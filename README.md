@@ -11,7 +11,8 @@
 每個年級的 `math/README.md` 記錄該年級數學的主要學習單元與內容：
 
 ```
-index.html                 # 網站首頁（課程目錄）
+index.html                 # 網站首頁（課程目錄，支援中英切換）
+docs/teaching-framework.md # 教學架構（參考 Khan Academy，含各年級年齡調整）
 grade-1/math/              # 一年級數學：單元整理
 grade-2/math/              # 二年級數學：單元整理
 grade-3/math/              # 三年級數學：單元整理
@@ -40,12 +41,21 @@ grade-6/math/              # 六年級數學：單元整理
 | 五年級 | 因數 — 因數工廠 | [grade-5/math/factor/](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/) |
 | 五年級 | 倍數 — 跳跳蛙數字樂園 | [grade-5/math/multiple/](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/) |
 
+## 教學架構
+
+課程設計參考 Khan Academy 的教學法（精熟學習、做中學、立即回饋、鷹架提示、遊戲化），
+並依各年級年齡調整時長、文字量、題型與遊戲規則 —— 完整規範見
+**[docs/teaching-framework.md](docs/teaching-framework.md)**。
+
 ## 課程頁面慣例
 
 - 路徑：`grade-X/math/<主題>/index.html`，一主題一課、一課一個自足的 HTML（行內 CSS ＋原生 JS，無外部相依），網址即 `…/grade-X/math/<主題>/`。
 - 三段式結構：範例教學（互動示範）→ 試題（六題即時回饋＋計分）→ 小遊戲（五關計分）。
 - 淺色暖色系：背景 `#FAF7F0`、卡片 `#FFF`、強調綠 `#2F9E69` ／橘 `#E8871E`；大字體、SVG 插圖。
 - 每課頁首連回首頁；新增課程時同步在 `index.html` 加上課程卡片。
+- **中英雙語**：每頁右上角有語言切換鈕（預設繁體中文），選擇記在 `localStorage`；
+  實作慣例（`data-i18n` ＋ `I18N` 字典）見教學架構文件第五節。
+  例外：因數課是瀏覽器存檔的 artifact，僅中文。
 
 ## 發佈
 
