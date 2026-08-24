@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我平均 — 平均分配站</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .scene{width:100%;height:auto;display:block;margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .numgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin-top:16px}
+  .cell{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);
+    padding:8px 0;text-align:center;font-size:17px;font-weight:600;color:var(--muted);
+  }
+  .cell.on{background:var(--green);border-color:var(--green);color:#fff;transform:scale(1.05);transition:.15s}
+  .hopline{margin-top:12px;font-size:18px;min-height:32px}
+  .hopline b{color:var(--green)}
+  .secret-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+  .secret{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center;
+  }
+  .secret .big{font-size:34px}
+  .secret h3{font-size:18px;margin:6px 0}
+  .secret p{font-size:15px;color:var(--muted)}
+  .checker{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+  .checker input{
+    width:110px;font-size:20px;padding:8px 12px;border:2px solid var(--line);border-radius:12px;
+    background:var(--card);color:var(--ink);text-align:center;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .verdict{margin-top:14px;font-size:18px;min-height:30px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .target{font-size:22px;margin-top:14px}
+  .target b{color:var(--orange);font-size:28px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px}
+  .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;margin-top:16px}
+  .num{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);padding:10px 0;
+    font-size:17px;font-weight:600;cursor:pointer;color:var(--ink);
+  }
+  .num.found{background:var(--green);border-color:var(--green);color:#fff}
+  .num.miss{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+  .num:disabled{cursor:default}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .btnrow{display:flex;gap:12px;margin-top:16px}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+
+  /* --- average-lesson-only additions --- */
+  .stackrow{display:flex;gap:32px;justify-content:center;align-items:flex-end;margin-top:20px;flex-wrap:wrap;min-height:230px}
+  .stack{display:flex;flex-direction:column-reverse;align-items:center;gap:4px;min-height:180px}
+  .stackblock{
+    width:44px;height:24px;background:var(--orange);border-radius:6px;
+    box-shadow:0 2px 4px rgba(0,0,0,.15);transition:.25s;
+  }
+  .stackblock.moved{background:var(--green)}
+  .stackwrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .stackperson{font-size:30px}
+  .stacklabel{font-weight:700;font-size:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+
+  <header>
+    <h1 data-i18n="h1">⚖️ 平均分配站</h1>
+    <p class="sub" data-i18n="sub">移多補少，讓大家都一樣多</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    平均就像<strong>把大家的東西倒在一起，再平分</strong>：7 塊、3 塊、5 塊倒在一起是 15 塊，<br>
+    3 個人平分，每人剛好 <strong>5 塊</strong> —— 這就是平均。
+  </div>
+
+  <!-- 1. 移多補少 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">移多補少：讓積木一樣高</h2>
+    <p class="lead" data-i18n="s1lead">三個好朋友手上的積木不一樣多，按按鈕看看怎麼把多的移給少的。</p>
+
+    <div class="card">
+      <div class="stackrow" id="stackRow" data-i18n-aria="s1aria" aria-label="三堆積木，分別是7塊、3塊、5塊，可以移多補少"></div>
+      <p class="hopline" id="lvlLine" data-i18n="lvlPrompt">點一下按鈕，看看怎麼移多補少！</p>
+      <div class="btnrow">
+        <button class="btn" id="lvlBtn" type="button" data-i18n="lvlBtnStart">移多補少</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 公式：總和 ÷ 個數 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">用算式算平均：總和 ÷ 個數</h2>
+    <p class="lead" data-i18n="s2lead">選一組資料，看看怎麼先加總、再平分。</p>
+
+    <div class="card">
+      <div class="chips" id="setChips"></div>
+      <div class="numgrid" id="setGrid"></div>
+      <p class="hopline" id="setLine"></p>
+    </div>
+  </section>
+
+  <!-- 3. 三個祕密（靜態） -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">關於平均的三個祕密</h2>
+    <div class="secret-row">
+      <div class="secret">
+        <div class="big">🔍</div>
+        <h3 data-i18n="fact1h">平均不一定是其中一個數</h3>
+        <p data-i18n="fact1p">例如 1、2、6 的平均是 (1+2+6)÷3=3，<br>3 並不是原來三個數字中的任何一個。</p>
+      </div>
+      <div class="secret">
+        <div class="big">🔁</div>
+        <h3 data-i18n="fact2h">平均 × 個數 = 總和（可以倒著算）</h3>
+        <p data-i18n="fact2p">4 個人的平均身高是 130 公分，<br>總和就是 130 × 4 = 520 公分。</p>
+      </div>
+      <div class="secret">
+        <div class="big">📈</div>
+        <h3 data-i18n="fact3h">一個很大的數會把平均拉高</h3>
+        <p data-i18n="fact3p">30、35、25、310 的平均是 (30+35+25+310)÷4=100，<br>那個 310 把平均從三十幾拉高到了 100。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">試題</span>
+    <h2 data-i18n="s4h2">六題檢查一下</h2>
+    <p class="lead" data-i18n="s4lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / 6</span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 5. 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">小遊戲</span>
+    <h2 data-i18n="s5h2">平均神算</h2>
+    <p class="lead" data-i18n="s5lead">看清楚這組數字，選出正確的平均數。答對愈快，分數愈高！</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <p class="target" id="gAskLine"><span data-i18n="gAsk">這組數字的平均是多少？</span></p>
+      <div class="numgrid" id="gDataGrid"></div>
+      <p class="hint" data-i18n="gHintText">提示：先把所有數字加起來，再除以有幾個數字。</p>
+      <div class="opts" id="gAnswers"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>移多補少變一樣 —— 總和 ÷ 個數，就是平均。</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 語言無關的資料 ---------- */
+  var SETS = [
+    { nums:[80,90,70], avg:80 },
+    { nums:[12,18,15,15], avg:15 },
+    { nums:[50,60,40,70,30], avg:50 }
+  ];
+
+  var ROUNDS = [
+    { nums:[4,8],           avg:6,  choices:[12,6,4,8,5,7] },
+    { nums:[10,20,30],      avg:20, choices:[60,10,30,15,20,25] },
+    { nums:[5,7,9,7],       avg:7,  choices:[7,28,5,9,6,8] },
+    { nums:[12,14],         avg:13, choices:[26,12,15,13,11,14] },
+    { nums:[15,25,35,25],   avg:25, choices:[100,15,35,20,30,25] }
+  ];
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '教我平均 — 平均分配站',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      h1: '⚖️ 平均分配站',
+      sub: '移多補少，讓大家都一樣多',
+      intro: '平均就像<strong>把大家的東西倒在一起，再平分</strong>：7 塊、3 塊、5 塊倒在一起是 15 塊，<br>3 個人平分，每人剛好 <strong>5 塊</strong> —— 這就是平均。',
+      eb1: '範例教學 1', eb2: '範例教學 2', eb3: '範例教學 3', eb4: '試題', eb5: '小遊戲',
+      s1h2: '移多補少：讓積木一樣高',
+      s1lead: '三個好朋友手上的積木不一樣多，按按鈕看看怎麼把多的移給少的。',
+      s1aria: '三堆積木，分別是7塊、3塊、5塊，可以移多補少',
+      lvlPrompt: '點一下按鈕，看看怎麼移多補少！',
+      lvlBtnStart: '移多補少',
+      lvlBtnReset: '重新開始',
+      lvlPeople: ['小安', '小美', '小杰'],
+      lvlLine: function(sum, n, avg){ return '全部 ' + sum + ' 塊 ÷ ' + n + ' 人 = 每人 ' + avg + ' 塊'; },
+      s2h2: '用算式算平均：總和 ÷ 個數',
+      s2lead: '選一組資料，看看怎麼先加總、再平分。',
+      setLabels: ['考試', '跳繩', '零用錢'],
+      setChipLabel: function(i){ return I18N.zh.setLabels[i]; },
+      setLine: function(nums, sum, count, avg){
+        return nums.join(' + ') + ' = ' + sum + '　　' + sum + ' ÷ ' + count + ' = <b>' + avg + '</b>';
+      },
+      s3h2: '關於平均的三個祕密',
+      fact1h: '平均不一定是其中一個數',
+      fact1p: '例如 1、2、6 的平均是 (1+2+6)÷3=3，<br>3 並不是原來三個數字中的任何一個。',
+      fact2h: '平均 × 個數 = 總和（可以倒著算）',
+      fact2p: '4 個人的平均身高是 130 公分，<br>總和就是 130 × 4 = 520 公分。',
+      fact3h: '一個很大的數會把平均拉高',
+      fact3p: '30、35、25、310 的平均是 (30+35+25+310)÷4=100，<br>那個 310 把平均從三十幾拉高到了 100。',
+      s4h2: '六題檢查一下',
+      s4lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      cAll: '全對！你已經是平均高手 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面再跟大家分一次積木。',
+      qs: [
+        { stem:'小美四次數學小考分別考了 70、85、90、75 分，她的平均分數是多少？',
+          opts:['80','320','64','90'], ans:0,
+          why:'70+85+90+75 = 320，320 ÷ 4 = 80，所以平均是 80 分。' },
+        { stem:'5 個好朋友一起買飲料，每人平均花了 45 元，請問他們一共花了多少錢？',
+          opts:['200','225','45','250'], ans:1,
+          why:'平均 × 人數 = 總和，45 × 5 = 225 元，所以他們一共花了 225 元。' },
+        { stem:'關於「平均」，下面哪一句話是正確的？',
+          opts:['平均一定是資料中最大的數', '只要把數字相加就是平均', '平均可能不是資料中任何一個數', '資料越多，平均一定越大'], ans:2,
+          why:'平均是把總和平分，不一定會等於某一項原始數字。例如 1、2、6 的平均是 (1+2+6)÷3=3，3 並不是原來的三個數字之一。' },
+        { stem:'露營小隊有 4 個人，平均每人帶了 20 顆糖果，這 4 人一共帶了多少顆糖果？',
+          opts:['26','12','15','80'], ans:3,
+          why:'平均 × 人數 = 總和，20 × 4 = 80 顆，所以 4 人一共帶了 80 顆糖果。' },
+        { stem:'小華跳遠測驗了三次，平均成績是 70 公分，前兩次分別跳了 60 公分和 75 公分，請問第三次跳了多少公分？',
+          opts:['75','65','70','85'], ans:0,
+          why:'三次的總和 = 70 × 3 = 210，210 − 60 − 75 = 75，所以第三次跳了 75 公分（平均可以反過來推算總和）。' },
+        { stem:'一組資料裡有一個特別大的數，這對平均數會有什麼影響？',
+          opts:['沒有影響', '會把平均數拉高', '平均數會變成那個最大的數', '會把平均數拉低'], ans:1,
+          why:'一個特別大的數會讓總和變大，平均（總和 ÷ 個數）也會跟著被拉高。' }
+      ],
+      s5h2: '平均神算',
+      s5lead: '看清楚這組數字，選出正確的平均數。答對愈快，分數愈高！',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
+      gAsk: '這組數字的平均是多少？',
+      gHintText: '提示：先把所有數字加起來，再除以有幾個數字。',
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      gCorrectFirst: function(avg){ return '答對了！平均是 ' + avg + '，+20 分！'; },
+      gCorrectRetry: function(avg){ return '答對了！平均是 ' + avg + '，+10 分。'; },
+      gWrong: function(v){ return v + ' 不是正確的平均，再試一次，−5 分。'; },
+      gClear: '按「下一關」繼續下一組數字。',
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      footer: '把整頁縮成一句：<strong>移多補少變一樣 —— 總和 ÷ 個數，就是平均。</strong>'
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'Teach Me Averages — The Level-Up Station',
+      btn: '中',
+      home: '← Back to teach-me home',
+      h1: '⚖️ The Level-Up Station',
+      sub: 'Making everything even',
+      intro: 'An average is like <strong>pouring everyone’s things together and sharing them out evenly</strong>: 7, 3 and 5 blocks poured together makes 15,<br>shared among 3 people that’s exactly <strong>5 each</strong> — that’s the average.',
+      eb1: 'Example 1', eb2: 'Example 2', eb3: 'Example 3', eb4: 'Quiz', eb5: 'Game',
+      s1h2: 'Move Some Over: Make the Block Towers Equal',
+      s1lead: 'Three friends are holding different numbers of blocks. Press the button to see how the extra ones move to the friend with fewer.',
+      s1aria: 'Three stacks of blocks: 7, 3 and 5 — you can move some from the tallest to the shortest',
+      lvlPrompt: 'Press the button to see how the blocks even out!',
+      lvlBtnStart: 'Move Some Over',
+      lvlBtnReset: 'Start Over',
+      lvlPeople: ['Ann', 'Mia', 'Jay'],
+      lvlLine: function(sum, n, avg){ return sum + ' blocks in total ÷ ' + n + ' people = ' + avg + ' blocks each'; },
+      s2h2: 'Work Out the Average With a Formula: Total ÷ Count',
+      s2lead: 'Pick a dataset and see how it’s added up, then shared out evenly.',
+      setLabels: ['Exam scores', 'Jump rope', 'Allowance'],
+      setChipLabel: function(i){ return I18N.en.setLabels[i]; },
+      setLine: function(nums, sum, count, avg){
+        return nums.join(' + ') + ' = ' + sum + '&nbsp;&nbsp;&nbsp;&nbsp;' + sum + ' ÷ ' + count + ' = <b>' + avg + '</b>';
+      },
+      s3h2: 'Three Secrets About Averages',
+      fact1h: 'The average is not always one of the original numbers',
+      fact1p: 'For example, the average of 1, 2, 6 is (1+2+6)÷3=3,<br>and 3 is not any of the three original numbers.',
+      fact2h: 'Average × count = total (you can work backward)',
+      fact2p: 'If 4 people have an average height of 130 cm,<br>the total is 130 × 4 = 520 cm.',
+      fact3h: 'One very large number pulls the average up',
+      fact3p: 'The average of 30, 35, 25, 310 is (30+35+25+310)÷4=100 —<br>that 310 pulled the average up from the thirties to 100.',
+      s4h2: 'Six Quick Questions',
+      s4lead: 'Tap an answer and we’ll tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll: 'Perfect score! You’re an averages master 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That’s okay — scroll up and share out the blocks with everyone one more time.',
+      qs: [
+        { stem:'Mia took four math quizzes and scored 70, 85, 90 and 75. What is her average score?',
+          opts:['80','320','64','90'], ans:0,
+          why:'70+85+90+75 = 320, and 320 ÷ 4 = 80, so the average is 80.' },
+        { stem:'5 friends bought drinks together, spending an average of $45 each. How much did they spend in total?',
+          opts:['200','225','45','250'], ans:1,
+          why:'Average × number of people = total, so 45 × 5 = $225 in total.' },
+        { stem:'Which of these statements about “average” is correct?',
+          opts:['The average must be the largest number in the data', 'Just adding the numbers together gives you the average', 'The average might not be any of the original numbers at all', 'The more data there is, the bigger the average must be'], ans:2,
+          why:'The average splits the total evenly — it doesn’t have to equal any of the original numbers. For example, the average of 1, 2, 6 is (1+2+6)÷3=3, and 3 isn’t one of the original numbers.' },
+        { stem:'A camping group of 4 people brought an average of 20 candies each. How many candies did the 4 of them bring in total?',
+          opts:['26','12','15','80'], ans:3,
+          why:'Average × count = total, so 20 × 4 = 80 candies in total.' },
+        { stem:'Jay did three long-jump tries with an average of 70 cm. The first two jumps were 60 cm and 75 cm. How far was the third jump?',
+          opts:['75','65','70','85'], ans:0,
+          why:'The total for three jumps = 70 × 3 = 210. 210 − 60 − 75 = 75, so the third jump was 75 cm (you can work backward from the average to find the total).' },
+        { stem:'If a dataset has one unusually large number in it, what effect does that have on the average?',
+          opts:['No effect', 'It pulls the average up', 'The average becomes that largest number', 'It pulls the average down'], ans:1,
+          why:'One unusually large number makes the total bigger, so the average (total ÷ count) gets pulled up too.' }
+      ],
+      s5h2: 'Average Ace',
+      s5lead: 'Look carefully at the numbers and pick the correct average. The faster you answer, the more points you score!',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
+      gAsk: 'What is the average of these numbers?',
+      gHintText: 'Hint: add all the numbers together first, then divide by how many numbers there are.',
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      gCorrectFirst: function(avg){ return 'Correct on the first try! The average is ' + avg + ' — +20 points!'; },
+      gCorrectRetry: function(avg){ return 'Correct! The average is ' + avg + ' — +10 points.'; },
+      gWrong: function(v){ return v + ' isn’t the correct average — try again. −5 points.'; },
+      gClear: 'Press “Next round” to try the next set of numbers.',
+      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      footer: 'The whole page in one line: <strong>move some over to even it out — total ÷ count is the average.</strong>'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  /* ---------- 1. 移多補少 ---------- */
+  var LVL_START = [7, 3, 5];
+  var LVL_END = [5, 5, 5];
+  var stackRow = document.getElementById('stackRow');
+  var lvlLine = document.getElementById('lvlLine');
+  var lvlBtn = document.getElementById('lvlBtn');
+  var lvlCounts = LVL_START.slice();
+  var lvlLeveled = false;
+  var lvlAnimating = false;
+
+  function renderStacks(moved){
+    stackRow.textContent = '';
+    var people = L().lvlPeople;
+    for (var i = 0; i < lvlCounts.length; i++){
+      var wrap = document.createElement('div');
+      wrap.className = 'stackwrap';
+      var stack = document.createElement('div');
+      stack.className = 'stack';
+      for (var b = 0; b < lvlCounts[i]; b++){
+        var block = document.createElement('div');
+        block.className = 'stackblock' + (moved && lvlLeveled ? ' moved' : '');
+        stack.appendChild(block);
+      }
+      var person = document.createElement('div');
+      person.className = 'stackperson'; person.textContent = '🧒';
+      var label = document.createElement('div');
+      label.className = 'stacklabel';
+      label.textContent = people[i] + '：' + lvlCounts[i];
+      wrap.appendChild(stack); wrap.appendChild(person); wrap.appendChild(label);
+      stackRow.appendChild(wrap);
+    }
+  }
+
+  function levelStep(){
+    if (lvlCounts[0] > 5){
+      lvlCounts[0] -= 1;
+      lvlCounts[1] += 1;
+      renderStacks(true);
+      setTimeout(levelStep, 500);
+    } else {
+      lvlLeveled = true;
+      lvlAnimating = false;
+      var sum = LVL_START[0] + LVL_START[1] + LVL_START[2];
+      lvlLine.innerHTML = L().lvlLine(sum, LVL_START.length, sum / LVL_START.length);
+      lvlBtn.textContent = L().lvlBtnReset;
+      lvlBtn.disabled = false;
+    }
+  }
+
+  function onLvlBtn(){
+    if (lvlAnimating) return;
+    if (!lvlLeveled){
+      lvlAnimating = true;
+      lvlBtn.disabled = true;
+      levelStep();
+    } else {
+      lvlCounts = LVL_START.slice();
+      lvlLeveled = false;
+      renderStacks(false);
+      lvlLine.textContent = L().lvlPrompt;
+      lvlBtn.textContent = L().lvlBtnStart;
+    }
+  }
+
+  lvlBtn.addEventListener('click', onLvlBtn);
+
+  function resetLevelDemo(){
+    lvlCounts = LVL_START.slice();
+    lvlLeveled = false;
+    lvlAnimating = false;
+    lvlBtn.disabled = false;
+    lvlBtn.textContent = L().lvlBtnStart;
+    lvlLine.textContent = L().lvlPrompt;
+    renderStacks(false);
+  }
+
+  /* ---------- 2. 公式 ---------- */
+  var setIdx = 0;
+  var setChips = document.getElementById('setChips');
+  var setGrid = document.getElementById('setGrid');
+  var setLine = document.getElementById('setLine');
+
+  function buildSetChips(){
+    setChips.textContent = '';
+    SETS.forEach(function(s, i){
+      var b = makeChip(L().setChipLabel(i), i === setIdx);
+      b.addEventListener('click', function(){ setIdx = i; buildSetChips(); renderSet(); });
+      setChips.appendChild(b);
+    });
+  }
+
+  function renderSet(){
+    var s = SETS[setIdx];
+    setGrid.textContent = '';
+    s.nums.forEach(function(v){
+      var c = document.createElement('div');
+      c.className = 'cell';
+      c.textContent = v;
+      setGrid.appendChild(c);
+    });
+    var sum = s.nums.reduce(function(a, b){ return a + b; }, 0);
+    setLine.innerHTML = L().setLine(s.nums, sum, s.nums.length, s.avg);
+  }
+
+  /* ---------- 4. 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function buildQuiz(){
+    var d = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    d.qs.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === d.qs.length){
+            qComment.textContent = right === 6 ? d.cAll : right >= 4 ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 5. 小遊戲：平均神算 ---------- */
+  var gRound = 0, gScore = 0, gMistake = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gDataGrid = document.getElementById('gDataGrid');
+  var gAnswers = document.getElementById('gAnswers');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+
+  function startRound(){
+    var round = ROUNDS[gRound];
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+
+    gDataGrid.textContent = '';
+    round.nums.forEach(function(v){
+      var c = document.createElement('div');
+      c.className = 'cell';
+      c.textContent = v;
+      gDataGrid.appendChild(c);
+    });
+
+    gAnswers.textContent = '';
+    round.choices.forEach(function(v){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'opt'; b.textContent = v;
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        if (v === round.avg){
+          var all = gAnswers.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          b.classList.add('right');
+          if (gMistake){
+            gScore += 10;
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrectRetry(round.avg) + '</span>';
+          } else {
+            gScore += 20;
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrectFirst(round.avg) + '</span>';
+          }
+          if (gRound === ROUNDS.length - 1){
+            gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore) + '</span>';
+          } else {
+            gMsg.innerHTML += ' ' + L().gClear;
+            gNext.disabled = false;
+          }
+        } else {
+          gMistake = true;
+          b.disabled = true;
+          b.classList.add('wrong');
+          gScore = Math.max(0, gScore - 5);
+          gMsg.innerHTML = '<span class="no">' + L().gWrong(v) + '</span>';
+        }
+        elScore.textContent = gScore;
+      });
+      gAnswers.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    resetLevelDemo();
+    buildSetChips();
+    renderSet();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

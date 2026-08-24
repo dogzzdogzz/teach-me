@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>通分披薩屋 — 異分母分數加減</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(26px,6vw,44px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .scene{width:100%;height:auto;display:block;margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:17px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .hint{color:var(--muted);font-size:15px;margin-top:10px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .target{font-size:22px;margin-top:14px}
+  .target b{color:var(--orange);font-size:26px}
+  .fggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;margin-top:16px}
+  .fnum{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);padding:12px 6px;
+    font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);text-align:center;
+  }
+  .fnum.found{background:var(--green);border-color:var(--green);color:#fff}
+  .fnum.miss{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+  .fnum:disabled{cursor:default}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+
+  <header>
+    <h1 data-i18n="h1">🍕 通分披薩屋</h1>
+    <p class="sub" data-i18n="sub">學會擴分、約分、通分，異分母分數也能輕鬆加減</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    兩片切法不同的披薩，沒辦法直接比誰的餅皮多。<br>
+    要先把它們切成<strong>一樣的大小</strong>（通分），才能一起加減。
+  </div>
+
+  <!-- 範例教學 1：等值分數 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">擴分與約分：大小不變的魔術</h2>
+    <p class="lead" data-i18n="s1lead">點一顆按鈕，看看不同切法的披薩，陰影的部分永遠一樣大。</p>
+    <div class="card">
+      <svg class="scene" viewBox="0 0 620 120" role="img" data-i18n-aria="s1aria" aria-label="等值分數長條圖">
+        <g id="eqBarG"></g>
+      </svg>
+      <div class="chips" id="eqChips"></div>
+      <p class="hint" id="eqLine"></p>
+      <p class="lead" style="margin-top:14px" data-i18n="s1note">
+        由左到右看是<strong>擴分</strong>：分子、分母同乘一個數；由右到左看是<strong>約分</strong>：分子、分母同除一個數。兩種做法都不會改變分數的大小。
+      </p>
+    </div>
+  </section>
+
+  <!-- 範例教學 2：通分 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">通分：把兩種切法變成一樣</h2>
+    <div class="card">
+      <p class="lead" data-i18n="s2lead1">先看看 1/2 和 1/3 原來的切法不一樣，沒辦法直接比較或相加：</p>
+      <svg class="scene" viewBox="0 0 620 140" role="img" data-i18n-aria="s2aria" aria-label="1/2 和 1/3 通分成一樣切法的長條圖">
+        <g id="cdRefG"></g>
+      </svg>
+      <p class="lead" style="margin-top:14px" data-i18n="s2lead2">選一個 2 和 3 都能整除的公倍數，把它們通分成一樣的切法（也可以先複習<a class="home" href="../multiple/">倍數</a>）：</p>
+      <div class="chips" id="cdChips"></div>
+      <svg class="scene" viewBox="0 0 620 140">
+        <g id="cdConvG"></g>
+      </svg>
+      <p class="hint" id="cdLine"></p>
+    </div>
+  </section>
+
+  <!-- 範例教學 3：一步一步加減 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">一步一步：異分母加減怎麼做</h2>
+    <p class="lead" data-i18n="s3lead">選一種算式，按「下一步」看看每一步發生了什麼事。</p>
+    <div class="card">
+      <div class="chips" id="stepModeChips"></div>
+      <svg class="scene" viewBox="0 0 700 220" role="img" data-i18n-aria="s3aria" aria-label="分數加減每一步的長條圖">
+        <g id="stepG"></g>
+      </svg>
+      <p class="hint" id="stepCaption"></p>
+      <div class="btnrow">
+        <button class="btn" id="stepNext" type="button" data-i18n="stepNextBtn">下一步</button>
+        <button class="btn ghost" id="stepReset" type="button" data-i18n="stepResetBtn">重來</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">試題</span>
+    <h2 data-i18n="s4h2">六題檢查一下</h2>
+    <p class="lead" data-i18n="s4lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / 6</span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">小遊戲</span>
+    <h2 data-i18n="s5h2">披薩配對</h2>
+    <p class="lead" data-i18n="s5lead">看看題目，從六張披薩卡片中，點出<strong>化到最簡</strong>的正確答案！點錯扣分，過關加分。</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <p class="target"><span data-i18n="gExprLabel">來看看：</span> <b id="gExpr">1/2 + 1/4</b></p>
+      <p class="hint" id="gHint"></p>
+      <div id="gGrid" class="fggrid"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    分母不同不能直接加 —— 先通分，變成同一種切法再加。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var ORANGE = '#E8871E', GREEN = '#2F9E69', PALE = '#FDF0E0', RED = '#D64545', BORDER = '#E8871E';
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '通分披薩屋 — 異分母分數加減',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      h1: '🍕 通分披薩屋',
+      sub: '學會擴分、約分、通分，異分母分數也能輕鬆加減',
+      intro: '兩片切法不同的披薩，沒辦法直接比誰的餅皮多。<br>要先把它們切成<strong>一樣的大小</strong>（通分），才能一起加減。',
+      eb1: '範例教學 1', eb2: '範例教學 2', eb3: '範例教學 3', eb4: '試題', eb5: '小遊戲',
+      s1h2: '擴分與約分：大小不變的魔術',
+      s1lead: '點一顆按鈕，看看不同切法的披薩，陰影的部分永遠一樣大。',
+      s1aria: '等值分數長條圖，顯示分子分母同乘或同除仍然一樣大',
+      s1note: '由左到右看是<strong>擴分</strong>：分子、分母同乘一個數；由右到左看是<strong>約分</strong>：分子、分母同除一個數。兩種做法都不會改變分數的大小。',
+      eqLine: function(n, k, mult){
+        if (mult === 1) return '這是最原始的 <b>1/2</b>。';
+        return '1/2 的分子、分母同乘 <b>' + mult + '</b> → <b>' + k + '/' + n + '</b>，還是一樣大（擴分）！反過來看，' + k + '/' + n + ' 同除 <b>' + mult + '</b> 就約分回 1/2。';
+      },
+      s2h2: '通分：把兩種切法變成一樣',
+      s2lead1: '先看看 1/2 和 1/3 原來的切法不一樣，沒辦法直接比較或相加：',
+      s2lead2: '選一個 2 和 3 都能整除的公倍數，把它們通分成一樣的切法（也可以先複習<a class="home" href="../multiple/">倍數</a>）：',
+      s2aria: '1/2 和 1/3 通分成一樣切法的長條圖',
+      refLabel: function(f){ return '原始：' + f; },
+      cdMinTag: ' (最小公倍數)',
+      cdLine: function(n, k1, k2){
+        return '通分成 ' + n + ' 等分後：1/2 = ' + k1 + '/' + n + '，1/3 = ' + k2 + '/' + n + '。大小完全一樣，只是切法變細了！';
+      },
+      s3h2: '一步一步：異分母加減怎麼做',
+      s3lead: '選一種算式，按「下一步」看看每一步發生了什麼事。',
+      s3aria: '分數加減每一步的長條圖',
+      modeAddLabel: '加法：1/2 + 1/3',
+      modeSubLabel: '減法：3/4 − 1/6',
+      stepNextBtn: '下一步',
+      stepResetBtn: '重來',
+      stepCap0: function(aNum, aDen, bNum, bDen, opSym){
+        var verb = opSym === '+' ? '加' : '減';
+        return '第一步：' + aNum + '/' + aDen + ' ' + opSym + ' ' + bNum + '/' + bDen + '，分母不同（' + aDen + ' 和 ' + bDen + '），還不能直接' + verb + '。';
+      },
+      stepCap1: function(aDen, bDen, lcm, kaNum, kbNum){
+        return '第二步：找 ' + aDen + ' 和 ' + bDen + ' 的最小公倍數 = ' + lcm + '，通分後變成 ' + kaNum + '/' + lcm + ' 和 ' + kbNum + '/' + lcm + '。';
+      },
+      stepCap2: function(kaNum, kbNum, lcm, resNum, resDen, opSym){
+        return '第三步：' + kaNum + '/' + lcm + ' ' + opSym + ' ' + kbNum + '/' + lcm + ' = ' + resNum + '/' + resDen + '（分母不變，只計算分子）。';
+      },
+      s4h2: '六題檢查一下',
+      s4lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b>',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b>'; },
+      cAll: '全對！你已經是通分高手 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面再跟披薩通分一次。',
+      qs: [
+        { stem:'1/2 擴分（分子、分母同乘一個數）之後，下面哪一個和它一樣大？',
+          opts:['2/3','3/6','3/5','4/9'], ans:1,
+          why:'1/2 的分子分母都乘以 3 → 3/6，大小不變。' },
+        { stem:'6/8 約分到最簡分數，答案是多少？',
+          opts:['3/4','2/3','1/2','3/8'], ans:0,
+          why:'6/8 的分子分母同除以 2 → 3/4，分子分母已經沒有共同的因數了。' },
+        { stem:'要計算 1/2 + 1/3，第一步應該怎麼做？',
+          opts:['把分子相加、分母不變','把兩個分母相加當作新分母','先通分，把兩個分母變成一樣（例如都變成 6）','分子和分母都相加'], ans:2,
+          why:'分母不同不能直接加，要先通分（找公倍數，把切法變成一樣）才能加。' },
+        { stem:'小美算 1/2 + 1/3，直接寫成 2/5，哪裡出了問題？',
+          opts:['沒有錯，答案就是 2/5','分母不同不可以直接把分子和分母相加，要先通分成 6，答案是 5/6','應該把分子相乘才對','答案應該是 3/5'], ans:1,
+          why:'1/2 = 3/6，1/3 = 2/6，3/6 + 2/6 = 5/6。分母不同時，不能直接把分子分母加起來。' },
+        { stem:'計算 3/4 − 1/6，通分後應該變成哪一個式子？',
+          opts:['3/12 − 1/12','9/6 − 1/6','3/4 − 1/12','9/12 − 2/12'], ans:3,
+          why:'12 是 4 和 6 的最小公倍數；3/4 = 9/12，1/6 = 2/12，所以是 9/12 − 2/12 = 7/12。' },
+        { stem:'1/6 + 1/3 通分後算出 3/6，這個答案還能不能再簡化？',
+          opts:['3/6 已經是最簡分數，不用再約','6/12，這樣比較好看','1/2（分子分母同除以 3），這樣才是最簡分數','2/3，分子分母同加 1'], ans:2,
+          why:'3/6 的分子分母都能同時除以 3，約分後是 1/2，這才是最簡分數。答完別忘了檢查能不能再約分！' }
+      ],
+      s5h2: '披薩配對',
+      s5lead: '看看題目，從六張披薩卡片中，點出<strong>化到最簡</strong>的正確答案！點錯扣分，過關加分。',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數', gExprLabel: '來看看：',
+      gHintMsg: function(lcm){ return '提示：先通分成 ' + lcm + '。'; },
+      gHitMsg: function(exprStr, correctStr){ return '✔️ ' + exprStr + ' = ' + correctStr + '，答對了！+10 分！'; },
+      gMissMsg: function(chosenStr){ return '✘ ' + chosenStr + ' 不對，再試一次。−5 分。'; },
+      gClearMsg: function(){ return '過關獎勵 +20 分！按「下一關」繼續。'; },
+      gWinMsg: function(score){ return '五關全破！總分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      footer: '分母不同不能直接加 —— 先通分，變成同一種切法再加。'
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'The Pizza House of Common Denominators',
+      btn: '中',
+      home: '← Back to teach-me home',
+      h1: '🍕 The Pizza House',
+      sub: 'Master expanding, simplifying, and common denominators — then add and subtract fractions with ease',
+      intro: 'Two pizzas cut into different-sized slices can’t be compared directly.<br>Cut them into the <strong>same-sized slices</strong> first (a common denominator) before adding or subtracting.',
+      eb1: 'Example 1', eb2: 'Example 2', eb3: 'Example 3', eb4: 'Quiz', eb5: 'Game',
+      s1h2: 'Expanding & Simplifying: Same Size, Different Look',
+      s1lead: 'Tap a button and see how differently-cut pizzas always keep the same shaded amount.',
+      s1aria: 'Bar diagram showing that multiplying or dividing the numerator and denominator together keeps the same size',
+      s1note: 'Read left to right, this is <strong>expanding</strong>: multiply the top and bottom by the same number. Read right to left, it’s <strong>simplifying</strong>: divide both by the same number. Neither changes the fraction’s size.',
+      eqLine: function(n, k, mult){
+        if (mult === 1) return 'This is the original fraction <b>1/2</b>.';
+        return 'Multiply both the top and bottom of 1/2 by <b>' + mult + '</b> → <b>' + k + '/' + n + '</b> — still the same size (expanding)! Going the other way, dividing ' + k + '/' + n + ' by <b>' + mult + '</b> simplifies it back to 1/2.';
+      },
+      s2h2: 'Common Denominators: Making the Cuts Match',
+      s2lead1: 'First, look at how 1/2 and 1/3 are cut differently — you can’t compare or add them directly yet:',
+      s2lead2: 'Pick a common multiple of 2 and 3 to cut both into the same-sized pieces (you can review <a class="home" href="../multiple/">multiples</a> first):',
+      s2aria: 'Bar diagram showing 1/2 and 1/3 converted to the same denominator',
+      refLabel: function(f){ return 'Original: ' + f; },
+      cdMinTag: ' (LCM)',
+      cdLine: function(n, k1, k2){
+        return 'With a common denominator of ' + n + ': 1/2 = ' + k1 + '/' + n + ', 1/3 = ' + k2 + '/' + n + '. Same size, just cut into smaller pieces!';
+      },
+      s3h2: 'Step by Step: Adding & Subtracting Unlike Fractions',
+      s3lead: 'Pick an expression, then press “Next step” to see what happens at each step.',
+      s3aria: 'Bar diagram showing each step of adding or subtracting fractions',
+      modeAddLabel: 'Addition: 1/2 + 1/3',
+      modeSubLabel: 'Subtraction: 3/4 − 1/6',
+      stepNextBtn: 'Next step',
+      stepResetBtn: 'Restart',
+      stepCap0: function(aNum, aDen, bNum, bDen, opSym){
+        var verb = opSym === '+' ? 'add' : 'subtract';
+        return 'Step 1: ' + aNum + '/' + aDen + ' ' + opSym + ' ' + bNum + '/' + bDen + ' — the denominators (' + aDen + ' and ' + bDen + ') are different, so we can’t ' + verb + ' yet.';
+      },
+      stepCap1: function(aDen, bDen, lcm, kaNum, kbNum){
+        return 'Step 2: find the least common multiple of ' + aDen + ' and ' + bDen + ' = ' + lcm + '. Converted: ' + kaNum + '/' + lcm + ' and ' + kbNum + '/' + lcm + '.';
+      },
+      stepCap2: function(kaNum, kbNum, lcm, resNum, resDen, opSym){
+        return 'Step 3: ' + kaNum + '/' + lcm + ' ' + opSym + ' ' + kbNum + '/' + lcm + ' = ' + resNum + '/' + resDen + ' (keep the denominator, just work out the numerator).';
+      },
+      s4h2: 'Six Quick Questions',
+      s4lead: 'Tap an answer and we’ll tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll: 'Perfect score! You’re a common-denominator master 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That’s okay — scroll up and try converting pizzas one more time.',
+      qs: [
+        { stem:'After expanding 1/2 (multiplying the top and bottom by the same number), which of these is still equal to it?',
+          opts:['2/3','3/6','3/5','4/9'], ans:1,
+          why:'Multiply both the numerator and denominator of 1/2 by 3 → 3/6. The size stays the same.' },
+        { stem:'Simplify 6/8 to its simplest form. What is the answer?',
+          opts:['3/4','2/3','1/2','3/8'], ans:0,
+          why:'Divide both the numerator and denominator of 6/8 by 2 → 3/4. There is no common factor left.' },
+        { stem:'What should you do first to work out 1/2 + 1/3?',
+          opts:['Add the numerators and keep the denominator the same','Add the two denominators to make the new denominator','Find a common denominator first (for example, change both to 6)','Add both the numerators and the denominators'], ans:2,
+          why:'You can’t add fractions with different denominators directly — first find a common denominator (a common multiple) so the pieces are the same size.' },
+        { stem:'Mia adds 1/2 + 1/3 and writes 2/5. What went wrong?',
+          opts:['Nothing — 2/5 is correct','You can’t add the numerators and denominators directly when the denominators differ — convert to sixths first, and the answer is 5/6','You should multiply the numerators instead','The answer should be 3/5'], ans:1,
+          why:'1/2 = 3/6 and 1/3 = 2/6, so 3/6 + 2/6 = 5/6. When denominators differ, you can’t just add the tops and bottoms.' },
+        { stem:'To work out 3/4 − 1/6, what should it become after finding a common denominator?',
+          opts:['3/12 − 1/12','9/6 − 1/6','3/4 − 1/12','9/12 − 2/12'], ans:3,
+          why:'12 is the least common multiple of 4 and 6; 3/4 = 9/12 and 1/6 = 2/12, so it becomes 9/12 − 2/12 = 7/12.' },
+        { stem:'After finding a common denominator, 1/6 + 1/3 comes out to 3/6. Can this answer be simplified further?',
+          opts:['3/6 is already simplest — no need to simplify','6/12 — that looks better','1/2 (divide top and bottom by 3) — that is the simplest form','2/3, by adding 1 to both the top and bottom'], ans:2,
+          why:'Both the numerator and denominator of 3/6 can be divided by 3, giving 1/2 — the simplest form. Always check whether you can simplify further!' }
+      ],
+      s5h2: 'Pizza Match',
+      s5lead: 'Look at the expression, then tap the pizza card with the <strong>fully simplified</strong> correct answer! Wrong taps lose points, clearing a round earns a bonus.',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score', gExprLabel: 'Let’s work out:',
+      gHintMsg: function(lcm){ return 'Hint: first convert to a common denominator of ' + lcm + '.'; },
+      gHitMsg: function(exprStr, correctStr){ return '✔️ ' + exprStr + ' = ' + correctStr + ' — correct! +10 points!'; },
+      gMissMsg: function(chosenStr){ return '✘ ' + chosenStr + ' is not correct — try again. −5 points.'; },
+      gClearMsg: function(){ return 'Bonus +20 points for clearing the round! Press “Next round” to continue.'; },
+      gWinMsg: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      footer: 'You can’t add fractions with different denominators — find a common denominator first, then add.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  /* ---------- SVG helpers ---------- */
+  function svgEl(tag){ return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+
+  function clearNode(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+
+  function drawSegments(parentG, x, y, w, h, n, colorFn){
+    for (var i = 0; i < n; i++){
+      var seg = svgEl('rect');
+      seg.setAttribute('x', x + i * (w / n));
+      seg.setAttribute('y', y);
+      seg.setAttribute('width', w / n);
+      seg.setAttribute('height', h);
+      seg.setAttribute('fill', colorFn(i));
+      seg.setAttribute('stroke', '#fff');
+      seg.setAttribute('stroke-width', '2');
+      parentG.appendChild(seg);
+    }
+    var border = svgEl('rect');
+    border.setAttribute('x', x); border.setAttribute('y', y);
+    border.setAttribute('width', w); border.setAttribute('height', h);
+    border.setAttribute('rx', 10); border.setAttribute('fill', 'none');
+    border.setAttribute('stroke', BORDER); border.setAttribute('stroke-width', '3');
+    parentG.appendChild(border);
+  }
+
+  function addText(parentG, x, y, text, opts){
+    opts = opts || {};
+    var t = svgEl('text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    t.setAttribute('font-size', opts.size || 16);
+    t.setAttribute('font-family', 'sans-serif');
+    t.setAttribute('fill', opts.fill || '#2B2A33');
+    if (opts.weight) t.setAttribute('font-weight', opts.weight);
+    if (opts.anchor) t.setAttribute('text-anchor', opts.anchor);
+    t.textContent = text;
+    parentG.appendChild(t);
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  /* ---------- 範例教學 1：等值分數 ---------- */
+  var EQ_PAIRS = [[1,2],[2,4],[3,6],[4,8]];
+  var eqIdx = 0;
+  var eqChipsEl = document.getElementById('eqChips');
+  var eqBarG = document.getElementById('eqBarG');
+  var eqLineEl = document.getElementById('eqLine');
+
+  function buildEqChips(){
+    clearNode(eqChipsEl);
+    EQ_PAIRS.forEach(function(p, i){
+      var b = makeChip(p[0] + '/' + p[1], i === eqIdx);
+      b.addEventListener('click', function(){ eqIdx = i; buildEqChips(); renderEqBar(); });
+      eqChipsEl.appendChild(b);
+    });
+  }
+
+  function renderEqBar(){
+    clearNode(eqBarG);
+    var p = EQ_PAIRS[eqIdx], k = p[0], n = p[1];
+    drawSegments(eqBarG, 20, 25, 460, 70, n, function(i){ return i < k ? ORANGE : PALE; });
+    addText(eqBarG, 500, 68, k + '/' + n, { size: 26, weight: 'bold' });
+    eqLineEl.innerHTML = L().eqLine(n, k, n / 2);
+  }
+
+  /* ---------- 範例教學 2：通分 ---------- */
+  var CD_OPTIONS = [6, 12, 18];
+  var cdN = 6;
+  var cdRefG = document.getElementById('cdRefG');
+  var cdChipsEl = document.getElementById('cdChips');
+  var cdConvG = document.getElementById('cdConvG');
+  var cdLineEl = document.getElementById('cdLine');
+
+  function renderCdRef(){
+    clearNode(cdRefG);
+    drawSegments(cdRefG, 20, 15, 360, 45, 2, function(i){ return i < 1 ? ORANGE : PALE; });
+    addText(cdRefG, 20, 10, L().refLabel('1/2'), { size: 16 });
+    drawSegments(cdRefG, 20, 85, 360, 45, 3, function(i){ return i < 1 ? GREEN : PALE; });
+    addText(cdRefG, 20, 80, L().refLabel('1/3'), { size: 16 });
+  }
+
+  function buildCdChips(){
+    clearNode(cdChipsEl);
+    CD_OPTIONS.forEach(function(n){
+      var label = (n === 6) ? (n + L().cdMinTag) : String(n);
+      var b = makeChip(label, n === cdN);
+      b.addEventListener('click', function(){ cdN = n; buildCdChips(); renderCdConv(); });
+      cdChipsEl.appendChild(b);
+    });
+  }
+
+  function renderCdConv(){
+    clearNode(cdConvG);
+    var n = cdN, k1 = n / 2, k2 = n / 3;
+    drawSegments(cdConvG, 20, 15, 360, 45, n, function(i){ return i < k1 ? ORANGE : PALE; });
+    addText(cdConvG, 390, 45, k1 + '/' + n, { size: 22, weight: 'bold' });
+    drawSegments(cdConvG, 20, 85, 360, 45, n, function(i){ return i < k2 ? GREEN : PALE; });
+    addText(cdConvG, 390, 115, k2 + '/' + n, { size: 22, weight: 'bold' });
+    cdLineEl.innerHTML = L().cdLine(n, k1, k2);
+  }
+
+  /* ---------- 範例教學 3：一步一步加減 ---------- */
+  var STEPS = {
+    add: { aNum:1, aDen:2, bNum:1, bDen:3, lcm:6,  kaNum:3, kbNum:2, resNum:5, resDen:6,  op:'+' },
+    sub: { aNum:3, aDen:4, bNum:1, bDen:6, lcm:12, kaNum:9, kbNum:2, resNum:7, resDen:12, op:'−' }
+  };
+  var mode = 'add';
+  var step = 0;
+  var stepModeChipsEl = document.getElementById('stepModeChips');
+  var stepGEl = document.getElementById('stepG');
+  var stepCaptionEl = document.getElementById('stepCaption');
+  var stepNextBtn = document.getElementById('stepNext');
+  var stepResetBtn = document.getElementById('stepReset');
+
+  function buildModeChips(){
+    clearNode(stepModeChipsEl);
+    ['add','sub'].forEach(function(m){
+      var label = (m === 'add') ? L().modeAddLabel : L().modeSubLabel;
+      var b = makeChip(label, m === mode);
+      b.addEventListener('click', function(){ mode = m; step = 0; buildModeChips(); renderStep(); });
+      stepModeChipsEl.appendChild(b);
+    });
+  }
+
+  function renderStep(){
+    clearNode(stepGEl);
+    var d = STEPS[mode];
+    if (step === 0){
+      drawSegments(stepGEl, 20, 15, 380, 55, d.aDen, function(i){ return i < d.aNum ? ORANGE : PALE; });
+      addText(stepGEl, 410, 48, d.aNum + '/' + d.aDen, { size: 24, weight: 'bold' });
+      drawSegments(stepGEl, 20, 95, 380, 55, d.bDen, function(i){ return i < d.bNum ? GREEN : PALE; });
+      addText(stepGEl, 410, 128, d.bNum + '/' + d.bDen, { size: 24, weight: 'bold' });
+      stepCaptionEl.innerHTML = L().stepCap0(d.aNum, d.aDen, d.bNum, d.bDen, d.op);
+    } else if (step === 1){
+      drawSegments(stepGEl, 20, 15, 380, 55, d.lcm, function(i){ return i < d.kaNum ? ORANGE : PALE; });
+      addText(stepGEl, 410, 48, d.kaNum + '/' + d.lcm, { size: 24, weight: 'bold' });
+      drawSegments(stepGEl, 20, 95, 380, 55, d.lcm, function(i){ return i < d.kbNum ? GREEN : PALE; });
+      addText(stepGEl, 410, 128, d.kbNum + '/' + d.lcm, { size: 24, weight: 'bold' });
+      stepCaptionEl.innerHTML = L().stepCap1(d.aDen, d.bDen, d.lcm, d.kaNum, d.kbNum);
+    } else {
+      var keep = (d.op === '+') ? null : (d.kaNum - d.kbNum);
+      drawSegments(stepGEl, 20, 45, 380, 70, d.lcm, function(i){
+        if (d.op === '+') return i < d.kaNum ? ORANGE : (i < d.kaNum + d.kbNum ? GREEN : PALE);
+        return i < keep ? ORANGE : (i < d.kaNum ? RED : PALE);
+      });
+      addText(stepGEl, 410, 88, d.resNum + '/' + d.resDen, { size: 26, weight: 'bold' });
+      stepCaptionEl.innerHTML = L().stepCap2(d.kaNum, d.kbNum, d.lcm, d.resNum, d.resDen, d.op);
+    }
+    stepNextBtn.disabled = (step >= 2);
+  }
+
+  stepNextBtn.addEventListener('click', function(){ step = Math.min(step + 1, 2); renderStep(); });
+  stepResetBtn.addEventListener('click', function(){ step = 0; renderStep(); });
+
+  /* ---------- 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function buildQuiz(){
+    var d = L();
+    clearNode(quizEl);
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    d.qs.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === d.qs.length){
+            qComment.textContent = right === 6 ? d.cAll : right >= 4 ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 小遊戲：披薩配對 ---------- */
+  var ROUNDS = [
+    { expr:'1/2 + 1/4', lcm:4,  opts:['2/6','3/4','5/4','2/4','1/2','1/6'], ans:1 },
+    { expr:'2/3 − 1/6', lcm:6,  opts:['3/6','1/2','2/6','1/3','5/6','4/6'], ans:1 },
+    { expr:'1/3 + 2/5', lcm:15, opts:['9/15','11/15','13/15','7/15','3/8','11/8'], ans:1 },
+    { expr:'3/4 − 1/3', lcm:12, opts:['5/12','2/12','7/12','1/12','5/7','2/1'], ans:0 },
+    { expr:'5/6 − 1/2', lcm:6,  opts:['2/6','1/3','1/2','3/6','2/3','1/6'], ans:1 }
+  ];
+  var gRound = 0, gScore = 0;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var elExpr = document.getElementById('gExpr');
+  var elHint = document.getElementById('gHint');
+  var gGrid = document.getElementById('gGrid');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+
+  function startGRound(){
+    var r = ROUNDS[gRound];
+    elRound.textContent = gRound + 1;
+    elExpr.textContent = r.expr;
+    elHint.textContent = L().gHintMsg(r.lcm);
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    clearNode(gGrid);
+    r.opts.forEach(function(optStr, oi){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'fnum'; b.textContent = optStr;
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        if (oi === r.ans){
+          var all = gGrid.querySelectorAll('.fnum');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          b.classList.add('found');
+          gScore += 30;
+          elScore.textContent = gScore;
+          if (gRound === ROUNDS.length - 1){
+            gMsg.innerHTML = '<span class="yes">' + L().gHitMsg(r.expr, optStr) + ' ' + L().gClearMsg() + ' ' + L().gWinMsg(gScore) + '</span>';
+          } else {
+            gMsg.innerHTML = '<span class="yes">' + L().gHitMsg(r.expr, optStr) + ' ' + L().gClearMsg() + '</span>';
+            gNext.disabled = false;
+          }
+        } else {
+          b.classList.add('miss');
+          gScore = Math.max(0, gScore - 5);
+          elScore.textContent = gScore;
+          gMsg.innerHTML = '<span class="no">' + L().gMissMsg(optStr) + '</span>';
+          setTimeout(function(){ b.classList.remove('miss'); }, 700);
+        }
+      });
+      gGrid.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startGRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startGRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildEqChips();
+    renderEqBar();
+    renderCdRef();
+    buildCdChips();
+    renderCdConv();
+    buildModeChips();
+    renderStep();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

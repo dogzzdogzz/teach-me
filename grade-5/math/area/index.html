@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>面積魔術師 — 三個圖形一家人</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .scene{width:100%;height:auto;display:block;margin-top:14px}
+  .shapeIcon{max-width:260px;margin:0 auto}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .caption{margin-top:14px;font-size:16px;min-height:24px;text-align:center}
+  .secret-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+  .secret{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center;
+  }
+  .secret .big{font-size:34px}
+  .secret h3{font-size:18px;margin:6px 0}
+  .secret p{font-size:15px;color:var(--muted)}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .hint{color:var(--muted);font-size:15px;margin-top:8px;text-align:center}
+  .gprompt{font-size:19px;margin-top:14px;text-align:center;font-weight:700}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px;text-align:center}
+  .btnrow{display:flex;gap:12px;margin-top:16px;justify-content:center}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+
+  <header>
+    <h1 data-i18n="h1">📐 面積魔術師</h1>
+    <p class="sub" data-i18n="sub">平行四邊形、三角形、梯形 —— 其實是三兄弟</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    這三個圖形都可以「變身」成長方形：<br>剪一剪、拼一拼，面積公式就藏在裡面。
+  </div>
+
+  <!-- 1. 平行四邊形 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">平行四邊形：剪一剪，變長方形</h2>
+    <p class="lead" data-i18n="s1lead">把左邊的三角形剪下來，移到右邊，就變成長方形了！</p>
+
+    <div class="card">
+      <svg class="scene" viewBox="0 0 380 220" role="img" data-i18n-aria="s1aria" aria-label="平行四邊形透過剪下三角形移到另一邊變成長方形的圖">
+        <g class="pstep" data-step="0">
+          <polygon points="60,170 240,170 300,60 120,60" fill="none" stroke="#2B2A33" stroke-width="3"/>
+          <line x1="120" y1="60" x2="120" y2="170" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="6 5"/>
+          <text x="150" y="192" font-size="16" fill="#2B2A33" text-anchor="middle">6</text>
+          <text x="95" y="118" font-size="16" fill="#3B7DD8" text-anchor="middle">4</text>
+          <text x="150" y="210" font-size="13" fill="#6B6875" text-anchor="middle" data-i18n="svgLabelBase">底</text>
+          <text x="70" y="140" font-size="13" fill="#3B7DD8" text-anchor="middle" data-i18n="svgLabelHeight">高</text>
+        </g>
+        <g class="pstep" data-step="1" style="display:none">
+          <polygon points="60,170 240,170 300,60 120,60" fill="none" stroke="#2B2A33" stroke-width="3"/>
+          <polygon points="60,170 120,60 120,170" fill="#FDF0E0" stroke="#E8871E" stroke-width="3" opacity="0.9"/>
+          <line x1="120" y1="60" x2="120" y2="170" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="6 5"/>
+          <text x="150" y="192" font-size="16" fill="#2B2A33" text-anchor="middle">6</text>
+          <text x="95" y="118" font-size="16" fill="#3B7DD8" text-anchor="middle">4</text>
+          <text x="150" y="210" font-size="13" fill="#6B6875" text-anchor="middle" data-i18n="svgLabelBase">底</text>
+          <text x="70" y="140" font-size="13" fill="#3B7DD8" text-anchor="middle" data-i18n="svgLabelHeight">高</text>
+          <path d="M 95 150 Q 190 110 235 150" fill="none" stroke="#E8871E" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#pArrow)"/>
+          <defs><marker id="pArrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#E8871E"/></marker></defs>
+        </g>
+        <g class="pstep" data-step="2" style="display:none">
+          <polygon points="120,60 300,60 300,170 120,170" fill="#E3F4EB" stroke="#2F9E69" stroke-width="3"/>
+          <polygon points="60,170 120,60 120,170" transform="translate(180,0)" fill="#FDF0E0" stroke="#E8871E" stroke-width="2" opacity="0.85"/>
+          <text x="210" y="192" font-size="16" fill="#2B2A33" text-anchor="middle">6</text>
+          <text x="105" y="118" font-size="16" fill="#3B7DD8" text-anchor="middle">4</text>
+          <text x="210" y="210" font-size="13" fill="#6B6875" text-anchor="middle" data-i18n="svgLabelBase">底</text>
+          <text x="80" y="140" font-size="13" fill="#3B7DD8" text-anchor="middle" data-i18n="svgLabelHeight">高</text>
+        </g>
+      </svg>
+      <div class="chips" id="p1Chips"></div>
+      <p class="caption" id="p1Cap"></p>
+    </div>
+  </section>
+
+  <!-- 2. 三角形 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">三角形：其實是半個平行四邊形</h2>
+    <p class="lead" data-i18n="s2lead">把兩個一樣的三角形拼起來，剛好變成一個平行四邊形。</p>
+
+    <div class="card">
+      <svg class="scene" viewBox="0 0 380 220" role="img" data-i18n-aria="s2aria" aria-label="兩個相同三角形拼成平行四邊形的圖">
+        <polygon points="60,170 220,170 140,70" fill="#E3F4EB" stroke="#2F9E69" stroke-width="3"/>
+        <line x1="140" y1="70" x2="140" y2="170" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="6 5"/>
+        <text x="140" y="192" font-size="16" fill="#2B2A33" text-anchor="middle">8</text>
+        <text x="118" y="122" font-size="16" fill="#3B7DD8" text-anchor="middle">5</text>
+        <text x="140" y="210" font-size="13" fill="#6B6875" text-anchor="middle" data-i18n="svgLabelBase">底</text>
+        <text x="98" y="122" font-size="13" fill="#3B7DD8" text-anchor="middle" data-i18n="svgLabelHeight">高</text>
+        <g id="t2extra" style="display:none">
+          <polygon points="60,170 220,170 140,70" transform="rotate(180 180 120)" fill="#FDF0E0" stroke="#E8871E" stroke-width="3"/>
+        </g>
+      </svg>
+      <div class="chips" id="t2Chips"></div>
+      <p class="caption" id="t2Cap"></p>
+    </div>
+  </section>
+
+  <!-- 3. 梯形 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">梯形：兩個一樣的梯形拼成平行四邊形</h2>
+    <p class="lead" data-i18n="s3lead">把梯形轉 180 度，跟原來的拼在一起，就變成平行四邊形。</p>
+
+    <div class="card">
+      <svg class="scene" viewBox="0 0 400 220" role="img" data-i18n-aria="s3aria" aria-label="兩個相同梯形拼成平行四邊形的圖">
+        <polygon points="100,60 160,60 200,140 60,140" fill="#E8F0FB" stroke="#3B7DD8" stroke-width="3"/>
+        <line x1="160" y1="60" x2="160" y2="140" stroke="#E8871E" stroke-width="2" stroke-dasharray="6 5"/>
+        <text x="130" y="48" font-size="14" fill="#2B2A33" text-anchor="middle">3</text>
+        <text x="130" y="164" font-size="14" fill="#2B2A33" text-anchor="middle">7</text>
+        <text x="180" y="105" font-size="14" fill="#E8871E" text-anchor="middle">4</text>
+        <text x="130" y="35" font-size="12" fill="#6B6875" text-anchor="middle" data-i18n="svgLabelTop">上底</text>
+        <text x="130" y="182" font-size="12" fill="#6B6875" text-anchor="middle" data-i18n="svgLabelBottom">下底</text>
+        <text x="200" y="105" font-size="12" fill="#E8871E" text-anchor="middle" data-i18n="svgLabelHeight">高</text>
+        <g id="z3extra" style="display:none">
+          <polygon points="100,60 160,60 200,140 60,140" transform="rotate(180 180 100)" fill="#FDF0E0" stroke="#E8871E" stroke-width="3"/>
+        </g>
+      </svg>
+      <div class="chips" id="z3Chips"></div>
+      <p class="caption" id="z3Cap"></p>
+    </div>
+  </section>
+
+  <!-- 4. 高的陷阱 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">小心陷阱：高一定要「垂直」量！</h2>
+    <p class="lead" data-i18n="s4lead">斜邊看起來很像高，但它不是高。高永遠是垂直量到底邊的距離。</p>
+    <div class="card">
+      <svg class="scene shapeIcon" viewBox="0 0 240 160" role="img" data-i18n-aria="tipAria" aria-label="三角形的斜邊和高的比較圖，斜邊不是高">
+        <polygon points="40,140 200,140 130,40" fill="#FBE9E9" stroke="#D64545" stroke-width="2"/>
+        <line x1="130" y1="40" x2="130" y2="140" stroke="#2F9E69" stroke-width="3" stroke-dasharray="6 5"/>
+        <path d="M120,140 L120,130 L130,130" fill="none" stroke="#2F9E69" stroke-width="2"/>
+        <text x="75" y="80" font-size="12" fill="#D64545" font-weight="bold" text-anchor="middle" data-i18n="tipWrongLabel">✗ 斜邊（不是高）</text>
+        <text x="160" y="95" font-size="12" fill="#2F9E69" font-weight="bold" text-anchor="middle" data-i18n="tipRightLabel">✓ 高（垂直量到底邊）</text>
+      </svg>
+    </div>
+    <div class="secret-row">
+      <div class="secret">
+        <div class="big">📏</div>
+        <h3 data-i18n="tip1Title">高＝垂直距離</h3>
+        <p data-i18n="tip1Body">不管是平行四邊形、三角形還是梯形，「高」都是從一邊垂直量到對邊（或底邊）的距離，跟旁邊那條斜斜的邊沒有關係。</p>
+      </div>
+      <div class="secret">
+        <div class="big">⚠️</div>
+        <h3 data-i18n="tip2Title">常見錯誤：把斜邊當高</h3>
+        <p data-i18n="tip2Body">三角形看起來斜邊比較長、比較明顯，很容易誤會那就是高。記住：高的線一定要跟底邊呈直角（90°）。</p>
+      </div>
+      <div class="secret">
+        <div class="big">➗</div>
+        <h3 data-i18n="tip3Title">常見錯誤：忘記除以 2</h3>
+        <p data-i18n="tip3Body">三角形和梯形的面積公式最後都要除以 2，只有平行四邊形不用。算完別忘了檢查一次！</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">試題</span>
+    <h2 data-i18n="s5h2">六題檢查一下</h2>
+    <p class="lead" data-i18n="s5lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / 6</span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 6. 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">小遊戲</span>
+    <h2 data-i18n="s6h2">面積工地</h2>
+    <p class="lead" data-i18n="s6lead">工地需要量出每個圖形的面積才能施工。點選正確答案，答錯會扣分，但工地不會關門，可以一直試！</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <div id="gIcon"></div>
+      <p class="gprompt" id="gPromptText"></p>
+      <p class="hint" id="gHint"></p>
+      <div id="gOpts" class="opts"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    三個公式都是同一招 —— 想辦法變回長方形。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '面積魔術師 — 三個圖形一家人',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      h1: '📐 面積魔術師',
+      sub: '平行四邊形、三角形、梯形 —— 其實是三兄弟',
+      intro: '這三個圖形都可以「變身」成長方形：<br>剪一剪、拼一拼，面積公式就藏在裡面。',
+      eb1: '範例教學 1', eb2: '範例教學 2', eb3: '範例教學 3', eb4: '範例教學 4',
+      eb5: '試題', eb6: '小遊戲',
+      s1h2: '平行四邊形：剪一剪，變長方形',
+      s1lead: '把左邊的三角形剪下來，移到右邊，就變成長方形了！',
+      s1aria: '平行四邊形透過剪下三角形移到另一邊變成長方形的圖',
+      svgLabelBase: '底', svgLabelHeight: '高',
+      p1step0: '① 原來的平行四邊形', p1step1: '② 剪下三角形', p1step2: '③ 拼成長方形',
+      p1cutLabel: '這塊三角形要被剪下來，移到右邊。',
+      p1resultText: '長方形的底 = 6，高 = 4，面積 = 6 × 4 = 24 平方公分。<br>平行四邊形的面積，就等於底 × 高！',
+      s2h2: '三角形：其實是半個平行四邊形',
+      s2lead: '把兩個一樣的三角形拼起來，剛好變成一個平行四邊形。',
+      s2aria: '兩個相同三角形拼成平行四邊形的圖',
+      t2c0: '① 一個三角形', t2c1: '② 兩個三角形拼起來',
+      t2resultText: '平行四邊形面積 = 8 × 5 = 40 平方公分。<br>一個三角形只有一半：40 ÷ 2 = 20 平方公分。<br>三角形面積 = 底 × 高 ÷ 2！',
+      s3h2: '梯形：兩個一樣的梯形拼成平行四邊形',
+      s3lead: '把梯形轉 180 度，跟原來的拼在一起，就變成平行四邊形。',
+      s3aria: '兩個相同梯形拼成平行四邊形的圖',
+      svgLabelTop: '上底', svgLabelBottom: '下底',
+      z3c0: '① 一個梯形', z3c1: '② 兩個梯形拼起來',
+      z3resultText: '平行四邊形的底 = 上底 + 下底 = 3 + 7 = 10，高 = 4。<br>面積 = 10 × 4 = 40 平方公分，是兩個梯形的面積。<br>一個梯形 = 40 ÷ 2 = 20 平方公分。<br>梯形面積 = (上底＋下底) × 高 ÷ 2！',
+      s4h2: '小心陷阱：高一定要「垂直」量！',
+      s4lead: '斜邊看起來很像高，但它不是高。高永遠是垂直量到底邊的距離。',
+      tipAria: '三角形的斜邊和高的比較圖，斜邊不是高',
+      tipWrongLabel: '✗ 斜邊（不是高）',
+      tipRightLabel: '✓ 高（垂直量到底邊）',
+      tip1Title: '高＝垂直距離',
+      tip1Body: '不管是平行四邊形、三角形還是梯形，「高」都是從一邊垂直量到對邊（或底邊）的距離，跟旁邊那條斜斜的邊沒有關係。',
+      tip2Title: '常見錯誤：把斜邊當高',
+      tip2Body: '三角形看起來斜邊比較長、比較明顯，很容易誤會那就是高。記住：高的線一定要跟底邊呈直角（90°）。',
+      tip3Title: '常見錯誤：忘記除以 2',
+      tip3Body: '三角形和梯形的面積公式最後都要除以 2，只有平行四邊形不用。算完別忘了檢查一次！',
+      s5h2: '六題檢查一下',
+      s5lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b>',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b>'; },
+      cAll: '全對！你已經是面積魔術師 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面的範例教學再玩一次。',
+      qs: [
+        { stem:'一個平行四邊形，底是 8 公分、高是 5 公分，面積是多少？',
+          opts:['13 平方公分','20 平方公分','40 平方公分','45 平方公分'], ans:2,
+          why:'平行四邊形面積 = 底 × 高 = 8 × 5 = 40（平方公分），不用除以 2。' },
+        { stem:'一個三角形，底是 10 公分、高是 6 公分，面積是多少？',
+          opts:['30 平方公分','16 平方公分','36 平方公分','60 平方公分'], ans:0,
+          why:'三角形面積 = 底 × 高 ÷ 2 = 10 × 6 ÷ 2 = 60 ÷ 2 = 30（平方公分）。別忘了要除以 2！' },
+        { stem:'一個梯形，上底是 5 公分、下底是 9 公分、高是 4 公分，面積是多少？',
+          opts:['56 平方公分','14 平方公分','32 平方公分','28 平方公分'], ans:3,
+          why:'梯形面積 = (上底＋下底) × 高 ÷ 2 = (5+9) × 4 ÷ 2 = 56 ÷ 2 = 28（平方公分）。' },
+        { stem:'一個三角形的斜邊長 10 公分，從頂點垂直畫到底邊的高是 6 公分。算面積要用哪一個數字當「高」？',
+          opts:['10 公分（斜邊）','6 公分（垂直高）','10 和 6 加起來','沒辦法知道'], ans:1,
+          why:'高一定要「垂直」量到底邊，斜邊不是高，所以要用 6 公分。' },
+        { stem:'一個平行四邊形面積是 42 平方公分，底是 7 公分，高是多少？',
+          opts:['35 公分','49 公分','8 公分','6 公分'], ans:3,
+          why:'底 × 高 = 面積，所以高 = 面積 ÷ 底 = 42 ÷ 7 = 6（公分）。' },
+        { stem:'下面哪一句話是正確的？',
+          opts:['三角形的高一定是三邊中最長的那一邊','梯形的高，是上底和下底之間的垂直距離','平行四邊形的高，可以是任何一條斜邊的長度','梯形的面積 = 上底 × 下底 × 高'], ans:1,
+          why:'高必須是垂直距離：梯形的高是上底和下底之間垂直量出來的長度；不是任何斜邊，也不一定是最長邊；梯形面積公式是 (上底＋下底) × 高 ÷ 2，不是三個數相乘。' }
+      ],
+      s6h2: '面積工地',
+      s6lead: '工地需要量出每個圖形的面積才能施工。點選正確答案，答錯會扣分，但工地不會關門，可以一直試！',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
+      gPrompt: function(name){ return '這是一個' + name + '，面積是多少？'; },
+      shapeNamePara: '平行四邊形', shapeNameTri: '三角形', shapeNameTrap: '梯形',
+      wordBase: '底', wordHeight: '高', wordTop: '上底', wordBottom: '下底', unitCm2: '平方公分',
+      hintPara: '提示：平行四邊形面積 = 底 × 高',
+      hintTri: '提示：三角形面積 = 底 × 高 ÷ 2（別忘了除以 2）',
+      hintTrap: '提示：梯形面積 = (上底＋下底) × 高 ÷ 2',
+      gCorrectFirst: function(area){ return '太厲害了，一次就答對！面積 = ' + area + ' 平方公分。基本 +10 分，一次答對再加碼 +20 分！'; },
+      gCorrect: function(area){ return '答對了！面積 = ' + area + ' 平方公分，+10 分。'; },
+      gWrong: function(v){ return v + ' 不對，再想想公式，－5 分，繼續試試看！'; },
+      gClear: '這一關完成了！按「下一關」繼續。',
+      gWin: function(score){ return '五關全部完工！總分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      footer: '三個公式都是同一招 —— 想辦法變回長方形。'
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'The Area Magician — Three Shapes, One Family',
+      btn: '中',
+      home: '← Back to teach-me home',
+      h1: '📐 The Area Magician',
+      sub: 'Parallelograms, triangles, and trapezoids — really are three siblings',
+      intro: 'All three shapes can transform into a rectangle:<br>cut, slide, or pair them up — and the area formula reveals itself.',
+      eb1: 'Example 1', eb2: 'Example 2', eb3: 'Example 3', eb4: 'Example 4',
+      eb5: 'Quiz', eb6: 'Game',
+      s1h2: 'Parallelogram: Cut and Turn It Into a Rectangle',
+      s1lead: 'Cut off the triangle on the left, slide it to the right, and it becomes a rectangle!',
+      s1aria: 'Diagram of a parallelogram turning into a rectangle by cutting off a triangle and sliding it to the other side',
+      svgLabelBase: 'base', svgLabelHeight: 'height',
+      p1step0: '① The original parallelogram', p1step1: '② Cut off a triangle', p1step2: '③ Rearranged into a rectangle',
+      p1cutLabel: 'This triangle gets cut off and moved to the right.',
+      p1resultText: 'The rectangle has base = 6, height = 4, so area = 6 × 4 = 24 cm².<br>A parallelogram’s area is exactly base × height!',
+      s2h2: 'Triangle: Really Just Half a Parallelogram',
+      s2lead: 'Put two identical triangles together and they form a parallelogram.',
+      s2aria: 'Diagram of two identical triangles forming a parallelogram',
+      t2c0: '① One triangle', t2c1: '② Two triangles put together',
+      t2resultText: 'The parallelogram’s area = 8 × 5 = 40 cm².<br>One triangle is only half of that: 40 ÷ 2 = 20 cm².<br>Triangle area = base × height ÷ 2!',
+      s3h2: 'Trapezoid: Two Identical Trapezoids Form a Parallelogram',
+      s3lead: 'Rotate a trapezoid 180° and join it to the original, and you get a parallelogram.',
+      s3aria: 'Diagram of two identical trapezoids forming a parallelogram',
+      svgLabelTop: 'top base', svgLabelBottom: 'bottom base',
+      z3c0: '① One trapezoid', z3c1: '② Two trapezoids put together',
+      z3resultText: 'The parallelogram’s base = top + bottom = 3 + 7 = 10, height = 4.<br>Area = 10 × 4 = 40 cm², which is the area of two trapezoids.<br>One trapezoid = 40 ÷ 2 = 20 cm².<br>Trapezoid area = (top + bottom) × height ÷ 2!',
+      s4h2: 'Watch Out: Height Must Be Measured Perpendicular!',
+      s4lead: 'A slanted side may look like the height, but it isn’t. Height is always the perpendicular distance to the base.',
+      tipAria: 'Comparison diagram of a triangle’s slanted side and its height, showing the slanted side is not the height',
+      tipWrongLabel: '✗ Slanted side (not the height)',
+      tipRightLabel: '✓ Height (measured perpendicular to the base)',
+      tip1Title: 'Height = perpendicular distance',
+      tip1Body: 'Whether it’s a parallelogram, triangle, or trapezoid, the “height” is always the perpendicular distance from one side to the opposite side (or base) — it has nothing to do with the slanted edge next to it.',
+      tip2Title: 'Common mistake: mistaking the slanted side for the height',
+      tip2Body: 'A triangle’s slanted side often looks longer and more obvious, so it’s easy to mistake it for the height. Remember: the height line must form a right angle (90°) with the base.',
+      tip3Title: 'Common mistake: forgetting to divide by 2',
+      tip3Body: 'The area formulas for triangles and trapezoids both end with dividing by 2 — only the parallelogram doesn’t need it. Don’t forget to double-check after you calculate!',
+      s5h2: 'Six Quick Questions',
+      s5lead: 'Tap an answer and we’ll tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll: 'Perfect score! You’re an area magician 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That’s okay — scroll up and try the examples again.',
+      qs: [
+        { stem:'A parallelogram has a base of 8 cm and a height of 5 cm. What is its area?',
+          opts:['13 cm²','20 cm²','40 cm²','45 cm²'], ans:2,
+          why:'Area of a parallelogram = base × height = 8 × 5 = 40 cm². No need to divide by 2.' },
+        { stem:'A triangle has a base of 10 cm and a height of 6 cm. What is its area?',
+          opts:['30 cm²','16 cm²','36 cm²','60 cm²'], ans:0,
+          why:'Area of a triangle = base × height ÷ 2 = 10 × 6 ÷ 2 = 60 ÷ 2 = 30 cm². Don’t forget to divide by 2!' },
+        { stem:'A trapezoid has a top base of 5 cm, a bottom base of 9 cm, and a height of 4 cm. What is its area?',
+          opts:['56 cm²','14 cm²','32 cm²','28 cm²'], ans:3,
+          why:'Area of a trapezoid = (top + bottom) × height ÷ 2 = (5+9) × 4 ÷ 2 = 56 ÷ 2 = 28 cm².' },
+        { stem:'A triangle’s slanted side is 10 cm long. The perpendicular height from the top vertex to the base is 6 cm. Which number should you use as the “height” when finding the area?',
+          opts:['10 cm (the slanted side)','6 cm (the perpendicular height)','10 and 6 added together','There’s no way to know'], ans:1,
+          why:'The height must be measured perpendicular to the base. The slanted side is not the height, so you should use 6 cm.' },
+        { stem:'A parallelogram has an area of 42 cm² and a base of 7 cm. What is its height?',
+          opts:['35 cm','49 cm','8 cm','6 cm'], ans:3,
+          why:'base × height = area, so height = area ÷ base = 42 ÷ 7 = 6 cm.' },
+        { stem:'Which statement below is correct?',
+          opts:['A triangle’s height is always its longest side','A trapezoid’s height is the perpendicular distance between the top and bottom bases','A parallelogram’s height can be any of its slanted sides','A trapezoid’s area = top base × bottom base × height'], ans:1,
+          why:'Height must be a perpendicular distance: a trapezoid’s height is measured perpendicular between its top and bottom bases — not any slanted side, and not necessarily the longest side. The trapezoid area formula is (top + bottom) × height ÷ 2, not a product of three numbers.' }
+      ],
+      s6h2: 'Area Construction Site',
+      s6lead: 'The construction site needs the area of each shape before it can build. Tap the correct answer — wrong taps cost points, but the site never closes, so keep trying!',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
+      gPrompt: function(name){ return 'Here is a ' + name + '. What is its area?'; },
+      shapeNamePara: 'parallelogram', shapeNameTri: 'triangle', shapeNameTrap: 'trapezoid',
+      wordBase: 'base', wordHeight: 'height', wordTop: 'top', wordBottom: 'bottom', unitCm2: 'cm²',
+      hintPara: 'Hint: parallelogram area = base × height',
+      hintTri: 'Hint: triangle area = base × height ÷ 2 (don’t forget to divide by 2)',
+      hintTrap: 'Hint: trapezoid area = (top + bottom) × height ÷ 2',
+      gCorrectFirst: function(area){ return 'Amazing, correct on the first try! Area = ' + area + ' cm². +10 points, plus a +20 first-try bonus!'; },
+      gCorrect: function(area){ return 'Correct! Area = ' + area + ' cm², +10 points.'; },
+      gWrong: function(v){ return v + ' is not right — think about the formula again. −5 points. Keep trying!'; },
+      gClear: 'Round complete! Press “Next round” to continue.',
+      gWin: function(score){ return 'All 5 rounds complete! Final score: ' + score + ' points 🏆 Press “Restart” to play again.'; },
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      footer: 'All three formulas use the same trick — find a way to turn the shape back into a rectangle.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  /* ---------- 1. 平行四邊形：剪一剪 ---------- */
+  var p1Step = 0;
+  var p1Chips = document.getElementById('p1Chips');
+  var p1Cap = document.getElementById('p1Cap');
+
+  function buildP1(){
+    p1Chips.textContent = '';
+    var d = L();
+    var labels = [d.p1step0, d.p1step1, d.p1step2];
+    labels.forEach(function(label, idx){
+      var b = makeChip(label, idx === p1Step);
+      b.addEventListener('click', function(){ p1Step = idx; renderP1(); });
+      p1Chips.appendChild(b);
+    });
+  }
+
+  function renderP1(){
+    var frames = document.querySelectorAll('.pstep');
+    for (var i = 0; i < frames.length; i++){
+      frames[i].style.display = (parseInt(frames[i].getAttribute('data-step'), 10) === p1Step) ? 'block' : 'none';
+    }
+    buildP1();
+    var d = L();
+    if (p1Step === 1) p1Cap.innerHTML = d.p1cutLabel;
+    else if (p1Step === 2) p1Cap.innerHTML = d.p1resultText;
+    else p1Cap.innerHTML = '';
+  }
+
+  /* ---------- 2. 三角形：半個平行四邊形 ---------- */
+  var t2On = 0;
+  var t2Chips = document.getElementById('t2Chips');
+  var t2Cap = document.getElementById('t2Cap');
+  var t2Extra = document.getElementById('t2extra');
+
+  function buildT2(){
+    t2Chips.textContent = '';
+    var d = L();
+    [d.t2c0, d.t2c1].forEach(function(label, idx){
+      var b = makeChip(label, idx === t2On);
+      b.addEventListener('click', function(){ t2On = idx; renderT2(); });
+      t2Chips.appendChild(b);
+    });
+  }
+
+  function renderT2(){
+    t2Extra.style.display = (t2On === 1) ? 'block' : 'none';
+    buildT2();
+    t2Cap.innerHTML = (t2On === 1) ? L().t2resultText : '';
+  }
+
+  /* ---------- 3. 梯形：兩個拼成平行四邊形 ---------- */
+  var z3On = 0;
+  var z3Chips = document.getElementById('z3Chips');
+  var z3Cap = document.getElementById('z3Cap');
+  var z3Extra = document.getElementById('z3extra');
+
+  function buildZ3(){
+    z3Chips.textContent = '';
+    var d = L();
+    [d.z3c0, d.z3c1].forEach(function(label, idx){
+      var b = makeChip(label, idx === z3On);
+      b.addEventListener('click', function(){ z3On = idx; renderZ3(); });
+      z3Chips.appendChild(b);
+    });
+  }
+
+  function renderZ3(){
+    z3Extra.style.display = (z3On === 1) ? 'block' : 'none';
+    buildZ3();
+    z3Cap.innerHTML = (z3On === 1) ? L().z3resultText : '';
+  }
+
+  /* ---------- 5. 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function buildQuiz(){
+    var d = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    d.qs.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === d.qs.length){
+            qComment.textContent = right === 6 ? d.cAll : right >= 4 ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 6. 小遊戲：面積工地 ---------- */
+  var ROUNDS = [
+    { type:'para', b:6, h:4,           area:24, opts:['12','24','30','10','20','28'], ans:1 },
+    { type:'tri',  b:8, h:5,           area:20, opts:['40','15','20','13','24','18'], ans:2 },
+    { type:'trap', top:3, bottom:5, h:4, area:16, opts:['32','16','12','20','14','18'], ans:1 },
+    { type:'para', b:9, h:6,           area:54, opts:['45','60','54','27','48','15'], ans:2 },
+    { type:'tri',  b:10, h:7,          area:35, opts:['70','35','17','40','42','30'], ans:1 }
+  ];
+
+  var gRoundIdx = 0, gScore = 0, gFirstTry = true, gLocked = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var elIcon = document.getElementById('gIcon');
+  var elPrompt = document.getElementById('gPromptText');
+  var elHint = document.getElementById('gHint');
+  var gOpts = document.getElementById('gOpts');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+
+  function shapeName(type){
+    var d = L();
+    if (type === 'para') return d.shapeNamePara;
+    if (type === 'tri') return d.shapeNameTri;
+    return d.shapeNameTrap;
+  }
+
+  function shapeHint(type){
+    var d = L();
+    if (type === 'para') return d.hintPara;
+    if (type === 'tri') return d.hintTri;
+    return d.hintTrap;
+  }
+
+  function shapeIconSVG(round){
+    var d = L();
+    if (round.type === 'para'){
+      return '<svg class="scene shapeIcon" viewBox="0 0 240 160" role="img">' +
+        '<polygon points="40,130 160,130 200,40 80,40" fill="#E3F4EB" stroke="#2F9E69" stroke-width="3"/>' +
+        '<line x1="80" y1="40" x2="80" y2="130" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="5 4"/>' +
+        '<text x="120" y="150" font-size="14" text-anchor="middle" fill="#2B2A33">' + d.wordBase + ' = ' + round.b + '</text>' +
+        '<text x="55" y="88" font-size="14" text-anchor="middle" fill="#3B7DD8">' + d.wordHeight + ' = ' + round.h + '</text>' +
+        '</svg>';
+    }
+    if (round.type === 'tri'){
+      return '<svg class="scene shapeIcon" viewBox="0 0 240 160" role="img">' +
+        '<polygon points="40,130 200,130 120,40" fill="#FDF0E0" stroke="#E8871E" stroke-width="3"/>' +
+        '<line x1="120" y1="40" x2="120" y2="130" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="5 4"/>' +
+        '<text x="120" y="150" font-size="14" text-anchor="middle" fill="#2B2A33">' + d.wordBase + ' = ' + round.b + '</text>' +
+        '<text x="95" y="88" font-size="14" text-anchor="middle" fill="#3B7DD8">' + d.wordHeight + ' = ' + round.h + '</text>' +
+        '</svg>';
+    }
+    return '<svg class="scene shapeIcon" viewBox="0 0 240 160" role="img">' +
+      '<polygon points="80,40 160,40 200,130 40,130" fill="#E8F0FB" stroke="#3B7DD8" stroke-width="3"/>' +
+      '<line x1="160" y1="40" x2="160" y2="130" stroke="#E8871E" stroke-width="2" stroke-dasharray="5 4"/>' +
+      '<text x="120" y="28" font-size="13" text-anchor="middle" fill="#2B2A33">' + d.wordTop + ' = ' + round.top + '</text>' +
+      '<text x="120" y="150" font-size="13" text-anchor="middle" fill="#2B2A33">' + d.wordBottom + ' = ' + round.bottom + '</text>' +
+      '<text x="185" y="88" font-size="13" text-anchor="middle" fill="#E8871E">' + d.wordHeight + ' = ' + round.h + '</text>' +
+      '</svg>';
+  }
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRoundIdx];
+    gFirstTry = true; gLocked = false;
+    elRound.textContent = gRoundIdx + 1;
+    elIcon.innerHTML = shapeIconSVG(round);
+    elPrompt.textContent = d.gPrompt(shapeName(round.type));
+    elHint.textContent = shapeHint(round.type);
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    gOpts.textContent = '';
+    round.opts.forEach(function(val, oi){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'opt'; b.textContent = val;
+      b.addEventListener('click', function(){
+        if (gLocked) return;
+        var good = (oi === round.ans);
+        if (good){
+          gLocked = true;
+          var all = gOpts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          b.classList.add('right');
+          if (gFirstTry){
+            gScore += 30;
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrectFirst(round.area) + '</span>';
+          } else {
+            gScore += 10;
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrect(round.area) + '</span>';
+          }
+          elScore.textContent = gScore;
+          if (gRoundIdx === ROUNDS.length - 1){
+            gMsg.innerHTML += '<br><span class="yes">' + L().gWin(gScore) + '</span>';
+            gNext.disabled = true;
+          } else {
+            gMsg.innerHTML += '<br>' + L().gClear;
+            gNext.disabled = false;
+          }
+        } else {
+          gFirstTry = false;
+          b.disabled = true;
+          b.classList.add('wrong');
+          gScore = Math.max(0, gScore - 5);
+          elScore.textContent = gScore;
+          gMsg.innerHTML = '<span class="no">' + L().gWrong(val) + '</span>';
+        }
+      });
+      gOpts.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRoundIdx = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRoundIdx < ROUNDS.length - 1){ gRoundIdx++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    p1Step = 0; renderP1();
+    t2On = 0; renderT2();
+    z3On = 0; renderZ3();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小數商店 — 小數的乘與除</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .scene{width:100%;height:auto;display:block;margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+
+  .coinrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .coinlabel{font-size:15px;color:var(--muted);min-width:78px}
+  .coin{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:#fff;flex:none}
+  .coin.dollar{background:var(--orange)}
+  .coin.dime{background:var(--blue)}
+  .coin.cent{background:var(--green)}
+  .moneyeq{margin-top:16px;font-size:20px;text-align:center}
+  .moneyeq b{color:var(--orange)}
+
+  .stepbox{background:var(--blue-soft);border-radius:14px;padding:14px 18px;margin-top:16px;font-size:17px}
+  .rule{background:var(--orange-soft);border:2px dashed var(--orange);border-radius:14px;
+    padding:14px 18px;margin-top:16px;font-size:17px;text-align:center}
+
+  .people-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;justify-content:center}
+  .person{background:var(--bg);border:2px solid var(--line);border-radius:16px;padding:14px;text-align:center;min-width:88px}
+  .person .emoji{font-size:30px}
+  .person .amt{font-weight:700;color:var(--blue);margin-top:6px;font-size:16px}
+
+  .frac-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:16px}
+  .fraccard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center}
+  .fraccard .eq{font-size:22px;font-weight:700;color:var(--green);margin-top:8px}
+  .fraccard p{font-size:14px;color:var(--muted);margin-top:6px}
+
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .problem{font-size:19px;margin-top:14px}
+  .problem b{color:var(--orange)}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px}
+  .shopcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-top:16px}
+  .shopcard{
+    border:2px solid var(--line);background:var(--card);border-radius:12px;padding:14px 4px;
+    text-align:center;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .shopcard.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .shopcard.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .shopcard:disabled{cursor:default;opacity:.85}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .btnrow{display:flex;gap:12px;margin-top:16px}
+
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+
+  <header>
+    <h1 data-i18n="h1">💰 小數商店</h1>
+    <p class="sub" data-i18n="sub">用元角分，學會小數的乘與除</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    小數就像<strong>錢幣</strong>：1 元 分成 10 角，1 角就是 0.1 元；<br>
+    1 角再分成 10 分，1 分就是 0.01 元。今天用「元角分」學會小數的乘與除。
+  </div>
+
+  <!-- 1. 錢幣模型 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">錢幣模型：元、角、分</h2>
+    <p class="lead" data-i18n="s1lead">點一個金額，看看它由幾個「元」、幾個「角」、幾個「分」組成。</p>
+
+    <div class="card">
+      <svg class="scene" viewBox="0 0 700 170" role="img" data-i18n-aria="s1aria" aria-label="元角分的位值圖，顯示2.34元分成2元3角4分">
+        <g font-family="sans-serif" text-anchor="middle">
+          <rect x="40"  y="30" width="150" height="90" rx="14" fill="#FDF0E0" stroke="#E8871E" stroke-width="3"/>
+          <text x="115" y="60" font-size="14" fill="#E8871E" font-weight="bold" data-i18n="svgOnes">元（個位）</text>
+          <text x="115" y="100" font-size="34" fill="#E8871E" font-weight="bold">2</text>
+
+          <text x="205" y="90" font-size="34" fill="#2B2A33" font-weight="bold">.</text>
+
+          <rect x="240" y="30" width="150" height="90" rx="14" fill="#E8F0FB" stroke="#3B7DD8" stroke-width="3"/>
+          <text x="315" y="60" font-size="14" fill="#3B7DD8" font-weight="bold" data-i18n="svgTenths">角（0.1）</text>
+          <text x="315" y="100" font-size="34" fill="#3B7DD8" font-weight="bold">3</text>
+
+          <rect x="440" y="30" width="150" height="90" rx="14" fill="#E3F4EB" stroke="#2F9E69" stroke-width="3"/>
+          <text x="515" y="60" font-size="14" fill="#2F9E69" font-weight="bold" data-i18n="svgHundredths">分（0.01）</text>
+          <text x="515" y="100" font-size="34" fill="#2F9E69" font-weight="bold">4</text>
+        </g>
+        <text x="350" y="150" text-anchor="middle" font-size="16" fill="#6B6875" data-i18n="svgCaption">2.34 元 = 2 元 + 3 角 + 4 分</text>
+      </svg>
+
+      <div class="chips" id="moneyChips"></div>
+      <div id="moneyDisplay"></div>
+      <p class="moneyeq" id="moneyEq"></p>
+    </div>
+  </section>
+
+  <!-- 2. 小數 × 整數 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">小數 × 整數：連加再點小數點</h2>
+    <p class="lead" data-i18n="s2lead">點一題，看看用錢連加，再看規則怎麼算得更快。</p>
+
+    <div class="card">
+      <div class="chips" id="multChips"></div>
+      <div class="stepbox" id="multAdd"></div>
+      <div class="stepbox" id="multRuleStep"></div>
+      <div class="rule" id="multRuleText"></div>
+    </div>
+  </section>
+
+  <!-- 3. 小數 ÷ 整數 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">小數 ÷ 整數：平分身上的錢</h2>
+    <p class="lead" data-i18n="s3lead">點一題，看看錢怎麼平分給大家，商的小數點要對齊被除數。</p>
+
+    <div class="card">
+      <div class="chips" id="divChips"></div>
+      <p class="problem" id="divProblem"></p>
+      <div class="people-row" id="divPeople"></div>
+      <div class="stepbox" id="divStep"></div>
+      <div class="rule" id="divRuleText"></div>
+    </div>
+  </section>
+
+  <!-- 4. 分數與小數 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">分數與小數是同一個數</h2>
+    <p class="lead" data-i18n="s4lead">分東西的分數，換一種寫法就是小數。</p>
+    <div class="frac-row">
+      <div class="fraccard">
+        <div style="font-size:28px" data-i18n="frac1">1/2</div>
+        <div class="eq">= 0.5</div>
+        <p data-i18n="frac1p">把 1 個東西分成 2 份，拿 1 份。</p>
+      </div>
+      <div class="fraccard">
+        <div style="font-size:28px" data-i18n="frac2">1/4</div>
+        <div class="eq">= 0.25</div>
+        <p data-i18n="frac2p">把 1 個東西分成 4 份，拿 1 份。</p>
+      </div>
+      <div class="fraccard">
+        <div style="font-size:28px" data-i18n="frac3">3/5</div>
+        <div class="eq">= 0.6</div>
+        <p data-i18n="frac3p">把 1 個東西分成 5 份，拿 3 份。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">試題</span>
+    <h2 data-i18n="s5h2">六題檢查一下</h2>
+    <p class="lead" data-i18n="s5lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / 6</span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 6. 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">小遊戲</span>
+    <h2 data-i18n="s6h2">小數商店</h2>
+    <p class="lead" data-i18n="s6lead">幫忙算出正確的錢，點對答案卡就過關。第一次就答對加 20 分，答錯後答對加 10 分，答錯扣 5 分。</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <p class="problem" id="gProblem"></p>
+      <p class="hint" id="gHint"></p>
+      <div id="gCards" class="shopcards"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    先當整數算，最後把小數點放回對的位置。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '小數商店 — 小數的乘與除',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      h1: '💰 小數商店',
+      sub: '用元角分，學會小數的乘與除',
+      intro: '小數就像<strong>錢幣</strong>：1 元 分成 10 角，1 角就是 0.1 元；<br>1 角再分成 10 分，1 分就是 0.01 元。今天用「元角分」學會小數的乘與除。',
+      eb1: '範例教學 1', eb2: '範例教學 2', eb3: '範例教學 3', eb4: '範例教學 4',
+      eb5: '試題', eb6: '小遊戲',
+
+      s1h2: '錢幣模型：元、角、分',
+      s1lead: '點一個金額，看看它由幾個「元」、幾個「角」、幾個「分」組成。',
+      s1aria: '元角分的位值圖，顯示2.34元分成2元3角4分',
+      svgOnes: '元（個位）', svgTenths: '角（0.1）', svgHundredths: '分（0.01）',
+      svgCaption: '2.34 元 = 2 元 + 3 角 + 4 分',
+      moneyChip: function(v){ return v.toFixed(2) + ' 元'; },
+      dollarLabel: '元（1）', dimeLabel: '角（0.1）', centLabel: '分（0.01）',
+      moneyEq: function(v, d, t, c){
+        return '<b>' + v.toFixed(2) + ' 元</b> = ' + d + ' 元 + ' + t + ' 角 + ' + c + ' 分';
+      },
+
+      s2h2: '小數 × 整數：連加再點小數點',
+      s2lead: '點一題，看看用錢連加，再看規則怎麼算得更快。',
+      multChip: function(a, n){ return a.toFixed(1) + ' × ' + n; },
+      multAdd: function(a, n, sum){
+        var arr = []; for (var i = 0; i < n; i++) arr.push(a.toFixed(1));
+        return arr.join(' + ') + ' = ' + sum.toFixed(1) + ' 元';
+      },
+      multRuleStep: function(a, n, whole, prod){
+        return '先當整數乘：' + Math.round(a*10) + ' × ' + n + ' = ' + prod + '（先不管小數點）';
+      },
+      multRuleText: function(a, n, prod, sum){
+        return '因為 ' + a.toFixed(1) + ' 有 1 位小數，把 ' + prod + ' 的小數點往左移 1 位 → <b>' + sum.toFixed(1) + '</b>';
+      },
+
+      s3h2: '小數 ÷ 整數：平分身上的錢',
+      s3lead: '點一題，看看錢怎麼平分給大家，商的小數點要對齊被除數。',
+      divChip: function(a, n){ return a.toFixed(1) + ' ÷ ' + n; },
+      divProblem: function(a, n){ return '把 <b>' + a.toFixed(1) + ' 元</b> 平分給 <b>' + n + ' 人</b>，每人拿多少元？'; },
+      divPersonAmt: function(v){ return v.toFixed(1) + ' 元'; },
+      divStep: function(a, n, tenths, q){
+        return a.toFixed(1) + ' 元 = ' + tenths + ' 個 0.1 元，' + tenths + ' ÷ ' + n + ' = ' + q + '（先當整數除）';
+      },
+      divRuleText: function(a, n, result){
+        return '商的小數點要對齊被除數：' + q_(result) + ' 個 0.1 元 = <b>' + result.toFixed(1) + ' 元</b>';
+      },
+
+      s4h2: '分數與小數是同一個數',
+      s4lead: '分東西的分數，換一種寫法就是小數。',
+      frac1: '1/2', frac1p: '把 1 個東西分成 2 份，拿 1 份。',
+      frac2: '1/4', frac2p: '把 1 個東西分成 4 份，拿 1 份。',
+      frac3: '3/5', frac3p: '把 1 個東西分成 5 份，拿 3 份。',
+
+      s5h2: '六題檢查一下',
+      s5lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      cAll: '全對！你已經是小數高手 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面再操作一次範例。',
+      qs: [
+        { stem:'1.2 × 3 = ?', opts:['0.36','36','3.6','4.2'], ans:2,
+          why:'12 × 3 = 36，1.2 有 1 位小數，把小數點往左移 1 位 → 3.6。' },
+        { stem:'0.5 × 0.5 = ?', opts:['2.5','0.25','1.0','0.1'], ans:1,
+          why:'5 × 5 = 25，兩個數各有 1 位小數，共移 2 位 → 0.25，不是 2.5。' },
+        { stem:'2.4 × 3 = ?', opts:['7.2','72','0.72','6.4'], ans:0,
+          why:'24 × 3 = 72，2.4 有 1 位小數，把小數點往左移 1 位 → 7.2。' },
+        { stem:'7.2 ÷ 3 = ?', opts:['3.2','24','2.4','0.24'], ans:2,
+          why:'72 ÷ 3 = 24，商的小數點對齊被除數（1 位小數）→ 2.4。' },
+        { stem:'9.6 ÷ 4 = ?', opts:['24','1.6','0.24','2.4'], ans:3,
+          why:'96 ÷ 4 = 24，商的小數點對齊被除數（1 位小數）→ 2.4。' },
+        { stem:'0.6 × 4 = ?', opts:['0.24','24','2.4','3.4'], ans:2,
+          why:'6 × 4 = 24，0.6 有 1 位小數，把小數點往左移 1 位 → 2.4。' }
+      ],
+
+      s6h2: '小數商店',
+      s6lead: '幫忙算出正確的錢，點對答案卡就過關。第一次就答對加 20 分，答錯後答對加 10 分，答錯扣 5 分。',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      gHintFirst: '提示：把「元」換成「角」再算，最後換回來。',
+      gHit20: function(text){ return '<b>+20 分！</b> ' + text; },
+      gHit10: function(text){ return '<b>+10 分！</b> ' + text; },
+      gMiss: '不對，再試一次（−5 分）。',
+      gClear: '過關！按「下一關」繼續。',
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      rounds: [
+        { text:'一枝鉛筆 <b>3.5</b> 元，買 <b>4</b> 枝，一共要多少錢？', ans:'14',
+          cards:['14','1.4','35','12','13.5','20'],
+          hint:'提示：3.5 元 = 35 個 0.1 元，35 × 4 = 140 個 0.1 元 = 14 元。' },
+        { text:'一個蛋糕 <b>8.4</b> 元，<b>3</b> 個人平分，每人要付多少錢？', ans:'2.8',
+          cards:['2.8','28','0.28','2.4','3.8','8.4'],
+          hint:'提示：8.4 元 = 84 個 0.1 元，84 ÷ 3 = 28 個 0.1 元 = 2.8 元。' },
+        { text:'<b>0.9 × 6</b> = ?', ans:'5.4',
+          cards:['5.4','54','0.54','5.6','6.4','4.5'],
+          hint:'提示：0.9 元 = 9 個 0.1 元，9 × 6 = 54 個 0.1 元 = 5.4 元。' },
+        { text:'<b>7.5 ÷ 5</b> = ?', ans:'1.5',
+          cards:['1.5','15','0.15','2.5','12.5','1.05'],
+          hint:'提示：7.5 元 = 75 個 0.1 元，75 ÷ 5 = 15 個 0.1 元 = 1.5 元。' },
+        { text:'<b>2.6 × 4</b> = ?', ans:'10.4',
+          cards:['10.4','104','1.04','9.4','10.24','8.4'],
+          hint:'提示：2.6 元 = 26 個 0.1 元，26 × 4 = 104 個 0.1 元 = 10.4 元。' }
+      ],
+      footer: '先當整數算，最後把小數點放回對的位置。'
+    },
+
+    en: {
+      htmlLang: 'en',
+      title: 'The Decimal Shop — Multiplying & Dividing Decimals',
+      btn: '中',
+      home: '← Back to teach-me home',
+      h1: '💰 The Decimal Shop',
+      sub: 'Learn decimal multiplication and division with dollars, dimes and cents',
+      intro: 'Decimals are like <strong>coins</strong>: 1 dollar splits into 10 dimes, and 1 dime is 0.1 dollars;<br>1 dime splits into 10 cents, and 1 cent is 0.01 dollars. Today we use coins to learn decimal × and ÷.',
+      eb1: 'Example 1', eb2: 'Example 2', eb3: 'Example 3', eb4: 'Example 4',
+      eb5: 'Quiz', eb6: 'Game',
+
+      s1h2: 'Coin Model: Dollars, Dimes, Cents',
+      s1lead: 'Tap an amount and see how many dollars, dimes, and cents it is made of.',
+      s1aria: 'Place-value chart showing 2.34 dollars split into 2 dollars, 3 dimes, 4 cents',
+      svgOnes: 'Dollars (ones)', svgTenths: 'Dimes (0.1)', svgHundredths: 'Cents (0.01)',
+      svgCaption: '$2.34 = 2 dollars + 3 dimes + 4 cents',
+      moneyChip: function(v){ return '$' + v.toFixed(2); },
+      dollarLabel: 'dollars (1)', dimeLabel: 'dimes (0.1)', centLabel: 'cents (0.01)',
+      moneyEq: function(v, d, t, c){
+        return '<b>$' + v.toFixed(2) + '</b> = ' + d + ' dollars + ' + t + ' dimes + ' + c + ' cents';
+      },
+
+      s2h2: 'Decimal × Whole Number: Add Then Place the Point',
+      s2lead: 'Tap a problem, watch the repeated addition with money, then see the faster rule.',
+      multChip: function(a, n){ return a.toFixed(1) + ' × ' + n; },
+      multAdd: function(a, n, sum){
+        var arr = []; for (var i = 0; i < n; i++) arr.push('$' + a.toFixed(1));
+        return arr.join(' + ') + ' = $' + sum.toFixed(1);
+      },
+      multRuleStep: function(a, n, whole, prod){
+        return 'First multiply as whole numbers: ' + Math.round(a*10) + ' × ' + n + ' = ' + prod + ' (ignore the point for now)';
+      },
+      multRuleText: function(a, n, prod, sum){
+        return 'Since ' + a.toFixed(1) + ' has 1 decimal place, move the point in ' + prod + ' one place left → <b>' + sum.toFixed(1) + '</b>';
+      },
+
+      s3h2: 'Decimal ÷ Whole Number: Sharing Money Fairly',
+      s3lead: 'Tap a problem and watch the money get shared out — the quotient point lines up with the dividend.',
+      divChip: function(a, n){ return a.toFixed(1) + ' ÷ ' + n; },
+      divProblem: function(a, n){ return 'Share <b>$' + a.toFixed(1) + '</b> equally among <b>' + n + ' people</b> — how much does each get?'; },
+      divPersonAmt: function(v){ return '$' + v.toFixed(1); },
+      divStep: function(a, n, tenths, q){
+        return '$' + a.toFixed(1) + ' = ' + tenths + ' dimes, ' + tenths + ' ÷ ' + n + ' = ' + q + ' (divide as whole numbers first)';
+      },
+      divRuleText: function(a, n, result){
+        return 'Line the quotient point up with the dividend: ' + q_(result) + ' dimes = <b>$' + result.toFixed(1) + '</b>';
+      },
+
+      s4h2: 'Fractions and Decimals Are the Same Number',
+      s4lead: 'A fraction from sharing things is just another way to write a decimal.',
+      frac1: '1/2', frac1p: 'Split 1 thing into 2 parts, take 1 part.',
+      frac2: '1/4', frac2p: 'Split 1 thing into 4 parts, take 1 part.',
+      frac3: '3/5', frac3p: 'Split 1 thing into 5 parts, take 3 parts.',
+
+      s5h2: 'Six Quick Questions',
+      s5lead: 'Tap an answer and we will tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll: 'Perfect score! You are a decimal master 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That is okay — scroll up and try the examples again.',
+      qs: [
+        { stem:'1.2 × 3 = ?', opts:['0.36','36','3.6','4.2'], ans:2,
+          why:'12 × 3 = 36. 1.2 has 1 decimal place, so move the point one place left → 3.6.' },
+        { stem:'0.5 × 0.5 = ?', opts:['2.5','0.25','1.0','0.1'], ans:1,
+          why:'5 × 5 = 25. Both numbers have 1 decimal place, so move the point 2 places total → 0.25, not 2.5.' },
+        { stem:'2.4 × 3 = ?', opts:['7.2','72','0.72','6.4'], ans:0,
+          why:'24 × 3 = 72. 2.4 has 1 decimal place, so move the point one place left → 7.2.' },
+        { stem:'7.2 ÷ 3 = ?', opts:['3.2','24','2.4','0.24'], ans:2,
+          why:'72 ÷ 3 = 24. Line the quotient point up with the dividend (1 decimal place) → 2.4.' },
+        { stem:'9.6 ÷ 4 = ?', opts:['24','1.6','0.24','2.4'], ans:3,
+          why:'96 ÷ 4 = 24. Line the quotient point up with the dividend (1 decimal place) → 2.4.' },
+        { stem:'0.6 × 4 = ?', opts:['0.24','24','2.4','3.4'], ans:2,
+          why:'6 × 4 = 24. 0.6 has 1 decimal place, so move the point one place left → 2.4.' }
+      ],
+
+      s6h2: 'The Decimal Shop',
+      s6lead: 'Work out the correct amount of money and tap the matching card to clear the round. First-try correct = +20, correct after a miss = +10, wrong = −5.',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      gHintFirst: 'Hint: convert dollars to dimes, calculate, then convert back.',
+      gHit20: function(text){ return '<b>+20 points!</b> ' + text; },
+      gHit10: function(text){ return '<b>+10 points!</b> ' + text; },
+      gMiss: 'Not quite — try again (−5 points).',
+      gClear: 'Round cleared! Press “Next round” to continue.',
+      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      rounds: [
+        { text:'A pencil costs <b>$3.5</b> each. How much for <b>4</b> pencils?', ans:'14',
+          cards:['14','1.4','35','12','13.5','20'],
+          hint:'Hint: $3.5 = 35 dimes, 35 × 4 = 140 dimes = $14.' },
+        { text:'A cake costs <b>$8.4</b>, shared by <b>3</b> people. How much does each person pay?', ans:'2.8',
+          cards:['2.8','28','0.28','2.4','3.8','8.4'],
+          hint:'Hint: $8.4 = 84 dimes, 84 ÷ 3 = 28 dimes = $2.8.' },
+        { text:'<b>0.9 × 6</b> = ?', ans:'5.4',
+          cards:['5.4','54','0.54','5.6','6.4','4.5'],
+          hint:'Hint: $0.9 = 9 dimes, 9 × 6 = 54 dimes = $5.4.' },
+        { text:'<b>7.5 ÷ 5</b> = ?', ans:'1.5',
+          cards:['1.5','15','0.15','2.5','12.5','1.05'],
+          hint:'Hint: $7.5 = 75 dimes, 75 ÷ 5 = 15 dimes = $1.5.' },
+        { text:'<b>2.6 × 4</b> = ?', ans:'10.4',
+          cards:['10.4','104','1.04','9.4','10.24','8.4'],
+          hint:'Hint: $2.6 = 26 dimes, 26 × 4 = 104 dimes = $10.4.' }
+      ],
+      footer: 'Multiply or divide as whole numbers first, then put the decimal point back in the right place.'
+    }
+  };
+
+  function q_(result){ return Math.round(result * 10); }
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  /* ---------- 1. 錢幣模型 ---------- */
+  var MONEY_AMOUNTS = [2.34, 1.2, 3.05, 0.6];
+  var moneyV = MONEY_AMOUNTS[0];
+  var moneyChips = document.getElementById('moneyChips');
+  var moneyDisplay = document.getElementById('moneyDisplay');
+  var moneyEqEl = document.getElementById('moneyEq');
+
+  function buildMoneyChips(){
+    moneyChips.textContent = '';
+    MONEY_AMOUNTS.forEach(function(v){
+      var b = makeChip(L().moneyChip(v), v === moneyV);
+      b.addEventListener('click', function(){ moneyV = v; buildMoneyChips(); renderMoney(); });
+      moneyChips.appendChild(b);
+    });
+  }
+
+  function coinRow(count, cls, label){
+    var row = document.createElement('div');
+    row.className = 'coinrow';
+    var lab = document.createElement('span');
+    lab.className = 'coinlabel'; lab.textContent = label;
+    row.appendChild(lab);
+    for (var i = 0; i < count; i++){
+      var c = document.createElement('div');
+      c.className = 'coin ' + cls;
+      c.textContent = cls === 'dollar' ? '$1' : (cls === 'dime' ? '0.1' : '0.01');
+      row.appendChild(c);
+    }
+    if (count === 0){
+      var z = document.createElement('span');
+      z.className = 'coinlabel'; z.textContent = '0';
+      row.appendChild(z);
+    }
+    return row;
+  }
+
+  function renderMoney(){
+    var cents = Math.round(moneyV * 100);
+    var dollars = Math.floor(cents / 100);
+    var rest = cents % 100;
+    var dimes = Math.floor(rest / 10);
+    var pennies = rest % 10;
+    var d = L();
+    moneyDisplay.textContent = '';
+    moneyDisplay.appendChild(coinRow(dollars, 'dollar', d.dollarLabel));
+    moneyDisplay.appendChild(coinRow(dimes, 'dime', d.dimeLabel));
+    moneyDisplay.appendChild(coinRow(pennies, 'cent', d.centLabel));
+    moneyEqEl.innerHTML = d.moneyEq(moneyV, dollars, dimes, pennies);
+  }
+
+  /* ---------- 2. 小數 × 整數 ---------- */
+  var MULT_PROBLEMS = [
+    { a:1.2, n:3 }, { a:2.4, n:3 }, { a:0.6, n:4 }
+  ];
+  var multIdx = 0;
+  var multChips = document.getElementById('multChips');
+  var multAdd = document.getElementById('multAdd');
+  var multRuleStep = document.getElementById('multRuleStep');
+  var multRuleText = document.getElementById('multRuleText');
+
+  function buildMultChips(){
+    multChips.textContent = '';
+    MULT_PROBLEMS.forEach(function(p, i){
+      var b = makeChip(L().multChip(p.a, p.n), i === multIdx);
+      b.addEventListener('click', function(){ multIdx = i; buildMultChips(); renderMult(); });
+      multChips.appendChild(b);
+    });
+  }
+
+  function renderMult(){
+    var d = L();
+    var p = MULT_PROBLEMS[multIdx];
+    var whole = Math.round(p.a * 10);
+    var prod = whole * p.n;
+    var sum = prod / 10;
+    multAdd.innerHTML = d.multAdd(p.a, p.n, sum);
+    multRuleStep.innerHTML = d.multRuleStep(p.a, p.n, whole, prod);
+    multRuleText.innerHTML = d.multRuleText(p.a, p.n, prod, sum);
+  }
+
+  /* ---------- 3. 小數 ÷ 整數 ---------- */
+  var DIV_PROBLEMS = [
+    { a:7.2, n:3 }, { a:8.4, n:2 }, { a:9.6, n:4 }, { a:6.3, n:7 }
+  ];
+  var divIdx = 0;
+  var divChips = document.getElementById('divChips');
+  var divProblem = document.getElementById('divProblem');
+  var divPeople = document.getElementById('divPeople');
+  var divStep = document.getElementById('divStep');
+  var divRuleText = document.getElementById('divRuleText');
+
+  function buildDivChips(){
+    divChips.textContent = '';
+    DIV_PROBLEMS.forEach(function(p, i){
+      var b = makeChip(L().divChip(p.a, p.n), i === divIdx);
+      b.addEventListener('click', function(){ divIdx = i; buildDivChips(); renderDiv(); });
+      divChips.appendChild(b);
+    });
+  }
+
+  function renderDiv(){
+    var d = L();
+    var p = DIV_PROBLEMS[divIdx];
+    var tenths = Math.round(p.a * 10);
+    var qTenths = tenths / p.n;
+    var result = qTenths / 10;
+    divProblem.innerHTML = d.divProblem(p.a, p.n);
+    divPeople.textContent = '';
+    for (var i = 0; i < p.n; i++){
+      var person = document.createElement('div');
+      person.className = 'person';
+      var emoji = document.createElement('div');
+      emoji.className = 'emoji'; emoji.textContent = '🧒';
+      var amt = document.createElement('div');
+      amt.className = 'amt'; amt.textContent = d.divPersonAmt(result);
+      person.appendChild(emoji); person.appendChild(amt);
+      divPeople.appendChild(person);
+    }
+    divStep.innerHTML = d.divStep(p.a, p.n, tenths, qTenths);
+    divRuleText.innerHTML = d.divRuleText(p.a, p.n, result);
+  }
+
+  /* ---------- 5. 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function buildQuiz(){
+    var d = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    d.qs.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === d.qs.length){
+            qComment.textContent = right === 6 ? d.cAll : right >= 4 ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 6. 小遊戲：小數商店 ---------- */
+  var gRoundIdx = 0, gScore = 0, gMissedThisRound = false, gSolved = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var elProblem = document.getElementById('gProblem');
+  var elHint = document.getElementById('gHint');
+  var gCards = document.getElementById('gCards');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+
+  function startRound(){
+    var d = L();
+    var r = d.rounds[gRoundIdx];
+    gMissedThisRound = false; gSolved = false;
+    elRound.textContent = gRoundIdx + 1;
+    elProblem.innerHTML = r.text;
+    elHint.textContent = r.hint;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    gCards.textContent = '';
+    r.cards.forEach(function(cardText){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'shopcard'; b.textContent = cardText;
+      b.addEventListener('click', function(){
+        if (b.disabled || gSolved) return;
+        var d2 = L();
+        var rr = d2.rounds[gRoundIdx];
+        if (cardText === rr.ans){
+          b.disabled = true; b.classList.add('right');
+          gSolved = true;
+          var pts = gMissedThisRound ? 10 : 20;
+          gScore += pts;
+          elScore.textContent = gScore;
+          gMsg.innerHTML = '<span class="yes">' + (pts === 20 ? d2.gHit20(d2.gClear) : d2.gHit10(d2.gClear)) + '</span>';
+          var allCards = gCards.querySelectorAll('.shopcard');
+          for (var i = 0; i < allCards.length; i++) allCards[i].disabled = true;
+          if (gRoundIdx === d2.rounds.length - 1){
+            gMsg.innerHTML = '<span class="yes">' + d2.gWin(gScore) + '</span>';
+          } else {
+            gNext.disabled = false;
+          }
+        } else {
+          gMissedThisRound = true;
+          b.disabled = true; b.classList.add('wrong');
+          gScore = Math.max(0, gScore - 5);
+          elScore.textContent = gScore;
+          gMsg.innerHTML = '<span class="no">' + d2.gMiss + '</span>';
+        }
+      });
+      gCards.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRoundIdx = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    var d = L();
+    if (gRoundIdx < d.rounds.length - 1){ gRoundIdx++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildMoneyChips();
+    renderMoney();
+    buildMultChips();
+    renderMult();
+    buildDivChips();
+    renderDiv();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

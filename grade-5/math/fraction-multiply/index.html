@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我分數乘法 — 切了再切</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .scene{width:100%;height:auto;display:block;margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .numgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin-top:16px}
+  .cell{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);
+    padding:8px 0;text-align:center;font-size:17px;font-weight:600;color:var(--muted);
+  }
+  .cell.on{background:var(--green);border-color:var(--green);color:#fff;transform:scale(1.05);transition:.15s}
+  .hopline{margin-top:12px;font-size:18px;min-height:32px}
+  .hopline b{color:var(--green)}
+  .secret-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+  .secret{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center;
+  }
+  .secret .big{font-size:34px}
+  .secret h3{font-size:18px;margin:6px 0}
+  .secret p{font-size:15px;color:var(--muted)}
+  .checker{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+  .checker input{
+    width:110px;font-size:20px;padding:8px 12px;border:2px solid var(--line);border-radius:12px;
+    background:var(--card);color:var(--ink);text-align:center;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .verdict{margin-top:14px;font-size:18px;min-height:30px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .target{font-size:22px;margin-top:14px}
+  .target b{color:var(--orange);font-size:28px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px}
+  .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;margin-top:16px}
+  .num{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);padding:10px 0;
+    font-size:17px;font-weight:600;cursor:pointer;color:var(--ink);
+  }
+  .num.found{background:var(--green);border-color:var(--green);color:#fff}
+  .num.miss{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+  .num:disabled{cursor:default}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .btnrow{display:flex;gap:12px;margin-top:16px}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .ansgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px;margin-top:16px}
+  .anscard{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);padding:14px 0;
+    font-size:20px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .anscard.right{background:var(--green);border-color:var(--green);color:#fff}
+  .anscard.wrong{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+  .anscard:disabled{cursor:default}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+
+  <header>
+    <h1 data-i18n="h1">✂️ 分數乘法</h1>
+    <p class="sub" data-i18n="sub">切了再切，學會分數乘法的秘密</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    分數乘法其實就是<strong>「切了再切」</strong>：想像一張紙先切成幾份，再把其中一份繼續切一次，<br>
+    剩下的那一小塊，就是兩個分數相乘的答案。
+  </div>
+
+  <!-- 1. 分數×整數＝連加 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">整數乘分數，就是連加</h2>
+    <p class="lead" data-i18n="s1lead">選一個倍數，看看 1/4 連加幾次會變成多少。</p>
+
+    <div class="card">
+      <svg class="scene" viewBox="0 0 610 110" role="img" data-i18n-aria="s1aria" aria-label="整數乘以1/4的長條圖，顯示連加的過程">
+        <g id="barGroup"></g>
+      </svg>
+      <div class="chips" id="barChips"></div>
+      <p class="hopline" id="barLine"></p>
+    </div>
+  </section>
+
+  <!-- 2. 分數×分數＝面積模型 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">分數乘分數，用面積來看</h2>
+    <p class="lead" data-i18n="s2lead">選一組分數，直的切一次、橫的切一次，兩次都塗到的地方就是答案。</p>
+
+    <div class="card">
+      <svg class="scene" viewBox="0 0 330 240" role="img" data-i18n-aria="s2aria" aria-label="分數乘分數的面積模型圖，顯示兩次切割重疊的部分">
+        <g id="areaGroup"></g>
+      </svg>
+      <div class="chips" id="areaChips"></div>
+      <p class="hopline" id="areaLine"></p>
+      <p class="lead" style="margin-top:10px" data-i18n="areaRule">
+        從圖上可以看出規則：分子乘分子、分母乘分母，藍色重疊的格子就是答案。
+      </p>
+    </div>
+  </section>
+
+  <!-- 3. 三個重點 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">三個一定要記住的重點</h2>
+    <p class="lead" data-i18n="s3lead">看懂圖之後，記住這三件事就好。</p>
+    <div class="secret-row">
+      <div class="secret">
+        <div class="big">⬇️</div>
+        <h3 data-i18n="f1h">乘一個比 1 小的分數會變小</h3>
+        <p data-i18n="f1p">×1/2 就是找一半：6 × 1/2 = 3，比 6 小。</p>
+      </div>
+      <div class="secret">
+        <div class="big">🔄</div>
+        <h3 data-i18n="f2h">帶分數要先變成假分數</h3>
+        <p data-i18n="f2p">1又1/2 = 3/2，先變成這樣才能乘：3/2 × 2/3 = 1。</p>
+      </div>
+      <div class="secret">
+        <div class="big">✂️</div>
+        <h3 data-i18n="f3h">能先約分就先約分</h3>
+        <p data-i18n="f3p">2/4 × 1/3 先把 2/4 約成 1/2，再乘 1/2 × 1/3 = 1/6，數字比較小、比較好算。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">試題</span>
+    <h2 data-i18n="s4h2">六題檢查一下</h2>
+    <p class="lead" data-i18n="s4lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / 6</span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 5. 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">小遊戲</span>
+    <h2 data-i18n="s5h2">面積切切樂</h2>
+    <p class="lead" data-i18n="s5lead">看清楚算式，在卡片裡找出正確答案。選對加 10 分，選錯扣 5 分，但遊戲不會結束。</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <p class="target"><span data-i18n="gExprLabel">請算出：</span> <b id="gExpr"></b></p>
+      <p class="hint" id="gHint"></p>
+      <div id="gCardsGrid" class="ansgrid"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>分子乘分子、分母乘分母，最後記得約分。</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '教我分數乘法 — 切了再切',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      h1: '✂️ 分數乘法',
+      sub: '切了再切，學會分數乘法的秘密',
+      intro: '分數乘法其實就是<strong>「切了再切」</strong>：想像一張紙先切成幾份，再把其中一份繼續切一次，<br>剩下的那一小塊，就是兩個分數相乘的答案。',
+
+      eb1: '範例教學 1',
+      s1h2: '整數乘分數，就是連加',
+      s1lead: '選一個倍數，看看 1/4 連加幾次會變成多少。',
+      s1aria: '整數乘以1/4的長條圖，顯示連加的過程',
+      barChipLabel: function(n){ return n + ' × 1/4'; },
+      barLine: function(n, addStr, resultStr){
+        return n + ' × 1/4 就是把 1/4 連加 ' + n + ' 次：' + addStr + ' = ' + resultStr;
+      },
+
+      eb2: '範例教學 2',
+      s2h2: '分數乘分數，用面積來看',
+      s2lead: '選一組分數，直的切一次、橫的切一次，兩次都塗到的地方就是答案。',
+      s2aria: '分數乘分數的面積模型圖，顯示兩次切割重疊的部分',
+      areaChipLabel: function(a,b,c,d){ return a + '/' + b + ' × ' + c + '/' + d; },
+      areaExprLine: function(a,b,c,d,pn,pd,sn,sd){
+        var raw = a + '/' + b + ' × ' + c + '/' + d + ' = (' + a + '×' + c + ')/(' + b + '×' + d + ') = ' + pn + '/' + pd;
+        if (pn === sn && pd === sd) return raw + '（已經是最簡分數）';
+        return raw + ' = ' + sn + '/' + sd + '（約分後）';
+      },
+      areaRule: '從圖上可以看出規則：分子乘分子、分母乘分母，藍色重疊的格子就是答案。',
+
+      eb3: '範例教學 3',
+      s3h2: '三個一定要記住的重點',
+      s3lead: '看懂圖之後，記住這三件事就好。',
+      f1h: '乘一個比 1 小的分數會變小',
+      f1p: '×1/2 就是找一半：6 × 1/2 = 3，比 6 小。',
+      f2h: '帶分數要先變成假分數',
+      f2p: '1又1/2 = 3/2，先變成這樣才能乘：3/2 × 2/3 = 1。',
+      f3h: '能先約分就先約分',
+      f3p: '2/4 × 1/3 先把 2/4 約成 1/2，再乘 1/2 × 1/3 = 1/6，數字比較小、比較好算。',
+
+      eb4: '試題',
+      s4h2: '六題檢查一下',
+      s4lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b>',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b>'; },
+      cAll: '全對！你已經是分數乘法高手 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面再看一次範例教學。',
+      qs: [
+        { stem:'3 × 2/5 = ?',
+          opts:['3又2/5','2/5','6/5','9/5'], ans:2,
+          why:'3 × 2/5 = (3×2)/5 = 6/5。整數可以想成 3/1，分子乘分子（3×2=6）、分母乘分母（1×5=5）。「3又2/5」是把 3 加上 2/5，不是相乘。' },
+        { stem:'1/2 × 1/3 = ?',
+          opts:['1/6','5/6','1/2','1/5'], ans:0,
+          why:'分子乘分子（1×1=1）、分母乘分母（2×3=6），答案是 1/6。5/6 是把兩個分數加起來的答案，不是相乘。' },
+        { stem:'2/3 × 1/4 = ?（記得約分）',
+          opts:['2/12','11/12','2/3','1/6'], ans:3,
+          why:'2/3 × 1/4 = (2×1)/(3×4) = 2/12，能約分就要約分：2/12 = 1/6（分子分母都除以 2）。別忘了最後要化成最簡分數。' },
+        { stem:'1又1/2 × 2 = ?',
+          opts:['2又1/2','3','3又1/2','1'], ans:1,
+          why:'帶分數要先化成假分數再乘：1又1/2 = 3/2，3/2 × 2 = 6/2 = 3。如果只把整數部分乘 2（1×2=2），忘了乘分數部分，就會算成「2又1/2」，是錯的。' },
+        { stem:'小美說：「乘以一個比 1 小的分數，答案會變小。」哪一個例子可以證明她說的對？',
+          opts:['4 × 3/2 = 6','4 + 1/2 = 4又1/2','4 × 1/2 = 2','4 × 2 = 8'], ans:2,
+          why:'1/2 是真分數（比 1 小），乘出來的答案會變小：4 × 1/2 = 2，2 比 4 小。3/2 比 1 大，乘出來反而變大；4+1/2 是加法，不是乘法；4×2 用的是整數，不是分數。' },
+        { stem:'3/4 × 2/5 = ?',
+          opts:['3/10','6/20','6/4','23/20'], ans:0,
+          why:'3/4 × 2/5 = (3×2)/(4×5) = 6/20，約分（分子分母都除以 2）＝ 3/10。6/20 忘了約分；23/20 是把兩個分數加起來，不是相乘。' }
+      ],
+
+      eb5: '小遊戲',
+      s5h2: '面積切切樂',
+      s5lead: '看清楚算式，在卡片裡找出正確答案。選對加 10 分，選錯扣 5 分，但遊戲不會結束。',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數', gExprLabel: '請算出：',
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      roundExpr: ['2 × 1/5', '1/2 × 1/4', '2/3 × 3/4', '1又1/3 × 3/4', '3/5 × 5/9'],
+      roundHints: [
+        '提示：2 × 1/5 就是把 1/5 連加 2 次。',
+        '提示：分子乘分子（1×1=1）、分母乘分母（2×4=8）。',
+        '提示：先乘出來是 6/12，記得約分。',
+        '提示：1又1/3 要先變成假分數 4/3 才能乘。',
+        '提示：3×5=15，5×9=45，15/45 可以約分成 1/3。'
+      ],
+      gCorrectMid: function(card){ return '答對了！答案就是 ' + card + '，加 10 分！這關過了，按「下一關」繼續。'; },
+      gWrongPick: function(card){ return '「' + card + '」不對，扣 5 分，再選一次看看。'; },
+      gWin: function(score, perfect){
+        return perfect
+          ? ('太厲害了！五關全破，而且完全沒選錯，加碼 20 分，最後得分 ' + score + ' 分 🏆')
+          : ('五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次完全不選錯。');
+      },
+
+      footer: '把整頁縮成一句：<strong>分子乘分子、分母乘分母，最後記得約分。</strong>'
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'Multiplying Fractions — Cut, Then Cut Again',
+      btn: '中',
+      home: '← Back to teach-me home',
+      h1: '✂️ Multiplying Fractions',
+      sub: 'Cut, then cut again — discover the secret of multiplying fractions',
+      intro: 'Multiplying fractions is really just <strong>“cutting, then cutting again”</strong>: imagine cutting a sheet of paper into pieces,<br>then cutting one of those pieces again — the little piece left over is the answer.',
+
+      eb1: 'Example 1',
+      s1h2: 'Whole Number × Fraction Is Repeated Addition',
+      s1lead: 'Pick a number and see how many times adding 1/4 gets you there.',
+      s1aria: 'Bar chart showing a whole number times 1/4 as repeated shading',
+      barChipLabel: function(n){ return n + ' × 1/4'; },
+      barLine: function(n, addStr, resultStr){
+        return n + ' × 1/4 means adding 1/4 together ' + n + ' times: ' + addStr + ' = ' + resultStr;
+      },
+
+      eb2: 'Example 2',
+      s2h2: 'Fraction × Fraction, Seen as Area',
+      s2lead: 'Pick a pair of fractions — cut once up-and-down, once side-to-side. Where both cuts overlap is the answer.',
+      s2aria: 'Area model showing two fractions multiplied where the shaded cuts overlap',
+      areaChipLabel: function(a,b,c,d){ return a + '/' + b + ' × ' + c + '/' + d; },
+      areaExprLine: function(a,b,c,d,pn,pd,sn,sd){
+        var raw = a + '/' + b + ' × ' + c + '/' + d + ' = (' + a + '×' + c + ')/(' + b + '×' + d + ') = ' + pn + '/' + pd;
+        if (pn === sn && pd === sd) return raw + ' (already simplest form)';
+        return raw + ' = ' + sn + '/' + sd + ' (simplified)';
+      },
+      areaRule: 'The picture reveals the rule: multiply the numerators together, multiply the denominators together — the blue overlapping cells are the answer.',
+
+      eb3: 'Example 3',
+      s3h2: 'Three Things Worth Remembering',
+      s3lead: 'Once the picture makes sense, just remember these three things.',
+      f1h: 'Multiplying by a fraction less than 1 makes it smaller',
+      f1p: '×1/2 means finding half: 6 × 1/2 = 3, which is smaller than 6.',
+      f2h: 'Turn mixed numbers into improper fractions first',
+      f2p: '1 1/2 = 3/2 — change it to this form before multiplying: 3/2 × 2/3 = 1.',
+      f3h: 'Simplify before you multiply when you can',
+      f3p: 'For 2/4 × 1/3, simplify 2/4 to 1/2 first, then multiply: 1/2 × 1/3 = 1/6 — smaller numbers, easier math.',
+
+      eb4: 'Quiz',
+      s4h2: 'Six Quick Questions',
+      s4lead: 'Tap an answer and we’ll tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll: 'Perfect score! You’re a fraction-multiplication master 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That’s okay — scroll up and look at the examples one more time.',
+      qs: [
+        { stem:'3 × 2/5 = ?',
+          opts:['3 2/5','2/5','6/5','9/5'], ans:2,
+          why:'3 × 2/5 = (3×2)/5 = 6/5. Think of the whole number as 3/1: multiply numerators (3×2=6) and denominators (1×5=5). “3 2/5” comes from adding 3 and 2/5, not multiplying.' },
+        { stem:'1/2 × 1/3 = ?',
+          opts:['1/6','5/6','1/2','1/5'], ans:0,
+          why:'Multiply numerators (1×1=1) and denominators (2×3=6) to get 1/6. 5/6 comes from adding the two fractions, not multiplying them.' },
+        { stem:'2/3 × 1/4 = ? (remember to simplify)',
+          opts:['2/12','11/12','2/3','1/6'], ans:3,
+          why:'2/3 × 1/4 = (2×1)/(3×4) = 2/12. Always simplify when you can: 2/12 = 1/6 (divide both by 2). Don’t forget that last step!' },
+        { stem:'1 1/2 × 2 = ?',
+          opts:['2 1/2','3','3 1/2','1'], ans:1,
+          why:'Convert the mixed number to an improper fraction first: 1 1/2 = 3/2, so 3/2 × 2 = 6/2 = 3. If you only multiply the whole-number part by 2 (1×2=2) and forget the fraction part, you’d wrongly get “2 1/2”.' },
+        { stem:'Mei says: “Multiplying by a fraction smaller than 1 makes the answer smaller.” Which example proves she is right?',
+          opts:['4 × 3/2 = 6','4 + 1/2 = 4 1/2','4 × 1/2 = 2','4 × 2 = 8'], ans:2,
+          why:'1/2 is a proper fraction (less than 1), so multiplying by it makes the answer smaller: 4 × 1/2 = 2, and 2 is smaller than 4. 3/2 is greater than 1, so it makes the answer bigger instead; 4 + 1/2 is addition, not multiplication; 4 × 2 uses a whole number, not a fraction.' },
+        { stem:'3/4 × 2/5 = ?',
+          opts:['3/10','6/20','6/4','23/20'], ans:0,
+          why:'3/4 × 2/5 = (3×2)/(4×5) = 6/20. Simplify (divide both by 2) to get 3/10. 6/20 forgot to simplify; 23/20 comes from adding the fractions instead of multiplying.' }
+      ],
+
+      eb5: 'Game',
+      s5h2: 'Area-Cutting Challenge',
+      s5lead: 'Read the expression carefully and tap the correct answer card. A correct pick is +10, a wrong pick is −5, but the game never ends.',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score', gExprLabel: 'Work out:',
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      roundExpr: ['2 × 1/5', '1/2 × 1/4', '2/3 × 3/4', '1 1/3 × 3/4', '3/5 × 5/9'],
+      roundHints: [
+        'Hint: 2 × 1/5 is just 1/5 added twice.',
+        'Hint: multiply the numerators (1×1=1) and the denominators (2×4=8).',
+        'Hint: it multiplies out to 6/12 — remember to simplify.',
+        'Hint: change 1 1/3 into the improper fraction 4/3 before multiplying.',
+        'Hint: 3×5=15 and 5×9=45, so 15/45 simplifies to 1/3.'
+      ],
+      gCorrectMid: function(card){ return 'Correct! The answer is ' + card + ' — +10 points! Round cleared, press “Next round” to continue.'; },
+      gWrongPick: function(card){ return '“' + card + '” is not right — −5 points. Try another card.'; },
+      gWin: function(score, perfect){
+        return perfect
+          ? ('Amazing! All 5 rounds cleared with zero wrong picks — bonus +20 points! Final score: ' + score + ' 🏆')
+          : ('All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to try for a perfect run.');
+      },
+
+      footer: 'The whole page in one line: <strong>multiply the numerators, multiply the denominators, then remember to simplify.</strong>'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (var k in attrs){ if (attrs.hasOwnProperty(k)) el.setAttribute(k, attrs[k]); }
+    return el;
+  }
+
+  function gcdFn(a, b){
+    a = Math.abs(a); b = Math.abs(b);
+    while (b){ var t = b; b = a % b; a = t; }
+    return a || 1;
+  }
+  function fracLabel(n, d){ return d === 1 ? String(n) : (n + '/' + d); }
+  function simplifyFrac(n, d){
+    var g = gcdFn(n, d);
+    return { n: n / g, d: d / g };
+  }
+  function resultDisplay(n, d){
+    var s = simplifyFrac(n, d);
+    var raw = fracLabel(n, d);
+    if (s.n === n && s.d === d) return raw;
+    return raw + ' = ' + fracLabel(s.n, s.d);
+  }
+
+  /* ---------- 1. 分數×整數＝連加（長條圖） ---------- */
+  var BAR_DEN = 4;
+  var barN = 2;
+  var barChips = document.getElementById('barChips');
+  var barGroup = document.getElementById('barGroup');
+  var barLineEl = document.getElementById('barLine');
+
+  function buildBarChips(){
+    barChips.textContent = '';
+    [2,3,4].forEach(function(n){
+      var b = makeChip(L().barChipLabel(n), n === barN);
+      b.addEventListener('click', function(){ barN = n; buildBarChips(); renderBar(); });
+      barChips.appendChild(b);
+    });
+  }
+
+  function renderBar(){
+    barGroup.textContent = '';
+    var segW = 140, gap = 10, y = 10, h = 90;
+    for (var i = 0; i < BAR_DEN; i++){
+      var x = i * (segW + gap) + 10;
+      var shaded = i < barN;
+      barGroup.appendChild(svgEl('rect', {
+        x: x, y: y, width: segW, height: h, rx: 10,
+        fill: shaded ? '#2F9E69' : '#FFFFFF', stroke: '#2B2A33', 'stroke-width': 2
+      }));
+      var txt = svgEl('text', {
+        x: x + segW / 2, y: y + h / 2 + 6, 'text-anchor': 'middle',
+        'font-size': 20, 'font-weight': 'bold',
+        fill: shaded ? '#FFFFFF' : '#2B2A33'
+      });
+      txt.textContent = '1/4';
+      barGroup.appendChild(txt);
+    }
+    var parts = [];
+    for (var k = 0; k < barN; k++) parts.push('1/4');
+    var addStr = parts.join(' + ');
+    var res = resultDisplay(barN, BAR_DEN);
+    barLineEl.innerHTML = L().barLine(barN, addStr, res);
+  }
+
+  /* ---------- 2. 分數×分數＝面積模型 ---------- */
+  var AREA_COMBOS = [
+    { a:1, b:2, c:1, d:3 },
+    { a:2, b:3, c:1, d:4 },
+    { a:3, b:4, c:2, d:5 }
+  ];
+  var areaIdx = 0;
+  var areaChips = document.getElementById('areaChips');
+  var areaGroup = document.getElementById('areaGroup');
+  var areaLineEl = document.getElementById('areaLine');
+
+  function buildAreaChips(){
+    areaChips.textContent = '';
+    AREA_COMBOS.forEach(function(combo, idx){
+      var b = makeChip(L().areaChipLabel(combo.a, combo.b, combo.c, combo.d), idx === areaIdx);
+      b.addEventListener('click', function(){ areaIdx = idx; buildAreaChips(); renderArea(); });
+      areaChips.appendChild(b);
+    });
+  }
+
+  function renderArea(){
+    areaGroup.textContent = '';
+    var combo = AREA_COMBOS[areaIdx];
+    var a = combo.a, b = combo.b, c = combo.c, d = combo.d;
+    var gx = 50, gy = 20, gw = 260, gh = 200;
+    var cellW = gw / b, cellH = gh / d;
+
+    areaGroup.appendChild(svgEl('rect', { x:gx, y:gy, width:gw, height:gh, fill:'#FFFFFF', stroke:'#2B2A33', 'stroke-width':2 }));
+    areaGroup.appendChild(svgEl('rect', { x:gx, y:gy, width:cellW * a, height:gh, fill:'#2F9E69', opacity:0.28 }));
+    areaGroup.appendChild(svgEl('rect', { x:gx, y:gy, width:gw, height:cellH * c, fill:'#E8871E', opacity:0.28 }));
+    areaGroup.appendChild(svgEl('rect', { x:gx, y:gy, width:cellW * a, height:cellH * c, fill:'#3B7DD8', opacity:0.55, stroke:'#3B7DD8', 'stroke-width':2 }));
+
+    var i;
+    for (i = 1; i < b; i++){
+      areaGroup.appendChild(svgEl('line', { x1:gx + cellW * i, y1:gy, x2:gx + cellW * i, y2:gy + gh, stroke:'#E8E2D6', 'stroke-width':1.5 }));
+    }
+    for (i = 1; i < d; i++){
+      areaGroup.appendChild(svgEl('line', { x1:gx, y1:gy + cellH * i, x2:gx + gw, y2:gy + cellH * i, stroke:'#E8E2D6', 'stroke-width':1.5 }));
+    }
+
+    var topLabel = svgEl('text', { x:gx + cellW * a / 2, y:gy - 8, 'text-anchor':'middle', 'font-size':16, 'font-weight':'bold', fill:'#2F9E69' });
+    topLabel.textContent = a + '/' + b;
+    areaGroup.appendChild(topLabel);
+
+    var leftLabel = svgEl('text', { x:gx - 8, y:gy + cellH * c / 2 + 5, 'text-anchor':'end', 'font-size':16, 'font-weight':'bold', fill:'#E8871E' });
+    leftLabel.textContent = c + '/' + d;
+    areaGroup.appendChild(leftLabel);
+
+    var pn = a * c, pd = b * d;
+    var simp = simplifyFrac(pn, pd);
+    var ovLabel = svgEl('text', { x:gx + cellW * a / 2, y:gy + cellH * c / 2 + 6, 'text-anchor':'middle', 'font-size':16, 'font-weight':'bold', fill:'#FFFFFF' });
+    ovLabel.textContent = fracLabel(simp.n, simp.d);
+    areaGroup.appendChild(ovLabel);
+
+    areaLineEl.innerHTML = L().areaExprLine(a, b, c, d, pn, pd, simp.n, simp.d);
+  }
+
+  /* ---------- 4. 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function buildQuiz(){
+    var d = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    d.qs.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === d.qs.length){
+            qComment.textContent = right === 6 ? d.cAll : right >= 4 ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 5. 小遊戲：面積切切樂 ---------- */
+  var ROUNDS = [
+    { correct:'2/5', cards:['3/5','1/2','2/5','4/5','1/10','2/7'] },
+    { correct:'1/8', cards:['1/4','1/6','3/8','1/2','1/8','1/16'] },
+    { correct:'1/2', cards:['1/2','1/3','2/3','3/4','1/4','5/12'] },
+    { correct:'1',   cards:['3/4','4/3','7/12','1','5/4','6/7'] },
+    { correct:'1/3', cards:['1/2','1/3','2/5','5/9','2/9','4/9'] }
+  ];
+  var gRound = 0, gScore = 0, wrongTotal = 0;
+  var elGRound = document.getElementById('gRound');
+  var elGScore = document.getElementById('gScore');
+  var elGExpr = document.getElementById('gExpr');
+  var elGHint = document.getElementById('gHint');
+  var gCardsGrid = document.getElementById('gCardsGrid');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRound];
+    elGRound.textContent = gRound + 1;
+    elGExpr.textContent = d.roundExpr[gRound];
+    elGHint.textContent = d.roundHints[gRound];
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    gCardsGrid.textContent = '';
+    round.cards.forEach(function(card){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'anscard'; b.textContent = card;
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        if (card === round.correct){
+          b.disabled = true; b.classList.add('right');
+          gScore += 10;
+          var all = gCardsGrid.querySelectorAll('.anscard');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          if (gRound === ROUNDS.length - 1){
+            var perfect = (wrongTotal === 0);
+            if (perfect) gScore += 20;
+            gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore, perfect) + '</span>';
+          } else {
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrectMid(card) + '</span>';
+            gNext.disabled = false;
+          }
+        } else {
+          b.disabled = true; b.classList.add('wrong');
+          gScore = Math.max(0, gScore - 5);
+          wrongTotal++;
+          gMsg.innerHTML = '<span class="no">' + L().gWrongPick(card) + '</span>';
+        }
+        elGScore.textContent = gScore;
+      });
+      gCardsGrid.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; wrongTotal = 0; elGScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildBarChips();
+    renderBar();
+    buildAreaChips();
+    renderArea();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

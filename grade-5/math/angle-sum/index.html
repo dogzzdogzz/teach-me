@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>角度偵探 — 內角和的祕密</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .scene{width:100%;height:auto;display:block;margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .numgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin-top:16px}
+  .cell{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);
+    padding:8px 0;text-align:center;font-size:17px;font-weight:600;color:var(--muted);
+  }
+  .cell.on{background:var(--green);border-color:var(--green);color:#fff;transform:scale(1.05);transition:.15s}
+  .hopline{margin-top:12px;font-size:18px;min-height:32px}
+  .hopline b{color:var(--green)}
+  .secret-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+  .secret{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center;
+  }
+  .secret .big{font-size:34px}
+  .secret h3{font-size:18px;margin:6px 0}
+  .secret p{font-size:15px;color:var(--muted)}
+  .checker{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+  .checker input{
+    width:110px;font-size:20px;padding:8px 12px;border:2px solid var(--line);border-radius:12px;
+    background:var(--card);color:var(--ink);text-align:center;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .verdict{margin-top:14px;font-size:18px;min-height:30px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .target{font-size:22px;margin-top:14px}
+  .target b{color:var(--orange);font-size:28px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px}
+  .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;margin-top:16px}
+  .num{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);padding:10px 0;
+    font-size:17px;font-weight:600;cursor:pointer;color:var(--ink);
+  }
+  .num.found{background:var(--green);border-color:var(--green);color:#fff}
+  .num.miss{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+  .num:disabled{cursor:default}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .btnrow{display:flex;gap:12px;margin-top:16px}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+
+  <header>
+    <h1 data-i18n="h1">🕵️ 角度偵探</h1>
+    <p class="sub" data-i18n="sub">找出三角形和四邊形內角和的祕密</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    三角形的三個角加起來永遠是 <strong>180°</strong>；四邊形的四個角加起來永遠是 <strong>360°</strong>。<br>
+    這是為什麼呢？跟著角度偵探一起找線索！
+  </div>
+
+  <!-- 1. 撕角實驗 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">撕角實驗</h2>
+    <p class="lead" data-i18n="s1lead">把三角形的三個角撕下來，看看會拼成什麼形狀。按「下一步」繼續。</p>
+
+    <div class="card">
+      <svg class="scene" viewBox="-20 -40 380 260" role="img" data-i18n-aria="s1aria" aria-label="撕角實驗步驟圖">
+        <g id="tearG0">
+          <polygon points="60,160 280,160 170,40" fill="none" stroke="#2B2A33" stroke-width="3"/>
+          <circle cx="60" cy="160" r="18" fill="#D64545"/>
+          <text x="60" y="166" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">A</text>
+          <circle cx="280" cy="160" r="18" fill="#3B7DD8"/>
+          <text x="280" y="166" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">B</text>
+          <circle cx="170" cy="40" r="18" fill="#E8871E"/>
+          <text x="170" y="46" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">C</text>
+        </g>
+        <g id="tearG1" style="display:none">
+          <polygon points="60,160 280,160 170,40" fill="none" stroke="#2B2A33" stroke-width="3" opacity=".25"/>
+          <line x1="60" y1="160" x2="4" y2="180" stroke="#D64545" stroke-width="2" stroke-dasharray="6 5"/>
+          <line x1="280" y1="160" x2="336" y2="180" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="6 5"/>
+          <line x1="170" y1="40" x2="170" y2="-20" stroke="#E8871E" stroke-width="2" stroke-dasharray="6 5"/>
+          <circle cx="4" cy="180" r="18" fill="#D64545"/>
+          <text x="4" y="186" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">A</text>
+          <circle cx="336" cy="180" r="18" fill="#3B7DD8"/>
+          <text x="336" y="186" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">B</text>
+          <circle cx="170" cy="-20" r="18" fill="#E8871E"/>
+          <text x="170" y="-14" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">C</text>
+        </g>
+        <g id="tearG2" style="display:none">
+          <line x1="40" y1="170" x2="300" y2="170" stroke="#2B2A33" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="100" cy="170" r="18" fill="#D64545"/>
+          <text x="100" y="176" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">A</text>
+          <circle cx="170" cy="170" r="18" fill="#3B7DD8"/>
+          <text x="170" y="176" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">B</text>
+          <circle cx="240" cy="170" r="18" fill="#E8871E"/>
+          <text x="240" y="176" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">C</text>
+          <text x="170" y="215" text-anchor="middle" font-size="26" font-weight="bold" fill="#2B2A33">180°</text>
+        </g>
+      </svg>
+      <p class="hopline" id="tearCaption"></p>
+      <div class="btnrow">
+        <span class="qn" id="tearStepBadge"></span>
+      </div>
+      <div class="btnrow">
+        <button class="btn ghost" id="tearPrev" type="button">←</button>
+        <button class="btn" id="tearNext" type="button">→</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 四邊形=兩個三角形 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">四邊形＝兩個三角形</h2>
+    <p class="lead" data-i18n="s2lead">畫一條對角線，四邊形就變成兩個三角形。</p>
+    <div class="card">
+      <svg class="scene" viewBox="0 0 340 190" role="img" data-i18n-aria="s2aria" aria-label="四邊形被對角線分成兩個三角形的圖">
+        <polygon points="60,150 255,45 85,45" fill="#E3F4EB"/>
+        <polygon points="60,150 280,150 255,45" fill="#FDF0E0"/>
+        <polygon points="60,150 280,150 255,45 85,45" fill="none" stroke="#2B2A33" stroke-width="3"/>
+        <line x1="60" y1="150" x2="255" y2="45" stroke="#2B2A33" stroke-width="3"/>
+        <text x="130" y="90" text-anchor="middle" font-size="22" font-weight="bold" fill="#2F9E69">180°</text>
+        <text x="205" y="130" text-anchor="middle" font-size="22" font-weight="bold" fill="#E8871E">180°</text>
+      </svg>
+      <p style="text-align:center;margin-top:8px" data-i18n="quadCap">
+        每個三角形的內角和是 180°，兩個三角形合起來：180° × 2 = <strong>360°</strong>。<br>所以四邊形的內角和永遠是 360°！
+      </p>
+    </div>
+  </section>
+
+  <!-- 3. 找出神祕角 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">找出神祕角</h2>
+    <p class="lead" data-i18n="s3lead">選一個三角形，看看第三個角是多少。</p>
+    <div class="card">
+      <div class="chips" id="mysteryChips"></div>
+      <div id="mysteryScene"></div>
+      <p class="verdict" id="mysteryEq"></p>
+    </div>
+  </section>
+
+  <!-- 4. 特別三角形 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">特別三角形</h2>
+    <div class="secret-row">
+      <div class="secret">
+        <div class="big">🔺</div>
+        <h3 data-i18n="sec1h">正三角形：每個角都是 60°</h3>
+        <p data-i18n="sec1p">60° + 60° + 60° = 180°，三個角一樣大。</p>
+      </div>
+      <div class="secret">
+        <div class="big">⚖️</div>
+        <h3 data-i18n="sec2h">等腰三角形：兩個底角相等</h3>
+        <p data-i18n="sec2p">頂角 40°，底角就是 (180−40) ÷ 2 = 70°。</p>
+      </div>
+      <div class="secret">
+        <div class="big">📐</div>
+        <h3 data-i18n="sec3h">直角三角形：另外兩角合起來 90°</h3>
+        <p data-i18n="sec3p">已經有一個角是 90°，180−90 = 90°，剩下兩角加起來剛好 90°。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">試題</span>
+    <h2 data-i18n="s5h2">六題檢查一下</h2>
+    <p class="lead" data-i18n="s5lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / 6</span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 6. 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">小遊戲</span>
+    <h2 data-i18n="s6h2">神祕角獵人</h2>
+    <p class="lead" data-i18n="s6lead">看圖找出「？」代表的角度，點卡片回答。答錯扣分，答對加分，第一次就答對還有獎勵分！</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <div id="gScene"></div>
+      <p class="hint" id="gHint"></p>
+      <div id="gCards" class="opts"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    三角形撕下三個角能排成一直線 —— 內角和永遠是 180°。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- shared shape renderers (numbers only, language-neutral) ---------- */
+  function triShape(txtA, txtB, txtC, aria){
+    return '<svg class="scene" viewBox="0 0 340 190" role="img" aria-label="' + aria + '">' +
+      '<polygon points="70,150 270,150 170,40" fill="none" stroke="#2B2A33" stroke-width="3"/>' +
+      '<circle cx="70" cy="150" r="24" fill="#D64545"/>' +
+      '<text x="70" y="157" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtA + '</text>' +
+      '<circle cx="270" cy="150" r="24" fill="#3B7DD8"/>' +
+      '<text x="270" y="157" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtB + '</text>' +
+      '<circle cx="170" cy="40" r="24" fill="#E8871E"/>' +
+      '<text x="170" y="47" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtC + '</text>' +
+      '</svg>';
+  }
+
+  function quadShape(txtA, txtB, txtC, txtD, aria){
+    return '<svg class="scene" viewBox="0 0 340 190" role="img" aria-label="' + aria + '">' +
+      '<polygon points="60,150 280,150 255,45 85,45" fill="none" stroke="#2B2A33" stroke-width="3"/>' +
+      '<circle cx="60" cy="150" r="24" fill="#D64545"/>' +
+      '<text x="60" y="157" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtA + '</text>' +
+      '<circle cx="280" cy="150" r="24" fill="#3B7DD8"/>' +
+      '<text x="280" y="157" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtB + '</text>' +
+      '<circle cx="255" cy="45" r="24" fill="#E8871E"/>' +
+      '<text x="255" y="52" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtC + '</text>' +
+      '<circle cx="85" cy="45" r="24" fill="#2F9E69"/>' +
+      '<text x="85" y="52" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtD + '</text>' +
+      '</svg>';
+  }
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '角度偵探 — 內角和的祕密',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      h1: '🕵️ 角度偵探',
+      sub: '找出三角形和四邊形內角和的祕密',
+      intro: '三角形的三個角加起來永遠是 <strong>180°</strong>；四邊形的四個角加起來永遠是 <strong>360°</strong>。<br>這是為什麼呢？跟著角度偵探一起找線索！',
+      eb1: '範例教學 1', eb2: '範例教學 2', eb3: '範例教學 3', eb4: '範例教學 4',
+      eb5: '試題', eb6: '小遊戲',
+      s1h2: '撕角實驗',
+      s1lead: '把三角形的三個角撕下來，看看會拼成什麼形狀。按「下一步」繼續。',
+      s1aria: '撕角實驗步驟圖',
+      tearSteps: [
+        '這是一個三角形，三個角分別是 A（紅）、B（藍）、C（橘）。',
+        '把三個角剪下來，往外移開。',
+        '把三個角拼在一起，剛好排成一條<strong>直線</strong>——直線是 180°，所以三角形的內角和永遠是 <strong>180°</strong>！'
+      ],
+      tearStepLabel: function(i, total){ return '步驟 ' + i + ' / ' + total; },
+      s2h2: '四邊形＝兩個三角形',
+      s2lead: '畫一條對角線，四邊形就變成兩個三角形。',
+      s2aria: '四邊形被對角線分成兩個三角形的圖',
+      quadCap: '每個三角形的內角和是 180°，兩個三角形合起來：180° × 2 = <strong>360°</strong>。<br>所以四邊形的內角和永遠是 360°！',
+      s3h2: '找出神祕角',
+      s3lead: '選一個三角形，看看第三個角是多少。',
+      s3aria: '三角形兩個已知角與一個神祕角的圖',
+      mysteryChip: function(a, b){ return a + '° + ' + b + '°'; },
+      mysteryEq: function(a, b, ans){ return '180° − ' + a + '° − ' + b + '° = ' + ans + '°，這就是神祕角！'; },
+      s4h2: '特別三角形',
+      sec1h: '正三角形：每個角都是 60°',
+      sec1p: '60° + 60° + 60° = 180°，三個角一樣大。',
+      sec2h: '等腰三角形：兩個底角相等',
+      sec2p: '頂角 40°，底角就是 (180−40) ÷ 2 = 70°。',
+      sec3h: '直角三角形：另外兩角合起來 90°',
+      sec3p: '已經有一個角是 90°，180−90 = 90°，剩下兩角加起來剛好 90°。',
+      s5h2: '六題檢查一下',
+      s5lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      cAll: '全對！你已經是角度偵探高手 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面再看一次範例教學。',
+      qs: [
+        { stem: '一個三角形的三個角是 50°、60° 和 ?°，「?」是多少？',
+          opts: ['70°','110°','130°','60°'], ans: 0,
+          why: '180 − 50 − 60 = 70°（三角形的三個角加起來永遠是 180°）。' },
+        { stem: '一個四邊形的四個角是 100°、80°、60° 和 ?°，「?」是多少？',
+          opts: ['100°','120°','140°','60°'], ans: 1,
+          why: '360 − 100 − 80 − 60 = 120°（四邊形的內角和是 360°，因為畫一條對角線可以分成兩個三角形，180° × 2 = 360°）。' },
+        { stem: '等腰三角形的頂角是 40°，兩個底角相等，每個底角是多少？',
+          opts: ['140°','35°','70°','80°'], ans: 2,
+          why: '180 − 40 = 140°，兩個底角相等，所以 140 ÷ 2 = 70°（別忘了要除以 2！）。' },
+        { stem: '為什麼三角形的內角和永遠是 180°？',
+          opts: [
+            '因為三角形有三個角，180÷3=60，每個角都是60度',
+            '因為三角形的邊長加起來是180公分',
+            '因為量了很多次，剛好都是180度，是巧合',
+            '因為把三個角撕下來拼在一起，剛好排成一條直線（180°）'
+          ], ans: 3,
+          why: '撕角實驗證明了這件事：三個角拼起來會變成一條直線，一條直線就是 180°，這是所有三角形都成立的規則，不是巧合。' },
+        { stem: '一個三角形的三個角是 90°、35° 和 ?°，「?」是多少？',
+          opts: ['55°','235°','45°','125°'], ans: 0,
+          why: '180 − 90 − 35 = 55°。三角形的內角和是 180°，不是 360°（360° 是四邊形才對）。' },
+        { stem: '關於三角形和四邊形，哪一句話正確？',
+          opts: [
+            '三角形和四邊形的內角和都是180°',
+            '三角形內角和180°，四邊形內角和360°，因為四邊形可以切成兩個三角形',
+            '四邊形內角和是180°，三角形是360°',
+            '四邊形內角和要看邊長才能決定，沒有固定答案'
+          ], ans: 1,
+          why: '四邊形畫一條對角線就會變成兩個三角形，180° × 2 = 360°，所以三角形永遠是 180°、四邊形永遠是 360°。' }
+      ],
+      s6h2: '神祕角獵人',
+      s6lead: '看圖找出「？」代表的角度，點卡片回答。答錯扣分，答對加分，第一次就答對還有獎勵分！',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      ariaTri: '三角形，兩個角已知，一個角是神祕角',
+      ariaQuad: '四邊形，三個角已知，一個角是神祕角',
+      ariaIso: '等腰三角形，頂角已知，兩個底角是神祕角',
+      hintTri: '提示：三角形的三個角加起來是 180°。',
+      hintQuad: '提示：四邊形的四個角加起來是 360°，可以想成兩個三角形。',
+      hintIso: '提示：先算 180° − 頂角，再把剩下的角平分成兩份（兩個底角相等）。',
+      explainTri: function(a, b, ans){ return '180 − ' + a + ' − ' + b + ' = ' + ans + '°，找到神祕角了！'; },
+      explainQuad: function(a, b, c, ans){ return '360 − ' + a + ' − ' + b + ' − ' + c + ' = ' + ans + '°，找到神祕角了！'; },
+      explainIso: function(apex, ans){ return '(180 − ' + apex + ') ÷ 2 = ' + ans + '°，找到神祕角了！'; },
+      pointsSuffix: function(bonus){ return bonus ? '（一次就找到，+20 分！）' : '（+10 分）'; },
+      gMiss: function(v){ return v + '° 不對，再試一次！扣 5 分。'; },
+      gClear: '過關！按「下一關」繼續。',
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      footer: '三角形撕下三個角能排成一直線 —— 內角和永遠是 180°。'
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'The Angle Detective — Secrets of Angle Sums',
+      btn: '中',
+      home: '← Back to teach-me home',
+      h1: '🕵️ The Angle Detective',
+      sub: 'Uncover the secret of triangle and quadrilateral angle sums',
+      intro: 'A triangle’s three angles always add up to <strong>180°</strong>; a quadrilateral’s four angles always add up to <strong>360°</strong>.<br>Why is that? Join the Angle Detective and find the clues!',
+      eb1: 'Example 1', eb2: 'Example 2', eb3: 'Example 3', eb4: 'Example 4',
+      eb5: 'Quiz', eb6: 'Game',
+      s1h2: 'The Torn-Corner Experiment',
+      s1lead: 'Tear the three corners off a triangle and see what shape they make. Press "Next" to continue.',
+      s1aria: 'Steps of the torn-corner experiment',
+      tearSteps: [
+        'This is a triangle. Its three corners are A (red), B (blue), and C (orange).',
+        'Cut out the three corners and pull them apart.',
+        'Put the three corners together and they form a <strong>straight line</strong> — a straight line is 180°, so a triangle’s angles always add up to <strong>180°</strong>!'
+      ],
+      tearStepLabel: function(i, total){ return 'Step ' + i + ' / ' + total; },
+      s2h2: 'A Quadrilateral = Two Triangles',
+      s2lead: 'Draw a diagonal, and the quadrilateral splits into two triangles.',
+      s2aria: 'A quadrilateral split by a diagonal into two triangles',
+      quadCap: 'Each triangle has an angle sum of 180°. Together: 180° × 2 = <strong>360°</strong>.<br>So a quadrilateral’s angle sum is always 360°!',
+      s3h2: 'Find the Mystery Angle',
+      s3lead: 'Pick a triangle and see what the third angle is.',
+      s3aria: 'A triangle with two known angles and one mystery angle',
+      mysteryChip: function(a, b){ return a + '° + ' + b + '°'; },
+      mysteryEq: function(a, b, ans){ return '180° − ' + a + '° − ' + b + '° = ' + ans + '° — that’s the mystery angle!'; },
+      s4h2: 'Special Triangles',
+      sec1h: 'Equilateral triangle: every angle is 60°',
+      sec1p: '60° + 60° + 60° = 180° — all three angles are equal.',
+      sec2h: 'Isosceles triangle: the two base angles are equal',
+      sec2p: 'If the top angle is 40°, each base angle is (180−40) ÷ 2 = 70°.',
+      sec3h: 'Right triangle: the other two angles add up to 90°',
+      sec3p: 'One angle is already 90°, so 180−90 = 90° — the remaining two angles always add up to 90°.',
+      s5h2: 'Six Quick Questions',
+      s5lead: 'Tap an answer and we’ll tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll: 'Perfect score! You’re a true Angle Detective 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That’s okay — scroll up and go through the examples once more.',
+      qs: [
+        { stem: 'A triangle’s angles are 50°, 60°, and ?°. What is the missing angle?',
+          opts: ['70°','110°','130°','60°'], ans: 0,
+          why: '180 − 50 − 60 = 70° (a triangle’s angles always add up to 180°).' },
+        { stem: 'A quadrilateral’s angles are 100°, 80°, 60°, and ?°. What is the missing angle?',
+          opts: ['100°','120°','140°','60°'], ans: 1,
+          why: '360 − 100 − 80 − 60 = 120° (draw a diagonal and the quadrilateral splits into two triangles: 180° × 2 = 360°).' },
+        { stem: 'An isosceles triangle has a top angle of 40°. The two base angles are equal — how big is each one?',
+          opts: ['140°','35°','70°','80°'], ans: 2,
+          why: '180 − 40 = 140°, and since the two base angles are equal, 140 ÷ 2 = 70° (don’t forget to divide by 2!).' },
+        { stem: 'Why is the angle sum of a triangle always 180°?',
+          opts: [
+            'A triangle has three angles, so 180 ÷ 3 = 60 — each angle is 60°',
+            'A triangle’s three side lengths add up to 180 cm',
+            'We measured many triangles and they happened to all be 180° — it’s a coincidence',
+            'Tear off the three corners and line them up — they form a straight line (180°)'
+          ], ans: 3,
+          why: 'Tearing off the three corners and lining them up proves it: together they form a straight line, and a straight line is 180° — this is always true for every triangle, not a coincidence.' },
+        { stem: 'A triangle’s angles are 90°, 35°, and ?°. What is the missing angle?',
+          opts: ['55°','235°','45°','125°'], ans: 0,
+          why: '180 − 90 − 35 = 55°. A triangle’s angle sum is 180°, not 360° (360° is for a quadrilateral).' },
+        { stem: 'Which statement about a triangle and a quadrilateral is correct?',
+          opts: [
+            'A triangle and a quadrilateral both have an angle sum of 180°',
+            'A triangle’s angle sum is 180° and a quadrilateral’s is 360°, because a quadrilateral can be split into two triangles',
+            'A quadrilateral’s angle sum is 180° and a triangle’s is 360°',
+            'A quadrilateral’s angle sum depends on its side lengths — there’s no fixed answer'
+          ], ans: 1,
+          why: 'Draw one diagonal in a quadrilateral and it splits into two triangles: 180° × 2 = 360°. So a triangle is always 180° and a quadrilateral is always 360°.' }
+      ],
+      s6h2: 'Mystery Angle Hunter',
+      s6lead: 'Look at the shape and find the angle marked "?". Tap a card to answer. Wrong guesses cost points, correct ones earn points — and a first-try correct guess earns a bonus!',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      ariaTri: 'A triangle with two known angles and one mystery angle',
+      ariaQuad: 'A quadrilateral with three known angles and one mystery angle',
+      ariaIso: 'An isosceles triangle with a known top angle and two mystery base angles',
+      hintTri: 'Hint: the three angles of a triangle always add up to 180°.',
+      hintQuad: 'Hint: the four angles of a quadrilateral add up to 360° — think of it as two triangles.',
+      hintIso: 'Hint: first work out 180° minus the top angle, then split what’s left into two equal parts (the base angles are equal).',
+      explainTri: function(a, b, ans){ return '180 − ' + a + ' − ' + b + ' = ' + ans + '° — found it!'; },
+      explainQuad: function(a, b, c, ans){ return '360 − ' + a + ' − ' + b + ' − ' + c + ' = ' + ans + '° — found it!'; },
+      explainIso: function(apex, ans){ return '(180 − ' + apex + ') ÷ 2 = ' + ans + '° — found it!'; },
+      pointsSuffix: function(bonus){ return bonus ? ' (first try, +20 points!)' : ' (+10 points)'; },
+      gMiss: function(v){ return v + '° isn’t it — try again! −5 points.'; },
+      gClear: 'Round cleared! Press "Next round" to continue.',
+      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press "Restart" to play again.'; },
+      footer: 'Tear off a triangle’s three corners and they line up straight — its angles always add up to 180°.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  /* ---------- 1. 撕角實驗 ---------- */
+  var tearStep = 0;
+  var tearGroups = [document.getElementById('tearG0'), document.getElementById('tearG1'), document.getElementById('tearG2')];
+  var tearCaption = document.getElementById('tearCaption');
+  var tearStepBadge = document.getElementById('tearStepBadge');
+  var tearPrev = document.getElementById('tearPrev');
+  var tearNext = document.getElementById('tearNext');
+
+  function renderTear(){
+    for (var i = 0; i < tearGroups.length; i++){
+      tearGroups[i].style.display = (i === tearStep) ? '' : 'none';
+    }
+    tearCaption.innerHTML = L().tearSteps[tearStep];
+    tearStepBadge.textContent = L().tearStepLabel(tearStep + 1, tearGroups.length);
+    tearPrev.disabled = (tearStep === 0);
+    tearNext.disabled = (tearStep === tearGroups.length - 1);
+  }
+
+  tearPrev.addEventListener('click', function(){ if (tearStep > 0){ tearStep--; renderTear(); } });
+  tearNext.addEventListener('click', function(){ if (tearStep < tearGroups.length - 1){ tearStep++; renderTear(); } });
+
+  /* ---------- 3. 找出神祕角 ---------- */
+  var MYSTERIES = [
+    { a: 50, b: 60, ans: 70 },
+    { a: 90, b: 30, ans: 60 },
+    { a: 45, b: 45, ans: 90 }
+  ];
+  var mysteryIdx = 0;
+  var mysteryChipsEl = document.getElementById('mysteryChips');
+  var mysteryScene = document.getElementById('mysteryScene');
+  var mysteryEqEl = document.getElementById('mysteryEq');
+
+  function buildMysteryChips(){
+    mysteryChipsEl.textContent = '';
+    MYSTERIES.forEach(function(m, i){
+      var b = makeChip(L().mysteryChip(m.a, m.b), i === mysteryIdx);
+      b.addEventListener('click', function(){ mysteryIdx = i; renderMystery(); });
+      mysteryChipsEl.appendChild(b);
+    });
+  }
+
+  function renderMystery(){
+    buildMysteryChips();
+    var m = MYSTERIES[mysteryIdx];
+    mysteryScene.innerHTML = triShape(m.a + '°', m.b + '°', m.ans + '°', L().ariaTri);
+    mysteryEqEl.innerHTML = '<span class="yes">' + L().mysteryEq(m.a, m.b, m.ans) + '</span>';
+  }
+
+  /* ---------- 5. 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function buildQuiz(){
+    var d = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    d.qs.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === d.qs.length){
+            qComment.textContent = right === 6 ? d.cAll : right >= 4 ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 6. 小遊戲：神祕角獵人 ---------- */
+  var ROUNDS = [
+    { shape: 'triangle',  given: [65, 75],     answer: 40,  cards: [140, 40, 105, 65, 115, 75] },
+    { shape: 'triangle',  given: [90, 35],     answer: 55,  cards: [125, 90, 55, 65, 145, 35] },
+    { shape: 'quad',      given: [100, 80, 60],answer: 120, cards: [240, 60, 120, 100, 180, 80] },
+    { shape: 'isosceles', given: [50],         answer: 65,  cards: [130, 65, 50, 15, 90, 25] },
+    { shape: 'triangle',  given: [30, 45],     answer: 105, cards: [75, 150, 105, 30, 135, 45] }
+  ];
+  var gRoundIdx = 0, gScore = 0, gFirstTry = true;
+  var elGRound = document.getElementById('gRound');
+  var elGScore = document.getElementById('gScore');
+  var gScene = document.getElementById('gScene');
+  var elHint = document.getElementById('gHint');
+  var gCards = document.getElementById('gCards');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+
+  function renderRoundScene(round, revealed){
+    var ansTxt = revealed ? round.answer + '°' : '?';
+    if (round.shape === 'triangle'){
+      return triShape(round.given[0] + '°', round.given[1] + '°', ansTxt, L().ariaTri);
+    } else if (round.shape === 'quad'){
+      return quadShape(round.given[0] + '°', round.given[1] + '°', round.given[2] + '°', ansTxt, L().ariaQuad);
+    } else {
+      return triShape(ansTxt, ansTxt, round.given[0] + '°', L().ariaIso);
+    }
+  }
+
+  function explainRound(round){
+    var d = L();
+    if (round.shape === 'triangle'){
+      return d.explainTri(round.given[0], round.given[1], round.answer);
+    } else if (round.shape === 'quad'){
+      return d.explainQuad(round.given[0], round.given[1], round.given[2], round.answer);
+    } else {
+      return d.explainIso(round.given[0], round.answer);
+    }
+  }
+
+  function hintForRound(round){
+    var d = L();
+    if (round.shape === 'triangle') return d.hintTri;
+    if (round.shape === 'quad') return d.hintQuad;
+    return d.hintIso;
+  }
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRoundIdx];
+    gFirstTry = true;
+    elGRound.textContent = gRoundIdx + 1;
+    gScene.innerHTML = renderRoundScene(round, false);
+    elHint.textContent = hintForRound(round);
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    gCards.textContent = '';
+    round.cards.forEach(function(v){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'opt'; b.textContent = v + '°';
+      b.addEventListener('click', function(){
+        if (v === round.answer){
+          var all = gCards.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          b.classList.add('right');
+          var pts = gFirstTry ? 20 : 10;
+          gScore += pts;
+          elGScore.textContent = gScore;
+          gScene.innerHTML = renderRoundScene(round, true);
+          var msg = '<span class="yes">' + explainRound(round) + d.pointsSuffix(gFirstTry) + '</span>';
+          if (gRoundIdx === ROUNDS.length - 1){
+            gMsg.innerHTML = msg + '<br><span class="yes">' + d.gWin(gScore) + '</span>';
+          } else {
+            gMsg.innerHTML = msg + '<br><span class="yes">' + d.gClear + '</span>';
+            gNext.disabled = false;
+          }
+        } else {
+          b.disabled = true; b.classList.add('wrong');
+          gFirstTry = false;
+          gScore = Math.max(0, gScore - 5);
+          elGScore.textContent = gScore;
+          gMsg.innerHTML = '<span class="no">' + d.gMiss(v) + '</span>';
+        }
+      });
+      gCards.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRoundIdx = 0; gScore = 0; elGScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRoundIdx < ROUNDS.length - 1){ gRoundIdx++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    tearStep = 0;
+    renderTear();
+    mysteryIdx = 0;
+    renderMystery();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

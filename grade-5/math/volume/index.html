@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>體積積木塔 — 體積與容積</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .secret-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+  .secret{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center;
+  }
+  .secret .big{font-size:34px}
+  .secret h3{font-size:18px;margin:6px 0}
+  .secret p{font-size:15px;color:var(--muted)}
+  .verdict{margin-top:14px;font-size:18px;min-height:30px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .btnrow{display:flex;gap:12px;margin-top:16px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+
+  /* ---- volume-lesson-specific additions ---- */
+  .chiplabel{font-size:15px;font-weight:700;color:var(--muted);margin-top:16px;margin-bottom:2px}
+  .chiplabel:first-child{margin-top:0}
+  .towerWrap{display:flex;flex-direction:column-reverse;align-items:center;margin-top:18px;min-height:40px}
+  .layerPlate{display:grid;gap:4px;padding:10px;background:var(--green-soft);border:2px solid var(--green);border-radius:12px;margin-top:-6px;box-shadow:0 4px 0 rgba(47,158,105,.25)}
+  .layerPlate:first-child{margin-top:0}
+  .cube{width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;background:#fff;border-radius:6px;border:1px solid var(--line)}
+  .towerLine{margin-top:16px;font-size:17px;text-align:center;line-height:1.9}
+  .towerLine b{color:var(--green)}
+  .boxinfo{font-size:19px;text-align:center;margin-top:6px}
+  .boxinfo b{color:var(--orange)}
+  .gamecards{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin-top:16px}
+  .gcard{border:2px solid var(--line);background:var(--card);border-radius:12px;padding:14px 0;font-size:20px;font-weight:700;cursor:pointer;color:var(--ink)}
+  .gcard.right{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+  .gcard.wrong{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+  .gcard:disabled{cursor:default;opacity:.85}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+
+  <header>
+    <h1 data-i18n="h1">🧊 體積積木塔</h1>
+    <p class="sub" data-i18n="sub">一層一層疊積木，學會體積與容積</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    體積就是一個立體東西<strong>占了多大的空間</strong>：<br>
+    把它想成一層一層疊起來的小方塊，<strong>數一數總共有幾塊</strong>，就是體積。
+  </div>
+
+  <!-- 1. 長方體疊疊樂 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">長方體疊疊樂</h2>
+    <p class="lead" data-i18n="s1lead">選長、寬、高，看看積木一層一層疊起來會變成什麼樣子。</p>
+
+    <div class="card">
+      <p class="chiplabel" data-i18n="lLabel">長（L）</p>
+      <div class="chips" id="lChips"></div>
+      <p class="chiplabel" data-i18n="wLabel">寬（W）</p>
+      <div class="chips" id="wChips"></div>
+      <p class="chiplabel" data-i18n="hLabel">高（H）</p>
+      <div class="chips" id="hChips"></div>
+
+      <div class="towerWrap" id="tower1" role="img"></div>
+      <p class="towerLine" id="towerLine1"></p>
+    </div>
+  </section>
+
+  <!-- 2. 正方體 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">正方體：長寬高都一樣</h2>
+    <p class="lead" data-i18n="s2lead">正方體的長、寬、高都相等，選一個邊長試試看。</p>
+
+    <div class="card">
+      <p class="chiplabel" data-i18n="edgeLabel">邊長</p>
+      <div class="chips" id="edgeChips"></div>
+
+      <div class="towerWrap" id="tower2" role="img"></div>
+      <p class="towerLine" id="towerLine2"></p>
+    </div>
+  </section>
+
+  <!-- 3. 容積與容量 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">容積與容量</h2>
+    <p class="lead" data-i18n="s3lead">體積講的是「東西本身」占多大空間；容積講的是「盒子裡面」能裝多少。</p>
+    <div class="secret-row">
+      <div class="secret">
+        <div class="big">📦</div>
+        <h3 data-i18n="cap1h">容積是什麼？</h3>
+        <p data-i18n="cap1p">容積是指容器「裡面」能裝多少東西的空間大小，例如水桶裡面能裝多少水。</p>
+      </div>
+      <div class="secret">
+        <div class="big">💧</div>
+        <h3 data-i18n="cap2h">1 立方公分 = 1 毫升</h3>
+        <p data-i18n="cap2p">邊長 1 公分的小方塊，裝滿水恰好是 1 毫升（mL）。</p>
+      </div>
+      <div class="secret">
+        <div class="big">🥤</div>
+        <h3 data-i18n="cap3h">1000 立方公分 = 1 公升</h3>
+        <p data-i18n="cap3p">1000 個 1 立方公分的小方塊疊起來，裝的水恰好是 1 公升（L）。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">試題</span>
+    <h2 data-i18n="s4h2">六題檢查一下</h2>
+    <p class="lead" data-i18n="s4lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / 6</span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 5. 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">小遊戲</span>
+    <h2 data-i18n="s5h2">搬家公司</h2>
+    <p class="lead" data-i18n="s5lead">幫搬家公司算出每個箱子的體積，點對答案得分，點錯會扣分。</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <p class="boxinfo" id="gBoxLine"></p>
+      <p class="hint" id="gHint"></p>
+      <div id="gCards" class="gamecards"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    一層有幾塊 × 疊幾層 —— 長 × 寬 × 高，就是體積。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '體積積木塔 — 體積與容積',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      h1: '🧊 體積積木塔',
+      sub: '一層一層疊積木，學會體積與容積',
+      intro: '體積就是一個立體東西<strong>占了多大的空間</strong>：<br>把它想成一層一層疊起來的小方塊，<strong>數一數總共有幾塊</strong>，就是體積。',
+      eb1: '範例教學 1', eb2: '範例教學 2', eb3: '範例教學 3', eb4: '試題', eb5: '小遊戲',
+      s1h2: '長方體疊疊樂',
+      s1lead: '選長、寬、高，看看積木一層一層疊起來會變成什麼樣子。',
+      lLabel: '長（L）', wLabel: '寬（W）', hLabel: '高（H）',
+      unitCm: function(n){ return n + ' 公分'; },
+      s1aria: function(l,w,h){ return '長 ' + l + ' 公分、寬 ' + w + ' 公分的積木疊了 ' + h + ' 層'; },
+      towerLine1: function(l,w,h){
+        var area = l*w, total = area*h;
+        return '一層 = 長 × 寬 = ' + l + ' × ' + w + ' = <b>' + area + ' 塊</b>；疊 ' + h + ' 層 → ' +
+          area + ' × ' + h + ' = <b>' + total + ' 塊</b><br>體積 = 長 × 寬 × 高 = ' + l + ' × ' + w + ' × ' + h + ' = <b>' + total + ' 立方公分</b>';
+      },
+      s2h2: '正方體：長寬高都一樣',
+      s2lead: '正方體的長、寬、高都相等，選一個邊長試試看。',
+      edgeLabel: '邊長',
+      s2aria: function(e){ return '邊長 ' + e + ' 公分的正方體積木塔'; },
+      towerLine2: function(e){
+        var area = e*e, total = area*e;
+        return '一層 = 邊 × 邊 = ' + e + ' × ' + e + ' = <b>' + area + ' 塊</b>；疊 ' + e + ' 層 → ' +
+          area + ' × ' + e + ' = <b>' + total + ' 塊</b><br>體積 = 邊 × 邊 × 邊 = ' + e + ' × ' + e + ' × ' + e + ' = <b>' + total + ' 立方公分</b>';
+      },
+      s3h2: '容積與容量',
+      s3lead: '體積講的是「東西本身」占多大空間；容積講的是「盒子裡面」能裝多少。',
+      cap1h: '容積是什麼？',
+      cap1p: '容積是指容器「裡面」能裝多少東西的空間大小，例如水桶裡面能裝多少水。',
+      cap2h: '1 立方公分 = 1 毫升',
+      cap2p: '邊長 1 公分的小方塊，裝滿水恰好是 1 毫升（mL）。',
+      cap3h: '1000 立方公分 = 1 公升',
+      cap3p: '1000 個 1 立方公分的小方塊疊起來，裝的水恰好是 1 公升（L）。',
+      s4h2: '六題檢查一下',
+      s4lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b>',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b>'; },
+      cAll: '全對！你已經是體積高手 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面再疊一次積木塔。',
+      qs: [
+        { stem:'一個長方體長 4 公分、寬 3 公分、高 2 公分，體積是多少？',
+          opts:['9 立方公分','12 立方公分','24 立方公分','20 立方公分'], ans:2,
+          why:'長 × 寬 × 高 = 4 × 3 × 2 = 24（立方公分）。' },
+        { stem:'正方體的邊長是 5 公分，體積是多少？',
+          opts:['15 立方公分','25 立方公分','75 立方公分','125 立方公分'], ans:3,
+          why:'邊 × 邊 × 邊 = 5 × 5 × 5 = 125（立方公分）。正方體要把邊長連乘三次，不是邊長 × 3。' },
+        { stem:'一個長方體的體積是 24 立方公分，長 4 公分、寬 3 公分，高是多少公分？',
+          opts:['1 公分','2 公分','3 公分','6 公分'], ans:1,
+          why:'長 × 寬 = 4 × 3 = 12；24 ÷ 12 = 2，所以高是 2 公分。' },
+        { stem:'2000 立方公分等於多少公升？',
+          opts:['2 公升','0.2 公升','20 公升','200 公升'], ans:0,
+          why:'1000 立方公分 = 1 公升，2000 立方公分是 2 個 1000，所以是 2 公升。' },
+        { stem:'一個長方體長 6 公分、寬 2 公分、高 3 公分，體積是多少？',
+          opts:['11 立方公分','12 立方公分','36 立方公分','72 立方公分'], ans:2,
+          why:'長 × 寬 × 高 = 6 × 2 × 3 = 36（立方公分）。' },
+        { stem:'500 立方公分的水，倒進量杯是多少毫升？',
+          opts:['5 毫升','500 毫升','50 毫升','5000 毫升'], ans:1,
+          why:'1 立方公分 = 1 毫升，所以 500 立方公分 = 500 毫升。' }
+      ],
+      s5h2: '搬家公司',
+      s5lead: '幫搬家公司算出每個箱子的體積，點對答案得分，點錯會扣分。',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
+      gBoxLine: function(l,w,h){
+        return '搬家公司來了！這個箱子長 <b>' + l + ' 公分</b>、寬 <b>' + w + ' 公分</b>、高 <b>' + h + ' 公分</b>，體積是多少立方公分？';
+      },
+      hints: [
+        '提示：先算一層的面積（長 × 寬），再乘上高。',
+        '提示：把三個數連乘要小心，別漏乘一個。',
+        '提示：正方體的長寬高都相等，邊 × 邊 × 邊。',
+        '提示：先算長 × 寬，再乘高，一步一步來。',
+        '提示：先算 4 × 4 這一層的面積，再乘上高 3。'
+      ],
+      gCorrectFirst: function(v){ return '答對了！體積是 ' + v + ' 立方公分，一次就對，加 20 分！🎉'; },
+      gCorrectAfter: function(v){ return '答對了！體積是 ' + v + ' 立方公分，加 10 分。'; },
+      gWrong: '不對喔，再算一次：長 × 寬 × 高。扣 5 分。',
+      gClear: '過關！按「下一關」搬下一個箱子。',
+      gWin: function(score){ return '五個箱子都搬完了！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      footer: '一層有幾塊 × 疊幾層 —— 長 × 寬 × 高，就是體積。'
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'The Block Tower — Volume & Capacity',
+      btn: '中',
+      home: '← Back to teach-me home',
+      h1: '🧊 The Block Tower',
+      sub: 'Stack blocks layer by layer and learn volume & capacity',
+      intro: 'Volume is <strong>how much space</strong> a solid shape takes up:<br>picture it as small cubes stacked layer by layer — <strong>count how many cubes there are</strong>, and that’s the volume.',
+      eb1: 'Example 1', eb2: 'Example 2', eb3: 'Example 3', eb4: 'Quiz', eb5: 'Game',
+      s1h2: 'Rectangular Box Tower',
+      s1lead: 'Pick a length, width, and height, and see the blocks stack up layer by layer.',
+      lLabel: 'Length (L)', wLabel: 'Width (W)', hLabel: 'Height (H)',
+      unitCm: function(n){ return n + ' cm'; },
+      s1aria: function(l,w,h){ return 'A tower of blocks ' + l + ' cm long and ' + w + ' cm wide, stacked ' + h + ' layers high'; },
+      towerLine1: function(l,w,h){
+        var area = l*w, total = area*h;
+        return 'One layer = Length × Width = ' + l + ' × ' + w + ' = <b>' + area + ' cubes</b>; stack ' + h + ' layers → ' +
+          area + ' × ' + h + ' = <b>' + total + ' cubes</b><br>Volume = Length × Width × Height = ' + l + ' × ' + w + ' × ' + h + ' = <b>' + total + ' cubic cm</b>';
+      },
+      s2h2: 'A Cube: Length, Width and Height Are All Equal',
+      s2lead: 'A cube’s length, width, and height are all the same — pick an edge length and try it.',
+      edgeLabel: 'Edge length',
+      s2aria: function(e){ return 'A cube tower with edge length ' + e + ' cm'; },
+      towerLine2: function(e){
+        var area = e*e, total = area*e;
+        return 'One layer = Edge × Edge = ' + e + ' × ' + e + ' = <b>' + area + ' cubes</b>; stack ' + e + ' layers → ' +
+          area + ' × ' + e + ' = <b>' + total + ' cubes</b><br>Volume = Edge × Edge × Edge = ' + e + ' × ' + e + ' × ' + e + ' = <b>' + total + ' cubic cm</b>';
+      },
+      s3h2: 'Volume vs. Capacity',
+      s3lead: 'Volume is how much space the object itself takes up; capacity is how much a container can hold inside.',
+      cap1h: 'What is capacity?',
+      cap1p: 'Capacity is how much a container can hold "inside" it — like how much water a bucket can hold.',
+      cap2h: '1 cubic cm = 1 milliliter',
+      cap2p: 'A small cube with a 1 cm edge, filled with water, holds exactly 1 milliliter (mL).',
+      cap3h: '1000 cubic cm = 1 liter',
+      cap3p: '1000 of those 1-cubic-cm cubes stacked together hold exactly 1 liter (L) of water.',
+      s4h2: 'Six Quick Questions',
+      s4lead: 'Tap an answer and we’ll tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll: 'Perfect score! You’re a volume master 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That’s okay — scroll up and build the block tower again.',
+      qs: [
+        { stem:'A rectangular box is 4 cm long, 3 cm wide, and 2 cm high. What is its volume?',
+          opts:['9 cubic cm','12 cubic cm','24 cubic cm','20 cubic cm'], ans:2,
+          why:'Length × Width × Height = 4 × 3 × 2 = 24 (cubic cm).' },
+        { stem:'A cube has an edge length of 5 cm. What is its volume?',
+          opts:['15 cubic cm','25 cubic cm','75 cubic cm','125 cubic cm'], ans:3,
+          why:'Edge × Edge × Edge = 5 × 5 × 5 = 125 (cubic cm). For a cube you multiply the edge by itself three times — not edge × 3.' },
+        { stem:'A rectangular box has a volume of 24 cubic cm. It is 4 cm long and 3 cm wide. How tall is it?',
+          opts:['1 cm','2 cm','3 cm','6 cm'], ans:1,
+          why:'Length × Width = 4 × 3 = 12; 24 ÷ 12 = 2, so the height is 2 cm.' },
+        { stem:'How many liters is 2000 cubic centimeters?',
+          opts:['2 liters','0.2 liters','20 liters','200 liters'], ans:0,
+          why:'1000 cubic cm = 1 liter, and 2000 cubic cm is 2 groups of 1000, so it’s 2 liters.' },
+        { stem:'A rectangular box is 6 cm long, 2 cm wide, and 3 cm high. What is its volume?',
+          opts:['11 cubic cm','12 cubic cm','36 cubic cm','72 cubic cm'], ans:2,
+          why:'Length × Width × Height = 6 × 2 × 3 = 36 (cubic cm).' },
+        { stem:'500 cubic centimeters of water is poured into a measuring cup. How many milliliters is that?',
+          opts:['5 mL','500 mL','50 mL','5000 mL'], ans:1,
+          why:'1 cubic cm = 1 mL, so 500 cubic cm = 500 mL.' }
+      ],
+      s5h2: 'The Moving Company',
+      s5lead: 'Help the movers work out each box’s volume — tap the right answer to score, wrong taps lose points.',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
+      gBoxLine: function(l,w,h){
+        return 'The movers are here! This box is <b>' + l + ' cm</b> long, <b>' + w + ' cm</b> wide, and <b>' + h + ' cm</b> high. What is its volume in cubic cm?';
+      },
+      hints: [
+        'Hint: work out the area of one layer (length × width) first, then multiply by the height.',
+        'Hint: multiply all three numbers together — don’t forget one of them.',
+        'Hint: a cube’s length, width, and height are all equal — edge × edge × edge.',
+        'Hint: multiply length × width first, then multiply by height, one step at a time.',
+        'Hint: work out 4 × 4 for one layer’s area first, then multiply by the height of 3.'
+      ],
+      gCorrectFirst: function(v){ return 'Correct! The volume is ' + v + ' cubic cm — right on the first try, +20 points! 🎉'; },
+      gCorrectAfter: function(v){ return 'Correct! The volume is ' + v + ' cubic cm, +10 points.'; },
+      gWrong: 'Not quite — try again: length × width × height. −5 points.',
+      gClear: 'Round cleared! Press "Next round" to move the next box.',
+      gWin: function(score){ return 'All 5 boxes moved! Final score: ' + score + ' 🏆 Press "Restart" to play again.'; },
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      footer: 'How many cubes in one layer × how many layers — that’s length × width × height, the volume.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  /* ---------- 積木塔繪製（範例教學 1 / 2 共用） ---------- */
+  function buildTower(el, l, w, h){
+    el.textContent = '';
+    for (var layer = 0; layer < h; layer++){
+      var plate = document.createElement('div');
+      plate.className = 'layerPlate';
+      plate.style.gridTemplateColumns = 'repeat(' + l + ', 28px)';
+      for (var c = 0; c < l * w; c++){
+        var cube = document.createElement('div');
+        cube.className = 'cube'; cube.textContent = '🧊';
+        plate.appendChild(cube);
+      }
+      el.appendChild(plate);
+    }
+  }
+
+  /* ---------- 1. 長方體疊疊樂 ---------- */
+  var lVal = 4, wVal = 3, hVal = 2;
+  var lChips = document.getElementById('lChips');
+  var wChips = document.getElementById('wChips');
+  var hChips = document.getElementById('hChips');
+  var tower1 = document.getElementById('tower1');
+  var towerLine1 = document.getElementById('towerLine1');
+
+  function buildDimChips(container, options, current, onPick){
+    container.textContent = '';
+    options.forEach(function(n){
+      var b = makeChip(L().unitCm(n), n === current);
+      b.addEventListener('click', function(){ onPick(n); });
+      container.appendChild(b);
+    });
+  }
+
+  function renderTower1(){
+    buildDimChips(lChips, [2,3,4,5], lVal, function(n){ lVal = n; renderTower1(); });
+    buildDimChips(wChips, [2,3,4], wVal, function(n){ wVal = n; renderTower1(); });
+    buildDimChips(hChips, [1,2,3,4], hVal, function(n){ hVal = n; renderTower1(); });
+    buildTower(tower1, lVal, wVal, hVal);
+    tower1.setAttribute('aria-label', L().s1aria(lVal, wVal, hVal));
+    towerLine1.innerHTML = L().towerLine1(lVal, wVal, hVal);
+  }
+
+  /* ---------- 2. 正方體 ---------- */
+  var edgeVal = 3;
+  var edgeChips = document.getElementById('edgeChips');
+  var tower2 = document.getElementById('tower2');
+  var towerLine2 = document.getElementById('towerLine2');
+
+  function renderTower2(){
+    buildDimChips(edgeChips, [2,3,4,5], edgeVal, function(n){ edgeVal = n; renderTower2(); });
+    buildTower(tower2, edgeVal, edgeVal, edgeVal);
+    tower2.setAttribute('aria-label', L().s2aria(edgeVal));
+    towerLine2.innerHTML = L().towerLine2(edgeVal);
+  }
+
+  /* ---------- 4. 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function buildQuiz(){
+    var d = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    d.qs.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === d.qs.length){
+            qComment.textContent = right === 6 ? d.cAll : right >= 4 ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 5. 小遊戲：搬家公司 ---------- */
+  var ROUNDS = [
+    { l:2, w:3, h:4, cards:[9,24,6,20,12,30] },
+    { l:5, w:2, h:3, cards:[30,10,15,40,25,35] },
+    { l:3, w:3, h:3, cards:[9,18,6,27,15,21] },
+    { l:6, w:2, h:5, cards:[13,12,30,40,60,70] },
+    { l:4, w:4, h:3, cards:[11,16,12,36,64,48] }
+  ];
+  var gRoundIdx = 0, gScore = 0, gWrongThisRound = 0, gRoundDone = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gBoxLine = document.getElementById('gBoxLine');
+  var elHint = document.getElementById('gHint');
+  var gCards = document.getElementById('gCards');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+
+  function startRound(){
+    var d = L();
+    var r = ROUNDS[gRoundIdx];
+    var correct = r.l * r.w * r.h;
+    gWrongThisRound = 0; gRoundDone = false;
+    elRound.textContent = gRoundIdx + 1;
+    gBoxLine.innerHTML = d.gBoxLine(r.l, r.w, r.h);
+    elHint.textContent = d.hints[gRoundIdx];
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    gCards.textContent = '';
+    r.cards.forEach(function(val){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'gcard'; b.textContent = val;
+      b.addEventListener('click', function(){
+        if (gRoundDone || b.disabled) return;
+        if (val === correct){
+          gRoundDone = true;
+          b.classList.add('right');
+          var all = gCards.querySelectorAll('.gcard');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          if (gWrongThisRound === 0){
+            gScore += 20;
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrectFirst(correct) + '</span>';
+          } else {
+            gScore += 10;
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrectAfter(correct) + '</span>';
+          }
+          elScore.textContent = gScore;
+          if (gRoundIdx === ROUNDS.length - 1){
+            gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore) + '</span>';
+          } else {
+            gNext.disabled = false;
+          }
+        } else {
+          b.disabled = true;
+          b.classList.add('wrong');
+          gWrongThisRound++;
+          gScore = Math.max(0, gScore - 5);
+          elScore.textContent = gScore;
+          gMsg.innerHTML = '<span class="no">' + L().gWrong + '</span>';
+        }
+      });
+      gCards.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRoundIdx = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRoundIdx < ROUNDS.length - 1){ gRoundIdx++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    renderTower1();
+    renderTower2();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

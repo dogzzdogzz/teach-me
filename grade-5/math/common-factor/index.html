@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我公因數與公倍數 — 好朋友車站</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --purple:#8B5CF6; --purple-soft:#F1EAFE;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .scene{width:100%;height:auto;display:block;margin-top:14px}
+  .dualgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:16px}
+  .subcard{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .subcard h3{font-size:17px;text-align:center;margin-bottom:8px}
+  .numgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:7px;margin-top:6px}
+  .numgrid48{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:6px;margin-top:16px}
+  .cell{
+    border:2px solid var(--line);border-radius:10px;background:var(--card);
+    padding:7px 0;text-align:center;font-size:15px;font-weight:600;color:var(--muted);
+    cursor:pointer;
+  }
+  .cell.on-a{background:var(--green);border-color:var(--green);color:#fff}
+  .cell.on-b{background:var(--orange);border-color:var(--orange);color:#fff}
+  .cell.on-common{background:var(--purple);border-color:var(--purple);color:#fff;transform:scale(1.08);transition:.15s;box-shadow:0 0 0 3px var(--purple-soft)}
+  .cell.selected{outline:3px solid var(--ink);outline-offset:1px}
+  .cell:disabled{cursor:default}
+  .resultline{margin-top:14px;font-size:17px;min-height:26px}
+  .resultline b{color:var(--purple)}
+  .verdict{margin-top:12px;font-size:16px;min-height:44px;background:var(--blue-soft);border-radius:12px;padding:10px 14px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:14px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .dot.a{background:var(--green)} .dot.b{background:var(--orange)} .dot.c{background:var(--purple)}
+  .secret-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+  .secret{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center;
+  }
+  .secret .big{font-size:34px}
+  .secret h3{font-size:18px;margin:6px 0}
+  .secret p{font-size:15px;color:var(--muted)}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .target{font-size:22px;margin-top:14px}
+  .target b{color:var(--orange);font-size:28px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px}
+  .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;margin-top:16px}
+  .num{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);padding:10px 0;
+    font-size:17px;font-weight:600;cursor:pointer;color:var(--ink);
+  }
+  .num.found{background:var(--purple);border-color:var(--purple);color:#fff}
+  .num.miss{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+  .num:disabled{cursor:default}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .btnrow{display:flex;gap:12px;margin-top:16px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+
+  <header>
+    <h1 data-i18n="h1">🚏 公因數與公倍數 — 好朋友車站</h1>
+    <p class="sub" data-i18n="sub">兩個數字，也可以是好朋友：一起被整除、一起被跳到</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    <strong>公因數</strong>是兩個數字都能被同一個數整除；<br>
+    <strong>公倍數</strong>是兩個數字跳格子時，都會落腳的地方。
+  </div>
+
+  <!-- 範例教學 1：公因數車站 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">公因數車站：12 和 18</h2>
+    <p class="lead" data-i18n="s1lead">先看看 12 的因數格，再看看 18 的因數格 —— 哪些數字兩邊都亮起來？點一個數字看看說明。</p>
+
+    <div class="card">
+      <svg class="scene" viewBox="0 0 500 200" role="img" data-i18n-aria="s1aria" aria-label="12和18的公因數文氏圖">
+        <circle cx="190" cy="105" r="85" fill="#2F9E69" fill-opacity=".32" stroke="#2F9E69" stroke-width="2"/>
+        <circle cx="310" cy="105" r="85" fill="#E8871E" fill-opacity=".32" stroke="#E8871E" stroke-width="2"/>
+        <text x="110" y="60" font-size="26" font-weight="bold" fill="#2F9E69" data-i18n="vennA">12</text>
+        <text x="370" y="60" font-size="26" font-weight="bold" fill="#E8871E" data-i18n="vennB">18</text>
+        <text x="250" y="112" text-anchor="middle" font-size="16" font-weight="bold" fill="#5B2E9E" data-i18n="vennBoth">公因數</text>
+        <text x="250" y="132" text-anchor="middle" font-size="15" font-weight="bold" fill="#5B2E9E">1、2、3、6</text>
+      </svg>
+
+      <div class="dualgrid">
+        <div class="subcard">
+          <h3 data-i18n="cardAh">12 的因數格</h3>
+          <div class="numgrid" id="gridA"></div>
+        </div>
+        <div class="subcard">
+          <h3 data-i18n="cardBh">18 的因數格</h3>
+          <div class="numgrid" id="gridB"></div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span><i class="dot a"></i><span data-i18n="legA">只是 12 的因數</span></span>
+        <span><i class="dot b"></i><span data-i18n="legB">只是 18 的因數</span></span>
+        <span><i class="dot c"></i><span data-i18n="legC">兩個都是 —— 公因數！</span></span>
+      </div>
+
+      <p class="resultline" id="gcfLine"></p>
+      <p class="verdict" id="s1Verdict" data-i18n="clickPrompt1">點一個數字（1～20），看看它是不是公因數。</p>
+    </div>
+  </section>
+
+  <!-- 範例教學 2：好朋友青蛙 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">好朋友的落腳點：4 號蛙 vs 6 號蛙</h2>
+    <p class="lead" data-i18n="s2lead">4 號青蛙每次跳 4 格，6 號青蛙每次跳 6 格。兩隻都能落腳的格子，就是 4 和 6 的公倍數！</p>
+
+    <div class="card">
+      <svg class="scene" viewBox="0 0 700 180" role="img" data-i18n-aria="s2aria" aria-label="4號和6號青蛙跳格子在12相遇的圖">
+        <line x1="30" y1="140" x2="670" y2="140" stroke="#2B2A33" stroke-width="3" stroke-linecap="round"/>
+        <g font-size="15" font-family="sans-serif" text-anchor="middle" fill="#6B6875">
+          <text x="50"  y="168">0</text><text x="190" y="168">4</text><text x="330" y="168">8</text>
+          <text x="470" y="168" fill="#5B2E9E" font-weight="bold">12</text>
+        </g>
+        <g stroke="#2B2A33" stroke-width="2"><line x1="50" y1="132" x2="50" y2="148"/><line x1="190" y1="132" x2="190" y2="148"/><line x1="330" y1="132" x2="330" y2="148"/><line x1="470" y1="132" x2="470" y2="148"/></g>
+        <path d="M 50 130 Q 120 60 190 130" fill="none" stroke="#2F9E69" stroke-width="4" stroke-dasharray="8 6" stroke-linecap="round"/>
+        <path d="M 190 130 Q 260 60 330 130" fill="none" stroke="#2F9E69" stroke-width="4" stroke-dasharray="8 6" stroke-linecap="round"/>
+        <path d="M 330 130 Q 400 60 470 130" fill="none" stroke="#2F9E69" stroke-width="4" stroke-dasharray="8 6" stroke-linecap="round"/>
+        <path d="M 50 120 Q 260 20 470 120" fill="none" stroke="#E8871E" stroke-width="4" stroke-dasharray="8 6" stroke-linecap="round"/>
+        <text x="120" y="55" font-size="14" fill="#2F9E69" font-weight="bold" data-i18n="svgHopA">+4</text>
+        <text x="260" y="25" font-size="14" fill="#E8871E" font-weight="bold" data-i18n="svgHopB">+6（一次跳到12）</text>
+        <text x="35" y="122" font-size="20">🐸</text>
+        <text x="35" y="105" font-size="20">🐸</text>
+        <circle cx="470" cy="125" r="18" fill="#5B2E9E"/>
+        <text x="470" y="130" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold" data-i18n="svgMeet">相遇!</text>
+      </svg>
+
+      <div class="numgrid48" id="mGrid"></div>
+      <div class="legend">
+        <span><i class="dot a"></i><span data-i18n="legA4">只是 4 的倍數</span></span>
+        <span><i class="dot b"></i><span data-i18n="legB6">只是 6 的倍數</span></span>
+        <span><i class="dot c"></i><span data-i18n="legC46">兩個都是 —— 公倍數！</span></span>
+      </div>
+      <p class="resultline" id="lcmLine"></p>
+      <p class="verdict" id="s2Verdict" data-i18n="clickPrompt2">點一個數字（1～48），看看它是不是公倍數。</p>
+    </div>
+  </section>
+
+  <!-- 範例教學 3：三個重要提醒 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">三個一定要記住的小提醒</h2>
+    <div class="secret-row">
+      <div class="secret">
+        <div class="big">1️⃣</div>
+        <h3 data-i18n="fact1h">公因數一定包含 1</h3>
+        <p data-i18n="fact1p">1 可以整除任何數字，所以任何兩個數的公因數裡，1 一定在名單上。</p>
+      </div>
+      <div class="secret">
+        <div class="big">📏</div>
+        <h3 data-i18n="fact2h">最大公因數不會超過較小的那個數</h3>
+        <p data-i18n="fact2p">因數不會比原來的數大，所以最大公因數最多就跟兩數中較小的那個一樣大。</p>
+      </div>
+      <div class="secret">
+        <div class="big">♾️</div>
+        <h3 data-i18n="fact3h">公倍數數不完，最小公倍數最重要</h3>
+        <p data-i18n="fact3p">公倍數有無限多個；但「最小公倍數」最好用 —— 通分的時候就是用它！</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">試題</span>
+    <h2 data-i18n="s4h2">六題檢查一下</h2>
+    <p class="lead" data-i18n="s4lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / 6</span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">小遊戲</span>
+    <h2 data-i18n="s5h2">好朋友車站大挑戰</h2>
+    <p class="lead" data-i18n="s5lead">點出這一關兩個數字<strong>全部</strong>的公因數（1～20）才能過關。點錯會扣分，但不會結束。</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+        <span><span data-i18n="gFoundLabel">已找到</span> <b id="gFound">0</b> / <b id="gTotal">0</b></span>
+      </div>
+      <p class="target" id="gTargetLine">
+        <span data-i18n="gT1">找出</span> <b id="gA">12</b><span data-i18n="gAndLabel"> 和 </span><b id="gB">18</b> <span data-i18n="gT2">的所有公因數（1～20）</span>
+      </p>
+      <p class="hint" id="gHint"></p>
+      <div id="gGrid" class="ggrid"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>兩個數都排得剛剛好的是公因數；兩隻青蛙都跳得到的是公倍數。</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '教我公因數與公倍數 — 好朋友車站',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      h1: '🚏 公因數與公倍數 — 好朋友車站',
+      sub: '兩個數字，也可以是好朋友：一起被整除、一起被跳到',
+      intro: '<strong>公因數</strong>是兩個數字都能被同一個數整除；<br><strong>公倍數</strong>是兩個數字跳格子時，都會落腳的地方。',
+      eb1: '範例教學 1', eb2: '範例教學 2', eb3: '範例教學 3', eb4: '試題', eb5: '小遊戲',
+      s1h2: '公因數車站：12 和 18',
+      s1lead: '先看看 12 的因數格，再看看 18 的因數格 —— 哪些數字兩邊都亮起來？點一個數字看看說明。',
+      s1aria: '12和18的公因數文氏圖',
+      vennA: '12', vennB: '18', vennBoth: '公因數',
+      cardAh: '12 的因數格', cardBh: '18 的因數格',
+      legA: '只是 12 的因數', legB: '只是 18 的因數', legC: '兩個都是 —— 公因數！',
+      clickPrompt1: '點一個數字（1～20），看看它是不是公因數。',
+      gcfResult: function(list, gcf){ return '12 和 18 的公因數：<b>' + list.join('、') + '</b>，最大公因數（GCF）是 <b>' + gcf + '</b>。'; },
+      gvBoth: function(n, q12, q18){ return n + ' 可以把 12 平分（12 ÷ ' + n + ' = ' + q12 + '），也可以把 18 平分（18 ÷ ' + n + ' = ' + q18 + '）→ ' + n + ' 是公因數！'; },
+      gvOnly12: function(n, q12, q18, r18){ return n + ' 可以把 12 平分（12 ÷ ' + n + ' = ' + q12 + '），但不能把 18 平分（18 ÷ ' + n + ' = ' + q18 + ' 餘 ' + r18 + '）→ ' + n + ' 不是公因數。'; },
+      gvOnly18: function(n, q12, r12, q18){ return n + ' 不能把 12 平分（12 ÷ ' + n + ' = ' + q12 + ' 餘 ' + r12 + '），但可以把 18 平分（18 ÷ ' + n + ' = ' + q18 + '）→ ' + n + ' 不是公因數。'; },
+      gvNeither: function(n, q12, r12, q18, r18){ return n + ' 不能把 12 平分（12 ÷ ' + n + ' = ' + q12 + ' 餘 ' + r12 + '），也不能把 18 平分（18 ÷ ' + n + ' = ' + q18 + ' 餘 ' + r18 + '）→ ' + n + ' 不是公因數。'; },
+      s2h2: '好朋友的落腳點：4 號蛙 vs 6 號蛙',
+      s2lead: '4 號青蛙每次跳 4 格，6 號青蛙每次跳 6 格。兩隻都能落腳的格子，就是 4 和 6 的公倍數！',
+      s2aria: '4號和6號青蛙跳格子在12相遇的圖',
+      svgHopA: '+4', svgHopB: '+6（一次跳到12）', svgMeet: '相遇!',
+      legA4: '只是 4 的倍數', legB6: '只是 6 的倍數', legC46: '兩個都是 —— 公倍數！',
+      clickPrompt2: '點一個數字（1～48），看看它是不是公倍數。',
+      lcmResult: function(list, lcm){ return '4 和 6 的公倍數：<b>' + list.join('、') + '⋯⋯</b>，最小公倍數（LCM）是 <b>' + lcm + '</b>。'; },
+      mvBoth: function(n, q4, q6){ return n + ' = 4 × ' + q4 + '，也 = 6 × ' + q6 + ' → ' + n + ' 是公倍數！'; },
+      mvOnly4: function(n, q4, q6, r6){ return n + ' = 4 × ' + q4 + '，是 4 的倍數；但 ' + n + ' ÷ 6 = ' + q6 + ' 餘 ' + r6 + '，不是 6 的倍數 → ' + n + ' 不是公倍數。'; },
+      mvOnly6: function(n, q4, r4, q6){ return n + ' ÷ 4 = ' + q4 + ' 餘 ' + r4 + '，不是 4 的倍數；但 ' + n + ' = 6 × ' + q6 + '，是 6 的倍數 → ' + n + ' 不是公倍數。'; },
+      mvNeither: function(n, q4, r4, q6, r6){ return n + ' ÷ 4 = ' + q4 + ' 餘 ' + r4 + '，' + n + ' ÷ 6 = ' + q6 + ' 餘 ' + r6 + '，兩邊都除不盡 → ' + n + ' 不是公倍數。'; },
+      s3h2: '三個一定要記住的小提醒',
+      fact1h: '公因數一定包含 1',
+      fact1p: '1 可以整除任何數字，所以任何兩個數的公因數裡，1 一定在名單上。',
+      fact2h: '最大公因數不會超過較小的那個數',
+      fact2p: '因數不會比原來的數大，所以最大公因數最多就跟兩數中較小的那個一樣大。',
+      fact3h: '公倍數數不完，最小公倍數最重要',
+      fact3p: '公倍數有無限多個；但「最小公倍數」最好用 —— 通分的時候就是用它！',
+      s4h2: '六題檢查一下',
+      s4lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      cAll: '全對！你已經是公因數公倍數高手 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面再跟數字車站玩一次。',
+      qs: [
+        { stem:'8 和 12 的公因數有哪些？',
+          opts:['1、2、4','1、2','1、2、4、8','2、4'], ans:0,
+          why:'8 的因數：1、2、4、8；12 的因數：1、2、3、4、6、12；兩邊都有的是 1、2、4，所以公因數是 1、2、4（8 不是 12 的因數，不能算）。' },
+        { stem:'8 和 12 的最大公因數是多少？',
+          opts:['2','4','8','24'], ans:1,
+          why:'8 和 12 的公因數是 1、2、4，其中最大的是 4，所以最大公因數（GCF）是 4，不是 2。' },
+        { stem:'6 和 9 的公因數有哪些？',
+          opts:['18','1、2、3','1、3','3、6'], ans:2,
+          why:'6 的因數：1、2、3、6；9 的因數：1、3、9；兩邊都有的只有 1 和 3，所以公因數是 1、3。18 是 6 和 9 的公倍數，不是公因數。' },
+        { stem:'4 和 6 的最小公倍數是多少？',
+          opts:['24','10','4','12'], ans:3,
+          why:'4 的倍數：4、8、12、16、20、24⋯；6 的倍數：6、12、18、24⋯；兩邊最先重複出現的是 12，所以最小公倍數是 12。' },
+        { stem:'下面哪一句話是正確的？',
+          opts:['兩個數的公因數裡一定包含 1','公因數一定比兩個數都大','兩個數的公倍數只有一個','最大公因數會大於較小的那個數'], ans:0,
+          why:'1 可以整除任何整數，所以公因數裡一定有 1；因數不會比原數大，最大公因數不會超過較小的那個數；公倍數有無限多個，不會只有一個。' },
+        { stem:'下面哪一組數字，兩個都是 3 和 4 的公倍數？',
+          opts:['6、8','1、2','12、24','3、4'], ans:2,
+          why:'12 = 3 × 4 = 4 × 3，同時是 3 和 4 的倍數；24 = 3 × 8 = 4 × 6，也同時是 3 和 4 的倍數。其他選項都只符合其中一個數的倍數。' }
+      ],
+      s5h2: '好朋友車站大挑戰',
+      s5lead: '點出這一關兩個數字<strong>全部</strong>的公因數（1～20）才能過關。點錯會扣分，但不會結束。',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數', gFoundLabel: '已找到',
+      gT1: '找出', gAndLabel: ' 和 ', gT2: '的所有公因數（1～20）',
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      hints: {
+        0:'提示：先列出 12 的因數：1、2、3、4、6、12；再看哪些也整除 18。',
+        1:'提示：8 的因數不多，一個一個檢查能不能整除 12。',
+        2:'提示：9 的因數只有 1、3、9，看看哪些也整除 6。',
+        3:'提示：10 和 15 都能被 5 整除，這是很重要的線索。',
+        4:'提示：16 和 24 都能被 8 整除，別忘了 1、2、4 也是公因數。'
+      },
+      gHit: function(v, a, b){ return v + ' 可以整除 ' + a + '（' + a + '÷' + v + '=' + (a / v) + '），也可以整除 ' + b + '（' + b + '÷' + v + '=' + (b / v) + '）→ 公因數！'; },
+      gMissA: function(v, a, q, r){ return a + ' ÷ ' + v + ' = ' + q + ' 餘 ' + r + '，' + v + ' 不能整除 ' + a + '，扣 5 分。'; },
+      gMissB: function(v, b, q, r){ return b + ' ÷ ' + v + ' = ' + q + ' 餘 ' + r + '，' + v + ' 不能整除 ' + b + '，扣 5 分。'; },
+      gClear: function(a, b){ return '過關！' + a + ' 和 ' + b + ' 的公因數全找到了，按「下一關」繼續。'; },
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      footer: '把整頁縮成一句：<strong>兩個數都排得剛剛好的是公因數；兩隻青蛙都跳得到的是公倍數。</strong>'
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'Teach Me Common Factors & Multiples — The Best-Friends Station',
+      btn: '中',
+      home: '← Back to teach-me home',
+      h1: '🚏 Common Factors & Multiples — The Best-Friends Station',
+      sub: 'Two numbers can be best friends too: divided by the same number, or landed on together',
+      intro: 'A <strong>common factor</strong> is a number that divides two numbers evenly;<br>a <strong>common multiple</strong> is a square that both numbers land on when hopping.',
+      eb1: 'Example 1', eb2: 'Example 2', eb3: 'Example 3', eb4: 'Quiz', eb5: 'Game',
+      s1h2: 'The Common-Factor Station: 12 and 18',
+      s1lead: 'Look at the factor grid for 12, then the one for 18 — which numbers light up in both? Tap a number to see why.',
+      s1aria: 'Venn diagram of the common factors of 12 and 18',
+      vennA: '12', vennB: '18', vennBoth: 'Common factors',
+      cardAh: 'Factors of 12', cardBh: 'Factors of 18',
+      legA: 'Factor of 12 only', legB: 'Factor of 18 only', legC: 'Both — a common factor!',
+      clickPrompt1: 'Tap a number (1–20) to see whether it is a common factor.',
+      gcfResult: function(list, gcf){ return 'Common factors of 12 and 18: <b>' + list.join(', ') + '</b>. The greatest common factor (GCF) is <b>' + gcf + '</b>.'; },
+      gvBoth: function(n, q12, q18){ return n + ' divides 12 evenly (12 ÷ ' + n + ' = ' + q12 + ') and divides 18 evenly (18 ÷ ' + n + ' = ' + q18 + ') → ' + n + ' is a common factor!'; },
+      gvOnly12: function(n, q12, q18, r18){ return n + ' divides 12 evenly (12 ÷ ' + n + ' = ' + q12 + '), but not 18 (18 ÷ ' + n + ' = ' + q18 + ' remainder ' + r18 + ') → ' + n + ' is not a common factor.'; },
+      gvOnly18: function(n, q12, r12, q18){ return n + ' does not divide 12 evenly (12 ÷ ' + n + ' = ' + q12 + ' remainder ' + r12 + '), but it divides 18 evenly (18 ÷ ' + n + ' = ' + q18 + ') → ' + n + ' is not a common factor.'; },
+      gvNeither: function(n, q12, r12, q18, r18){ return n + ' does not divide 12 evenly (12 ÷ ' + n + ' = ' + q12 + ' remainder ' + r12 + '), nor 18 (18 ÷ ' + n + ' = ' + q18 + ' remainder ' + r18 + ') → ' + n + ' is not a common factor.'; },
+      s2h2: 'Where Best Friends Land: Frog 4 vs Frog 6',
+      s2lead: 'Frog 4 hops 4 squares at a time; Frog 6 hops 6 squares at a time. Any square both frogs can land on is a common multiple of 4 and 6!',
+      s2aria: 'Diagram of frogs hopping by 4 and by 6, meeting at 12',
+      svgHopA: '+4', svgHopB: '+6 (one hop to 12)', svgMeet: 'Meet!',
+      legA4: 'Multiple of 4 only', legB6: 'Multiple of 6 only', legC46: 'Both — a common multiple!',
+      clickPrompt2: 'Tap a number (1–48) to see whether it is a common multiple.',
+      lcmResult: function(list, lcm){ return 'Common multiples of 4 and 6: <b>' + list.join(', ') + '…</b>. The least common multiple (LCM) is <b>' + lcm + '</b>.'; },
+      mvBoth: function(n, q4, q6){ return n + ' = 4 × ' + q4 + ', and also = 6 × ' + q6 + ' → ' + n + ' is a common multiple!'; },
+      mvOnly4: function(n, q4, q6, r6){ return n + ' = 4 × ' + q4 + ', so it is a multiple of 4; but ' + n + ' ÷ 6 = ' + q6 + ' remainder ' + r6 + ', so it is not a multiple of 6 → ' + n + ' is not a common multiple.'; },
+      mvOnly6: function(n, q4, r4, q6){ return n + ' ÷ 4 = ' + q4 + ' remainder ' + r4 + ', so it is not a multiple of 4; but ' + n + ' = 6 × ' + q6 + ', so it is a multiple of 6 → ' + n + ' is not a common multiple.'; },
+      mvNeither: function(n, q4, r4, q6, r6){ return n + ' ÷ 4 = ' + q4 + ' remainder ' + r4 + ', and ' + n + ' ÷ 6 = ' + q6 + ' remainder ' + r6 + ' — neither divides evenly → ' + n + ' is not a common multiple.'; },
+      s3h2: 'Three Things Worth Remembering',
+      fact1h: 'A common factor always includes 1',
+      fact1p: '1 divides every whole number, so 1 is always on the list of common factors of any two numbers.',
+      fact2h: 'The GCF never exceeds the smaller number',
+      fact2p: 'A factor is never bigger than the number it belongs to, so the greatest common factor can be at most as big as the smaller of the two numbers.',
+      fact3h: 'Common multiples never end — the LCM matters most',
+      fact3p: 'There are endless common multiples; but the "least common multiple" is the most useful one — it is exactly what you use when finding a common denominator!',
+      s4h2: 'Six Quick Questions',
+      s4lead: 'Tap an answer and we will tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is "' + ans + '".</b> '; },
+      cAll: 'Perfect score! You are a common factor & multiple master 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That is okay — scroll up and play with the station one more time.',
+      qs: [
+        { stem:'Which of these are common factors of 8 and 12?',
+          opts:['1, 2, 4','1, 2','1, 2, 4, 8','2, 4'], ans:0,
+          why:'Factors of 8: 1, 2, 4, 8. Factors of 12: 1, 2, 3, 4, 6, 12. The ones shared are 1, 2, 4 — so those are the common factors (8 is not a factor of 12, so it does not count).' },
+        { stem:'What is the greatest common factor of 8 and 12?',
+          opts:['2','4','8','24'], ans:1,
+          why:'The common factors of 8 and 12 are 1, 2, 4 — the greatest of them is 4, so the GCF is 4, not 2.' },
+        { stem:'Which of these are common factors of 6 and 9?',
+          opts:['18','1, 2, 3','1, 3','3, 6'], ans:2,
+          why:'Factors of 6: 1, 2, 3, 6. Factors of 9: 1, 3, 9. The only ones shared are 1 and 3. 18 is a common multiple of 6 and 9, not a common factor.' },
+        { stem:'What is the least common multiple of 4 and 6?',
+          opts:['24','10','4','12'], ans:3,
+          why:'Multiples of 4: 4, 8, 12, 16, 20, 24… Multiples of 6: 6, 12, 18, 24… The first one they share is 12, so the LCM is 12.' },
+        { stem:'Which sentence below is correct?',
+          opts:['The common factors of two numbers always include 1','A common factor is always bigger than both numbers','Two numbers have only one common multiple','The GCF can be bigger than the smaller of the two numbers'], ans:0,
+          why:'1 divides every whole number, so 1 is always a common factor; a factor is never bigger than its own number, so the GCF cannot exceed the smaller number; and there are endless common multiples, not just one.' },
+        { stem:'Which pair of numbers are BOTH common multiples of 3 and 4?',
+          opts:['6, 8','1, 2','12, 24','3, 4'], ans:2,
+          why:'12 = 3 × 4 = 4 × 3, so it is a multiple of both 3 and 4; 24 = 3 × 8 = 4 × 6, also a multiple of both. The other pairs each satisfy only one of the two numbers.' }
+      ],
+      s5h2: 'Best-Friends Station Challenge',
+      s5lead: 'Tap <strong>every</strong> common factor (1–20) of this round’s pair to clear it. Wrong taps cost points, but the game never ends.',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score', gFoundLabel: 'Found',
+      gT1: 'Find all common factors of', gAndLabel: ' and ', gT2: '(1–20)',
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      hints: {
+        0:'Hint: list the factors of 12 first — 1, 2, 3, 4, 6, 12 — then see which also divide 18.',
+        1:'Hint: 8 does not have many factors — check each one against 12.',
+        2:'Hint: 9 only has factors 1, 3, 9 — see which also divide 6.',
+        3:'Hint: both 10 and 15 can be divided by 5 — that is an important clue.',
+        4:'Hint: both 16 and 24 can be divided by 8 — but do not forget 1, 2, 4 too.'
+      },
+      gHit: function(v, a, b){ return v + ' divides ' + a + ' evenly (' + a + '÷' + v + '=' + (a / v) + ') and divides ' + b + ' evenly (' + b + '÷' + v + '=' + (b / v) + ') → common factor!'; },
+      gMissA: function(v, a, q, r){ return a + ' ÷ ' + v + ' = ' + q + ' remainder ' + r + ' — ' + v + ' does not divide ' + a + ' evenly. −5 points.'; },
+      gMissB: function(v, b, q, r){ return b + ' ÷ ' + v + ' = ' + q + ' remainder ' + r + ' — ' + v + ' does not divide ' + b + ' evenly. −5 points.'; },
+      gClear: function(a, b){ return 'Round cleared! You found every common factor of ' + a + ' and ' + b + ' — press "Next round" to continue.'; },
+      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press "Restart" to play again.'; },
+      footer: 'The whole page in one line: <strong>numbers that divide both evenly are common factors; squares both frogs can land on are common multiples.</strong>'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  /* ---------- 範例教學 1：公因數車站 (12 與 18) ---------- */
+  var FA = 12, FB = 18;
+  var gridA = document.getElementById('gridA');
+  var gridB = document.getElementById('gridB');
+  var gcfLine = document.getElementById('gcfLine');
+  var s1Verdict = document.getElementById('s1Verdict');
+  var s1Selected = null;
+
+  function commonFactors(a, b, max){
+    var out = [];
+    for (var v = 1; v <= max; v++){ if (a % v === 0 && b % v === 0) out.push(v); }
+    return out;
+  }
+
+  function renderFactorGrids(){
+    gridA.textContent = '';
+    gridB.textContent = '';
+    var cf = commonFactors(FA, FB, 20);
+    for (var v = 1; v <= 20; v++){
+      var isA = (FA % v === 0);
+      var isB = (FB % v === 0);
+      var isCommon = isA && isB;
+
+      var cellA = document.createElement('button');
+      cellA.type = 'button'; cellA.className = 'cell' + (isCommon ? ' on-common' : (isA ? ' on-a' : ''));
+      cellA.textContent = v;
+      (function(v, isA, isB){
+        cellA.addEventListener('click', function(){ showFactorVerdict(v, isA, isB); });
+      })(v, isA, isB);
+      gridA.appendChild(cellA);
+
+      var cellB = document.createElement('button');
+      cellB.type = 'button'; cellB.className = 'cell' + (isCommon ? ' on-common' : (isB ? ' on-b' : ''));
+      cellB.textContent = v;
+      (function(v, isA, isB){
+        cellB.addEventListener('click', function(){ showFactorVerdict(v, isA, isB); });
+      })(v, isA, isB);
+      gridB.appendChild(cellB);
+    }
+    gcfLine.innerHTML = L().gcfResult(cf, cf[cf.length - 1]);
+  }
+
+  function showFactorVerdict(v, isA, isB){
+    var d = L();
+    var q12 = Math.floor(FA / v), r12 = FA % v;
+    var q18 = Math.floor(FB / v), r18 = FB % v;
+    var msg;
+    if (isA && isB) msg = d.gvBoth(v, q12, q18);
+    else if (isA && !isB) msg = d.gvOnly12(v, q12, q18, r18);
+    else if (!isA && isB) msg = d.gvOnly18(v, q12, r12, q18);
+    else msg = d.gvNeither(v, q12, r12, q18, r18);
+    s1Verdict.innerHTML = msg;
+  }
+
+  /* ---------- 範例教學 2：好朋友青蛙 (4 與 6，1~48) ---------- */
+  var MA = 4, MB = 6, MMAX = 48;
+  var mGrid = document.getElementById('mGrid');
+  var lcmLine = document.getElementById('lcmLine');
+  var s2Verdict = document.getElementById('s2Verdict');
+
+  function commonMultiples(a, b, max){
+    var out = [];
+    for (var v = 1; v <= max; v++){ if (v % a === 0 && v % b === 0) out.push(v); }
+    return out;
+  }
+
+  function renderMultipleGrid(){
+    mGrid.textContent = '';
+    var cm = commonMultiples(MA, MB, MMAX);
+    for (var v = 1; v <= MMAX; v++){
+      var isA = (v % MA === 0);
+      var isB = (v % MB === 0);
+      var isCommon = isA && isB;
+      var cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cell' + (isCommon ? ' on-common' : (isA ? ' on-a' : (isB ? ' on-b' : '')));
+      cell.textContent = v;
+      (function(v, isA, isB){
+        cell.addEventListener('click', function(){ showMultipleVerdict(v, isA, isB); });
+      })(v, isA, isB);
+      mGrid.appendChild(cell);
+    }
+    lcmLine.innerHTML = L().lcmResult(cm, cm[0]);
+  }
+
+  function showMultipleVerdict(v, isA, isB){
+    var d = L();
+    var q4 = Math.floor(v / MA), r4 = v % MA;
+    var q6 = Math.floor(v / MB), r6 = v % MB;
+    var msg;
+    if (isA && isB) msg = d.mvBoth(v, q4, q6);
+    else if (isA && !isB) msg = d.mvOnly4(v, q4, q6, r6);
+    else if (!isA && isB) msg = d.mvOnly6(v, q4, r4, q6);
+    else msg = d.mvNeither(v, q4, r4, q6, r6);
+    s2Verdict.innerHTML = msg;
+  }
+
+  /* ---------- 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function buildQuiz(){
+    var d = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    d.qs.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === d.qs.length){
+            qComment.textContent = right === 6 ? d.cAll : right >= 4 ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 小遊戲：好朋友車站大挑戰 ---------- */
+  var GMAX = 20;
+  var PAIRS = [[12,18],[8,12],[6,9],[10,15],[16,24]];
+  var gRound = 0, gScore = 0, foundCount = 0, needCount = 0;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var elFound = document.getElementById('gFound');
+  var elTotal = document.getElementById('gTotal');
+  var elA = document.getElementById('gA');
+  var elB = document.getElementById('gB');
+  var elHint = document.getElementById('gHint');
+  var gGrid = document.getElementById('gGrid');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+
+  function startRound(){
+    var pair = PAIRS[gRound];
+    var a = pair[0], b = pair[1];
+    foundCount = 0; needCount = 0;
+    for (var i = 1; i <= GMAX; i++){ if (a % i === 0 && b % i === 0) needCount++; }
+    elRound.textContent = gRound + 1;
+    elA.textContent = a; elB.textContent = b;
+    elTotal.textContent = needCount;
+    elFound.textContent = '0';
+    elHint.textContent = (L().hints[gRound]) || '';
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    gGrid.textContent = '';
+    for (var v = 1; v <= GMAX; v++){
+      (function(v){
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'num'; btn.textContent = v;
+        btn.addEventListener('click', function(){
+          if (btn.disabled) return;
+          var okA = (a % v === 0), okB = (b % v === 0);
+          if (okA && okB){
+            btn.disabled = true; btn.classList.add('found');
+            foundCount++; gScore += 10;
+            elFound.textContent = foundCount;
+            gMsg.innerHTML = '<span class="yes" style="color:var(--green);font-weight:700">' + L().gHit(v, a, b) + '</span>';
+            if (foundCount === needCount){
+              gScore += 20;
+              elScore.textContent = gScore;
+              if (gRound === PAIRS.length - 1){
+                gMsg.innerHTML = '<span style="color:var(--green);font-weight:700">' + L().gWin(gScore) + '</span>';
+              } else {
+                gMsg.innerHTML = '<span style="color:var(--green);font-weight:700">' + L().gClear(a, b) + '</span>';
+                gNext.disabled = false;
+              }
+              return;
+            }
+          } else {
+            btn.classList.add('miss');
+            gScore = Math.max(0, gScore - 5);
+            var msg;
+            if (!okA){
+              msg = L().gMissA(v, a, Math.floor(a / v), a % v);
+            } else {
+              msg = L().gMissB(v, b, Math.floor(b / v), b % v);
+            }
+            gMsg.innerHTML = '<span style="color:var(--red);font-weight:700">' + msg + '</span>';
+            setTimeout(function(){ btn.classList.remove('miss'); }, 700);
+          }
+          elScore.textContent = gScore;
+        });
+        gGrid.appendChild(btn);
+      })(v);
+    }
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < PAIRS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    renderFactorGrids();
+    s1Verdict.innerHTML = '';
+    s1Verdict.textContent = L().clickPrompt1;
+    renderMultipleGrid();
+    s2Verdict.textContent = L().clickPrompt2;
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
