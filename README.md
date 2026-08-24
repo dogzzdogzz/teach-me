@@ -17,8 +17,8 @@ grade-2/math/              # 二年級數學：單元整理
 grade-3/math/              # 三年級數學：單元整理
 grade-4/math/              # 四年級數學：單元整理
 grade-5/math/              # 五年級數學：單元整理＋課程
-│   ├── factor/factor-1.html      # 因數 — 因數工廠
-│   └── multiple/multiple-1.html  # 倍數 — 跳跳蛙數字樂園
+│   ├── factor/index.html         # 因數 — 因數工廠
+│   └── multiple/index.html       # 倍數 — 跳跳蛙數字樂園
 grade-6/math/              # 六年級數學：單元整理
 ```
 
@@ -37,12 +37,12 @@ grade-6/math/              # 六年級數學：單元整理
 
 | 年級 | 課程 | 連結 |
 |------|------|------|
-| 五年級 | 因數 — 因數工廠 | [grade-5/math/factor/factor-1.html](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/factor-1.html) |
-| 五年級 | 倍數 — 跳跳蛙數字樂園 | [grade-5/math/multiple/multiple-1.html](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/multiple-1.html) |
+| 五年級 | 因數 — 因數工廠 | [grade-5/math/factor/](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/) |
+| 五年級 | 倍數 — 跳跳蛙數字樂園 | [grade-5/math/multiple/](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/) |
 
 ## 課程頁面慣例
 
-- 路徑：`grade-X/math/<主題>/<主題>-N.html`，一課一個自足的 HTML（行內 CSS ＋原生 JS，無外部相依）。
+- 路徑：`grade-X/math/<主題>/index.html`，一主題一課、一課一個自足的 HTML（行內 CSS ＋原生 JS，無外部相依），網址即 `…/grade-X/math/<主題>/`。
 - 三段式結構：範例教學（互動示範）→ 試題（六題即時回饋＋計分）→ 小遊戲（五關計分）。
 - 淺色暖色系：背景 `#FAF7F0`、卡片 `#FFF`、強調綠 `#2F9E69` ／橘 `#E8871E`；大字體、SVG 插圖。
 - 每課頁首連回首頁；新增課程時同步在 `index.html` 加上課程卡片。

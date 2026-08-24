@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我倍數 — 跳跳蛙數字樂園</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .scene{width:100%;height:auto;display:block;margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .numgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin-top:16px}
+  .cell{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);
+    padding:8px 0;text-align:center;font-size:17px;font-weight:600;color:var(--muted);
+  }
+  .cell.on{background:var(--green);border-color:var(--green);color:#fff;transform:scale(1.05);transition:.15s}
+  .hopline{margin-top:12px;font-size:18px;min-height:32px}
+  .hopline b{color:var(--green)}
+  .secret-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+  .secret{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center;
+  }
+  .secret .big{font-size:34px}
+  .secret h3{font-size:18px;margin:6px 0}
+  .secret p{font-size:15px;color:var(--muted)}
+  .checker{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+  .checker input{
+    width:110px;font-size:20px;padding:8px 12px;border:2px solid var(--line);border-radius:12px;
+    background:var(--card);color:var(--ink);text-align:center;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .verdict{margin-top:14px;font-size:18px;min-height:30px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .target{font-size:22px;margin-top:14px}
+  .target b{color:var(--orange);font-size:28px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px}
+  .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;margin-top:16px}
+  .num{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);padding:10px 0;
+    font-size:17px;font-weight:600;cursor:pointer;color:var(--ink);
+  }
+  .num.found{background:var(--green);border-color:var(--green);color:#fff}
+  .num.miss{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+  .num:disabled{cursor:default}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .btnrow{display:flex;gap:12px;margin-top:16px}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p><a class="home" href="../../../index.html">← 回 teach-me 首頁</a></p>
+
+  <header>
+    <h1>🐸 教我倍數</h1>
+    <p class="sub">跟著跳跳蛙，一步一步認識倍數</p>
+  </header>
+
+  <div class="intro">
+    倍數就像<strong>青蛙跳格子</strong>：一隻每次跳 3 格的青蛙，<br>
+    落腳的格子 3、6、9、12⋯⋯ 全部都是 <strong>3 的倍數</strong>。
+  </div>
+
+  <!-- 1. 跳格子看倍數 -->
+  <section>
+    <span class="eyebrow">範例教學 1</span>
+    <h2>青蛙跳給你看</h2>
+    <p class="lead">選一隻青蛙，看牠落腳在哪些格子 —— 那些就是牠的倍數。</p>
+
+    <div class="card">
+      <svg class="scene" viewBox="0 0 700 180" role="img" aria-label="青蛙每次跳3格的數線圖">
+        <line x1="30" y1="140" x2="670" y2="140" stroke="#2B2A33" stroke-width="3" stroke-linecap="round"/>
+        <g font-size="16" font-family="sans-serif" text-anchor="middle" fill="#6B6875">
+          <text x="50"  y="168">0</text><text x="150" y="168">1</text><text x="250" y="168">2</text>
+          <text x="350" y="168" fill="#2F9E69" font-weight="bold">3</text>
+          <text x="450" y="168">4</text><text x="550" y="168">5</text>
+          <text x="650" y="168" fill="#2F9E69" font-weight="bold">6</text>
+        </g>
+        <g stroke="#2B2A33" stroke-width="2"><line x1="50" y1="132" x2="50" y2="148"/><line x1="150" y1="132" x2="150" y2="148"/><line x1="250" y1="132" x2="250" y2="148"/><line x1="350" y1="132" x2="350" y2="148"/><line x1="450" y1="132" x2="450" y2="148"/><line x1="550" y1="132" x2="550" y2="148"/><line x1="650" y1="132" x2="650" y2="148"/></g>
+        <path d="M 50 130 Q 200 40 350 130" fill="none" stroke="#2F9E69" stroke-width="4" stroke-dasharray="8 6" stroke-linecap="round"/>
+        <path d="M 350 130 Q 500 40 650 130" fill="none" stroke="#2F9E69" stroke-width="4" stroke-dasharray="8 6" stroke-linecap="round"/>
+        <text x="200" y="60" text-anchor="middle" font-size="15" fill="#2F9E69" font-weight="bold">跳一次 +3</text>
+        <text x="500" y="60" text-anchor="middle" font-size="15" fill="#2F9E69" font-weight="bold">再跳 +3</text>
+        <circle cx="350" cy="112" r="16" fill="#2F9E69"/>
+        <circle cx="343" cy="107" r="2.5" fill="#fff"/><circle cx="357" cy="107" r="2.5" fill="#fff"/>
+        <path d="M 343 117 Q 350 122 357 117" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <text x="35" y="115" font-size="22">🐸</text>
+      </svg>
+
+      <div class="chips" id="hopChips"></div>
+      <div class="numgrid" id="hopGrid"></div>
+      <p class="hopline" id="hopLine"></p>
+    </div>
+  </section>
+
+  <!-- 2. 三個祕密 -->
+  <section>
+    <span class="eyebrow">範例教學 2</span>
+    <h2>倍數的三個祕密</h2>
+    <div class="secret-row">
+      <div class="secret">
+        <div class="big">🥇</div>
+        <h3>最小的倍數是自己</h3>
+        <p>青蛙的第一跳就落在 3。<br>3 × 1 = 3，所以 3 是 3 的倍數。</p>
+      </div>
+      <div class="secret">
+        <div class="big">♾️</div>
+        <h3>倍數數不完</h3>
+        <p>青蛙可以一直跳下去，<br>3、6、9、12⋯⋯永遠沒有終點。</p>
+      </div>
+      <div class="secret">
+        <div class="big">➕</div>
+        <h3>每次都加同樣的數</h3>
+        <p>3 的倍數每次 +3，<br>5 的倍數每次 +5。有規律！</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 倍數與因數 -->
+  <section>
+    <span class="eyebrow">範例教學 3</span>
+    <h2>倍數和因數是好朋友</h2>
+    <p class="lead">同一件事，兩種說法。學過<a class="home" href="../factor/factor-1.html">因數</a>的你一定看得懂。</p>
+    <div class="card">
+      <svg class="scene" viewBox="0 0 700 200" role="img" aria-label="3和12的因數倍數關係圖">
+        <rect x="60"  y="60" width="160" height="80" rx="16" fill="#E3F4EB" stroke="#2F9E69" stroke-width="3"/>
+        <text x="140" y="110" text-anchor="middle" font-size="34" font-weight="bold" fill="#2F9E69">3</text>
+        <rect x="480" y="60" width="160" height="80" rx="16" fill="#FDF0E0" stroke="#E8871E" stroke-width="3"/>
+        <text x="560" y="110" text-anchor="middle" font-size="34" font-weight="bold" fill="#E8871E">12</text>
+        <path d="M 230 80 L 470 80" stroke="#2F9E69" stroke-width="3" marker-end="url(#a1)"/>
+        <text x="350" y="68" text-anchor="middle" font-size="16" fill="#2F9E69" font-weight="bold">3 是 12 的因數</text>
+        <path d="M 470 120 L 230 120" stroke="#E8871E" stroke-width="3" marker-end="url(#a2)"/>
+        <text x="350" y="145" text-anchor="middle" font-size="16" fill="#E8871E" font-weight="bold">12 是 3 的倍數</text>
+        <defs>
+          <marker id="a1" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#2F9E69"/></marker>
+          <marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#E8871E"/></marker>
+        </defs>
+      </svg>
+      <p style="text-align:center;margin-top:8px">一句話記住：<strong>小的當因數，大的當倍數。</strong></p>
+    </div>
+  </section>
+
+  <!-- 4. 怎麼判斷 -->
+  <section>
+    <span class="eyebrow">範例教學 4</span>
+    <h2>怎麼判斷是不是倍數？用除法！</h2>
+    <p class="lead">除得盡（沒有餘數）就是倍數。輸入一個數試試看。</p>
+    <div class="card">
+      <div class="checker">
+        <input id="ckNum" type="number" min="1" max="9999" value="24" aria-label="要檢查的數">
+        <span>是不是</span>
+        <div class="chips" id="ckChips" style="margin-top:0"></div>
+        <span>的倍數？</span>
+        <button class="btn" id="ckBtn" type="button">檢查</button>
+      </div>
+      <p class="verdict" id="ckVerdict"></p>
+    </div>
+  </section>
+
+  <!-- 5. 試題 -->
+  <section>
+    <span class="eyebrow">試題</span>
+    <h2>六題檢查一下</h2>
+    <p class="lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span>已作答 <b id="qDone">0</b> / 6</span>
+      <span>答對 <b id="qRight">0</b> 題</span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 6. 小遊戲 -->
+  <section>
+    <span class="eyebrow">小遊戲</span>
+    <h2>倍數跳跳蛙</h2>
+    <p class="lead">幫青蛙把 <strong>所有</strong>能落腳的格子（倍數）點出來就過關。點錯會扣分，但不會結束。</p>
+    <div class="card game">
+      <div class="stats">
+        <span>第 <b id="gRound">1</b> / 5 關</span>
+        <span>分數 <b id="gScore">0</b></span>
+        <span>已找到 <b id="gFound">0</b> / <b id="gTotal">0</b></span>
+      </div>
+      <p class="target">找出 <b id="gTarget">3</b> 的所有倍數（1～30）</p>
+      <p class="hint" id="gHint"></p>
+      <div id="gGrid" class="ggrid"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled>下一關</button>
+        <button id="gRestart" class="btn ghost" type="button">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    把整頁縮成一句：<strong>從自己開始、每次加自己、永遠數不完 —— 這就是倍數。</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 1. 跳格子 ---------- */
+  var HOP_MAX = 36;
+  var hopN = 3;
+  var hopChips = document.getElementById('hopChips');
+  var hopGrid = document.getElementById('hopGrid');
+  var hopLine = document.getElementById('hopLine');
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  function buildHopChips(){
+    hopChips.textContent = '';
+    [2,3,4,5,6].forEach(function(n){
+      var b = makeChip('每次跳 ' + n, n === hopN);
+      b.addEventListener('click', function(){ hopN = n; buildHopChips(); renderHop(); });
+      hopChips.appendChild(b);
+    });
+  }
+
+  function renderHop(){
+    hopGrid.textContent = '';
+    var landed = [];
+    for (var i = 1; i <= HOP_MAX; i++){
+      var c = document.createElement('div');
+      c.className = 'cell' + (i % hopN === 0 ? ' on' : '');
+      c.textContent = i;
+      if (i % hopN === 0) landed.push(i);
+      hopGrid.appendChild(c);
+    }
+    hopLine.innerHTML = hopN + ' 的倍數：<b>' + landed.slice(0,6).join('、') + '⋯⋯</b>（每次 +' + hopN + '，數不完）';
+  }
+
+  buildHopChips();
+  renderHop();
+
+  /* ---------- 4. 倍數檢查機 ---------- */
+  var ckN = 3;
+  var ckChips = document.getElementById('ckChips');
+  var ckNum = document.getElementById('ckNum');
+  var ckBtn = document.getElementById('ckBtn');
+  var ckVerdict = document.getElementById('ckVerdict');
+
+  function buildCkChips(){
+    ckChips.textContent = '';
+    [3,4,6,7,9].forEach(function(n){
+      var b = makeChip(String(n), n === ckN);
+      b.addEventListener('click', function(){ ckN = n; buildCkChips(); });
+      ckChips.appendChild(b);
+    });
+  }
+
+  function runCheck(){
+    var v = parseInt(ckNum.value, 10);
+    if (!v || v < 1){ ckVerdict.innerHTML = '<span class="no">請輸入 1 以上的數。</span>'; return; }
+    var q = Math.floor(v / ckN), r = v % ckN;
+    if (r === 0){
+      ckVerdict.innerHTML = '<span class="yes">' + v + ' ÷ ' + ckN + ' = ' + q +
+        '，整除！' + v + ' 是 ' + ckN + ' 的倍數（' + ckN + ' × ' + q + '）。</span>';
+    } else {
+      ckVerdict.innerHTML = '<span class="no">' + v + ' ÷ ' + ckN + ' = ' + q + ' 餘 ' + r +
+        '，除不盡，' + v + ' 不是 ' + ckN + ' 的倍數。</span>';
+    }
+  }
+
+  buildCkChips();
+  ckBtn.addEventListener('click', runCheck);
+  ckNum.addEventListener('keydown', function(e){ if (e.key === 'Enter') runCheck(); });
+
+  /* ---------- 5. 試題 ---------- */
+  var QS = [
+    {
+      stem:'下面哪一個是 6 的倍數？',
+      opts:['16','26','36','46'], ans:2,
+      why:'36 ÷ 6 = 6，整除。青蛙每次跳 6：6、12、18、24、30、36。'
+    },
+    {
+      stem:'8 的倍數當中，最小的是哪一個？',
+      opts:['1','4','8','16'], ans:2,
+      why:'最小的倍數就是自己：8 × 1 = 8。1 和 4 是 8 的因數，不是倍數。'
+    },
+    {
+      stem:'已知 7 × 8 = 56，下面哪一句正確？',
+      opts:['56 是 7 的倍數','7 是 56 的倍數','8 是 7 的倍數','56 是 8 的因數'], ans:0,
+      why:'乘出來的 56 比較大，是 7 和 8 的倍數；7 和 8 比較小，是 56 的因數。'
+    },
+    {
+      stem:'下面哪一個<strong>不是</strong> 4 的倍數？',
+      opts:['12','20','26','32'], ans:2,
+      why:'26 ÷ 4 = 6 餘 2，除不盡。青蛙跳 4 會落在 24、28，跳不到 26。'
+    },
+    {
+      stem:'5 的倍數一共有幾個？',
+      opts:['5 個','10 個','100 個','數不完'], ans:3,
+      why:'青蛙可以一直跳下去：5、10、15⋯⋯倍數永遠數不完。'
+    },
+    {
+      stem:'「4 是 20 的 ___，20 是 4 的 ___」',
+      opts:['倍數；因數','因數；倍數','倍數；倍數','因數；因數'], ans:1,
+      why:'小的當因數，大的當倍數。20 ÷ 4 = 5 整除，所以 4 是因數、20 是倍數。'
+    }
+  ];
+
+  var quizEl = document.getElementById('quiz');
+  quizEl.textContent = '';
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  QS.forEach(function(q, qi){
+    var box = document.createElement('div');
+    box.className = 'q';
+    var n = document.createElement('span');
+    n.className = 'qn'; n.textContent = '第 ' + (qi + 1) + ' 題';
+    var stem = document.createElement('p');
+    stem.className = 'stem'; stem.innerHTML = q.stem;
+    var opts = document.createElement('div');
+    opts.className = 'opts';
+    var fb = document.createElement('p');
+    fb.className = 'fb';
+    var answered = false;
+    q.opts.forEach(function(opt, oi){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+      b.addEventListener('click', function(){
+        if (answered) return;
+        answered = true;
+        var good = (oi === q.ans);
+        var all = opts.querySelectorAll('.opt');
+        for (var i = 0; i < all.length; i++){
+          all[i].disabled = true;
+          if (i === q.ans) all[i].classList.add('right');
+        }
+        if (!good) b.classList.add('wrong');
+        fb.innerHTML = (good ? '<b>答對了。</b>' : '<b>正確答案是「' + q.opts[q.ans] + '」。</b>') + q.why;
+        done++; if (good) right++;
+        qDone.textContent = done; qRight.textContent = right;
+        if (done === QS.length){
+          qComment.textContent = right === 6 ? '全對！你已經是倍數高手 🏆'
+            : right >= 4 ? '很棒！錯的那幾題再看一次說明。'
+            : '沒關係，回到上面再跟青蛙跳一輪。';
+        }
+      });
+      opts.appendChild(b);
+    });
+    box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+    quizEl.appendChild(box);
+  });
+
+  /* ---------- 6. 小遊戲：倍數跳跳蛙 ---------- */
+  var MAXNUM = 30;
+  var TARGETS = [3, 4, 5, 6, 9];
+  var HINTS = {
+    3:'提示：3、6、9⋯⋯每次加 3。', 4:'提示：別忘了 4 自己。',
+    5:'提示：個位是 0 或 5。', 6:'提示：6 的倍數也是 2 和 3 的倍數。',
+    9:'提示：30 以內只有 3 個。'
+  };
+  var gRound = 0, gScore = 0, foundCount = 0, needCount = 0;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var elFound = document.getElementById('gFound');
+  var elTotal = document.getElementById('gTotal');
+  var elTarget = document.getElementById('gTarget');
+  var elHint = document.getElementById('gHint');
+  var gGrid = document.getElementById('gGrid');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+
+  function startRound(){
+    var target = TARGETS[gRound];
+    foundCount = 0; needCount = 0;
+    for (var i = 1; i <= MAXNUM; i++) if (i % target === 0) needCount++;
+    elRound.textContent = gRound + 1;
+    elTarget.textContent = target;
+    elTotal.textContent = needCount;
+    elFound.textContent = '0';
+    elHint.textContent = HINTS[target] || '';
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    gGrid.textContent = '';
+    for (var v = 1; v <= MAXNUM; v++){
+      (function(v){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'num'; b.textContent = v;
+        b.addEventListener('click', function(){
+          if (b.disabled) return;
+          if (v % target === 0){
+            b.disabled = true; b.classList.add('found');
+            foundCount++; gScore += 10;
+            elFound.textContent = foundCount;
+            gMsg.innerHTML = '<span class="yes">' + target + ' × ' + (v / target) + ' = ' + v + '，青蛙落腳成功！</span>';
+            if (foundCount === needCount){
+              if (gRound === TARGETS.length - 1){
+                gMsg.innerHTML = '<span class="yes">五關全破！最後得分 ' + gScore + ' 分 🏆 按「重新開始」再挑戰一次。</span>';
+              } else {
+                gMsg.innerHTML = '<span class="yes">過關！' + target + ' 的倍數全找到了，按「下一關」繼續。</span>';
+                gNext.disabled = false;
+              }
+            }
+          } else {
+            b.classList.add('miss');
+            gScore = Math.max(0, gScore - 5);
+            gMsg.innerHTML = '<span class="no">' + v + ' ÷ ' + target + ' 除不盡，青蛙跳不到這格，扣 5 分。</span>';
+            setTimeout(function(){ b.classList.remove('miss'); }, 700);
+          }
+          elScore.textContent = gScore;
+        });
+        gGrid.appendChild(b);
+      })(v);
+    }
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < TARGETS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', function(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  });
+
+  startRound();
+})();
+</script>
+</body>
+</html>
