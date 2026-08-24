@@ -1,9 +1,43 @@
 # teach-me — 互動數學教室
 
-給國小學生的互動數學課程網站（繁體中文）。每一課都是一個獨立的網頁，
-包含**範例教學**、**試題**、**小遊戲**三個部分，讓孩子看得懂、玩得動、記得住。
+給國小學生的互動數學課程網站（繁體中文，支援中英切換）。
+每個主題都是一個**三頁迷你課程**：上課、速查卡、複習挑戰 ——
+讓孩子看得懂、玩得動、記得住。
 
 🌐 **網站**：<https://dogzzdogzz.github.io/teach-me/>
+
+## 每個主題有三頁
+
+| 頁面 | 內容 |
+|------|------|
+| 📖 **上課** `index.html` | 互動範例教學（具體→圖像→抽象）→ 分層試題 → 小遊戲（含兩層提示）→ 一句話總結 |
+| 🗂️ **速查卡** `reference.html` | 一頁重點：定義、方法步驟、易錯對照、常用數值表 —— 可直接列印貼在書桌前 |
+| 🔁 **複習挑戰** `review.html` | 12 題混合複習，**每按「換一批」數字全部重新出**，跨主題交錯出題，錯題自動指路回對應課程 |
+
+每堂課可選**三種學習模式**（右上角隨時可換，跨課記住）：
+
+- 🚀 **超前學習**：還沒學過 —— 基礎 6 題，遊戲自動給提示
+- 🏫 **跟上進度**：學校正在教 —— 完整 10 題，含課本型文字題
+- 💪 **補強練習**：學過但不穩 —— 迷思檢查優先，共 12 題，做完導向複習挑戰
+
+## 目前的課程（五年級，12 個主題）
+
+| 課程 | 單元 | 上課 | 速查卡 | 複習 |
+|------|------|:---:|:---:|:---:|
+| 🏭 因數工廠 | 因數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/review.html) |
+| 🐸 跳跳蛙數字樂園 | 倍數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/review.html) |
+| 🚏 好朋友車站 | 公因數與公倍數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/common-factor/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/common-factor/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/common-factor/review.html) |
+| 🍕 通分披薩屋 | 擴分約分通分、異分母加減 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-add/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-add/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-add/review.html) |
+| ✂️ 切了再切 | 分數乘法 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-multiply/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-multiply/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-multiply/review.html) |
+| 💰 小數商店 | 小數乘除 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/decimal/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/decimal/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/decimal/review.html) |
+| 🎯 百分百大挑戰 | 比率與百分率 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/percent/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/percent/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/percent/review.html) |
+| 📐 面積魔術師 | 平行四邊形/三角形/梯形面積 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/area/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/area/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/area/review.html) |
+| 🧊 體積積木塔 | 體積與容積 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/volume/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/volume/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/volume/review.html) |
+| 🦋 對摺魔鏡 | 線對稱 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/review.html) |
+| 🕵️ 角度偵探 | 三角形/四邊形內角和 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/review.html) |
+| ⚖️ 平均分配站 | 平均 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/review.html) |
+
+五年級尚未有課程的單元：整數四則與運算律、多邊形與扇形、時間的乘除、公噸、統計圖表。
 
 ## 資料夾結構
 
@@ -11,16 +45,15 @@
 每個年級的 `math/README.md` 記錄該年級數學的主要學習單元與內容：
 
 ```
-index.html                 # 網站首頁（課程目錄，支援中英切換）
-docs/teaching-framework.md # 教學架構（參考 Khan Academy，含各年級年齡調整）
-grade-1/math/              # 一年級數學：單元整理
-grade-2/math/              # 二年級數學：單元整理
-grade-3/math/              # 三年級數學：單元整理
-grade-4/math/              # 四年級數學：單元整理
-grade-5/math/              # 五年級數學：單元整理＋課程
-│   ├── factor/index.html         # 因數 — 因數工廠
-│   └── multiple/index.html       # 倍數 — 跳跳蛙數字樂園
-grade-6/math/              # 六年級數學：單元整理
+index.html                     # 網站首頁（課程目錄，支援中英切換）
+docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調整與深度規格）
+grade-1/math/ … grade-4/math/  # 一～四年級：單元整理（課程準備中）
+grade-5/math/                  # 五年級：單元整理＋ 12 個三頁迷你課程
+│   └── <主題>/                #   factor / multiple / common-factor / fraction-add /
+│       ├── index.html         #   fraction-multiply / decimal / percent / area /
+│       ├── reference.html     #   volume / symmetry / angle-sum / average
+│       └── review.html
+grade-6/math/                  # 六年級：單元整理（課程準備中）
 ```
 
 ## 各年級數學單元整理
@@ -34,28 +67,25 @@ grade-6/math/              # 六年級數學：單元整理
 | 五年級 | **因數與倍數**、通分與異分母加減、分數小數乘除、體積 | [grade-5/math](grade-5/math/README.md) |
 | 六年級 | 質數與質因數分解、分數小數除法、比與比值、圓面積、速率 | [grade-6/math](grade-6/math/README.md) |
 
-## 目前的課程
-
-| 年級 | 課程 | 連結 |
-|------|------|------|
-| 五年級 | 因數 — 因數工廠 | [grade-5/math/factor/](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/) |
-| 五年級 | 倍數 — 跳跳蛙數字樂園 | [grade-5/math/multiple/](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/) |
-
 ## 教學架構
 
-課程設計參考 Khan Academy 的教學法（精熟學習、做中學、立即回饋、鷹架提示、遊戲化），
-並依各年級年齡調整時長、文字量、題型與遊戲規則 —— 完整規範見
+課程設計參考 Khan Academy 的教學法（精熟學習、做中學、立即回饋、鷹架提示、遊戲化、
+間隔複習與交錯練習），並依各年級年齡調整時長、文字量、題型與遊戲規則 ——
+完整規範（含三頁課程結構、三模式、產生器出題）見
 **[docs/teaching-framework.md](docs/teaching-framework.md)**。
 
 ## 課程頁面慣例
 
-- 路徑：`grade-X/math/<主題>/index.html`，一主題一課、一課一個自足的 HTML（行內 CSS ＋原生 JS，無外部相依），網址即 `…/grade-X/math/<主題>/`。
-- 三段式結構：範例教學（互動示範）→ 試題（六題即時回饋＋計分）→ 小遊戲（五關計分）。
+- 路徑：`grade-X/math/<主題>/`，每主題三頁（`index` / `reference` / `review`），
+  每頁自足（行內 CSS ＋原生 JS，無外部相依），課程網址即 `…/grade-X/math/<主題>/`。
+- 上課頁五段式：範例教學（互動示範）→ 試題（依模式 6/10/12 題，回饋附為什麼）→
+  小遊戲（五關計分＋兩層提示）→ 學完之後三動作。
+- **課程頁不放任何外部平台連結**。
 - 淺色暖色系：背景 `#FAF7F0`、卡片 `#FFF`、強調綠 `#2F9E69` ／橘 `#E8871E`；大字體、SVG 插圖。
-- 每課頁首連回首頁；新增課程時同步在 `index.html` 加上課程卡片。
+- 每課頁首連回首頁與課程三頁導覽；新增課程時同步在 `index.html` 加上課程卡片。
 - **中英雙語（硬性規範）**：每一頁都必須支援右上角語言切換鈕（預設繁體中文），
   選擇記在 `localStorage`；統一架構（`data-i18n` ＋ `I18N` 字典 ＋ `teachme-lang`）
-  見教學架構文件第五節，範本為倍數課。
+  見教學架構文件第五節，範本為因數課三頁。
 
 ## 發佈
 
