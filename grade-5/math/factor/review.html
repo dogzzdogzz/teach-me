@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>因數複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 因數複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：因數、倍數、公因數交錯出現（混在一起想，記得更牢）。<br>
+    每次進來題目順序都不一樣。建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔀 重新洗牌再來一次</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'因數複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      h1:'🔁 因數複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：因數、倍數、公因數交錯出現（混在一起想，記得更牢）。<br>每次進來題目順序都不一樣。建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { factor:'因數', multiple:'倍數', common:'公因數/公倍數' },
+      fbRight: '<b>答對了。</b>',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b>'; },
+      retryBtn:'🔀 重新洗牌再來一次',
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一次，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { factor:'📖 因數 — 因數工廠', multiple:'🐸 倍數 — 跳跳蛙數字樂園', common:'🚏 公因數與公倍數 — 好朋友車站' },
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。',
+      qs: [
+        { cat:'factor', stem:'16 的因數一共有幾個？', opts:['3 個','4 個','5 個','6 個'], ans:2,
+          why:'16 的因數：1、2、4、8、16，共 5 個。' },
+        { cat:'multiple', stem:'下面哪一個是 7 的倍數？', opts:['27','37','42','52'], ans:2,
+          why:'42 ÷ 7 = 6 整除。7 的倍數：7、14、21、28、35、42⋯' },
+        { cat:'factor', stem:'下面哪一個不是 18 的因數？', opts:['2','3','4','6'], ans:2,
+          why:'18 ÷ 4 = 4 餘 2，除不盡。18 的因數：1、2、3、6、9、18。' },
+        { cat:'multiple', stem:'6 的倍數當中，最小的是哪一個？', opts:['1','3','6','12'], ans:2,
+          why:'最小的倍數就是自己：6 × 1 = 6。' },
+        { cat:'common', stem:'12 和 20 的公因數是哪些？', opts:['1、2、4','1、2、3','1、2、5','1、4、6'], ans:0,
+          why:'12 的因數 1,2,3,4,6,12；20 的因數 1,2,4,5,10,20 —— 兩邊都有的是 1、2、4。' },
+        { cat:'factor', stem:'5 × 9 = 45，下面哪一句正確？', opts:['5 是 45 的因數','45 是 9 的因數','9 是 5 的倍數','45 是 90 的倍數'], ans:0,
+          why:'小的當因數：5 和 9 都是 45 的因數；45 是它們的倍數。' },
+        { cat:'factor', stem:'找 28 的因數，試到哪個數就可以停？', opts:['5','6','7','14'], ans:0,
+          why:'6 × 6 = 36 已超過 28，所以試到 5 就夠（1×28、2×14、4×7 都抓到了）。' },
+        { cat:'multiple', stem:'1～30 裡面，4 的倍數共有幾個？', opts:['6 個','7 個','8 個','9 個'], ans:1,
+          why:'4、8、12、16、20、24、28，共 7 個。' },
+        { cat:'common', stem:'4 和 6 的最小公倍數是多少？', opts:['2','12','24','48'], ans:1,
+          why:'4 的倍數：4,8,12⋯；6 的倍數：6,12⋯ —— 最早一起出現的是 12。' },
+        { cat:'factor', stem:'質數有幾個因數？', opts:['1 個','2 個','3 個','4 個'], ans:1,
+          why:'質數的因數只有 1 和自己，剛好 2 個。' },
+        { cat:'factor', stem:'下面哪一句是錯的？', opts:['8 是 24 的因數','24 是 8 的倍數','8 的因數包含 24','24 的因數包含 8'], ans:2,
+          why:'因數不會比自己大 —— 8 的因數最大就是 8，不可能包含 24。' },
+        { cat:'factor', stem:'49 的因數是奇數個，因為 49 是？', opts:['質數','平方數','奇數','兩位數'], ans:1,
+          why:'49 = 7 × 7，是平方數。7×7 這一對只算一次，所以因數（1、7、49）是奇數個。' }
+      ]
+    },
+    en: {
+      htmlLang:'en', title:'Factors Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      h1:'🔁 Factors Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong>: factors, multiples and common factors interleaved (mixing makes memory stronger).<br>The order shuffles every visit. Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      qn: function(i){ return 'Question ' + i; },
+      cats: { factor:'Factors', multiple:'Multiples', common:'Common factors/multiples' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      retryBtn:'🔀 Shuffle and try again',
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow to lock it in.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { factor:'📖 Factors — The Factor Factory', multiple:'🐸 Multiples — Jumping Frog', common:'🚏 Common Factors & Multiples' },
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.',
+      qs: [
+        { cat:'factor', stem:'How many factors does 16 have?', opts:['3','4','5','6'], ans:2,
+          why:'Factors of 16: 1, 2, 4, 8, 16 — five.' },
+        { cat:'multiple', stem:'Which of these is a multiple of 7?', opts:['27','37','42','52'], ans:2,
+          why:'42 ÷ 7 = 6 exactly. Multiples of 7: 7, 14, 21, 28, 35, 42…' },
+        { cat:'factor', stem:'Which is NOT a factor of 18?', opts:['2','3','4','6'], ans:2,
+          why:'18 ÷ 4 = 4 r 2 — not exact. Factors of 18: 1, 2, 3, 6, 9, 18.' },
+        { cat:'multiple', stem:'Which is the smallest multiple of 6?', opts:['1','3','6','12'], ans:2,
+          why:'The smallest multiple is the number itself: 6 × 1 = 6.' },
+        { cat:'common', stem:'What are the common factors of 12 and 20?', opts:['1, 2, 4','1, 2, 3','1, 2, 5','1, 4, 6'], ans:0,
+          why:'Factors of 12: 1,2,3,4,6,12; of 20: 1,2,4,5,10,20 — shared: 1, 2, 4.' },
+        { cat:'factor', stem:'5 × 9 = 45. Which sentence is correct?', opts:['5 is a factor of 45','45 is a factor of 9','9 is a multiple of 5','45 is a multiple of 90'], ans:0,
+          why:'The smaller numbers are factors: 5 and 9 are both factors of 45.' },
+        { cat:'factor', stem:'Finding the factors of 28 — where can you stop trying?', opts:['5','6','7','14'], ans:0,
+          why:'6 × 6 = 36 is already past 28, so stop at 5 (1×28, 2×14, 4×7 caught everything).' },
+        { cat:'multiple', stem:'How many multiples of 4 are there from 1 to 30?', opts:['6','7','8','9'], ans:1,
+          why:'4, 8, 12, 16, 20, 24, 28 — seven.' },
+        { cat:'common', stem:'What is the least common multiple of 4 and 6?', opts:['2','12','24','48'], ans:1,
+          why:'Multiples of 4: 4, 8, 12…; of 6: 6, 12… — the first shared one is 12.' },
+        { cat:'factor', stem:'How many factors does a prime number have?', opts:['1','2','3','4'], ans:1,
+          why:'A prime has exactly 2 factors: 1 and itself.' },
+        { cat:'factor', stem:'Which sentence is WRONG?', opts:['8 is a factor of 24','24 is a multiple of 8','24 is a factor of 8','8 is smaller than 24'], ans:2,
+          why:'A factor is never bigger than the number — 24 cannot be a factor of 8.' },
+        { cat:'factor', stem:'49 has an odd number of factors because 49 is a…', opts:['prime number','square number','odd number','two-digit number'], ans:1,
+          why:'49 = 7 × 7 — a square. The pair 7×7 counts once, so its factors (1, 7, 49) are odd in count.' }
+      ]
+    }
+  };
+
+  var LINK_HREFS = { factor:'index.html', multiple:'../multiple/', common:'../common-factor/' };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  /* 洗牌（每次載入 / 重來順序都不同） */
+  function shuffledOrder(n){
+    var idx = [];
+    for (var i = 0; i < n; i++) idx.push(i);
+    for (var j = n - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));
+      var t = idx[j]; idx[j] = idx[k]; idx[k] = t;
+    }
+    return idx;
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var d = L();
+    var order = shuffledOrder(d.qs.length);
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = d.qs.length;
+    order.forEach(function(qi, pos){
+      var q = d.qs[qi];
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = d.cats[q.cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[q.cat] = true; }
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === d.qs.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var d = L();
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = d.resAll(d.qs.length);
+    } else {
+      resultLine.textContent = d.resSome(right, d.qs.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = d.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', buildQuiz);
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
