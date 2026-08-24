@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>倍數複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 倍數複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：倍數、因數、公倍數交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'倍數複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      h1:'🔁 倍數複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：倍數、因數、公倍數交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Multiples Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      h1:'🔁 Multiples Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving multiples, factors and common multiples — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { factor:'因數', multiple:'倍數', common:'公因數/公倍數' },
+      fbRight: '<b>答對了。</b>',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b>'; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { factor:'📖 因數 — 因數工廠', multiple:'🐸 倍數 — 跳跳蛙數字樂園', common:'🚏 公因數與公倍數 — 好朋友車站' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { factor:'Factors', multiple:'Multiples', common:'Common factors/multiples' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { factor:'📖 Factors — The Factor Factory', multiple:'🐸 Multiples — Jumping Frog', common:'🚏 Common Factors & Multiples' }
+    }
+  };
+
+  var LINK_HREFS = { factor:'../factor/', multiple:'index.html', common:'../common-factor/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function factorsOf(n){
+    var f = [];
+    for (var i = 1; i <= n; i++) if (n % i === 0) f.push(i);
+    return f;
+  }
+  function gcd(a, b){ return b ? gcd(b, a % b) : a; }
+  function lcm(a, b){ return a * b / gcd(a, b); }
+  function joinNums(arr, lang){ return arr.join(lang === 'zh' ? '、' : ', '); }
+  /* 把選項值＋正解洗牌，回傳 {opts, ans} */
+  function mixOpts(correct, wrongs){
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var GENS = [
+    { id:'isMultiple', cat:'multiple',
+      make: function(used){
+        var k = pickUnused([3,4,6,7,8,9], used);
+        var c = k * (4 + rand(6));
+        var wrongs = [], delta = 1;
+        while (wrongs.length < 3){
+          var cand = (wrongs.length % 2 === 0) ? c + delta : c - delta;
+          if (cand > 0 && cand % k !== 0 && wrongs.indexOf(cand) < 0) wrongs.push(cand);
+          delta++;
+        }
+        var m = mixOpts(c, wrongs);
+        return { k:k, c:c, q:c/k, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '下面哪一個是 ' + d.k + ' 的倍數？' : 'Which of these is a multiple of ' + d.k + '?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.c + ' ÷ ' + d.k + ' = ' + d.q + '，整除，所以 ' + d.c + ' 是 ' + d.k + ' 的倍數。'
+            : d.c + ' ÷ ' + d.k + ' = ' + d.q + ' exactly, so ' + d.c + ' is a multiple of ' + d.k + '.'
+        };
+      } },
+    { id:'smallestMultiple', cat:'multiple',
+      make: function(used){
+        var k = pickUnused([5,6,7,8,9,12], used);
+        var d2 = (k % 2 === 0) ? k / 2 : 2;
+        var m = mixOpts(k, [1, d2, 2 * k]);
+        return { k:k, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.k + ' 的倍數當中，最小的是哪一個？' : 'Which is the smallest multiple of ' + d.k + '?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '最小的倍數就是自己：' + d.k + ' × 1 = ' + d.k + '。'
+            : 'The smallest multiple is the number itself: ' + d.k + ' × 1 = ' + d.k + '.'
+        };
+      } },
+    { id:'multiplesCount', cat:'multiple',
+      make: function(used){
+        var k = pickUnused([3,4,6,7,8,9], used);
+        var range = pick([30, 50]);
+        var c = Math.floor(range / k);
+        var m = mixOpts(c, [c - 1, c + 1, c + 2]);
+        return { k:k, range:range, c:c, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 個' : '';
+        var rem = d.range % d.k;
+        return {
+          stem: lang === 'zh' ? '1～' + d.range + ' 裡面，' + d.k + ' 的倍數共有幾個？' : 'How many multiples of ' + d.k + ' are there from 1 to ' + d.range + '?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.k + '、' + 2 * d.k + '、' + 3 * d.k + '⋯⋯每 ' + d.k + ' 個出現一次：' + d.range + ' ÷ ' + d.k + ' = ' + d.c + (rem ? ' 餘 ' + rem : '') + '，共 ' + d.c + ' 個。'
+            : d.k + ', ' + 2 * d.k + ', ' + 3 * d.k + '… one every ' + d.k + ' numbers: ' + d.range + ' ÷ ' + d.k + ' = ' + d.c + (rem ? ' r ' + rem : '') + ' — ' + d.c + ' of them.'
+        };
+      } },
+    { id:'nthMultiple', cat:'multiple',
+      make: function(used){
+        var k = pickUnused([3,4,5,6,7,8,9], used);
+        var n = 3 + rand(6);
+        var c = k * n;
+        var offs = shuffle([-2, -1, 1, 2]).slice(0, 3);
+        var wrongs = offs.map(function(o){ return c + o * k; });
+        var m = mixOpts(c, wrongs);
+        return { k:k, n:n, c:c, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.k + ' 的第 ' + d.n + ' 個倍數是多少？' : 'What is the ' + d.n + 'th multiple of ' + d.k + '?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.k + ' 的倍數依序是 ' + d.k + '×1、' + d.k + '×2⋯⋯所以第 ' + d.n + ' 個就是 ' + d.k + ' × ' + d.n + ' = ' + d.c + '。'
+            : 'Multiples of ' + d.k + ' go ' + d.k + '×1, ' + d.k + '×2… so the ' + d.n + 'th one is ' + d.k + ' × ' + d.n + ' = ' + d.c + '.'
+        };
+      } },
+    { id:'nextMultipleAfter', cat:'multiple',
+      make: function(used){
+        var k = pickUnused([3,4,5,6,7,8,9], used);
+        var mm = 2 + rand(5);
+        var r = 1 + rand(k - 1);
+        var x = k * mm + r;
+        var ans = k * (mm + 1);
+        var wrongs = [k * mm, k * (mm + 2), x];
+        var m = mixOpts(ans, wrongs);
+        return { k:k, x:x, mm:mm, ans2:ans, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '比 ' + d.x + ' 大、又是 ' + d.k + ' 的倍數的數字中，最小的是哪一個？' : 'Which is the smallest multiple of ' + d.k + ' that is greater than ' + d.x + '?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.k + ' 的倍數：⋯' + (d.k * d.mm) + '、' + d.ans2 + '⋯⋯比 ' + d.x + ' 大的第一個是 ' + d.ans2 + '。'
+            : 'Multiples of ' + d.k + ': …' + (d.k * d.mm) + ', ' + d.ans2 + '… the first one bigger than ' + d.x + ' is ' + d.ans2 + '.'
+        };
+      } },
+    { id:'lcmQ', cat:'common',
+      make: function(used){
+        var POOL = [[4,6],[6,9],[4,10],[6,8],[8,12],[10,15]];
+        var keys = POOL.map(function(p){ return p[0] + '&' + p[1]; });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var a = p[0], b = p[1], l = lcm(a, b);
+        var m = mixOpts(l, [a * b, a + b, gcd(a, b)]);
+        return { a:a, b:b, l:l, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.a + ' 和 ' + d.b + ' 的最小公倍數是多少？' : 'What is the least common multiple of ' + d.a + ' and ' + d.b + '?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.a + ' 的倍數：' + d.a + '、' + 2 * d.a + '⋯⋯；' + d.b + ' 的倍數：' + d.b + '、' + 2 * d.b + '⋯⋯ 最早一起出現的是 ' + d.l + '。'
+            : 'Multiples of ' + d.a + ': ' + d.a + ', ' + 2 * d.a + '…; of ' + d.b + ': ' + d.b + ', ' + 2 * d.b + '… — the first shared one is ' + d.l + '.'
+        };
+      } },
+    { id:'factorCount', cat:'factor',
+      make: function(used){
+        var n = pickUnused([12,16,18,20,24,28,30,32,36,40,45,48], used);
+        var facs = factorsOf(n), c = facs.length;
+        var m = mixOpts(c, [c-1, c+1, c+2]);
+        return { n:n, facs:facs, c:c, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 個' : '';
+        return {
+          stem: lang === 'zh' ? d.n + ' 的因數一共有幾個？' : 'How many factors does ' + d.n + ' have?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.n + ' 的因數：' + joinNums(d.facs, 'zh') + '，共 ' + d.c + ' 個。'
+            : 'Factors of ' + d.n + ': ' + joinNums(d.facs, 'en') + ' — ' + d.c + ' in total.'
+        };
+      } },
+    { id:'notFactor', cat:'factor',
+      make: function(used){
+        var n = pickUnused([12,18,20,24,30,36,40], used);
+        var facs = factorsOf(n);
+        var w = 0;
+        while (!w){
+          var cand = 2 + rand(Math.floor(n / 2));
+          if (n % cand !== 0) w = cand;
+        }
+        var three = shuffle(facs.filter(function(f){ return f > 1 && f < n; })).slice(0, 3);
+        var m = mixOpts(w, three);
+        return { n:n, w:w, facs:facs, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '下面哪一個不是 ' + d.n + ' 的因數？' : 'Which is NOT a factor of ' + d.n + '?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.n + ' ÷ ' + d.w + ' = ' + Math.floor(d.n / d.w) + ' 餘 ' + (d.n % d.w) + '，除不盡。' + d.n + ' 的因數：' + joinNums(d.facs, 'zh') + '。'
+            : d.n + ' ÷ ' + d.w + ' = ' + Math.floor(d.n / d.w) + ' r ' + (d.n % d.w) + ' — not exact. Factors of ' + d.n + ': ' + joinNums(d.facs, 'en') + '.'
+        };
+      } },
+    { id:'sentenceRel', cat:'multiple',
+      make: function(used){
+        var POOL = [[5,9],[6,7],[4,8],[7,8],[3,9],[6,9]];
+        var keys = POOL.map(function(p){ return p[0] + 'x' + p[1]; });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var a = p[0], b = p[1], c = a * b;
+        /* 選項編碼：[類型, x, y] → fac = 「x 是 y 的因數」, mul = 「x 是 y 的倍數」 */
+        var correct = ['mul', c, a];
+        var m = mixOpts(correct, [['mul', a, c], ['fac', c, a], ['fac', c, b]]);
+        return { a:a, b:b, c:c, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        function txt(o){
+          if (lang === 'zh') return o[1] + ' 是 ' + o[2] + ' 的' + (o[0] === 'fac' ? '因數' : '倍數');
+          return o[1] + ' is a ' + (o[0] === 'fac' ? 'factor' : 'multiple') + ' of ' + o[2];
+        }
+        return {
+          stem: lang === 'zh' ? d.a + ' × ' + d.b + ' = ' + d.c + '，下面哪一句正確？' : d.a + ' × ' + d.b + ' = ' + d.c + '. Which sentence is correct?',
+          opts: d.opts.map(txt),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '乘出來的 ' + d.c + ' 比較大：' + d.c + ' 是 ' + d.a + ' 和 ' + d.b + ' 的倍數；' + d.a + ' 和 ' + d.b + ' 比較小，是 ' + d.c + ' 的因數。'
+            : 'The product ' + d.c + ' is the bigger number: ' + d.c + ' is a multiple of both ' + d.a + ' and ' + d.b + '; the smaller numbers ' + d.a + ' and ' + d.b + ' are factors of ' + d.c + '.'
+        };
+      } },
+    { id:'concept', cat:'multiple',
+      make: function(used){
+        var v = pickUnused(['smallest', 'wrongSent', 'infinite'], used);
+        return { v:v };
+      },
+      fmt: function(d, lang){
+        if (d.v === 'smallest'){
+          return {
+            stem: lang === 'zh' ? '下面哪一句是對的？' : 'Which sentence is correct?',
+            opts: lang === 'zh'
+              ? ['0 是最小的倍數', '1 是每個數的倍數', '每個數最小的倍數是它自己', '倍數只有 10 個']
+              : ['0 is the smallest multiple', '1 is a multiple of every number', 'Every number’s smallest multiple is itself', 'A number has exactly 10 multiples'],
+            ans: 2,
+            why: lang === 'zh'
+              ? '0 不算倍數，1 是因數不是倍數；每個數最小的倍數就是它自己（× 1）。'
+              : '0 doesn’t count, and 1 is a factor, not a multiple; the smallest multiple of any number is itself (×1).'
+          };
+        }
+        if (d.v === 'wrongSent'){
+          return {
+            stem: lang === 'zh' ? '下面哪一句是錯的？' : 'Which sentence is WRONG?',
+            opts: lang === 'zh'
+              ? ['8 是 24 的因數', '24 是 8 的倍數', '24 是 8 的因數', '8 的倍數包含 24']
+              : ['8 is a factor of 24', '24 is a multiple of 8', '24 is a factor of 8', '8’s multiples include 24'],
+            ans: 2,
+            why: lang === 'zh'
+              ? '因數不會比自己大 —— 8 的因數最大是 8，24 不可能是 8 的因數；24 卻確實是 8 的倍數。'
+              : 'A factor is never bigger than the number itself — 8’s largest factor is 8, so 24 cannot be a factor of 8; but 24 IS a multiple of 8.'
+          };
+        }
+        return {
+          stem: lang === 'zh' ? '一個數的倍數一共有幾個？' : 'How many multiples does a number have?',
+          opts: lang === 'zh' ? ['有限，最多 10 個', '無限，數不完', '跟因數一樣多', '剛好 2 個'] : ['A limited amount, at most 10', 'Endless — they never run out', 'The same count as its factors', 'Exactly 2'],
+          ans: 1,
+          why: lang === 'zh'
+            ? '可以一直乘下去（× 1、× 2、× 3⋯⋯），倍數永遠數不完。'
+            : 'You can keep multiplying forever (×1, ×2, ×3…), so multiples never run out.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：10 種題型各一題＋隨機 2 題（數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['isMultiple','multiplesCount','nthMultiple','nextMultipleAfter'].indexOf(g.id) >= 0;
+    });
+    slots.push(pick(extraPool));
+    slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

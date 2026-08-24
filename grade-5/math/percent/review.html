@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>百分率複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 百分率複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：百分率、折扣、命中率，還會混入小數乘法和約分，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'百分率複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      h1:'🔁 百分率複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：百分率、折扣、命中率，還會混入小數乘法和約分，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Percentages Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      h1:'🔁 Percentages Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> on percentages, discounts and shooting rates — with decimal multiplication and fraction simplifying mixed in — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { percent:'百分率', decimal:'小數', fracadd:'約分' },
+      fbRight: '<b>答對了。</b>',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b>'; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { percent:'🎯 百分率 — 百分百大挑戰', decimal:'💰 小數 — 小數商店', fracadd:'🍕 分數加減 — 通分披薩屋' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { percent:'Percentages', decimal:'Decimals', fracadd:'Simplifying' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { percent:'🎯 Percentages — The 100% Challenge', decimal:'💰 Decimals — The Decimal Shop', fracadd:'🍕 Adding Fractions — The Pizza House' }
+    }
+  };
+
+  var LINK_HREFS = { percent:'index.html', decimal:'../decimal/', fracadd:'../fraction-add/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function gcd(a, b){ return b ? gcd(b, a % b) : a; }
+  /* 把選項值＋正解洗牌，回傳 {opts, ans} */
+  function mixOpts(correct, wrongs){
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 整數型鄰近錯誤選項：correct±1, correct±2… 一定是正數且不重複 */
+  function nearWrongs(correct, count){
+    var res = [], delta = 1;
+    while (res.length < count && delta < 50){
+      [correct - delta, correct + delta].forEach(function(v){
+        if (v > 0 && v !== correct && res.indexOf(v) < 0 && res.length < count) res.push(v);
+      });
+      delta++;
+    }
+    return res;
+  }
+  /* 一位小數型鄰近錯誤選項：correct±0.1, correct±0.2… */
+  function nearWrongsDec(correct, count){
+    var res = [], delta = 1;
+    while (res.length < count && delta < 50){
+      [Math.round((correct - delta * 0.1) * 10) / 10, Math.round((correct + delta * 0.1) * 10) / 10].forEach(function(v){
+        if (v > 0 && v !== correct && res.indexOf(v) < 0 && res.length < count) res.push(v);
+      });
+      delta++;
+    }
+    return res;
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字（結果保證整數／可整除） ---------- */
+  var GENS = [
+    { id:'percentOf', cat:'percent',
+      make: function(used){
+        var PPOOL = [10, 20, 25, 50, 75, 5, 15, 35, 45, 8, 12];
+        var p = pickUnused(PPOOL, used);
+        var mult = 100 / gcd(p, 100);
+        var n = mult * (2 + rand(10));
+        var c = n * p / 100;
+        var m = mixOpts(c, nearWrongs(c, 3));
+        return { n:n, p:p, c:c, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 人/個' : '';
+        return {
+          stem: lang === 'zh' ? d.n + ' 的 ' + d.p + '% 是多少？' : 'What is ' + d.p + '% of ' + d.n + '?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.p + '% = ' + (d.p / 100) + '，' + d.n + ' × ' + (d.p / 100) + ' = ' + d.c + '。'
+            : d.p + '% = ' + (d.p / 100) + ', and ' + d.n + ' × ' + (d.p / 100) + ' = ' + d.c + '.'
+        };
+      } },
+    { id:'discountPrice', cat:'percent',
+      make: function(used){
+        var RATES = [90, 85, 80, 75, 70, 60, 50];
+        var LABELS = { 90:'九折', 85:'八五折', 80:'八折', 75:'七五折', 70:'七折', 60:'六折', 50:'五折' };
+        var ELABELS = { 90:'10% off', 85:'15% off', 80:'20% off', 75:'25% off', 70:'30% off', 60:'40% off', 50:'50% off' };
+        var rate = pickUnused(RATES, used);
+        var mult = 100 / gcd(rate, 100);
+        var n = mult * (2 + rand(10));
+        var c = n * rate / 100;
+        var m = mixOpts(c, nearWrongs(c, 3));
+        return { n:n, rate:rate, lbl:LABELS[rate], elbl:ELABELS[rate], c:c, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.n + ' 元打 ' + d.lbl + '，要付多少元？' : 'An item costs NT$' + d.n + ' with "' + d.elbl + '" (' + d.lbl + '). How much do you pay?',
+          opts: d.opts.map(function(v){ return lang === 'zh' ? v + ' 元' : 'NT$' + v; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.lbl + ' = ' + d.rate + '%，' + d.n + ' × ' + (d.rate / 100) + ' = ' + d.c + ' 元。'
+            : d.lbl + ' = ' + d.rate + '%, and ' + d.n + ' × ' + (d.rate / 100) + ' = ' + d.c + '.'
+        };
+      } },
+    { id:'discountSaved', cat:'percent',
+      make: function(used){
+        var RATES = [90, 85, 80, 75, 70, 60, 50];
+        var LABELS = { 90:'九折', 85:'八五折', 80:'八折', 75:'七五折', 70:'七折', 60:'六折', 50:'五折' };
+        var ELABELS = { 90:'10% off', 85:'15% off', 80:'20% off', 75:'25% off', 70:'30% off', 60:'40% off', 50:'50% off' };
+        var rate = pickUnused(RATES, used);
+        var mult = 100 / gcd(rate, 100);
+        var n = mult * (2 + rand(10));
+        var paid = n * rate / 100;
+        var saved = n - paid;
+        var m = mixOpts(saved, nearWrongs(saved, 3).concat([paid]).slice(0, 3));
+        return { n:n, rate:rate, lbl:LABELS[rate], elbl:ELABELS[rate], paid:paid, saved:saved, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.n + ' 元打 ' + d.lbl + '，省了多少元？' : 'An item costs NT$' + d.n + ' with "' + d.elbl + '" (' + d.lbl + '). How much do you save?',
+          opts: d.opts.map(function(v){ return lang === 'zh' ? v + ' 元' : 'NT$' + v; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.lbl + ' = ' + d.rate + '%，' + d.n + ' × ' + (d.rate / 100) + ' = ' + d.paid + ' 元；省下 ' + d.n + ' − ' + d.paid + ' = ' + d.saved + ' 元。'
+            : d.lbl + ' = ' + d.rate + '%, so you pay ' + d.n + ' × ' + (d.rate / 100) + ' = ' + d.paid + '; you save ' + d.n + ' − ' + d.paid + ' = ' + d.saved + '.'
+        };
+      } },
+    { id:'shootingPercent', cat:'percent',
+      make: function(used){
+        var ATTEMPTS = [20, 25, 50, 10, 4, 5];
+        var attempts = pickUnused(ATTEMPTS, used);
+        var made = 1 + rand(attempts - 1);
+        var pct = made * (100 / attempts);
+        var m = mixOpts(pct, nearWrongs(pct, 3));
+        return { attempts:attempts, made:made, pct:pct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '投籃 ' + d.attempts + ' 投 ' + d.made + ' 中，命中率是幾 %？' : 'Out of ' + d.attempts + ' shots, ' + d.made + ' go in. What is the shooting percentage?',
+          opts: d.opts.map(function(v){ return v + '%'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.made + ' ÷ ' + d.attempts + ' = ' + (d.made / d.attempts) + ' = ' + d.pct + '%。'
+            : d.made + ' ÷ ' + d.attempts + ' = ' + (d.made / d.attempts) + ' = ' + d.pct + '%.'
+        };
+      } },
+    { id:'trioConvert', cat:'percent',
+      make: function(used){
+        var POOL = [
+          { frac:'1/2', dec:0.5, pct:50 }, { frac:'1/4', dec:0.25, pct:25 }, { frac:'3/4', dec:0.75, pct:75 },
+          { frac:'1/5', dec:0.2, pct:20 }, { frac:'2/5', dec:0.4, pct:40 }, { frac:'3/5', dec:0.6, pct:60 },
+          { frac:'4/5', dec:0.8, pct:80 }, { frac:'1/10', dec:0.1, pct:10 }, { frac:'1/100', dec:0.01, pct:1 }
+        ];
+        var keys = POOL.map(function(p){ return p.frac; });
+        var key = pickUnused(keys, used);
+        var t = POOL[keys.indexOf(key)];
+        var m = mixOpts(t.pct, nearWrongs(t.pct, 3));
+        return { frac:t.frac, dec:t.dec, pct:t.pct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.frac + ' 換成百分率是多少？' : 'What percentage is ' + d.frac + '?',
+          opts: d.opts.map(function(v){ return v + '%'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.frac + ' = ' + d.dec + ' = ' + d.pct + '%。'
+            : d.frac + ' = ' + d.dec + ' = ' + d.pct + '%.'
+        };
+      } },
+    { id:'compareDeal', cat:'percent',
+      make: function(used){
+        var POOL = [
+          { base:200, rate:90, lbl:'九折', elbl:'10% off' },
+          { base:150, rate:80, lbl:'八折', elbl:'20% off' },
+          { base:300, rate:70, lbl:'七折', elbl:'30% off' },
+          { base:250, rate:60, lbl:'六折', elbl:'40% off' },
+          { base:400, rate:75, lbl:'七五折', elbl:'25% off' },
+          { base:120, rate:50, lbl:'五折', elbl:'50% off' },
+          { base:180, rate:90, lbl:'九折', elbl:'10% off' }
+        ];
+        var keys = POOL.map(function(p){ return p.base + '/' + p.rate; });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var priceA = p.base * p.rate / 100;
+        var margin = 3 + rand(15);
+        var priceB = (rand(2) === 0) ? priceA + margin : priceA - margin;
+        if (priceB <= 0) priceB = priceA + margin;
+        var winner = (priceA < priceB) ? 'A' : 'B';
+        var diff = Math.abs(priceA - priceB);
+        var correct = [winner, diff];
+        var wrongs = [
+          [winner === 'A' ? 'B' : 'A', diff],
+          [winner, diff + 2],
+          ['tie', 0]
+        ];
+        var m = mixOpts(correct, wrongs);
+        return { base:p.base, rate:p.rate, lbl:p.lbl, elbl:p.elbl, priceA:priceA, priceB:priceB, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        function txt(o){
+          if (o[0] === 'tie') return lang === 'zh' ? '兩家一樣貴' : 'Both cost the same';
+          var shopName = (o[0] === 'A') ? (lang === 'zh' ? '甲店' : 'Shop A') : (lang === 'zh' ? '乙店' : 'Shop B');
+          return lang === 'zh' ? shopName + '便宜 ' + o[1] + ' 元' : shopName + ' is NT$' + o[1] + ' cheaper';
+        }
+        return {
+          stem: lang === 'zh'
+            ? '甲店同一件商品原價 ' + d.base + ' 元打 ' + d.lbl + '，乙店同一件商品賣 ' + d.priceB + ' 元，哪一家比較便宜？'
+            : 'The same item costs NT$' + d.base + ' with "' + d.elbl + '" (' + d.lbl + ') at Shop A, and NT$' + d.priceB + ' at Shop B. Which shop is cheaper?',
+          opts: d.opts.map(txt),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '甲店：' + d.base + ' × ' + (d.rate / 100) + ' = ' + d.priceA + ' 元；乙店 ' + d.priceB + ' 元。'
+            : 'Shop A: ' + d.base + ' × ' + (d.rate / 100) + ' = ' + d.priceA + '; Shop B: ' + d.priceB + '.'
+        };
+      } },
+    { id:'decimalMul', cat:'decimal',
+      make: function(used){
+        var numerator = pickUnused([6,8,12,14,15,16,18,22,24,25,26,28,32,34,36,42,44,45,46,48], used);
+        var dec = numerator / 10;
+        var mult = 2 + rand(3);
+        var correct = Math.round(numerator * mult) / 10;
+        var moveRight = numerator * mult;
+        var moveLeft = Math.round((correct / 10) * 100) / 100;
+        var wrongs = [moveRight, moveLeft].concat(nearWrongsDec(correct, 1));
+        var m = mixOpts(correct, wrongs);
+        return { dec:dec, mult:mult, numerator:numerator, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.dec + ' × ' + d.mult + ' = ?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.numerator + ' × ' + d.mult + ' = ' + (d.numerator * d.mult) + '，' + d.dec + ' 有 1 位小數，把小數點往左移 1 位 → ' + d.correct + '。'
+            : d.numerator + ' × ' + d.mult + ' = ' + (d.numerator * d.mult) + '. ' + d.dec + ' has 1 decimal place, so move the point one place left → ' + d.correct + '.'
+        };
+      } },
+    { id:'simplifyFrac', cat:'fracadd',
+      make: function(used){
+        var POOL = [[4,6],[6,8],[6,9],[8,12],[9,12],[10,15],[12,16],[12,18],[15,20],[16,24]];
+        var keys = POOL.map(function(p){ return p[0] + '/' + p[1]; });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var num = p[0], den = p[1], g = gcd(num, den);
+        var sn = num / g, sd = den / g;
+        var correct = sn + '/' + sd;
+        var wrongs = [(num - 1) + '/' + den, sn + '/' + (sd + 1), (sn + 1) + '/' + sd];
+        var m = mixOpts(correct, wrongs);
+        return { num:num, den:den, g:g, sn:sn, sd:sd, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.num + '/' + d.den + ' 約分到最簡分數，答案是多少？' : 'Simplify ' + d.num + '/' + d.den + ' to its simplest form. What is the answer?',
+          opts: d.opts,
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.num + '/' + d.den + ' 的分子分母同除以 ' + d.g + '（它們的最大公因數）→ ' + d.sn + '/' + d.sd + '。'
+            : 'Divide both the numerator and denominator of ' + d.num + '/' + d.den + ' by ' + d.g + ' (their GCD) → ' + d.sn + '/' + d.sd + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：8 種題型各一題＋隨機 4 題（數字不重複，額外題只從百分率題型抽） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){ return g.cat === 'percent'; });
+    for (var i = 0; i < 4; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>內角和複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 內角和複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：三角形、四邊形內角和與圖形對稱交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'內角和複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      h1:'🔁 內角和複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：三角形、四邊形內角和與圖形對稱交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Angle Sum Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      h1:'🔁 Angle Sum Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving triangle/quadrilateral angle sums with shape symmetry — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { angle:'內角和', symmetry:'對稱' },
+      fbRight: '<b>答對了。</b>',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b>'; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { angle:'🕵️ 內角和 — 角度偵探', symmetry:'🔺 對稱 — 對稱圖形' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { angle:'Angle sum', symmetry:'Symmetry' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { angle:'🕵️ Angle sum — The Angle Detective', symmetry:'🔺 Symmetry — Symmetric shapes' }
+    }
+  };
+
+  var LINK_HREFS = { angle:'index.html', symmetry:'../symmetry/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 把選項值＋正解洗牌，回傳 {opts, ans} */
+  function mixOpts(correct, wrongs){
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 確保錯誤選項都是正整數、且互不重複、也不等於正解：碰撞就 +5 直到安全 */
+  function safeWrongs(ans, raw){
+    var used = [ans];
+    var out = [];
+    raw.forEach(function(v){
+      while (v <= 0 || used.indexOf(v) >= 0) v += 5;
+      used.push(v);
+      out.push(v);
+    });
+    return out;
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var GENS = [
+    { id:'triMissing', cat:'angle',
+      make: function(used){
+        var ansPool = [20,30,40,50,60,70,80,100,110,120,130,140];
+        var ans = pickUnused(ansPool, used);
+        var rem = 180 - ans;
+        var aOptions = [];
+        for (var v = 5; v <= rem - 5; v += 5) aOptions.push(v);
+        var a = pick(aOptions);
+        var b = rem - a;
+        var wrongs = safeWrongs(ans, [rem, ans + 10, ans - 10]);
+        var m = mixOpts(ans, wrongs);
+        return { a:a, b:b, ans:ans, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一個三角形的三個角是 ' + d.a + '°、' + d.b + '° 和 ?°，「?」是多少？'
+            : 'A triangle’s angles are ' + d.a + '°, ' + d.b + '°, and ?°. What is the missing angle?',
+          opts: d.opts.map(function(v){ return v + '°'; }),
+          ans: d.ansIdx,
+          why: lang === 'zh'
+            ? '180 − ' + d.a + ' − ' + d.b + ' = ' + d.ans + '°（三角形的三個角加起來永遠是 180°）。'
+            : '180 − ' + d.a + ' − ' + d.b + ' = ' + d.ans + '° (a triangle’s angles always add up to 180°).'
+        };
+      } },
+    { id:'quadMissing', cat:'angle',
+      make: function(used){
+        var ansPool = [40,50,60,70,80,90,100,110,120,130,140,150,160];
+        var ans = pickUnused(ansPool, used);
+        var sum = 360 - ans;
+        var a, b, c, tries = 0;
+        do {
+          a = 40 + 5 * rand(21);
+          b = 40 + 5 * rand(21);
+          c = sum - a - b;
+          tries++;
+        } while ((c < 40 || c > 150) && tries < 30);
+        if (c < 40 || c > 150){ a = 100; b = 90; c = sum - 190; }
+        var wrongs = safeWrongs(ans, [ans - 10, ans + 10, ans + 20]);
+        var m = mixOpts(ans, wrongs);
+        return { a:a, b:b, c:c, ans:ans, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一個四邊形的四個角是 ' + d.a + '°、' + d.b + '°、' + d.c + '° 和 ?°，「?」是多少？'
+            : 'A quadrilateral’s angles are ' + d.a + '°, ' + d.b + '°, ' + d.c + '°, and ?°. What is the missing angle?',
+          opts: d.opts.map(function(v){ return v + '°'; }),
+          ans: d.ansIdx,
+          why: lang === 'zh'
+            ? '360 − ' + d.a + ' − ' + d.b + ' − ' + d.c + ' = ' + d.ans + '°（四邊形的內角和是 360°，因為對角線可以切成兩個三角形，180° × 2 = 360°）。'
+            : '360 − ' + d.a + ' − ' + d.b + ' − ' + d.c + ' = ' + d.ans + '° (a quadrilateral’s angle sum is 360° — a diagonal splits it into two triangles, 180° × 2 = 360°).'
+        };
+      } },
+    { id:'isoTop2Base', cat:'angle',
+      make: function(used){
+        var apexPool = [20,24,30,36,40,44,50,56,60,64,70,76,80,86,90,96,100,110,120,130,140];
+        var apex = pickUnused(apexPool, used);
+        var base = (180 - apex) / 2;
+        var wrongs = safeWrongs(base, [180 - apex, base + 5, base - 5]);
+        var m = mixOpts(base, wrongs);
+        return { apex:apex, base:base, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '等腰三角形的頂角是 ' + d.apex + '°，兩個底角相等，每個底角是多少？'
+            : 'An isosceles triangle has a top angle of ' + d.apex + '°. The two base angles are equal — how big is each one?',
+          opts: d.opts.map(function(v){ return v + '°'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '180 − ' + d.apex + ' = ' + (180 - d.apex) + '°，兩個底角相等，所以 (' + (180 - d.apex) + ') ÷ 2 = ' + d.base + '°（別忘了要除以 2！）。'
+            : '180 − ' + d.apex + ' = ' + (180 - d.apex) + '°, and since the two base angles are equal, (' + (180 - d.apex) + ') ÷ 2 = ' + d.base + '° (don’t forget to divide by 2!).'
+        };
+      } },
+    { id:'isoBase2Top', cat:'angle',
+      make: function(used){
+        var basePool = [20,25,30,35,40,45,50,55,60,65,70,75,80];
+        var base = pickUnused(basePool, used);
+        var top = 180 - 2 * base;
+        var wrongs = safeWrongs(top, [base, top + 10, top - 10]);
+        var m = mixOpts(top, wrongs);
+        return { base:base, top:top, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '等腰三角形的底角是 ' + d.base + '°，頂角是幾度？'
+            : 'An isosceles triangle has a base angle of ' + d.base + '°. What is the top angle?',
+          opts: d.opts.map(function(v){ return v + '°'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '兩個底角相等：' + d.base + '° + ' + d.base + '° = ' + (2 * d.base) + '°，180° − ' + (2 * d.base) + '° = ' + d.top + '°（頂角）。'
+            : 'The two base angles are equal: ' + d.base + '° + ' + d.base + '° = ' + (2 * d.base) + '°, so 180° − ' + (2 * d.base) + '° = ' + d.top + '° (the top angle).'
+        };
+      } },
+    { id:'rightTriComplement', cat:'angle',
+      make: function(used){
+        var pool = [5,10,15,20,25,30,35,40,50,55,60,65,70,75,80,85];
+        var a = pickUnused(pool, used);
+        var other = 90 - a;
+        var wrongs = safeWrongs(other, [180 - a, other + 10, other - 10]);
+        var m = mixOpts(other, wrongs);
+        return { a:a, other:other, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一個直角三角形有一個銳角是 ' + d.a + '°，另一個銳角是多少？'
+            : 'A right triangle has one acute angle of ' + d.a + '°. What is the other acute angle?',
+          opts: d.opts.map(function(v){ return v + '°'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '直角三角形已經用掉 90°，90 − ' + d.a + ' = ' + d.other + '°（不是 180 − ' + d.a + '，那是三角形內角和的算法，這裡要先減掉已經知道的直角）。'
+            : 'A right triangle already uses 90°: 90 − ' + d.a + ' = ' + d.other + '° (not 180 − ' + d.a + ' — that forgets the right angle is already known).'
+        };
+      } },
+    { id:'ratioTriangle', cat:'angle',
+      make: function(used){
+        var POOL = [
+          { r:[1,2,3], sum:6 }, { r:[2,3,4], sum:9 }, { r:[1,1,2], sum:4 },
+          { r:[3,4,5], sum:12 }, { r:[1,3,5], sum:9 }, { r:[2,2,5], sum:9 }
+        ];
+        var keys = POOL.map(function(p){ return p.r.join(':'); });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var unit = 180 / p.sum;
+        var angles = p.r.map(function(x){ return x * unit; });
+        var largest = Math.max.apply(null, angles);
+        var others = angles.filter(function(x){ return x !== largest; });
+        while (others.length < 2) others.push(others[0] || unit);
+        var wrongs = safeWrongs(largest, [others[0], others[1], largest + 10]);
+        var m = mixOpts(largest, wrongs);
+        return { r:p.r, angles:angles, largest:largest, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一個三角形三個角的度數比是 ' + d.r.join(':') + '，最大的角是幾度？'
+            : 'A triangle’s three angles are in the ratio ' + d.r.join(':') + '. What is the largest angle?',
+          opts: d.opts.map(function(v){ return v + '°'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '把 180° 分成 ' + d.r.join('+') + ' = ' + d.r.reduce(function(a,b){return a+b;},0) + ' 份，每份 ' + (180 / d.r.reduce(function(a,b){return a+b;},0)) + '°；最大的角是 ' + Math.max.apply(null, d.r) + ' 份，共 ' + d.largest + '°。'
+            : 'Split 180° into ' + d.r.join('+') + ' = ' + d.r.reduce(function(a,b){return a+b;},0) + ' parts, ' + (180 / d.r.reduce(function(a,b){return a+b;},0)) + '° each; the largest angle is ' + Math.max.apply(null, d.r) + ' parts, ' + d.largest + '° in total.'
+        };
+      } },
+    { id:'canFormTriangle', cat:'angle',
+      make: function(used){
+        var a, b, c, tries = 0;
+        do {
+          a = 10 * (2 + rand(13));
+          b = 10 * (2 + rand(13));
+          c = 180 - a - b;
+          tries++;
+        } while ((c < 10 || c > 150) && tries < 30);
+        if (c < 10 || c > 150){ a = 40; b = 60; c = 80; }
+        var correct = [a, b, c];
+        var w1 = [a + 10, b, c];
+        var w2 = [a, b - 15, c];
+        var w3 = [a + 5, b + 5, c];
+        var combos = shuffle([correct, w1, w2, w3]);
+        var ans = combos.indexOf(correct);
+        return { combos:combos, ans:ans };
+      },
+      fmt: function(d, lang){
+        function joinTri(t){ return t[0] + '°、' + t[1] + '°、' + t[2] + '°'; }
+        var correct = d.combos[d.ans];
+        return {
+          stem: lang === 'zh' ? '下面哪一組角度可以組成三角形？' : 'Which set of angles can form a triangle?',
+          opts: d.combos.map(function(t){ return lang === 'zh' ? joinTri(t) : t[0] + '°, ' + t[1] + '°, ' + t[2] + '°'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '三角形三個角一定要加起來是 180°：' + correct[0] + ' + ' + correct[1] + ' + ' + correct[2] + ' = 180，其他選項加起來都不是 180，所以不能組成三角形。'
+            : 'A triangle’s three angles must add up to 180°: ' + correct[0] + ' + ' + correct[1] + ' + ' + correct[2] + ' = 180 — the other options don’t sum to 180, so they can’t form a triangle.'
+        };
+      } },
+    { id:'symmetryAxes', cat:'symmetry',
+      make: function(used){
+        var POOL = [
+          { zh:'正方形', en:'square', count:4, wrongs:[2,3,5] },
+          { zh:'正三角形', en:'equilateral triangle', count:3, wrongs:[1,2,4] },
+          { zh:'長方形（非正方形）', en:'rectangle (not a square)', count:2, wrongs:[1,3,4] },
+          { zh:'等腰三角形（非正三角形）', en:'isosceles triangle (not equilateral)', count:1, wrongs:[0,2,3] },
+          { zh:'正五邊形', en:'regular pentagon', count:5, wrongs:[3,4,6] },
+          { zh:'正六邊形', en:'regular hexagon', count:6, wrongs:[3,4,5] },
+          { zh:'一般四邊形（不規則）', en:'irregular quadrilateral', count:0, wrongs:[1,2,3] }
+        ];
+        var keys = POOL.map(function(p){ return p.zh; });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var m = mixOpts(p.count, p.wrongs.slice());
+        return { zh:p.zh, en:p.en, count:p.count, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 條' : '';
+        return {
+          stem: lang === 'zh' ? '「' + d.zh + '」有幾條對稱軸？' : 'How many lines of symmetry does a ' + d.en + ' have?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.zh + '有 ' + d.count + ' 條對稱軸。'
+            : 'A ' + d.en + ' has ' + d.count + ' line(s) of symmetry.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：8 種題型各一題＋隨機 4 題（數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){ return g.id !== 'symmetryAxes'; });
+    for (var i = 0; i < 4; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>平均複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 平均複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：平均、小數、倍數交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'平均複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      h1:'🔁 平均複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：平均、小數、倍數交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Averages Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      h1:'🔁 Averages Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving averages, decimals and multiples — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { average:'平均', decimal:'小數', multiple:'倍數' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { average:'📖 平均 — 平均分配站', decimal:'💰 小數 — 小數商店', multiple:'🐸 倍數 — 跳跳蛙數字樂園' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { average:'Averages', decimal:'Decimals', multiple:'Multiples' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { average:'📖 Averages — The Level-Up Station', decimal:'💰 Decimals — The Decimal Shop', multiple:'🐸 Multiples — Jumping Frog' }
+    }
+  };
+
+  var LINK_HREFS = { average:'index.html', decimal:'../decimal/', multiple:'../multiple/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function sum(arr){ return arr.reduce(function(a, b){ return a + b; }, 0); }
+  function round1(x){ return Math.round(x * 10) / 10; }
+  /* 保證 3 個相異、且不等於正解的錯誤選項（先用候選值去重，不夠再往外補） */
+  function makeWrongs(correct, candidates){
+    var out = [];
+    var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (!seen[key]){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3){
+      var lo = round1(correct - step), hi = round1(correct + step);
+      if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  /* 把選項值＋正解洗牌，回傳 {opts, ans} */
+  function mixOpts(correct, candidates){
+    var wrongs = makeWrongs(correct, candidates);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 產生 n 個數字，平均剛好是 avg（整數），數字全部大於 0 */
+  function makeNumsForAvg(avg, n){
+    var nums;
+    for (var tries = 0; tries < 40; tries++){
+      var devs = [], total = 0, i;
+      for (i = 0; i < n - 1; i++){
+        var d = rand(9) - 4; // -4..4
+        devs.push(d); total += d;
+      }
+      devs.push(-total);
+      devs = shuffle(devs);
+      nums = devs.map(function(dv){ return avg + dv; });
+      if (nums.every(function(v){ return v > 0; })) return nums;
+    }
+    return nums;
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var GENS = [
+    { id:'avgCalc', cat:'average',
+      make: function(used){
+        var n = pick([2, 3, 4, 5]);
+        var avg = pickUnused([6,7,8,9,10,11,12,14,15,16,18,20,22,24,25], used);
+        var nums = makeNumsForAvg(avg, n);
+        var s = sum(nums);
+        var m = mixOpts(avg, [avg - 1, avg + 1, s]);
+        return { n:n, nums:nums, avg:avg, sum:s, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '這組數字：' + d.nums.join('、') + '，平均是多少？' : 'What is the average of: ' + d.nums.join(', ') + '?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.nums.join(' + ') + ' = ' + d.sum + '，' + d.sum + ' ÷ ' + d.n + ' = ' + d.avg + '。'
+            : d.nums.join(' + ') + ' = ' + d.sum + ', and ' + d.sum + ' ÷ ' + d.n + ' = ' + d.avg + '.'
+        };
+      } },
+    { id:'reverseSum', cat:'average',
+      make: function(used){
+        var n = pick([3, 4, 5]);
+        var avg = pickUnused([6,8,9,10,12,14,15,16,18,20], used);
+        var s = avg * n;
+        var m = mixOpts(s, [s - n, s + n, avg]);
+        return { n:n, avg:avg, sum:s, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.n + ' 個數字的平均是 ' + d.avg + '，這 ' + d.n + ' 個數字的總和是多少？' : 'The average of ' + d.n + ' numbers is ' + d.avg + '. What is their total?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '總和 ＝ 平均 × 個數：' + d.avg + ' × ' + d.n + ' = ' + d.sum + '。'
+            : 'Total = average × count: ' + d.avg + ' × ' + d.n + ' = ' + d.sum + '.'
+        };
+      } },
+    { id:'missingValue', cat:'average',
+      make: function(used){
+        var n = pick([3, 4, 5]);
+        var avg = pickUnused([10,12,15,18,20,24,25,30], used);
+        var s = avg * n;
+        var known, missing;
+        for (var tries = 0; tries < 40; tries++){
+          known = [];
+          for (var i = 0; i < n - 1; i++) known.push(avg + rand(9) - 4);
+          missing = s - sum(known);
+          if (missing > 0 && known.every(function(v){ return v > 0; })) break;
+        }
+        var m = mixOpts(missing, [missing - 2, missing + 2, avg]);
+        return { n:n, avg:avg, sum:s, known:known, missing:missing, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? d.n + ' 個數字的平均是 ' + d.avg + '，其中 ' + (d.n - 1) + ' 個是：' + d.known.join('、') + '，最後一個是多少？'
+            : 'The average of ' + d.n + ' numbers is ' + d.avg + '. ' + (d.n - 1) + ' of them are: ' + d.known.join(', ') + '. What is the last one?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '總和 ＝ ' + d.avg + ' × ' + d.n + ' = ' + d.sum + '，' + d.sum + ' − ' + d.known.join(' − ') + ' = ' + d.missing + '。'
+            : 'Total = ' + d.avg + ' × ' + d.n + ' = ' + d.sum + '. ' + d.sum + ' − ' + d.known.join(' − ') + ' = ' + d.missing + '.'
+        };
+      } },
+    { id:'dailyTotal', cat:'average',
+      make: function(used){
+        var days = pickUnused([5, 6, 7, 10], used);
+        var perDay = pick([8, 10, 12, 15, 18, 20, 25]);
+        var total = perDay * days;
+        var m = mixOpts(total, [total - days, total + days, perDay]);
+        return { days:days, perDay:perDay, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '每天平均存 ' + d.perDay + ' 元，連續 ' + d.days + ' 天一共存了多少錢？' : 'Saving an average of $' + d.perDay + ' a day, how much is saved over ' + d.days + ' days?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.perDay + ' × ' + d.days + ' = ' + d.total + ' 元。'
+            : d.perDay + ' × ' + d.days + ' = $' + d.total + '.'
+        };
+      } },
+    { id:'plausibleAvg', cat:'average',
+      make: function(used){
+        var min = pickUnused([10, 15, 20, 25, 30, 35, 40], used);
+        var gap = pick([8, 9, 10, 11, 12]);
+        var max = min + gap;
+        var poolBetween = [];
+        for (var v = min + 1; v < max; v++) poolBetween.push(v);
+        var plausible = shuffle(poolBetween).slice(0, 3);
+        var below = min - (1 + rand(5));
+        var above = max + (1 + rand(5));
+        var impossible = pick([below, above]);
+        var opts = shuffle(plausible.concat([impossible]));
+        var ans = opts.indexOf(impossible);
+        return { min:min, max:max, impossible:impossible, opts:opts, ans:ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一組資料中最小是 ' + d.min + '，最大是 ' + d.max + '，下面哪一個數<strong>不可能</strong>是這組資料的平均？'
+            : 'A dataset has a minimum of ' + d.min + ' and a maximum of ' + d.max + '. Which of these <strong>cannot</strong> be the average?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '平均一定介於最大值與最小值之間（' + d.min + '～' + d.max + '），' + d.impossible + ' 超出這個範圍，不可能是平均。'
+            : 'The average must fall between the minimum and maximum (' + d.min + '–' + d.max + '). ' + d.impossible + ' is outside that range, so it cannot be the average.'
+        };
+      } },
+    { id:'addOneNew', cat:'average',
+      make: function(used){
+        var n = pick([3, 4]);
+        var avg = pickUnused([8,10,12,14,15,16,18,20], used);
+        var nums = makeNumsForAvg(avg, n);
+        var s = sum(nums);
+        var delta = pick([1, 2, 3]);
+        var newAvg = avg + delta;
+        var newVal = newAvg * (n + 1) - s;
+        var m = mixOpts(newAvg, [avg, newAvg - 1, newAvg + 1]);
+        return { n:n, nums:nums, avg:avg, sum:s, newVal:newVal, newAvg:newAvg, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '原本 ' + d.n + ' 個數字（' + d.nums.join('、') + '）平均是 ' + d.avg + '，再加入一個新數字 ' + d.newVal + ' 後，平均變成多少？'
+            : d.n + ' numbers (' + d.nums.join(', ') + ') average ' + d.avg + '. After adding a new number, ' + d.newVal + ', what is the new average?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '新的總和 ＝ ' + d.sum + ' + ' + d.newVal + ' = ' + (d.sum + d.newVal) + '，' + (d.sum + d.newVal) + ' ÷ ' + (d.n + 1) + ' = ' + d.newAvg + '。'
+            : 'New total = ' + d.sum + ' + ' + d.newVal + ' = ' + (d.sum + d.newVal) + ', and ' + (d.sum + d.newVal) + ' ÷ ' + (d.n + 1) + ' = ' + d.newAvg + '.'
+        };
+      } },
+    { id:'decimalDivide', cat:'decimal',
+      make: function(used){
+        var k = pickUnused([2, 3, 4, 5, 6], used);
+        var qt = 20 + rand(70); // 商的十分位整數，代表 2.0～8.9
+        var dividendTenths = qt * k;
+        var dividend = round1(dividendTenths / 10);
+        var q = round1(qt / 10);
+        var m = mixOpts(q, [round1(q - 0.1), round1(q + 0.1), round1(q * 2)]);
+        return { k:k, dividend:dividend, dividendTenths:dividendTenths, q:q, qt:qt, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.dividend + ' ÷ ' + d.k + ' = ?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.dividend + ' 裡面有 ' + d.dividendTenths + ' 個 0.1，' + d.dividendTenths + ' ÷ ' + d.k + ' = ' + d.qt + ' 個 0.1，也就是 ' + d.q + '。'
+            : d.dividend + ' is ' + d.dividendTenths + ' tenths. ' + d.dividendTenths + ' ÷ ' + d.k + ' = ' + d.qt + ' tenths, which is ' + d.q + '.'
+        };
+      } },
+    { id:'multiplesInRange', cat:'multiple',
+      make: function(used){
+        var k = pickUnused([3, 4, 6, 7, 8, 9], used);
+        var range = pick([30, 40, 50, 60]);
+        var c = Math.floor(range / k);
+        var m = mixOpts(c, [c - 1, c + 1, c + 2]);
+        return { k:k, range:range, c:c, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 個' : '';
+        var rem = d.range % d.k;
+        return {
+          stem: lang === 'zh' ? '1～' + d.range + ' 裡面，' + d.k + ' 的倍數共有幾個？' : 'How many multiples of ' + d.k + ' are there from 1 to ' + d.range + '?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.range + ' ÷ ' + d.k + ' = ' + d.c + (rem ? ' 餘 ' + rem : '') + '，共 ' + d.c + ' 個。'
+            : d.range + ' ÷ ' + d.k + ' = ' + d.c + (rem ? ' r ' + rem : '') + ' — ' + d.c + ' of them.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：8 種題型各一題＋隨機 4 題（限平均類，數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['avgCalc','reverseSum','missingValue','addOneNew'].indexOf(g.id) >= 0;
+    });
+    for (var i = 0; i < 4; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

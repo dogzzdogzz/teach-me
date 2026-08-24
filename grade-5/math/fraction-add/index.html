@@ -96,6 +96,20 @@
     border-radius:20px;padding:24px;font-size:18px;
   }
   a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px;text-align:center;cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .mode .mbig{font-size:26px}
+  .mode h3{font-size:17px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:16px;display:grid;gap:10px}
 </style>
 </head>
 <body>
@@ -104,6 +118,11 @@
     <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
     <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
   </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰</a>
+  </nav>
 
   <header>
     <h1 data-i18n="h1">🍕 通分披薩屋</h1>
@@ -113,6 +132,13 @@
   <div class="intro" data-i18n="intro">
     兩片切法不同的披薩，沒辦法直接比誰的餅皮多。<br>
     要先把它們切成<strong>一樣的大小</strong>（通分），才能一起加減。
+  </div>
+
+  <!-- 模式選擇 -->
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
   </div>
 
   <!-- 範例教學 1：等值分數 -->
@@ -175,7 +201,7 @@
     <p class="lead" data-i18n="s4lead">直接點答案，馬上告訴你為什麼。</p>
     <div id="quiz" class="quiz"></div>
     <div class="scoreboard">
-      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / 6</span>
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
       <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
       <span id="qComment"></span>
     </div>
@@ -191,7 +217,9 @@
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <p class="target"><span data-i18n="gExprLabel">來看看：</span> <b id="gExpr">1/2 + 1/4</b></p>
+      <p class="target"><span data-i18n="gExprLabel">來看看：</span> <b id="gExpr">1/2 + 1/4</b>
+        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px;margin-left:10px" data-i18n="gHintBtn">💡 提示</button>
+      </p>
       <p class="hint" id="gHint"></p>
       <div id="gGrid" class="fggrid"></div>
       <p id="gMsg" class="gamemsg"></p>
@@ -199,6 +227,19 @@
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
+    </div>
+  </section>
+
+  <!-- 學完之後 -->
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的三個動作</h2>
+    <div class="card">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。</li>
+        <li data-i18n="next3">❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。</li>
+      </ul>
     </div>
   </section>
 
@@ -287,15 +328,50 @@
           opts:['3/6 已經是最簡分數，不用再約','6/12，這樣比較好看','1/2（分子分母同除以 3），這樣才是最簡分數','2/3，分子分母同加 1'], ans:2,
           why:'3/6 的分子分母都能同時除以 3，約分後是 1/2，這才是最簡分數。答完別忘了檢查能不能再約分！' }
       ],
+      qsAdv: [
+        { stem:'文字題：早上吃 1/4 個披薩、下午吃 1/2 個，一天共吃了幾個披薩？',
+          opts:['1/6','2/6','3/4','3/6'], ans:2,
+          why:'1/4 + 1/2 = 1/4 + 2/4 = 3/4。分母不同要先通分成 4，再把分子相加。' },
+        { stem:'文字題：一條緞帶長 5/6 公尺，剪掉 1/3 公尺，還剩多少公尺？',
+          opts:['4/3 公尺','4/6 公尺','1/2 公尺','2/3 公尺'], ans:2,
+          why:'5/6 − 1/3 = 5/6 − 2/6 = 3/6，約分後是 1/2 公尺。別忘了把答案化到最簡！' },
+        { stem:'2/3 和 3/5 哪一個比較大？',
+          opts:['2/3 比較大','3/5 比較大','兩個一樣大','沒辦法比較'], ans:0,
+          why:'通分成 15：2/3 = 10/15，3/5 = 9/15。10/15 &gt; 9/15，所以 2/3 比較大。' },
+        { stem:'文字題：水壺先倒入 1/2 公升的水，再倒入 1/5 公升，總共倒入多少公升？',
+          opts:['2/7 公升','6/10 公升','7/10 公升','2/10 公升'], ans:2,
+          why:'1/2 + 1/5 通分成 10：5/10 + 2/10 = 7/10 公升，分子分母已經沒有公因數，不用再約分。' }
+      ],
+      qsBoost: [
+        { stem:'迷思檢查：算 1/2 + 1/3 的時候，可以把分子相加、分母也相加，直接寫成 2/5 嗎？',
+          opts:['可以，2/5 就是答案','不行，分母不同不能直接相加，要先通分成 6，答案是 5/6','可以，因為看起來數字比較小','不行，因為分母要相減才對'], ans:1,
+          why:'分母不同時，分子和分母都不能直接相加。要先通分：1/2 = 3/6，1/3 = 2/6，3/6 + 2/6 = 5/6。' },
+        { stem:'迷思檢查：算出 4/8 之後，這樣就寫完答案了嗎？',
+          opts:['寫完了，4/8 就是最後答案','還沒，要檢查能不能約分成最簡分數','還沒，要再擴分成更大的分母','寫完了，通分過的分數不用再檢查'], ans:1,
+          why:'算完加減之後一定要檢查能不能再約分。4/8 的分子分母都能同除以 4，約分後是 1/2，這才是最簡分數。' }
+      ],
       s5h2: '披薩配對',
       s5lead: '看看題目，從六張披薩卡片中，點出<strong>化到最簡</strong>的正確答案！點錯扣分，過關加分。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數', gExprLabel: '來看看：',
-      gHintMsg: function(lcm){ return '提示：先通分成 ' + lcm + '。'; },
+      gHintBtn: '💡 提示',
+      gHint1: '提示 1：分母不同時，要先找兩個分母的最小公倍數，把兩個分數通分成同一種切法，才能比較或計算。',
+      gHint2: function(lcm){ return '提示 2：先通分成 ' + lcm + '，再看看哪張披薩卡片的答案已經化到最簡分數。'; },
       gHitMsg: function(exprStr, correctStr){ return '✔️ ' + exprStr + ' = ' + correctStr + '，答對了！+10 分！'; },
       gMissMsg: function(chosenStr){ return '✘ ' + chosenStr + ' 不對，再試一次。−5 分。'; },
       gClearMsg: function(){ return '過關獎勵 +20 分！按「下一關」繼續。'; },
       gWinMsg: function(score){ return '五關全破！總分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
       gNextBtn: '下一關', gRestartBtn: '重新開始',
+      modeTitle: '今天想怎麼學？（隨時可以換）',
+      modes: {
+        ahead:  { icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：慢慢玩上面的範例就好，試題只出 6 題基礎題，遊戲會自動給提示。' },
+        school: { icon:'🏫', h:'跟上進度', p:'學校正在教，完整練習', banner:'跟上模式：完整 10 題，包含 4 題像課本一樣的文字題。' },
+        boost:  { icon:'💪', h:'補強練習', p:'學過但還不穩，加強', banner:'補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。' }
+      },
+      nav1: '📖 上課（本頁）', nav2: '🗂️ 速查卡', nav3: '🔁 複習挑戰',
+      ebNext: '學完之後', nextH2: '把它記牢的三個動作',
+      next1: '🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2: '🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
+      next3: '❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
       footer: '分母不同不能直接加 —— 先通分，變成同一種切法再加。'
     },
     en: {
@@ -370,15 +446,50 @@
           opts:['3/6 is already simplest — no need to simplify','6/12 — that looks better','1/2 (divide top and bottom by 3) — that is the simplest form','2/3, by adding 1 to both the top and bottom'], ans:2,
           why:'Both the numerator and denominator of 3/6 can be divided by 3, giving 1/2 — the simplest form. Always check whether you can simplify further!' }
       ],
+      qsAdv: [
+        { stem:'Word problem: you eat 1/4 of a pizza in the morning and 1/2 in the afternoon. How much pizza did you eat in total?',
+          opts:['1/6','2/6','3/4','3/6'], ans:2,
+          why:'1/4 + 1/2 = 1/4 + 2/4 = 3/4. The denominators differ, so convert to fourths first, then add the numerators.' },
+        { stem:'Word problem: a ribbon is 5/6 of a meter long. If you cut off 1/3 of a meter, how much is left?',
+          opts:['4/3 m','4/6 m','1/2 m','2/3 m'], ans:2,
+          why:'5/6 − 1/3 = 5/6 − 2/6 = 3/6, which simplifies to 1/2 m. Don’t forget to reduce to simplest form!' },
+        { stem:'Which is bigger, 2/3 or 3/5?',
+          opts:['2/3 is bigger','3/5 is bigger','They are equal','You can’t compare them'], ans:0,
+          why:'Convert both to fifteenths: 2/3 = 10/15, 3/5 = 9/15. Since 10/15 &gt; 9/15, 2/3 is bigger.' },
+        { stem:'Word problem: a kettle is filled with 1/2 liter of water, then another 1/5 liter is poured in. How much water is there in total?',
+          opts:['2/7 L','6/10 L','7/10 L','2/10 L'], ans:2,
+          why:'1/2 + 1/5, converted to tenths: 5/10 + 2/10 = 7/10 L. The numerator and denominator share no common factor, so no further simplifying is needed.' }
+      ],
+      qsBoost: [
+        { stem:'Misconception check: when adding 1/2 + 1/3, can you add both numerators and both denominators to get 2/5?',
+          opts:['Yes, 2/5 is the answer','No — denominators differ, so convert to sixths first; the answer is 5/6','Yes, because the numbers look smaller','No, because the denominators should be subtracted instead'], ans:1,
+          why:'When denominators differ, you can’t add the tops and bottoms directly. Convert first: 1/2 = 3/6, 1/3 = 2/6, so 3/6 + 2/6 = 5/6.' },
+        { stem:'Misconception check: after working out 4/8, is that the finished answer?',
+          opts:['Yes, 4/8 is the final answer','Not yet — check whether it simplifies to a simplest form','Not yet — expand it to a bigger denominator instead','Yes, converted fractions never need checking'], ans:1,
+          why:'Always check whether a result can be simplified further. Both the numerator and denominator of 4/8 divide by 4, giving 1/2 — the simplest form.' }
+      ],
       s5h2: 'Pizza Match',
       s5lead: 'Look at the expression, then tap the pizza card with the <strong>fully simplified</strong> correct answer! Wrong taps lose points, clearing a round earns a bonus.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score', gExprLabel: 'Let’s work out:',
-      gHintMsg: function(lcm){ return 'Hint: first convert to a common denominator of ' + lcm + '.'; },
+      gHintBtn: '💡 Hint',
+      gHint1: 'Hint 1: when denominators differ, first find the least common multiple of the two denominators and convert both fractions to it before comparing or calculating.',
+      gHint2: function(lcm){ return 'Hint 2: convert to a common denominator of ' + lcm + ', then look for the pizza card whose answer is already in simplest form.'; },
       gHitMsg: function(exprStr, correctStr){ return '✔️ ' + exprStr + ' = ' + correctStr + ' — correct! +10 points!'; },
       gMissMsg: function(chosenStr){ return '✘ ' + chosenStr + ' is not correct — try again. −5 points.'; },
       gClearMsg: function(){ return 'Bonus +20 points for clearing the round! Press “Next round” to continue.'; },
       gWinMsg: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
       gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      modeTitle: 'How do you want to learn today? (switch anytime)',
+      modes: {
+        ahead:  { icon:'🚀', h:'Learning ahead', p:'First time meeting this topic', banner:'Ahead mode: enjoy the examples above at your own pace — the quiz has just the 6 basics, and the game shows a hint automatically.' },
+        school: { icon:'🏫', h:'School pace', p:'Learning it at school now', banner:'School mode: the full 10 questions, including 4 textbook-style word problems.' },
+        boost:  { icon:'💪', h:'Boost', p:'Learned it, still shaky', banner:'Boost mode: 2 misconception checks first, 12 questions in total — then head to the Review Challenge.' }
+      },
+      nav1: '📖 Lesson (this page)', nav2: '🗂️ Cheat sheet', nav3: '🔁 Review challenge',
+      ebNext: 'After the lesson', nextH2: 'Three moves that make it stick',
+      next1: '🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
+      next2: '🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
+      next3: '❓ Anything unclear — ask your parents or your AI teacher until it clicks. Good learners ask.',
       footer: 'You can’t add fractions with different denominators — find a common denominator first, then add.'
     }
   };
@@ -387,7 +498,31 @@
   try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
   function L(){ return I18N[lang]; }
 
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
   var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+
+  function buildModeCards(){
+    var d = L();
+    clearNode(modeCards);
+    ['ahead','school','boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
 
   function applyStatic(){
     var d = L();
@@ -516,7 +651,7 @@
     add: { aNum:1, aDen:2, bNum:1, bDen:3, lcm:6,  kaNum:3, kbNum:2, resNum:5, resDen:6,  op:'+' },
     sub: { aNum:3, aDen:4, bNum:1, bDen:6, lcm:12, kaNum:9, kbNum:2, resNum:7, resDen:12, op:'−' }
   };
-  var mode = 'add';
+  var stepMode = 'add';
   var step = 0;
   var stepModeChipsEl = document.getElementById('stepModeChips');
   var stepGEl = document.getElementById('stepG');
@@ -528,15 +663,15 @@
     clearNode(stepModeChipsEl);
     ['add','sub'].forEach(function(m){
       var label = (m === 'add') ? L().modeAddLabel : L().modeSubLabel;
-      var b = makeChip(label, m === mode);
-      b.addEventListener('click', function(){ mode = m; step = 0; buildModeChips(); renderStep(); });
+      var b = makeChip(label, m === stepMode);
+      b.addEventListener('click', function(){ stepMode = m; step = 0; buildModeChips(); renderStep(); });
       stepModeChipsEl.appendChild(b);
     });
   }
 
   function renderStep(){
     clearNode(stepGEl);
-    var d = STEPS[mode];
+    var d = STEPS[stepMode];
     if (step === 0){
       drawSegments(stepGEl, 20, 15, 380, 55, d.aDen, function(i){ return i < d.aNum ? ORANGE : PALE; });
       addText(stepGEl, 410, 48, d.aNum + '/' + d.aDen, { size: 24, weight: 'bold' });
@@ -568,15 +703,25 @@
   var quizEl = document.getElementById('quiz');
   var qDone = document.getElementById('qDone');
   var qRight = document.getElementById('qRight');
+  var qTotalEl = document.getElementById('qTotal');
   var qComment = document.getElementById('qComment');
   var done = 0, right = 0;
 
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
   function buildQuiz(){
     var d = L();
+    var list = quizSet();
     clearNode(quizEl);
     done = 0; right = 0;
     qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
-    d.qs.forEach(function(q, qi){
+    qTotalEl.textContent = list.length;
+    list.forEach(function(q, qi){
       var box = document.createElement('div');
       box.className = 'q';
       var n = document.createElement('span');
@@ -604,8 +749,9 @@
           fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
           done++; if (good) right++;
           qDone.textContent = done; qRight.textContent = right;
-          if (done === d.qs.length){
-            qComment.textContent = right === 6 ? d.cAll : right >= 4 ? d.cGood : d.cTry;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
           }
         });
         opts.appendChild(b);
@@ -637,7 +783,15 @@
     var r = ROUNDS[gRound];
     elRound.textContent = gRound + 1;
     elExpr.textContent = r.expr;
-    elHint.textContent = L().gHintMsg(r.lcm);
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    gHintBtn.textContent = L().gHintBtn;
+    if (mode === 'ahead'){
+      hintLevel = 1;
+      elHint.textContent = L().gHint1;
+    } else {
+      elHint.textContent = '';
+    }
     gMsg.textContent = '';
     gNext.disabled = true;
     clearNode(gGrid);
@@ -679,9 +833,22 @@
   });
   gRestart.addEventListener('click', restartGame);
 
+  var gHintBtn = document.getElementById('gHintBtn');
+  var hintLevel = 0;
+  gHintBtn.addEventListener('click', function(){
+    hintLevel++;
+    if (hintLevel === 1){
+      elHint.textContent = L().gHint1;
+    } else {
+      elHint.textContent = L().gHint2(ROUNDS[gRound].lcm);
+      gHintBtn.disabled = true;
+    }
+  });
+
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
   function renderAll(){
     applyStatic();
+    buildModeCards();
     buildEqChips();
     renderEqBar();
     renderCdRef();

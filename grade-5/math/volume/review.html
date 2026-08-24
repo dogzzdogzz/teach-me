@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>體積複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 體積複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：體積計算與面積交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'體積複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      h1:'🔁 體積複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：體積計算與面積交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Volume Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      h1:'🔁 Volume Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving volume with area — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { volume:'體積', area:'面積' },
+      fbRight: '<b>答對了。</b>',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b>'; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { volume:'🧊 體積 — 體積積木塔', area:'📐 面積 — 三兄弟變身長方形' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { volume:'Volume', area:'Area' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { volume:'🧊 Volume — The Block Tower', area:'📐 Area — Three Shapes, One Trick' }
+    }
+  };
+
+  var LINK_HREFS = { volume:'index.html', area:'../area/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 把選項值＋正解洗牌，回傳 {opts, ans} */
+  function mixOpts(correct, wrongs){
+    var uniqWrongs = [];
+    wrongs.forEach(function(w){
+      if (w !== correct && uniqWrongs.indexOf(w) < 0) uniqWrongs.push(w);
+    });
+    var opts = shuffle([correct].concat(uniqWrongs.slice(0, 3)));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，正解一律由程式算出 ---------- */
+  var GENS = [
+    /* 1. 長方體體積 = 長×寬×高 */
+    { id:'boxVolume', cat:'volume',
+      make: function(used){
+        var POOL = [[3,4,2],[5,3,2],[4,4,3],[6,2,3],[2,5,4],[7,2,2],[3,3,5],[4,2,6],[5,4,2],[3,6,2]];
+        var keys = POOL.map(function(p){ return p.join('x'); });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var l = p[0], w = p[1], h = p[2], v = l * w * h;
+        var m = mixOpts(v, [l + w + h, (l + 1) * w * h, l * w, l * w * (h + 1)]);
+        return { l:l, w:w, h:h, v:v, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? '立方公分' : 'cubic cm';
+        return {
+          stem: lang === 'zh'
+            ? '一個長方體長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分、高 ' + d.h + ' 公分，體積是多少？'
+            : 'A rectangular box is ' + d.l + ' cm long, ' + d.w + ' cm wide, and ' + d.h + ' cm high. What is its volume?',
+          opts: d.opts.map(function(v){ return v + ' ' + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '長 × 寬 × 高 = ' + d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.v + '（立方公分）。'
+            : 'Length × Width × Height = ' + d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.v + ' (cubic cm).'
+        };
+      } },
+    /* 2. 正方體體積 = 邊×邊×邊 */
+    { id:'cubeVolume', cat:'volume',
+      make: function(used){
+        var e = pickUnused([2,3,4,5,6,7,8], used);
+        var v = e * e * e;
+        var m = mixOpts(v, [e * 3, e * e, e * 4, e * e * (e - 1)]);
+        return { e:e, v:v, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? '立方公分' : 'cubic cm';
+        return {
+          stem: lang === 'zh' ? '正方體邊長 ' + d.e + ' 公分，體積是多少？' : 'A cube has an edge length of ' + d.e + ' cm. What is its volume?',
+          opts: d.opts.map(function(v){ return v + ' ' + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '邊 × 邊 × 邊 = ' + d.e + ' × ' + d.e + ' × ' + d.e + ' = ' + d.v + '（立方公分），要連乘三次，不是邊長 × 3。'
+            : 'Edge × Edge × Edge = ' + d.e + ' × ' + d.e + ' × ' + d.e + ' = ' + d.v + ' (cubic cm) — multiply by itself three times, not edge × 3.'
+        };
+      } },
+    /* 3. 已知體積和兩邊，逆求第三邊 */
+    { id:'findMissingEdge', cat:'volume',
+      make: function(used){
+        var POOL = [[4,3,2],[5,2,3],[6,3,2],[4,5,2],[3,3,4],[6,2,4],[5,4,2],[8,2,2]];
+        var keys = POOL.map(function(p){ return p.join('x'); });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var l = p[0], w = p[1], h = p[2], v = l * w * h;
+        var m = mixOpts(h, [h + 1, Math.max(1, h - 1), l * w]);
+        return { l:l, w:w, h:h, v:v, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? '公分' : 'cm';
+        return {
+          stem: lang === 'zh'
+            ? '一個長方體的體積是 ' + d.v + ' 立方公分，長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分，高是多少？'
+            : 'A rectangular box has a volume of ' + d.v + ' cubic cm. It is ' + d.l + ' cm long and ' + d.w + ' cm wide. How tall is it?',
+          opts: d.opts.map(function(v){ return v + ' ' + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '長 × 寬 = ' + d.l + ' × ' + d.w + ' = ' + (d.l * d.w) + '；' + d.v + ' ÷ ' + (d.l * d.w) + ' = ' + d.h + '，所以高是 ' + d.h + ' 公分。'
+            : 'Length × Width = ' + d.l + ' × ' + d.w + ' = ' + (d.l * d.w) + '; ' + d.v + ' ÷ ' + (d.l * d.w) + ' = ' + d.h + ', so the height is ' + d.h + ' cm.'
+        };
+      } },
+    /* 4. 水箱裝水公升數（立方公分→公升） */
+    { id:'tankLiters', cat:'volume',
+      make: function(used){
+        var POOL = [
+          {l:10,w:10,h:10, liters:1},
+          {l:20,w:10,h:5,  liters:1},
+          {l:30,w:20,h:5,  liters:3},
+          {l:25,w:20,h:10, liters:5},
+          {l:50,w:20,h:10, liters:10},
+          {l:40,w:25,h:4,  liters:4}
+        ];
+        var keys = POOL.map(function(p){ return p.l + '-' + p.w + '-' + p.h; });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var cm3 = p.l * p.w * p.h;
+        var m = mixOpts(p.liters, [p.liters * 10, Math.max(1, Math.floor(p.liters / 10)), p.liters + 2]);
+        return { l:p.l, w:p.w, h:p.h, cm3:cm3, liters:p.liters, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? '公升' : 'liters';
+        return {
+          stem: lang === 'zh'
+            ? '一個水箱長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分、高 ' + d.h + ' 公分，最多可以裝幾公升水？'
+            : 'A water tank is ' + d.l + ' cm long, ' + d.w + ' cm wide, and ' + d.h + ' cm high. How many liters of water can it hold at most?',
+          opts: d.opts.map(function(v){ return v + ' ' + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '水箱體積 = ' + d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.cm3 + '（立方公分）；1000 立方公分 = 1 公升，' + d.cm3 + ' ÷ 1000 = ' + d.liters + '，所以是 ' + d.liters + ' 公升。'
+            : 'Tank volume = ' + d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.cm3 + ' (cubic cm); 1000 cubic cm = 1 liter, ' + d.cm3 + ' ÷ 1000 = ' + d.liters + ', so it holds ' + d.liters + ' liters.'
+        };
+      } },
+    /* 5. 一層幾塊 × 疊幾層（直接給層塊數，練「一層×層數」的概念） */
+    { id:'layerCount', cat:'volume',
+      make: function(used){
+        var perLayer = pickUnused([6,8,9,10,12,15,16,20,24], used);
+        var layers = pick([2,3,4,5]);
+        var total = perLayer * layers;
+        var m = mixOpts(total, [perLayer + layers, total + perLayer, Math.max(1, total - layers)]);
+        return { perLayer:perLayer, layers:layers, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? '塊' : 'cubes';
+        return {
+          stem: lang === 'zh'
+            ? '積木塔每層排 ' + d.perLayer + ' 塊，一共疊了 ' + d.layers + ' 層，總共用了幾塊小方塊？'
+            : 'A block tower has ' + d.perLayer + ' cubes in each layer, stacked ' + d.layers + ' layers high. How many cubes in total?',
+          opts: d.opts.map(function(v){ return v + ' ' + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '一層有幾塊 × 疊幾層 = ' + d.perLayer + ' × ' + d.layers + ' = ' + d.total + '（塊）。'
+            : 'Cubes in one layer × number of layers = ' + d.perLayer + ' × ' + d.layers + ' = ' + d.total + ' cubes.'
+        };
+      } },
+    /* 6. 公升 → 立方公分換算 */
+    { id:'litersToCm3', cat:'volume',
+      make: function(used){
+        var k = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var v = k * 1000;
+        var m = mixOpts(v, [k * 100, k * 10, k * 10000]);
+        return { k:k, v:v, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? '立方公分' : 'cubic cm';
+        return {
+          stem: lang === 'zh' ? d.k + ' 公升等於幾立方公分？' : 'How many cubic centimeters is ' + d.k + ' liters?',
+          opts: d.opts.map(function(v){ return v + ' ' + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '1 公升 = 1000 立方公分，' + d.k + ' × 1000 = ' + d.v + '，所以是 ' + d.v + ' 立方公分。'
+            : '1 liter = 1000 cubic cm, so ' + d.k + ' × 1000 = ' + d.v + ' cubic cm.'
+        };
+      } },
+    /* 7. 交錯主題：長方形面積 = 長×寬 */
+    { id:'rectArea', cat:'area',
+      make: function(used){
+        var POOL = [[6,4],[5,3],[8,3],[7,4],[9,2],[6,5],[4,4],[8,5]];
+        var keys = POOL.map(function(p){ return p.join('x'); });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var l = p[0], w = p[1], a = l * w;
+        var m = mixOpts(a, [l + w, a + l, (l + 1) * w]);
+        return { l:l, w:w, a:a, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? '平方公分' : 'square cm';
+        return {
+          stem: lang === 'zh'
+            ? '一個長方形長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分，面積是多少？'
+            : 'A rectangle is ' + d.l + ' cm long and ' + d.w + ' cm wide. What is its area?',
+          opts: d.opts.map(function(v){ return v + ' ' + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '長方形面積 = 長 × 寬 = ' + d.l + ' × ' + d.w + ' = ' + d.a + '（平方公分）。'
+            : 'Rectangle area = Length × Width = ' + d.l + ' × ' + d.w + ' = ' + d.a + ' (square cm).'
+        };
+      } },
+    /* 8. 交錯主題：三角形面積 = 底×高÷2 */
+    { id:'triArea', cat:'area',
+      make: function(used){
+        var POOL = [[6,4],[8,3],[10,6],[6,8],[9,4],[12,5],[10,4],[8,6]];
+        var keys = POOL.map(function(p){ return p.join('x'); });
+        var key = pickUnused(keys, used);
+        var p = POOL[keys.indexOf(key)];
+        var base = p[0], height = p[1], a = base * height / 2;
+        var m = mixOpts(a, [base * height, base + height, a + base]);
+        return { base:base, height:height, a:a, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? '平方公分' : 'square cm';
+        return {
+          stem: lang === 'zh'
+            ? '一個三角形底是 ' + d.base + ' 公分、高是 ' + d.height + ' 公分，面積是多少？'
+            : 'A triangle has a base of ' + d.base + ' cm and a height of ' + d.height + ' cm. What is its area?',
+          opts: d.opts.map(function(v){ return v + ' ' + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '三角形面積 = 底 × 高 ÷ 2 = ' + d.base + ' × ' + d.height + ' ÷ 2 = ' + d.a + '（平方公分），別忘了除以 2。'
+            : 'Triangle area = Base × Height ÷ 2 = ' + d.base + ' × ' + d.height + ' ÷ 2 = ' + d.a + ' (square cm) — don’t forget to divide by 2.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：8 種題型各一題＋隨機 4 題（同題型可重複，但數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['boxVolume','cubeVolume','findMissingEdge','layerCount','tankLiters','litersToCm3'].indexOf(g.id) >= 0;
+    });
+    for (var i = 0; i < 4; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>面積複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 面積複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：平行四邊形、三角形、梯形面積交錯出現，還會混入體積和角度題，
+    <strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'面積複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      h1:'🔁 面積複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：平行四邊形、三角形、梯形面積交錯出現，還會混入體積和角度題，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Area Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      h1:'🔁 Area Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving parallelogram, triangle and trapezoid area, plus some volume and angle questions — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { area:'面積', volume:'體積', angle:'角度' },
+      fbRight: '<b>答對了。</b>',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b>'; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { area:'📐 面積 — 面積魔術師', volume:'🧊 體積 — 體積積木塔', angle:'🕵️ 角度 — 角度偵探' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { area:'Area', volume:'Volume', angle:'Angle' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { area:'📐 Area — The Area Magician', volume:'🧊 Volume — The Block Tower', angle:'🕵️ Angle — The Angle Detective' }
+    }
+  };
+
+  var LINK_HREFS = { area:'index.html', volume:'../volume/', angle:'../angle-sum/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 把選項值＋正解洗牌，回傳 {opts, ans} */
+  function mixOpts(correct, wrongs){
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 在正確答案附近找 count 個不重複、不等於正解的正整數當錯誤選項 */
+  function nearbyWrongs(correct, count){
+    var wrongs = [], delta = 1;
+    while (wrongs.length < count){
+      var cand = (wrongs.length % 2 === 0) ? correct + delta : correct - delta;
+      if (cand > 0 && cand !== correct && wrongs.indexOf(cand) < 0) wrongs.push(cand);
+      delta++;
+    }
+    return wrongs;
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，答案一律用程式算出來 ---------- */
+  var GENS = [
+    { id:'paraArea', cat:'area',
+      make: function(used){
+        var bs = [4,5,6,7,8,9,10,12], hs = [3,4,5,6,7,8,9];
+        var b, h, key, tries = 0;
+        do { b = pick(bs); h = pick(hs); key = b + 'x' + h; tries++; }
+        while (used.indexOf(key) >= 0 && tries < 30);
+        used.push(key);
+        var area = b * h;
+        var m = mixOpts(area, nearbyWrongs(area, 3));
+        return { b:b, h:h, area:area, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 平方公分' : ' cm²';
+        return {
+          stem: lang === 'zh' ? '平行四邊形底 ' + d.b + ' 公分、高 ' + d.h + ' 公分，面積是多少？' : 'A parallelogram has base ' + d.b + ' cm and height ' + d.h + ' cm. What is its area?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '平行四邊形面積 = 底 × 高 = ' + d.b + ' × ' + d.h + ' = ' + d.area + '（平方公分）。'
+            : 'Area = base × height = ' + d.b + ' × ' + d.h + ' = ' + d.area + ' cm².'
+        };
+      } },
+    { id:'triArea', cat:'area',
+      make: function(used){
+        var bs = [4,6,8,10,12,14], hs = [3,4,5,6,7,8,9];
+        var b, h, key, tries = 0;
+        do { b = pick(bs); h = pick(hs); key = b + 'x' + h; tries++; }
+        while (used.indexOf(key) >= 0 && tries < 30);
+        used.push(key);
+        var area = b * h / 2;
+        var m = mixOpts(area, nearbyWrongs(area, 3));
+        return { b:b, h:h, area:area, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 平方公分' : ' cm²';
+        return {
+          stem: lang === 'zh' ? '三角形底 ' + d.b + ' 公分、高 ' + d.h + ' 公分，面積是多少？' : 'A triangle has base ' + d.b + ' cm and height ' + d.h + ' cm. What is its area?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '三角形面積 = 底 × 高 ÷ 2 = ' + d.b + ' × ' + d.h + ' ÷ 2 = ' + d.area + '（平方公分）。別忘了除以 2！'
+            : 'Area = base × height ÷ 2 = ' + d.b + ' × ' + d.h + ' ÷ 2 = ' + d.area + ' cm². Don’t forget to divide by 2!'
+        };
+      } },
+    { id:'trapArea', cat:'area',
+      make: function(used){
+        var tops = [3,4,5,6,7], gaps = [2,3,4,5,6], hs = [2,4,6,8];
+        var top, bottom, h, key, tries = 0;
+        do {
+          top = pick(tops); bottom = top + pick(gaps); h = pick(hs);
+          key = top + '-' + bottom + '-' + h; tries++;
+        } while (used.indexOf(key) >= 0 && tries < 30);
+        used.push(key);
+        var area = (top + bottom) * h / 2;
+        var m = mixOpts(area, nearbyWrongs(area, 3));
+        return { top:top, bottom:bottom, h:h, area:area, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 平方公分' : ' cm²';
+        return {
+          stem: lang === 'zh' ? '梯形上底 ' + d.top + ' 公分、下底 ' + d.bottom + ' 公分、高 ' + d.h + ' 公分，面積是多少？' : 'A trapezoid has a top base of ' + d.top + ' cm, a bottom base of ' + d.bottom + ' cm, and a height of ' + d.h + ' cm. What is its area?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '梯形面積 = (上底＋下底) × 高 ÷ 2 = (' + d.top + '+' + d.bottom + ') × ' + d.h + ' ÷ 2 = ' + d.area + '（平方公分）。'
+            : 'Area = (top + bottom) × height ÷ 2 = (' + d.top + '+' + d.bottom + ') × ' + d.h + ' ÷ 2 = ' + d.area + ' cm².'
+        };
+      } },
+    { id:'inverseHeight', cat:'area',
+      make: function(used){
+        var bs = [3,4,5,6,7,8,9], hs = [3,4,5,6,7,8,9];
+        var b, h, key, tries = 0;
+        do { b = pick(bs); h = pick(hs); key = b + 'x' + h; tries++; }
+        while (used.indexOf(key) >= 0 && tries < 30);
+        used.push(key);
+        var area = b * h;
+        var m = mixOpts(h, nearbyWrongs(h, 3));
+        return { b:b, h:h, area:area, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 公分' : ' cm';
+        return {
+          stem: lang === 'zh' ? '平行四邊形面積 ' + d.area + ' 平方公分、底 ' + d.b + ' 公分，高是多少？' : 'A parallelogram has an area of ' + d.area + ' cm² and a base of ' + d.b + ' cm. What is its height?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '底 × 高 = 面積，所以高 = 面積 ÷ 底 = ' + d.area + ' ÷ ' + d.b + ' = ' + d.h + '（公分）。'
+            : 'base × height = area, so height = area ÷ base = ' + d.area + ' ÷ ' + d.b + ' = ' + d.h + ' cm.'
+        };
+      } },
+    { id:'inverseBase', cat:'area',
+      make: function(used){
+        var hs = [2,4,6,8], bs = [4,5,6,7,8,9,10];
+        var b, h, key, tries = 0;
+        do { b = pick(bs); h = pick(hs); key = b + 'x' + h; tries++; }
+        while (used.indexOf(key) >= 0 && tries < 30);
+        used.push(key);
+        var area = b * h / 2;
+        var m = mixOpts(b, nearbyWrongs(b, 3));
+        return { b:b, h:h, area:area, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 公分' : ' cm';
+        return {
+          stem: lang === 'zh' ? '三角形面積 ' + d.area + ' 平方公分、高 ' + d.h + ' 公分，底是多少？' : 'A triangle has an area of ' + d.area + ' cm² and a height of ' + d.h + ' cm. What is its base?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '三角形面積 = 底 × 高 ÷ 2，所以底 = 面積 × 2 ÷ 高 = ' + d.area + ' × 2 ÷ ' + d.h + ' = ' + d.b + '（公分）。'
+            : 'Area = base × height ÷ 2, so base = area × 2 ÷ height = ' + d.area + ' × 2 ÷ ' + d.h + ' = ' + d.b + ' cm.'
+        };
+      } },
+    { id:'composite', cat:'area',
+      make: function(used){
+        var Ls = [4,6,8,10], Ws = [3,4,5,6,7], H2s = [2,3,4,5,6];
+        var L, W, h2, key, tries = 0;
+        do { L = pick(Ls); W = pick(Ws); h2 = pick(H2s); key = L + '-' + W + '-' + h2; tries++; }
+        while (used.indexOf(key) >= 0 && tries < 30);
+        used.push(key);
+        var rectArea = L * W, triArea = L * h2 / 2, total = rectArea + triArea;
+        var missTri = rectArea;
+        var missDiv2 = rectArea + L * h2;
+        var candidates = nearbyWrongs(total, 4).filter(function(v){ return v !== missTri && v !== missDiv2; });
+        var wrongs = [missTri, missDiv2, candidates[0]];
+        var m = mixOpts(total, wrongs);
+        return { L:L, W:W, h2:h2, rectArea:rectArea, triArea:triArea, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 平方公分' : ' cm²';
+        return {
+          stem: lang === 'zh'
+            ? '組合圖形：長方形長 ' + d.L + ' 公分、寬 ' + d.W + ' 公分，加上一個底 ' + d.L + ' 公分、高 ' + d.h2 + ' 公分的三角形，總面積是多少？'
+            : 'Composite shape: a rectangle ' + d.L + ' cm by ' + d.W + ' cm, plus a triangle with base ' + d.L + ' cm and height ' + d.h2 + ' cm. What is the total area?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '長方形面積 = ' + d.L + ' × ' + d.W + ' = ' + d.rectArea + '；三角形面積 = ' + d.L + ' × ' + d.h2 + ' ÷ 2 = ' + d.triArea + '；總面積 = ' + d.rectArea + ' + ' + d.triArea + ' = ' + d.total + '（平方公分）。'
+            : 'Rectangle area = ' + d.L + ' × ' + d.W + ' = ' + d.rectArea + '; triangle area = ' + d.L + ' × ' + d.h2 + ' ÷ 2 = ' + d.triArea + '; total = ' + d.rectArea + ' + ' + d.triArea + ' = ' + d.total + ' cm².'
+        };
+      } },
+    { id:'volumeCuboid', cat:'volume',
+      make: function(used){
+        var pool = [2,3,4,5,6,7,8];
+        var l, w, h, key, tries = 0;
+        do { l = pick(pool); w = pick(pool); h = pick(pool); key = l + '-' + w + '-' + h; tries++; }
+        while (used.indexOf(key) >= 0 && tries < 30);
+        used.push(key);
+        var vol = l * w * h;
+        var m = mixOpts(vol, nearbyWrongs(vol, 3));
+        return { l:l, w:w, h:h, vol:vol, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 立方公分' : ' cm³';
+        return {
+          stem: lang === 'zh' ? '一個長方體長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分、高 ' + d.h + ' 公分，體積是多少？' : 'A rectangular box is ' + d.l + ' cm long, ' + d.w + ' cm wide, and ' + d.h + ' cm high. What is its volume?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '長 × 寬 × 高 = ' + d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.vol + '（立方公分）。'
+            : 'length × width × height = ' + d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.vol + ' cm³.'
+        };
+      } },
+    { id:'angleMissing', cat:'angle',
+      make: function(used){
+        var pool = [30,40,50,60,70,80,90,100];
+        var a, b, key, tries = 0;
+        do { a = pick(pool); b = pick(pool); key = a + '-' + b; tries++; }
+        while ((used.indexOf(key) >= 0 || a + b >= 170) && tries < 30);
+        used.push(key);
+        var missing = 180 - a - b;
+        var m = mixOpts(missing, nearbyWrongs(missing, 3));
+        return { a:a, b:b, missing:missing, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var deg = '°';
+        return {
+          stem: lang === 'zh' ? '一個三角形的兩個角是 ' + d.a + '°、' + d.b + '°，第三個角是多少度？' : 'A triangle has two angles of ' + d.a + '° and ' + d.b + '°. What is the third angle?',
+          opts: d.opts.map(function(v){ return v + deg; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '三角形內角和永遠是 180°：180 − ' + d.a + ' − ' + d.b + ' = ' + d.missing + '°。'
+            : 'A triangle’s angles always sum to 180°: 180 − ' + d.a + ' − ' + d.b + ' = ' + d.missing + '°.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：8 種題型各一題＋隨機 4 題（偏重面積，數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){ return g.cat === 'area'; });
+    for (var i = 0; i < 4; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
