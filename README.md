@@ -15,7 +15,7 @@
 | 🔁 **複習挑戰** `review.html` | 12 題混合複習，**每按「換一批」數字全部重新出**，跨主題交錯出題，錯題自動指路回對應課程 |
 | 👨‍👩‍👧 **給家長** `parents.html` | 這課在教什麼、學會後孩子該做得到什麼、在家怎麼陪、卡關時怎麼回應（附可以照著說的話）、什麼時候可以往下一課 |
 
-👨‍👩‍👧 那一頁是 2026-08-25 起的新規格，**49 堂課全部都有**（同日補齊五年級既有的 19 堂）。
+👨‍👩‍👧 那一頁是 2026-08-25 起的新規格，**50 堂課全部都有**（同日補齊五年級既有的 19 堂）。
 
 每堂課可選**三種學習模式**（右上角隨時可換，跨課記住）：
 
@@ -36,6 +36,15 @@
 | 🪙 小小收銀員 | 錢幣 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/money/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/money/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/money/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/money/parents.html) |
 | 🔺 形狀積木屋 | 平面圖形與立體形體 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/parents.html) |
 | 🔁 規律接接看 | 數的規律 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/parents.html) |
+
+
+## 二年級（1 個主題）
+
+| 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
+|------|------|:---:|:---:|:---:|:---:|
+| 🍪 乘法排排隊 | 九九乘法 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/parents.html) |
+
+二年級的其他單元（1000 以內的數、直式加減、長度、時間、平面圖形、統計表）課程還在準備中。
 
 
 ## 三年級（17 個主題）
@@ -100,14 +109,18 @@
 
 ```
 index.html                     # 首頁：選年級＋「▶ 繼續上次的課程」
-grade-1/ … grade-6/index.html  # 年級頁：領域摘要；五年級為完整課程頁（依領域分區列課程）
+grade-1/ … grade-6/index.html  # 年級頁：領域摘要＋該年級的課程清單（依領域分區）
 docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調整與深度規格）
-grade-1/math/ … grade-4/math/  # 一～四年級：單元整理（課程準備中）
+grade-1/math/                  # 一年級：單元整理＋ 9 個四頁迷你課程
+grade-2/math/                  # 二年級：單元整理＋ 1 個四頁迷你課程（multiply）
+grade-3/math/                  # 三年級：單元整理＋ 17 個四頁迷你課程
+grade-4/math/                  # 四年級：單元整理（課程準備中）
 grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你課程
-│   └── <主題>/                #   factor / multiple / common-factor / fraction-add /
-│       ├── index.html         #   fraction-multiply / decimal / percent / area /
-│       ├── reference.html     #   volume / symmetry / angle-sum / average
-│       └── review.html
+│   └── <主題>/                #   每個主題一個資料夾，固定四頁：
+│       ├── index.html         #     上課（互動教學）
+│       ├── reference.html     #     速查卡（重點整理）
+│       ├── review.html        #     複習挑戰（隨機新題）
+│       └── parents.html       #     給家長（陪讀指引）
 grade-6/math/                  # 六年級：單元整理（課程準備中）
 ```
 
@@ -134,7 +147,7 @@ grade-6/math/                  # 六年級：單元整理（課程準備中）
 
 ## 課程頁面慣例
 
-- 路徑：`grade-X/math/<主題>/`，每主題三頁（`index` / `reference` / `review`），
+- 路徑：`grade-X/math/<主題>/`，每主題四頁（`index` / `reference` / `review` / `parents`），
   每頁自足（行內 CSS ＋原生 JS，無外部相依），課程網址即 `…/grade-X/math/<主題>/`。
 - 上課頁五段式：範例教學（互動示範）→ 試題（依模式 6/10/12 題，回饋附為什麼）→
   小遊戲（五關計分＋兩層提示）→ 學完之後三動作。
@@ -146,7 +159,7 @@ grade-6/math/                  # 六年級：單元整理（課程準備中）
   首頁只列年級，不列個別課程。
 - **中英雙語（硬性規範）**：每一頁都必須支援右上角語言切換鈕（預設繁體中文），
   選擇記在 `localStorage`；統一架構（`data-i18n` ＋ `I18N` 字典 ＋ `teachme-lang`）
-  見教學架構文件第五節，範本為因數課三頁。
+  見教學架構文件第五節，範本為因數課四頁。
 
 ## 發佈
 
