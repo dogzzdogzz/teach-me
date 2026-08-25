@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分數複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .qpic{display:flex;justify-content:center;gap:14px;margin:10px 0;flex-wrap:wrap}
+  .qpic .picwrap{text-align:center;font-size:14px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 分數複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：分數、除法、乘法交錯出現，<strong>每一批的數字和蛋糕圖都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function polar(cx, cy, r, deg){
+    var rad = deg * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+  function sectorPath(cx, cy, r, startDeg, endDeg){
+    var s = polar(cx, cy, r, startDeg), e = polar(cx, cy, r, endDeg);
+    var large = (endDeg - startDeg) > 180 ? 1 : 0;
+    return 'M' + cx + ',' + cy + ' L' + s.x + ',' + s.y +
+      ' A' + r + ',' + r + ' 0 ' + large + ' 1 ' + e.x + ',' + e.y + ' Z';
+  }
+  function makePie(n, shadedCount, size){
+    size = size || 120;
+    var r = size / 2 - 6, cx = size / 2, cy = size / 2;
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+    svg.setAttribute('width', size); svg.setAttribute('height', size);
+    var base = document.createElementNS(SVGNS, 'circle');
+    base.setAttribute('cx', cx); base.setAttribute('cy', cy); base.setAttribute('r', r);
+    base.setAttribute('fill', '#FFF6E9'); base.setAttribute('stroke', '#2B2A33'); base.setAttribute('stroke-width', 2);
+    svg.appendChild(base);
+    var anglePer = 360 / n;
+    for (var i = 0; i < n; i++){
+      var start = -90 + i * anglePer, end = start + anglePer;
+      var path = document.createElementNS(SVGNS, 'path');
+      path.setAttribute('d', sectorPath(cx, cy, r, start, end));
+      path.setAttribute('fill', i < shadedCount ? '#E8871E' : 'none');
+      path.setAttribute('stroke', '#2B2A33'); path.setAttribute('stroke-width', 1.5);
+      svg.appendChild(path);
+    }
+    return svg;
+  }
+  function makePieCustom(angles, shadedIdx, size){
+    size = size || 120;
+    var r = size / 2 - 6, cx = size / 2, cy = size / 2;
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+    svg.setAttribute('width', size); svg.setAttribute('height', size);
+    var base = document.createElementNS(SVGNS, 'circle');
+    base.setAttribute('cx', cx); base.setAttribute('cy', cy); base.setAttribute('r', r);
+    base.setAttribute('fill', '#FFF6E9'); base.setAttribute('stroke', '#2B2A33'); base.setAttribute('stroke-width', 2);
+    svg.appendChild(base);
+    var acc = -90;
+    for (var i = 0; i < angles.length; i++){
+      var start = acc, end = acc + angles[i]; acc = end;
+      var path = document.createElementNS(SVGNS, 'path');
+      path.setAttribute('d', sectorPath(cx, cy, r, start, end));
+      path.setAttribute('fill', i === shadedIdx ? '#E8871E' : 'none');
+      path.setAttribute('stroke', '#2B2A33'); path.setAttribute('stroke-width', 1.5);
+      svg.appendChild(path);
+    }
+    return svg;
+  }
+  function makeBar(n, shadedA, shadedB, width, height){
+    width = width || 220; height = height || 44;
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    svg.setAttribute('width', width); svg.setAttribute('height', height);
+    var segW = width / n;
+    for (var i = 0; i < n; i++){
+      var rect = document.createElementNS(SVGNS, 'rect');
+      rect.setAttribute('x', (i * segW).toFixed(3));
+      rect.setAttribute('y', 0);
+      rect.setAttribute('width', segW.toFixed(3));
+      rect.setAttribute('height', height);
+      rect.setAttribute('stroke', '#2B2A33'); rect.setAttribute('stroke-width', 1.5);
+      var fill = '#FFFFFF';
+      if (i < shadedA) fill = '#3B7DD8';
+      else if (i < shadedA + shadedB) fill = '#E8871E';
+      rect.setAttribute('fill', fill);
+      svg.appendChild(rect);
+    }
+    var outline = document.createElementNS(SVGNS, 'rect');
+    outline.setAttribute('x', 0); outline.setAttribute('y', 0);
+    outline.setAttribute('width', width); outline.setAttribute('height', height);
+    outline.setAttribute('fill', 'none'); outline.setAttribute('stroke', '#2B2A33'); outline.setAttribute('stroke-width', 2);
+    svg.appendChild(outline);
+    return svg;
+  }
+  function randUnequalAngles(n){
+    var equal = 360 / n;
+    for (var tries = 0; tries < 30; tries++){
+      var raw = [], i;
+      for (i = 0; i < n; i++) raw.push(15 + Math.random() * 60);
+      var total = raw.reduce(function(a, b){ return a + b; }, 0);
+      var angles = raw.map(function(v){ return v / total * 360; });
+      var allDifferent = angles.every(function(a){ return Math.abs(a - equal) > 6; });
+      if (allDifferent) return angles;
+    }
+    return [70, 150, 80, 60];
+  }
+
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'分數複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 分數複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：分數、除法、乘法交錯出現，<strong>每一批的數字和蛋糕圖都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Fractions Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Fractions Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving fractions, division and multiplication — <strong>every batch uses fresh numbers and freshly drawn cake pictures</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ fraction:'分數', divide:'除法', multiply:'乘法' },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目建議回去複習：'; },
+      linkNames:{ lesson:'📖 上課 — 分數蛋糕店', ref:'🗂️ 速查卡 — 分數重點整理' }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ fraction:'Fractions', divide:'Division', multiply:'Multiplication' },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames:{ lesson:'📖 Lesson — The Fraction Bakery', ref:'🗂️ Cheat sheet — Fractions summary' }
+    }
+  };
+  var LINK_HREFS = { lesson:'index.html', ref:'reference.html' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 從候選字串中湊出 3 個相異、且不等於正解文字的錯誤選項 */
+  function makeWrongTexts(correctText, candidates){
+    var out = [];
+    var seen = {}; seen[correctText] = true;
+    (candidates || []).forEach(function(c){
+      if (!seen[c]){ seen[c] = true; out.push(c); }
+    });
+    return out.slice(0, 3);
+  }
+  function mixTextOpts(correctText, candidates){
+    var wrongs = makeWrongTexts(correctText, candidates);
+    while (wrongs.length < 3) wrongs.push(correctText + '·' + wrongs.length); /* 保底，理論上不會用到 */
+    var opts = shuffle([correctText].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correctText) };
+  }
+
+  var DEN_POOL = [4, 5, 6, 7, 8, 9, 10];
+
+  /* ---------- 題目產生器 ---------- */
+  var GENS = [
+    { id:'idFrac', cat:'fraction',
+      make:function(used){
+        var n = pickUnused(DEN_POOL, used);
+        var m = 1 + rand(n - 1); /* 1..n-1，真分數 */
+        return { n:n, m:m };
+      },
+      fmt:function(d, lang){
+        var correct = d.m + '/' + d.n;
+        var mix = mixTextOpts(correct, [d.n + '/' + d.m, (d.m + 1) + '/' + d.n, d.m + '/' + (d.n + 1)]);
+        return {
+          stem: lang === 'zh' ? '這個蛋糕塗色的部分，是幾分之幾？' : 'What fraction of this cake is shaded?',
+          pic: { type:'pie', n:d.n, m:d.m },
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '切成 ' + d.n + ' 份（分母），塗了 ' + d.m + ' 份（分子），所以是 ' + correct + '。'
+            : 'Cut into ' + d.n + ' pieces (denominator), ' + d.m + ' shaded (numerator) — so it is ' + correct + '.'
+        };
+      } },
+    { id:'compareSameDen', cat:'fraction',
+      make:function(used){
+        var n = pickUnused(DEN_POOL, used);
+        var a = 1 + rand(n - 1);
+        var b;
+        do { b = 1 + rand(n - 1); } while (b === a);
+        return { n:n, a:a, b:b, bigger: a > b ? a : b };
+      },
+      fmt:function(d, lang){
+        var correct = d.bigger + '/' + d.n;
+        var other = (d.a === d.bigger ? d.b : d.a) + '/' + d.n;
+        var equalTxt = lang === 'zh' ? '一樣大' : 'They are equal';
+        var cantTxt = lang === 'zh' ? '沒辦法比較' : 'Cannot be compared';
+        return {
+          stem: lang === 'zh' ? (d.a + '/' + d.n) + ' 和 ' + (d.b + '/' + d.n) + '，哪一個比較大？' : 'Which is bigger, ' + (d.a + '/' + d.n) + ' or ' + (d.b + '/' + d.n) + '?',
+          opts: shuffle([correct, other, equalTxt, cantTxt]),
+          get ans(){ return this.opts.indexOf(correct); },
+          why: lang === 'zh'
+            ? '分母相同（都是 ' + d.n + '），分子越大分數越大，所以 ' + correct + ' 比較大。'
+            : 'Same denominator (' + d.n + ') — the bigger numerator wins, so ' + correct + ' is bigger.'
+        };
+      } },
+    { id:'addSameDen', cat:'fraction',
+      make:function(used){
+        var n = pickUnused(DEN_POOL, used);
+        var a = 1 + rand(n - 2);
+        var maxB = n - 1 - a;
+        var b = 1 + rand(maxB);
+        return { n:n, a:a, b:b, sum:a + b };
+      },
+      fmt:function(d, lang){
+        var correct = d.sum + '/' + d.n;
+        var mix = mixTextOpts(correct, [d.sum + '/' + (d.n * 2), d.a + '/' + d.n, d.b + '/' + d.n]);
+        return {
+          stem: (d.a + '/' + d.n) + ' + ' + (d.b + '/' + d.n) + ' = ?',
+          pic: { type:'bar', n:d.n, a:d.a, b:d.b },
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '分母不變，只加分子：' + d.a + ' + ' + d.b + ' = ' + d.sum + '，所以是 ' + correct + '。'
+            : 'The denominator stays the same — just add the numerators: ' + d.a + ' + ' + d.b + ' = ' + d.sum + ', so it is ' + correct + '.'
+        };
+      } },
+    { id:'subSameDen', cat:'fraction',
+      make:function(used){
+        var n = pickUnused(DEN_POOL, used);
+        var a = 2 + rand(n - 2); /* 2..n-1 */
+        var b = 1 + rand(a - 1); /* 1..a-1 */
+        return { n:n, a:a, b:b, diff:a - b };
+      },
+      fmt:function(d, lang){
+        var correct = d.diff + '/' + d.n;
+        var mix = mixTextOpts(correct, [(d.a + d.b) + '/' + d.n, d.a + '/' + d.n, d.b + '/' + d.n]);
+        return {
+          stem: (d.a + '/' + d.n) + ' − ' + (d.b + '/' + d.n) + ' = ?',
+          pic: { type:'bar', n:d.n, a:d.a, b:0 },
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '分母不變，只減分子：' + d.a + ' − ' + d.b + ' = ' + d.diff + '，所以是 ' + correct + '。'
+            : 'The denominator stays the same — just subtract the numerators: ' + d.a + ' − ' + d.b + ' = ' + d.diff + ', so it is ' + correct + '.'
+        };
+      } },
+    { id:'unitInversion', cat:'fraction',
+      make:function(used){
+        var p = pickUnused(DEN_POOL, used);
+        var q;
+        do { q = pick(DEN_POOL); } while (q === p);
+        var smaller = Math.min(p, q);
+        return { p:p, q:q, smaller:smaller };
+      },
+      fmt:function(d, lang){
+        var correct = '1/' + d.smaller;
+        var other = '1/' + (d.smaller === d.p ? d.q : d.p);
+        var equalTxt = lang === 'zh' ? '一樣大' : 'They are equal';
+        var cantTxt = lang === 'zh' ? '沒辦法比較' : 'Cannot be compared';
+        return {
+          stem: lang === 'zh' ? '1/' + d.p + ' 和 1/' + d.q + '，哪一個比較大？' : 'Which is bigger, 1/' + d.p + ' or 1/' + d.q + '?',
+          pic: { type:'cmp2', n1:d.p, n2:d.q },
+          opts: shuffle([correct, other, equalTxt, cantTxt]),
+          get ans(){ return this.opts.indexOf(correct); },
+          why: lang === 'zh'
+            ? '分母越大，切得越細，每一份反而越小，所以 ' + correct + ' 比較大。'
+            : 'A bigger denominator means finer cutting, so each piece is smaller — ' + correct + ' is bigger.'
+        };
+      } },
+    { id:'wholeConcept', cat:'fraction',
+      make:function(used){
+        var n = pickUnused(DEN_POOL, used);
+        return { n:n };
+      },
+      fmt:function(d, lang){
+        var correctZh = d.n + '/' + d.n + '，也就是 1（整個蛋糕）';
+        var correctEn = d.n + '/' + d.n + ', which equals 1 (the whole cake)';
+        var correct = lang === 'zh' ? correctZh : correctEn;
+        var wrong1 = d.n + '/1', wrong2 = '1/' + d.n, wrong3 = '0';
+        return {
+          stem: lang === 'zh'
+            ? '一個蛋糕平分成 ' + d.n + ' 份，如果全部 ' + d.n + ' 份都塗色了，等於多少？'
+            : 'A cake is cut into ' + d.n + ' equal pieces. If all ' + d.n + ' are shaded, what does that equal?',
+          pic: { type:'pie', n:d.n, m:d.n },
+          opts: shuffle([correct, wrong1, wrong2, wrong3]),
+          get ans(){ return this.opts.indexOf(correct); },
+          why: lang === 'zh'
+            ? '分子和分母一樣大時（' + d.n + '/' + d.n + '），表示拿了全部的份數，等於整個蛋糕，也就是 1。'
+            : 'When the numerator equals the denominator, all pieces are taken — that is the whole cake, which equals 1.'
+        };
+      } },
+    { id:'shareWord', cat:'fraction',
+      make:function(used){
+        var n = pickUnused(DEN_POOL, used);
+        var k = 1 + rand(n - 1);
+        var ctxIdx = rand(3);
+        return { n:n, k:k, ctxIdx:ctxIdx };
+      },
+      fmt:function(d, lang){
+        var ctxZh = ['一條吐司', '一塊蛋糕', '一條巧克力'][d.ctxIdx];
+        var ctxEn = ['a loaf of bread', 'a cake', 'a chocolate bar'][d.ctxIdx];
+        var correct = d.k + '/' + d.n;
+        var mix = mixTextOpts(correct, [d.n + '/' + d.k, (d.k + 1) + '/' + d.n, d.k + '/' + (d.n + 1)]);
+        return {
+          stem: lang === 'zh'
+            ? ctxZh + '平分成 ' + d.n + ' 份，吃了 ' + d.k + ' 份，吃了整個的幾分之幾？'
+            : ctxEn.charAt(0).toUpperCase() + ctxEn.slice(1) + ' is cut into ' + d.n + ' equal pieces, and ' + d.k + ' are eaten. What fraction of the whole is that?',
+          pic: { type:'pie', n:d.n, m:d.k },
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '平分成 ' + d.n + ' 份是分母，吃了 ' + d.k + ' 份是分子，所以是 ' + correct + '。'
+            : 'Cut into ' + d.n + ' is the denominator; ' + d.k + ' eaten is the numerator — so it is ' + correct + '.'
+        };
+      } },
+    { id:'unequalCheck', cat:'fraction',
+      make:function(used){
+        var n = pick([3, 4, 5]);
+        var angles = randUnequalAngles(n);
+        var shadedIdx = rand(n);
+        return { n:n, angles:angles, shadedIdx:shadedIdx };
+      },
+      fmt:function(d, lang){
+        var correct = lang === 'zh' ? '不可以，因為每一塊大小不一樣' : 'No, the pieces are not the same size';
+        var wrong1 = lang === 'zh' ? '可以，因為切成了 ' + d.n + ' 塊' : 'Yes, because it was cut into ' + d.n + ' pieces';
+        var wrong2 = lang === 'zh' ? '可以，因為有塗顏色' : 'Yes, because it is shaded';
+        var wrong3 = lang === 'zh' ? '不可以，因為蛋糕是圓的' : 'No, because the cake is round';
+        return {
+          stem: lang === 'zh'
+            ? '這個蛋糕切成大小不一樣的 ' + d.n + ' 塊，塗色的那一塊可以說是「1/' + d.n + '」嗎？'
+            : 'This cake is cut into ' + d.n + ' unequal pieces. Can the shaded piece be called “1/' + d.n + '”?',
+          pic: { type:'pieUneq', angles:d.angles, shadedIdx:d.shadedIdx },
+          opts: shuffle([correct, wrong1, wrong2, wrong3]),
+          get ans(){ return this.opts.indexOf(correct); },
+          why: lang === 'zh'
+            ? '分數的前提是「平分」——每一份大小要一樣。這裡的 ' + d.n + ' 塊大小不同，所以不能用幾分之幾來說。'
+            : 'A fraction requires equal pieces. These ' + d.n + ' pieces are different sizes, so it cannot be described as a fraction.'
+        };
+      } },
+    { id:'divideShare', cat:'divide',
+      make:function(used){
+        var divisor = pickUnused([2, 3, 4, 5, 6, 7, 8, 9], used);
+        var quotient = 2 + rand(9);
+        var dividend = divisor * quotient;
+        return { divisor:divisor, quotient:quotient, dividend:dividend };
+      },
+      fmt:function(d, lang){
+        var correct = String(d.quotient);
+        var mix = mixTextOpts(correct, [String(d.quotient - 1), String(d.quotient + 1), String(d.dividend)]);
+        return {
+          stem: lang === 'zh'
+            ? d.dividend + ' 顆糖平分給 ' + d.divisor + ' 個小朋友，每人分到幾顆？'
+            : d.dividend + ' candies are shared equally among ' + d.divisor + ' children. How many does each get?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? d.dividend + ' ÷ ' + d.divisor + ' = ' + d.quotient + '，平分給每個人一樣多，這就是除法。'
+            : d.dividend + ' ÷ ' + d.divisor + ' = ' + d.quotient + ' — sharing equally is what division means.'
+        };
+      } },
+    { id:'multiplyBasic', cat:'multiply',
+      make:function(used){
+        var a = pickUnused([2, 3, 4, 5, 6, 7, 8, 9], used);
+        var b = 2 + rand(8);
+        return { a:a, b:b, product:a * b };
+      },
+      fmt:function(d, lang){
+        var correct = String(d.product);
+        var mix = mixTextOpts(correct, [String(d.a * (d.b - 1)), String(d.a * (d.b + 1)), String(d.a + d.b)]);
+        return {
+          stem: d.a + ' × ' + d.b + ' = ?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh' ? d.a + ' × ' + d.b + ' = ' + d.product + '。' : d.a + ' × ' + d.b + ' = ' + d.product + '.'
+        };
+      } }
+  ];
+
+  var FRACTION_IDS = ['idFrac','compareSameDen','addSameDen','subSameDen','unitInversion','wholeConcept','shareWord','unequalCheck'];
+
+  /* ---------- 出一批 12 題：8 種分數類型各一題＋2 題額外分數＋2 題交錯（除法／乘法） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var byId = {};
+    GENS.forEach(function(g){ byId[g.id] = g; });
+
+    var slots = FRACTION_IDS.map(function(id){ return byId[id]; });
+    var extraPool = FRACTION_IDS.filter(function(id){
+      return ['idFrac','addSameDen','subSameDen','compareSameDen'].indexOf(id) >= 0;
+    }).map(function(id){ return byId[id]; });
+    for (var i = 0; i < 2; i++) slots.push(pick(extraPool));
+    slots.push(byId['divideShare']);
+    slots.push(byId['multiplyBasic']);
+
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  function renderPic(container, pic){
+    container.textContent = '';
+    if (!pic) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'qpic';
+    if (pic.type === 'pie'){
+      wrap.appendChild(makePie(pic.n, pic.m, 120));
+    } else if (pic.type === 'pieUneq'){
+      wrap.appendChild(makePieCustom(pic.angles, pic.shadedIdx, 120));
+    } else if (pic.type === 'bar'){
+      wrap.appendChild(makeBar(pic.n, pic.a, pic.b, 220, 44));
+    } else if (pic.type === 'cmp2'){
+      var b1 = document.createElement('div'); b1.className = 'picwrap';
+      b1.appendChild(makeBar(pic.n1, 1, 0, 100, 40));
+      var c1 = document.createElement('div'); c1.textContent = '1/' + pic.n1; b1.appendChild(c1);
+      var b2 = document.createElement('div'); b2.className = 'picwrap';
+      b2.appendChild(makeBar(pic.n2, 1, 0, 100, 40));
+      var c2 = document.createElement('div'); c2.textContent = '1/' + pic.n2; b2.appendChild(c2);
+      wrap.appendChild(b1); wrap.appendChild(b2);
+    }
+    container.appendChild(wrap);
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, anyWrong = false;
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; anyWrong = false;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var pic = document.createElement('div');
+      renderPic(pic, q.pic);
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); anyWrong = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(pic); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    if (!anyWrong){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      ['lesson', 'ref'].forEach(function(k){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[k]; a.textContent = t.linkNames[k];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

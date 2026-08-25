@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分數速查卡</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.6; font-size:16px;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:32px 20px 60px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:24px 0 4px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:6px;font-size:16px}
+  .sheet{
+    background:var(--card);border:2px solid var(--ink);border-radius:20px;
+    padding:26px;margin-top:22px;
+  }
+  .sheet h2{
+    font-size:19px;border-left:6px solid var(--green);padding-left:10px;margin:22px 0 8px;
+  }
+  .sheet h2:first-child{margin-top:0}
+  .row{display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:10px}
+  .col{text-align:center}
+  .diagram{position:relative;display:inline-block}
+  .callout{
+    position:absolute;font-weight:700;font-size:14px;border-radius:10px;padding:4px 10px;
+    white-space:nowrap;
+  }
+  .callout.num{background:var(--orange-soft);color:var(--orange)}
+  .callout.den{background:var(--blue-soft);color:var(--blue)}
+  .verdict{font-size:15px;font-weight:700;margin-top:6px}
+  .verdict.bad{color:var(--red)}
+  .verdict.ok{color:var(--green)}
+  .cap{font-size:14px;color:var(--muted);margin-top:4px}
+  .ladder{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px;align-items:flex-end}
+  .ladderitem{text-align:center;font-size:13px}
+  .rule3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:10px}
+  .rule3 div{
+    border:2px solid var(--orange);background:var(--orange-soft);border-radius:14px;
+    padding:12px;text-align:center;font-size:15px;color:var(--ink);
+  }
+  .rule3 b{display:block;font-size:16px;margin-bottom:4px}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:center}
+  th{background:var(--blue-soft);color:var(--blue)}
+  td.left{text-align:left}
+  .printbtn{
+    margin-top:18px;border:none;border-radius:12px;background:var(--green);color:#fff;
+    font-size:16px;font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  footer{margin-top:28px;text-align:center;color:var(--muted);font-size:14px}
+  @media print{
+    body{background:#fff}
+    .topbar,.coursenav,.printbtn,footer{display:none}
+    .wrap{padding:0}
+    .sheet{border-color:#000;margin-top:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <span data-i18n="nav2">🗂️ 速查卡（本頁）</span>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🗂️ 分數速查卡</h1>
+    <p data-i18n="sub">一張卡把分數的重點帶著走 —— 印出來貼在書桌前</p>
+  </header>
+
+  <div class="sheet">
+    <h2 data-i18n="s1">分母與分子在哪裡？</h2>
+    <div class="row">
+      <div class="col">
+        <div class="diagram" id="labelDiagram"></div>
+        <p class="cap" data-i18n="labelCap">切成 4 份，塗色 1 份，寫成 1/4</p>
+      </div>
+      <div class="col">
+        <div style="font-size:44px;font-weight:700;line-height:1.1">
+          <span style="color:var(--orange)">1</span><br>
+          <span style="border-top:3px solid var(--ink);display:inline-block;padding-top:2px;color:var(--blue)">4</span>
+        </div>
+        <p class="cap" data-i18n="fracLayout"><span style="color:var(--orange);font-weight:700">分子</span>在上面：拿了幾份<br><span style="color:var(--blue);font-weight:700">分母</span>在下面：切成幾份</p>
+      </div>
+    </div>
+
+    <h2 data-i18n="s2">先「平分」才有分數</h2>
+    <div class="row">
+      <div class="col">
+        <div id="badDiagram"></div>
+        <p class="verdict bad" data-i18n="badV">✗ 大小不一樣，不能說是 1/4</p>
+      </div>
+      <div class="col">
+        <div id="goodDiagram"></div>
+        <p class="verdict ok" data-i18n="goodV">✓ 大小一樣，這才是 1/4</p>
+      </div>
+    </div>
+    <p class="cap" style="margin-top:10px" data-i18n="s2note">規則：<strong>每一份的大小必須完全一樣</strong>，才能用「幾分之幾」來描述。</p>
+
+    <h2 data-i18n="s3">分母越大，每一份反而越小</h2>
+    <div class="ladder" id="ladderRow"></div>
+    <p class="cap" style="margin-top:8px" data-i18n="s3note">這排長條的<strong>總長度都一樣</strong>，只是切成的份數不同——切得越細，塗色的那一份就越小。所以 <strong>1/2 &gt; 1/3 &gt; 1/4 &gt; 1/5 &gt; 1/6 &gt; 1/8 &gt; 1/10</strong>。</p>
+
+    <h2 data-i18n="s4">同分母比較與加減規則</h2>
+    <div class="rule3">
+      <div data-i18n="rule1"><b>比大小</b>分母一樣時，分子越大，分數越大。<br>例：3/8 &gt; 1/8</div>
+      <div data-i18n="rule2"><b>加法</b>分母不變，分子相加。<br>例：1/5 + 2/5 = 3/5</div>
+      <div data-i18n="rule3"><b>減法</b>分母不變，分子相減。<br>例：4/6 − 1/6 = 3/6</div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="col"><div id="ruleBarAdd"></div><p class="cap">1/5 + 2/5 = 3/5</p></div>
+      <div class="col"><div id="ruleBarSub"></div><p class="cap">4/6 − 1/6 = 3/6</p></div>
+    </div>
+
+    <h2 data-i18n="s5">易混淆對照表</h2>
+    <table>
+      <tr><th data-i18n="thWrong">常見的錯誤想法</th><th data-i18n="thRight">正確的想法</th></tr>
+      <tr>
+        <td class="left" data-i18n="mis1w">蛋糕隨便切成 4 塊，拿 1 塊就說是 1/4</td>
+        <td class="left" data-i18n="mis1r">要「平分」（每份一樣大）才能說幾分之幾；大小不一樣就不行</td>
+      </tr>
+      <tr>
+        <td class="left" data-i18n="mis2w">8 比 4 大，所以 1/8 比 1/4 大</td>
+        <td class="left" data-i18n="mis2r">分母越大，切得越細，每一份反而越小：1/8 &lt; 1/4</td>
+      </tr>
+      <tr>
+        <td class="left" data-i18n="mis3w">1/5 + 2/5 算成 3/10（把分母也加起來）</td>
+        <td class="left" data-i18n="mis3r">分母表示「每一份的大小」，加減時不會變：1/5 + 2/5 = 3/5</td>
+      </tr>
+    </table>
+  </div>
+
+  <button class="printbtn" onclick="window.print()" data-i18n="printBtn">🖨️ 印出速查卡</button>
+
+  <footer data-i18n="foot">看不懂的地方，回到<a class="home" href="index.html">課程</a>再玩一次，或問爸媽、問 AI 老師。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var SVGNS = 'http://www.w3.org/2000/svg';
+
+  function polar(cx, cy, r, deg){
+    var rad = deg * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+  function sectorPath(cx, cy, r, startDeg, endDeg){
+    var s = polar(cx, cy, r, startDeg), e = polar(cx, cy, r, endDeg);
+    var large = (endDeg - startDeg) > 180 ? 1 : 0;
+    return 'M' + cx + ',' + cy + ' L' + s.x + ',' + s.y +
+      ' A' + r + ',' + r + ' 0 ' + large + ' 1 ' + e.x + ',' + e.y + ' Z';
+  }
+  function ensureHatch(svg){
+    var defs = document.createElementNS(SVGNS, 'defs');
+    var pattern = document.createElementNS(SVGNS, 'pattern');
+    var pid = 'hatch' + Math.random().toString(36).slice(2);
+    pattern.setAttribute('id', pid);
+    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+    pattern.setAttribute('width', 6); pattern.setAttribute('height', 6);
+    pattern.setAttribute('patternTransform', 'rotate(45)');
+    var bg = document.createElementNS(SVGNS, 'rect');
+    bg.setAttribute('width', 6); bg.setAttribute('height', 6); bg.setAttribute('fill', '#FDF0E0');
+    var ln = document.createElementNS(SVGNS, 'line');
+    ln.setAttribute('x1', 0); ln.setAttribute('y1', 0); ln.setAttribute('x2', 0); ln.setAttribute('y2', 6);
+    ln.setAttribute('stroke', '#E8871E'); ln.setAttribute('stroke-width', 3);
+    pattern.appendChild(bg); pattern.appendChild(ln);
+    defs.appendChild(pattern);
+    svg.appendChild(defs);
+    return 'url(#' + pid + ')';
+  }
+  function makePie(n, shadedCount, size){
+    size = size || 140;
+    var r = size / 2 - 6, cx = size / 2, cy = size / 2;
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+    svg.setAttribute('width', size); svg.setAttribute('height', size);
+    var hatchUrl = ensureHatch(svg);
+    var base = document.createElementNS(SVGNS, 'circle');
+    base.setAttribute('cx', cx); base.setAttribute('cy', cy); base.setAttribute('r', r);
+    base.setAttribute('fill', '#FFF6E9'); base.setAttribute('stroke', '#2B2A33'); base.setAttribute('stroke-width', 2);
+    svg.appendChild(base);
+    var anglePer = 360 / n;
+    for (var i = 0; i < n; i++){
+      var start = -90 + i * anglePer, end = start + anglePer;
+      var path = document.createElementNS(SVGNS, 'path');
+      path.setAttribute('d', sectorPath(cx, cy, r, start, end));
+      path.setAttribute('fill', i < shadedCount ? hatchUrl : 'none');
+      path.setAttribute('stroke', '#2B2A33'); path.setAttribute('stroke-width', 1.5);
+      svg.appendChild(path);
+    }
+    return svg;
+  }
+  function makePieCustom(angles, shadedIdx, size){
+    size = size || 140;
+    var r = size / 2 - 6, cx = size / 2, cy = size / 2;
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+    svg.setAttribute('width', size); svg.setAttribute('height', size);
+    var hatchUrl = ensureHatch(svg);
+    var base = document.createElementNS(SVGNS, 'circle');
+    base.setAttribute('cx', cx); base.setAttribute('cy', cy); base.setAttribute('r', r);
+    base.setAttribute('fill', '#FFF6E9'); base.setAttribute('stroke', '#2B2A33'); base.setAttribute('stroke-width', 2);
+    svg.appendChild(base);
+    var acc = -90;
+    for (var i = 0; i < angles.length; i++){
+      var start = acc, end = acc + angles[i]; acc = end;
+      var path = document.createElementNS(SVGNS, 'path');
+      path.setAttribute('d', sectorPath(cx, cy, r, start, end));
+      path.setAttribute('fill', i === shadedIdx ? hatchUrl : 'none');
+      path.setAttribute('stroke', '#2B2A33'); path.setAttribute('stroke-width', 1.5);
+      svg.appendChild(path);
+    }
+    return svg;
+  }
+  function makeBar(n, shadedA, shadedB, width, height){
+    width = width || 260; height = height || 44;
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    svg.setAttribute('width', width); svg.setAttribute('height', height);
+    var hatchUrl = ensureHatch(svg);
+    var segW = width / n;
+    for (var i = 0; i < n; i++){
+      var rect = document.createElementNS(SVGNS, 'rect');
+      rect.setAttribute('x', (i * segW).toFixed(3));
+      rect.setAttribute('y', 0);
+      rect.setAttribute('width', segW.toFixed(3));
+      rect.setAttribute('height', height);
+      rect.setAttribute('stroke', '#2B2A33'); rect.setAttribute('stroke-width', 1.5);
+      var fill = '#FFFFFF';
+      if (i < shadedA) fill = hatchUrl;
+      else if (i < shadedA + shadedB) fill = '#E8F0FB';
+      rect.setAttribute('fill', fill);
+      svg.appendChild(rect);
+    }
+    var outline = document.createElementNS(SVGNS, 'rect');
+    outline.setAttribute('x', 0); outline.setAttribute('y', 0);
+    outline.setAttribute('width', width); outline.setAttribute('height', height);
+    outline.setAttribute('fill', 'none'); outline.setAttribute('stroke', '#2B2A33'); outline.setAttribute('stroke-width', 2);
+    svg.appendChild(outline);
+    return svg;
+  }
+  /* 依比例畫出的單位分數長條（1/n），寬度固定總長，份數越多每份越窄 */
+  function makeUnitBarToScale(n, totalWidth, height){
+    return makeBar(n, 1, 0, totalWidth, height);
+  }
+
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'分數速查卡', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡（本頁）', nav3:'🔁 複習挑戰', nav4:'👨‍👩‍👧 給家長',
+      h1:'🗂️ 分數速查卡', sub:'一張卡把分數的重點帶著走 —— 印出來貼在書桌前',
+      s1:'分母與分子在哪裡？',
+      labelCap:'切成 4 份，塗色 1 份，寫成 1/4',
+      fracLayout:'<span style="color:var(--orange);font-weight:700">分子</span>在上面：拿了幾份<br><span style="color:var(--blue);font-weight:700">分母</span>在下面：切成幾份',
+      s2:'先「平分」才有分數',
+      badV:'✗ 大小不一樣，不能說是 1/4',
+      goodV:'✓ 大小一樣，這才是 1/4',
+      s2note:'規則：<strong>每一份的大小必須完全一樣</strong>，才能用「幾分之幾」來描述。',
+      s3:'分母越大，每一份反而越小',
+      s3note:'這排長條的<strong>總長度都一樣</strong>，只是切成的份數不同——切得越細，塗色的那一份就越小。所以 <strong>1/2 &gt; 1/3 &gt; 1/4 &gt; 1/5 &gt; 1/6 &gt; 1/8 &gt; 1/10</strong>。',
+      s4:'同分母比較與加減規則',
+      rule1:'<b>比大小</b>分母一樣時，分子越大，分數越大。<br>例：3/8 &gt; 1/8',
+      rule2:'<b>加法</b>分母不變，分子相加。<br>例：1/5 + 2/5 = 3/5',
+      rule3:'<b>減法</b>分母不變，分子相減。<br>例：4/6 − 1/6 = 3/6',
+      s5:'易混淆對照表',
+      thWrong:'常見的錯誤想法', thRight:'正確的想法',
+      mis1w:'蛋糕隨便切成 4 塊，拿 1 塊就說是 1/4',
+      mis1r:'要「平分」（每份一樣大）才能說幾分之幾；大小不一樣就不行',
+      mis2w:'8 比 4 大，所以 1/8 比 1/4 大',
+      mis2r:'分母越大，切得越細，每一份反而越小：1/8 &lt; 1/4',
+      mis3w:'1/5 + 2/5 算成 3/10（把分母也加起來）',
+      mis3r:'分母表示「每一份的大小」，加減時不會變：1/5 + 2/5 = 3/5',
+      printBtn:'🖨️ 印出速查卡',
+      foot:'看不懂的地方，回到<a class="home" href="index.html">課程</a>再玩一次，或問爸媽、問 AI 老師。'
+    },
+    en: {
+      htmlLang:'en', title:'Fractions Cheat Sheet', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet (this page)', nav3:'🔁 Review challenge', nav4:'👨‍👩‍👧 For parents',
+      h1:'🗂️ Fractions Cheat Sheet', sub:'The whole topic on one card — print it for your desk',
+      s1:'Where Are the Numerator and Denominator?',
+      labelCap:'Cut into 4 pieces, 1 shaded, written as 1/4',
+      fracLayout:'<span style="color:var(--orange);font-weight:700">Numerator</span> on top: pieces taken<br><span style="color:var(--blue);font-weight:700">Denominator</span> on the bottom: equal pieces in total',
+      s2:'Fractions Need “Equal Sharing” First',
+      badV:'✗ Different sizes — cannot be called 1/4',
+      goodV:'✓ Equal sizes — this is 1/4',
+      s2note:'Rule: <strong>every piece must be exactly the same size</strong> before you can describe it with a fraction.',
+      s3:'A Bigger Denominator Means a Smaller Piece',
+      s3note:'These bars are all the <strong>same total length</strong> — only the number of equal pieces differs. The more pieces, the smaller the shaded one. So <strong>1/2 &gt; 1/3 &gt; 1/4 &gt; 1/5 &gt; 1/6 &gt; 1/8 &gt; 1/10</strong>.',
+      s4:'Rules for Comparing, Adding and Subtracting (Same Denominator)',
+      rule1:'<b>Comparing</b>With the same denominator, a bigger numerator means a bigger fraction.<br>E.g. 3/8 &gt; 1/8',
+      rule2:'<b>Addition</b>Denominator stays the same, add the numerators.<br>E.g. 1/5 + 2/5 = 3/5',
+      rule3:'<b>Subtraction</b>Denominator stays the same, subtract the numerators.<br>E.g. 4/6 − 1/6 = 3/6',
+      s5:'Common Mix-ups',
+      thWrong:'Common wrong idea', thRight:'The correct idea',
+      mis1w:'Cutting a cake into 4 random pieces and calling any 1 piece “1/4”',
+      mis1r:'The pieces must be equal (fairly shared) before you can use a fraction; unequal pieces don’t count',
+      mis2w:'“8 is bigger than 4, so 1/8 is bigger than 1/4”',
+      mis2r:'A bigger denominator means finer cutting, so each piece is actually smaller: 1/8 &lt; 1/4',
+      mis3w:'Computing 1/5 + 2/5 as 3/10 (adding the denominators too)',
+      mis3r:'The denominator describes the size of each piece — it never changes when adding or subtracting: 1/5 + 2/5 = 3/5',
+      printBtn:'🖨️ Print this card',
+      foot:'Anything unclear? Replay the <a class="home" href="index.html">lesson</a>, or ask your parents / AI teacher.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  function renderDiagrams(){
+    var labelDiagram = document.getElementById('labelDiagram');
+    labelDiagram.textContent = '';
+    labelDiagram.appendChild(makePie(4, 1, 150));
+
+    var badDiagram = document.getElementById('badDiagram');
+    badDiagram.textContent = '';
+    badDiagram.appendChild(makePieCustom([70, 150, 80, 60], 2, 130));
+
+    var goodDiagram = document.getElementById('goodDiagram');
+    goodDiagram.textContent = '';
+    goodDiagram.appendChild(makePie(4, 1, 130));
+
+    var LADDER_DENS = [2, 3, 4, 5, 6, 8, 10];
+    var ladderRow = document.getElementById('ladderRow');
+    ladderRow.textContent = '';
+    LADDER_DENS.forEach(function(n){
+      var item = document.createElement('div');
+      item.className = 'ladderitem';
+      item.appendChild(makeUnitBarToScale(n, 260, 40));
+      var cap = document.createElement('div');
+      cap.textContent = '1/' + n;
+      item.appendChild(cap);
+      ladderRow.appendChild(item);
+    });
+
+    var ruleBarAdd = document.getElementById('ruleBarAdd');
+    ruleBarAdd.textContent = '';
+    ruleBarAdd.appendChild(makeBar(5, 1, 2, 220, 44));
+
+    var ruleBarSub = document.getElementById('ruleBarSub');
+    ruleBarSub.textContent = '';
+    ruleBarSub.appendChild(makeBar(6, 3, 0, 220, 44));
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+  });
+
+  applyStatic();
+  renderDiagrams();
+})();
+</script>
+</body>
+</html>

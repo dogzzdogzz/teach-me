@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我乘法 — 直式乘法工廠</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:17px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .numgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin-top:16px}
+  .cell{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);
+    padding:8px 0;text-align:center;font-size:17px;font-weight:600;color:var(--muted);
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px;min-height:20px}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px;text-align:center;cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .mode .mbig{font-size:26px}
+  .mode h3{font-size:17px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:16px;display:grid;gap:10px}
+
+  /* --- multiply-lesson-only additions --- */
+  .rectwrap{display:flex;justify-content:center;margin-top:18px}
+  .rectgrid{display:grid;border:2px solid var(--ink);border-radius:10px;overflow:hidden;max-width:100%}
+  .rectcell{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;text-align:center;padding:6px;min-height:52px}
+  .rc-a{background:var(--green-soft);color:var(--green)}
+  .rc-b{background:var(--orange-soft);color:var(--orange)}
+  .sumline{margin-top:14px;font-size:19px;text-align:center}
+  .sumline b{color:var(--green)}
+  table.vmul{border-collapse:collapse;margin:16px auto;font-family:inherit}
+  table.vmul td{width:36px;height:38px;text-align:center;font-size:22px;font-weight:700;vertical-align:middle;color:var(--ink)}
+  table.vmul td.op{color:var(--orange);font-size:19px}
+  table.vmul td.empty{color:transparent}
+  table.vmul tr.rule td{border-top:3px solid var(--ink)}
+  table.vmul td.blank{border:2px dashed var(--orange);border-radius:8px;background:var(--orange-soft)}
+  table.vmul button.digitbtn{
+    width:100%;height:100%;border:2px dashed var(--orange);border-radius:8px;background:var(--orange-soft);
+    color:var(--orange);font-size:20px;font-weight:700;cursor:pointer;
+  }
+  table.vmul td.hl{background:var(--green-soft);border-radius:8px;color:var(--green)}
+  table.vmul td.right-answer{background:var(--green-soft);border-radius:8px;color:var(--green)}
+  table.vmul td.wrong-answer{background:var(--red-soft);border-radius:8px;color:var(--red)}
+  .carryrow td{height:20px;font-size:14px;color:var(--red);font-weight:700;vertical-align:bottom}
+  .narration{margin-top:14px;font-size:17px;min-height:28px;text-align:center}
+  .narration b{color:var(--green)}
+  .est-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:14px}
+  .est-card{border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center}
+  .est-card .arrow{color:var(--muted);margin:6px 0}
+  .est-card .ok{color:var(--green);font-weight:700;margin-top:8px}
+  .gamehead{text-align:center}
+  .gopts{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .gopt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:12px 20px;
+    font-size:20px;font-weight:700;cursor:pointer;color:var(--ink);min-width:56px;
+  }
+  .gopt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gopt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .gopt:disabled{cursor:default;opacity:.85}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">✖️ 直式乘法工廠</h1>
+    <p class="sub" data-i18n="sub">把大數字拆開來乘，再合起來</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    直式乘法不是魔法，是<strong>把數字拆成幾份，分別算完再加起來</strong>的捷徑。<br>
+    今天我們要打開這台「乘法工廠」，看看裡面到底在做什麼。
+  </div>
+
+  <!-- 模式選擇 -->
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
+  </div>
+
+  <!-- 範例1：面積模型，為什麼直式有效 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">直式為什麼算得出來？</h2>
+    <p class="lead" data-i18n="s1lead">把 23 拆成 20 和 3，分開乘再加起來，答案會一樣！按按鈕看看。</p>
+    <div class="card">
+      <div class="rectwrap">
+        <div class="rectgrid" id="s1grid" style="width:min(100%,520px)"></div>
+      </div>
+      <p class="sumline" id="s1line" data-i18n-aria="s1aria"></p>
+      <div class="btnrow">
+        <button class="btn" id="s1btn" type="button" data-i18n="s1btnShow">拆開來看看</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 範例2：直式進位 step-through -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">直式工廠：一格一格算，注意進位</h2>
+    <p class="lead" data-i18n="s2lead">選一張訂單，按「下一步」看工廠怎麼一格一格算出答案。</p>
+    <div class="card">
+      <div class="chips" id="s2chips"></div>
+      <table class="vmul" id="s2table"></table>
+      <p class="narration" id="s2narr"></p>
+      <div class="btnrow">
+        <button class="btn" id="s2next" type="button" data-i18n="s2nextBtn">下一步</button>
+        <button class="btn ghost" id="s2reset" type="button" data-i18n="s2resetBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 範例3：二位數x二位數，四塊面積模型 + 位移 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">二位數 × 二位數：為什麼第二排要往左移一格？</h2>
+    <p class="lead" data-i18n="s3lead">23 × 14 可以拆成四塊來看，再對照到直式的兩排。</p>
+    <div class="card">
+      <div class="rectwrap">
+        <div class="rectgrid" id="s3grid" style="width:min(100%,420px);grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr"></div>
+      </div>
+      <p class="sumline" id="s3areasum"></p>
+      <div class="btnrow">
+        <button class="btn" id="s3btn" type="button" data-i18n="s3btnShow">對照到直式</button>
+      </div>
+      <table class="vmul" id="s3table" style="display:none"></table>
+      <p class="narration" id="s3narr"></p>
+    </div>
+  </section>
+
+  <!-- 範例4：先估再算 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">先估再算：答案合不合理？</h2>
+    <p class="lead" data-i18n="s4lead">算之前先用整十數估一下，算完再檢查答案有沒有跑太遠。</p>
+    <div class="card">
+      <div class="est-row" id="estRow"></div>
+    </div>
+  </section>
+
+  <!-- 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">試題</span>
+    <h2 data-i18n="s5h2">試題檢查一下</h2>
+    <p class="lead" data-i18n="s5lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">小遊戲</span>
+    <h2 data-i18n="s6h2">工廠出貨</h2>
+    <p class="lead" data-i18n="s6lead">訂單漏印了一格數字，幫工廠找出正確的值！</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <div class="gamehead">
+        <p class="lead" id="gAskLine" data-i18n="gAsk">哪一格漏印了？點選正確的數字！</p>
+        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px;margin-top:6px" data-i18n="gHintBtn">💡 提示</button>
+      </div>
+      <p class="hint" id="gHint" style="text-align:center"></p>
+      <table class="vmul" id="gTable" style="margin-left:auto;margin-right:auto"></table>
+      <div class="gopts" id="gAnswers"></div>
+      <p id="gMsg" class="gamemsg" style="text-align:center"></p>
+      <div class="btnrow" style="justify-content:center">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 學完之後 -->
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的三個動作</h2>
+    <div class="card">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。</li>
+        <li data-i18n="next3">❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>拆開來乘、對齊位值、記得進位，直式就會算對。</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===================== 數學引擎（與家教檢查腳本共用邏輯） ===================== */
+  function stepMultiplySingleDigit(a, d){
+    var digits = String(a).split('').reverse().map(Number);
+    var steps = [], carry = 0;
+    for (var i = 0; i < digits.length; i++){
+      var isLast = (i === digits.length - 1);
+      var prod = digits[i] * d;
+      var total = prod + carry;
+      var writeVal = isLast ? total : (total % 10);
+      var carryOut = isLast ? 0 : Math.floor(total / 10);
+      steps.push({ i:i, digit:digits[i], d:d, prod:prod, carryIn:carry, total:total, writeVal:writeVal, carryOut:carryOut, isLast:isLast });
+      carry = carryOut;
+    }
+    return steps;
+  }
+  function stepsToNumber(steps){
+    var acc = 0, place = 1;
+    steps.forEach(function(s){
+      acc += (s.isLast ? s.total : (s.total % 10)) * place;
+      place *= 10;
+    });
+    return acc;
+  }
+  function stepMultiplyTwoDigit(a, b){
+    var onesB = b % 10, tensB = Math.floor(b / 10);
+    var p1 = stepMultiplySingleDigit(a, onesB);
+    var p2 = stepMultiplySingleDigit(a, tensB);
+    var n1 = stepsToNumber(p1);
+    var n2 = stepsToNumber(p2) * 10;
+    return { onesB:onesB, tensB:tensB, p1:p1, p2:p2, n1:n1, n2:n2, total:n1 + n2 };
+  }
+
+  /* ===================== i18n ===================== */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'教我乘法 — 直式乘法工廠', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（本頁）', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰', nav4:'👨‍👩‍👧 給家長',
+      h1:'✖️ 直式乘法工廠', sub:'把大數字拆開來乘，再合起來',
+      intro:'直式乘法不是魔法，是<strong>把數字拆成幾份，分別算完再加起來</strong>的捷徑。<br>今天我們要打開這台「乘法工廠」，看看裡面到底在做什麼。',
+      modeTitle:'今天想怎麼學？（隨時可以換）',
+      modes:{
+        ahead:{icon:'🚀',h:'超前學習',p:'還沒學過，第一次認識',banner:'超前模式：慢慢看範例就好，試題只出 6 題基礎題，遊戲會自動給提示。'},
+        school:{icon:'🏫',h:'跟上進度',p:'學校正在教，完整練習',banner:'跟上模式：完整 10 題，包含 4 題兩步驟文字題。'},
+        boost:{icon:'💪',h:'補強練習',p:'學過但還不穩，加強',banner:'補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。'}
+      },
+      eb1:'範例教學 1', eb2:'範例教學 2', eb3:'範例教學 3', eb4:'範例教學 4', eb5:'試題', eb6:'小遊戲',
+      s1h2:'直式為什麼算得出來？',
+      s1lead:'把 23 拆成 20 和 3，分開乘再加起來，答案會一樣！按按鈕看看。',
+      s1aria:'一個長方形被拆成兩塊，分別代表 20×4 和 3×4',
+      s1btnShow:'拆開來看看', s1btnHide:'收回去',
+      s1line: function(sum){ return '20 × 4 = 80　　3 × 4 = 12　　80 + 12 = <b>' + sum + '</b>'; },
+      s1lineBefore:'23 × 4 = ？　　按下面的按鈕，把 23 拆開來看看！',
+      s2h2:'直式工廠：一格一格算，注意進位',
+      s2lead:'選一張訂單，按「下一步」看工廠怎麼一格一格算出答案。',
+      s2chip1:'27 × 4', s2chip2:'236 × 3',
+      s2nextBtn:'下一步', s2resetBtn:'重新開始', s2doneBtn:'完成！',
+      s2narrStart: function(a,d){ return '準備好了嗎？' + a + ' × ' + d + '，按「下一步」開始，從個位數開始算！'; },
+      s2narrOnes: function(digit,d,prod){ return '個位：' + digit + ' × ' + d + ' = ' + prod + '。'; },
+      s2narrTens: function(digit,d,prod,carryIn){ return '十位：' + digit + ' × ' + d + ' = ' + prod + (carryIn ? '，再加上進位的 ' + carryIn : '') + '。'; },
+      s2narrHund: function(digit,d,prod,carryIn){ return '百位：' + digit + ' × ' + d + ' = ' + prod + (carryIn ? '，再加上進位的 ' + carryIn : '') + '。'; },
+      s2narrWrite: function(writeVal){ return '寫下 ' + writeVal + '。'; },
+      s2narrCarry: function(c){ return '滿十了，往左邊進位 ' + c + '！'; },
+      s2narrDone: function(a,d,total){ return '完成！' + a + ' × ' + d + ' = <b>' + total + '</b> 🎉'; },
+      s3h2:'二位數 × 二位數：為什麼第二排要往左移一格？',
+      s3lead:'23 × 14 可以拆成四塊來看，再對照到直式的兩排。',
+      s3btnShow:'對照到直式', s3btnHide:'收回去',
+      s3areasum: function(){ return '20×10=200　20×4=80　3×10=30　3×4=12<br>200+80+30+12=<b>322</b>'; },
+      s3narr:'第一排 23×4=92 是「乘以個位的 4」；第二排 23×1=23 是「乘以十位的 1」，但十位的 1 其實代表 10，所以要<strong>往左移一格</strong>，變成 230，兩排加起來才是 322。',
+      s3region: { a:'20×10=200', b:'20×4=80', c:'3×10=30', d:'3×4=12' },
+      s4h2:'先估再算：答案合不合理？',
+      s4lead:'算之前先用整十數估一下，算完再檢查答案有沒有跑太遠。',
+      est1:{ label:'23 × 4', round:'20 × 4 ＝ 80（估計）', actual:'23 × 4 ＝ 92（實際）', ok:'✅ 92 跟 80 很接近，合理！' },
+      est2:{ label:'42 × 23', round:'40 × 20 ＝ 800（估計）', actual:'42 × 23 ＝ 966（實際）', ok:'✅ 966 跟 800 差不多大，落在合理範圍！' },
+      estArrow:'先估 →',
+      s5h2:'試題檢查一下', s5lead:'直接點答案，馬上告訴你為什麼。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      cAll:'全對！你已經是直式乘法高手 🏆',
+      cGood:'很棒！錯的那幾題再看一次說明。',
+      cTry:'沒關係，回到上面的範例教學再看一次。',
+      qs:[
+        { stem:'32 × 3 = ？', opts:['96','69','906','35'], ans:0, why:'3 × 3 = 9（十位），2 × 3 = 6（個位），合起來是 96。' },
+        { stem:'47 × 2 = ？（要進位喔）', opts:['94','84','814','98'], ans:0, why:'7 × 2 = 14，寫 4 進位 1；4 × 2 = 8，加上進位 1 等於 9，合起來是 94。' },
+        { stem:'123 × 3 = ？', opts:['369','396','363','3609'], ans:0, why:'1×3=3、2×3=6、3×3=9，三個都沒有進位，合起來是 369。' },
+        { stem:'156 × 4 = ？（兩次進位）', opts:['624','604','6024','244'], ans:0, why:'6×4=24 寫 4 進位 2；5×4=20+2=22 寫 2 進位 2；1×4=4+2=6，合起來是 624。' },
+        { stem:'12 × 13 = ？', opts:['156','48','36','120'], ans:0, why:'12×3=36，12×10=120，因為十位的 1 代表 10，所以要往左移一格，36+120=156。' },
+        { stem:'先估再算：29 × 4 大約是多少？', opts:['120','80','140','160'], ans:0, why:'29 接近 30，所以先估 30 × 4 = 120。（29 × 4 實際算出來是 116，跟估計 120 很接近，所以 120 才是合理的估計；80、140、160 是把 29 估成別的整十數，不是最接近的估計。）' }
+      ],
+      qsAdv:[
+        { stem:'文字題：一盒有 24 顆彈珠，老師買了 3 盒，另外還多買 15 顆散裝的，一共有幾顆彈珠？', opts:['87','72','96','39'], ans:0, why:'24 × 3 = 72（3 盒），72 + 15 = 87 顆。' },
+        { stem:'文字題：小明一天讀 18 頁書，連續讀了 6 天後，還差 12 頁就讀完全書，這本書一共有幾頁？', opts:['120','108','132','96'], ans:0, why:'18 × 6 = 108（6 天讀的頁數），108 + 12 = 120 頁。' },
+        { stem:'文字題：農場一排種 15 棵樹，一共種了 12 排，這個農場一共種了多少棵樹？', opts:['180','30','150','27'], ans:0, why:'15 × 2 = 30，15 × 10 = 150（十位的 1 要往左移一格代表 10 排），30 + 150 = 180 棵。' },
+        { stem:'文字題：一張桌子可以坐 8 個人，禮堂有 14 張桌子，同時坐滿的話最多可以坐幾個人？', opts:['112','32','80','22'], ans:0, why:'8 × 4 = 32，8 × 10 = 80（十位的 1 移一格代表 10 張桌子），32 + 80 = 112 人。' }
+      ],
+      qsBoost:[
+        { stem:'迷思檢查：27 × 4 = ？（很多同學會忘記進位）', opts:['108','88','98','128'], ans:0, why:'7×4=28，要寫 8、進位 2！2×4=8，再加上進位的 2 等於 10，合起來是 108。答案 88 是忘記加上進位 2 才算出來的錯誤答案。' },
+        { stem:'迷思檢查：23 × 14 = ？（注意第二排要往左移）', opts:['322','115','92','345'], ans:0, why:'23×4=92，23×10=230（十位的 1 要往左移一格才代表 10），92+230=322。答案 115 是忘記把第二排往左移（誤算成 92+23）；答案 92 是只乘了個位的 4、忘記乘十位。' }
+      ],
+      s6h2:'工廠出貨', s6lead:'訂單漏印了一格數字，幫工廠找出正確的值！',
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
+      gAsk:'哪一格漏印了？點選正確的數字！',
+      gHintBtn:'💡 提示',
+      gHint1:'提示 1：先算出每一步的乘積，別忘了進位要加到下一欄！',
+      gHint2: function(){ return '提示 2：把整張訂單重新算一次，比對每一欄的數字。'; },
+      gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gCorrectFirst: function(v){ return '答對了！這一格是 ' + v + '，+20 分！'; },
+      gCorrectRetry: function(v){ return '答對了！這一格是 ' + v + '，+10 分。'; },
+      gWrong: function(v){ return v + ' 不對，再試一次，−5 分。'; },
+      gClear:'按「下一關」出下一張訂單。',
+      gWin: function(score){ return '五張訂單都出貨了！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gWhy:[
+        '34 × 2：個位 4×2=8，沒有進位，這格直接寫個位的乘積。',
+        '46 × 3：十位 4×3=12，別忘了加上個位進位的 1，12+1=13，這格要寫 13 的個位數 3。',
+        '258 × 3：百位 2×3=6，加上十位進位的 1，6+1=7。',
+        '12 × 14：第二排 12×10=120 要往左移一格，跟第一排 48 對齊相加，十位是 4+2=6。',
+        '23 × 14：第一排 92 和第二排 230（230 是把 23 往左移一格）相加，十位是 9+3=12，寫 2 進位 1，加上原本的 0 和進位的 1 等於 3？別急，一步一步來：個位 2+0=2，十位 9+3=12 寫 2 進位 1，百位 0+2+1=3，所以是 322，十位是 2。'
+      ],
+      ebNext:'學完之後', nextH2:'把它記牢的三個動作',
+      next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
+      next3:'❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
+      footer:'把整頁縮成一句：<strong>拆開來乘、對齊位值、記得進位，直式就會算對。</strong>'
+    },
+    en: {
+      htmlLang:'en', title:'Teach Me Multiplication — The Column Multiplication Factory', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (this page)', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge', nav4:'👨‍👩‍👧 For parents',
+      h1:'✖️ The Column Multiplication Factory', sub:'Split big numbers apart to multiply, then put them back together',
+      intro:'Column multiplication isn’t magic — it’s a shortcut for <strong>splitting a number into parts, multiplying each part, then adding them up</strong>.<br>Today we’ll open up this “multiplication factory” and see what’s really happening inside.',
+      modeTitle:'How do you want to learn today? (switch anytime)',
+      modes:{
+        ahead:{icon:'🚀',h:'Learning ahead',p:'First time meeting this topic',banner:'Ahead mode: enjoy the examples at your own pace — the quiz has just the 6 basics, and the game shows a hint automatically.'},
+        school:{icon:'🏫',h:'School pace',p:'Learning it at school now',banner:'School mode: the full 10 questions, including 4 two-step word problems.'},
+        boost:{icon:'💪',h:'Boost',p:'Learned it, still shaky',banner:'Boost mode: 2 misconception checks first, 12 questions in total — then head to the Review Challenge.'}
+      },
+      eb1:'Example 1', eb2:'Example 2', eb3:'Example 3', eb4:'Example 4', eb5:'Quiz', eb6:'Game',
+      s1h2:'Why does column multiplication actually work?',
+      s1lead:'Split 23 into 20 and 3, multiply each part separately, then add — same answer! Press the button to see.',
+      s1aria:'A rectangle split into two parts, representing 20×4 and 3×4',
+      s1btnShow:'Split it apart', s1btnHide:'Put it back',
+      s1line: function(sum){ return '20 × 4 = 80&nbsp;&nbsp;&nbsp;&nbsp;3 × 4 = 12&nbsp;&nbsp;&nbsp;&nbsp;80 + 12 = <b>' + sum + '</b>'; },
+      s1lineBefore:'23 × 4 = ?  Press the button below to split 23 apart and see!',
+      s2h2:'The Column Factory: one column at a time, watch the carries',
+      s2lead:'Pick an order slip, then press “Next step” to see the factory work it out column by column.',
+      s2chip1:'27 × 4', s2chip2:'236 × 3',
+      s2nextBtn:'Next step', s2resetBtn:'Start over', s2doneBtn:'Done!',
+      s2narrStart: function(a,d){ return 'Ready? ' + a + ' × ' + d + ' — press “Next step” to begin with the ones column!'; },
+      s2narrOnes: function(digit,d,prod){ return 'Ones column: ' + digit + ' × ' + d + ' = ' + prod + '.'; },
+      s2narrTens: function(digit,d,prod,carryIn){ return 'Tens column: ' + digit + ' × ' + d + ' = ' + prod + (carryIn ? ', plus the carried ' + carryIn : '') + '.'; },
+      s2narrHund: function(digit,d,prod,carryIn){ return 'Hundreds column: ' + digit + ' × ' + d + ' = ' + prod + (carryIn ? ', plus the carried ' + carryIn : '') + '.'; },
+      s2narrWrite: function(writeVal){ return 'Write down ' + writeVal + '.'; },
+      s2narrCarry: function(c){ return 'That’s ten or more — carry the ' + c + ' to the left!'; },
+      s2narrDone: function(a,d,total){ return 'Done! ' + a + ' × ' + d + ' = <b>' + total + '</b> 🎉'; },
+      s3h2:'Two-digit × two-digit: why does the second row shift one place left?',
+      s3lead:'23 × 14 can be split into four pieces — then mapped onto the two rows of the column form.',
+      s3btnShow:'Map it onto columns', s3btnHide:'Hide it again',
+      s3areasum: function(){ return '20×10=200&nbsp;&nbsp;20×4=80&nbsp;&nbsp;3×10=30&nbsp;&nbsp;3×4=12<br>200+80+30+12=<b>322</b>'; },
+      s3narr:'The first row, 23×4=92, is “times the ones digit, 4”. The second row, 23×1=23, is “times the tens digit, 1” — but that tens digit really means 10, so it must <strong>shift one place left</strong> to become 230. Add the two rows and you get 322.',
+      s3region:{ a:'20×10=200', b:'20×4=80', c:'3×10=30', d:'3×4=12' },
+      s4h2:'Estimate first, then compute: is the answer reasonable?',
+      s4lead:'Round to the nearest ten and estimate before you compute — then check the real answer isn’t way off.',
+      est1:{ label:'23 × 4', round:'20 × 4 = 80 (estimate)', actual:'23 × 4 = 92 (actual)', ok:'✅ 92 is close to 80 — reasonable!' },
+      est2:{ label:'42 × 23', round:'40 × 20 = 800 (estimate)', actual:'42 × 23 = 966 (actual)', ok:'✅ 966 is in the same ballpark as 800 — reasonable!' },
+      estArrow:'Estimate first →',
+      s5h2:'Quick check', s5lead:'Tap an answer and we’ll tell you why right away.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll:'Perfect score! You’re a column multiplication master 🏆',
+      cGood:'Great job! Re-read the explanations for the ones you missed.',
+      cTry:'That’s okay — scroll up and look at the examples one more time.',
+      qs:[
+        { stem:'32 × 3 = ?', opts:['96','69','906','35'], ans:0, why:'3 × 3 = 9 (tens), 2 × 3 = 6 (ones). Together that’s 96.' },
+        { stem:'47 × 2 = ? (there’s a carry)', opts:['94','84','814','98'], ans:0, why:'7 × 2 = 14 — write 4, carry 1. 4 × 2 = 8, plus the carried 1 makes 9. Together that’s 94.' },
+        { stem:'123 × 3 = ?', opts:['369','396','363','3609'], ans:0, why:'1×3=3, 2×3=6, 3×3=9 — no carries at all. Together that’s 369.' },
+        { stem:'156 × 4 = ? (two carries)', opts:['624','604','6024','244'], ans:0, why:'6×4=24 — write 4, carry 2. 5×4=20+2=22 — write 2, carry 2. 1×4=4+2=6. Together that’s 624.' },
+        { stem:'12 × 13 = ?', opts:['156','48','36','120'], ans:0, why:'12×3=36, and 12×10=120 — the tens digit 1 really means 10, so it shifts one place left. 36+120=156.' },
+        { stem:'Estimate first: about how much is 29 × 4?', opts:['120','80','140','160'], ans:0, why:'29 is close to 30, so estimate 30 × 4 = 120. (29 × 4 actually works out to 116, close to the estimate, so 120 is the reasonable one; 80, 140 and 160 come from rounding 29 to a less accurate ten.)' }
+      ],
+      qsAdv:[
+        { stem:'Word problem: a box has 24 marbles. The teacher bought 3 boxes, plus 15 loose ones. How many marbles in total?', opts:['87','72','96','39'], ans:0, why:'24 × 3 = 72 (three boxes), 72 + 15 = 87 marbles.' },
+        { stem:'Word problem: Ming reads 18 pages a day. After 6 days he still has 12 pages left to finish the book. How many pages does the book have?', opts:['120','108','132','96'], ans:0, why:'18 × 6 = 108 (pages read in 6 days), 108 + 12 = 120 pages.' },
+        { stem:'Word problem: a farm plants 15 trees per row, with 12 rows. How many trees does the farm have in total?', opts:['180','30','150','27'], ans:0, why:'15 × 2 = 30, and 15 × 10 = 150 (the tens digit 1 shifts left because it means 10 rows). 30 + 150 = 180 trees.' },
+        { stem:'Word problem: a table seats 8 people. The hall has 14 tables. If every seat is full, how many people can sit in total?', opts:['112','32','80','22'], ans:0, why:'8 × 4 = 32, and 8 × 10 = 80 (the tens digit 1 shifts left, meaning 10 tables). 32 + 80 = 112 people.' }
+      ],
+      qsBoost:[
+        { stem:'Misconception check: 27 × 4 = ? (easy to forget the carry)', opts:['108','88','98','128'], ans:0, why:'7×4=28 — write 8, carry 2. 2×4=8, plus the carried 2 makes 10. Together that’s 108. The answer 88 comes from forgetting to add the carried 2.' },
+        { stem:'Misconception check: 23 × 14 = ? (watch the shift on the second row)', opts:['322','115','92','345'], ans:0, why:'23×4=92, and 23×10=230 (the tens digit 1 shifts left because it means 10). 92+230=322. The answer 115 comes from forgetting the shift (92+23); 92 comes from only multiplying by the ones digit and forgetting the tens digit entirely.' }
+      ],
+      s6h2:'Factory Shipping', s6lead:'One box on the order slip got smudged out — help the factory find the right value!',
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
+      gAsk:'Which box got smudged out? Tap the correct digit!',
+      gHintBtn:'💡 Hint',
+      gHint1:'Hint 1: work out the product for each column, and remember to add any carry to the next column!',
+      gHint2: function(){ return 'Hint 2: redo the whole slip from scratch and compare each column.'; },
+      gNextBtn:'Next round', gRestartBtn:'Restart',
+      gCorrectFirst: function(v){ return 'Correct on the first try! It’s ' + v + ' — +20 points!'; },
+      gCorrectRetry: function(v){ return 'Correct! It’s ' + v + ' — +10 points.'; },
+      gWrong: function(v){ return v + ' isn’t right — try again. −5 points.'; },
+      gClear:'Press “Next round” for the next order slip.',
+      gWin: function(score){ return 'All 5 slips shipped! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gWhy:[
+        '34 × 2: ones column 4×2=8, no carry — this box is just that product.',
+        '46 × 3: tens column 4×3=12, plus the carried 1 from the ones column makes 13 — this box is the ones digit of 13, which is 3.',
+        '258 × 3: hundreds column 2×3=6, plus the carried 1 from the tens column makes 7.',
+        '12 × 14: the second row, 12×10=120, shifts one place left to line up with the first row (48) — the tens digit is 4+2=6.',
+        '23 × 14: add row one (92) and row two (230, which is 23 shifted one place left) — ones: 2+0=2; tens: 9+3=12, write 2 carry 1; hundreds: 0+2+1=3. So the total is 322, and the tens digit is 2.'
+      ],
+      ebNext:'After the lesson', nextH2:'Three moves that make it stick',
+      next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
+      next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
+      next3:'❓ Anything unclear — ask your parents or your AI teacher until it clicks. Good learners ask.',
+      footer:'The whole page in one line: <strong>split the number apart, line up place values, remember the carry — and column multiplication always works out.</strong>'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
+  var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+
+  function buildModeCards(){
+    var d = L();
+    modeCards.textContent = '';
+    ['ahead','school','boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  /* ===================== 範例1：面積模型 23×4 ===================== */
+  var s1grid = document.getElementById('s1grid');
+  var s1line = document.getElementById('s1line');
+  var s1btn = document.getElementById('s1btn');
+  var S1_A = 20, S1_B = 3, S1_D = 4;
+  var s1shown = false;
+
+  function renderS1(){
+    var d = L();
+    s1grid.textContent = '';
+    s1grid.style.gridTemplateColumns = S1_A + 'fr ' + S1_B + 'fr';
+    var c1 = document.createElement('div');
+    c1.className = 'rectcell rc-a';
+    c1.textContent = (S1_A + ' × ' + S1_D + ' = ' + (S1_A * S1_D));
+    var c2 = document.createElement('div');
+    c2.className = 'rectcell rc-b';
+    c2.textContent = (S1_B + ' × ' + S1_D + ' = ' + (S1_B * S1_D));
+    s1grid.appendChild(c1); s1grid.appendChild(c2);
+    if (s1shown){
+      s1line.innerHTML = d.s1line(S1_A * S1_D + S1_B * S1_D);
+      s1btn.textContent = d.s1btnHide;
+    } else {
+      s1line.textContent = d.s1lineBefore;
+      s1btn.textContent = d.s1btnShow;
+    }
+  }
+  s1btn.addEventListener('click', function(){ s1shown = !s1shown; renderS1(); });
+
+  /* ===================== 範例2：直式進位 step-through ===================== */
+  var S2_EXAMPLES = [ { a:27, d:4 }, { a:236, d:3 } ];
+  var s2idx = 0, s2steps = [], s2pos = -1; // s2pos: -1=尚未開始, 0..n-1 表示已完成到第幾個 step
+  var s2chips = document.getElementById('s2chips');
+  var s2table = document.getElementById('s2table');
+  var s2narr = document.getElementById('s2narr');
+  var s2next = document.getElementById('s2next');
+  var s2reset = document.getElementById('s2reset');
+
+  function buildS2Chips(){
+    var d = L();
+    s2chips.textContent = '';
+    [d.s2chip1, d.s2chip2].forEach(function(label, i){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.textContent = label;
+      b.setAttribute('aria-pressed', i === s2idx ? 'true' : 'false');
+      b.addEventListener('click', function(){
+        if (s2idx === i) return;
+        s2idx = i;
+        resetS2();
+        buildS2Chips();
+      });
+      s2chips.appendChild(b);
+    });
+  }
+
+  function resetS2(){
+    var ex = S2_EXAMPLES[s2idx];
+    s2steps = stepMultiplySingleDigit(ex.a, ex.d);
+    s2pos = -1;
+    renderS2Table();
+    s2narr.textContent = L().s2narrStart(ex.a, ex.d);
+    s2next.disabled = false;
+    s2next.textContent = L().s2nextBtn;
+  }
+
+  function renderS2Table(){
+    var ex = S2_EXAMPLES[s2idx];
+    var digitsA = String(ex.a).split('');
+    var width = digitsA.length + 1; // 多留一欄給進位／位數增加
+    s2table.textContent = '';
+
+    // 進位列
+    var carryRow = document.createElement('tr');
+    carryRow.className = 'carryrow';
+    for (var c = 0; c < width; c++){
+      var ctd = document.createElement('td');
+      var colFromRight = width - 1 - c; // 0 = 個位
+      var stepIdxForCol = colFromRight - 1; // 這一欄若有進位，是從右邊那一欄進位過來的
+      if (stepIdxForCol >= 0 && stepIdxForCol <= s2pos && s2steps[stepIdxForCol] && s2steps[stepIdxForCol].carryOut > 0){
+        ctd.textContent = '+' + s2steps[stepIdxForCol].carryOut;
+      } else { ctd.textContent = ''; }
+      carryRow.appendChild(ctd);
+    }
+    s2table.appendChild(carryRow);
+
+    // 被乘數列
+    var rowA = document.createElement('tr');
+    for (var i = 0; i < width; i++){
+      var td = document.createElement('td');
+      var idxFromRight = width - 1 - i;
+      if (idxFromRight < digitsA.length){
+        td.textContent = digitsA[digitsA.length - 1 - idxFromRight];
+        if (idxFromRight === s2pos + 1 && s2pos + 1 < s2steps.length) td.className = 'hl';
+      } else { td.className = 'empty'; td.textContent = '0'; }
+      rowA.appendChild(td);
+    }
+    s2table.appendChild(rowA);
+
+    // 乘數列
+    var rowD = document.createElement('tr');
+    for (var j = 0; j < width; j++){
+      var td2 = document.createElement('td');
+      if (j === width - 2) { td2.className = 'op'; td2.textContent = '×'; }
+      else if (j === width - 1) { td2.textContent = String(ex.d); }
+      else { td2.className = 'empty'; td2.textContent = '0'; }
+      rowD.appendChild(td2);
+    }
+    s2table.appendChild(rowD);
+
+    // 分隔線
+    var ruleRow = document.createElement('tr');
+    ruleRow.className = 'rule';
+    for (var k = 0; k < width; k++){ ruleRow.appendChild(document.createElement('td')); }
+    s2table.appendChild(ruleRow);
+
+    // 結果列（只顯示算到目前這一步的數字）
+    var rowR = document.createElement('tr');
+    for (var m = 0; m < width; m++){
+      var td3 = document.createElement('td');
+      var colFromRight2 = width - 1 - m;
+      td3.textContent = '';
+      for (var si = 0; si <= s2pos; si++){
+        var step = s2steps[si];
+        var writeStr = String(step.writeVal);
+        // writeVal 可能佔多位數（最後一步進位溢出），從右往左填入對應欄位
+        for (var wi = 0; wi < writeStr.length; wi++){
+          var place = si + wi; // 0 = 個位
+          if (place === colFromRight2){
+            td3.textContent = writeStr[writeStr.length - 1 - wi];
+            if (si === s2pos) td3.className = 'hl';
+          }
+        }
+      }
+      rowR.appendChild(td3);
+    }
+    s2table.appendChild(rowR);
+  }
+
+  s2next.addEventListener('click', function(){
+    var d = L();
+    if (s2pos + 1 >= s2steps.length) return;
+    s2pos++;
+    renderS2Table();
+    var step = s2steps[s2pos];
+    var label = (s2pos === 0) ? d.s2narrOnes(step.digit, step.d, step.prod)
+      : (s2pos === 1) ? d.s2narrTens(step.digit, step.d, step.prod, step.carryIn)
+      : d.s2narrHund(step.digit, step.d, step.prod, step.carryIn);
+    var msg = label + ' ' + d.s2narrWrite(step.writeVal);
+    if (step.carryOut > 0) msg += ' ' + d.s2narrCarry(step.carryOut);
+    if (s2pos === s2steps.length - 1){
+      var ex = S2_EXAMPLES[s2idx];
+      msg = d.s2narrDone(ex.a, ex.d, stepsToNumber(s2steps));
+      s2next.disabled = true;
+    }
+    s2narr.innerHTML = msg;
+  });
+  s2reset.addEventListener('click', resetS2);
+
+  /* ===================== 範例3：二位數×二位數，四塊面積模型 ===================== */
+  var S3_A = 23, S3_B = 14;
+  var S3_TA = 20, S3_OA = 3, S3_TB = 10, S3_OB = 4;
+  var s3grid = document.getElementById('s3grid');
+  var s3areasum = document.getElementById('s3areasum');
+  var s3btn = document.getElementById('s3btn');
+  var s3table = document.getElementById('s3table');
+  var s3narr = document.getElementById('s3narr');
+  var s3shown = false;
+
+  function renderS3Area(){
+    var d = L();
+    s3grid.textContent = '';
+    s3grid.style.gridTemplateColumns = S3_TA + 'fr ' + S3_OA + 'fr';
+    s3grid.style.gridTemplateRows = S3_TB + 'fr ' + S3_OB + 'fr';
+    var regions = [
+      { cls:'rc-a', text: d.s3region.a },
+      { cls:'rc-b', text: d.s3region.b },
+      { cls:'rc-b', text: d.s3region.c },
+      { cls:'rc-a', text: d.s3region.d }
+    ];
+    regions.forEach(function(r){
+      var c = document.createElement('div');
+      c.className = 'rectcell ' + r.cls;
+      c.textContent = r.text;
+      s3grid.appendChild(c);
+    });
+    s3areasum.innerHTML = d.s3areasum();
+  }
+
+  function renderS3Table(){
+    var mult = stepMultiplyTwoDigit(S3_A, S3_B);
+    var width = 4;
+    s3table.textContent = '';
+    function mkRow(cells, cls){
+      var tr = document.createElement('tr');
+      if (cls) tr.className = cls;
+      cells.forEach(function(txt){
+        var td = document.createElement('td');
+        if (txt === null){ td.className = 'empty'; td.textContent = '0'; }
+        else { td.textContent = txt; if (txt === '×') td.className = 'op'; }
+        tr.appendChild(td);
+      });
+      return tr;
+    }
+    s3table.appendChild(mkRow([null, null, '2', '3']));
+    s3table.appendChild(mkRow([null, '×', '1', '4']));
+    s3table.appendChild(mkRow([null, null, null, null], 'rule'));
+    var p1str = String(mult.n1); // 92
+    s3table.appendChild(mkRow([null, null, p1str[0], p1str[1]]));
+    var p2str = String(mult.n2 / 10); // 23，位移一格
+    s3table.appendChild(mkRow([null, p2str[0], p2str[1], '']));
+    s3table.appendChild(mkRow([null, null, null, null], 'rule'));
+    var totalStr = String(mult.total); // 322
+    s3table.appendChild(mkRow([null, totalStr[0], totalStr[1], totalStr[2]]));
+  }
+
+  s3btn.addEventListener('click', function(){
+    s3shown = !s3shown;
+    var d = L();
+    if (s3shown){
+      renderS3Table();
+      s3table.style.display = '';
+      s3narr.innerHTML = d.s3narr;
+      s3btn.textContent = d.s3btnHide;
+    } else {
+      s3table.style.display = 'none';
+      s3narr.textContent = '';
+      s3btn.textContent = d.s3btnShow;
+    }
+  });
+
+  /* ===================== 範例4：先估再算 ===================== */
+  var estRow = document.getElementById('estRow');
+  function renderEst(){
+    var d = L();
+    estRow.textContent = '';
+    [d.est1, d.est2].forEach(function(e){
+      var box = document.createElement('div');
+      box.className = 'est-card';
+      box.innerHTML = '<div style="font-size:20px;font-weight:700">' + e.label + '</div>' +
+        '<div class="arrow">' + d.estArrow + '</div>' +
+        '<div>' + e.round + '</div>' +
+        '<div style="margin-top:6px">' + e.actual + '</div>' +
+        '<div class="ok">' + e.ok + '</div>';
+      estRow.appendChild(box);
+    });
+  }
+
+  /* ===================== 試題 ===================== */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
+  function buildQuiz(){
+    var d = L();
+    var list = quizSet();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    qTotal.textContent = list.length;
+    list.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ===================== 小遊戲：工廠出貨 ===================== */
+  var ROUNDS = [
+    { a:34, d:2, b:null, rows:[ ['','', '3','4'], ['','×','','2'] ], resultRows:[ ['','','6','8'] ], blank:{row:0,col:3}, correct:'8', wrong:['4','2','6'] },
+    { a:46, d:3, b:null, rows:[ ['','', '4','6'], ['','×','','3'] ], resultRows:[ ['','1','3','8'] ], blank:{row:0,col:2}, correct:'3', wrong:['2','1','8'] },
+    { a:258, d:3, b:null, rows:[ ['','2','5','8'], ['','×','','3'] ], resultRows:[ ['','7','7','4'] ], blank:{row:0,col:1}, correct:'7', wrong:['6','8','4'] },
+    { a:12, d:null, b:14, rows:[ ['','', '1','2'], ['','×','1','4'] ], resultRows:[ ['','','4','8'], ['','1','2',''] , '__sum__'], blank:{row:'sum',col:2}, correct:'6', wrong:['8','1','0'] },
+    { a:23, d:null, b:14, rows:[ ['','', '2','3'], ['','×','1','4'] ], resultRows:[ ['','','9','2'], ['','2','3',''], '__sum__'], blank:{row:'sum',col:2}, correct:'2', wrong:['1','9','4'] }
+  ];
+  var gRound = 0, gScore = 0, gMistake = false, hintLevel = 0;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gTable = document.getElementById('gTable');
+  var gAnswers = document.getElementById('gAnswers');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+
+  function sumRows(resultRows){
+    // 針對雙位數乘法（含 __sum__ 標記）：把兩個部分積相加，逐欄計算含進位
+    var partials = resultRows.filter(function(r){ return r !== '__sum__'; });
+    var width = partials[0].length;
+    var sumCells = [];
+    var carry = 0;
+    for (var col = width - 1; col >= 0; col--){
+      var total = carry;
+      partials.forEach(function(row){
+        var v = row[col];
+        total += (v === '' || v === null) ? 0 : parseInt(v, 10);
+      });
+      sumCells[col] = String(total % 10);
+      carry = Math.floor(total / 10);
+    }
+    if (carry > 0 && sumCells[0] === '0') sumCells[0] = String(carry);
+    return sumCells;
+  }
+
+  function startRound(){
+    var round = ROUNDS[gRound];
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    gHintBtn.textContent = L().gHintBtn;
+    elHint.textContent = (mode === 'ahead') ? L().gHint1 : '';
+    if (mode === 'ahead') hintLevel = 1;
+
+    // 組出完整的表格（含結果列，blank 那格用按鈕呈現）
+    gTable.textContent = '';
+    function mkCell(txt){
+      var td = document.createElement('td');
+      if (txt === '' ) { td.className = 'empty'; td.textContent = '0'; }
+      else { td.textContent = txt; if (txt === '×') td.className = 'op'; }
+      return td;
+    }
+    round.rows.forEach(function(rowArr){
+      var tr = document.createElement('tr');
+      rowArr.forEach(function(c){ tr.appendChild(mkCell(c)); });
+      gTable.appendChild(tr);
+    });
+    var ruleTr = document.createElement('tr'); ruleTr.className = 'rule';
+    round.rows[0].forEach(function(){ ruleTr.appendChild(document.createElement('td')); });
+    gTable.appendChild(ruleTr);
+
+    var isSum = round.blank.row === 'sum';
+    var finalCells = isSum ? sumRows(round.resultRows) : round.resultRows[0].slice();
+    round.resultRows.forEach(function(rowArr, ri){
+      if (rowArr === '__sum__') return;
+      var tr = document.createElement('tr');
+      rowArr.forEach(function(c, ci){
+        if (!isSum && ri === round.blank.row && ci === round.blank.col){
+          var td = document.createElement('td'); td.className = 'blank';
+          tr.appendChild(td);
+        } else {
+          tr.appendChild(mkCell(c));
+        }
+      });
+      gTable.appendChild(tr);
+      if (round.resultRows.length > 1 && round.resultRows.indexOf('__sum__') === ri + 1){
+        var ruleTr2 = document.createElement('tr'); ruleTr2.className = 'rule';
+        rowArr.forEach(function(){ ruleTr2.appendChild(document.createElement('td')); });
+        gTable.appendChild(ruleTr2);
+      }
+    });
+    if (isSum){
+      var tr2 = document.createElement('tr');
+      finalCells.forEach(function(c, ci){
+        if (ci === round.blank.col){
+          var td = document.createElement('td'); td.className = 'blank';
+          tr2.appendChild(td);
+        } else {
+          tr2.appendChild(mkCell(c));
+        }
+      });
+      gTable.appendChild(tr2);
+    }
+
+    gAnswers.textContent = '';
+    var choices = [round.correct].concat(round.wrong);
+    // 洗牌
+    for (var i = choices.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = choices[i]; choices[i] = choices[j]; choices[j] = t;
+    }
+    choices.forEach(function(v){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'gopt'; b.textContent = v;
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        if (v === round.correct){
+          var all = gAnswers.querySelectorAll('.gopt');
+          for (var k = 0; k < all.length; k++) all[k].disabled = true;
+          b.classList.add('right');
+          if (gMistake){
+            gScore += 10;
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrectRetry(v) + '</span>';
+          } else {
+            gScore += 20;
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrectFirst(v) + '</span>';
+          }
+          gMsg.innerHTML += '<br>' + L().gWhy[gRound];
+          if (gRound === ROUNDS.length - 1){
+            gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore) + '</span>';
+          } else {
+            gMsg.innerHTML += ' ' + L().gClear;
+            gNext.disabled = false;
+          }
+        } else {
+          gMistake = true;
+          b.disabled = true;
+          b.classList.add('wrong');
+          gScore = Math.max(0, gScore - 5);
+          gMsg.innerHTML = '<span class="no">' + L().gWrong(v) + '</span>';
+        }
+        elScore.textContent = gScore;
+      });
+      gAnswers.appendChild(b);
+    });
+  }
+
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+  gHintBtn.addEventListener('click', function(){
+    hintLevel++;
+    if (hintLevel === 1){ elHint.textContent = L().gHint1; }
+    else { elHint.textContent = L().gHint2(); gHintBtn.disabled = true; }
+  });
+
+  /* ===================== 語言切換：靜態文字＋所有動態區重新渲染 ===================== */
+  function renderAll(){
+    applyStatic();
+    buildModeCards();
+    renderS1();
+    buildS2Chips();
+    resetS2();
+    renderS3Area();
+    if (s3shown) renderS3Table();
+    s3narr.textContent = s3shown ? L().s3narr : '';
+    renderEst();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+  try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-3/math/multiply/', zh:'直式乘法工廠 — 把大數字拆開來乘', en:'The Column Multiplication Factory', icon:'✖️'})); } catch(e){}
+
+})();
+</script>
+</body>
+</html>

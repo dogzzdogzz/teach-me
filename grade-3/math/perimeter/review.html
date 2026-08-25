@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>周長複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .qshape{display:flex;justify-content:center;margin-bottom:10px}
+  .qshape svg{width:100%;max-width:280px;height:auto;display:block}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 周長複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：周長、乘法、除法交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 形狀繪圖工具（跟上課頁同一套邏輯） ---------- */
+  var PXCM = 16, PAD = 40;
+  function cmPoint(x, y, maxY){ return { x: PAD + x * PXCM, y: PAD + (maxY - y) * PXCM }; }
+  function renderShape(shape){
+    var maxX = 0, maxY = 0, i;
+    for (i = 0; i < shape.points.length; i++){
+      if (shape.points[i].x > maxX) maxX = shape.points[i].x;
+      if (shape.points[i].y > maxY) maxY = shape.points[i].y;
+    }
+    var vbW = maxX * PXCM + PAD * 2, vbH = maxY * PXCM + PAD * 2;
+    var sp = shape.points.map(function(p){ return cmPoint(p.x, p.y, maxY); });
+    var d = sp.map(function(p, idx){ return (idx === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ') + ' Z';
+    var svg = '<svg class="scene" viewBox="0 0 ' + vbW.toFixed(0) + ' ' + vbH.toFixed(0) + '" role="img">';
+    svg += '<path d="' + d + '" fill="#FDF0E0" stroke="#E8871E" stroke-width="3" stroke-linejoin="round"/>';
+    (shape.sides || []).forEach(function(s){
+      var p1 = sp[s.from], p2 = sp[s.to];
+      if (s.label){
+        var mx = (p1.x + p2.x) / 2 + (s.offset ? s.offset.dx : 0);
+        var my = (p1.y + p2.y) / 2 + (s.offset ? s.offset.dy : 0);
+        svg += '<text x="' + mx.toFixed(1) + '" y="' + my.toFixed(1) + '" font-size="14" font-weight="700" fill="#2B2A33" text-anchor="' + (s.anchor || 'middle') + '">' + s.label + '</text>';
+      }
+    });
+    svg += '</svg>';
+    return svg;
+  }
+  function rectPts(l, w){ return [{x:0,y:0},{x:l,y:0},{x:l,y:w},{x:0,y:w}]; }
+  function rectShape2(l, w, lLabel, wLabel){
+    return { points: rectPts(l, w), sides: [
+      { from:0, to:1, label:lLabel, offset:{dx:0,dy:20}, anchor:'middle' },
+      { from:1, to:2, label:null },
+      { from:2, to:3, label:null },
+      { from:3, to:0, label:wLabel, offset:{dx:-14,dy:5}, anchor:'end' }
+    ]};
+  }
+  function squareShape(s, label){
+    return { points: rectPts(s, s), sides: [
+      { from:0, to:1, label:label, offset:{dx:0,dy:20}, anchor:'middle' },
+      { from:1, to:2, label:null }, { from:2, to:3, label:null }, { from:3, to:0, label:null }
+    ]};
+  }
+  function lPts(W, H, p, q){ return [ {x:0,y:0}, {x:W,y:0}, {x:W,y:H-q}, {x:W-p,y:H-q}, {x:W-p,y:H}, {x:0,y:H} ]; }
+  function lShapeSides(W, H, p, q, labels){
+    return { points: lPts(W, H, p, q), sides: [
+      { from:0, to:1, label:labels[0], offset:{dx:0,dy:20}, anchor:'middle' },
+      { from:1, to:2, label:labels[1], offset:{dx:16,dy:5}, anchor:'start' },
+      { from:2, to:3, label:labels[2], offset:{dx:0,dy:-14}, anchor:'middle' },
+      { from:3, to:4, label:labels[3], offset:{dx:16,dy:5}, anchor:'start' },
+      { from:4, to:5, label:labels[4], offset:{dx:0,dy:-14}, anchor:'middle' },
+      { from:5, to:0, label:labels[5], offset:{dx:-14,dy:5}, anchor:'end' }
+    ]};
+  }
+  /* L 形六邊長度（依繞行順序）：底=W，右下=H-q，缺角底=p，缺角右=q，頂=W-p，左=H */
+  function lSideLens(W, H, p, q){ return [W, H - q, p, q, W - p, H]; }
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'周長複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 周長複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：周長、乘法、除法交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      unit:function(v){ return v + ' 公分'; },
+      labL:'長', labW:'寬', labS:'邊長',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Perimeter Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Perimeter Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving perimeter, multiplication and division — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      unit:function(v){ return v + ' cm'; },
+      labL:'L', labW:'W', labS:'side',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { perimeter:'周長', multiply:'乘法', divide:'除法' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { perimeter:'📖 周長 — 繞一圈量量看', multiply:'📖 周長 — 正方形周長（乘法）', divide:'🗂️ 周長 — 反推方法（除法）' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { perimeter:'Perimeter', multiply:'Multiply', divide:'Divide' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { perimeter:'📖 Perimeter — Once Around the Edge', multiply:'📖 Perimeter — Square perimeter (×)', divide:'🗂️ Perimeter — Working backward (÷)' }
+    }
+  };
+
+  var LINK_HREFS = { perimeter:'index.html', multiply:'index.html', divide:'reference.html' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function makeWrongs(correct, candidates){
+    var out = [];
+    var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (!seen[key] && c > 0){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3){
+      var lo = correct - step, hi = correct + step;
+      if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  function mixOpts(correct, candidates){
+    var wrongs = makeWrongs(correct, candidates);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var GENS = [
+    { id:'rectPerimeter', cat:'perimeter',
+      make: function(used){
+        var l = pickUnused([4,5,6,7,8,9,10,11,12,13,14], used);
+        var w = 2 + rand(10);
+        var P = (l + w) * 2;
+        var m = mixOpts(P, [l + w, l * w, P - 2, P + 2]);
+        return { l:l, w:w, P:P, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var L = I18N[lang];
+        return {
+          stem: lang === 'zh' ? '長方形長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分，周長是多少？' : 'A rectangle is ' + d.l + ' cm long and ' + d.w + ' cm wide. What is its perimeter?',
+          shape: renderShape(rectShape2(d.l, d.w, L.labL + ' ' + L.unit(d.l), L.labW + ' ' + L.unit(d.w))),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? '(' + d.l + ' + ' + d.w + ') × 2 = ' + d.P + ' 公分。' : '(' + d.l + ' + ' + d.w + ') × 2 = ' + d.P + ' cm.'
+        };
+      } },
+    { id:'squarePerimeter', cat:'multiply',
+      make: function(used){
+        var s = pickUnused([3,4,5,6,7,8,9,11,12,13], used);
+        var P = s * 4;
+        var m = mixOpts(P, [s * 2, s * s, P - 4, P + 4]);
+        return { s:s, P:P, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var L = I18N[lang];
+        return {
+          stem: lang === 'zh' ? '正方形邊長 ' + d.s + ' 公分，周長是多少？（用乘法算）' : 'A square has sides of ' + d.s + ' cm. What is its perimeter? (use multiplication)',
+          shape: renderShape(squareShape(d.s, L.labS + ' ' + L.unit(d.s))),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? d.s + ' × 4 = ' + d.P + ' 公分。' : d.s + ' × 4 = ' + d.P + ' cm.'
+        };
+      } },
+    { id:'reverseSquareSide', cat:'divide',
+      make: function(used){
+        var s = pickUnused([3,4,5,6,7,8,9,10,11,12], used);
+        var P = s * 4;
+        var m = mixOpts(s, [P / 2, s - 1, s + 1]);
+        return { s:s, P:P, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var L = I18N[lang];
+        return {
+          stem: lang === 'zh' ? '正方形的周長是 ' + d.P + ' 公分，邊長是多少？（用除法算）' : 'A square has a perimeter of ' + d.P + ' cm. What is its side length? (use division)',
+          shape: renderShape(squareShape('?')),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? d.P + ' ÷ 4 = ' + d.s + ' 公分。' : d.P + ' ÷ 4 = ' + d.s + ' cm.'
+        };
+      } },
+    { id:'reverseRectSide', cat:'perimeter',
+      make: function(used){
+        var l = pickUnused([5,6,7,8,9,10,11,12], used);
+        var w = 2 + rand(8);
+        var P = (l + w) * 2;
+        var half = P / 2;
+        var m = mixOpts(w, [half, P - l, w - 1, w + 1]);
+        return { l:l, w:w, P:P, half:half, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var L = I18N[lang];
+        return {
+          stem: lang === 'zh' ? '長方形的周長是 ' + d.P + ' 公分，長是 ' + d.l + ' 公分，寬是多少？' : 'A rectangle has a perimeter of ' + d.P + ' cm and a length of ' + d.l + ' cm. What is its width?',
+          shape: renderShape(rectShape2(d.l, d.w, L.labL + ' ' + L.unit(d.l), L.labW + ' ?')),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? d.P + ' ÷ 2 = ' + d.half + '，' + d.half + ' − ' + d.l + ' = ' + d.w + ' 公分。' : d.P + ' ÷ 2 = ' + d.half + ', and ' + d.half + ' − ' + d.l + ' = ' + d.w + ' cm.'
+        };
+      } },
+    { id:'sumAllSidesIrregular', cat:'perimeter',
+      make: function(used){
+        var W = pickUnused([6,7,8,9,10], used);
+        var H = 3 + rand(4);
+        var p = 1 + rand(Math.max(1, W - 2));
+        var q = 1 + rand(Math.max(1, H - 1));
+        var lens = lSideLens(W, H, p, q);
+        var total = lens.reduce(function(a,b){return a+b;}, 0);
+        var m = mixOpts(total, [total - lens[1], total - lens[4], W + H + p + q]);
+        return { W:W, H:H, p:p, q:q, lens:lens, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var labels = d.lens.map(String);
+        return {
+          stem: lang === 'zh' ? '這個圖形每一條邊都標出來了，周長是多少？' : 'Every side of this shape is labeled. What is its perimeter?',
+          shape: renderShape(lShapeSides(d.W, d.H, d.p, d.q, labels)),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? d.lens.join(' + ') + ' = ' + d.total + ' 公分。' : d.lens.join(' + ') + ' = ' + d.total + ' cm.'
+        };
+      } },
+    { id:'lShapeDeduce', cat:'perimeter',
+      make: function(used){
+        var W = pickUnused([6,7,8,9,10,11], used);
+        var H = 4 + rand(4);
+        var p = 1 + rand(Math.max(1, W - 3));
+        var q = 1 + rand(Math.max(1, H - 2));
+        var lens = lSideLens(W, H, p, q);
+        var total = lens.reduce(function(a,b){return a+b;}, 0);
+        var labeledSum = W + H + p + q;
+        var missOne = total - lens[1];
+        var m = mixOpts(total, [labeledSum, missOne, total - lens[4]]);
+        return { W:W, H:H, p:p, q:q, lens:lens, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var labels = [String(d.W), '?', String(d.p), String(d.q), '?', String(d.H)];
+        return {
+          stem: lang === 'zh' ? '這個圖形有兩條邊沒有標出來，先算出來，再求周長。' : 'Two sides of this shape are not labeled — work them out first, then find the perimeter.',
+          shape: renderShape(lShapeSides(d.W, d.H, d.p, d.q, labels)),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '缺的邊是 ' + (d.H - d.q) + ' 和 ' + (d.W - d.p) + '，' + d.lens.join(' + ') + ' = ' + d.total + ' 公分。'
+            : 'The missing sides are ' + (d.H - d.q) + ' and ' + (d.W - d.p) + '. ' + d.lens.join(' + ') + ' = ' + d.total + ' cm.'
+        };
+      } },
+    { id:'comparePerimeters', cat:'perimeter',
+      make: function(used){
+        var l1 = pickUnused([4,5,6,7,8,9,10], used);
+        var w1 = 2 + rand(6);
+        var same = rand(10) < 4;
+        var l2, w2;
+        if (same){ l2 = w1 + rand(3) + 1; w2 = (l1 + w1) - l2; if (w2 < 1) w2 = 1; }
+        else { l2 = 2 + rand(11); w2 = 2 + rand(9); }
+        var P1 = (l1 + w1) * 2, P2 = (l2 + w2) * 2;
+        var optsArr, ans;
+        if (P1 === P2){ optsArr = ['A','B','same','cannot']; ans = 2; }
+        else if (P1 > P2){ optsArr = ['A','B','same','cannot']; ans = 0; }
+        else { optsArr = ['A','B','same','cannot']; ans = 1; }
+        return { l1:l1, w1:w1, l2:l2, w2:w2, P1:P1, P2:P2, optsArr:optsArr, ans:ans };
+      },
+      fmt: function(d, lang){
+        var L = I18N[lang];
+        var labelMap = lang === 'zh'
+          ? { A:'A 比較長', B:'B 比較長', same:'一樣長', cannot:'不能比較' }
+          : { A:'A is longer', B:'B is longer', same:'the same', cannot:'cannot compare' };
+        return {
+          stem: lang === 'zh'
+            ? 'A 長方形長 ' + d.l1 + '、寬 ' + d.w1 + '；B 長方形長 ' + d.l2 + '、寬 ' + d.w2 + '。哪一個周長比較長？'
+            : 'Rectangle A is ' + d.l1 + ' by ' + d.w1 + '; rectangle B is ' + d.l2 + ' by ' + d.w2 + '. Which has the longer perimeter?',
+          shape: '<div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">' +
+            renderShape(rectShape2(d.l1, d.w1, L.labL+' '+L.unit(d.l1), L.labW+' '+L.unit(d.w1))) +
+            renderShape(rectShape2(d.l2, d.w2, L.labL+' '+L.unit(d.l2), L.labW+' '+L.unit(d.w2))) + '</div>',
+          opts: d.optsArr.map(function(k){ return labelMap[k]; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? 'A 周長 (' + d.l1 + '+' + d.w1 + ')×2=' + d.P1 + '，B 周長 (' + d.l2 + '+' + d.w2 + ')×2=' + d.P2 + '。'
+            : 'A: (' + d.l1 + '+' + d.w1 + ')×2=' + d.P1 + ', B: (' + d.l2 + '+' + d.w2 + ')×2=' + d.P2 + '.'
+        };
+      } },
+    { id:'fenceWordProblem', cat:'perimeter',
+      make: function(used){
+        var l = pickUnused([6,8,9,10,11,12,14], used);
+        var w = 3 + rand(6);
+        var P = (l + w) * 2;
+        var m = mixOpts(P, [l + w, l * w, P - 2]);
+        return { l:l, w:w, P:P, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var L = I18N[lang];
+        return {
+          stem: lang === 'zh' ? '花圃長 ' + d.l + ' 公尺、寬 ' + d.w + ' 公尺，四周要圍籬笆，需要多少公尺？' : 'A garden bed is ' + d.l + ' m long and ' + d.w + ' m wide. How much fencing goes all the way around it?',
+          shape: renderShape(rectShape2(d.l, d.w, L.labL + ' ' + d.l, L.labW + ' ' + d.w)),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? '(' + d.l + ' + ' + d.w + ') × 2 = ' + d.P + ' 公尺。' : '(' + d.l + ' + ' + d.w + ') × 2 = ' + d.P + ' m.'
+        };
+      } },
+    { id:'squareWordProblem', cat:'multiply',
+      make: function(used){
+        var s = pickUnused([4,5,6,8,9,10,11], used);
+        var P = s * 4;
+        var m = mixOpts(P, [s * 2, s * s, P + 4]);
+        return { s:s, P:P, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var L = I18N[lang];
+        return {
+          stem: lang === 'zh' ? '正方形菜園邊長 ' + d.s + ' 公尺，四周要圍籬笆，需要多少公尺？' : 'A square vegetable patch has sides of ' + d.s + ' m. How much fencing goes all the way around it?',
+          shape: renderShape(squareShape(d.s, L.labS + ' ' + d.s)),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? d.s + ' × 4 = ' + d.P + ' 公尺。' : d.s + ' × 4 = ' + d.P + ' m.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：9 種題型各一題＋隨機 3 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    for (var i = 0; i < 3; i++) slots.push(pick(GENS));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var shapeDiv = document.createElement('div');
+      shapeDiv.className = 'qshape';
+      shapeDiv.innerHTML = q.shape;
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c);
+      if (shapeDiv.innerHTML) box.appendChild(shapeDiv);
+      box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

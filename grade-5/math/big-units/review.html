@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>大單位複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 大單位複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：大單位、面積、體積、重量交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'大單位複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 大單位複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：大單位、面積、體積、重量交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Big Units Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Big Units Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving big units, area, volume and weight — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { bigunits:'大單位', area:'面積', volume:'體積', weight:'重量' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { bigunits:'🏞️ 大單位 — 大地測量隊', area:'📐 面積 — 面積小教室', volume:'🧊 體積 — 立方公分小教室', weight:'🏋️ 重量 — 大力士磅秤' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { bigunits:'Big Units', area:'Area', volume:'Volume', weight:'Weight' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { bigunits:'🏞️ Big Units — The Land Surveyors', area:'📐 Area', volume:'🧊 Volume', weight:'🏋️ Weight — The Heavy-Duty Scale' }
+    }
+  };
+
+  var LINK_HREFS = { bigunits:'index.html', area:'../area/', volume:'../volume/', weight:'../weight/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  // 把整數 num 除以整數 denom（denom 為 10 的次方）用字串運算得到乾淨的字串，完全不用浮點除法
+  function divExact(num, denom){
+    var neg = num < 0; num = Math.abs(num);
+    var whole = Math.floor(num / denom);
+    var rem = num - whole * denom;
+    if (rem === 0) return (neg ? '-' : '') + whole;
+    var digits = String(denom).length - 1;
+    var decStr = String(rem);
+    while (decStr.length < digits) decStr = '0' + decStr;
+    decStr = decStr.replace(/0+$/, '');
+    return (neg ? '-' : '') + whole + '.' + decStr;
+  }
+  /* 保證 3 個相異、且不等於正解的錯誤選項 */
+  function makeWrongs(correct, candidates){
+    var out = [];
+    var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (!seen[key]){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3){
+      var lo = correct - step, hi = correct + step;
+      if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  function mixOpts(correct, candidates){
+    var wrongs = makeWrongs(correct, candidates);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  var UNIT = {
+    zh:{ m2:'平方公尺', a:'公畝', ha:'公頃', km2:'平方公里', cm2:'平方公分', m3:'立方公尺', cm3:'立方公分', t:'公噸', kg:'公斤' },
+    en:{ m2:'m²', a:'a', ha:'ha', km2:'km²', cm2:'cm²', m3:'m³', cm3:'cm³', t:'t', kg:'kg' }
+  };
+  function u(unit, lang){ return UNIT[lang][unit]; }
+  function withUnit(v, unit, lang){ return lang === 'zh' ? (v + u(unit, lang)) : (v + ' ' + u(unit, lang)); }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var AREA_LEVELS = ['km2', 'ha', 'a', 'm2']; // 相鄰兩階都是 × 100
+  var AREA_FACTOR = { km2:1000000, ha:10000, a:100, m2:1 }; // 換成平方公尺的倍數
+
+  var GENS = [
+    /* A. 面積階梯：相鄰兩階，×100 或 ÷100 */
+    { id:'areaLadderStep', cat:'bigunits',
+      make: function(used){
+        var i = pick([0, 1, 2]); // km2-ha, ha-a, a-m2
+        var hiUnit = AREA_LEVELS[i], loUnit = AREA_LEVELS[i + 1];
+        var hiVal = pickUnused([1,2,3,4,5,6,7,8,9,10,12,15,18,20], used);
+        var loVal = hiVal * 100;
+        var down = pick([true, false]);
+        if (down){
+          var m1 = mixOpts(loVal, [loVal / 100, loVal * 100, hiVal]);
+          return { down:true, hiVal:hiVal, hiUnit:hiUnit, loVal:loVal, loUnit:loUnit, opts:m1.opts, ans:m1.ans };
+        } else {
+          var m2 = mixOpts(hiVal, [hiVal * 100, hiVal / 100, loVal]);
+          return { down:false, hiVal:hiVal, hiUnit:hiUnit, loVal:loVal, loUnit:loUnit, opts:m2.opts, ans:m2.ans };
+        }
+      },
+      fmt: function(d, lang){
+        var stem, why;
+        if (d.down){
+          stem = withUnit(d.hiVal, d.hiUnit, lang) + (lang === 'zh' ? ' 等於多少 ' + u(d.loUnit, lang) + '？' : ' equals how many ' + u(d.loUnit, lang) + '?');
+          why = lang === 'zh'
+            ? '面積每往下一階 × 100：' + d.hiVal + ' × 100 = ' + d.loVal + '（' + u(d.loUnit, lang) + '）。'
+            : 'Each step down in area is ×100: ' + d.hiVal + ' × 100 = ' + d.loVal + ' (' + u(d.loUnit, lang) + ').';
+        } else {
+          stem = withUnit(d.loVal, d.loUnit, lang) + (lang === 'zh' ? ' 等於多少 ' + u(d.hiUnit, lang) + '？' : ' equals how many ' + u(d.hiUnit, lang) + '?');
+          why = lang === 'zh'
+            ? '面積每往上一階 ÷ 100：' + d.loVal + ' ÷ 100 = ' + d.hiVal + '（' + u(d.hiUnit, lang) + '）。'
+            : 'Each step up in area is ÷100: ' + d.loVal + ' ÷ 100 = ' + d.hiVal + ' (' + u(d.hiUnit, lang) + ').';
+        }
+        return { stem: stem, opts: d.opts.map(String), ans: d.ans, why: why };
+      } },
+
+    /* B. 平方公分 ↔ 平方公尺 的特例：×10000 */
+    { id:'areaCm2M2', cat:'bigunits',
+      make: function(used){
+        var down = pick([true, false]);
+        var m2Val = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var cm2Val = m2Val * 10000;
+        if (down){
+          var mm = mixOpts(cm2Val, [m2Val * 100, m2Val * 1000, cm2Val / 10]);
+          return { down:true, m2Val:m2Val, cm2Val:cm2Val, opts:mm.opts, ans:mm.ans };
+        } else {
+          var mm2 = mixOpts(m2Val, [m2Val * 100, cm2Val, m2Val / 10]);
+          return { down:false, m2Val:m2Val, cm2Val:cm2Val, opts:mm2.opts, ans:mm2.ans };
+        }
+      },
+      fmt: function(d, lang){
+        var stem, why;
+        if (d.down){
+          stem = withUnit(d.m2Val, 'm2', lang) + (lang === 'zh' ? ' 等於多少平方公分？' : ' equals how many cm²?');
+          why = lang === 'zh'
+            ? '1 平方公尺 = 10000 平方公分（100 × 100，不是 100）：' + d.m2Val + ' × 10000 = ' + d.cm2Val + '（平方公分）。'
+            : '1 m² = 10000 cm² (100 × 100, not 100): ' + d.m2Val + ' × 10000 = ' + d.cm2Val + ' (cm²).';
+        } else {
+          stem = withUnit(d.cm2Val, 'cm2', lang) + (lang === 'zh' ? ' 等於多少平方公尺？' : ' equals how many m²?');
+          why = lang === 'zh'
+            ? d.cm2Val + ' ÷ 10000 = ' + d.m2Val + '（平方公尺）。'
+            : d.cm2Val + ' ÷ 10000 = ' + d.m2Val + ' (m²).';
+        }
+        return { stem: stem, opts: d.opts.map(String), ans: d.ans, why: why };
+      } },
+
+    /* C. 立方公尺 ↔ 立方公分：×1,000,000 */
+    { id:'volM3Cm3', cat:'bigunits',
+      make: function(used){
+        var down = pick([true, false]);
+        var m3Val = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var cm3Val = m3Val * 1000000;
+        if (down){
+          var mm = mixOpts(cm3Val, [m3Val * 10000, m3Val * 100000, cm3Val / 10]);
+          return { down:true, m3Val:m3Val, cm3Val:cm3Val, opts:mm.opts, ans:mm.ans };
+        } else {
+          var mm2 = mixOpts(m3Val, [m3Val * 100, cm3Val, m3Val * 10]);
+          return { down:false, m3Val:m3Val, cm3Val:cm3Val, opts:mm2.opts, ans:mm2.ans };
+        }
+      },
+      fmt: function(d, lang){
+        var stem, why;
+        if (d.down){
+          stem = withUnit(d.m3Val, 'm3', lang) + (lang === 'zh' ? ' 等於多少立方公分？' : ' equals how many cm³?');
+          why = lang === 'zh'
+            ? '1 立方公尺 = 1000000 立方公分（100 × 100 × 100）：' + d.m3Val + ' × 1000000 = ' + d.cm3Val + '（立方公分）。'
+            : '1 m³ = 1000000 cm³ (100 × 100 × 100): ' + d.m3Val + ' × 1000000 = ' + d.cm3Val + ' (cm³).';
+        } else {
+          stem = withUnit(d.cm3Val, 'cm3', lang) + (lang === 'zh' ? ' 等於多少立方公尺？' : ' equals how many m³?');
+          why = lang === 'zh'
+            ? d.cm3Val + ' ÷ 1000000 = ' + d.m3Val + '（立方公尺）。'
+            : d.cm3Val + ' ÷ 1000000 = ' + d.m3Val + ' (m³).';
+        }
+        return { stem: stem, opts: d.opts.map(String), ans: d.ans, why: why };
+      } },
+
+    /* D. 比大小：兩塊地，不同單位 */
+    { id:'compareAreas', cat:'bigunits',
+      make: function(used){
+        var uA = pick(['a','ha','km2']);
+        var uB = pick(['a','ha','km2'].filter(function(x){ return x !== uA; }));
+        var vA, vB, m2A, m2B;
+        for (var tries = 0; tries < 30; tries++){
+          vA = pickUnused([2,3,4,5,6,7,8,9,10,12,15,20,25,30], used);
+          vB = pick([2,3,4,5,6,7,8,9,10,12,15,20,25,30]);
+          m2A = vA * AREA_FACTOR[uA];
+          m2B = vB * AREA_FACTOR[uB];
+          if (m2A !== m2B) break;
+        }
+        return { uA:uA, uB:uB, vA:vA, vB:vB, m2A:m2A, m2B:m2B, aWins: m2A > m2B };
+      },
+      fmt: function(d, lang){
+        var stem = lang === 'zh'
+          ? '哪一塊地比較大？甲地（' + withUnit(d.vA, d.uA, lang) + '）還是乙地（' + withUnit(d.vB, d.uB, lang) + '）？'
+          : 'Which plot is bigger? Plot A (' + withUnit(d.vA, d.uA, lang) + ') or Plot B (' + withUnit(d.vB, d.uB, lang) + ')?';
+        var optA = lang === 'zh' ? '甲地' : 'Plot A';
+        var optB = lang === 'zh' ? '乙地' : 'Plot B';
+        var why = lang === 'zh'
+          ? '先統一單位換成平方公尺：甲 = ' + d.m2A + ' 平方公尺，乙 = ' + d.m2B + ' 平方公尺，' + (d.aWins ? '甲' : '乙') + '比較大。'
+          : 'Unify to square meters first: A = ' + d.m2A + ' m², B = ' + d.m2B + ' m², ' + (d.aWins ? 'A' : 'B') + ' is bigger.';
+        return { stem: stem, opts: [optA, optB], ans: d.aWins ? 0 : 1, why: why };
+      } },
+
+    /* E. 文字題：長方形面積換算公畝 */
+    { id:'wordRectToA', cat:'bigunits',
+      make: function(used){
+        var l = pickUnused([20,40,60,80,100], used);
+        var w = pick([5,10,15,20,25,30]);
+        var areaM2 = l * w;
+        var aVal = areaM2 / 100;
+        var m = mixOpts(aVal, [areaM2, aVal * 10, aVal + 1]);
+        return { l:l, w:w, areaM2:areaM2, aVal:aVal, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var stem = lang === 'zh'
+          ? '一塊長方形農地長 ' + d.l + ' 公尺、寬 ' + d.w + ' 公尺，面積是多少公畝？'
+          : 'A rectangular farm plot is ' + d.l + ' m long and ' + d.w + ' m wide. What is its area in ares?';
+        var why = lang === 'zh'
+          ? '先算面積：' + d.l + ' × ' + d.w + ' = ' + d.areaM2 + ' 平方公尺，再換算：' + d.areaM2 + ' ÷ 100 = ' + d.aVal + ' 公畝。'
+          : 'Area first: ' + d.l + ' × ' + d.w + ' = ' + d.areaM2 + ' m², then convert: ' + d.areaM2 + ' ÷ 100 = ' + d.aVal + ' a.';
+        return { stem: stem, opts: d.opts.map(String), ans: d.ans, why: why };
+      } },
+
+    /* F. 迷思：換算要乘多少倍 */
+    { id:'multiplierCheck', cat:'bigunits',
+      make: function(used){
+        var kind = pickUnused(['ladder', 'areaSpecial', 'volSpecial'], used);
+        var correct = kind === 'ladder' ? 100 : kind === 'areaSpecial' ? 10000 : 1000000;
+        var m = mixOpts(correct, [100, 10000, 1000, 1000000]);
+        return { kind:kind, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var stem, why;
+        if (d.kind === 'ladder'){
+          stem = lang === 'zh' ? '從「公畝」換算到「公頃」，要乘多少倍？' : 'Converting from "ares" to "hectares", multiply by how much?';
+          why = lang === 'zh' ? '面積單位階梯（平方公尺以上）每一階都是 × 100。' : 'Every rung of the area ladder (above m²) is ×100.';
+        } else if (d.kind === 'areaSpecial'){
+          stem = lang === 'zh' ? '從「平方公尺」換算到「平方公分」，要乘多少倍？' : 'Converting from "square meters" to "square centimeters", multiply by how much?';
+          why = lang === 'zh' ? '面積是二維，長和寬都要乘 100：100 × 100 = 10000，不是 100。' : 'Area is 2D — both directions need ×100: 100 × 100 = 10000, not 100.';
+        } else {
+          stem = lang === 'zh' ? '從「立方公尺」換算到「立方公分」，要乘多少倍？' : 'Converting from "cubic meters" to "cubic centimeters", multiply by how much?';
+          why = lang === 'zh' ? '體積是三維，長、寬、高都要乘 100：100 × 100 × 100 = 1000000。' : 'Volume is 3D — all three directions need ×100: 100 × 100 × 100 = 1000000.';
+        }
+        return { stem: stem, opts: d.opts.map(String), ans: d.ans, why: why };
+      } },
+
+    /* G. 跨階換算（跳過中間階） */
+    { id:'chainedLadder', cat:'bigunits',
+      make: function(used){
+        var skip = pick([2, 3]); // km2 -> a (跳過ha, 2階) 或 km2 -> m2 (跳過ha,a, 3階)
+        var kmVal = pickUnused([1,2,3,4,5,6,7,8], used);
+        var factor = Math.pow(100, skip);
+        var toUnit = skip === 2 ? 'a' : 'm2';
+        var toVal = kmVal * factor;
+        var m = mixOpts(toVal, [kmVal * 100, kmVal * Math.pow(100, skip - 1), toVal / 10]);
+        return { kmVal:kmVal, toUnit:toUnit, toVal:toVal, factor:factor, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var stem = withUnit(d.kmVal, 'km2', lang) + (lang === 'zh' ? ' 等於多少 ' + u(d.toUnit, lang) + '？' : ' equals how many ' + u(d.toUnit, lang) + '?');
+        var why = lang === 'zh'
+          ? '中間跨了幾階，就連乘幾次 100：' + d.kmVal + ' × ' + d.factor + ' = ' + d.toVal + '（' + u(d.toUnit, lang) + '）。'
+          : 'Multiply by 100 once per rung skipped: ' + d.kmVal + ' × ' + d.factor + ' = ' + d.toVal + ' (' + u(d.toUnit, lang) + ').';
+        return { stem: stem, opts: d.opts.map(String), ans: d.ans, why: why };
+      } },
+
+    /* H. 交錯：面積公式（長方形/三角形，小單位） */
+    { id:'areaFormula', cat:'area',
+      make: function(used){
+        var shape = pick(['rect', 'tri']);
+        var base = pickUnused([3,4,5,6,7,8,9,10,12], used);
+        var height = pick([2,3,4,5,6,7,8]);
+        var area = shape === 'rect' ? base * height : (base * height) / 2;
+        if (shape === 'tri' && (base * height) % 2 !== 0){ height += 1; area = (base * height) / 2; }
+        var m = mixOpts(area, [base + height, base * height, area * 2]);
+        return { shape:shape, base:base, height:height, area:area, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var shapeName = lang === 'zh' ? (d.shape === 'rect' ? '長方形' : '三角形') : (d.shape === 'rect' ? 'rectangle' : 'triangle');
+        var stem = lang === 'zh'
+          ? '一個' + shapeName + '，底是 ' + d.base + ' 公分、高是 ' + d.height + ' 公分，面積是多少平方公分？'
+          : 'A ' + shapeName + ' has a base of ' + d.base + ' cm and a height of ' + d.height + ' cm. What is its area?';
+        var why = lang === 'zh'
+          ? (d.shape === 'rect'
+              ? '長方形面積 = 底 × 高 = ' + d.base + ' × ' + d.height + ' = ' + d.area + '（平方公分）。'
+              : '三角形面積 = 底 × 高 ÷ 2 = ' + d.base + ' × ' + d.height + ' ÷ 2 = ' + d.area + '（平方公分）。')
+          : (d.shape === 'rect'
+              ? 'Rectangle area = base × height = ' + d.base + ' × ' + d.height + ' = ' + d.area + ' cm².'
+              : 'Triangle area = base × height ÷ 2 = ' + d.base + ' × ' + d.height + ' ÷ 2 = ' + d.area + ' cm².');
+        return { stem: stem, opts: d.opts.map(function(v){ return v + (lang === 'zh' ? ' 平方公分' : ' cm²'); }), ans: d.ans, why: why };
+      } },
+
+    /* I. 交錯：長方體體積（小單位） */
+    { id:'boxVolume', cat:'volume',
+      make: function(used){
+        var l = pickUnused([2,3,4,5,6,7,8], used);
+        var w = pick([2,3,4,5,6]);
+        var h = pick([2,3,4,5,6]);
+        var vol = l * w * h;
+        var m = mixOpts(vol, [l + w + h, l * w, vol + l]);
+        return { l:l, w:w, h:h, vol:vol, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var stem = lang === 'zh'
+          ? '一個長方體，長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分、高 ' + d.h + ' 公分，體積是多少立方公分？'
+          : 'A box is ' + d.l + ' cm long, ' + d.w + ' cm wide, and ' + d.h + ' cm high. What is its volume?';
+        var why = lang === 'zh'
+          ? '體積 = 長 × 寬 × 高 = ' + d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.vol + '（立方公分）。'
+          : 'Volume = length × width × height = ' + d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.vol + ' cm³.';
+        return { stem: stem, opts: d.opts.map(function(v){ return v + (lang === 'zh' ? ' 立方公分' : ' cm³'); }), ans: d.ans, why: why };
+      } },
+
+    /* J. 交錯：公噸 ↔ 公斤（重量課的 ×1000 階梯） */
+    { id:'tonneKg', cat:'weight',
+      make: function(used){
+        var down = pick([true, false]);
+        var tVal = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var kgVal = tVal * 1000;
+        if (down){
+          var m = mixOpts(kgVal, [tVal * 100, tVal * 10000, kgVal / 10]);
+          return { down:true, tVal:tVal, kgVal:kgVal, opts:m.opts, ans:m.ans };
+        } else {
+          var m2 = mixOpts(tVal, [tVal * 10, kgVal, tVal * 100]);
+          return { down:false, tVal:tVal, kgVal:kgVal, opts:m2.opts, ans:m2.ans };
+        }
+      },
+      fmt: function(d, lang){
+        var stem, why;
+        if (d.down){
+          stem = withUnit(d.tVal, 't', lang) + (lang === 'zh' ? ' 等於多少公斤？' : ' equals how many kg?');
+          why = lang === 'zh' ? '1 公噸 = 1000 公斤：' + d.tVal + ' × 1000 = ' + d.kgVal + '（公斤）。' : '1 t = 1000 kg: ' + d.tVal + ' × 1000 = ' + d.kgVal + ' kg.';
+        } else {
+          stem = withUnit(d.kgVal, 'kg', lang) + (lang === 'zh' ? ' 等於多少公噸？' : ' equals how many tonnes?');
+          why = lang === 'zh' ? d.kgVal + ' ÷ 1000 = ' + d.tVal + '（公噸）。' : d.kgVal + ' ÷ 1000 = ' + d.tVal + ' t.';
+        }
+        return { stem: stem, opts: d.opts.map(String), ans: d.ans, why: why };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：10 種題型各一題 ＋ 隨機 2 題（限大單位類，數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){ return g.cat === 'bigunits'; });
+    for (var i = 0; i < 2; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+
+  /* 測試用掛勾：僅在測試腳本明確要求時才會被呼叫，正式頁面上不會有作用 */
+  if (typeof globalThis !== 'undefined' && typeof globalThis.__EXPOSE_FOR_TEST__ === 'function'){
+    globalThis.__EXPOSE_FOR_TEST__({ GENS: GENS, divExact: divExact, makePlan: makePlan, AREA_FACTOR: AREA_FACTOR });
+  }
+})();
+</script>
+</body>
+</html>

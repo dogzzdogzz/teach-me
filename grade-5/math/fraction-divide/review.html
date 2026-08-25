@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分數大平分複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 分數大平分複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：分數除法、分數乘法、分數加法、小數交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'分數大平分複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 分數大平分複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：分數除法、分數乘法、分數加法、小數交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Sharing Fractions Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Sharing Fractions Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving fraction division, fraction multiplication, fraction addition and decimals — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { fdiv:'分數除法', fmul:'分數乘法', fadd:'分數加法', decimal:'小數' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { fdiv:'🍫 分數大平分 — 分數除以整數', fmul:'✂️ 分數乘法 — 切了再切', fadd:'🍕 通分披薩屋 — 異分母分數加減', decimal:'💰 小數商店 — 小數的乘與除' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { fdiv:'Fraction division', fmul:'Fraction multiplication', fadd:'Fraction addition', decimal:'Decimals' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { fdiv:'🍫 Sharing Fractions — dividing fractions by whole numbers', fmul:'✂️ Multiplying Fractions — cut, then cut again', fadd:'🍕 The Pizza House — common denominators', decimal:'💰 The Decimal Shop — multiplying and dividing decimals' }
+    }
+  };
+
+  var LINK_HREFS = { fdiv:'index.html', fmul:'../fraction-multiply/', fadd:'../fraction-add/', decimal:'../decimal/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function round1(x){ return Math.round(x * 10) / 10; }
+  function gcdFn(a, b){
+    a = Math.abs(a); b = Math.abs(b);
+    while (b){ var t = b; b = a % b; a = t; }
+    return a || 1;
+  }
+  function simplifyFrac(n, d){
+    var g = gcdFn(n, d);
+    return { n: n / g, d: d / g };
+  }
+  function fracStr(n, d){ return n + '/' + d; }
+  function fracWrongCandidates(n, d){
+    return [
+      [d, n],
+      [n + 1, d],
+      [n > 1 ? n - 1 : n + 1, d],
+      [n, d + 1],
+      [n, d > 1 ? d - 1 : d + 1],
+      [n + 1, d + 1],
+      [n + 2, d]
+    ];
+  }
+  /* 依正解 n/d 產生 4 個選項（含正解），保證選項字串互不相同 */
+  function mixFracOpts(n, d){
+    var correct = fracStr(n, d);
+    var seen = {}; seen[correct] = true;
+    var wrongs = [];
+    fracWrongCandidates(n, d).forEach(function(c){
+      if (c[1] <= 0 || c[0] <= 0) return;
+      var s = fracStr(c[0], c[1]);
+      if (!seen[s]){ seen[s] = true; wrongs.push(s); }
+    });
+    var bump = 3;
+    while (wrongs.length < 3){
+      var s2 = fracStr(n + bump, d);
+      if (!seen[s2]){ seen[s2] = true; wrongs.push(s2); }
+      bump++;
+    }
+    wrongs = wrongs.slice(0, 3);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var GENS = [
+    { id:'shareAsFraction', cat:'fdiv',
+      make: function(used){
+        var m = pickUnused([3,4,5,6,7,8], used);
+        var cands = [];
+        for (var i = 1; i < m; i++){ if (gcdFn(i, m) === 1) cands.push(i); }
+        var n = pick(cands);
+        return { n:n, m:m };
+      },
+      fmt: function(d, lang){
+        var mix = mixFracOpts(d.n, d.m);
+        return {
+          stem: lang === 'zh' ? d.n + ' 個蘋果平分給 ' + d.m + ' 個人，每人分到多少個？' : 'Share ' + d.n + ' apples equally among ' + d.m + ' people. How much does each person get?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? d.n + ' ÷ ' + d.m + ' = ' + d.n + '/' + d.m + '。'
+            : d.n + ' ÷ ' + d.m + ' = ' + d.n + '/' + d.m + '.'
+        };
+      } },
+    { id:'divideGeneral', cat:'fdiv',
+      make: function(used){
+        var den = pickUnused([3,4,5,6,7], used);
+        var num, k;
+        for (var tries = 0; tries < 30; tries++){
+          num = 1 + rand(den - 1);
+          k = pick([2,3,4]);
+          if (num % k !== 0) break;
+        }
+        var pd = den * k;
+        var simp = simplifyFrac(num, pd);
+        return { num:num, den:den, k:k, pd:pd, sn:simp.n, sd:simp.d };
+      },
+      fmt: function(d, lang){
+        var mix = mixFracOpts(d.sn, d.sd);
+        var reduced = (d.sn === d.num && d.sd === d.pd);
+        return {
+          stem: d.num + '/' + d.den + ' ÷ ' + d.k + ' = ?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '分母乘以 ' + d.k + '：' + d.den + '×' + d.k + '=' + d.pd + '，分子 ' + d.num + ' 不變，' + d.num + '/' + d.den + '÷' + d.k + '=' + d.num + '/' + d.pd + (reduced ? '。' : '，約分後是 ' + d.sn + '/' + d.sd + '。')
+            : 'Multiply the denominator by ' + d.k + ': ' + d.den + '×' + d.k + '=' + d.pd + ', numerator ' + d.num + ' stays the same: ' + d.num + '/' + d.den + '÷' + d.k + '=' + d.num + '/' + d.pd + (reduced ? '.' : ', which simplifies to ' + d.sn + '/' + d.sd + '.')
+        };
+      } },
+    { id:'divideShortcut', cat:'fdiv',
+      make: function(used){
+        var den = pickUnused([5,6,7,8,9,10], used);
+        var k, q, num;
+        for (var tries = 0; tries < 40; tries++){
+          k = pick([2,3,4]);
+          q = 1 + rand(den - 1);
+          num = q * k;
+          if (num < den && gcdFn(q, den) === 1) break;
+        }
+        return { num:num, den:den, k:k, q:q };
+      },
+      fmt: function(d, lang){
+        var mix = mixFracOpts(d.q, d.den);
+        return {
+          stem: d.num + '/' + d.den + ' ÷ ' + d.k + ' = ?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '分子 ' + d.num + ' 剛好能被 ' + d.k + ' 整除：' + d.num + '÷' + d.k + '=' + d.q + '，分母不變，' + d.num + '/' + d.den + '÷' + d.k + '=' + d.q + '/' + d.den + '。'
+            : 'The numerator ' + d.num + ' divides evenly by ' + d.k + ': ' + d.num + '÷' + d.k + '=' + d.q + ', denominator stays the same: ' + d.num + '/' + d.den + '÷' + d.k + '=' + d.q + '/' + d.den + '.'
+        };
+      } },
+    { id:'wordShare', cat:'fdiv',
+      make: function(used){
+        var total = pickUnused([2,3,4,5,6,8,9,10], used);
+        var peoplePool = [3,4,5,6,7,8,9,10,12].filter(function(p){ return p > total; });
+        var people = pick(peoplePool);
+        var simp = simplifyFrac(total, people);
+        return { total:total, people:people, sn:simp.n, sd:simp.d };
+      },
+      fmt: function(d, lang){
+        var mix = mixFracOpts(d.sn, d.sd);
+        var reduced = (d.sn === d.total && d.sd === d.people);
+        return {
+          stem: lang === 'zh' ? d.total + ' 塊餅乾平分給 ' + d.people + ' 個人，每人分到多少塊？' : d.total + ' cookies are shared equally among ' + d.people + ' people. How many cookies does each person get?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? d.total + '÷' + d.people + '=' + d.total + '/' + d.people + (reduced ? '。' : '，約分後是 ' + d.sn + '/' + d.sd + '。')
+            : d.total + '÷' + d.people + '=' + d.total + '/' + d.people + (reduced ? '.' : ', which simplifies to ' + d.sn + '/' + d.sd + '.')
+        };
+      } },
+    { id:'twoStepDivide', cat:'fdiv',
+      make: function(used){
+        var b = pickUnused([2,3,4,5], used);
+        var a = 1 + rand(b - 1);
+        var k1 = pick([2,3]);
+        var k2 = pick([2,3]);
+        var pd = b * k1 * k2;
+        var simp = simplifyFrac(a, pd);
+        return { a:a, b:b, k1:k1, k2:k2, pd:pd, sn:simp.n, sd:simp.d, mid: a + '/' + (b*k1) };
+      },
+      fmt: function(d, lang){
+        var mix = mixFracOpts(d.sn, d.sd);
+        var reduced = (d.sn === d.a && d.sd === d.pd);
+        return {
+          stem: lang === 'zh'
+            ? '一條緞帶長 ' + d.a + '/' + d.b + ' 公尺，先平分成 ' + d.k1 + ' 段，再把其中一段平分給 ' + d.k2 + ' 個人，每人分到多少公尺？'
+            : 'A ribbon is ' + d.a + '/' + d.b + ' meters long. It is first split into ' + d.k1 + ' equal pieces, and then one of those pieces is shared equally among ' + d.k2 + ' people. How many meters does each person get?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? d.a + '/' + d.b + '÷' + d.k1 + '=' + d.mid + '（其中一段），再÷' + d.k2 + '：' + d.mid + '÷' + d.k2 + '=' + d.a + '/' + d.pd + (reduced ? '。' : '，約分後是 ' + d.sn + '/' + d.sd + '。')
+            : d.a + '/' + d.b + '÷' + d.k1 + '=' + d.mid + ' (one piece), then ÷' + d.k2 + ': ' + d.mid + '÷' + d.k2 + '=' + d.a + '/' + d.pd + (reduced ? '.' : ', which simplifies to ' + d.sn + '/' + d.sd + '.')
+        };
+      } },
+    { id:'equivalentExpr', cat:'fdiv',
+      make: function(used){
+        var den = pickUnused([3,4,5,6,7], used);
+        var num = 1 + rand(den - 1);
+        var k = pick([2,3,4,5]);
+        return { num:num, den:den, k:k };
+      },
+      fmt: function(d, lang){
+        var correct = d.num + '/' + d.den + ' × 1/' + d.k;
+        var wrongs = [
+          d.num + '/' + d.den + ' × ' + d.k,
+          d.k + ' × ' + d.den + '/' + d.num,
+          d.num + '/' + d.den + ' + 1/' + d.k
+        ];
+        var opts = shuffle([correct].concat(wrongs));
+        var ans = opts.indexOf(correct);
+        return {
+          stem: lang === 'zh' ? '哪一個算式跟 ' + d.num + '/' + d.den + ' ÷ ' + d.k + ' 的答案一樣？' : 'Which expression gives the same answer as ' + d.num + '/' + d.den + ' ÷ ' + d.k + '?',
+          opts: opts, ans: ans,
+          why: lang === 'zh'
+            ? '除以整數等於乘上它的倒數：÷' + d.k + ' 就是 ×1/' + d.k + '，所以 ' + d.num + '/' + d.den + ' ÷ ' + d.k + ' = ' + d.num + '/' + d.den + ' × 1/' + d.k + '。'
+            : 'Dividing by a whole number equals multiplying by its reciprocal: ÷' + d.k + ' is the same as ×1/' + d.k + ', so ' + d.num + '/' + d.den + ' ÷ ' + d.k + ' = ' + d.num + '/' + d.den + ' × 1/' + d.k + '.'
+        };
+      } },
+    { id:'fractionMultiply', cat:'fmul',
+      make: function(used){
+        var b = pickUnused([2,3,4,5,6], used);
+        var a = 1 + rand(b - 1);
+        var dd = pick([2,3,4,5,6]);
+        var c = 1 + rand(dd - 1);
+        var pn = a * c, pd = b * dd;
+        var simp = simplifyFrac(pn, pd);
+        return { a:a, b:b, c:c, dd:dd, pn:pn, pd:pd, sn:simp.n, sd:simp.d };
+      },
+      fmt: function(d, lang){
+        var mix = mixFracOpts(d.sn, d.sd);
+        var reduced = (d.sn === d.pn && d.sd === d.pd);
+        return {
+          stem: d.a + '/' + d.b + ' × ' + d.c + '/' + d.dd + ' = ?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '分子乘分子（' + d.a + '×' + d.c + '=' + d.pn + '）、分母乘分母（' + d.b + '×' + d.dd + '=' + d.pd + '）' + (reduced ? '。' : '，約分後是 ' + d.sn + '/' + d.sd + '。')
+            : 'Multiply the numerators (' + d.a + '×' + d.c + '=' + d.pn + ') and the denominators (' + d.b + '×' + d.dd + '=' + d.pd + ')' + (reduced ? '.' : ', which simplifies to ' + d.sn + '/' + d.sd + '.')
+        };
+      } },
+    { id:'fractionAdd', cat:'fadd',
+      make: function(used){
+        var den = pickUnused([4,5,6,7,8,9,10], used);
+        var a = 1 + rand(den - 2);
+        var maxC = den - a - 1;
+        var c = 1 + rand(maxC);
+        var pn = a + c;
+        var simp = simplifyFrac(pn, den);
+        return { a:a, c:c, den:den, pn:pn, sn:simp.n, sd:simp.d };
+      },
+      fmt: function(d, lang){
+        var mix = mixFracOpts(d.sn, d.sd);
+        var reduced = (d.sn === d.pn && d.sd === d.den);
+        return {
+          stem: d.a + '/' + d.den + ' + ' + d.c + '/' + d.den + ' = ?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '分母相同，直接加分子：' + d.a + '+' + d.c + '=' + d.pn + '，' + d.pn + '/' + d.den + (reduced ? '。' : '，約分後是 ' + d.sn + '/' + d.sd + '。')
+            : 'Same denominator, so just add the numerators: ' + d.a + '+' + d.c + '=' + d.pn + ', giving ' + d.pn + '/' + d.den + (reduced ? '.' : ', which simplifies to ' + d.sn + '/' + d.sd + '.')
+        };
+      } },
+    { id:'decimalDivide', cat:'decimal',
+      make: function(used){
+        var k = pickUnused([2, 3, 4, 5, 6], used);
+        var qt = 20 + rand(70);
+        var dividendTenths = qt * k;
+        var dividend = round1(dividendTenths / 10);
+        var q = round1(qt / 10);
+        var correct = String(q);
+        var seen = {}; seen[correct] = true;
+        var wrongs = [];
+        [round1(q - 0.1), round1(q + 0.1), round1(q * 2)].forEach(function(v){
+          var s = String(v);
+          if (!seen[s]){ seen[s] = true; wrongs.push(s); }
+        });
+        var bump = 1;
+        while (wrongs.length < 3){
+          var s2 = String(round1(q + 0.2 * bump));
+          if (!seen[s2]){ seen[s2] = true; wrongs.push(s2); }
+          bump++;
+        }
+        var opts = shuffle([correct].concat(wrongs.slice(0,3)));
+        var ans = opts.indexOf(correct);
+        return { k:k, dividend:dividend, dividendTenths:dividendTenths, q:q, qt:qt, opts:opts, ans:ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.dividend + ' ÷ ' + d.k + ' = ?',
+          opts: d.opts, ans: d.ans,
+          why: lang === 'zh'
+            ? d.dividend + ' 裡面有 ' + d.dividendTenths + ' 個 0.1，' + d.dividendTenths + ' ÷ ' + d.k + ' = ' + d.qt + ' 個 0.1，也就是 ' + d.q + '。'
+            : d.dividend + ' is ' + d.dividendTenths + ' tenths. ' + d.dividendTenths + ' ÷ ' + d.k + ' = ' + d.qt + ' tenths, which is ' + d.q + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：9 種題型各一題＋隨機 3 題（限分數除法類，數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['shareAsFraction','divideGeneral','divideShortcut','wordShare','twoStepDivide'].indexOf(g.id) >= 0;
+    });
+    for (var i = 0; i < 3; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

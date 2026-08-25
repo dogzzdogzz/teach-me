@@ -6,13 +6,17 @@
 
 🌐 **網站**：<https://dogzzdogzz.github.io/teach-me/>
 
-## 每個主題有三頁
+## 每個主題有三到四頁
 
 | 頁面 | 內容 |
 |------|------|
 | 📖 **上課** `index.html` | 互動範例教學（具體→圖像→抽象）→ 分層試題 → 小遊戲（含兩層提示）→ 一句話總結 |
 | 🗂️ **速查卡** `reference.html` | 一頁重點：定義、方法步驟、易錯對照、常用數值表 —— 可直接列印貼在書桌前 |
 | 🔁 **複習挑戰** `review.html` | 12 題混合複習，**每按「換一批」數字全部重新出**，跨主題交錯出題，錯題自動指路回對應課程 |
+| 👨‍👩‍👧 **給家長** `parents.html` | 這課在教什麼、學會後孩子該做得到什麼、在家怎麼陪、卡關時怎麼回應（附可以照著說的話）、什麼時候可以往下一課 |
+
+👨‍👩‍👧 那一頁是 2026-08-25 起的新規格，目前一、三年級的 8 堂課都有；
+五年級既有 19 堂還是三頁，待補。
 
 每堂課可選**三種學習模式**（右上角隨時可換，跨課記住）：
 
@@ -20,7 +24,28 @@
 - 🏫 **跟上進度**：學校正在教 —— 完整 10 題，含課本型文字題
 - 💪 **補強練習**：學過但不穩 —— 迷思檢查優先，共 12 題，做完導向複習挑戰
 
-## 目前的課程（五年級，19 個主題）
+## 一年級（4 個主題）
+
+| 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
+|------|------|:---:|:---:|:---:|:---:|
+| 🔢 數字探險隊 | 100 以內的數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/numbers/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/numbers/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/numbers/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/numbers/parents.html) |
+| 🤝 好朋友配對 | 分與合 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/number-bonds/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/number-bonds/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/number-bonds/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/number-bonds/parents.html) |
+| 🚂 加加減減小火車 | 20 以內的加減 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/parents.html) |
+| 🔺 形狀積木屋 | 平面圖形與立體形體 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/parents.html) |
+
+## 三年級（4 個主題）
+
+| 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
+|------|------|:---:|:---:|:---:|:---:|
+| ✖️ 直式乘法工廠 | 乘法 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/multiply/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/multiply/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/multiply/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/multiply/parents.html) |
+| ➗ 分東西大隊 | 除法（含餘數） | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/parents.html) |
+| 🍰 分數蛋糕店 | 分數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/fraction/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/fraction/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/fraction/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/fraction/parents.html) |
+| 📏 繞一圈量量看 | 周長 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/perimeter/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/perimeter/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/perimeter/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/perimeter/parents.html) |
+
+一、三年級的課程是**四頁**：上課、速查卡、複習挑戰，外加一頁**給家長**
+（低年級的孩子讀不了速查卡，需要那份資訊的是陪讀的大人）。
+
+## 五年級（19 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 |
 |------|------|:---:|:---:|:---:|
@@ -44,7 +69,9 @@
 | 🏋️ 大力士磅秤 | 公噸與重量單位 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/review.html) |
 | 📊 資料偵察隊 | 統計圖表 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/review.html) |
 
-✅ 五年級 108 課綱的主要學習單元已全部有對應課程。
+五年級目前 19 堂課。對照教育部 108 課綱逐條稽核後仍缺：分數除以整數、整數相除的分數表示、
+小數概數與四捨五入、面積大單位（公畝/公頃/平方公里）、柱體與錐體的展開圖。
+詳見 [grade-5/math/README.md](grade-5/math/README.md)。
 
 ## 資料夾結構
 

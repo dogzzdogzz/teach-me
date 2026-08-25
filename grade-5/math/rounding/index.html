@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>差不多剛剛好 — 概數與四捨五入</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .scene{width:100%;height:auto;display:block;margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .numgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin-top:16px}
+  .cell{
+    border:2px solid var(--line);border-radius:12px;background:var(--card);
+    padding:8px 0;text-align:center;font-size:17px;font-weight:600;color:var(--muted);
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .verdict{margin-top:14px;font-size:18px;min-height:30px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .target{font-size:22px;margin-top:14px}
+  .target b{color:var(--orange);font-size:28px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px;text-align:center;cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .mode .mbig{font-size:26px}
+  .mode h3{font-size:17px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:16px;display:grid;gap:10px}
+
+  /* --- rounding-lesson-only additions --- */
+  .numline{background:var(--bg);border-radius:16px}
+  .sliderwrap{margin-top:18px}
+  .sliderwrap input[type="range"]{width:100%;accent-color:var(--green)}
+  .sliderlabels{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin-top:2px}
+  .digitrow{display:flex;gap:6px;justify-content:center;align-items:center;margin-top:18px;flex-wrap:wrap}
+  .dchar{
+    min-width:36px;padding:8px 4px;text-align:center;font-size:24px;font-weight:700;
+    border:2px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);
+  }
+  .dchar.dot{border:none;background:none;min-width:14px;font-size:24px}
+  .dchar.target{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .dchar.look{border-color:var(--orange);background:var(--orange-soft);color:var(--orange)}
+  .arrow{font-size:26px;color:var(--muted);margin:0 6px}
+  .stepresult{font-size:30px;font-weight:700;color:var(--green)}
+  .steprow{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:14px;justify-content:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .swatch.g{background:var(--green-soft);border:2px solid var(--green)}
+  .swatch.o{background:var(--orange-soft);border:2px solid var(--orange)}
+  .cf-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:16px}
+  .cf-card{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:18px;text-align:center}
+  .cf-card.ceil{border-color:var(--orange)}
+  .cf-card.floor{border-color:var(--blue)}
+  .cf-card .cfbig{font-size:30px}
+  .cf-card h3{font-size:17px;margin:6px 0}
+  .cf-card p{font-size:15px;color:var(--muted)}
+  .cf-explain{margin-top:10px;font-size:14px;background:var(--bg);border-radius:10px;padding:10px;display:none;text-align:left}
+  .cf-explain.show{display:block}
+  .est-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:16px}
+  .est-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center}
+  .est-card.on{border-color:var(--blue);background:var(--blue-soft)}
+  .est-expr{font-size:20px;font-weight:700}
+  .est-detail{margin-top:10px;font-size:15px;text-align:left;background:var(--bg);border-radius:10px;padding:12px;display:none}
+  .est-detail.show{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">📍 差不多剛剛好</h1>
+    <p class="sub" data-i18n="sub">概數與四捨五入 —— 找出數線上最近的那個點</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    生活裡常常不需要「剛剛好」的數字，只需要「大概多少」：<br>
+    園遊會來了幾個人、步道有多長、東西賣多少錢 —— <strong>概數</strong>比精確數字更好用、更好記。
+  </div>
+
+  <!-- 模式選擇 -->
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
+  </div>
+
+  <!-- 1. 為什麼需要概數 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">為什麼需要概數？</h2>
+    <p class="lead" data-i18n="s1lead">點一個情境，看看精確數字和概數，哪一句話比較好記、比較好講？</p>
+    <div class="card">
+      <div class="chips" id="scenChips"></div>
+      <p class="stem" id="scenExact" style="margin-top:16px"></p>
+      <div class="btnrow">
+        <button class="btn ghost" id="scenBtn" type="button" data-i18n="scenBtnShow">說說看，概數怎麼講？</button>
+      </div>
+      <p class="stem" id="scenRound" style="margin-top:12px;color:var(--green);font-weight:700;min-height:26px"></p>
+    </div>
+  </section>
+
+  <!-- 2. 數線是主角 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">數線是主角：離哪個地標比較近？</h2>
+    <p class="lead" data-i18n="s2lead">拖拖看下面的滑桿，數字會在兩個地標中間移動 —— 四捨五入就是找「比較近的那個地標」。</p>
+    <div class="card">
+      <p style="font-weight:700" data-i18n="s2placeLabel">四捨五入到哪一位？</p>
+      <div class="chips" id="lnPlaceChips"></div>
+      <svg class="scene numline" id="lnSvg" viewBox="0 0 700 170" role="img" data-i18n-aria="lnAria" aria-label="數線，顯示兩個地標和中間可以拖曳的數字">
+        <g id="lnGroup"></g>
+      </svg>
+      <div class="sliderwrap">
+        <input type="range" id="lnSlider" min="0" max="9" step="1" value="4">
+        <div class="sliderlabels"><span data-i18n="lnSliderLo">比較靠近左邊地標</span><span data-i18n="lnSliderHi">比較靠近右邊地標</span></div>
+      </div>
+      <div class="btnrow">
+        <button class="btn ghost" id="lnNewBtn" type="button" data-i18n="lnNewBtn">🎲 換一個數字</button>
+      </div>
+      <p class="stem" id="lnLine" style="margin-top:14px"></p>
+      <div class="legend">
+        <span><span class="swatch g"></span><span data-i18n="lnLegendTarget">要留下的那一位</span></span>
+        <span><span class="swatch o"></span><span data-i18n="lnLegendLook">決定進退位的那一位</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 四捨五入到指定位 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">四捨五入到指定的位</h2>
+    <p class="lead" data-i18n="s3lead">選一個數字、選一個目標位，看看要看哪一位、怎麼決定進或退。</p>
+    <div class="card">
+      <p style="font-weight:700" data-i18n="s3numLabel">選一個數字：</p>
+      <div class="chips" id="stepNumChips"></div>
+      <p style="font-weight:700;margin-top:14px" data-i18n="s3placeLabel">四捨五入到哪一位：</p>
+      <div class="chips" id="stepPlaceChips"></div>
+      <div class="digitrow" id="stepDigits"></div>
+      <div class="steprow" id="stepResultRow" style="display:none">
+        <span class="arrow">➜</span><span class="stepresult" id="stepResult"></span>
+      </div>
+      <p class="stem" id="stepWhy" style="margin-top:14px"></p>
+    </div>
+  </section>
+
+  <!-- 4. 無條件進位／無條件捨去 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">不是每次都用四捨五入</h2>
+    <p class="lead" data-i18n="s4lead">有時候生活情境需要「一定要夠」或「一定不能超過」，這時候不能四捨五入。</p>
+    <div class="cf-row">
+      <div class="cf-card ceil">
+        <div class="cfbig">📦</div>
+        <h3 data-i18n="cfCeilH">無條件進位</h3>
+        <p data-i18n="cfCeilP">137 顆糖果，每箱裝 20 顆，137 ÷ 20 = 6 箱又 17 顆 —— 剩下的 17 顆也要裝箱，所以要準備 <strong>7</strong> 個箱子。</p>
+        <button class="btn ghost" id="cfCeilBtn" type="button" data-i18n="cfWhyBtn">為什麼？</button>
+        <div class="cf-explain" id="cfCeilExplain" data-i18n="cfCeilExplain">如果四捨五入，6.85 會變成 7，剛好一樣；但就算是 6.05 箱（多一點點），還是需要湊出第 7 箱，因為箱子不能切一半——買箱子、租車、訂位這種「一定要夠」的情境，永遠用無條件進位。</div>
+      </div>
+      <div class="cf-card floor">
+        <div class="cfbig">✂️</div>
+        <h3 data-i18n="cfFloorH">無條件捨去</h3>
+        <p data-i18n="cfFloorP">一條 6.75 公尺的繩子，最多能剪成幾段 1 公尺的繩子？6.75 裡面有 6 段又多 0.75 公尺 —— 剩下的 0.75 公尺剪不出完整一段，所以只能剪 <strong>6</strong> 段。</p>
+        <button class="btn ghost" id="cfFloorBtn" type="button" data-i18n="cfWhyBtn">為什麼？</button>
+        <div class="cf-explain" id="cfFloorExplain" data-i18n="cfFloorExplain">如果四捨五入，6.75 會變成 7 段；但真正剪出來的完整段數只有 6 段，多出來的 0.75 公尺不夠剪成一整段——剪東西、換零錢這種「不能超過」的情境，永遠用無條件捨去。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 估算應用 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">範例教學 5</span>
+    <h2 data-i18n="s5h2">用概數幫答案抓漏</h2>
+    <p class="lead" data-i18n="s5lead">算出答案以後，先用概數估一下大概多少，就能抓到算錯的地方。</p>
+    <div class="card">
+      <div class="est-row" id="estCards"></div>
+    </div>
+  </section>
+
+  <!-- 6. 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">試題</span>
+    <h2 data-i18n="s6h2">檢查一下</h2>
+    <p class="lead" data-i18n="s6lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 7. 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb7">小遊戲</span>
+    <h2 data-i18n="s7h2">數線快問</h2>
+    <p class="lead" data-i18n="s7lead">看清楚數字和目標位，選出正確的概數。答對愈快，分數愈高！</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <p class="target" id="gAskLine"></p>
+      <p class="hint" id="gHint"></p>
+      <div class="opts" id="gAnswers"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 學完之後 -->
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的三個動作</h2>
+    <div class="card">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。</li>
+        <li data-i18n="next3">❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>看下一位夠不夠 5 —— 夠了進，不夠就捨，四捨五入就是找數線上最近的那個點。</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(SVGNS, tag);
+    for (var k in attrs){ if (attrs.hasOwnProperty(k)) el.setAttribute(k, attrs[k]); }
+    return el;
+  }
+
+  /* ---------- 語言無關的四捨五入核心（字串／整數運算，不用浮點數） ---------- */
+  function incStr(s){
+    var arr = s.split('');
+    var i = arr.length - 1;
+    while (i >= 0){
+      if (arr[i] === '9'){ arr[i] = '0'; i--; }
+      else { arr[i] = String(Number(arr[i]) + 1); break; }
+    }
+    if (i < 0) arr.unshift('1');
+    return arr.join('');
+  }
+  /* 把 numStr 四捨五入到小數點後 places 位（places=0 表示整數） */
+  function roundDecimalStr(numStr, places){
+    numStr = String(numStr).trim();
+    var neg = false;
+    if (numStr.charAt(0) === '-'){ neg = true; numStr = numStr.slice(1); }
+    var dot = numStr.indexOf('.');
+    var intPart = dot < 0 ? numStr : numStr.slice(0, dot);
+    var fracPart = dot < 0 ? '' : numStr.slice(dot + 1);
+    if (intPart === '') intPart = '0';
+    while (fracPart.length <= places) fracPart += '0';
+    var lookDigit = Number(fracPart.charAt(places));
+    var kept = intPart + fracPart.slice(0, places);
+    if (lookDigit >= 5) kept = incStr(kept);
+    var newIntPart, newFracPart;
+    if (places === 0){
+      newIntPart = kept; newFracPart = '';
+    } else {
+      if (kept.length <= places) kept = kept.padStart(places + 1, '0');
+      newIntPart = kept.slice(0, kept.length - places);
+      newFracPart = kept.slice(kept.length - places);
+    }
+    newIntPart = newIntPart.replace(/^0+(?=\d)/, '');
+    var result = newIntPart + (places > 0 ? '.' + newFracPart : '');
+    var isZero = /^0(\.0+)?$/.test(result);
+    return (neg && !isZero ? '-' : '') + result;
+  }
+  /* 把整數 ticks（代表某個小數，最細一格是 10^-decimals）轉成字串 */
+  function ticksToStr(ticks, decimals){
+    var neg = ticks < 0; ticks = Math.abs(ticks);
+    var s = String(ticks);
+    while (s.length <= decimals) s = '0' + s;
+    var intPart = decimals > 0 ? s.slice(0, s.length - decimals) : s;
+    var fracPart = decimals > 0 ? s.slice(s.length - decimals) : '';
+    if (intPart === '') intPart = '0';
+    return (neg ? '-' : '') + intPart + (decimals > 0 ? '.' + fracPart : '');
+  }
+
+  /* ---------- 語言無關的資料 ---------- */
+  /* 情境（範例教學 1） */
+  var SCENARIOS = [
+    { icon: '🎪' },
+    { icon: '🥾' },
+    { icon: '🛒' }
+  ];
+
+  /* 數線示範（範例教學 2）：landmarkScaled 是「左邊地標」在 place 位小數下的整數值 */
+  var LN_SCENES = {
+    0: [ { landmarkScaled: 3 }, { landmarkScaled: 7 }, { landmarkScaled: 12 }, { landmarkScaled: 19 } ],
+    1: [ { landmarkScaled: 38 }, { landmarkScaled: 52 }, { landmarkScaled: 86 }, { landmarkScaled: 123 } ],
+    2: [ { landmarkScaled: 384 }, { landmarkScaled: 256 }, { landmarkScaled: 917 } ]
+  };
+
+  /* 拆解示範（範例教學 3）：都準備到小數第三位，三個目標位都能練 */
+  var STEP_NUMS = ['3.847', '12.638', '0.954', '3.968', '9.982', '24.505'];
+
+  /* 估算應用（範例教學 5） */
+  var EST_CASES = [
+    { expr: '3.9 × 4', claimed: '1.56', correct: '15.6', roundA: '4', roundB: '4', roundOp: '×', roundResult: '16' },
+    { expr: '19.8 + 5.2', claimed: '71', correct: '25', roundA: '20', roundB: '5', roundOp: '+', roundResult: '25' },
+    { expr: '48.6 ÷ 6', claimed: '0.81', correct: '8.1', roundA: '49', roundB: '6', roundOp: '÷', roundResult: '8' }
+  ];
+
+  /* 遊戲：數線快問（5 關） */
+  var ROUNDS = [
+    { num: '4.36',  place: 1, ans: '4.4',  choices: ['4.4', '4.3', '4.36', '5.0', '4'],    lookDigit: '6' },
+    { num: '17.2',  place: 0, ans: '17',   choices: ['17', '18', '17.2', '16', '17.0'],    lookDigit: '2' },
+    { num: '8.95',  place: 1, ans: '9.0',  choices: ['9.0', '8.9', '8.10', '9', '8.95'],   lookDigit: '5' },
+    { num: '0.638', place: 2, ans: '0.64', choices: ['0.64', '0.63', '0.7', '0.638', '0.6'], lookDigit: '8' },
+    { num: '29.95', place: 0, ans: '30',   choices: ['30', '29', '29.9', '31', '29.95'],   lookDigit: '9' }
+  ];
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '差不多剛剛好 — 概數與四捨五入',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      h1: '📍 差不多剛剛好',
+      sub: '概數與四捨五入 —— 找出數線上最近的那個點',
+      intro: '生活裡常常不需要「剛剛好」的數字，只需要「大概多少」：<br>園遊會來了幾個人、步道有多長、東西賣多少錢 —— <strong>概數</strong>比精確數字更好用、更好記。',
+      nav1: '📖 上課（本頁）', nav2: '🗂️ 速查卡', nav3: '🔁 複習挑戰', nav4: '👨‍👩‍👧 給家長',
+      modeTitle: '今天想怎麼學？（隨時可以換）',
+      modes: {
+        ahead:  { icon: '🚀', h: '超前學習', p: '還沒學過，第一次認識', banner: '超前模式：慢慢看範例就好，試題只出 6 題基礎題，遊戲會自動給第一層提示。' },
+        school: { icon: '🏫', h: '跟上進度', p: '學校正在教，完整練習', banner: '跟上模式：完整 10 題，包含 4 題兩步驟文字題。' },
+        boost:  { icon: '💪', h: '補強練習', p: '學過但還不穩，加強', banner: '補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。' }
+      },
+      ebNext: '學完之後', nextH2: '把它記牢的三個動作',
+      next1: '🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2: '🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
+      next3: '❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
+      eb1: '範例教學 1', eb2: '範例教學 2', eb3: '範例教學 3', eb4: '範例教學 4', eb5: '範例教學 5', eb6: '試題', eb7: '小遊戲',
+      s1h2: '為什麼需要概數？',
+      s1lead: '點一個情境，看看精確數字和概數，哪一句話比較好記、比較好講？',
+      scenBtnShow: '說說看，概數怎麼講？',
+      scenarios: [
+        { exact: '園遊會這天，一共來了 987 個人。', round: '大約有 1000 個人來玩。' },
+        { exact: '這條步道全長 3847 公尺。', round: '大約是 3.8 公里的路。' },
+        { exact: '這枝自動鉛筆賣 38.5 元。', round: '大概 40 元左右。' }
+      ],
+      s2h2: '數線是主角：離哪個地標比較近？',
+      s2lead: '拖拖看下面的滑桿，數字會在兩個地標中間移動 —— 四捨五入就是找「比較近的那個地標」。',
+      s2placeLabel: '四捨五入到哪一位？',
+      lnAria: '數線，顯示兩個地標和中間可以拖曳的數字',
+      lnSliderLo: '比較靠近左邊地標', lnSliderHi: '比較靠近右邊地標',
+      lnNewBtn: '🎲 換一個數字',
+      lnLegendTarget: '要留下的那一位', lnLegendLook: '決定進退位的那一位',
+      placeName: function(p){ return p === 0 ? '整數' : (p === 1 ? '小數第一位' : '小數第二位'); },
+      lnLine: function(valStr, place, lookDigit, nearer, resultStr){
+        var verdict = Number(lookDigit) >= 5 ? '滿 5，要進位' : '不到 5，直接捨去';
+        return valStr + ' 比較靠近 <b>' + nearer + '</b>，決定的那一位是「' + lookDigit + '」，' + verdict + '，四捨五入到' + I18N.zh.placeName(place) + '是 <b>' + resultStr + '</b>。';
+      },
+      s3h2: '四捨五入到指定的位',
+      s3lead: '選一個數字、選一個目標位，看看要看哪一位、怎麼決定進或退。',
+      s3numLabel: '選一個數字：', s3placeLabel: '四捨五入到哪一位：',
+      stepWhy: function(numStr, place, lookDigit, resultStr){
+        if (lookDigit === null) return numStr + ' 這一位後面已經沒有數字了，不用進位，直接是 ' + resultStr + '。';
+        var verdict = Number(lookDigit) >= 5 ? '滿 5，要進位' : '不到 5，直接捨去';
+        return '看' + I18N.zh.placeName(place) + '後面那一位，是「' + lookDigit + '」，' + verdict + '，所以 ' + numStr + ' 四捨五入到' + I18N.zh.placeName(place) + '是 <b>' + resultStr + '</b>。';
+      },
+      s4h2: '不是每次都用四捨五入',
+      s4lead: '有時候生活情境需要「一定要夠」或「一定不能超過」，這時候不能四捨五入。',
+      cfCeilH: '無條件進位', cfFloorH: '無條件捨去',
+      cfCeilP: '137 顆糖果，每箱裝 20 顆，137 ÷ 20 = 6 箱又 17 顆 —— 剩下的 17 顆也要裝箱，所以要準備 <strong>7</strong> 個箱子。',
+      cfFloorP: '一條 6.75 公尺的繩子，最多能剪成幾段 1 公尺的繩子？6.75 裡面有 6 段又多 0.75 公尺 —— 剩下的 0.75 公尺剪不出完整一段，所以只能剪 <strong>6</strong> 段。',
+      cfWhyBtn: '為什麼？',
+      cfCeilExplain: '如果四捨五入，6.85 會變成 7，剛好一樣；但就算是 6.05 箱（多一點點），還是需要湊出第 7 箱，因為箱子不能切一半 —— 買箱子、租車、訂位這種「一定要夠」的情境，永遠用無條件進位。',
+      cfFloorExplain: '如果四捨五入，6.75 會變成 7 段；但真正剪出來的完整段數只有 6 段，多出來的 0.75 公尺不夠剪成一整段 —— 剪東西、換零錢這種「不能超過」的情境，永遠用無條件捨去。',
+      s5h2: '用概數幫答案抓漏',
+      s5lead: '算出答案以後，先用概數估一下大概多少，就能抓到算錯的地方。',
+      estCheckBtn: '檢查看看',
+      estClaimLine: function(expr, claimed){ return '有人算 ' + expr + '，答案寫成 ' + claimed + '，合理嗎？'; },
+      estDetail: function(a, op, b, roundResult, correct, plausible){
+        var head = '先估算：' + a + ' ' + op + ' ' + b + ' ≈ ' + roundResult + '。';
+        return head + (plausible
+          ? ' 這個答案的數量級是對的，看起來合理。'
+          : ' 答案跟估算差太多了，數量級不對，一定是哪裡算錯了！正確答案其實是 ' + correct + '。');
+      },
+      estVerdictBad: '不合理 ❌', estVerdictGood: '合理 ✅',
+      s6h2: '檢查一下',
+      s6lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      cAll: '全對！你已經是四捨五入高手 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面的數線再玩一次。',
+      qs: [
+        { stem: '把 3.847 四捨五入到小數第一位，答案是多少？',
+          opts: ['3.8', '3.9', '3.85', '4.8'], ans: 0,
+          why: '要看小數點後「第二位」，是 4，不到 5，直接捨去，所以是 3.8。' },
+        { stem: '把 12.638 四捨五入到整數，答案是多少？',
+          opts: ['13', '12', '12.6', '13.6'], ans: 0,
+          why: '看小數點後第一位是 6，滿 5 要進位，12 進位變成 13。' },
+        { stem: '把 0.954 四捨五入到小數第二位，答案是多少？',
+          opts: ['0.95', '0.96', '1.00', '0.9'], ans: 0,
+          why: '看小數點後第三位是 4，不到 5，直接捨去，所以是 0.95。' },
+        { stem: '把 9.982 四捨五入到小數第一位，答案是多少？',
+          opts: ['10.0', '9.9', '10', '9.98'], ans: 0,
+          why: '看小數點後第二位是 8，滿 5 要進位，9.9 再進位變成 10.0（要留到小數第一位，不能寫成 10）。' },
+        { stem: '把 24.505 四捨五入到整數，答案是多少？',
+          opts: ['25', '24', '24.5', '24.51'], ans: 0,
+          why: '看小數點後第一位是 5，滿 5 要進位，24 進位變成 25。' },
+        { stem: '把 3.968 四捨五入到小數第一位，答案是多少？',
+          opts: ['4.0', '3.9', '3.10', '3.97'], ans: 0,
+          why: '看小數點後第二位是 6，滿 5 要進位，3.9 再進位（9 進位變 10），所以是 4.0。' }
+      ],
+      qsAdv: [
+        { stem: '小安量到桌子的長度是 128.4 公分，換算成公尺是 1.284 公尺。老師要求寫到小數第二位，四捨五入後是多少公尺？',
+          opts: ['1.28', '1.29', '1.3', '1.284'], ans: 0,
+          why: '看小數點後第三位是 4，不到 5，直接捨去，所以是 1.28 公尺。' },
+        { stem: '一根繩子長 6.75 公尺，最多能剪成幾段 1 公尺的繩子？（提示：這裡不是四捨五入）',
+          opts: ['6', '7', '6.75', '0.75'], ans: 0,
+          why: '這裡要用「無條件捨去」，不是四捨五入 —— 剩下的 0.75 公尺剪不出一整段，所以只能剪 6 段。' },
+        { stem: '老闆要把 138 顆糖果裝進袋子，每袋最多裝 25 顆，至少需要幾個袋子？',
+          opts: ['6', '5', '5.52', '138'], ans: 0,
+          why: '138 ÷ 25 = 5 袋又 13 顆，剩下的 13 顆也要裝，所以要用「無條件進位」，準備 6 個袋子。' },
+        { stem: '小華說「19.6 公斤加 8.3 公斤，大概是 18 公斤」，這個估計合理嗎？正確的整數概數大約是多少？',
+          opts: ['28', '18', '27', '279'], ans: 0,
+          why: '19.6 四捨五入到整數約 20，8.3 約 8，20 + 8 = 28，所以正確答案應該接近 28，小華的 18 抓錯了數量級。' }
+      ],
+      qsBoost: [
+        { stem: '迷思檢查：小明要把 3.847 四捨五入到小數第一位，他看小數點後「第二位」以為是看最後一位「7」，所以進位變成 3.9。正確答案應該是多少？',
+          opts: ['3.8', '3.9', '3.85', '4.0'], ans: 0,
+          why: '要看的是目標位（小數第一位）後面那一位，也就是小數點後第二位「4」，不是最後一位的「7」。4 不到 5，直接捨去，正確答案是 3.8。' },
+        { stem: '迷思檢查：把 3.46 四捨五入到整數，小美先把它四捨五入到小數第一位變成 3.5，再把 3.5 四捨五入到整數變成 4。這樣對嗎？正確答案是多少？',
+          opts: ['3', '4', '3.5', '3.46'], ans: 0,
+          why: '一次就到位，不要一步一步進。四捨五入要直接看目標位（整數位）後面那一位：3.46 小數點後第一位是 4，不到 5，直接捨去，正確答案是 3。' }
+      ],
+      s7h2: '數線快問',
+      s7lead: '看清楚數字和目標位，選出正確的概數。答對愈快，分數愈高！',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
+      gAsk: function(numStr, place){ return numStr + ' 四捨五入到' + I18N.zh.placeName(place) + '，答案是多少？'; },
+      gHintBtn: '💡 提示',
+      gHint1: '提示 1：先看目標位後面那一位是幾。',
+      gHint2: function(lookDigit){ return '提示 2：這一位是「' + lookDigit + '」，5 或以上要進位，不到 5 就捨去。'; },
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      gCorrectFirst: function(ans){ return '答對了！' + ans + '，+20 分！'; },
+      gCorrectRetry: function(ans){ return '答對了！' + ans + '，+10 分。'; },
+      gWrong: function(v){ return v + ' 不是正確的概數，再試一次，−5 分。'; },
+      gClear: '按「下一關」繼續下一題。',
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      footer: '把整頁縮成一句：<strong>看下一位夠不夠 5 —— 夠了進，不夠就捨，四捨五入就是找數線上最近的那個點。</strong>'
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'About How Much? — Rounding Decimals',
+      btn: '中',
+      home: '← Back to teach-me home',
+      h1: '📍 About How Much?',
+      sub: 'Rounding decimals — finding the nearest point on the number line',
+      intro: 'Everyday life often doesn’t need an exact number — just "about how much":<br>how many people came to the fair, how long a trail is, how much something costs — <strong>a rounded number</strong> is easier to use and remember than the exact one.',
+      nav1: '📖 Lesson (this page)', nav2: '🗂️ Cheat sheet', nav3: '🔁 Review challenge', nav4: '👨‍👩‍👧 For parents',
+      modeTitle: 'How do you want to learn today? (switch anytime)',
+      modes: {
+        ahead:  { icon: '🚀', h: 'Learning ahead', p: 'First time meeting this topic', banner: 'Ahead mode: enjoy the examples above at your own pace — the quiz has just the 6 basics, and the game shows the first hint automatically.' },
+        school: { icon: '🏫', h: 'School pace', p: 'Learning it at school now', banner: 'School mode: the full 10 questions, including 4 two-step word problems.' },
+        boost:  { icon: '💪', h: 'Boost', p: 'Learned it, still shaky', banner: 'Boost mode: 2 misconception checks first, 12 questions in total — then head to the Review Challenge.' }
+      },
+      ebNext: 'After the lesson', nextH2: 'Three moves that make it stick',
+      next1: '🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
+      next2: '🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
+      next3: '❓ Anything unclear — ask your parents or your AI teacher until it clicks. Good learners ask.',
+      eb1: 'Example 1', eb2: 'Example 2', eb3: 'Example 3', eb4: 'Example 4', eb5: 'Example 5', eb6: 'Quiz', eb7: 'Game',
+      s1h2: 'Why Do We Need Rounded Numbers?',
+      s1lead: 'Tap a situation and compare the exact number with the rounded one — which is easier to say and remember?',
+      scenBtnShow: 'Show me the rounded version',
+      scenarios: [
+        { exact: '987 people came to the school fair today.', round: 'About 1,000 people came.' },
+        { exact: 'The trail is 3,847 meters long.', round: 'That’s about a 3.8 km walk.' },
+        { exact: 'This mechanical pencil costs $38.5.', round: 'That’s roughly $40.' }
+      ],
+      s2h2: 'The Number Line Takes the Lead: Which Landmark Is Closer?',
+      s2lead: 'Drag the slider below — the number moves between two landmarks. Rounding just means finding the "closer landmark".',
+      s2placeLabel: 'Round to which place?',
+      lnAria: 'A number line showing two landmarks and a draggable number in between',
+      lnSliderLo: 'Closer to the left landmark', lnSliderHi: 'Closer to the right landmark',
+      lnNewBtn: '🎲 New number',
+      lnLegendTarget: 'The digit we keep', lnLegendLook: 'The digit that decides',
+      placeName: function(p){ return p === 0 ? 'the nearest whole number' : (p === 1 ? 'the first decimal place' : 'the second decimal place'); },
+      lnLine: function(valStr, place, lookDigit, nearer, resultStr){
+        var verdict = Number(lookDigit) >= 5 ? 'it’s 5 or more, so round up' : 'it’s less than 5, so round down';
+        return valStr + ' is closer to <b>' + nearer + '</b>. The deciding digit is "' + lookDigit + '" — ' + verdict + ', so rounded to ' + I18N.en.placeName(place) + ' it’s <b>' + resultStr + '</b>.';
+      },
+      s3h2: 'Rounding to a Named Place',
+      s3lead: 'Pick a number and a target place, and see which digit to look at and how it decides rounding up or down.',
+      s3numLabel: 'Pick a number:', s3placeLabel: 'Round to which place:',
+      stepWhy: function(numStr, place, lookDigit, resultStr){
+        if (lookDigit === null) return numStr + ' has no digit after that place, so nothing changes — it’s ' + resultStr + '.';
+        var verdict = Number(lookDigit) >= 5 ? 'it’s 5 or more, so round up' : 'it’s less than 5, so round down';
+        return 'Look at the digit right after ' + I18N.en.placeName(place) + ': it’s "' + lookDigit + '" — ' + verdict + ', so ' + numStr + ' rounded to ' + I18N.en.placeName(place) + ' is <b>' + resultStr + '</b>.';
+      },
+      s4h2: 'Rounding Isn’t Always the Right Tool',
+      s4lead: 'Sometimes real life needs "must be enough" or "must not go over" — and then you can’t round the usual way.',
+      cfCeilH: 'Round Up (Ceiling)', cfFloorH: 'Round Down (Floor)',
+      cfCeilP: '137 candies, 20 per box: 137 ÷ 20 = 6 boxes with 17 left over. Those 17 still need a box, so you need <strong>7</strong> boxes.',
+      cfFloorP: 'A 6.75-meter rope — how many full 1-meter pieces can you cut? 6.75 has 6 full meters plus 0.75 left over, which isn’t enough for another full piece, so you only get <strong>6</strong> pieces.',
+      cfWhyBtn: 'Why?',
+      cfCeilExplain: 'With ordinary rounding, 6.85 would round to 7 — same answer here. But even 6.05 boxes (just a little over) still needs a 7th box, because boxes can’t be split in half. "Must be enough" situations — boxes, buses, seats — always round up.',
+      cfFloorExplain: 'With ordinary rounding, 6.75 would round to 7 pieces — but you only actually get 6 full pieces; the leftover 0.75 m isn’t enough for a whole one. "Must not go over" situations — cutting material, making change — always round down.',
+      s5h2: 'Use Rounding to Catch Mistakes',
+      s5lead: 'After computing an answer, estimate it first with rounded numbers — that’s how you catch a wrong answer.',
+      estCheckBtn: 'Check it',
+      estClaimLine: function(expr, claimed){ return 'Someone computed ' + expr + ' and got ' + claimed + '. Is that reasonable?'; },
+      estDetail: function(a, op, b, roundResult, correct, plausible){
+        var head = 'Estimate first: ' + a + ' ' + op + ' ' + b + ' ≈ ' + roundResult + '.';
+        return head + (plausible
+          ? ' That’s the right order of magnitude, so it looks reasonable.'
+          : ' The answer is way off from the estimate — the order of magnitude is wrong, so something was miscalculated! The correct answer is actually ' + correct + '.');
+      },
+      estVerdictBad: 'Not reasonable ❌', estVerdictGood: 'Reasonable ✅',
+      s6h2: 'Quick Check',
+      s6lead: 'Tap an answer and we’ll tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll: 'Perfect score! You’re a rounding master 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That’s okay — scroll up and play with the number line one more time.',
+      qs: [
+        { stem: 'Round 3.847 to the first decimal place. What’s the answer?',
+          opts: ['3.8', '3.9', '3.85', '4.8'], ans: 0,
+          why: 'Look at the digit right after the first decimal place — the second decimal digit is 4, less than 5, so round down: 3.8.' },
+        { stem: 'Round 12.638 to the nearest whole number. What’s the answer?',
+          opts: ['13', '12', '12.6', '13.6'], ans: 0,
+          why: 'The first decimal digit is 6, which is 5 or more, so 12 rounds up to 13.' },
+        { stem: 'Round 0.954 to the second decimal place. What’s the answer?',
+          opts: ['0.95', '0.96', '1.00', '0.9'], ans: 0,
+          why: 'The third decimal digit is 4, less than 5, so round down: 0.95.' },
+        { stem: 'Round 9.982 to the first decimal place. What’s the answer?',
+          opts: ['10.0', '9.9', '10', '9.98'], ans: 0,
+          why: 'The second decimal digit is 8, 5 or more, so 9.9 rounds up (carrying the 9 to 10) — 10.0, keeping one decimal place.' },
+        { stem: 'Round 24.505 to the nearest whole number. What’s the answer?',
+          opts: ['25', '24', '24.5', '24.51'], ans: 0,
+          why: 'The first decimal digit is 5, 5 or more, so 24 rounds up to 25.' },
+        { stem: 'Round 3.968 to the first decimal place. What’s the answer?',
+          opts: ['4.0', '3.9', '3.10', '3.97'], ans: 0,
+          why: 'The second decimal digit is 6, 5 or more, so 3.9 rounds up again (9 carries to 10), giving 4.0.' }
+      ],
+      qsAdv: [
+        { stem: 'Ann measured a table at 128.4 cm, which is 1.284 m. Her teacher wants it to 2 decimal places. What’s the rounded answer?',
+          opts: ['1.28', '1.29', '1.3', '1.284'], ans: 0,
+          why: 'The third decimal digit is 4, less than 5, so round down: 1.28 m.' },
+        { stem: 'A 6.75-meter rope — how many full 1-meter pieces can be cut from it? (Hint: this isn’t ordinary rounding)',
+          opts: ['6', '7', '6.75', '0.75'], ans: 0,
+          why: 'This calls for rounding down (floor), not ordinary rounding — the leftover 0.75 m can’t make another whole piece, so only 6.' },
+        { stem: 'A shop owner packs 138 candies into bags of at most 25 each. How many bags are needed at least?',
+          opts: ['6', '5', '5.52', '138'], ans: 0,
+          why: '138 ÷ 25 = 5 bags with 13 left over, which still need a bag — round up (ceiling) to 6 bags.' },
+        { stem: 'Hua says "19.6 kg plus 8.3 kg is about 18 kg" — is that reasonable? What should the rounded whole-number estimate actually be?',
+          opts: ['28', '18', '27', '279'], ans: 0,
+          why: '19.6 rounds to about 20, 8.3 rounds to about 8, and 20 + 8 = 28 — so the answer should be close to 28. Hua’s 18 is off by an order of magnitude.' }
+      ],
+      qsBoost: [
+        { stem: 'Misconception check: Ming rounds 3.847 to the first decimal place, but looks at the very last digit "7" instead of the digit right after the target place, so he rounds up to 3.9. What’s the correct answer?',
+          opts: ['3.8', '3.9', '3.85', '4.0'], ans: 0,
+          why: 'The digit to check is the one right after the target place — the second decimal digit, "4" — not the last digit "7". Since 4 is less than 5, round down: the correct answer is 3.8.' },
+        { stem: 'Misconception check: to round 3.46 to a whole number, Mia first rounds it to 3.5 (one decimal place), then rounds 3.5 up to 4. Is that correct? What’s the right answer?',
+          opts: ['3', '4', '3.5', '3.46'], ans: 0,
+          why: 'Round straight to the target in one step — don’t chain-round. Look directly at the digit after the whole-number place: 3.46’s first decimal digit is 4, less than 5, so round down — the correct answer is 3.' }
+      ],
+      s7h2: 'Number-Line Speed Round',
+      s7lead: 'Look carefully at the number and the target place, then pick the right rounded value. The faster you answer, the more points you score!',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
+      gAsk: function(numStr, place){ return 'Round ' + numStr + ' to ' + I18N.en.placeName(place) + '. What’s the answer?'; },
+      gHintBtn: '💡 Hint',
+      gHint1: 'Hint 1: first look at the digit right after the target place.',
+      gHint2: function(lookDigit){ return 'Hint 2: that digit is "' + lookDigit + '" — 5 or more rounds up, less than 5 rounds down.'; },
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      gCorrectFirst: function(ans){ return 'Correct on the first try! ' + ans + ' — +20 points!'; },
+      gCorrectRetry: function(ans){ return 'Correct! ' + ans + ' — +10 points.'; },
+      gWrong: function(v){ return v + ' isn’t the correct rounded value — try again. −5 points.'; },
+      gClear: 'Press "Next round" to try the next number.',
+      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press "Restart" to play again.'; },
+      footer: 'The whole page in one line: <strong>check the next digit for 5 — enough, round up; not enough, round down. That’s just finding the nearest point on the number line.</strong>'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
+  var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+
+  function buildModeCards(){
+    var d = L();
+    modeCards.textContent = '';
+    ['ahead', 'school', 'boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  /* ---------- 1. 為什麼需要概數 ---------- */
+  var scenIdx = 0;
+  var scenChips = document.getElementById('scenChips');
+  var scenExact = document.getElementById('scenExact');
+  var scenBtn = document.getElementById('scenBtn');
+  var scenRound = document.getElementById('scenRound');
+
+  function buildScenChips(){
+    scenChips.textContent = '';
+    SCENARIOS.forEach(function(s, i){
+      var b = makeChip(s.icon, i === scenIdx);
+      b.addEventListener('click', function(){ scenIdx = i; buildScenChips(); renderScen(); });
+      scenChips.appendChild(b);
+    });
+  }
+  function renderScen(){
+    scenExact.textContent = L().scenarios[scenIdx].exact;
+    scenRound.textContent = '';
+    scenBtn.disabled = false;
+  }
+  scenBtn.addEventListener('click', function(){
+    scenRound.textContent = L().scenarios[scenIdx].round;
+  });
+
+  /* ---------- 2. 數線是主角 ---------- */
+  var lnPlace = 1;
+  var lnScene = 0;
+  var lnPlaceChips = document.getElementById('lnPlaceChips');
+  var lnSlider = document.getElementById('lnSlider');
+  var lnGroup = document.getElementById('lnGroup');
+  var lnLine = document.getElementById('lnLine');
+  var lnNewBtn = document.getElementById('lnNewBtn');
+
+  function buildLnPlaceChips(){
+    lnPlaceChips.textContent = '';
+    [0, 1, 2].forEach(function(p){
+      var b = makeChip(L().placeName(p), p === lnPlace);
+      b.addEventListener('click', function(){
+        lnPlace = p; lnScene = 0; lnSlider.value = 4;
+        buildLnPlaceChips(); renderNumline();
+      });
+      lnPlaceChips.appendChild(b);
+    });
+  }
+
+  function currentLnScenario(){
+    var pool = LN_SCENES[lnPlace];
+    return pool[lnScene % pool.length];
+  }
+
+  function renderNumline(){
+    var sc = currentLnScenario();
+    var place = lnPlace;
+    var lowerTicks = sc.landmarkScaled * 10;
+    var digit = Number(lnSlider.value);
+    var valueTicks = lowerTicks + digit;
+    var lowerLabel = ticksToStr(sc.landmarkScaled, place);
+    var upperLabel = ticksToStr(sc.landmarkScaled + 1, place);
+    var valLabel = ticksToStr(valueTicks, place + 1);
+    var nearer = digit >= 5 ? upperLabel : lowerLabel;
+    var resultStr = roundDecimalStr(valLabel, place);
+
+    /* draw SVG */
+    lnGroup.textContent = '';
+    var x0 = 90, x1 = 610, y = 90;
+    var xFor = function(d){ return x0 + (d / 9) * (x1 - x0); };
+    lnGroup.appendChild(svgEl('line', { x1: x0, y1: y, x2: x1, y2: y, stroke: '#2B2A33', 'stroke-width': 3 }));
+    /* highlighted side */
+    var midX = xFor(4.5);
+    if (digit >= 5){
+      lnGroup.appendChild(svgEl('rect', { x: midX, y: y - 4, width: x1 - midX, height: 8, fill: '#E3F4EB' }));
+    } else {
+      lnGroup.appendChild(svgEl('rect', { x: x0, y: y - 4, width: midX - x0, height: 8, fill: '#E3F4EB' }));
+    }
+    lnGroup.appendChild(svgEl('line', { x1: x0, y1: y, x2: x1, y2: y, stroke: '#2B2A33', 'stroke-width': 3 }));
+    /* landmark ticks */
+    [ { x: x0, label: lowerLabel }, { x: x1, label: upperLabel } ].forEach(function(pt){
+      lnGroup.appendChild(svgEl('line', { x1: pt.x, y1: y - 14, x2: pt.x, y2: y + 14, stroke: '#2B2A33', 'stroke-width': 3 }));
+      var t = svgEl('text', { x: pt.x, y: y + 40, 'text-anchor': 'middle', 'font-size': 24, 'font-weight': 'bold', fill: '#2B2A33' });
+      t.textContent = pt.label;
+      lnGroup.appendChild(t);
+    });
+    /* midpoint marker */
+    lnGroup.appendChild(svgEl('line', { x1: midX, y1: y - 10, x2: midX, y2: y + 10, stroke: '#E8871E', 'stroke-width': 2, 'stroke-dasharray': '4,3' }));
+    var midT = svgEl('text', { x: midX, y: y - 22, 'text-anchor': 'middle', 'font-size': 13, fill: '#E8871E' });
+    midT.textContent = ticksToStr(lowerTicks + 5, place + 1);
+    lnGroup.appendChild(midT);
+    /* current value marker */
+    var cx = xFor(digit);
+    lnGroup.appendChild(svgEl('circle', { cx: cx, cy: y, r: 12, fill: digit >= 5 ? '#2F9E69' : '#3B7DD8' }));
+    var ct = svgEl('text', { x: cx, y: y - 26, 'text-anchor': 'middle', 'font-size': 22, 'font-weight': 'bold', fill: '#2B2A33' });
+    ct.textContent = valLabel;
+    lnGroup.appendChild(ct);
+
+    lnLine.innerHTML = L().lnLine(valLabel, place, String(digit), nearer, resultStr);
+  }
+
+  lnSlider.addEventListener('input', renderNumline);
+  lnNewBtn.addEventListener('click', function(){
+    var pool = LN_SCENES[lnPlace];
+    lnScene = (lnScene + 1) % pool.length;
+    lnSlider.value = Math.floor(Math.random() * 10);
+    renderNumline();
+  });
+
+  /* ---------- 3. 四捨五入到指定的位 ---------- */
+  var stepNum = STEP_NUMS[0];
+  var stepPlace = 1;
+  var stepNumChips = document.getElementById('stepNumChips');
+  var stepPlaceChips = document.getElementById('stepPlaceChips');
+  var stepDigits = document.getElementById('stepDigits');
+  var stepResultRow = document.getElementById('stepResultRow');
+  var stepResult = document.getElementById('stepResult');
+  var stepWhy = document.getElementById('stepWhy');
+
+  function buildStepNumChips(){
+    stepNumChips.textContent = '';
+    STEP_NUMS.forEach(function(n){
+      var b = makeChip(n, n === stepNum);
+      b.addEventListener('click', function(){ stepNum = n; buildStepNumChips(); renderStep(); });
+      stepNumChips.appendChild(b);
+    });
+  }
+  function buildStepPlaceChips(){
+    stepPlaceChips.textContent = '';
+    [0, 1, 2].forEach(function(p){
+      var b = makeChip(L().placeName(p), p === stepPlace);
+      b.addEventListener('click', function(){ stepPlace = p; buildStepPlaceChips(); renderStep(); });
+      stepPlaceChips.appendChild(b);
+    });
+  }
+  function digitPositions(intPart, fracPart, place){
+    if (place === 0){
+      return { target: intPart.length - 1, look: fracPart.length > 0 ? intPart.length + 1 : -1 };
+    }
+    return { target: intPart.length + place, look: (fracPart.length > place) ? (intPart.length + place + 1) : -1 };
+  }
+  function renderStep(){
+    var dot = stepNum.indexOf('.');
+    var intPart = dot < 0 ? stepNum : stepNum.slice(0, dot);
+    var fracPart = dot < 0 ? '' : stepNum.slice(dot + 1);
+    var chars = intPart.split('').concat(dot < 0 ? [] : ['.'].concat(fracPart.split('')));
+    var pos = digitPositions(intPart, fracPart, stepPlace);
+
+    stepDigits.textContent = '';
+    chars.forEach(function(ch, i){
+      var box = document.createElement('div');
+      box.className = 'dchar' + (ch === '.' ? ' dot' : '') + (i === pos.target ? ' target' : '') + (i === pos.look ? ' look' : '');
+      box.textContent = ch;
+      stepDigits.appendChild(box);
+    });
+
+    var resultStr = roundDecimalStr(stepNum, stepPlace);
+    stepResult.textContent = resultStr;
+    stepResultRow.style.display = 'flex';
+    var lookDigit = pos.look >= 0 ? chars[pos.look] : null;
+    stepWhy.innerHTML = L().stepWhy(stepNum, stepPlace, lookDigit, resultStr);
+  }
+
+  /* ---------- 4. 無條件進位／捨去 ---------- */
+  var cfCeilBtn = document.getElementById('cfCeilBtn');
+  var cfCeilExplain = document.getElementById('cfCeilExplain');
+  var cfFloorBtn = document.getElementById('cfFloorBtn');
+  var cfFloorExplain = document.getElementById('cfFloorExplain');
+  cfCeilBtn.addEventListener('click', function(){ cfCeilExplain.classList.toggle('show'); });
+  cfFloorBtn.addEventListener('click', function(){ cfFloorExplain.classList.toggle('show'); });
+
+  /* ---------- 5. 估算應用 ---------- */
+  var estCards = document.getElementById('estCards');
+  function buildEstCards(){
+    var d = L();
+    estCards.textContent = '';
+    EST_CASES.forEach(function(c, i){
+      var card = document.createElement('div');
+      card.className = 'est-card';
+      var expr = document.createElement('div');
+      expr.className = 'est-expr'; expr.textContent = c.expr;
+      var line = document.createElement('p');
+      line.style.marginTop = '8px'; line.style.fontSize = '14px'; line.style.color = 'var(--muted)';
+      line.textContent = d.estClaimLine(c.expr, c.claimed);
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'btn ghost'; btn.style.marginTop = '10px';
+      btn.textContent = d.estCheckBtn;
+      var detail = document.createElement('div');
+      detail.className = 'est-detail';
+      var plausible = plausibleCheck(c);
+      btn.addEventListener('click', function(){
+        detail.innerHTML = '<b>' + (plausible ? d.estVerdictGood : d.estVerdictBad) + '</b><br>' +
+          d.estDetail(c.roundA, c.roundOp, c.roundB, c.roundResult, c.correct, plausible);
+        detail.classList.add('show');
+        card.classList.add('on');
+      });
+      card.appendChild(expr); card.appendChild(line); card.appendChild(btn); card.appendChild(detail);
+      estCards.appendChild(card);
+    });
+  }
+  function plausibleCheck(c){
+    /* 用估算值和聲稱答案比較數量級（差距在估算值一半以內才算合理） */
+    var est = Number(c.roundResult);
+    var claimed = Number(c.claimed);
+    return Math.abs(claimed - est) <= est * 0.5;
+  }
+
+  /* ---------- 6. 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
+  function buildQuiz(){
+    var d = L();
+    var list = quizSet();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    qTotal.textContent = list.length;
+    list.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 7. 小遊戲：數線快問 ---------- */
+  var gRound = 0, gScore = 0, gMistake = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gAskLine = document.getElementById('gAskLine');
+  var gAnswers = document.getElementById('gAnswers');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+  var hintLevel = 0;
+
+  function startRound(){
+    var round = ROUNDS[gRound];
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    gAskLine.textContent = L().gAsk(round.num, round.place);
+
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    gHintBtn.textContent = L().gHintBtn;
+    if (mode === 'ahead'){
+      hintLevel = 1;
+      elHint.textContent = L().gHint1;
+    } else {
+      elHint.textContent = '';
+    }
+
+    gAnswers.textContent = '';
+    round.choices.forEach(function(v){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'opt'; b.textContent = v;
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        if (v === round.ans){
+          var all = gAnswers.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          b.classList.add('right');
+          if (gMistake){
+            gScore += 10;
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrectRetry(round.ans) + '</span>';
+          } else {
+            gScore += 20;
+            gMsg.innerHTML = '<span class="yes">' + L().gCorrectFirst(round.ans) + '</span>';
+          }
+          if (gRound === ROUNDS.length - 1){
+            gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore) + '</span>';
+          } else {
+            gMsg.innerHTML += ' ' + L().gClear;
+            gNext.disabled = false;
+          }
+        } else {
+          gMistake = true;
+          b.disabled = true;
+          b.classList.add('wrong');
+          gScore = Math.max(0, gScore - 5);
+          gMsg.innerHTML = '<span class="no">' + L().gWrong(v) + '</span>';
+        }
+        elScore.textContent = gScore;
+      });
+      gAnswers.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  gHintBtn.addEventListener('click', function(){
+    hintLevel++;
+    if (hintLevel === 1){
+      elHint.textContent = L().gHint1;
+    } else {
+      elHint.textContent = L().gHint2(ROUNDS[gRound].lookDigit);
+      gHintBtn.disabled = true;
+    }
+  });
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildModeCards();
+    buildScenChips();
+    renderScen();
+    buildLnPlaceChips();
+    renderNumline();
+    buildStepNumChips();
+    buildStepPlaceChips();
+    renderStep();
+    buildEstCards();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+  /* 記錄最後上的課，供首頁「繼續上次」使用 */
+  try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-5/math/rounding/', zh:'差不多剛剛好 — 概數與四捨五入', en:'About How Much?', icon:'📍'})); } catch(e){}
+
+})();
+</script>
+</body>
+</html>

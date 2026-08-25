@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>形狀複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.75; font-size:18px;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+  .opts.textopts{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .opt{
+    border:3px solid var(--line);background:var(--bg);border-radius:14px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);min-height:44px;display:flex;align-items:center;justify-content:center;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+  svg.bigshape polygon, svg.bigshape circle{ fill:var(--orange-soft); stroke:var(--orange); stroke-width:5 }
+  svg.familyicon .solidface{ fill:#FBE0B8; stroke:#B9722B; stroke-width:4 }
+  svg.familyicon .solidfacetop{ fill:#FDEFD4; stroke:#B9722B; stroke-width:4 }
+  svg.familyicon .solidfaceside{ fill:#F4C989; stroke:#B9722B; stroke-width:4 }
+  svg.familyicon .solidball{ fill:#CFE8FF; stroke:#3B7DD8; stroke-width:4 }
+  svg.familyicon .solidballshine{ fill:#fff; opacity:.75 }
+  svg.familyicon .solidcanbody{ fill:#DCF3E5; stroke:#2F9E69; stroke-width:4 }
+  svg.familyicon .solidcantop{ fill:#EFFBF3; stroke:#2F9E69; stroke-width:4 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 形狀複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：每按一次都會<strong>重新出新的形狀</strong>，
+    背答案沒有用，要真的看懂形狀。<br>建議<strong>隔一天來一次</strong>。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---- shape geometry (identical to index.html, verified via scratchpad/test-shapegeo.js) ---- */
+  function deg2rad(d){ return d * Math.PI / 180; }
+  function rotatePoint(x, y, cx, cy, angleDeg){
+    var a = deg2rad(angleDeg);
+    var dx = x - cx, dy = y - cy;
+    return { x: cx + dx*Math.cos(a) - dy*Math.sin(a), y: cy + dx*Math.sin(a) + dy*Math.cos(a) };
+  }
+  function ptDist(p1, p2){ return Math.hypot(p2.x-p1.x, p2.y-p1.y); }
+  function polygonSides(pts){
+    var s=[]; for (var i=0;i<pts.length;i++) s.push(ptDist(pts[i], pts[(i+1)%pts.length]));
+    return s;
+  }
+  function angleAt(pPrev, pCur, pNext){
+    var v1x=pPrev.x-pCur.x, v1y=pPrev.y-pCur.y, v2x=pNext.x-pCur.x, v2y=pNext.y-pCur.y;
+    var dot=v1x*v2x+v1y*v2y, m1=Math.hypot(v1x,v1y), m2=Math.hypot(v2x,v2y);
+    var c=Math.max(-1,Math.min(1,dot/(m1*m2)));
+    return Math.acos(c)*180/Math.PI;
+  }
+  function polygonAngles(pts){
+    var a=[], n=pts.length;
+    for (var i=0;i<n;i++) a.push(angleAt(pts[(i-1+n)%n], pts[i], pts[(i+1)%n]));
+    return a;
+  }
+  function shoelaceArea(pts){
+    var s=0, n=pts.length;
+    for (var i=0;i<n;i++){ var p1=pts[i], p2=pts[(i+1)%n]; s += (p1.x*p2.y - p2.x*p1.y); }
+    return Math.abs(s)/2;
+  }
+  function makeSquare(cx, cy, side, rot){
+    var h = side/2;
+    var base = [{x:cx-h,y:cy-h},{x:cx+h,y:cy-h},{x:cx+h,y:cy+h},{x:cx-h,y:cy+h}];
+    return base.map(function(p){ return rotatePoint(p.x,p.y,cx,cy,rot); });
+  }
+  function makeRectangle(cx, cy, w, h, rot){
+    var hw=w/2, hh=h/2;
+    var base=[{x:cx-hw,y:cy-hh},{x:cx+hw,y:cy-hh},{x:cx+hw,y:cy+hh},{x:cx-hw,y:cy+hh}];
+    return base.map(function(p){ return rotatePoint(p.x,p.y,cx,cy,rot); });
+  }
+  function makeTriangle(cx, cy, size, rot, variant){
+    variant = variant || 'normal';
+    var pts, tries;
+    for (tries=0; tries<60; tries++){
+      var baseAngles=[0,120,240].map(function(a){ return a + (Math.random()*40-20); });
+      var radii;
+      if (variant==='thin') radii=[size*1.0, size*(0.25+Math.random()*0.15), size*(0.9+Math.random()*0.1)];
+      else if (variant==='wide') radii=[size*(0.6+Math.random()*0.1), size*(0.95+Math.random()*0.1), size*(0.6+Math.random()*0.1)];
+      else radii = baseAngles.map(function(){ return size*(0.55+Math.random()*0.45); });
+      pts = baseAngles.map(function(a,i){ var r=deg2rad(a); return {x:cx+radii[i]*Math.cos(r), y:cy+radii[i]*Math.sin(r)}; });
+      if (shoelaceArea(pts) > size*size*0.02) return pts.map(function(p){ return rotatePoint(p.x,p.y,cx,cy,rot); });
+    }
+    pts=[0,120,240].map(function(a){ var r=deg2rad(a); return {x:cx+size*Math.cos(r), y:cy+size*Math.sin(r)}; });
+    return pts.map(function(p){ return rotatePoint(p.x,p.y,cx,cy,rot); });
+  }
+  function ptsAttr(pts){ return pts.map(function(p){ return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' '); }
+
+  function bigShapeSVG(desc, px){
+    px = px || 100;
+    var cx=100, cy=100, body;
+    if (desc.kind === 'triangle'){
+      /* IMPORTANT: makeTriangle() is randomized internally (jittered angles/radii), so
+         calling it again here would draw a DIFFERENT triangle than the one whose side/
+         angle count a generator already computed for the answer. Always reuse the exact
+         points computed at make()-time (desc.pts) when present; only fall back to a
+         fresh call when no precomputed points were given (e.g. decorative renders). */
+      var triPts = desc.pts || makeTriangle(cx,cy,desc.size||72,desc.rot||0,desc.variant||'normal');
+      body = '<polygon points="'+ptsAttr(triPts)+'"></polygon>';
+    } else if (desc.kind === 'square'){
+      body = '<polygon points="'+ptsAttr(makeSquare(cx,cy,desc.size||96,desc.rot||0))+'"></polygon>';
+    } else if (desc.kind === 'rectangle'){
+      body = '<polygon points="'+ptsAttr(makeRectangle(cx,cy,desc.w||118,desc.h||62,desc.rot||0))+'"></polygon>';
+    } else {
+      body = '<circle cx="'+cx+'" cy="'+cy+'" r="'+(desc.r||58)+'"></circle>';
+    }
+    return '<svg viewBox="0 0 200 200" width="'+px+'" height="'+px+'" class="bigshape">'+body+'</svg>';
+  }
+  function familyIconSVG(fam, px){
+    px = px || 54;
+    var body;
+    if (fam==='box'){
+      body = '<polygon class="solidface" points="18,42 58,42 58,84 18,84"></polygon>'+
+             '<polygon class="solidfacetop" points="18,42 33,22 73,22 58,42"></polygon>'+
+             '<polygon class="solidfaceside" points="58,42 73,22 73,64 58,84"></polygon>';
+    } else if (fam==='ball'){
+      body = '<circle class="solidball" cx="50" cy="55" r="32"></circle>'+
+             '<ellipse class="solidballshine" cx="39" cy="42" rx="8" ry="5"></ellipse>';
+    } else {
+      body = '<ellipse class="solidcantop" cx="50" cy="28" rx="24" ry="9"></ellipse>'+
+             '<path class="solidcanbody" d="M26,28 L26,74 A24,9 0 0 0 74,74 L74,28"></path>';
+    }
+    return '<svg viewBox="0 0 100 100" width="'+px+'" height="'+px+'" class="familyicon">'+body+'</svg>';
+  }
+
+  var PLANE_KINDS = ['triangle','square','rectangle','circle'];
+  var FAMILIES = ['box','ball','can'];
+  var OBJECT_POOL = {
+    box: ['🎁','🧊','📚','🎲'],
+    ball: ['⚽','🍊','🔮','🎱'],
+    can: ['🥫','🕯️','🥤','🛢️']
+  };
+  var OBJECT_FAM = {};
+  FAMILIES.forEach(function(f){ OBJECT_POOL[f].forEach(function(o){ OBJECT_FAM[o] = f; }); });
+
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'形狀複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 形狀複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：每按一次都會<strong>重新出新的形狀</strong>，背答案沒有用，要真的看懂形狀。<br>建議<strong>隔一天來一次</strong>。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Shapes Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Shapes Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> — every batch draws <strong>fresh new shapes</strong>, so memorising answers won’t help; you have to really see the shape.<br>Come back <strong>a day later</strong>.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { plane:'平面辨認', sqrect:'正方形/長方形', solid:'立體分類', compose:'圖形拼排', attr:'屬性判斷' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      shapeName: function(k){ return {triangle:'三角形',square:'正方形',rectangle:'長方形',circle:'圓形'}[k]; },
+      familyName: function(f){ return {box:'像盒子的',ball:'像球的',can:'像罐子的'}[f]; },
+      objectName: function(o){
+        var m = {'🎁':'禮物盒','🧊':'骰子','📚':'書','🎲':'骰子',
+          '⚽':'足球','🍊':'橘子','🔮':'水晶球','🎱':'撞球',
+          '🥫':'罐頭','🕯️':'蠟燭','🥤':'飲料杯','🛢️':'油桶'};
+        return m[o] || o;
+      },
+      linkNames: { plane:'📖 回去看：形狀朋友大集合', sqrect:'📖 回去看：正方形 vs 長方形', solid:'📖 回去看：像什麼家族？', compose:'📖 回去看：合起來、接下去', attr:'🗂️ 回去看：速查卡' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { plane:'Shape ID', sqrect:'Square/Rectangle', solid:'Solid families', compose:'Composing', attr:'Attributes' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      shapeName: function(k){ return {triangle:'triangle',square:'square',rectangle:'rectangle',circle:'circle'}[k]; },
+      familyName: function(f){ return {box:'box-like',ball:'ball-like',can:'can-like'}[f]; },
+      objectName: function(o){
+        var m = {'🎁':'gift box','🧊':'die','📚':'books','🎲':'die',
+          '⚽':'soccer ball','🍊':'orange','🔮':'crystal ball','🎱':'billiard ball',
+          '🥫':'can','🕯️':'candle','🥤':'cup','🛢️':'drum'};
+        return m[o] || o;
+      },
+      linkNames: { plane:'📖 Revisit: Meet the Shape Friends', sqrect:'📖 Revisit: Square vs Rectangle', solid:'📖 Revisit: Which Family?', compose:'📖 Revisit: Combine It, Continue It', attr:'🗂️ Revisit: Cheat sheet' }
+    }
+  };
+
+  var LINK_HREFS = { plane:'index.html#sec-plane', sqrect:'index.html#sec-sqrect', solid:'index.html#sec-solid', compose:'index.html#sec-compose', attr:'reference.html' };
+
+  /* ---------- utils ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){ var k = rand(j+1); var t=a[j]; a[j]=a[k]; a[k]=t; }
+    return a;
+  }
+  function approxEq(a,b,tol){ return Math.abs(a-b) <= tol; }
+
+  /* ---------- generators: every answer is COMPUTED from the freshly generated shape ---------- */
+  var GENS = [
+    /* G1 — 平面辨認：隨機畫一個形狀，選出它的名字 */
+    { id:'identifyShape', cat:'plane',
+      make: function(){
+        var kind = pick(PLANE_KINDS);
+        var desc = { kind:kind, rot: rand(360) };
+        if (kind==='triangle') desc.variant = pick(['normal','thin','wide']);
+        if (kind==='rectangle'){ desc.w = 70+rand(60); desc.h = desc.w + 30 + rand(40); }
+        if (kind==='square') desc.size = 60+rand(50);
+        if (kind==='circle') desc.r = 30+rand(30);
+        return { desc:desc, correctKind: kind };
+      },
+      fmt: function(d, lang, t){
+        /* A square IS technically also a rectangle (all 4 sides just happen to be
+           equal), so when the shown shape is a square, offering "rectangle" as a
+           WRONG option would be reachable by fully correct reasoning — drop it from
+           the pool in that one case. (The reverse is never ambiguous: our generated
+           rectangles always have h >= w+30, so a real rectangle is never a square.) */
+        var pool = d.correctKind === 'square' ? PLANE_KINDS.filter(function(k){ return k !== 'rectangle'; }) : PLANE_KINDS;
+        var opts = shuffle(pool);
+        var ans = opts.indexOf(d.correctKind);
+        return {
+          stemShape: d.desc,
+          stem: lang==='zh' ? '這是什麼形狀？' : 'What shape is this?',
+          opts: opts.map(function(k){ return t.shapeName(k); }),
+          ans: ans,
+          why: lang==='zh' ? '它是' + t.shapeName(d.correctKind) + '。' : 'It’s a ' + t.shapeName(d.correctKind) + '.'
+        };
+      } },
+    /* G5 — 平面辨認：正方形轉了很多度，還是正方形嗎（一律是，因為旋轉不改變邊長與角度）*/
+    { id:'rotateStillSquare', cat:'plane',
+      make: function(){
+        var rot = 10 + rand(340);
+        var side = 60 + rand(60);
+        var pts = makeSquare(100,100,side,rot);
+        var sides = polygonSides(pts);
+        var angs = polygonAngles(pts);
+        var stillSquare = sides.every(function(s){ return approxEq(s, side, side*0.01); }) &&
+                           angs.every(function(a){ return approxEq(a, 90, 0.5); });
+        return { desc:{kind:'square', rot:rot, size:side}, rot:rot, stillSquare: stillSquare };
+      },
+      fmt: function(d, lang, t){
+        var yes = lang==='zh' ? '還是正方形' : 'Still a square';
+        var no = lang==='zh' ? '不是正方形了' : 'Not a square anymore';
+        var opts = shuffle([yes, no]);
+        var ans = opts.indexOf(d.stillSquare ? yes : no);
+        return {
+          stemShape: d.desc,
+          stem: lang==='zh' ? '轉了 ' + Math.round(d.rot) + ' 度，還是正方形嗎？' : 'Rotated ' + Math.round(d.rot) + '° — still a square?',
+          opts: opts, ans: ans,
+          why: lang==='zh' ? '轉一轉只是換方向，邊長和角度都沒變，所以還是正方形。' : 'Rotating only changes direction — side lengths and angles stay the same, so it’s still a square.'
+        };
+      } },
+    /* G2 — 正方形/長方形：這是正方形還是長方形（由實際邊長判斷）*/
+    { id:'squareOrRectangle', cat:'sqrect',
+      make: function(){
+        var isSq = Math.random() < 0.5;
+        var w = 60 + rand(60);
+        var h = isSq ? w : w + 25 + rand(45);
+        var rot = rand(360);
+        var pts = makeRectangle(100,100,w,h,rot);
+        var sides = polygonSides(pts);
+        var actualSquare = approxEq(sides[0], sides[1], Math.min(w,h)*0.02);
+        return { desc:{kind:'rectangle', w:w, h:h, rot:rot}, actualSquare: actualSquare };
+      },
+      fmt: function(d, lang, t){
+        var sq = lang==='zh' ? '正方形' : 'Square';
+        var rc = lang==='zh' ? '長方形' : 'Rectangle';
+        var opts = shuffle([sq, rc]);
+        var ans = opts.indexOf(d.actualSquare ? sq : rc);
+        return {
+          stemShape: d.desc,
+          stem: lang==='zh' ? '這是正方形還是長方形？' : 'Is this a square or a rectangle?',
+          opts: opts, ans: ans,
+          why: d.actualSquare
+            ? (lang==='zh' ? '四個邊一樣長，是正方形。' : 'All four sides are equal — it’s a square.')
+            : (lang==='zh' ? '對邊一樣長但四邊不全相等，是長方形。' : 'Opposite sides are equal but not all four — it’s a rectangle.')
+        };
+      } },
+    /* G3 — 屬性判斷：這個形狀有幾個邊（由 polygonSides 實際算出）*/
+    { id:'sideCount', cat:'sqrect',
+      make: function(){
+        var kind = pick(['triangle','square','rectangle']);
+        var desc = { kind:kind, rot: rand(360) };
+        if (kind==='triangle') desc.variant = pick(['normal','thin','wide']);
+        if (kind==='rectangle'){ desc.w = 70+rand(50); desc.h = desc.w+30+rand(30); }
+        if (kind==='square') desc.size = 60+rand(50);
+        var pts = kind==='triangle' ? makeTriangle(100,100,desc.size||70,desc.rot,desc.variant)
+                : kind==='square' ? makeSquare(100,100,desc.size,desc.rot)
+                : makeRectangle(100,100,desc.w,desc.h,desc.rot);
+        desc.pts = pts; /* freeze this exact instance so the rendered image matches the computed count */
+        return { desc:desc, count: pts.length };
+      },
+      fmt: function(d, lang, t){
+        var opts = shuffle([d.count, d.count+1, d.count-1, d.count+2].filter(function(v,i,a){ return v>0 && a.indexOf(v)===i; }).slice(0,4));
+        while (opts.length < 4) opts.push(d.count + opts.length + 2);
+        var ans = opts.indexOf(d.count);
+        return {
+          stemShape: d.desc,
+          stem: lang==='zh' ? '這個形狀有幾個邊？' : 'How many sides does this shape have?',
+          opts: opts.map(String), ans: ans,
+          why: lang==='zh' ? '數一數，剛好 ' + d.count + ' 個邊。' : 'Count them — exactly ' + d.count + ' sides.'
+        };
+      } },
+    /* G4 — 屬性判斷：這個形狀有幾個直角（由 polygonAngles 實際算出）*/
+    { id:'rightAngleCount', cat:'attr',
+      make: function(){
+        var kind = pick(['triangle','square','rectangle']);
+        var desc = { kind:kind, rot: rand(360) };
+        if (kind==='triangle') desc.variant = pick(['normal','thin','wide']);
+        if (kind==='rectangle'){ desc.w = 70+rand(50); desc.h = desc.w+30+rand(30); }
+        if (kind==='square') desc.size = 60+rand(50);
+        var pts = kind==='triangle' ? makeTriangle(100,100,desc.size||70,desc.rot,desc.variant)
+                : kind==='square' ? makeSquare(100,100,desc.size,desc.rot)
+                : makeRectangle(100,100,desc.w,desc.h,desc.rot);
+        desc.pts = pts; /* freeze this exact instance so the rendered image matches the computed count */
+        var angs = polygonAngles(pts);
+        var rightCount = angs.filter(function(a){ return approxEq(a,90,1); }).length;
+        return { desc:desc, count: rightCount };
+      },
+      fmt: function(d, lang, t){
+        /* Random scalene triangles can occasionally land within the angle tolerance of
+           90° by chance, so d.count is NOT reliably 0 for a triangle — always build the
+           option set FROM the actual computed count, never assume it. */
+        var candidates = [0,1,2,3,4].filter(function(v){ return v !== d.count; });
+        var opts = shuffle([d.count].concat(shuffle(candidates).slice(0,3)));
+        var ans = opts.indexOf(d.count);
+        return {
+          stemShape: d.desc,
+          stem: lang==='zh' ? '這個形狀有幾個直角？' : 'How many right angles does this shape have?',
+          opts: opts.map(String), ans: ans,
+          why: lang==='zh' ? '量一量角，剛好 ' + d.count + ' 個直角。' : 'Check the corners — exactly ' + d.count + ' right angles.'
+        };
+      } },
+    /* G6 — 立體分類：物品屬於哪個家族（由對照表算出）*/
+    { id:'familyMatch', cat:'solid',
+      make: function(){
+        var obj = pick(Object.keys(OBJECT_FAM));
+        return { obj:obj, fam: OBJECT_FAM[obj] };
+      },
+      fmt: function(d, lang, t){
+        var opts = shuffle(FAMILIES);
+        var ans = opts.indexOf(d.fam);
+        return {
+          stemObj: d.obj,
+          stem: lang==='zh' ? (t.objectName(d.obj) + ' 是像什麼家族？') : (t.objectName(d.obj) + ' — which family?'),
+          opts: opts.map(function(f){ return t.familyName(f); }), ans: ans,
+          why: lang==='zh' ? t.objectName(d.obj) + '是' + t.familyName(d.fam) + '家族。' : t.objectName(d.obj) + ' is in the ' + t.familyName(d.fam) + ' family.'
+        };
+      } },
+    /* G7 — 屬性判斷：平面圖形還是立體形體 */
+    { id:'planeOrSolid', cat:'attr',
+      make: function(){
+        var isPlane = Math.random() < 0.5;
+        if (isPlane){
+          var kind = pick(PLANE_KINDS);
+          return { isPlane:true, desc:{kind:kind, rot:rand(360), size:70, w:110, h:60, r:50, variant:'normal'} };
+        }
+        var obj = pick(Object.keys(OBJECT_FAM));
+        return { isPlane:false, obj:obj };
+      },
+      fmt: function(d, lang, t){
+        var plane = lang==='zh' ? '平面圖形（扁扁的）' : 'Flat shape (2D)';
+        var solid = lang==='zh' ? '立體形體（有厚度）' : 'Solid (3D)';
+        var opts = shuffle([plane, solid]);
+        var ans = opts.indexOf(d.isPlane ? plane : solid);
+        return {
+          stemShape: d.isPlane ? d.desc : null,
+          stemObj: d.isPlane ? null : d.obj,
+          stem: lang==='zh' ? '這是平面圖形，還是立體形體？' : 'Is this a flat shape or a solid?',
+          opts: opts, ans: ans,
+          why: d.isPlane
+            ? (lang==='zh' ? '它是畫在紙上扁扁的，是平面圖形。' : 'It’s flat and can be drawn on paper — a flat shape.')
+            : (lang==='zh' ? '它可以拿在手上、有厚度，是立體形體。' : 'It can be held and has thickness — a solid.')
+        };
+      } },
+    /* G8 — 圖形拼排：幾個三角形合成一個正方形（由拼片陣列長度算出）*/
+    { id:'composeTriangleCount', cat:'compose',
+      make: function(){
+        var size = 60 + rand(50);
+        var pieces = [
+          { pts:[{x:0,y:0},{x:size,y:0},{x:0,y:size}] },
+          { pts:[{x:size,y:0},{x:size,y:size},{x:0,y:size}] }
+        ];
+        return { size:size, pieces:pieces, count: pieces.length };
+      },
+      fmt: function(d, lang, t){
+        var opts = shuffle([d.count, d.count+1, d.count+2, Math.max(1,d.count-1)]);
+        var ans = opts.indexOf(d.count);
+        return {
+          stemCombo: d.size,
+          stem: lang==='zh' ? '幾個三角形合成這個正方形？' : 'How many triangles make this square?',
+          opts: opts.map(String), ans: ans,
+          why: lang==='zh' ? '兩個一樣大的直角三角形，斜邊對斜邊，剛好合成 1 個正方形。' : 'Two equal right triangles fit hypotenuse-to-hypotenuse into exactly 1 square.'
+        };
+      } },
+    /* G9 — 圖形拼排：規律接下去（隨機挑兩種形狀交替，答案由規律定義算出）*/
+    { id:'patternNext', cat:'compose',
+      make: function(){
+        var kinds = shuffle(PLANE_KINDS).slice(0,2);
+        var len = 4 + rand(2);
+        var seq = [];
+        for (var i=0;i<len;i++) seq.push(kinds[i%2]);
+        var next = kinds[len%2];
+        return { seq:seq, next:next, decoy: kinds[(len+1)%2] };
+      },
+      fmt: function(d, lang, t){
+        var otherKinds = PLANE_KINDS.filter(function(k){ return d.seq.indexOf(k) < 0; });
+        var opts = shuffle([d.next, d.decoy].concat(otherKinds.slice(0,1)));
+        var ans = opts.indexOf(d.next);
+        return {
+          stemPattern: d.seq,
+          stem: lang==='zh' ? '規律接下去，下一個是誰？' : 'Continue the pattern — what comes next?',
+          opts: opts.map(function(k){ return t.shapeName(k); }), ans: ans,
+          why: lang==='zh' ? '規律是 ' + d.seq.map(t.shapeName).join('、') + ' 重複，接下來是' + t.shapeName(d.next) + '。'
+             : 'The pattern repeats ' + d.seq.map(t.shapeName).join(', ') + ' — next is a ' + t.shapeName(d.next) + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：9 種題型各一題＋隨機 3 題補足，交錯洗牌 ---------- */
+  function makePlan(){
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){ return ['identifyShape','squareOrRectangle','sideCount','planeOrSolid'].indexOf(g.id) >= 0; });
+    for (var i = 0; i < 3; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){ return { gen: g, data: g.make() }; });
+  }
+
+  /* ---------- render ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang, t);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.textContent = q.stem;
+      var visual = document.createElement('div');
+      if (q.stemShape){ visual.innerHTML = bigShapeSVG(q.stemShape, 110); }
+      else if (q.stemObj){ visual.style.fontSize='54px'; visual.textContent = q.stemObj; }
+      else if (q.stemCombo){
+        var s = q.stemCombo;
+        visual.innerHTML = '<svg viewBox="0 0 '+s+' '+s+'" width="110" height="110" class="bigshape">'+
+          '<polygon points="0,0 '+s+',0 0,'+s+'"></polygon>'+
+          '<polygon points="'+s+',0 '+s+','+s+' 0,'+s+'" style="opacity:.6"></polygon></svg>';
+      } else if (q.stemPattern){
+        var row = document.createElement('div');
+        row.style.display='flex'; row.style.gap='8px';
+        q.stemPattern.forEach(function(k){
+          var mini = document.createElement('span');
+          mini.innerHTML = bigShapeSVG({kind:k, rot:0, size:50, w:70, h:40, r:26}, 46);
+          row.appendChild(mini);
+        });
+        var qmark = document.createElement('span');
+        qmark.style.cssText = 'width:46px;height:46px;border:2px dashed var(--orange);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--orange);font-weight:700';
+        qmark.textContent = '？';
+        row.appendChild(qmark);
+        visual.appendChild(row);
+      }
+      var opts = document.createElement('div');
+      opts.className = 'opts textopts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      if (visual.innerHTML || visual.textContent) box.appendChild(visual);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
