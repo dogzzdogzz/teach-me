@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>直式加減複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.75; font-size:18px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:8px 20px;font-size:16px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:19px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:14px 10px;
+    font-size:19px;cursor:pointer;color:var(--ink);min-height:52px;font-weight:700;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:14px 20px;font-size:17px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:18px;
+    font-weight:700;padding:14px 26px;cursor:pointer;margin-top:16px;min-height:52px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 直式加減複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己算一次 —— 算出來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：進位加法、退位減法、驗算、文字題交錯出現，<strong>每一批的數字都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'直式加減複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 直式加減複習挑戰',
+      sub:'不看速查卡、自己算一次 —— 算出來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：進位加法、退位減法、驗算、文字題交錯出現，<strong>每一批的數字都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Column Add & Subtract Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Column Add & Subtract Review Challenge',
+      sub:'No peeking at the cheat sheet — the moment you work it out is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving carrying, borrowing, checking and word problems — <strong>every batch uses fresh numbers</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ add:'直式加法', sub:'直式減法', check:'驗算', word:'文字題' },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        add:'➕ 加法：滿十就進位（範例教學 1）',
+        sub:'➖ 減法：不夠減就退位（範例教學 2）',
+        check:'✅ 算完檢查一下（範例教學 3）'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ add:'Column adding', sub:'Column subtracting', check:'Checking', word:'Word problem' },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        add:'➕ Adding: Ten Makes a Carry (Example 1)',
+        sub:'➖ Subtracting: Not Enough? Borrow (Example 2)',
+        check:'✅ Check It When You Finish (Example 3)'
+      }
+    }
+  };
+
+  var LINK_HREFS = { add:'index.html#secAdd', sub:'index.html#secSub', check:'index.html#secCheck' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 值 + 單位的去重鍵（和 tools/sweep.html 的 parseVU 同一套判準）。 */
+  function vkey(s){
+    var t = String(s).replace(/　/g, ' ').replace(/[−–]/g, '-').trim();
+    var m = t.match(/^-?\d+(?:\.\d+)?/);
+    if (!m) return 'raw:' + t.replace(/\s+/g, '');
+    return m[0] + '|' + t.slice(m[0].length).replace(/\s+/g, '');
+  }
+  /* 這一課是「二、三位數的加減」—— 任何選項（含保底）都不可以超出 0~999，
+     也不可以是負數（二年級還沒有負數）。問「個位數字」的那一題另外用 0~9。
+     保底是「長得像答案的數」（正解 ± k），不是垃圾字串。
+     去重比的是「值」，而且逐一累積比對 —— 兩個誘答彼此相等一樣不行。 */
+  /* taboo = 題幹裡看得見的數字。誘答剛好等於其中一個時（例如「44 + 10 = ?」
+     的正解 54 減 10 剛好又是 44），看起來像把題目抄回來當選項 —— 那是算術上的
+     巧合，不是有教學意義的誘答。候選與保底都要濾掉。 */
+  function makeWrongs(correct, candidates, lo, hi, taboo){
+    if (typeof lo !== 'number') lo = 0;
+    if (typeof hi !== 'number') hi = 999;
+    var ban = taboo || [];
+    function ok(v){ return v >= lo && v <= hi && ban.indexOf(v) < 0; }
+    var out = [];
+    var seen = {}; seen[vkey(correct)] = true;
+    (candidates || []).forEach(function(c){
+      if (out.length >= 3) return;
+      var k = vkey(c);
+      if (ok(c) && !seen[k]){ seen[k] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3 && step < 200){
+      var low = correct - step, high = correct + step;
+      if (ok(low) && !seen[vkey(low)]){ seen[vkey(low)] = true; out.push(low); }
+      if (out.length < 3 && ok(high) && !seen[vkey(high)]){ seen[vkey(high)] = true; out.push(high); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  function mixOpts(correct, candidates, lo, hi, taboo){
+    var wrongs = makeWrongs(correct, candidates, lo, hi, taboo);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  function fill(tpl, map){
+    var s = tpl;
+    for (var k in map) s = s.split('{' + k + '}').join(map[k]);
+    return s;
+  }
+  /* 「每一位大減小」—— 減法最常見的錯誤，拿來當誘答。 */
+  function bigMinusSmall(a, b){
+    var v = 0, mul = 1;
+    for (var p = 0; p < 3; p++){
+      var da = Math.floor(a / mul) % 10;
+      var db = Math.floor(b / mul) % 10;
+      v += Math.abs(da - db) * mul;
+      mul *= 10;
+    }
+    return v;
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 兩位數加法，不進位 */
+    { id:'addNoCarry', cat:'add', grp:'add',
+      make:function(used){
+        var oa = rand(10), ob = rand(10 - oa);           /* 個位加起來 <= 9 */
+        var ta = pickUnused([1,2,3,4,5,6,7,8], used);
+        var tb = 1 + rand(9 - ta);                        /* 十位加起來 <= 9 */
+        var a = ta * 10 + oa, b = tb * 10 + ob;
+        var correct = a + b;
+        var m = mixOpts(correct, [correct + 10, correct - 10, correct + 1, correct - 1], 0, 999, [a, b]);
+        return { a:a, b:b, oa:oa, ob:ob, ta:ta, tb:tb, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: d.a + ' + ' + d.b + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '個位 ' + d.oa + ' + ' + d.ob + ' = ' + (d.oa + d.ob) + '，十位 ' + d.ta + ' + ' + d.tb + ' = ' + (d.ta + d.tb) + '，沒有滿十，不用進位 → ' + d.correct + '。'
+            : 'Ones: ' + d.oa + ' + ' + d.ob + ' = ' + (d.oa + d.ob) + '. Tens: ' + d.ta + ' + ' + d.tb + ' = ' + (d.ta + d.tb) + '. Nothing reaches ten, so no carry → ' + d.correct + '.'
+        };
+      } },
+    /* 2. 兩位數加法，個位進位 */
+    { id:'addCarryOnes', cat:'add', grp:'add',
+      make:function(used){
+        var oa = 1 + rand(9);
+        var ob = (10 - oa) + rand(oa);                    /* 個位加起來 >= 10 */
+        var ta = pickUnused([1,2,3,4,5,6,7], used);
+        var tb = 1 + rand(8 - ta);                        /* 十位加起來 + 進位 <= 9 */
+        var a = ta * 10 + oa, b = tb * 10 + ob;
+        var correct = a + b;
+        /* 誘答都是真的會出現的錯：個位直接寫 14（變成三位數）、忘記進位。 */
+        var concat = (ta + tb) * 100 + (oa + ob);
+        var m = mixOpts(correct, [concat, correct - 10, correct + 10, correct + 1], 0, 999, [a, b]);
+        return { a:a, b:b, oa:oa, ob:ob, ta:ta, tb:tb, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var s = d.oa + d.ob;
+        return {
+          stem: d.a + ' + ' + d.b + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '個位 ' + d.oa + ' + ' + d.ob + ' = ' + s + '，寫 ' + (s % 10) + '、進位 1；十位 ' + d.ta + ' + ' + d.tb + ' + 1 = ' + (d.ta + d.tb + 1) + ' → ' + d.correct + '。'
+            : 'Ones: ' + d.oa + ' + ' + d.ob + ' = ' + s + ' — write ' + (s % 10) + ' and carry 1. Tens: ' + d.ta + ' + ' + d.tb + ' + 1 = ' + (d.ta + d.tb + 1) + ' → ' + d.correct + '.'
+        };
+      } },
+    /* 3. 三位數加法，十位進位（答案的十位常常是 0） */
+    { id:'addCarryTens', cat:'add', grp:'add',
+      make:function(used){
+        var oa = rand(10), ob = rand(10 - oa);            /* 個位不進位 */
+        var ta = 1 + rand(9);
+        var tb = (10 - ta) + rand(ta);                    /* 十位加起來 >= 10 */
+        var ha = pickUnused([1,2,3,4,5,6,7], used);
+        var hb = 1 + rand(8 - ha);                        /* 百位加起來 + 進位 <= 9 */
+        var a = ha * 100 + ta * 10 + oa, b = hb * 100 + tb * 10 + ob;
+        var correct = a + b;
+        var m = mixOpts(correct, [correct - 100, correct + 100, correct - 10, correct + 10], 0, 999, [a, b]);
+        return { a:a, b:b, oa:oa, ob:ob, ta:ta, tb:tb, ha:ha, hb:hb, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var ts = d.ta + d.tb;
+        return {
+          stem: d.a + ' + ' + d.b + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '個位 ' + d.oa + ' + ' + d.ob + ' = ' + (d.oa + d.ob) + '，不用進位；十位 ' + d.ta + ' + ' + d.tb + ' = ' + ts + '，滿十！寫 ' + (ts - 10) + ' 再進位 1；百位 ' + d.ha + ' + ' + d.hb + ' + 1 = ' + (d.ha + d.hb + 1) + ' → ' + d.correct + '。'
+            : 'Ones: ' + d.oa + ' + ' + d.ob + ' = ' + (d.oa + d.ob) + ', no carry. Tens: ' + d.ta + ' + ' + d.tb + ' = ' + ts + ' — ten or more! Write ' + (ts - 10) + ' and carry 1. Hundreds: ' + d.ha + ' + ' + d.hb + ' + 1 = ' + (d.ha + d.hb + 1) + ' → ' + d.correct + '.'
+        };
+      } },
+    /* 4. 三位數減法，每一位都夠減 */
+    { id:'subNoBorrow', cat:'sub', grp:'sub',
+      make:function(used){
+        var ob, oa, tb, ta, hb, ha, a, b, correct;
+        do {
+          ob = rand(5); oa = ob + rand(10 - ob);
+          tb = rand(5); ta = tb + rand(10 - tb);
+          hb = pickUnused([1,2,3,4], used); ha = hb + rand(10 - hb);
+          a = ha * 100 + ta * 10 + oa;
+          b = hb * 100 + tb * 10 + ob;
+          correct = a - b;
+        } while (correct === 0);
+        var m = mixOpts(correct, [correct + 10, correct - 10, correct + 1, correct + 100], 0, 999, [a, b]);
+        return { a:a, b:b, oa:oa, ob:ob, ta:ta, tb:tb, ha:ha, hb:hb, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: d.a + ' − ' + d.b + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '每一位都夠減，不用退位：個位 ' + d.oa + ' − ' + d.ob + ' = ' + (d.oa - d.ob) + '，十位 ' + d.ta + ' − ' + d.tb + ' = ' + (d.ta - d.tb) + '，百位 ' + d.ha + ' − ' + d.hb + ' = ' + (d.ha - d.hb) + ' → ' + d.correct + '。'
+            : 'Every column is big enough, so no borrowing: ones ' + d.oa + ' − ' + d.ob + ' = ' + (d.oa - d.ob) + ', tens ' + d.ta + ' − ' + d.tb + ' = ' + (d.ta - d.tb) + ', hundreds ' + d.ha + ' − ' + d.hb + ' = ' + (d.ha - d.hb) + ' → ' + d.correct + '.'
+        };
+      } },
+    /* 5. 兩位數減法，個位退位 */
+    { id:'subBorrowOnes', cat:'sub', grp:'sub',
+      make:function(used){
+        var oa = rand(9);
+        var ob = oa + 1 + rand(9 - oa);                   /* 個位不夠減 */
+        var tb = pickUnused([1,2,3,4,5,6,7], used);
+        var ta = tb + 1 + rand(9 - tb);                   /* 借走 1 之後十位還夠減 */
+        var a = ta * 10 + oa, b = tb * 10 + ob;
+        var correct = a - b;
+        var m = mixOpts(correct, [bigMinusSmall(a, b), correct + 10, correct - 10, correct + 1], 0, 999, [a, b]);
+        return { a:a, b:b, oa:oa, ob:ob, ta:ta, tb:tb, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: d.a + ' − ' + d.b + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '個位 ' + d.oa + ' 不夠減 ' + d.ob + '，向十位借 1 → ' + (d.oa + 10) + ' − ' + d.ob + ' = ' + (d.oa + 10 - d.ob) + '；十位剩 ' + (d.ta - 1) + '，' + (d.ta - 1) + ' − ' + d.tb + ' = ' + (d.ta - 1 - d.tb) + ' → ' + d.correct + '。'
+            : 'The ones: ' + d.oa + ' is too small for ' + d.ob + ', so borrow 1 ten → ' + (d.oa + 10) + ' − ' + d.ob + ' = ' + (d.oa + 10 - d.ob) + '. The tens have ' + (d.ta - 1) + ' left: ' + (d.ta - 1) + ' − ' + d.tb + ' = ' + (d.ta - 1 - d.tb) + ' → ' + d.correct + '.'
+        };
+      } },
+    /* 6. 三位數減法，十位是 0，要連續退位 */
+    { id:'subBorrowZero', cat:'sub', grp:'sub',
+      make:function(used){
+        var oa = rand(9);
+        var ob = oa + 1 + rand(9 - oa);                   /* 個位不夠減 */
+        var tb = 1 + rand(8);
+        var hb = pickUnused([1,2,3,4,5,6,7], used);
+        var ha = hb + 1 + rand(9 - hb);                   /* 百位借走 1 之後還夠減 */
+        var a = ha * 100 + oa;                             /* 十位刻意是 0 */
+        var b = hb * 100 + tb * 10 + ob;
+        var correct = a - b;
+        var m = mixOpts(correct, [bigMinusSmall(a, b), correct + 100, correct - 10, correct + 10], 0, 999, [a, b]);
+        return { a:a, b:b, oa:oa, ob:ob, tb:tb, ha:ha, hb:hb, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: d.a + ' − ' + d.b + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '個位 ' + d.oa + ' 不夠減 ' + d.ob + '，可是十位是 0 —— 先向百位借 1，十位變 10，再借 1 給個位：' + (d.oa + 10) + ' − ' + d.ob + ' = ' + (d.oa + 10 - d.ob) + '；十位剩 9，9 − ' + d.tb + ' = ' + (9 - d.tb) + '；百位剩 ' + (d.ha - 1) + '，' + (d.ha - 1) + ' − ' + d.hb + ' = ' + (d.ha - 1 - d.hb) + ' → ' + d.correct + '。'
+            : 'The ones are too small, but the tens are 0 — borrow 1 from the hundreds so the tens become 10, then lend 1 to the ones: ' + (d.oa + 10) + ' − ' + d.ob + ' = ' + (d.oa + 10 - d.ob) + '. The tens keep 9: 9 − ' + d.tb + ' = ' + (9 - d.tb) + '. The hundreds have ' + (d.ha - 1) + ' left: ' + (d.ha - 1) + ' − ' + d.hb + ' = ' + (d.ha - 1 - d.hb) + ' → ' + d.correct + '.'
+        };
+      } },
+    /* 7. 和的個位數字是多少（不用算完整題也能答） */
+    { id:'onesDigit', cat:'add', grp:'add',
+      make:function(used){
+        var oa = 1 + rand(9);
+        var ob = (10 - oa) + rand(oa);                    /* 個位一定會進位 */
+        var ta = pickUnused([1,2,3,4,5,6,7,8], used);
+        var tb = 1 + rand(4);
+        var a = ta * 10 + oa, b = tb * 10 + ob;
+        var s = oa + ob;
+        var correct = s % 10;
+        /* 誘答：進位的那個 1（最常見的迷思）、答案上下各 1、加 2。全部限制在 0~9。 */
+        var m = mixOpts(correct, [1, (correct + 1) % 10, (correct + 9) % 10, (correct + 2) % 10], 0, 9, []);
+        return { a:a, b:b, oa:oa, ob:ob, s:s, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? d.a + ' + ' + d.b + ' 的<strong>個位數字</strong>是多少？'
+            : 'What is the <strong>ones digit</strong> of ' + d.a + ' + ' + d.b + '?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '個位 ' + d.oa + ' + ' + d.ob + ' = ' + d.s + '：個位寫 ' + d.correct + '，那個 1 進位到十位去了。'
+            : 'The ones give ' + d.oa + ' + ' + d.ob + ' = ' + d.s + ': write ' + d.correct + ' in the ones and carry the 1 to the tens.'
+        };
+      } },
+    /* 8. 少了一個加數（用減法找出來） */
+    { id:'missingAddend', cat:'check', grp:'check',
+      make:function(used){
+        var b = pickUnused([12,15,18,23,26,29,34,37,45,48,56,59,67,78,89], used);
+        var correct = 12 + rand(88);
+        var sum = b + correct;
+        var m = mixOpts(correct, [sum + b, correct + 10, correct - 10, correct + 1, correct - 1], 0, 999, [b, sum]);
+        return { b:b, sum:sum, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: d.b + ' + ? = ' + d.sum,
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '少了的那個加數要用減的：' + d.sum + ' − ' + d.b + ' = ' + d.correct + '。檢查：' + d.b + ' + ' + d.correct + ' = ' + d.sum + '。'
+            : 'Find the missing part by subtracting: ' + d.sum + ' − ' + d.b + ' = ' + d.correct + '. Check: ' + d.b + ' + ' + d.correct + ' = ' + d.sum + '.'
+        };
+      } },
+    /* 9. 少了被減的那個數（把減掉的加回來） */
+    { id:'missingMinuend', cat:'check', grp:'check',
+      make:function(used){
+        var b = pickUnused([13,16,19,24,27,35,38,46,49,57,68,79], used);
+        var c = 12 + rand(78);
+        var correct = b + c;
+        var cands = [];
+        if (c - b > 0) cands.push(c - b);
+        cands.push(correct + 10, correct - 10, correct + 1);
+        var m = mixOpts(correct, cands, 0, 999, [b, c]);
+        return { b:b, c:c, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: '? − ' + d.b + ' = ' + d.c,
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '把減掉的加回來：' + d.c + ' + ' + d.b + ' = ' + d.correct + '。檢查：' + d.correct + ' − ' + d.b + ' = ' + d.c + '。'
+            : 'Add back what was taken away: ' + d.c + ' + ' + d.b + ' = ' + d.correct + '. Check: ' + d.correct + ' − ' + d.b + ' = ' + d.c + '.'
+        };
+      } },
+    /* 10. 文字題：合起來一共有多少（一定會進位） */
+    { id:'wordAdd', cat:'word', grp:'add',
+      make:function(used){
+        var oa = 1 + rand(9);
+        var ob = (10 - oa) + rand(oa);                    /* 個位一定會進位 */
+        var ta = rand(10), tb = rand(10);
+        var ha = pickUnused([1,2,3], used);
+        var hb = 1 + rand(3);
+        var x = ha * 100 + ta * 10 + oa;
+        var y = hb * 100 + tb * 10 + ob;
+        var correct = x + y;
+        var cands = [];
+        if (x !== y) cands.push(Math.abs(x - y));         /* 用成減法的錯 */
+        cands.push(correct - 10, correct - 100, correct + 10);
+        var m = mixOpts(correct, cands, 0, 999, [x, y]);
+        return { x:x, y:y, oa:oa, ob:ob, correct:correct, kind:rand(3), opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var zhStem = [
+          '圖書館上午借出 {X} 本書，<br>下午又借出 {Y} 本。一天一共借出幾本？',
+          '小美存了 {X} 元，<br>媽媽再給她 {Y} 元。小美現在有幾元？',
+          '果園上午摘了 {X} 顆蘋果，<br>下午又摘了 {Y} 顆。一共摘了幾顆？'
+        ][d.kind];
+        var enStem = [
+          'A library lends out {X} books in the morning<br>and another {Y} books in the afternoon. How many books does it lend out that day?',
+          'Mei has saved ${X}, and her mum gives her another ${Y}.<br>How much money does Mei have now?',
+          'Workers in an orchard pick {X} apples in the morning<br>and another {Y} in the afternoon. How many apples do they pick altogether?'
+        ][d.kind];
+        /* 解釋裡引用的提示詞，必須是這一題的題幹真的寫出來的那一個。 */
+        var zhWhy = [
+          '「一共借出幾本」要用加的：',
+          '「現在有幾元」是把原來的和新拿到的合起來，要用加的：',
+          '「一共摘了幾顆」要用加的：'
+        ][d.kind];
+        var enWhy = [
+          '“How many does it lend out that day” means add: ',
+          '“How much does she have now” means adding what she had to what she was given: ',
+          '“Altogether” means add: '
+        ][d.kind];
+        return {
+          stem: fill(lang === 'zh' ? zhStem : enStem, { X:d.x, Y:d.y }),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? zhWhy + d.x + ' + ' + d.y + ' = ' + d.correct + '。個位 ' + d.oa + ' + ' + d.ob + ' = ' + (d.oa + d.ob) + '，記得進位 1。'
+            : enWhy + d.x + ' + ' + d.y + ' = ' + d.correct + '. The ones give ' + d.oa + ' + ' + d.ob + ' = ' + (d.oa + d.ob) + ', so remember to carry 1.'
+        };
+      } },
+    /* 11. 文字題：還剩多少／多多少（一定會退位） */
+    { id:'wordSub', cat:'word', grp:'sub',
+      make:function(used){
+        var oa = rand(9);
+        var ob = oa + 1 + rand(9 - oa);                   /* 個位一定要退位 */
+        var tb = rand(9);
+        var ta = tb + 1 + rand(9 - tb);                   /* 借走 1 之後十位還夠減 */
+        var hb = pickUnused([1,2,3], used);
+        var ha = hb + rand(10 - hb);
+        var x = ha * 100 + ta * 10 + oa;
+        var y = hb * 100 + tb * 10 + ob;
+        var correct = x - y;
+        var m = mixOpts(correct, [bigMinusSmall(x, y), correct + 10, correct - 10, correct + 100], 0, 999, [x, y]);
+        return { x:x, y:y, oa:oa, ob:ob, correct:correct, kind:rand(3), opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var zhStem = [
+          '書店有 {X} 本書，<br>賣掉了 {Y} 本。還剩幾本？',
+          '哥哥有 {X} 元，弟弟有 {Y} 元。<br>哥哥比弟弟多幾元？',
+          '一本書有 {X} 頁，<br>小明看了 {Y} 頁。還有幾頁沒看？'
+        ][d.kind];
+        var enStem = [
+          'A bookshop has {X} books<br>and sells {Y} of them. How many books are left?',
+          'The older brother has ${X} and the younger has ${Y}.<br>How much more money does the older brother have?',
+          'A book has {X} pages<br>and Ming has read {Y} of them. How many pages does he have left to read?'
+        ][d.kind];
+        var zhWhy = ['「還剩」要用減的：', '「多幾元」要用減的：', '「還有幾頁」要用減的：'][d.kind];
+        var enWhy = [
+          '“How many are left” means subtract: ',
+          '“How much more” means subtract: ',
+          '“How many pages are left to read” means subtract: '
+        ][d.kind];
+        return {
+          stem: fill(lang === 'zh' ? zhStem : enStem, { X:d.x, Y:d.y }),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? zhWhy + d.x + ' − ' + d.y + ' = ' + d.correct + '。個位 ' + d.oa + ' 不夠減 ' + d.ob + '，要向十位借 1。'
+            : enWhy + d.x + ' − ' + d.y + ' = ' + d.correct + '. The ones: ' + d.oa + ' is too small for ' + d.ob + ', so borrow 1 ten.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：11 種題型各一題＋核心題型隨機 1 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['addCarryOnes','addCarryTens','subBorrowOnes','wordAdd','wordSub'].indexOf(g.id) >= 0;
+    });
+    slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var grp = item.gen.grp;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[grp] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
