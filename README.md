@@ -110,6 +110,7 @@
 
 ```
 index.html                     # 首頁：選年級＋「▶ 繼續上次的課程」
+lessons.js                     # 全站唯一的課程清單（哪個年級有哪些課）；首頁堂數由它算出來
 grade-1/ … grade-6/index.html  # 年級頁：領域摘要＋該年級的課程清單（依領域分區）
 docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調整與深度規格）
 grade-1/math/                  # 一年級：單元整理＋ 9 個四頁迷你課程
