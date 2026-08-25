@@ -57,7 +57,9 @@ function vkey(s){
   const t = String(s).replace(/　/g, ' ').replace(/[−–]/g, '-').trim();
   const m = t.match(/^-?\d+(?:\.\d+)?/);
   if (!m) return 'raw:' + t.replace(/\s+/g, '');
-  return m[0] + '|' + t.slice(m[0].length).replace(/\s+/g, '');
+  /* 數字部分要正規化成「值」，不是原字：`05 分` 和 `5 分` 是同一個答案，
+     字面比對卻會放它們一起進選項。（2026-08-25 codex 審查抓到） */
+  return String(Number(m[0])) + '|' + t.slice(m[0].length).replace(/\s+/g, '');
 }
 
 /* 畫面上真正看得到的文字：<svg> 整塊拿掉（那是圖不是字），會換行的標籤補一個空白，
