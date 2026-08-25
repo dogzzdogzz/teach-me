@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>看時間速查卡</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.6; font-size:16px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 60px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:6px 18px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:24px 0 4px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:6px;font-size:16px}
+  .sheet{
+    background:var(--card);border:2px solid var(--ink);border-radius:20px;
+    padding:26px;margin-top:22px;
+  }
+  .sheet h2{
+    font-size:19px;border-left:6px solid var(--green);padding-left:10px;margin:22px 0 8px;
+  }
+  .sheet h2:first-child{margin-top:0}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:15px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:center;vertical-align:middle}
+  th{background:var(--blue-soft);color:var(--blue)}
+  td.left{text-align:left}
+  .eq{font-weight:800;color:var(--green);font-size:17px}
+  ol.steps{padding-left:24px;font-size:15px}
+  ol.steps li{margin-top:4px}
+  .stepbox{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:center;margin-top:14px}
+  .stepcol{text-align:center;font-size:14px;color:var(--muted);max-width:210px}
+  .swap{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px}
+  .swapcard{
+    border:2px solid var(--orange);background:var(--orange-soft);border-radius:14px;
+    padding:12px;text-align:center;font-size:15px;font-weight:700;color:var(--orange);
+  }
+  /* 長針位置表：12 張小卡，一眼看完「數字 → 分」 */
+  .mingrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:10px}
+  .mincard{
+    border:2px solid var(--blue);background:var(--blue-soft);border-radius:12px;
+    padding:8px;text-align:center;font-size:15px;font-weight:800;color:var(--blue);
+  }
+  .weekgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px;margin-top:10px}
+  .weekcard{
+    border:2px solid var(--green);background:var(--green-soft);border-radius:12px;
+    padding:8px;text-align:center;font-size:15px;font-weight:800;color:var(--green);
+  }
+  .printbtn{
+    margin-top:18px;border:none;border-radius:12px;background:var(--green);color:#fff;
+    font-size:16px;font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  footer{margin-top:28px;text-align:center;color:var(--muted);font-size:14px}
+  @media print{
+    body{background:#fff}
+    .topbar,.coursenav,.printbtn,footer{display:none}
+    .wrap{padding:0}
+    .sheet{border-color:#000;margin-top:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <span data-i18n="nav2">🗂️ 速查卡（本頁）</span>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🗂️ 看時間速查卡</h1>
+    <p data-i18n="sub">幾點幾分、上午下午、日曆，一張卡就夠 —— 印出來貼在書桌前</p>
+  </header>
+
+  <div class="sheet">
+    <h2 data-i18n="s1">讀時鐘的三個步驟</h2>
+    <ol class="steps">
+      <li data-i18n="st1"><strong>先看短針</strong>：它<strong>正指著或剛走過</strong>哪個數字，就是幾點。</li>
+      <li data-i18n="st2"><strong>再看長針</strong>：指著數字 n，就是 n 個 5 分 → 幾分。</li>
+      <li data-i18n="st3"><strong>合起來說</strong>：先說幾點，再說幾分。</li>
+    </ol>
+    <div class="stepbox">
+      <div class="stepcol">
+        <div id="picTrap"></div>
+        <p data-i18n="picTrapLbl">短針在 3 和 4 中間 → 3 點；長針指 10 → 50 分。是 3 點 50 分，不是 4 點 50 分。</p>
+      </div>
+      <div class="stepcol">
+        <div id="picHalf"></div>
+        <p data-i18n="picHalfLbl">長針指著 6 → 30 分，也就是「9 點半」。</p>
+      </div>
+    </div>
+
+    <h2 data-i18n="s2">長針位置表</h2>
+    <div class="swap">
+      <div class="swapcard" data-i18n="sw1">一小格 = 1 分</div>
+      <div class="swapcard" data-i18n="sw2">一個數字 = 5 分</div>
+      <div class="swapcard" data-i18n="sw3">走一整圈 = 60 分 = 1 小時</div>
+    </div>
+    <div class="mingrid">
+      <div class="mincard" data-i18n="mn1">1 → 5 分</div>
+      <div class="mincard" data-i18n="mn2">2 → 10 分</div>
+      <div class="mincard" data-i18n="mn3">3 → 15 分</div>
+      <div class="mincard" data-i18n="mn4">4 → 20 分</div>
+      <div class="mincard" data-i18n="mn5">5 → 25 分</div>
+      <div class="mincard" data-i18n="mn6">6 → 30 分</div>
+      <div class="mincard" data-i18n="mn7">7 → 35 分</div>
+      <div class="mincard" data-i18n="mn8">8 → 40 分</div>
+      <div class="mincard" data-i18n="mn9">9 → 45 分</div>
+      <div class="mincard" data-i18n="mn10">10 → 50 分</div>
+      <div class="mincard" data-i18n="mn11">11 → 55 分</div>
+      <div class="mincard" data-i18n="mn12">12 → 0 分（整點）</div>
+    </div>
+
+    <h2 data-i18n="s3">短針的規矩</h2>
+    <table>
+      <tr>
+        <th data-i18n="th1">短針的位置</th>
+        <th data-i18n="th2">要怎麼讀</th>
+        <th data-i18n="th3">例子</th>
+      </tr>
+      <tr>
+        <td data-i18n="hr1a">正好指著 7</td>
+        <td class="left" data-i18n="hr1b">就是 7 點整（長針一定指 12）</td>
+        <td class="eq" data-i18n="hr1c">7 點整</td>
+      </tr>
+      <tr>
+        <td data-i18n="hr2a">在 7 和 8 中間</td>
+        <td class="left" data-i18n="hr2b">還沒到 8，所以是 7 點</td>
+        <td class="eq" data-i18n="hr2c">7 點多</td>
+      </tr>
+      <tr>
+        <td data-i18n="hr3a">快碰到 8 了</td>
+        <td class="left" data-i18n="hr3b">只要還沒走到 8，就還是 7 點</td>
+        <td class="eq" data-i18n="hr3c">7 點 55 分</td>
+      </tr>
+      <tr>
+        <td data-i18n="hr4a">在 12 和 1 中間</td>
+        <td class="left" data-i18n="hr4b">剛走過的是 12，所以是 12 點（不是 1 點）</td>
+        <td class="eq" data-i18n="hr4c">12 點 25 分</td>
+      </tr>
+    </table>
+
+    <h2 data-i18n="s4">上午、下午、晚上</h2>
+    <table>
+      <tr>
+        <th data-i18n="th4">說法</th>
+        <th data-i18n="th5">大概是什麼時候</th>
+        <th data-i18n="th6">在做什麼</th>
+      </tr>
+      <tr><td class="eq" data-i18n="ap1a">上午</td><td data-i18n="ap1b">天亮到中午 12 點</td><td data-i18n="ap1c">🛌 起床、🏫 上學</td></tr>
+      <tr><td class="eq" data-i18n="ap2a">中午</td><td data-i18n="ap2b">12 點左右</td><td data-i18n="ap2c">🍚 吃午餐</td></tr>
+      <tr><td class="eq" data-i18n="ap3a">下午</td><td data-i18n="ap3b">中午過後到天黑</td><td data-i18n="ap3c">🎒 放學、⚽ 玩</td></tr>
+      <tr><td class="eq" data-i18n="ap4a">晚上</td><td data-i18n="ap4b">天黑到睡覺</td><td data-i18n="ap4c">🍜 吃晚餐、🌙 睡覺</td></tr>
+    </table>
+    <div class="swap">
+      <div class="swapcard" data-i18n="sw4">短針一天走兩圈：一圈上午，一圈下午和晚上</div>
+      <div class="swapcard" data-i18n="sw5">同一個鐘面，可能是上午，也可能是晚上</div>
+    </div>
+
+    <h2 data-i18n="s5">日曆：一星期 7 天</h2>
+    <div class="weekgrid">
+      <div class="weekcard" data-i18n="wk0">星期日</div>
+      <div class="weekcard" data-i18n="wk1">星期一</div>
+      <div class="weekcard" data-i18n="wk2">星期二</div>
+      <div class="weekcard" data-i18n="wk3">星期三</div>
+      <div class="weekcard" data-i18n="wk4">星期四</div>
+      <div class="weekcard" data-i18n="wk5">星期五</div>
+      <div class="weekcard" data-i18n="wk6">星期六</div>
+    </div>
+    <div class="swap">
+      <div class="swapcard" data-i18n="sw6">差 7 天 → 同一個星期幾</div>
+      <div class="swapcard" data-i18n="sw7">一年有 12 個月</div>
+    </div>
+
+    <h2 data-i18n="s6">每個月有幾天</h2>
+    <table>
+      <tr>
+        <th data-i18n="th7">天數</th>
+        <th data-i18n="th8">哪幾個月</th>
+      </tr>
+      <tr><td class="eq" data-i18n="dm1a">31 天（大月）</td><td class="left" data-i18n="dm1b">1、3、5、7、8、10、12 月</td></tr>
+      <tr><td class="eq" data-i18n="dm2a">30 天（小月）</td><td class="left" data-i18n="dm2b">4、6、9、11 月</td></tr>
+      <tr><td class="eq" data-i18n="dm3a">28 天</td><td class="left" data-i18n="dm3b">只有 2 月（閏年是 29 天）</td></tr>
+    </table>
+
+    <h2 data-i18n="s7">最容易搞混的三件事</h2>
+    <table>
+      <tr>
+        <th data-i18n="th9">看到這個</th>
+        <th data-i18n="th10">很多人會這樣</th>
+        <th data-i18n="th11">正確的是</th>
+      </tr>
+      <tr>
+        <td data-i18n="m1a">長針指著 4</td>
+        <td data-i18n="m1b">說是「4 分」</td>
+        <td data-i18n="m1c">4 個 5 分 → 20 分</td>
+      </tr>
+      <tr>
+        <td data-i18n="m2a">短針快到 5 了</td>
+        <td data-i18n="m2b">說是「5 點」</td>
+        <td data-i18n="m2c">還沒走到 5，還是 4 點</td>
+      </tr>
+      <tr>
+        <td data-i18n="m3a">兩根針</td>
+        <td data-i18n="m3b">長的說幾點、短的說幾分</td>
+        <td data-i18n="m3c">短針說幾點，長針說幾分</td>
+      </tr>
+    </table>
+  </div>
+
+  <button class="printbtn" onclick="window.print()" data-i18n="printBtn">🖨️ 印出速查卡</button>
+
+  <footer data-i18n="foot">看不懂的地方，回到<a class="home" href="index.html">課程</a>再按一次「下一步」，或問爸媽、問 AI 老師。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* 速查卡上的兩張鐘面，和上課頁用同一套畫法（含 60 個小格）。 */
+  function polar(cx, cy, angleDeg, radius){
+    var rad = angleDeg * Math.PI / 180;
+    return { x: cx + radius * Math.sin(rad), y: cy - radius * Math.cos(rad) };
+  }
+  function clockSVG(h, m, o){
+    o = o || {};
+    var size = o.size || 170, cx = size / 2, cy = size / 2, r = size / 2 - 12;
+    var hourAngle = ((h % 12) + m / 60) * 30;
+    var minAngle = m * 6;
+    var hp = polar(cx, cy, hourAngle, r * 0.50);
+    var mp = polar(cx, cy, minAngle, r * 0.80);
+    var s = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size +
+            '" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#FFFFFF" stroke="#2B2A33" stroke-width="4"/>';
+    for (var t = 0; t < 60; t++){
+      var big = (t % 5 === 0);
+      var p1 = polar(cx, cy, t * 6, r - 3);
+      var p2 = polar(cx, cy, t * 6, r - (big ? 11 : 6));
+      s += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) +
+           '" y2="' + p2.y.toFixed(1) + '" stroke="' + (big ? '#2B2A33' : '#C9C4B8') +
+           '" stroke-width="' + (big ? 3 : 1.5) + '"/>';
+    }
+    for (var i = 1; i <= 12; i++){
+      var tp = polar(cx, cy, i * 30, r - 26);
+      s += '<text x="' + tp.x.toFixed(1) + '" y="' + (tp.y + 6).toFixed(1) +
+           '" font-size="16" text-anchor="middle" fill="#6B6875" font-weight="700">' + i + '</text>';
+    }
+    s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + hp.x.toFixed(1) + '" y2="' + hp.y.toFixed(1) +
+         '" stroke="#E8871E" stroke-width="8" stroke-linecap="round"/>';
+    s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + mp.x.toFixed(1) + '" y2="' + mp.y.toFixed(1) +
+         '" stroke="#3B7DD8" stroke-width="5" stroke-linecap="round"/>';
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#2B2A33"/>';
+    s += '</svg>';
+    return s;
+  }
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'看時間速查卡', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（本頁）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🗂️ 看時間速查卡', sub:'幾點幾分、上午下午、日曆，一張卡就夠 —— 印出來貼在書桌前',
+      s1:'讀時鐘的三個步驟',
+      st1:'<strong>先看短針</strong>：它<strong>正指著或剛走過</strong>哪個數字，就是幾點。',
+      st2:'<strong>再看長針</strong>：指著數字 n，就是 n 個 5 分 → 幾分。',
+      st3:'<strong>合起來說</strong>：先說幾點，再說幾分。',
+      picTrapLbl:'短針在 3 和 4 中間 → 3 點；長針指 10 → 50 分。是 3 點 50 分，不是 4 點 50 分。',
+      picHalfLbl:'長針指著 6 → 30 分，也就是「9 點半」。',
+      s2:'長針位置表',
+      sw1:'一小格 = 1 分', sw2:'一個數字 = 5 分', sw3:'走一整圈 = 60 分 = 1 小時',
+      mn1:'1 → 5 分', mn2:'2 → 10 分', mn3:'3 → 15 分', mn4:'4 → 20 分',
+      mn5:'5 → 25 分', mn6:'6 → 30 分', mn7:'7 → 35 分', mn8:'8 → 40 分',
+      mn9:'9 → 45 分', mn10:'10 → 50 分', mn11:'11 → 55 分', mn12:'12 → 0 分（整點）',
+      s3:'短針的規矩',
+      th1:'短針的位置', th2:'要怎麼讀', th3:'例子',
+      hr1a:'正好指著 7', hr1b:'就是 7 點整（長針一定指 12）', hr1c:'7 點整',
+      hr2a:'在 7 和 8 中間', hr2b:'還沒到 8，所以是 7 點', hr2c:'7 點多',
+      hr3a:'快碰到 8 了', hr3b:'只要還沒走到 8，就還是 7 點', hr3c:'7 點 55 分',
+      hr4a:'在 12 和 1 中間', hr4b:'剛走過的是 12，所以是 12 點（不是 1 點）', hr4c:'12 點 25 分',
+      s4:'上午、下午、晚上',
+      th4:'說法', th5:'大概是什麼時候', th6:'在做什麼',
+      ap1a:'上午', ap1b:'天亮到中午 12 點', ap1c:'🛌 起床、🏫 上學',
+      ap2a:'中午', ap2b:'12 點左右', ap2c:'🍚 吃午餐',
+      ap3a:'下午', ap3b:'中午過後到天黑', ap3c:'🎒 放學、⚽ 玩',
+      ap4a:'晚上', ap4b:'天黑到睡覺', ap4c:'🍜 吃晚餐、🌙 睡覺',
+      sw4:'短針一天走兩圈：一圈上午，一圈下午和晚上',
+      sw5:'同一個鐘面，可能是上午，也可能是晚上',
+      s5:'日曆：一星期 7 天',
+      wk0:'星期日', wk1:'星期一', wk2:'星期二', wk3:'星期三', wk4:'星期四', wk5:'星期五', wk6:'星期六',
+      sw6:'差 7 天 → 同一個星期幾', sw7:'一年有 12 個月',
+      s6:'每個月有幾天',
+      th7:'天數', th8:'哪幾個月',
+      dm1a:'31 天（大月）', dm1b:'1、3、5、7、8、10、12 月',
+      dm2a:'30 天（小月）', dm2b:'4、6、9、11 月',
+      dm3a:'28 天', dm3b:'只有 2 月（閏年是 29 天）',
+      s7:'最容易搞混的三件事',
+      th9:'看到這個', th10:'很多人會這樣', th11:'正確的是',
+      m1a:'長針指著 4', m1b:'說是「4 分」', m1c:'4 個 5 分 → 20 分',
+      m2a:'短針快到 5 了', m2b:'說是「5 點」', m2c:'還沒走到 5，還是 4 點',
+      m3a:'兩根針', m3b:'長的說幾點、短的說幾分', m3c:'短針說幾點，長針說幾分',
+      printBtn:'🖨️ 印出速查卡',
+      foot:'看不懂的地方，回到<a class="home" href="index.html">課程</a>再按一次「下一步」，或問爸媽、問 AI 老師。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Telling Time Cheat Sheet', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (this page)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🗂️ Telling Time Cheat Sheet', sub:'Hours, minutes, a.m./p.m. and the calendar on one card — print it for your desk',
+      s1:'Three Steps for Reading a Clock',
+      st1:'<strong>Short hand first</strong>: the hour is whichever number it is <strong>on, or has just passed</strong>.',
+      st2:'<strong>Long hand next</strong>: pointing at number n means n fives → the minutes.',
+      st3:'<strong>Say them together</strong>: the hour first, then the minutes.',
+      picTrapLbl:'The short hand is between 3 and 4 → 3 o’clock; the long hand points at 10 → 50 minutes. It is 3:50, not 4:50.',
+      picHalfLbl:'The long hand on 6 → 30 minutes, which is “half past 9”.',
+      s2:'Long-Hand Position Table',
+      sw1:'One little tick = 1 minute', sw2:'One whole number = 5 minutes', sw3:'One full lap = 60 minutes = 1 hour',
+      mn1:'1 → 5 min', mn2:'2 → 10 min', mn3:'3 → 15 min', mn4:'4 → 20 min',
+      mn5:'5 → 25 min', mn6:'6 → 30 min', mn7:'7 → 35 min', mn8:'8 → 40 min',
+      mn9:'9 → 45 min', mn10:'10 → 50 min', mn11:'11 → 55 min', mn12:'12 → 0 min (on the hour)',
+      s3:'Rules for the Short Hand',
+      th1:'Where the short hand is', th2:'How to read it', th3:'Example',
+      hr1a:'Exactly on the 7', hr1b:'It is 7 o’clock (the long hand must be on 12)', hr1c:'7:00',
+      hr2a:'Between 7 and 8', hr2b:'It has not reached 8, so the hour is 7', hr2c:'Something past 7',
+      hr3a:'Almost touching the 8', hr3b:'Until it actually reaches 8, the hour is still 7', hr3c:'7:55',
+      hr4a:'Between 12 and 1', hr4b:'It has just passed the 12, so the hour is 12 (not 1)', hr4c:'12:25',
+      s4:'Morning, Noon and Night',
+      th4:'What we say', th5:'Roughly when', th6:'What is happening',
+      ap1a:'a.m. (morning)', ap1b:'From sunrise to 12 noon', ap1c:'🛌 waking up, 🏫 school',
+      ap2a:'Noon', ap2b:'Around 12 o’clock', ap2c:'🍚 lunch',
+      ap3a:'p.m. (afternoon)', ap3b:'After noon until it gets dark', ap3c:'🎒 home time, ⚽ play',
+      ap4a:'Evening / night', ap4b:'From dark until bedtime', ap4c:'🍜 dinner, 🌙 sleep',
+      sw4:'The short hand goes round twice a day: one lap morning, one lap afternoon and night',
+      sw5:'The same clock face can be morning or evening',
+      s5:'The Calendar: 7 Days in a Week',
+      wk0:'Sunday', wk1:'Monday', wk2:'Tuesday', wk3:'Wednesday', wk4:'Thursday', wk5:'Friday', wk6:'Saturday',
+      sw6:'7 days apart → the same day of the week', sw7:'A year has 12 months',
+      s6:'How Many Days Each Month Has',
+      th7:'Days', th8:'Which months',
+      dm1a:'31 days (long months)', dm1b:'January, March, May, July, August, October, December',
+      dm2a:'30 days (short months)', dm2b:'April, June, September, November',
+      dm3a:'28 days', dm3b:'February only (29 in a leap year)',
+      s7:'The Three Easiest Things to Mix Up',
+      th9:'When you see', th10:'Many people do this', th11:'It should be',
+      m1a:'The long hand on 4', m1b:'Call it “4 minutes”', m1c:'4 fives → 20 minutes',
+      m2a:'The short hand almost at 5', m2b:'Call it “5 o’clock”', m2c:'It has not reached 5 — still 4 o’clock',
+      m3a:'The two hands', m3b:'Long one gives the hour, short one the minutes', m3c:'Short hand = hour, long hand = minutes',
+      printBtn:'🖨️ Print this card',
+      foot:'Anything unclear? Go back to the <a class="home" href="index.html">lesson</a> and tap “Next step” again, or ask your parents / AI teacher.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+  var picTrap = document.getElementById('picTrap');
+  var picHalf = document.getElementById('picHalf');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+    picTrap.innerHTML = clockSVG(3, 50);
+    picHalf.innerHTML = clockSVG(9, 30);
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+  });
+
+  applyStatic();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>看時間複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.75; font-size:18px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:8px 20px;font-size:16px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:19px}
+  .stem svg{display:block;margin:8px auto}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:14px 10px;
+    font-size:19px;cursor:pointer;color:var(--ink);min-height:52px;font-weight:700;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:14px 20px;font-size:17px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:18px;
+    font-weight:700;padding:14px 26px;cursor:pointer;margin-top:16px;min-height:52px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 看時間複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己讀一次 —— 讀出來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：讀時鐘、分針、上午下午、日曆交錯出現，<strong>每一批的時刻和日期都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'看時間複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 看時間複習挑戰',
+      sub:'不看速查卡、自己讀一次 —— 讀出來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：讀時鐘、分針、上午下午、日曆交錯出現，<strong>每一批的時刻和日期都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Telling Time Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Telling Time Review Challenge',
+      sub:'No peeking at the cheat sheet — the moment you read it out is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving clock reading, minutes, a.m./p.m. and the calendar — <strong>every batch uses fresh times and dates</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ clock:'讀時鐘', minute:'分針', day:'上午下午', cal:'日曆', word:'文字題' },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        five:'🕐 長針：一個數字是 5 分（範例教學 1）',
+        hour:'🕒 先看短針，再看長針（範例教學 2）',
+        day:'☀️ 一天，短針走兩圈（範例教學 3）',
+        cal:'🗓️ 日曆怎麼看（範例教學 4）'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ clock:'Reading clocks', minute:'Minutes', day:'a.m. / p.m.', cal:'Calendar', word:'Word problem' },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        five:'🕐 The Long Hand: One Number Is 5 Minutes (Example 1)',
+        hour:'🕒 Short Hand First, Long Hand Second (Example 2)',
+        day:'☀️ The Short Hand Goes Round Twice a Day (Example 3)',
+        cal:'🗓️ How to Read a Calendar (Example 4)'
+      }
+    }
+  };
+
+  var LINK_HREFS = { five:'index.html#secFive', hour:'index.html#secHour', day:'index.html#secDay', cal:'index.html#secCal' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+
+  var WD_ZH = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+  var WD_EN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var MON_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  /* 每個月的天數。二月是 28（閏年 29），這一課的產生器一律不出二月，避免答案不唯一。 */
+  var DIM = [31,28,31,30,31,30,31,31,30,31,30,31];
+
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function timeStr(v, lang){
+    return lang === 'zh' ? (v.m === 0 ? (v.h + ' 點整') : (v.h + ' 點 ' + v.m + ' 分'))
+                         : (v.h + ':' + pad2(v.m));
+  }
+  function minStr(n, lang){ return lang === 'zh' ? (n + ' 分') : (n + ' minutes'); }
+  function dayStr(n, lang){ return lang === 'zh' ? (n + ' 天') : (n + ' days'); }
+  function numStr(n){ return String(n); }
+  function wdStr(i, lang){ return (lang === 'zh' ? WD_ZH : WD_EN)[i]; }
+  function monthStr(mo, lang){ return lang === 'zh' ? (mo + ' 月') : MON_EN[mo - 1]; }
+  function dateStr(v, lang){
+    return lang === 'zh' ? (v.mo + ' 月 ' + v.d + ' 日') : (v.d + ' ' + MON_EN[v.mo - 1]);
+  }
+  function ampmStr(v, lang){
+    return lang === 'zh' ? ((v.half === 'am' ? '上午 ' : '晚上 ') + v.h + ' 點')
+                         : (v.h + ':00 ' + (v.half === 'am' ? 'a.m.' : 'p.m.'));
+  }
+
+  /* 選項去重用的鍵：時刻、日期、上午下午都要「整個值」一起比，
+     不能只比數字 —— 上午 7 點和晚上 7 點是不同的答案。 */
+  function keyOf(v){
+    if (v && typeof v === 'object'){
+      if (typeof v.half === 'string') return 'A' + v.half + '|' + v.h;
+      if (typeof v.mo === 'number') return 'D' + v.mo + '|' + v.d;
+      return 'T' + v.h + '|' + v.m;
+    }
+    return 'N' + v;
+  }
+  /* 誘答：先用「真的會犯的錯」當候選，不夠再用保底。
+     保底一律是「長得像答案的值」（同一種形狀的時刻／日期／天數），
+     不是垃圾字串；候選與保底都要通過值去重。 */
+  function mixOpts(correct, cands, fallback){
+    var out = [], seen = {};
+    seen[keyOf(correct)] = true;
+    (cands || []).forEach(function(c){
+      if (out.length >= 3 || c === null || c === undefined) return;
+      var k = keyOf(c);
+      if (!seen[k]){ seen[k] = true; out.push(c); }
+    });
+    var i = 0;
+    while (out.length < 3 && i < 60){
+      var f = fallback(i);
+      i++;
+      if (f === null || f === undefined) continue;
+      var k2 = keyOf(f);
+      if (!seen[k2]){ seen[k2] = true; out.push(f); }
+    }
+    var opts = shuffle([correct].concat(out));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+
+  /* 鐘面（和上課頁、速查卡同一套畫法：60 個小格，短針的角度含 m/60）。 */
+  function polar(cx, cy, angleDeg, radius){
+    var rad = angleDeg * Math.PI / 180;
+    return { x: cx + radius * Math.sin(rad), y: cy - radius * Math.cos(rad) };
+  }
+  function clockSVG(h, m){
+    var size = 170, cx = size / 2, cy = size / 2, r = size / 2 - 12;
+    var hp = polar(cx, cy, ((h % 12) + m / 60) * 30, r * 0.50);
+    var mp = polar(cx, cy, m * 6, r * 0.80);
+    var s = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size +
+            '" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#FFFFFF" stroke="#2B2A33" stroke-width="4"/>';
+    for (var t = 0; t < 60; t++){
+      var big = (t % 5 === 0);
+      var p1 = polar(cx, cy, t * 6, r - 3);
+      var p2 = polar(cx, cy, t * 6, r - (big ? 11 : 6));
+      s += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) +
+           '" y2="' + p2.y.toFixed(1) + '" stroke="' + (big ? '#2B2A33' : '#C9C4B8') +
+           '" stroke-width="' + (big ? 3 : 1.5) + '"/>';
+    }
+    for (var i = 1; i <= 12; i++){
+      var tp = polar(cx, cy, i * 30, r - 26);
+      s += '<text x="' + tp.x.toFixed(1) + '" y="' + (tp.y + 6).toFixed(1) +
+           '" font-size="16" text-anchor="middle" fill="#6B6875" font-weight="700">' + i + '</text>';
+    }
+    s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + hp.x.toFixed(1) + '" y2="' + hp.y.toFixed(1) +
+         '" stroke="#E8871E" stroke-width="8" stroke-linecap="round"/>';
+    s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + mp.x.toFixed(1) + '" y2="' + mp.y.toFixed(1) +
+         '" stroke="#3B7DD8" stroke-width="5" stroke-linecap="round"/>';
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#2B2A33"/></svg>';
+    return s;
+  }
+
+  /* 生活情境：鐘面決定幾點，情境裡的線索決定上午還是晚上 —— 兩個都對才是正解。
+     線索必須是孩子看得懂、而且真的排除另一半天的事實（天亮／天黑／第一節課／
+     今天最後一件事）。只寫活動名稱是不夠的：小朋友午睡起來也叫「起床」，
+     那樣兩個答案都講得通。（2026-08-25 codex 審查抓到） */
+  var SCENES = [
+    { icon:'🌅', half:'am',    hours:[6,7],
+      zhAct:'小明起床',     zhCue:'太陽剛升起來',
+      enAct:'Ming wakes up', enCue:'The sun has just come up' },
+    { icon:'🏫', half:'am',    hours:[7,8],
+      zhAct:'小明到學校',   zhCue:'第一節課還沒開始',
+      enAct:'Ming gets to school', enCue:'The first lesson has not started yet' },
+    { icon:'🌆', half:'night', hours:[6,7],
+      zhAct:'小明吃晚餐',   zhCue:'學校今天已經放學了',
+      enAct:'Ming eats dinner', enCue:'School has already finished for the day' },
+    { icon:'🌙', half:'night', hours:[8,9],
+      zhAct:'小明上床睡覺', zhCue:'這是今天最後一件事',
+      enAct:'Ming goes to bed', enCue:'This is the last thing he does today' }
+  ];
+
+  /* ---------- 題目產生器：每次 make() 都用新時刻／新日期，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 讀時鐘（長針在前半圈，5~30 分） */
+    { id:'readClock', cat:'clock', grp:'hour',
+      make:function(used){
+        var h = pickUnused([1,2,3,4,5,6,7,8,9,10,11,12], used);
+        var n = 1 + rand(6);
+        var m = n * 5;
+        var nx = (h % 12) + 1;
+        var correct = { h:h, m:m };
+        var cands = [ {h:nx, m:m}, {h:h, m:n}, {h:h, m:60 - m} ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [m + 5, m - 5, m + 10, m + 15];
+          var mm = alt[i % alt.length];
+          return (mm >= 0 && mm <= 55) ? { h:h, m:mm } : null;
+        });
+        return { h:h, m:m, n:n, nx:nx, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: (lang === 'zh' ? '現在幾點幾分？' : 'What time is it?') + clockSVG(d.h, d.m),
+          opts: d.opts.map(function(v){ return timeStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '短針在 ' + d.h + ' 和 ' + d.nx + ' 中間 → ' + d.h + ' 點；長針指著 ' + d.n + ' → ' + d.n + ' 個 5 分 → ' + d.m + ' 分。'
+            : 'The short hand is between ' + d.h + ' and ' + d.nx + ' → ' + d.h + ' o’clock. The long hand points at ' + d.n + ' → ' + d.n + ' fives → ' + d.m + ' minutes.'
+        };
+      } },
+    /* 2. 讀時鐘（長針在後半圈，短針快碰到下一個數字 —— 這一課最大的陷阱） */
+    { id:'readClockTrap', cat:'clock', grp:'hour',
+      make:function(used){
+        var h = pickUnused([1,2,3,4,5,6,7,8,9,10,11,12], used);
+        var n = 7 + rand(5);
+        var m = n * 5;
+        var nx = (h % 12) + 1;
+        var correct = { h:h, m:m };
+        var cands = [ {h:nx, m:m}, {h:h, m:n}, {h:h, m:60 - m} ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [m - 5, m + 5, m - 10, m - 15];
+          var mm = alt[i % alt.length];
+          return (mm >= 0 && mm <= 55) ? { h:h, m:mm } : null;
+        });
+        return { h:h, m:m, n:n, nx:nx, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: (lang === 'zh' ? '現在幾點幾分？' : 'What time is it?') + clockSVG(d.h, d.m),
+          opts: d.opts.map(function(v){ return timeStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '短針快碰到 ' + d.nx + ' 了，但還沒走到 → 還是 ' + d.h + ' 點；長針指著 ' + d.n + ' → ' + d.m + ' 分。'
+            : 'The short hand is almost at ' + d.nx + ' but has not reached it → the hour is still ' + d.h + '. The long hand points at ' + d.n + ' → ' + d.m + ' minutes.'
+        };
+      } },
+    /* 3. 長針指著數字 n，是幾分？ */
+    { id:'minuteOfNumber', cat:'minute', grp:'five',
+      make:function(used){
+        var n = pickUnused([1,2,3,4,5,6,7,8,9,10,11], used);
+        var h = 1 + rand(12);
+        var m = n * 5;
+        var correct = m;
+        var cands = [n, m + 5, m - 5, m + 10].filter(function(x){ return x >= 1 && x <= 59; });
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [m + 15, m - 10, m + 20, m - 15];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 59) ? v : null;
+        });
+        return { n:n, h:h, m:m, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: (lang === 'zh' ? ('長針指著 ' + d.n + '，是幾分？') : ('The long hand points at ' + d.n + '. How many minutes is that?')) + clockSVG(d.h, d.m),
+          opts: d.opts.map(function(v){ return minStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '長針每指過一個數字就是 5 分：' + d.n + ' 個 5 分 → ' + d.n + ' × 5 = ' + d.m + ' 分。'
+            : 'Every number the long hand passes is 5 minutes: ' + d.n + ' fives → ' + d.n + ' × 5 = ' + d.m + ' minutes.'
+        };
+      } },
+    /* 4. m 分的時候，長針指著哪個數字？（把 m 本身放進選項是刻意的迷思誘答） */
+    { id:'numberOfMinute', cat:'minute', grp:'five',
+      make:function(used){
+        var k = pickUnused([1,2,3,4,5,6,7,8,9,10,11], used);
+        var m = k * 5;
+        var correct = k;
+        var cands = [m, k + 1, k - 1, k + 6, k - 6].filter(function(x){ return x >= 1 && x <= 12; });
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [k + 2, k - 2, k + 3, k - 3];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 12) ? v : null;
+        });
+        return { k:k, m:m, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? (d.m + ' 分的時候，長針指著哪個數字？')
+            : ('It is ' + d.m + ' minutes past the hour. Which number is the long hand on?'),
+          opts: d.opts.map(numStr), ans:d.ans,
+          why: lang === 'zh'
+            ? '一個數字 5 分：5、10、15…' + d.m + ' 分是 ' + d.k + ' 個 5 分，所以長針指著 ' + d.k + '。'
+            : 'One number is 5 minutes: 5, 10, 15… ' + d.m + ' minutes is ' + d.k + ' fives, so the long hand points at ' + d.k + '.'
+        };
+      } },
+    /* 5. 幾點半 = 幾點 30 分 */
+    { id:'halfPast', cat:'minute', grp:'five',
+      make:function(used){
+        var h = pickUnused([1,2,3,4,5,6,7,8,9,10,11,12], used);
+        var nx = (h % 12) + 1;
+        var correct = { h:h, m:30 };
+        var cands = [ {h:h, m:6}, {h:nx, m:30}, {h:h, m:15} ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [45, 20, 25, 35];
+          return { h:h, m:alt[i % alt.length] };
+        });
+        return { h:h, nx:nx, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? (d.h + ' 點半，是幾點幾分？') : ('What time is half past ' + d.h + '?'),
+          opts: d.opts.map(function(v){ return timeStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '半就是 30 分：長針指著 6，短針停在 ' + d.h + ' 和 ' + d.nx + ' 正中間。'
+            : 'Half past means 30 minutes: the long hand points at 6 and the short hand sits exactly between ' + d.h + ' and ' + d.nx + '.'
+        };
+      } },
+    /* 6. 生活情境：上午還是晚上 */
+    { id:'ampmLife', cat:'day', grp:'day',
+      make:function(used){
+        var si = pickUnused([0,1,2,3], used);
+        var s = SCENES[si];
+        var h = pick(s.hours);
+        var other = (s.half === 'am') ? 'night' : 'am';
+        var correct = { half:s.half, h:h };
+        var cands = [ {half:other, h:h}, {half:s.half, h:h + 1}, {half:other, h:h + 1}, {half:s.half, h:h - 1} ]
+          .filter(function(c){ return c.h >= 1 && c.h <= 12; });
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [h + 2, h - 2, h + 3, h - 3];
+          var hh = alt[i % alt.length];
+          return (hh >= 1 && hh <= 12) ? { half:s.half, h:hh } : null;
+        });
+        return { si:si, h:h, half:s.half, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var s = SCENES[d.si];
+        var stem = lang === 'zh'
+          ? (s.zhAct + '。' + s.zhCue + '。時鐘長這樣：' + clockSVG(d.h, 0) + '那是什麼時候？')
+          : (s.enAct + '. ' + s.enCue + '. The clock looks like this:' + clockSVG(d.h, 0) + 'What time is that?');
+        return {
+          stem: stem,
+          opts: d.opts.map(function(v){ return ampmStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '短針正好指著 ' + d.h + ' → ' + d.h + ' 點整；' + s.zhCue + '，所以是' + (d.half === 'am' ? '上午' : '晚上') + ' → ' + ampmStr(d.correct, 'zh') + '。'
+            /* ampmStr 的英文本來就以 a.m./p.m. 的句點結尾，再補一個點會變成 “7:00 a.m..”。 */
+            : 'The short hand points right at ' + d.h + ' → ' + d.h + ' o’clock. ' + s.enCue + ', so it is the ' + (d.half === 'am' ? 'morning' : 'evening') + ' → ' + ampmStr(d.correct, 'en')
+        };
+      } },
+    /* 7. n 天後是星期幾 */
+    { id:'weekdayAfter', cat:'cal', grp:'cal',
+      make:function(used){
+        var mo = pickUnused([3,4,5,6,9,10,11], used);
+        var w0 = rand(7);
+        var y = 1 + rand(20);
+        var n = 1 + rand(6);
+        var correct = (w0 + n) % 7;
+        var cands = [ (correct + 6) % 7, (correct + 1) % 7, w0 ];
+        var mix = mixOpts(correct, cands, function(i){ return (correct + 2 + i) % 7; });
+        return { mo:mo, w0:w0, y:y, n:n, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var mn = monthStr(d.mo, lang);
+        return {
+          stem: lang === 'zh'
+            ? (mn + ' ' + d.y + ' 日是' + WD_ZH[d.w0] + '。<br>' + mn + ' ' + (d.y + d.n) + ' 日是星期幾？')
+            : (d.y + ' ' + mn + ' is a ' + WD_EN[d.w0] + '.<br>What day of the week is ' + (d.y + d.n) + ' ' + mn + '?'),
+          opts: d.opts.map(function(v){ return wdStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? ('從 ' + d.y + ' 日到 ' + (d.y + d.n) + ' 日是 ' + d.n + ' 天。' + WD_ZH[d.w0] + '再過 ' + d.n + ' 天就是' + WD_ZH[d.correct] + '。')
+            : ('From ' + d.y + ' to ' + (d.y + d.n) + ' is ' + d.n + ' days. ' + d.n + ' days after ' + WD_EN[d.w0] + ' is ' + WD_EN[d.correct] + '.')
+        };
+      } },
+    /* 8. 這個月有幾天（不出二月：二月的答案要看閏年，不唯一） */
+    { id:'daysInMonth', cat:'cal', grp:'cal',
+      make:function(used){
+        var mo = pickUnused([1,3,4,5,6,7,8,9,10,11,12], used);
+        var correct = DIM[mo - 1];
+        var cands = [28,29,30,31].filter(function(x){ return x !== correct; });
+        /* 候選永遠剛好是 3 個（四種月長扣掉正解），所以保底到不了。
+           真的到得了的話，寧可讓題目缺選項被檢查抓到，也不要端出 26 天、27 天
+           這種「哪個月都沒有的天數」。 */
+        var mix = mixOpts(correct, cands, function(){ return null; });
+        return { mo:mo, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var mn = monthStr(d.mo, lang);
+        return {
+          stem: lang === 'zh' ? (mn + '有幾天？') : ('How many days does ' + mn + ' have?'),
+          opts: d.opts.map(function(v){ return dayStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.correct === 31
+                ? '1、3、5、7、8、10、12 月是大月，有 31 天。'
+                : '4、6、9、11 月是小月，有 30 天。')
+            : (d.correct === 31
+                ? 'January, March, May, July, August, October and December are the long months — 31 days.'
+                : 'April, June, September and November are the short months — 30 days.')
+        };
+      } },
+    /* 9. 幾天後是幾月幾日（有時候要換月） */
+    { id:'dateAfter', cat:'cal', grp:'cal',
+      make:function(used){
+        var mo = pickUnused([1,3,4,5,6,7,8,9,10,11], used);
+        var len = DIM[mo - 1];
+        var n = 2 + rand(4);
+        var y = len - 3 + rand(3);          /* len-3 ~ len-1：離月底只剩 1~3 天 */
+        var over = (y + n) > len;
+        var correct = over ? { mo:mo + 1, d:y + n - len } : { mo:mo, d:y + n };
+        var cands = over
+          ? [ {mo:mo, d:y + n}, {mo:mo + 1, d:y + n - len + 1}, {mo:mo + 1, d:y + n - len - 1}, {mo:mo, d:len} ]
+          : [ {mo:mo, d:y + n + 1}, {mo:mo, d:y + n - 1}, {mo:mo + 1, d:y + n}, {mo:mo, d:len} ];
+        cands = cands.filter(function(c){ return c.d >= 1; });
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [ {mo:mo, d:1}, {mo:mo, d:len - 1}, {mo:mo + 1, d:2}, {mo:mo + 1, d:3} ];
+          return alt[i % alt.length];
+        });
+        return { mo:mo, len:len, y:y, n:n, over:over, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var mn = monthStr(d.mo, lang);
+        var left = d.len - d.y;
+        return {
+          stem: lang === 'zh'
+            ? (mn + '有 ' + d.len + ' 天。<br>' + mn + ' ' + d.y + ' 日的 ' + d.n + ' 天後是幾月幾日？')
+            : (mn + ' has ' + d.len + ' days.<br>Which date is ' + d.n + ' days after ' + d.y + ' ' + mn + '?'),
+          opts: d.opts.map(function(v){ return dateStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.over
+                ? ('再過 ' + left + ' 天就到 ' + d.len + ' 日，那是 ' + mn + '的最後一天；剩下的 ' + (d.n - left) + ' 天算到下個月 → ' + dateStr(d.correct, 'zh') + '。')
+                : (d.y + ' + ' + d.n + ' = ' + (d.y + d.n) + '，還沒超過 ' + d.len + ' 日，所以還在 ' + mn + '裡面 → ' + dateStr(d.correct, 'zh') + '。'))
+            : (d.over
+                ? (left + ' more days reaches ' + d.len + ' ' + mn + ', the last day of the month; the remaining ' + (d.n - left) + ' days run into the next month → ' + dateStr(d.correct, 'en') + '.')
+                : (d.y + ' + ' + d.n + ' = ' + (d.y + d.n) + ', which is still within the ' + d.len + ' days of ' + mn + ' → ' + dateStr(d.correct, 'en') + '.'))
+        };
+      } },
+    /* 10. 幾個星期是幾天（接回九九乘法） */
+    { id:'weeksToDays', cat:'cal', grp:'cal',
+      make:function(used){
+        var k = pickUnused([2,3,4,5], used);
+        var correct = 7 * k;
+        var cands = [ 7 * k - 7, 7 * k + 7, k + 7, 7 * k + 1 ].filter(function(x){ return x >= 1; });
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [correct - 1, correct + 2, correct - 2, correct + 3];
+          var v = alt[i % alt.length];
+          return (v >= 1) ? v : null;
+        });
+        return { k:k, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? (d.k + ' 個星期有幾天？') : ('How many days are there in ' + d.k + ' weeks?'),
+          opts: d.opts.map(function(v){ return dayStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? ('一個星期 7 天，' + d.k + ' 個星期就是 ' + d.k + ' × 7 = ' + d.correct + ' 天。')
+            : ('One week is 7 days, so ' + d.k + ' weeks is ' + d.k + ' × 7 = ' + d.correct + ' days.')
+        };
+      } },
+    /* 11. 文字題：還要幾天才到生日 */
+    { id:'birthdayCountdown', cat:'word', grp:'cal',
+      make:function(used){
+        var mo = pickUnused([3,4,5,6,9,10,11], used);
+        var n = 2 + rand(8);
+        var b = 12 + rand(14);
+        var today = b - n;
+        var correct = n;
+        var cands = [ n + 1, n - 1, b, n + 7 ].filter(function(x){ return x >= 1; });
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [n + 2, n + 3, n + 4, n + 5];
+          return alt[i % alt.length];
+        });
+        return { mo:mo, b:b, today:today, n:n, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var mn = monthStr(d.mo, lang);
+        return {
+          stem: lang === 'zh'
+            ? ('今天是 ' + mn + ' ' + d.today + ' 日。<br>小美的生日是 ' + mn + ' ' + d.b + ' 日。<br>還要幾天才到生日？')
+            : ('Today is ' + d.today + ' ' + mn + '.<br>Mei’s birthday is ' + d.b + ' ' + mn + '.<br>How many days are left until her birthday?'),
+          opts: d.opts.map(function(v){ return dayStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? ('從今天數到生日要用減的：' + d.b + ' − ' + d.today + ' = ' + d.n + '，還要 ' + d.n + ' 天。')
+            : ('Counting from today to the birthday means subtracting: ' + d.b + ' − ' + d.today + ' = ' + d.n + ', so ' + d.n + ' days are left.')
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：11 種題型各一題＋核心題型隨機 1 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['readClock','readClockTrap','minuteOfNumber','ampmLife','weekdayAfter'].indexOf(g.id) >= 0;
+    });
+    slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var grp = item.gen.grp;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[grp] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
