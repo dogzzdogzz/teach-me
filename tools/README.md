@@ -46,6 +46,18 @@ python3 tools/check_quiz.py $(find . -name '*.html' -not -path './tools/*' | sor
   `1 公克` 和 `1 公斤` 不相等）。目前有 8 筆是 §六之二 的合法例外
   （反向題 `percent`、記法就是考點 `rounding`、題幹已寫「記得約分」`fraction-multiply`）。
 
+## 3b. 給家長那一頁的五段格式
+
+```bash
+python3 tools/check_parents.py $(find . -name parents.html | sort)
+```
+
+檢查 `parents.html` 有沒有真的回答家長要的五件事（teaching-framework §六之一）：
+五段齊備、四個可觀察的行為、三個不需教具的活動、每個迷思都配一句**有引號、家長可以照著念**
+的話、精熟標準寫出遊戲名稱與 2/3 門檻、只有語言切換一個互動、可列印。
+
+早期手寫的 29 頁鍵名各自不同，只跑通用檢查並印出 `NOTE:`（不是失敗）。
+
 ## 4. 站內連結
 
 ```bash

@@ -1,12 +1,12 @@
 # teach-me — 互動數學教室
 
 給國小學生的互動數學課程網站（繁體中文，支援中英切換）。
-每個主題都是一個**三頁迷你課程**：上課、速查卡、複習挑戰 ——
-讓孩子看得懂、玩得動、記得住。
+每個主題都是一個**四頁迷你課程**：上課、速查卡、複習挑戰、給家長 ——
+讓孩子看得懂、玩得動、記得住，也讓陪讀的大人知道怎麼陪。
 
 🌐 **網站**：<https://dogzzdogzz.github.io/teach-me/>
 
-## 每個主題有三到四頁
+## 每個主題有四頁
 
 | 頁面 | 內容 |
 |------|------|
@@ -15,8 +15,7 @@
 | 🔁 **複習挑戰** `review.html` | 12 題混合複習，**每按「換一批」數字全部重新出**，跨主題交錯出題，錯題自動指路回對應課程 |
 | 👨‍👩‍👧 **給家長** `parents.html` | 這課在教什麼、學會後孩子該做得到什麼、在家怎麼陪、卡關時怎麼回應（附可以照著說的話）、什麼時候可以往下一課 |
 
-👨‍👩‍👧 那一頁是 2026-08-25 起的新規格，目前一、三年級的 8 堂課都有；
-五年級既有 19 堂還是三頁，待補。
+👨‍👩‍👧 那一頁是 2026-08-25 起的新規格，**49 堂課全部都有**（同日補齊五年級既有的 19 堂）。
 
 每堂課可選**三種學習模式**（右上角隨時可換，跨課記住）：
 
@@ -24,54 +23,75 @@
 - 🏫 **跟上進度**：學校正在教 —— 完整 10 題，含課本型文字題
 - 💪 **補強練習**：學過但不穩 —— 迷思檢查優先，共 12 題，做完導向複習挑戰
 
-## 一年級（4 個主題）
+## 一年級（9 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
 |------|------|:---:|:---:|:---:|:---:|
 | 🔢 數字探險隊 | 100 以內的數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/numbers/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/numbers/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/numbers/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/numbers/parents.html) |
 | 🤝 好朋友配對 | 分與合 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/number-bonds/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/number-bonds/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/number-bonds/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/number-bonds/parents.html) |
-| 🚂 加加減減小火車 | 20 以內的加減 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/parents.html) |
+| 🚂 加加減減小火車 | 20 以內加減 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/add-sub/parents.html) |
+| 🧮 兩位數大冒險 | 二位數的加減 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/two-digit/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/two-digit/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/two-digit/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/two-digit/parents.html) |
+| 📐 誰比較長？ | 長度的比較 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/length/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/length/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/length/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/length/parents.html) |
+| 🕐 時鐘小偵探 | 時間（整點半點） | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/clock/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/clock/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/clock/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/clock/parents.html) |
+| 🪙 小小收銀員 | 錢幣 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/money/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/money/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/money/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/money/parents.html) |
 | 🔺 形狀積木屋 | 平面圖形與立體形體 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/shapes/parents.html) |
+| 🔁 規律接接看 | 數的規律 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/parents.html) |
 
-## 三年級（4 個主題）
+
+## 三年級（17 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
 |------|------|:---:|:---:|:---:|:---:|
+| 🏢 數字大樓 | 一萬以內的數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/numbers/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/numbers/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/numbers/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/numbers/parents.html) |
+| 🧾 加減直式大挑戰 | 三四位數的加減 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/add-sub/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/add-sub/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/add-sub/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/add-sub/parents.html) |
 | ✖️ 直式乘法工廠 | 乘法 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/multiply/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/multiply/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/multiply/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/multiply/parents.html) |
-| ➗ 分東西大隊 | 除法（含餘數） | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/parents.html) |
+| ➗ 分東西大隊 | 除法 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/divide/parents.html) |
+| 🪜 兩步驟解題王 | 兩步驟問題與併式 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/two-step/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/two-step/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/two-step/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/two-step/parents.html) |
 | 🍰 分數蛋糕店 | 分數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/fraction/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/fraction/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/fraction/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/fraction/parents.html) |
+| 🔟 小數初登場 | 一位小數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/decimal/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/decimal/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/decimal/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/decimal/parents.html) |
+| 📏 長度單位家族 | 長度（毫米～公里） | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/length/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/length/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/length/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/length/parents.html) |
+| ⚖️ 秤秤看有多重 | 重量（公斤公克） | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/weight/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/weight/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/weight/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/weight/parents.html) |
+| 🥤 裝得下多少？ | 容量（公升毫升） | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/capacity/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/capacity/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/capacity/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/capacity/parents.html) |
+| ⏱️ 時間偵察兵 | 秒、時分秒計算 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/time/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/time/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/time/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/time/parents.html) |
+| 📐 角度大搜查 | 角的認識與比較 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/angle/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/angle/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/angle/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/angle/parents.html) |
+| ⬜ 方方正正的祕密 | 正方形與長方形 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/rectangle/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/rectangle/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/rectangle/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/rectangle/parents.html) |
+| ⭕ 圓規畫圓趣 | 圓心、半徑、直徑 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/circle/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/circle/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/circle/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/circle/parents.html) |
 | 📏 繞一圈量量看 | 周長 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/perimeter/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/perimeter/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/perimeter/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/perimeter/parents.html) |
+| ❓ 找出神祕數字 | 算式填充題 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/equation/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/equation/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/equation/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/equation/parents.html) |
+| 📋 表格讀心術 | 報讀表格 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/parents.html) |
 
-一、三年級的課程是**四頁**：上課、速查卡、複習挑戰，外加一頁**給家長**
-（低年級的孩子讀不了速查卡，需要那份資訊的是陪讀的大人）。
 
-## 五年級（19 個主題）
+## 五年級（23 個主題）
 
-| 課程 | 單元 | 上課 | 速查卡 | 複習 |
-|------|------|:---:|:---:|:---:|
-| 🏭 因數工廠 | 因數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/review.html) |
-| 🐸 跳跳蛙數字樂園 | 倍數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/review.html) |
-| 🚏 好朋友車站 | 公因數與公倍數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/common-factor/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/common-factor/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/common-factor/review.html) |
-| 🍕 通分披薩屋 | 擴分約分通分、異分母加減 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-add/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-add/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-add/review.html) |
-| ✂️ 切了再切 | 分數乘法 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-multiply/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-multiply/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-multiply/review.html) |
-| 💰 小數商店 | 小數乘除 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/decimal/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/decimal/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/decimal/review.html) |
-| 🎯 百分百大挑戰 | 比率與百分率 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/percent/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/percent/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/percent/review.html) |
-| 📐 面積魔術師 | 平行四邊形/三角形/梯形面積 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/area/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/area/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/area/review.html) |
-| 🧊 體積積木塔 | 體積與容積 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/volume/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/volume/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/volume/review.html) |
-| 🦋 對摺魔鏡 | 線對稱 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/review.html) |
-| 🕵️ 角度偵探 | 三角形/四邊形內角和 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/review.html) |
-| ⚖️ 平均分配站 | 平均 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/review.html) |
-| 🎩 運算律魔術師 | 整數四則與運算律 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/operations/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/operations/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/operations/review.html) |
-| 🔍 符號偵探社 | 用符號代表數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/symbol/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/symbol/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/symbol/review.html) |
-| 🔷 多邊形轉轉盤 | 多邊形與扇形 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/polygon/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/polygon/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/polygon/review.html) |
-| 📦 展開圖工作坊 | 立體形體與展開圖 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/solid/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/solid/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/solid/review.html) |
-| ⏰ 時間管理局 | 時間的乘除計算 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/time/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/time/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/time/review.html) |
-| 🏋️ 大力士磅秤 | 公噸與重量單位 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/review.html) |
-| 📊 資料偵察隊 | 統計圖表 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/review.html) |
+| 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
+|------|------|:---:|:---:|:---:|:---:|
+| 🏭 因數工廠 | 因數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/factor/parents.html) |
+| 🐸 教我倍數 | 倍數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/multiple/parents.html) |
+| 🚏 公因數與公倍數 好朋友車站 | 公因數、公倍數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/common-factor/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/common-factor/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/common-factor/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/common-factor/parents.html) |
+| 🍕 通分披薩屋 | 擴分約分通分、異分母加減 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-add/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-add/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-add/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-add/parents.html) |
+| ✂️ 分數乘法 | 分數乘法 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-multiply/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-multiply/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-multiply/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-multiply/parents.html) |
+| 💰 小數商店 | 小數乘除 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/decimal/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/decimal/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/decimal/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/decimal/parents.html) |
+| 🎯 百分百大挑戰 | 比率與百分率 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/percent/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/percent/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/percent/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/percent/parents.html) |
+| 📐 面積魔術師 | 面積三公式 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/area/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/area/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/area/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/area/parents.html) |
+| 🧊 體積積木塔 | 體積與容積 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/volume/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/volume/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/volume/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/volume/parents.html) |
+| 🦋 對摺魔鏡 線對稱圖形 | 線對稱 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/parents.html) |
+| 🕵️ 角度偵探 | 內角和 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/parents.html) |
+| ⚖️ 平均分配站 | 平均 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/parents.html) |
+| 🎩 運算律魔術師 | 整數四則、運算律 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/operations/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/operations/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/operations/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/operations/parents.html) |
+| 🔍 符號偵探社 | 用符號代表數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/symbol/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/symbol/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/symbol/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/symbol/parents.html) |
+| 🔷 多邊形轉轉盤 | 多邊形、扇形 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/polygon/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/polygon/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/polygon/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/polygon/parents.html) |
+| 📦 展開圖工作坊 | 立體形體、展開圖 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/solid/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/solid/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/solid/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/solid/parents.html) |
+| ⏰ 時間管理局 | 時間的乘除 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/time/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/time/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/time/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/time/parents.html) |
+| 🏋️ 大力士磅秤 | 公噸、重量單位 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/parents.html) |
+| 📊 資料偵察隊 | 統計圖表 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/parents.html) |
+| 🍫 分數大平分 | 分數除以整數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-divide/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-divide/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-divide/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/fraction-divide/parents.html) |
+| 📍 差不多剛剛好 | 概數與四捨五入 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/rounding/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/rounding/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/rounding/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/rounding/parents.html) |
+| 🏞️ 大地測量隊 | 面積與體積大單位 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/big-units/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/big-units/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/big-units/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/big-units/parents.html) |
+| 🎪 柱體錐體俱樂部 | 柱體、錐體、球 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/prisms/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/prisms/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/prisms/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-5/math/prisms/parents.html) |
 
-五年級目前 19 堂課。對照教育部 108 課綱逐條稽核後仍缺：分數除以整數、整數相除的分數表示、
-小數概數與四捨五入、面積大單位（公畝/公頃/平方公里）、柱體與錐體的展開圖。
-詳見 [grade-5/math/README.md](grade-5/math/README.md)。
+五年級目前 23 堂課，**108 課綱的單元已全部有課程**（2026-08-25 逐條稽核後補齊分數除以整數、
+小數概數、面積大單位、柱體與錐體四個缺口）。詳見 [grade-5/math/README.md](grade-5/math/README.md)。
+
 
 ## 資料夾結構
 
@@ -83,7 +103,7 @@ index.html                     # 首頁：選年級＋「▶ 繼續上次的課�
 grade-1/ … grade-6/index.html  # 年級頁：領域摘要；五年級為完整課程頁（依領域分區列課程）
 docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調整與深度規格）
 grade-1/math/ … grade-4/math/  # 一～四年級：單元整理（課程準備中）
-grade-5/math/                  # 五年級：單元整理＋ 19 個三頁迷你課程
+grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你課程
 │   └── <主題>/                #   factor / multiple / common-factor / fraction-add /
 │       ├── index.html         #   fraction-multiply / decimal / percent / area /
 │       ├── reference.html     #   volume / symmetry / angle-sum / average
