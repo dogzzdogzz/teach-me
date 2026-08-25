@@ -225,24 +225,28 @@
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
-  /* 字串選項（算式型）：呼叫端保證彼此不同，這裡再依值＋單位過濾一次，
-     不足三個誘答就用「換一個乘數」補，永遠不會產生垃圾字串。 */
-  function mixStrOpts(correct, wrongs, filler){
-    var out = [], seen = {};
-    seen[vkey(correct)] = true;
-    wrongs.forEach(function(w){
-      var k = vkey(w);
-      if (out.length < 3 && !seen[k]){ seen[k] = true; out.push(w); }
-    });
-    var n = 1;
-    while (out.length < 3 && n < 20){
-      var cand = filler(n);
-      var ck = vkey(cand);
-      if (!seen[ck]){ seen[ck] = true; out.push(cand); }
-      n++;
+  /* 算式型選項：候選是 {t:顯示文字, v:算出來的值}。去重要同時比「文字」和「值」——
+     3 × 4 和 4 × 3 是不同字串卻是同一個數，兩個誘答彼此等值一樣違反 §六之三。
+     乘數一律留在 2~9（九九乘法的範圍），不足時用同一個被乘數換乘數補，不會生垃圾字串。 */
+  function mixStrOpts(correct, cands, fillerVals){
+    var out = [], seenT = {}, seenV = {};
+    seenT[vkey(correct.t)] = true; seenV[correct.v] = true;
+    function take(c){
+      if (out.length >= 3) return;
+      var kt = vkey(c.t);
+      if (seenT[kt] || seenV[c.v]) return;
+      seenT[kt] = true; seenV[c.v] = true; out.push(c);
     }
-    var opts = shuffle([correct].concat(out));
-    return { opts: opts, ans: opts.indexOf(correct) };
+    cands.forEach(take);
+    (fillerVals || []).forEach(take);
+    var opts = shuffle([correct].concat(out)).map(function(c){ return c.t; });
+    return { opts: opts, ans: opts.indexOf(correct.t) };
+  }
+  /* 同一個被乘數、乘數換成 2~9 的其他值 —— 保底候選，長得就像一個正常算式 */
+  function factorFillers(a){
+    var out = [];
+    for (var k = 2; k <= 9; k++) out.push({ t: a + ' × ' + k, v: a * k });
+    return out;
   }
 
   /* ---------- 題目產生器：每次 make() 都用新數字，數值都在九九乘法範圍內 ---------- */
@@ -288,14 +292,15 @@
       make:function(used){
         var a = pickUnused([2,3,4,5,6,7,8,9], used);
         var b = 2 + rand(4);
-        var correct = a + ' × ' + b;
-        /* 連加式的誘答只有在「加起來 ≠ 乘起來」時才能用：2 + 2 和 2 × 2 都是 4，
-           放進同一組選項，正確推理會走到錯誤選項（framework §六之二）。 */
-        var wrongs = [];
-        if (a + b !== a * b) wrongs.push(a + ' + ' + b);
-        wrongs.push(a + ' × ' + (b + 1));
-        wrongs.push((a + 1) + ' × ' + b);
-        var m = mixStrOpts(correct, wrongs, function(n){ return a + ' × ' + (b + 1 + n); });
+        var correct = { t: a + ' × ' + b, v: a * b };
+        /* 連加式的誘答只有在「加起來 ≠ 乘起來」時才能用：2 + 2 和 2 × 2 都是 4。
+           乘數只用 2~9，且全部依「值」去重（a=b 時 a×(b+1) 與 (a+1)×b 同值）。 */
+        var cands = [];
+        if (a + b !== a * b) cands.push({ t: a + ' + ' + b, v: a + b });
+        if (b + 1 <= 9) cands.push({ t: a + ' × ' + (b + 1), v: a * (b + 1) });
+        if (a + 1 <= 9) cands.push({ t: (a + 1) + ' × ' + b, v: (a + 1) * b });
+        if (b - 1 >= 2) cands.push({ t: a + ' × ' + (b - 1), v: a * (b - 1) });
+        var m = mixStrOpts(correct, cands, factorFillers(a));
         return { a:a, b:b, p:a * b, opts:m.opts, ans:m.ans };
       },
       fmt:function(d, lang){
@@ -409,12 +414,13 @@
         var a = pickUnused([2,3,4,5,6,7,8,9], used);
         var b = 2 + rand(8);
         while (b === a) b = 2 + rand(8);
-        var correct = b + ' × ' + a;
-        var wrongs = [];
-        if (a + b !== a * b) wrongs.push(a + ' + ' + b);   /* 同 §六之二：加起來不能等於乘起來 */
-        wrongs.push(a + ' × ' + (b + 1));
-        wrongs.push((a + 1) + ' × ' + b);
-        var m = mixStrOpts(correct, wrongs, function(n){ return (a + 1 + n) + ' × ' + b; });
+        var correct = { t: b + ' × ' + a, v: a * b };
+        var cands = [];
+        if (a + b !== a * b) cands.push({ t: a + ' + ' + b, v: a + b });
+        if (b + 1 <= 9) cands.push({ t: a + ' × ' + (b + 1), v: a * (b + 1) });
+        if (a + 1 <= 9) cands.push({ t: (a + 1) + ' × ' + b, v: (a + 1) * b });
+        if (b - 1 >= 2) cands.push({ t: a + ' × ' + (b - 1), v: a * (b - 1) });
+        var m = mixStrOpts(correct, cands, factorFillers(a));
         return { a:a, b:b, p:a * b, opts:m.opts, ans:m.ans };
       },
       fmt:function(d, lang){
