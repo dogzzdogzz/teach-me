@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小數複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .qpic{display:flex;justify-content:center;margin:10px 0}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 小數複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：小數、分數、除法、乘法交錯出現，<strong>每一批的數字和圖都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+
+  /* ---------- 小數點安全：全部用「十分位整數」表示，只用整數運算 ---------- */
+  function fmtTenths(t){
+    var sign = t < 0 ? '-' : '';
+    var a = Math.abs(t);
+    var whole = Math.floor(a / 10);
+    var frac = a % 10;
+    return sign + whole + '.' + frac;
+  }
+  function toTenths(w, t){ return w * 10 + t; }
+
+  /* ---------- SVG：長條切成 n 段，塗色 shaded 段 ---------- */
+  function makeStrip(n, shaded, width, height){
+    width = width || 220; height = height || 44;
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    svg.setAttribute('width', width); svg.setAttribute('height', height);
+    var segW = width / n;
+    for (var i = 0; i < n; i++){
+      var rect = document.createElementNS(SVGNS, 'rect');
+      rect.setAttribute('x', (i * segW).toFixed(3));
+      rect.setAttribute('y', 0);
+      rect.setAttribute('width', segW.toFixed(3));
+      rect.setAttribute('height', height);
+      rect.setAttribute('stroke', '#2B2A33'); rect.setAttribute('stroke-width', 1.5);
+      rect.setAttribute('fill', i < shaded ? '#E8871E' : '#FFFFFF');
+      svg.appendChild(rect);
+    }
+    var outline = document.createElementNS(SVGNS, 'rect');
+    outline.setAttribute('x', 0); outline.setAttribute('y', 0);
+    outline.setAttribute('width', width); outline.setAttribute('height', height);
+    outline.setAttribute('fill', 'none'); outline.setAttribute('stroke', '#2B2A33'); outline.setAttribute('stroke-width', 2);
+    svg.appendChild(outline);
+    return svg;
+  }
+
+  /* ---------- SVG：數線 0..maxTenths，標記 markTenths ---------- */
+  function makeNumberLine(maxTenths, markTenths, width, height){
+    width = width || 240; height = height || 70;
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    svg.setAttribute('width', width); svg.setAttribute('height', height);
+    var y = height - 26, pad = 14, span = width - pad * 2;
+    function xAt(t){ return pad + (t / maxTenths) * span; }
+    var line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', xAt(0)); line.setAttribute('y1', y);
+    line.setAttribute('x2', xAt(maxTenths)); line.setAttribute('y2', y);
+    line.setAttribute('stroke', '#2B2A33'); line.setAttribute('stroke-width', 2);
+    svg.appendChild(line);
+    for (var t = 0; t <= maxTenths; t++){
+      var big = (t % 10 === 0);
+      var tick = document.createElementNS(SVGNS, 'line');
+      var x = xAt(t);
+      tick.setAttribute('x1', x); tick.setAttribute('x2', x);
+      tick.setAttribute('y1', y - (big ? 10 : 5)); tick.setAttribute('y2', y + (big ? 10 : 5));
+      tick.setAttribute('stroke', '#2B2A33'); tick.setAttribute('stroke-width', big ? 2 : 1);
+      svg.appendChild(tick);
+      if (big){
+        var lbl = document.createElementNS(SVGNS, 'text');
+        lbl.setAttribute('x', x); lbl.setAttribute('y', y + 22);
+        lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('font-size', 12);
+        lbl.setAttribute('font-weight', '700'); lbl.setAttribute('fill', '#2B2A33');
+        lbl.textContent = String(t / 10);
+        svg.appendChild(lbl);
+      }
+    }
+    var mx = xAt(markTenths);
+    var dot = document.createElementNS(SVGNS, 'circle');
+    dot.setAttribute('cx', mx); dot.setAttribute('cy', y); dot.setAttribute('r', 6);
+    dot.setAttribute('fill', '#2F9E69'); dot.setAttribute('stroke', '#2B2A33'); dot.setAttribute('stroke-width', 1.5);
+    svg.appendChild(dot);
+    return svg;
+  }
+
+  /* ---------- SVG：圓形蛋糕（分數用） ---------- */
+  function polar(cx, cy, r, deg){
+    var rad = deg * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+  function sectorPath(cx, cy, r, startDeg, endDeg){
+    var s = polar(cx, cy, r, startDeg), e = polar(cx, cy, r, endDeg);
+    var large = (endDeg - startDeg) > 180 ? 1 : 0;
+    return 'M' + cx + ',' + cy + ' L' + s.x + ',' + s.y +
+      ' A' + r + ',' + r + ' 0 ' + large + ' 1 ' + e.x + ',' + e.y + ' Z';
+  }
+  function makePie(n, shadedCount, size){
+    size = size || 120;
+    var r = size / 2 - 6, cx = size / 2, cy = size / 2;
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+    svg.setAttribute('width', size); svg.setAttribute('height', size);
+    var base = document.createElementNS(SVGNS, 'circle');
+    base.setAttribute('cx', cx); base.setAttribute('cy', cy); base.setAttribute('r', r);
+    base.setAttribute('fill', '#FFF6E9'); base.setAttribute('stroke', '#2B2A33'); base.setAttribute('stroke-width', 2);
+    svg.appendChild(base);
+    var anglePer = 360 / n;
+    for (var i = 0; i < n; i++){
+      var start = -90 + i * anglePer, end = start + anglePer;
+      var path = document.createElementNS(SVGNS, 'path');
+      path.setAttribute('d', sectorPath(cx, cy, r, start, end));
+      path.setAttribute('fill', i < shadedCount ? '#E8871E' : 'none');
+      path.setAttribute('stroke', '#2B2A33'); path.setAttribute('stroke-width', 1.5);
+      svg.appendChild(path);
+    }
+    return svg;
+  }
+
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang:'zh-Hant', title:'小數複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 小數複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：小數、分數、除法、乘法交錯出現，<strong>每一批的數字和圖都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang:'en', title:'Decimals Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Decimals Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving decimals, fractions, division and multiplication — <strong>every batch uses fresh numbers and freshly drawn pictures</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { decimal:'小數', fraction:'分數', divide:'除法', multiply:'乘法' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { decimal:'📖 小數 — 小數初登場', fraction:'🍰 分數 — 分數蛋糕店', divide:'➗ 除法 — 分東西大隊', multiply:'✖️ 乘法（上課）' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { decimal:'Decimals', fraction:'Fractions', divide:'Division', multiply:'Multiplication' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { decimal:'📖 Decimals — Meet the Decimal Point', fraction:'🍰 Fractions — The Fraction Bakery', divide:'➗ Division — The Sharing Squad', multiply:'✖️ Multiplication (lesson)' }
+    }
+  };
+
+  var LINK_HREFS = { decimal:'index.html', fraction:'../fraction/index.html', divide:'../divide/index.html', multiply:'../multiply/index.html' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 湊 3 個相異、非正解的十分位整數錯誤選項，再各自格式化成小數字串 */
+  function mixOptsTenths(correctT, candidatesT){
+    var seen = {}; seen[correctT] = true;
+    var wrongs = [];
+    (candidatesT || []).forEach(function(c){
+      if (c >= 0 && !seen[c]){ seen[c] = true; wrongs.push(c); }
+    });
+    var step = 1;
+    while (wrongs.length < 3){
+      var lo = correctT - step, hi = correctT + step;
+      if (lo >= 0 && !seen[lo]){ seen[lo] = true; wrongs.push(lo); }
+      if (wrongs.length < 3 && !seen[hi]){ seen[hi] = true; wrongs.push(hi); }
+      step++;
+    }
+    wrongs = wrongs.slice(0, 3);
+    var optsT = shuffle([correctT].concat(wrongs));
+    return { opts: optsT.map(fmtTenths), ans: optsT.indexOf(correctT) };
+  }
+  /* 湊 3 個相異、非正解的整數錯誤選項（0 以上） */
+  function mixOptsInt(correct, candidates){
+    var seen = {}; seen[correct] = true;
+    var wrongs = [];
+    (candidates || []).forEach(function(c){
+      if (c >= 0 && !seen[c]){ seen[c] = true; wrongs.push(c); }
+    });
+    var step = 1;
+    while (wrongs.length < 3){
+      var lo = correct - step, hi = correct + step;
+      if (lo >= 0 && !seen[lo]){ seen[lo] = true; wrongs.push(lo); }
+      if (wrongs.length < 3 && !seen[hi]){ seen[hi] = true; wrongs.push(hi); }
+      step++;
+    }
+    wrongs = wrongs.slice(0, 3);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts.map(String), ans: opts.indexOf(correct) };
+  }
+  /* 湊 3 個相異、非正解的文字選項 */
+  function mixOptsText(correctText, candidates){
+    var seen = {}; seen[correctText] = true;
+    var wrongs = [];
+    (candidates || []).forEach(function(c){
+      if (!seen[c]){ seen[c] = true; wrongs.push(c); }
+    });
+    wrongs = wrongs.slice(0, 3);
+    var opts = shuffle([correctText].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correctText) };
+  }
+
+  var TENTH_POOL_NO5 = [1,2,3,4,6,7,8,9];
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var GENS = [
+    /* ---- 核心：小數 6 型（各含針對性誘答，命中課程迷思） ---- */
+    { id:'stripRead', cat:'decimal',
+      make: function(used){
+        var m = pickUnused(TENTH_POOL_NO5, used);
+        return { m:m };
+      },
+      fmt: function(d, lang){
+        var mix = mixOptsText('0.' + d.m, ['0.' + (10 - d.m), String(d.m), '0.0' + d.m]);
+        return {
+          stem: lang === 'zh' ? '這條緞帶剪成 10 段，塗色的部分是多少？' : 'This ribbon is cut into 10 pieces. What is the shaded part?',
+          pic: { type:'strip', n:10, m:d.m },
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '切成 10 段，塗了 ' + d.m + ' 段，' + d.m + ' 個 0.1 就是 0.' + d.m + '。'
+            : 'Cut into 10 pieces, ' + d.m + ' shaded — ' + d.m + ' lots of 0.1 make 0.' + d.m + '.'
+        };
+      } },
+    { id:'placeValue', cat:'decimal',
+      make: function(used){
+        var w = pick([1,2,3,4,5,6,7,8]);
+        var t = pickUnused(TENTH_POOL_NO5, used);
+        return { w:w, t:t };
+      },
+      fmt: function(d, lang){
+        var mix = mixOptsInt(d.t, [d.w, (d.t + 1) % 10, Math.max(0, d.t - 1) === d.t ? d.t + 2 : Math.max(0, d.t - 1)]);
+        return {
+          stem: d.w + '.' + d.t + (lang === 'zh' ? ' 裡面，十分位是多少？' : ' — what is the tenths digit?'),
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '小數點右邊第一位是十分位，' + d.w + '.' + d.t + ' 的十分位是 ' + d.t + '（' + d.w + ' 是個位，不是十分位）。'
+            : 'The first digit right of the point is the tenths digit — in ' + d.w + '.' + d.t + ' that is ' + d.t + ' (' + d.w + ' is the ones digit, not the tenths).'
+        };
+      } },
+    { id:'lineRead', cat:'decimal',
+      make: function(used){
+        var t = pickUnused([1,2,3,4,6,7,8,9,11,12,13,14,16,17,18,19], used);
+        return { t:t, maxT: t < 10 ? 10 : 20 };
+      },
+      fmt: function(d, lang){
+        var mix = mixOptsTenths(d.t, [d.t - 2, d.t - 1, d.t + 1, d.t + 2]);
+        return {
+          stem: lang === 'zh' ? '數線上這個點是多少？' : 'What value is this marked point?',
+          pic: { type:'numline', markT:d.t, maxT:d.maxT },
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '從 0 數到這個點，中間隔了 ' + d.t + ' 個 0.1 的小格，所以是 ' + fmtTenths(d.t) + '。'
+            : 'Counting from 0 to this point crosses ' + d.t + ' small ticks of 0.1, so it is ' + fmtTenths(d.t) + '.'
+        };
+      } },
+    { id:'compareTrap', cat:'decimal',
+      make: function(used){
+        var wA = pickUnused([1,2,3,4,5,6,7,8], used);
+        var wB = wA - 1;
+        var tA = rand(5); // 0..4
+        var tB = tA + 5;  // 5..9  (十分位比 tA 大，但整數部分較小)
+        return { a: toTenths(wA, tA), b: toTenths(wB, tB) };
+      },
+      fmt: function(d, lang){
+        var correct = fmtTenths(d.a), other = fmtTenths(d.b);
+        var eqTxt = lang === 'zh' ? '一樣大' : 'They are equal';
+        var cantTxt = lang === 'zh' ? '沒辦法比較' : 'Cannot be compared';
+        return {
+          stem: lang === 'zh' ? correct + ' 和 ' + other + '，哪一個比較大？' : 'Which is bigger, ' + correct + ' or ' + other + '?',
+          opts: shuffle([correct, other, eqTxt, cantTxt]),
+          get ans(){ return this.opts.indexOf(correct); },
+          why: lang === 'zh'
+            ? '先比整數部分：' + Math.floor(d.a / 10) + ' 比 ' + Math.floor(d.b / 10) + ' 大，所以 ' + correct + ' 比較大，不用再看小數點後面的數字。'
+            : 'Compare the whole part first: ' + Math.floor(d.a / 10) + ' is bigger than ' + Math.floor(d.b / 10) + ', so ' + correct + ' is bigger — no need to check the digits after the point.'
+        };
+      } },
+    { id:'additionCrossing', cat:'decimal',
+      make: function(used){
+        var wA = pick([0, 1, 2, 3]);
+        var wB = pick([0, 1, 2, 3]);
+        var tA = pickUnused([5, 6, 7, 8, 9], used);
+        var tB = pick([5, 6, 7, 8, 9]);
+        var a = toTenths(wA, tA), b = toTenths(wB, tB);
+        return { wA:wA, wB:wB, tA:tA, tB:tB, a:a, b:b, total: a + b };
+      },
+      fmt: function(d, lang){
+        var noCarry = d.wA + d.wB + '.' + (d.tA + d.tB);
+        var dropped = String(d.total);
+        var noWhole = fmtTenths(d.total - 10);
+        var mix = mixOptsText(fmtTenths(d.total), [noCarry, dropped, noWhole]);
+        return {
+          stem: lang === 'zh'
+            ? '一條緞帶原本 ' + fmtTenths(d.a) + ' 公尺，又接上 ' + fmtTenths(d.b) + ' 公尺，現在一共多少公尺？'
+            : 'A ribbon is ' + fmtTenths(d.a) + ' m long. Another ' + fmtTenths(d.b) + ' m is joined on. How long is it now?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '十分位 ' + d.tA + ' ＋ ' + d.tB + ' ＝ ' + (d.tA + d.tB) + '，超過 10，要向個位多進 1，十分位剩下 ' + (d.tA + d.tB - 10) + '，答案是 ' + fmtTenths(d.total) + '。'
+            : 'Tenths: ' + d.tA + ' + ' + d.tB + ' = ' + (d.tA + d.tB) + ', which is 10 or more, so carry 1 into the ones — tenths become ' + (d.tA + d.tB - 10) + '. The answer is ' + fmtTenths(d.total) + '.'
+        };
+      } },
+    { id:'subtractionBorrow', cat:'decimal',
+      make: function(used){
+        var wA = pickUnused([1, 2, 3, 4, 5, 6], used);
+        var wB = wA - 1;
+        var tA = rand(5); // 0..4
+        var tB = tA + 1 + rand(5); // tA+1 .. tA+5, capped later
+        if (tB > 9) tB = 9;
+        var a = toTenths(wA, tA), b = toTenths(wB, tB);
+        return { wA:wA, wB:wB, tA:tA, tB:tB, a:a, b:b, diff: a - b };
+      },
+      fmt: function(d, lang){
+        var noBorrow = (d.wA - d.wB) + '.' + Math.abs(d.tA - d.tB);
+        var justTenths = fmtTenths(Math.abs(d.tA - d.tB));
+        var summed = fmtTenths(d.a + d.b);
+        var mix = mixOptsText(fmtTenths(d.diff), [noBorrow, justTenths, summed]);
+        return {
+          stem: lang === 'zh'
+            ? '小明有 ' + fmtTenths(d.a) + ' 公尺長的緞帶，剪掉 ' + fmtTenths(d.b) + ' 公尺，還剩多少公尺？'
+            : 'Ming has a ' + fmtTenths(d.a) + ' m ribbon and cuts off ' + fmtTenths(d.b) + ' m. How much is left?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '個位不夠減，向十分位借：把 ' + fmtTenths(d.a) + ' 看成 ' + d.a + ' 個 0.1，' + d.a + ' － ' + d.b + ' ＝ ' + d.diff + ' 個 0.1，答案是 ' + fmtTenths(d.diff) + '。'
+            : 'The ones digit isn’t enough, so borrow: think of ' + fmtTenths(d.a) + ' as ' + d.a + ' tenths. ' + d.a + ' − ' + d.b + ' = ' + d.diff + ' tenths, so the answer is ' + fmtTenths(d.diff) + '.'
+        };
+      } },
+    { id:'fracDecimalLink', cat:'decimal',
+      make: function(used){
+        var n = pickUnused(TENTH_POOL_NO5, used);
+        return { n:n };
+      },
+      fmt: function(d, lang){
+        var correct = d.n + '/10';
+        var mix = mixOptsText(correct, ['10/' + d.n, '1/' + d.n, d.n + '/1']);
+        return {
+          stem: lang === 'zh' ? '0.' + d.n + ' 是十分之幾？' : 'How many tenths is 0.' + d.n + '?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '0.' + d.n + ' 是 ' + d.n + ' 個 0.1，也就是十分之 ' + d.n + '（' + d.n + '/10）。'
+            : '0.' + d.n + ' is ' + d.n + ' lots of 0.1, which is ' + d.n + ' tenths (' + d.n + '/10).'
+        };
+      } },
+    /* ---- 額外小數題型（填充用，近值誘答一樣要求相異且合理） ---- */
+    { id:'compareBasic', cat:'decimal',
+      make: function(used){
+        var w = pickUnused([0, 1, 2, 3, 4, 5], used);
+        var t1 = 1 + rand(8);
+        var t2;
+        do { t2 = 1 + rand(8); } while (t2 === t1);
+        return { w:w, t1:t1, t2:t2, bigger: Math.max(t1, t2) };
+      },
+      fmt: function(d, lang){
+        var correct = fmtTenths(toTenths(d.w, d.bigger));
+        var otherT = d.t1 === d.bigger ? d.t2 : d.t1;
+        var other = fmtTenths(toTenths(d.w, otherT));
+        var eqTxt = lang === 'zh' ? '一樣大' : 'They are equal';
+        var cantTxt = lang === 'zh' ? '沒辦法比較' : 'Cannot be compared';
+        return {
+          stem: lang === 'zh'
+            ? fmtTenths(toTenths(d.w, d.t1)) + ' 和 ' + fmtTenths(toTenths(d.w, d.t2)) + '，哪一個比較大？'
+            : 'Which is bigger, ' + fmtTenths(toTenths(d.w, d.t1)) + ' or ' + fmtTenths(toTenths(d.w, d.t2)) + '?',
+          opts: shuffle([correct, other, eqTxt, cantTxt]),
+          get ans(){ return this.opts.indexOf(correct); },
+          why: lang === 'zh'
+            ? '整數部分一樣（都是 ' + d.w + '），比十分位：' + d.bigger + ' 比 ' + otherT + ' 大，所以 ' + correct + ' 比較大。'
+            : 'Same whole part (' + d.w + ') — compare the tenths: ' + d.bigger + ' is bigger than ' + otherT + ', so ' + correct + ' is bigger.'
+        };
+      } },
+    { id:'additionSamePlace', cat:'decimal',
+      make: function(used){
+        var wA = pick([0, 1, 2, 3]);
+        var wB = pick([0, 1, 2, 3]);
+        var tA = pickUnused([1, 2, 3, 4], used);
+        var tB = pick([1, 2, 3, 4]);
+        var a = toTenths(wA, tA), b = toTenths(wB, tB);
+        return { a:a, b:b, sum: a + b };
+      },
+      fmt: function(d, lang){
+        var mix = mixOptsTenths(d.sum, [d.sum - 1, d.sum + 1, Math.abs(d.a - d.b)]);
+        return {
+          stem: fmtTenths(d.a) + ' + ' + fmtTenths(d.b) + ' = ?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '個位相加、十分位相加：' + fmtTenths(d.a) + ' + ' + fmtTenths(d.b) + ' = ' + fmtTenths(d.sum) + '。'
+            : 'Add the ones and add the tenths: ' + fmtTenths(d.a) + ' + ' + fmtTenths(d.b) + ' = ' + fmtTenths(d.sum) + '.'
+        };
+      } },
+    { id:'subtractionSamePlace', cat:'decimal',
+      make: function(used){
+        var wA = pickUnused([2, 3, 4, 5, 6], used);
+        var wB = pick([0, 1]);
+        while (wB >= wA) wB = 0;
+        var tA = 3 + rand(6); // 3..8
+        var tB = rand(tA);    // 0..tA-1，保證不用借位
+        var a = toTenths(wA, tA), b = toTenths(wB, tB);
+        return { a:a, b:b, diff: a - b };
+      },
+      fmt: function(d, lang){
+        var mix = mixOptsTenths(d.diff, [d.diff - 1, d.diff + 1, d.a + d.b]);
+        return {
+          stem: fmtTenths(d.a) + ' − ' + fmtTenths(d.b) + ' = ?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '個位相減、十分位相減：' + fmtTenths(d.a) + ' − ' + fmtTenths(d.b) + ' = ' + fmtTenths(d.diff) + '。'
+            : 'Subtract the ones and subtract the tenths: ' + fmtTenths(d.a) + ' − ' + fmtTenths(d.b) + ' = ' + fmtTenths(d.diff) + '.'
+        };
+      } },
+    /* ---- 交錯：分數、除法、乘法 ---- */
+    { id:'fractionLink', cat:'fraction',
+      make: function(used){
+        var n = pickUnused([4, 5, 6, 7, 8], used);
+        var m = 1 + rand(n - 1);
+        return { n:n, m:m };
+      },
+      fmt: function(d, lang){
+        var correct = d.m + '/' + d.n;
+        var mix = mixOptsText(correct, [d.n + '/' + d.m, (d.m + 1) + '/' + d.n, d.m + '/' + (d.n + 1)]);
+        return {
+          stem: lang === 'zh' ? '這個蛋糕塗色的部分，是幾分之幾？' : 'What fraction of this cake is shaded?',
+          pic: { type:'pie', n:d.n, m:d.m },
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? '切成 ' + d.n + ' 份（分母），塗了 ' + d.m + ' 份（分子），所以是 ' + correct + '。'
+            : 'Cut into ' + d.n + ' pieces (denominator), ' + d.m + ' shaded (numerator) — so it is ' + correct + '.'
+        };
+      } },
+    { id:'divideShare', cat:'divide',
+      make: function(used){
+        var divisor = pickUnused([2, 3, 4, 5, 6], used);
+        var quotient = 2 + rand(8);
+        var total = divisor * quotient;
+        return { divisor:divisor, quotient:quotient, total:total };
+      },
+      fmt: function(d, lang){
+        var mix = mixOptsInt(d.quotient, [d.quotient - 1, d.quotient + 1, d.total]);
+        return {
+          stem: lang === 'zh'
+            ? d.total + ' 顆糖平分給 ' + d.divisor + ' 個人，每人分到幾顆？'
+            : d.total + ' candies are shared equally among ' + d.divisor + ' people. How many does each get?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh'
+            ? d.total + ' ÷ ' + d.divisor + ' ＝ ' + d.quotient + '，每人分到 ' + d.quotient + ' 顆。'
+            : d.total + ' ÷ ' + d.divisor + ' = ' + d.quotient + ', so each person gets ' + d.quotient + '.'
+        };
+      } },
+    { id:'multiplyBasic', cat:'multiply',
+      make: function(used){
+        var a = pickUnused([2, 3, 4, 5, 6, 7, 8, 9], used);
+        var b = 2 + rand(8);
+        return { a:a, b:b, product: a * b };
+      },
+      fmt: function(d, lang){
+        var mix = mixOptsInt(d.product, [d.a * (d.b - 1), d.a * (d.b + 1), d.a + d.b]);
+        return {
+          stem: d.a + ' × ' + d.b + ' = ?',
+          opts: mix.opts, ans: mix.ans,
+          why: lang === 'zh' ? d.a + ' × ' + d.b + ' = ' + d.product + '。' : d.a + ' × ' + d.b + ' = ' + d.product + '.'
+        };
+      } }
+  ];
+
+  var CORE_DECIMAL_IDS = ['stripRead', 'placeValue', 'lineRead', 'compareTrap', 'additionCrossing', 'subtractionBorrow'];
+  var ALL_DECIMAL_IDS = CORE_DECIMAL_IDS.concat(['fracDecimalLink', 'compareBasic', 'additionSamePlace', 'subtractionSamePlace']);
+
+  /* ---------- 出一批 12 題：6 個核心小數題型各一題＋3 題額外小數（不重複型別為優先）＋分數／除法／乘法各一題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var byId = {};
+    GENS.forEach(function(g){ byId[g.id] = g; });
+
+    var slots = CORE_DECIMAL_IDS.map(function(id){ return byId[id]; });
+    var extraIds = shuffle(ALL_DECIMAL_IDS.filter(function(id){ return CORE_DECIMAL_IDS.indexOf(id) < 0; })).slice(0, 3);
+    extraIds.forEach(function(id){ slots.push(byId[id]); });
+    slots.push(byId['fractionLink']);
+    slots.push(byId['divideShare']);
+    slots.push(byId['multiplyBasic']);
+
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function renderPic(container, pic){
+    container.textContent = '';
+    if (!pic) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'qpic';
+    if (pic.type === 'strip') wrap.appendChild(makeStrip(pic.n, pic.m, 220, 44));
+    else if (pic.type === 'numline') wrap.appendChild(makeNumberLine(pic.maxT, pic.markT, 240, 70));
+    else if (pic.type === 'pie') wrap.appendChild(makePie(pic.n, pic.m, 120));
+    container.appendChild(wrap);
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var pic = document.createElement('div');
+      renderPic(pic, q.pic);
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(pic); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

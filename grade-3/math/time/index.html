@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我時間 — 時間偵察兵</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);text-align:center;
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;justify-content:center}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:8px 18px;font-size:17px;font-weight:700;cursor:pointer;color:var(--ink);
+    min-height:44px;
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .numgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(24px,1fr));gap:5px;margin-top:16px}
+  .cell{
+    border:2px solid var(--line);border-radius:6px;background:var(--card);
+    padding:8px 0;text-align:center;font-size:11px;font-weight:600;color:var(--muted);min-height:26px;
+  }
+  .cell.on{background:var(--green);border-color:var(--green);color:#fff;transition:.15s}
+  .cell.hourmark{border-color:var(--orange);border-width:3px}
+  .hopline{margin-top:14px;font-size:19px;min-height:32px}
+  .hopline b{color:var(--green)}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:12px 24px;cursor:pointer;min-height:48px;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:10px 0 14px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:12px 8px;
+    font-size:17px;cursor:pointer;color:var(--ink);min-height:48px;font-weight:700;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px;text-align:center}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;justify-content:center;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px;justify-content:center}
+  .target{font-size:19px;margin-top:14px;text-align:center}
+  .hint{color:var(--muted);font-size:15px;margin-top:6px;min-height:22px;text-align:center}
+  .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;margin-top:16px}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px;text-align:center}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px;text-align:center;cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .mode .mbig{font-size:26px}
+  .mode h3{font-size:17px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:16px;display:grid;gap:10px}
+
+  /* --- time-lesson-only additions --- */
+  .anchorRow{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:30px}
+  .anchorLabel{font-size:15px;color:var(--muted);margin-top:6px}
+  .clockmini{display:block;margin:0 auto}
+  .twoclocks{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin:10px 0}
+  .twoclocks .cwrap{text-align:center;font-size:14px;color:var(--muted)}
+  .trapcard{
+    margin-top:16px;border:2px dashed var(--orange);background:var(--orange-soft);
+    border-radius:16px;padding:14px 16px;text-align:center;font-size:16px;
+  }
+  .trapcard .ttitle{font-weight:700;color:var(--orange);margin-bottom:4px}
+  .numline{position:relative;height:78px;margin-top:24px}
+  .numline .track{position:absolute;top:34px;left:0;right:0;height:4px;background:var(--line);border-radius:2px}
+  .numline .tick{position:absolute;top:26px;width:2px;height:20px;background:var(--muted);transform:translateX(-50%)}
+  .numline .tick.hourtick{background:var(--orange);width:3px}
+  .numline .ticklabel{position:absolute;top:50px;font-size:11px;color:var(--muted);transform:translateX(-50%);white-space:nowrap}
+  .numline .marker{position:absolute;top:20px;width:16px;height:16px;border-radius:50%;background:var(--blue);transform:translate(-50%,0);transition:left .3s,background .3s}
+  .linesum{margin-top:20px;font-size:17px;text-align:center;min-height:26px}
+  .linesum b{color:var(--green)}
+  .stepbox{margin-top:16px}
+  .stepline{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:18px;font-size:18px;min-height:76px;text-align:left}
+  .stepline .hl{color:var(--orange);font-weight:700}
+  .stepline .hl2{color:var(--green);font-weight:700}
+  .stepnum{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .stepnav{display:flex;gap:12px;margin-top:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .stepdots{display:flex;gap:6px;margin-left:4px}
+  .stepdot{width:8px;height:8px;border-radius:50%;background:var(--line)}
+  .stepdot.on{background:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">⏱️ 時間偵察兵</h1>
+    <p class="sub" data-i18n="sub">秒的認識、看懂非整點、時間的加加減減</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    1 分＝60 秒，1 時＝60 分 —— 時間是「60 進位」的，滿 60 就要跳一格！<br>
+    今天我們要學會看懂鐘面上的每一分鐘，還有時間怎麼加、怎麼減。
+  </div>
+
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
+  </div>
+
+  <!-- 1. 秒的認識 + 60 進位 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">1 秒有多快？滿 60 就要進位</h2>
+    <p class="lead" data-i18n="s1lead">先感覺一下 1 秒有多長，再看看秒、分、時是怎麼接起來的。</p>
+    <div class="card">
+      <div class="anchorRow" id="anchorRow">👁️👁️👁️👁️👁️</div>
+      <p class="anchorLabel" data-i18n="anchorNote">一次眨眼、或是數一次「1001」，大約都是 1 秒 —— 上面 5 個眼睛，大約就是 5 秒。</p>
+    </div>
+    <div class="card">
+      <div class="chips" id="ladderChips"></div>
+      <div class="numgrid" id="ladderGrid"></div>
+      <p class="hopline" id="ladderLine"></p>
+      <div class="btnrow">
+        <button class="btn" id="ladderBtn" type="button" data-i18n="ladderStart">開始累積</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 報讀非整點 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">長針每指一個數字，就是 5 分</h2>
+    <p class="lead" data-i18n="s2lead">選一個小時，再一步一步讓長針走 5 分、5 分！</p>
+    <div class="card">
+      <div id="stepClock"></div>
+      <div class="chips" id="stepHourChips"></div>
+      <p class="hopline" id="stepLine"></p>
+      <div class="btnrow">
+        <button class="btn ghost" id="stepBackBtn" type="button" data-i18n="stepBackBtn">← 退 5 分</button>
+        <button class="btn" id="stepFwdBtn" type="button" data-i18n="stepFwdBtn">走 5 分 →</button>
+      </div>
+      <div class="trapcard">
+        <p class="ttitle" data-i18n="trapTitle">⚠️ 小心陷阱</p>
+        <p data-i18n="trapText">長針指著「5」，不是代表 5 分，而是 5×5＝25 分！長針上的每個數字都要乘以 5。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 時間量的加減 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">時間量的加法：滿 60 分要跳成 1 時</h2>
+    <p class="lead" data-i18n="s3lead">選一組時間，看看兩段時間加起來變多長。</p>
+    <div class="card">
+      <div class="chips" id="nlChips"></div>
+      <p class="hopline" id="nlStem"></p>
+      <div class="numline" id="nlTrack"></div>
+      <p class="linesum" id="nlSum"></p>
+      <div class="btnrow">
+        <button class="btn" id="nlBtn" type="button" data-i18n="nlStartBtn">開始累加</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 時刻 + 時間量 = 時刻 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">時刻 ＋ 時間量 ＝ 時刻：先走到整點</h2>
+    <p class="lead" data-i18n="s4lead">從一個時刻出發，經過一段時間，會停在哪個時刻？一步一步看。</p>
+    <div class="card">
+      <div class="chips" id="fwdChips"></div>
+      <div class="stepbox">
+        <p class="stepnum" id="fwdStepNum"></p>
+        <div class="stepline" id="fwdStepLine"></div>
+        <div class="stepnav">
+          <button class="btn ghost" id="fwdPrev" type="button" data-i18n="stepPrevBtn">上一步</button>
+          <button class="btn" id="fwdNext" type="button" data-i18n="stepNextBtn">下一步</button>
+          <div class="stepdots" id="fwdDots"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 時刻 − 時刻 = 時間量 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">範例教學 5</span>
+    <h2 data-i18n="s5h2">時刻 − 時刻 ＝ 時間量：分段數</h2>
+    <p class="lead" data-i18n="s5lead">兩個時刻之間經過多久？先走到整點，再算剩下的。</p>
+    <div class="card">
+      <div class="chips" id="diffChips"></div>
+      <div class="stepbox">
+        <p class="stepnum" id="diffStepNum"></p>
+        <div class="stepline" id="diffStepLine"></div>
+        <div class="stepnav">
+          <button class="btn ghost" id="diffPrev" type="button" data-i18n="stepPrevBtn">上一步</button>
+          <button class="btn" id="diffNext" type="button" data-i18n="stepNextBtn">下一步</button>
+          <div class="stepdots" id="diffDots"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">試題</span>
+    <h2 data-i18n="s6h2">六題檢查一下</h2>
+    <p class="lead" data-i18n="s6lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb7">小遊戲</span>
+    <h2 data-i18n="s7h2">趕上下一班車</h2>
+    <p class="lead" data-i18n="s7lead">看清楚時間，選出正確答案。答錯會扣一點分，但永遠可以再試一次！</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <p class="target" id="gAskLine"><span id="gAskText"></span>
+        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px;margin-left:6px;min-height:auto" data-i18n="gHintBtn">💡 提示</button>
+      </p>
+      <p class="hint" id="gHint"></p>
+      <div class="opts" id="gAnswers"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 學完之後 -->
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的三個動作</h2>
+    <div class="card" style="text-align:left">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。</li>
+        <li data-i18n="next3">❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>滿 60 就進位，時刻不能直接相加，要用分段數。</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 語言無關的小工具：時鐘 SVG ---------- */
+  function polar(cx, cy, angleDeg, radius){
+    var rad = angleDeg * Math.PI / 180;
+    return { x: cx + radius * Math.sin(rad), y: cy - radius * Math.cos(rad) };
+  }
+  /* hourAngle 用 ((h%12) + m/60) * 30 計算：m/60 這一項就是非整點時
+     短針會走到兩數字中間的關鍵，不能省略，否則畫出來的鐘面會跟題目的時間對不上。 */
+  function clockSVG(h, m, opts){
+    opts = opts || {};
+    var size = opts.size || 150, cx = size / 2, cy = size / 2, r = size / 2 - 14;
+    var hourAngle = ((h % 12) + m / 60) * 30;
+    var minAngle = m * 6;
+    var hp = polar(cx, cy, hourAngle, r * 0.52);
+    var mp = polar(cx, cy, minAngle, r * 0.82);
+    var svg = '<svg class="clockmini" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#FFFFFF" stroke="#2B2A33" stroke-width="4"/>';
+    for (var i = 1; i <= 12; i++){
+      var tp = polar(cx, cy, i * 30, r - 20);
+      svg += '<text x="' + tp.x.toFixed(1) + '" y="' + (tp.y + 6).toFixed(1) + '" font-size="15" text-anchor="middle" fill="#6B6875" font-weight="700">' + i + '</text>';
+    }
+    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + hp.x.toFixed(1) + '" y2="' + hp.y.toFixed(1) + '" stroke="#E8871E" stroke-width="7" stroke-linecap="round"/>';
+    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + mp.x.toFixed(1) + '" y2="' + mp.y.toFixed(1) + '" stroke="#3B7DD8" stroke-width="4" stroke-linecap="round"/>';
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#2B2A33"/>';
+    svg += '</svg>';
+    return svg;
+  }
+
+  /* ---------- 語言無關的時間計算（供試題／遊戲共用，避免算式寫死） ---------- */
+  function addMinutes(h, m, add){
+    var total = h * 60 + m + add;
+    return { h: Math.floor(total / 60), m: total % 60 };
+  }
+  function diffMinutes(h1, m1, h2, m2){
+    return (h2 * 60 + m2) - (h1 * 60 + m1);
+  }
+
+  /* ---------- 語言無關的資料 ---------- */
+  var LADDER = [
+    { small:'sec', big:'min', target:60 },
+    { small:'min', big:'hour', target:60 }
+  ];
+
+  var NL_PAIRS = [
+    { labelKey:'class', a:40, bLabelKey:'break', b:10 },
+    { labelKey:'homework', a:40, bLabelKey:'review', b:35 }
+  ];
+  var NL_MAX = 90;
+
+  var FWD_EXAMPLES = [
+    { h:9, m:40, add:50 },
+    { h:2, m:15, add:40 }
+  ];
+
+  var DIFF_EXAMPLES = [
+    { h1:9, m1:40, h2:10, m2:30 },
+    { h1:2, m1:15, h2:2, m2:50 }
+  ];
+
+  /* 遊戲：每一關都用 addMinutes / diffMinutes 現場算出正解，錯誤選項另外給 */
+  var ROUNDS = [
+    { kind:'time', h:8, m:15, add:20, wrong:[{h:8,m:55},{h:8,m:15},{h:8,m:45}] },
+    { kind:'time', h:9, m:45, add:30, wrong:[{h:10,m:5},{h:9,m:15},{h:11,m:15}] },
+    { kind:'time', h:3, m:10, add:25, wrong:[{h:3,m:25},{h:3,m:45},{h:4,m:10}] },
+    { kind:'dur', h1:9, m1:50, h2:10, m2:20, wrong:[70, 90, 20] },
+    { kind:'dur', h1:4, m1:5, h2:4, m2:50, wrong:[55, 35, 285] }
+  ];
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang: 'zh-Hant',
+      title: '教我時間 — 時間偵察兵',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      h1: '⏱️ 時間偵察兵',
+      sub: '秒的認識、看懂非整點、時間的加加減減',
+      intro: '1 分＝60 秒，1 時＝60 分 —— 時間是「60 進位」的，滿 60 就要跳一格！<br>今天我們要學會看懂鐘面上的每一分鐘，還有時間怎麼加、怎麼減。',
+      nav1: '📖 上課（本頁）', nav2: '🗂️ 速查卡', nav3: '🔁 複習挑戰', nav4: '👨‍👩‍👧 給家長',
+      modeTitle: '今天想怎麼學？（隨時可以換）',
+      modes: {
+        ahead:  { icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：範例慢慢看，試題只出 6 題基礎題，遊戲會自動給提示。' },
+        school: { icon:'🏫', h:'跟上進度', p:'學校正在教，完整練習', banner:'跟上模式：完整 10 題，包含 4 題文字題。' },
+        boost:  { icon:'💪', h:'補強練習', p:'學過但還不穩，加強', banner:'補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。' }
+      },
+      ebNext: '學完之後', nextH2: '把它記牢的三個動作',
+      next1: '🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2: '🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
+      next3: '❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
+      eb1:'範例教學 1', eb2:'範例教學 2', eb3:'範例教學 3', eb4:'範例教學 4', eb5:'範例教學 5', eb6:'試題', eb7:'小遊戲',
+      stepPrevBtn: '上一步', stepNextBtn: '下一步',
+
+      s1h2: '1 秒有多快？滿 60 就要進位',
+      s1lead: '先感覺一下 1 秒有多長，再看看秒、分、時是怎麼接起來的。',
+      anchorNote: '一次眨眼、或是數一次「1001」，大約都是 1 秒 —— 上面 5 個眼睛，大約就是 5 秒。',
+      unitLabel: { sec:'秒', min:'分', hour:'時' },
+      ladderChipLabel: function(l){ return I18N.zh.unitLabel[l.small] + ' → ' + I18N.zh.unitLabel[l.big]; },
+      ladderStart: '開始累積', ladderReset: '重新開始',
+      ladderLine: function(value, unitSmall){ return '已經累積了 <b>' + value + ' ' + unitSmall + '</b>。'; },
+      ladderDone: function(target, unitSmall, unitBig){ return '滿 ' + target + ' ' + unitSmall + ' 了！<b>' + target + ' ' + unitSmall + ' ＝ 1 ' + unitBig + '</b>，跳成 1 個大單位！'; },
+
+      s2h2: '長針每指一個數字，就是 5 分',
+      s2lead: '選一個小時，再一步一步讓長針走 5 分、5 分！',
+      stepLine: function(h, m, num){
+        return m === 0 ? ('長針指著 <b>12</b>，回到起點 —— 現在是 <b>' + h + ' 點整</b>。') : ('長針指著 <b>' + num + '</b>，' + num + '×5＝' + m + ' 分 —— 現在是 <b>' + h + ' 點 ' + m + ' 分</b>。');
+      },
+      stepBackBtn: '← 退 5 分', stepFwdBtn: '走 5 分 →',
+      trapTitle: '⚠️ 小心陷阱',
+      trapText: '長針指著「5」，不是代表 5 分，而是 5×5＝25 分！長針上的每個數字都要乘以 5。',
+
+      s3h2: '時間量的加法：滿 60 分要跳成 1 時',
+      s3lead: '選一組時間，看看兩段時間加起來變多長。',
+      durLabel: { class:'一節課', break:'下課', homework:'寫功課', review:'複習' },
+      nlChipLabel: function(p){ return I18N.zh.durLabel[p.labelKey] + ' ' + p.a + ' 分 + ' + I18N.zh.durLabel[p.bLabelKey] + ' ' + p.b + ' 分'; },
+      nlStem: function(p){ return I18N.zh.durLabel[p.labelKey] + ' ' + p.a + ' 分，' + I18N.zh.durLabel[p.bLabelKey] + ' ' + p.b + ' 分，一共是多少時間？'; },
+      nlLine: function(value){ return '已經加到 <b>' + value + ' 分</b>。'; },
+      nlSumLine: function(a, b, sum, h, m){
+        var result = h > 0 ? (h + ' 時 ' + m + ' 分') : (m + ' 分');
+        return a + ' 分 ＋ ' + b + ' 分 ＝ ' + sum + ' 分' + (sum >= 60 ? '，滿 60 分要跳成 1 時：' + sum + ' ＝ 60 ＋ ' + (sum - 60) : '') + ' ＝ <b>' + result + '</b>';
+      },
+      nlHourMark: '60分=1時',
+      nlStartBtn: '開始累加', nlResetBtn: '重新開始',
+
+      s4h2: '時刻 ＋ 時間量 ＝ 時刻：先走到整點',
+      s4lead: '從一個時刻出發，經過一段時間，會停在哪個時刻？一步一步看。',
+      fwdChipLabel: function(e){ return e.h + ':' + (e.m < 10 ? '0' + e.m : e.m) + ' + ' + e.add + ' 分'; },
+      fwdSteps: function(e){
+        var toHour = 60 - e.m;
+        var stem = '現在 <b>' + e.h + ':' + (e.m < 10 ? '0' + e.m : e.m) + '</b>，再過 <b>' + e.add + ' 分</b>，是幾點？';
+        var r = addMinutes(e.h, e.m, e.add);
+        var end = r.h + ':' + (r.m < 10 ? '0' + r.m : r.m);
+        if (e.add <= toHour){
+          return [
+            stem,
+            '因為 ' + e.m + ' ＋ ' + e.add + ' ＝ <span class="hl">' + (e.m + e.add) + '</span>，還沒有滿 60，不用跳到下一個小時。',
+            '答案：<span class="hl2">' + end + '</span>。'
+          ];
+        }
+        var rest = e.add - toHour;
+        return [
+          stem,
+          '先走到整點 <span class="hl">' + (e.h + 1) + ':00</span>，用掉了 60－' + e.m + '＝<span class="hl">' + toHour + '</span> 分。',
+          '還剩下 ' + e.add + '－' + toHour + '＝<span class="hl">' + rest + '</span> 分，從 ' + (e.h + 1) + ':00 再走 ' + rest + ' 分。',
+          '答案：<span class="hl2">' + end + '</span>。'
+        ];
+      },
+      stepOf: function(i, n){ return '第 ' + i + ' / ' + n + ' 步'; },
+
+      s5h2: '時刻 − 時刻 ＝ 時間量：分段數',
+      s5lead: '兩個時刻之間經過多久？先走到整點，再算剩下的。',
+      diffChipLabel: function(e){
+        return e.h1 + ':' + (e.m1 < 10 ? '0' + e.m1 : e.m1) + ' → ' + e.h2 + ':' + (e.m2 < 10 ? '0' + e.m2 : e.m2);
+      },
+      diffSteps: function(e){
+        var stem = '從 <b>' + e.h1 + ':' + (e.m1 < 10 ? '0' + e.m1 : e.m1) + '</b> 到 <b>' + e.h2 + ':' + (e.m2 < 10 ? '0' + e.m2 : e.m2) + '</b>，經過了多久？';
+        var total = diffMinutes(e.h1, e.m1, e.h2, e.m2);
+        if (e.h1 === e.h2){
+          return [
+            stem,
+            '兩個時刻的小時一樣，直接用分鐘相減：' + e.m2 + '－' + e.m1 + '＝<span class="hl">' + total + '</span> 分。',
+            '答案：經過了 <span class="hl2">' + total + ' 分</span>。'
+          ];
+        }
+        var seg1 = 60 - e.m1, seg2 = e.m2;
+        return [
+          stem,
+          '先算走到整點 ' + (e.h1 + 1) + ':00，用了 60－' + e.m1 + '＝<span class="hl">' + seg1 + '</span> 分。',
+          '再算整點走到結束時刻，用了 <span class="hl">' + seg2 + '</span> 分。',
+          seg1 + ' ＋ ' + seg2 + ' ＝ <span class="hl2">' + total + '</span> 分。',
+          '答案：經過了 <span class="hl2">' + total + ' 分</span>（不能直接把 ' + e.h2 + ':' + (e.m2 < 10 ? '0' + e.m2 : e.m2) + ' 減 ' + e.h1 + ':' + (e.m1 < 10 ? '0' + e.m1 : e.m1) + ' 的數字列式相減，會借位借錯）。'
+        ];
+      },
+
+      s6h2: '六題檢查一下', s6lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      cAll: '全對！你已經是時間偵察兵 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面範例教學再玩一次。',
+      qs: [
+        { stem: '看時鐘，現在是幾點幾分？' + clockSVG(3, 25),
+          opts: ['3:05', '3:25', '3:30', '4:25'], ans: 1,
+          why: '長針指著 5，5×5＝25 分；短針在 3 和 4 中間、還沒到 4，所以是 3:25。' },
+        { stem: '看時鐘，長針指著數字 7，代表幾分？' + clockSVG(6, 35),
+          opts: ['7分', '35分', '12分', '70分'], ans: 1,
+          why: '長針每指一個數字代表 5 分，長針指著 7，7×5＝35 分。' },
+        { stem: '1 分 ＝ 幾秒？',
+          opts: ['60秒', '100秒', '10秒', '6秒'], ans: 0,
+          why: '滿 60 秒才會變成 1 分，所以 1 分 ＝ 60 秒。' },
+        { stem: '整理房間花了 20 分，掃地花了 15 分，一共花多少時間？',
+          opts: ['35分', '5分', '300分', '25分'], ans: 0,
+          why: '20 ＋ 15 ＝ 35，一共花了 35 分。' },
+        { stem: '上一節課 40 分，下課休息 35 分，一共經過多少時間？',
+          opts: ['1時15分', '0時75分', '1時5分', '75時'], ans: 0,
+          why: '40 ＋ 35 ＝ 75 分，75 分 ＝ 60 分 ＋ 15 分 ＝ 1 時 15 分（分不能寫到 60 以上，所以不能寫成「0 時 75 分」）。' },
+        { stem: '下面哪一個是「時刻」（某一個時間點）？',
+          opts: ['3:40', '25分鐘', '1時', '2時30分'], ans: 0,
+          why: '3:40 代表現在幾點，是時刻；其他三個都是經過多久，是時間量。' }
+      ],
+      qsAdv: [
+        { stem: '文字題：游泳課 9:40 開始，上了 50 分鐘，幾點下課？',
+          opts: ['10:30', '10:20', '11:30', '10:10'], ans: 0,
+          why: '先走到整點 10:00，用了 60－40＝20 分；50－20＝30，10:00 再走 30 分是 10:30。' },
+        { stem: '文字題：整理花圃從 9:40 開始，到 10:15 結束，一共花了多久？',
+          opts: ['35分', '25分', '45分', '1時35分'], ans: 0,
+          why: '先算 9:40 走到 10:00 用了 20 分，再算 10:00 走到 10:15 用了 15 分，20 ＋ 15 ＝ 35 分。' },
+        { stem: '文字題：小明 3:10 開始寫作業，寫了 45 分後，又檢查了 20 分，寫完是幾點？',
+          opts: ['4:15', '4:05', '3:55', '5:15'], ans: 0,
+          why: '先算總共用了 45 ＋ 20 ＝ 65 分 ＝ 1 時 5 分；再從 3:10 走 1 時 5 分：先走 1 時到 4:10，再走 5 分是 4:15。' },
+        { stem: '下面哪一句話正確？',
+          opts: ['「幾點」和「經過多久」是同一種東西，可以直接相加', '8:00 和 10:30 都是時刻，不能直接把它們相加來算經過多久', '時刻一定比時間量大', '時間量一定是整數的時'], ans: 1,
+          why: '時刻是「幾點」，時間量是「經過多久」，是不一樣的兩件事：要算經過多久，要用「時刻－時刻」，不能把兩個時刻直接相加。' }
+      ],
+      qsBoost: [
+        { stem: '迷思檢查：1 時 20 分 ＋ 50 分 ＝ ？',
+          opts: ['2時10分', '1時70分', '1時10分', '3時10分'], ans: 0,
+          why: '先加分：20 ＋ 50 ＝ 70 分 ＝ 1 時 10 分（分不能寫到 60 以上，不能寫成「1 時 70 分」）；再加時：1 時 ＋ 1 時 10 分 ＝ 2 時 10 分。' },
+        { stem: '迷思檢查：' + clockSVG(9, 40) + clockSVG(10, 30) + '從 9:40 到 10:30，經過了多久？',
+          opts: ['50分', '1時10分', '90分', '20分'], ans: 0,
+          why: '用分段數：先算 9:40 走到 10:00 用了 20 分，再算 10:00 走到 10:30 用了 30 分，20 ＋ 30 ＝ 50 分。（如果直接把時和分分別相減不會借位，會誤算成「1 時 10 分」；如果把時刻當成四位數直接相減（1030－940），會誤算成 90 分，這兩種都不對。）' }
+      ],
+
+      s7h2: '趕上下一班車', s7lead: '看清楚時間，選出正確答案。答錯會扣一點分，但永遠可以再試一次！',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
+      gScenario: [
+        function(r){ return '公車站牌上寫「現在 ' + r.h + ':' + (r.m < 10 ? '0' + r.m : r.m) + '，再等 ' + r.add + ' 分鐘」，公車幾點會到？'; },
+        function(r){ return '妹妹 ' + r.h + ':' + (r.m < 10 ? '0' + r.m : r.m) + ' 開始收拾書包，再過 ' + r.add + ' 分鐘要出門，出門是幾點？'; },
+        function(r){ return '游泳課 ' + r.h + ':' + (r.m < 10 ? '0' + r.m : r.m) + ' 開始，游了 ' + r.add + ' 分鐘，幾點下課？'; },
+        function(r){ return '校車 ' + r.h1 + ':' + (r.m1 < 10 ? '0' + r.m1 : r.m1) + ' 出發，' + r.h2 + ':' + (r.m2 < 10 ? '0' + r.m2 : r.m2) + ' 到達學校，車程開了多久？'; },
+        function(r){ return '妹妹 ' + r.h1 + ':' + (r.m1 < 10 ? '0' + r.m1 : r.m1) + ' 開始寫功課，' + r.h2 + ':' + (r.m2 < 10 ? '0' + r.m2 : r.m2) + ' 寫完，一共寫了多久？'; }
+      ],
+      gHintBtn: '💡 提示',
+      gHint1: '提示：用分段數，先走到整點！',
+      gHint2Cross: function(toHour){ return '提示 2：先走到整點要用 ' + toHour + ' 分。'; },
+      gHint2Plain: function(sum){ return '提示 2：分的部分加起來是 ' + sum + '，自己換算成時分看看。'; },
+      gHint2Same: '提示 2：兩個時刻的小時一樣，直接把分鐘相減就好。',
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      gCorrectFirst: function(v){ return '答對了！答案是 ' + v + '，+10 分 🌟'; },
+      gCorrectRetry: function(v){ return '答對了！答案是 ' + v + '，+5 分 🌟'; },
+      gWrong: function(v){ return v + ' 不對，再試一次，−3 分。'; },
+      gClear: '按「下一關」繼續！',
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+
+      clk: function(h, m){ return h + ':' + (m < 10 ? '0' + m : String(m)); },
+      dur: function(h, m){ return (h > 0) ? (h + '時' + m + '分') : (m + '分'); },
+
+      footer: '把整頁縮成一句：<strong>滿 60 就進位，時刻不能直接相加，要用分段數。</strong>'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang: 'en',
+      title: 'Teach Me Time — The Time Scout',
+      btn: '中',
+      home: '← Back to teach-me home',
+      h1: '⏱️ The Time Scout',
+      sub: 'Meeting the second, reading past-the-hour times, adding and subtracting time',
+      intro: '1 minute = 60 seconds, 1 hour = 60 minutes — time counts in base 60, so once you reach 60 you roll over!<br>Today we’ll learn to read every minute on a clock face, and how to add and subtract time.',
+      nav1: '📖 Lesson (this page)', nav2: '🗂️ Cheat sheet', nav3: '🔁 Review challenge', nav4: '👨‍👩‍👧 For parents',
+      modeTitle: 'How do you want to learn today? (switch anytime)',
+      modes: {
+        ahead:  { icon:'🚀', h:'Learning ahead', p:'First time meeting this topic', banner:'Ahead mode: enjoy the examples at your own pace — the quiz has just the 6 basics, and the game shows a hint automatically.' },
+        school: { icon:'🏫', h:'School pace', p:'Learning it at school now', banner:'School mode: the full 10 questions, including 4 word problems.' },
+        boost:  { icon:'💪', h:'Boost', p:'Learned it, still shaky', banner:'Boost mode: 2 misconception checks first, 12 questions in total — then head to the Review Challenge.' }
+      },
+      ebNext: 'After the lesson', nextH2: 'Three moves that make it stick',
+      next1: '🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
+      next2: '🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
+      next3: '❓ Anything unclear — ask your parents or your AI teacher until it clicks. Good learners ask.',
+      eb1:'Example 1', eb2:'Example 2', eb3:'Example 3', eb4:'Example 4', eb5:'Example 5', eb6:'Quiz', eb7:'Game',
+      stepPrevBtn: 'Back', stepNextBtn: 'Next',
+
+      s1h2: 'How fast is a second? Rolling over at 60',
+      s1lead: 'First feel how long a second is, then see how seconds, minutes and hours connect.',
+      anchorNote: 'One blink, or counting “one-Mississippi”, is about 1 second — the 5 eyes above are about 5 seconds.',
+      unitLabel: { sec:'sec', min:'min', hour:'h' },
+      ladderChipLabel: function(l){ return I18N.en.unitLabel[l.small] + ' → ' + I18N.en.unitLabel[l.big]; },
+      ladderStart: 'Start counting up', ladderReset: 'Reset',
+      ladderLine: function(value, unitSmall){ return 'You’ve counted up to <b>' + value + ' ' + unitSmall + '</b>.'; },
+      ladderDone: function(target, unitSmall, unitBig){ return 'Reached ' + target + ' ' + unitSmall + '! <b>' + target + ' ' + unitSmall + ' = 1 ' + unitBig + '</b> — it rolls over into one bigger unit!'; },
+
+      s2h2: 'Every number the long hand points to means 5 minutes',
+      s2lead: 'Pick an hour, then step the long hand forward 5 minutes at a time!',
+      stepLine: function(h, m, num){
+        return m === 0 ? ('The long hand points at <b>12</b>, back at the start — it\u2019s <b>' + h + ' o\u2019clock</b>.') : ('The long hand points at <b>' + num + '</b>: ' + num + '\u00d75 = ' + m + ' minutes \u2014 it\u2019s <b>' + h + ':' + (m < 10 ? '0' + m : m) + '</b>.');
+      },
+      stepBackBtn: '← Back 5 min', stepFwdBtn: 'Forward 5 min →',
+      trapTitle: '⚠️ Watch out for this trap',
+      trapText: 'The long hand pointing at “5” does not mean 5 minutes — it means 5×5 = 25 minutes! Every number on the long hand must be multiplied by 5.',
+
+      s3h2: 'Adding lengths of time: 60 minutes rolls over into 1 hour',
+      s3lead: 'Pick a pair of times and watch the two spans add up.',
+      durLabel: { class:'Class', break:'Break', homework:'Homework', review:'Review' },
+      nlChipLabel: function(p){ return I18N.en.durLabel[p.labelKey] + ' ' + p.a + ' min + ' + I18N.en.durLabel[p.bLabelKey] + ' ' + p.b + ' min'; },
+      nlStem: function(p){ return I18N.en.durLabel[p.labelKey] + ' takes ' + p.a + ' min, ' + I18N.en.durLabel[p.bLabelKey] + ' takes ' + p.b + ' min. What’s the total?'; },
+      nlLine: function(value){ return 'Counted up to <b>' + value + ' min</b>.'; },
+      nlSumLine: function(a, b, sum, h, m){
+        var result = h > 0 ? (h + ' h ' + m + ' min') : (m + ' min');
+        return a + ' + ' + b + ' = ' + sum + ' minutes' + (sum >= 60 ? ', and once it reaches 60 it rolls into 1 hour: ' + sum + ' = 60 + ' + (sum - 60) : '') + ' = <b>' + result + '</b>';
+      },
+      nlHourMark: '60 min = 1 h',
+      nlStartBtn: 'Start adding up', nlResetBtn: 'Reset',
+
+      s4h2: 'Point in time + length of time = point in time: reach the hour first',
+      s4lead: 'Starting from a point in time, where do you land after a length of time passes? Step through it.',
+      fwdChipLabel: function(e){ return (e.h < 10 ? '0' + e.h : e.h) + ':' + (e.m < 10 ? '0' + e.m : e.m) + ' + ' + e.add + ' min'; },
+      fwdSteps: function(e){
+        var toHour = 60 - e.m;
+        var stem = 'It’s <b>' + e.h + ':' + (e.m < 10 ? '0' + e.m : e.m) + '</b> now. ' + e.add + ' minutes later, what time is it?';
+        var r = addMinutes(e.h, e.m, e.add);
+        var end = r.h + ':' + (r.m < 10 ? '0' + r.m : r.m);
+        if (e.add <= toHour){
+          return [
+            stem,
+            'Since ' + e.m + ' + ' + e.add + ' = <span class="hl">' + (e.m + e.add) + '</span>, it hasn’t reached 60 yet, so we don’t roll over to the next hour.',
+            'Answer: <span class="hl2">' + end + '</span>.'
+          ];
+        }
+        var rest = e.add - toHour;
+        return [
+          stem,
+          'First reach the hour mark <span class="hl">' + (e.h + 1) + ':00</span>, using 60 − ' + e.m + ' = <span class="hl">' + toHour + '</span> minutes.',
+          rest + ' minutes are left (' + e.add + ' − ' + toHour + ' = <span class="hl">' + rest + '</span>), so from ' + (e.h + 1) + ':00, go forward ' + rest + ' more minutes.',
+          'Answer: <span class="hl2">' + end + '</span>.'
+        ];
+      },
+      stepOf: function(i, n){ return 'Step ' + i + ' / ' + n; },
+
+      s5h2: 'Point in time − point in time = length of time: count in segments',
+      s5lead: 'How much time passes between two points in time? Reach the hour mark first, then count the rest.',
+      diffChipLabel: function(e){
+        return (e.h1 < 10 ? '0' + e.h1 : e.h1) + ':' + (e.m1 < 10 ? '0' + e.m1 : e.m1) + ' → ' + (e.h2 < 10 ? '0' + e.h2 : e.h2) + ':' + (e.m2 < 10 ? '0' + e.m2 : e.m2);
+      },
+      diffSteps: function(e){
+        var stem = 'From <b>' + e.h1 + ':' + (e.m1 < 10 ? '0' + e.m1 : e.m1) + '</b> to <b>' + e.h2 + ':' + (e.m2 < 10 ? '0' + e.m2 : e.m2) + '</b>, how much time passed?';
+        var total = diffMinutes(e.h1, e.m1, e.h2, e.m2);
+        if (e.h1 === e.h2){
+          return [
+            stem,
+            'Both points share the same hour, so just subtract the minutes: ' + e.m2 + ' − ' + e.m1 + ' = <span class="hl">' + total + '</span> minutes.',
+            'Answer: <span class="hl2">' + total + ' minutes</span> passed.'
+          ];
+        }
+        var seg1 = 60 - e.m1, seg2 = e.m2;
+        return [
+          stem,
+          'First count up to the hour mark ' + (e.h1 + 1) + ':00, using 60 − ' + e.m1 + ' = <span class="hl">' + seg1 + '</span> minutes.',
+          'Then count from the hour mark to the ending time: <span class="hl">' + seg2 + '</span> minutes.',
+          seg1 + ' + ' + seg2 + ' = <span class="hl2">' + total + '</span> minutes.',
+          'Answer: <span class="hl2">' + total + ' minutes</span> passed (don’t just subtract the digits of ' + e.h2 + ':' + (e.m2 < 10 ? '0' + e.m2 : e.m2) + ' and ' + e.h1 + ':' + (e.m1 < 10 ? '0' + e.m1 : e.m1) + ' directly — it’s easy to borrow wrong).'
+        ];
+      },
+
+      s6h2: 'Six Quick Questions', s6lead: 'Tap an answer and we’ll tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll: 'Perfect score! You’re a time scout now 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That’s okay — scroll up and try the examples again.',
+      qs: [
+        { stem: 'Look at the clock — what time is it?' + clockSVG(3, 25),
+          opts: ['3:05', '3:25', '3:30', '4:25'], ans: 1,
+          why: 'The long hand points at 5, so 5×5 = 25 minutes; the short hand is between 3 and 4, not yet at 4 — so it’s 3:25.' },
+        { stem: 'Look at the clock — the long hand points at 7. How many minutes is that?' + clockSVG(6, 35),
+          opts: ['7 min', '35 min', '12 min', '70 min'], ans: 1,
+          why: 'Every number the long hand points at means 5 minutes: 7×5 = 35 minutes.' },
+        { stem: '1 minute = how many seconds?',
+          opts: ['60 sec', '100 sec', '10 sec', '6 sec'], ans: 0,
+          why: 'It takes 60 seconds to roll over into 1 minute, so 1 minute = 60 seconds.' },
+        { stem: 'Tidying the room took 20 minutes, sweeping took 15 minutes. How much time in total?',
+          opts: ['35 min', '5 min', '300 min', '25 min'], ans: 0,
+          why: '20 + 15 = 35, so it took 35 minutes in total.' },
+        { stem: 'A class lasted 40 minutes, and the break lasted 35 minutes. How much time passed in total?',
+          opts: ['1 h 15 min', '0 h 75 min', '1 h 5 min', '75 h'], ans: 0,
+          why: '40 + 35 = 75 minutes = 60 minutes + 15 minutes = 1 h 15 min (minutes can never be written as 60 or more, so it can’t be “0 h 75 min”).' },
+        { stem: 'Which of these is a “point in time”?',
+          opts: ['3:40', '25 minutes', '1 hour', '2 h 30 min'], ans: 0,
+          why: '3:40 tells you what time it is right now — a point in time. The other three describe how long something lasted — a length of time.' }
+      ],
+      qsAdv: [
+        { stem: 'Word problem: Swim class starts at 9:40 and lasts 50 minutes. What time does it end?',
+          opts: ['10:30', '10:20', '11:30', '10:10'], ans: 0,
+          why: 'First reach the hour mark 10:00, using 60 − 40 = 20 minutes; 50 − 20 = 30, so from 10:00 go forward 30 more minutes, landing at 10:30.' },
+        { stem: 'Word problem: Gardening started at 9:40 and ended at 10:15. How long did it take?',
+          opts: ['35 min', '25 min', '45 min', '1 h 35 min'], ans: 0,
+          why: 'First count 9:40 to 10:00 (20 minutes), then 10:00 to 10:15 (15 minutes): 20 + 15 = 35 minutes.' },
+        { stem: 'Word problem: Ming starts homework at 3:10, works for 45 minutes, then checks it for 20 more minutes. What time does he finish?',
+          opts: ['4:15', '4:05', '3:55', '5:15'], ans: 0,
+          why: 'Total time used: 45 + 20 = 65 minutes = 1 h 5 min; from 3:10, go forward 1 hour to 4:10, then 5 more minutes to 4:15.' },
+        { stem: 'Which sentence is correct?',
+          opts: ['“What time” and “how long” are the same thing, so you can add them directly', '8:00 and 10:30 are both points in time — you can’t add them directly to find how long passed', 'A point in time is always bigger than a length of time', 'A length of time is always a whole number of hours'], ans: 1,
+          why: 'A point in time is “what time is it”; a length of time is “how long something lasted” — they’re different things. To find how long passed, subtract one point in time from another; you can’t add two points in time together.' }
+      ],
+      qsBoost: [
+        { stem: 'Misconception check: 1 h 20 min + 50 min = ?',
+          opts: ['2 h 10 min', '1 h 70 min', '1 h 10 min', '3 h 10 min'], ans: 0,
+          why: 'First add the minutes: 20 + 50 = 70 minutes = 1 h 10 min (minutes can’t be written as 60 or more, so it can’t be “1 h 70 min”); then add the hours: 1 h + 1 h 10 min = 2 h 10 min.' },
+        { stem: 'Misconception check: ' + clockSVG(9, 40) + clockSVG(10, 30) + 'From 9:40 to 10:30, how much time passed?',
+          opts: ['50 min', '1 h 10 min', '90 min', '20 min'], ans: 0,
+          why: 'Count in segments: 9:40 to 10:00 is 20 minutes, 10:00 to 10:30 is 30 minutes, 20 + 30 = 50 minutes. (Subtracting hours and minutes separately without borrowing gives the wrong “1 h 10 min”; treating the times as four-digit numbers (1030 − 940) gives the wrong “90 min” — neither is correct.)' }
+      ],
+
+      s7h2: 'Catch the Next Bus', s7lead: 'Read the time carefully and pick the correct answer. A wrong tap costs a little — but you can always try again!',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
+      gScenario: [
+        function(r){ return 'A bus sign says “It’s ' + r.h + ':' + (r.m < 10 ? '0' + r.m : r.m) + ' now, wait ' + r.add + ' more minutes.” What time will the bus arrive?'; },
+        function(r){ return 'Mia starts packing her bag at ' + r.h + ':' + (r.m < 10 ? '0' + r.m : r.m) + ', and needs to leave in ' + r.add + ' more minutes. What time does she leave?'; },
+        function(r){ return 'Swimming class starts at ' + r.h + ':' + (r.m < 10 ? '0' + r.m : r.m) + ' and lasts ' + r.add + ' minutes. What time does it end?'; },
+        function(r){ return 'The school bus leaves at ' + r.h1 + ':' + (r.m1 < 10 ? '0' + r.m1 : r.m1) + ' and arrives at ' + r.h2 + ':' + (r.m2 < 10 ? '0' + r.m2 : r.m2) + '. How long was the ride?'; },
+        function(r){ return 'Mia starts homework at ' + r.h1 + ':' + (r.m1 < 10 ? '0' + r.m1 : r.m1) + ' and finishes at ' + r.h2 + ':' + (r.m2 < 10 ? '0' + r.m2 : r.m2) + '. How long did it take?'; }
+      ],
+      gHintBtn: '💡 Hint',
+      gHint1: 'Hint: count in segments — reach the hour mark first!',
+      gHint2Cross: function(toHour){ return 'Hint 2: reaching the hour mark first uses ' + toHour + ' minutes.'; },
+      gHint2Plain: function(sum){ return 'Hint 2: the minutes add up to ' + sum + ' — try converting that to hours and minutes yourself.'; },
+      gHint2Same: 'Hint 2: both points share the same hour, so just subtract the minutes.',
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      gCorrectFirst: function(v){ return 'Correct on the first try! The answer is ' + v + ' — +10 points 🌟'; },
+      gCorrectRetry: function(v){ return 'Correct! The answer is ' + v + ' — +5 points 🌟'; },
+      gWrong: function(v){ return v + ' isn’t right — try again. −3 points.'; },
+      gClear: 'Press “Next round” to continue!',
+      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+
+      clk: function(h, m){ return h + ':' + (m < 10 ? '0' + m : String(m)); },
+      dur: function(h, m){ return (h > 0) ? (h + ' h ' + m + ' min') : (m + ' min'); },
+
+      footer: 'The whole page in one line: <strong>roll over at 60, and never add two points in time directly — count in segments instead.</strong>'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
+  var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+
+  function buildModeCards(){
+    var d = L();
+    modeCards.textContent = '';
+    ['ahead','school','boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  function buildDots(container, n, idx){
+    container.textContent = '';
+    for (var i = 0; i < n; i++){
+      var dot = document.createElement('span');
+      dot.className = 'stepdot' + (i === idx ? ' on' : '');
+      container.appendChild(dot);
+    }
+  }
+
+  /* ========== 1. 秒的認識 + 60 進位 ========== */
+  var ladderIdx = 0, ladderValue = 0, ladderAnimating = false, ladderDone = false;
+  var ladderChipsEl = document.getElementById('ladderChips');
+  var ladderGrid = document.getElementById('ladderGrid');
+  var ladderLine = document.getElementById('ladderLine');
+  var ladderBtn = document.getElementById('ladderBtn');
+
+  function buildLadderChips(){
+    ladderChipsEl.textContent = '';
+    LADDER.forEach(function(l, i){
+      var b = makeChip(L().ladderChipLabel(l), i === ladderIdx);
+      b.addEventListener('click', function(){
+        if (ladderAnimating) return;
+        if (ladderIdx === i) return;
+        ladderIdx = i;
+        resetLadder();
+      });
+      ladderChipsEl.appendChild(b);
+    });
+  }
+
+  function renderLadderGrid(value){
+    ladderGrid.textContent = '';
+    var target = LADDER[ladderIdx].target;
+    for (var i = 1; i <= target; i++){
+      var c = document.createElement('div');
+      c.className = 'cell' + (i <= value ? ' on' : '') + (i === target ? ' hourmark' : '');
+      c.textContent = i;
+      ladderGrid.appendChild(c);
+    }
+  }
+
+  function resetLadder(){
+    ladderAnimating = false; ladderDone = false; ladderValue = 0;
+    renderLadderGrid(0);
+    ladderLine.textContent = '';
+    ladderBtn.disabled = false;
+    ladderBtn.textContent = L().ladderStart;
+    buildLadderChips();
+  }
+
+  function ladderStep(){
+    var l = LADDER[ladderIdx];
+    if (ladderValue < l.target){
+      ladderValue = Math.min(ladderValue + 5, l.target);
+      renderLadderGrid(ladderValue);
+      if (ladderValue < l.target){
+        ladderLine.innerHTML = L().ladderLine(ladderValue, L().unitLabel[l.small]);
+        setTimeout(ladderStep, 350);
+      } else {
+        ladderDone = true; ladderAnimating = false;
+        ladderLine.innerHTML = L().ladderDone(l.target, L().unitLabel[l.small], L().unitLabel[l.big]);
+        ladderBtn.textContent = L().ladderReset;
+        ladderBtn.disabled = false;
+      }
+    }
+  }
+
+  ladderBtn.addEventListener('click', function(){
+    if (ladderAnimating) return;
+    if (!ladderDone){
+      ladderAnimating = true;
+      ladderBtn.disabled = true;
+      ladderStep();
+    } else {
+      resetLadder();
+    }
+  });
+
+  /* ========== 2. 報讀非整點：長針 5 分一步 ========== */
+  var stepHour = 3, stepMinIdx = 0; // stepMinIdx: 0..11, 代表長針指著的數字 0~11（0 代表指著 12，即整點）
+  var stepClockEl = document.getElementById('stepClock');
+  var stepHourChips = document.getElementById('stepHourChips');
+  var stepLineEl = document.getElementById('stepLine');
+  var stepBackBtn = document.getElementById('stepBackBtn');
+  var stepFwdBtn = document.getElementById('stepFwdBtn');
+
+  function buildStepHourChips(){
+    stepHourChips.textContent = '';
+    [1,2,3,6,9,12].forEach(function(h){
+      var b = makeChip(String(h), h === stepHour);
+      b.addEventListener('click', function(){
+        if (stepHour === h) return;
+        stepHour = h; stepMinIdx = 0;
+        renderStep();
+      });
+      stepHourChips.appendChild(b);
+    });
+  }
+
+  function renderStep(){
+    buildStepHourChips();
+    var num = stepMinIdx === 0 ? 12 : stepMinIdx;
+    var m = stepMinIdx * 5;
+    stepClockEl.innerHTML = clockSVG(stepHour, m, { size: 160 });
+    stepLineEl.innerHTML = L().stepLine(stepHour, m, num);
+    stepBackBtn.disabled = (stepMinIdx === 0);
+    stepFwdBtn.disabled = (stepMinIdx === 11);
+  }
+
+  stepBackBtn.addEventListener('click', function(){
+    if (stepMinIdx > 0){ stepMinIdx--; renderStep(); }
+  });
+  stepFwdBtn.addEventListener('click', function(){
+    if (stepMinIdx < 11){ stepMinIdx++; renderStep(); }
+  });
+
+  /* ========== 3. 時間量的加法（數線） ========== */
+  var nlIdx = 0, nlValue = 0, nlAnimating = false, nlDone = false;
+  var nlChipsEl = document.getElementById('nlChips');
+  var nlStemEl = document.getElementById('nlStem');
+  var nlTrack = document.getElementById('nlTrack');
+  var nlSum = document.getElementById('nlSum');
+  var nlBtn = document.getElementById('nlBtn');
+
+  function buildNlChips(){
+    nlChipsEl.textContent = '';
+    NL_PAIRS.forEach(function(p, i){
+      var b = makeChip(L().nlChipLabel(p), i === nlIdx);
+      b.addEventListener('click', function(){
+        if (nlAnimating) return;
+        if (nlIdx === i) return;
+        nlIdx = i;
+        resetNl();
+      });
+      nlChipsEl.appendChild(b);
+    });
+  }
+
+  function renderNlTrack(value, carried){
+    nlTrack.textContent = '';
+    var trackDiv = document.createElement('div');
+    trackDiv.className = 'track';
+    nlTrack.appendChild(trackDiv);
+    for (var t = 0; t <= NL_MAX; t += 10){
+      var tick = document.createElement('div');
+      tick.className = 'tick' + (t === 60 ? ' hourtick' : '');
+      tick.style.left = (t / NL_MAX * 100) + '%';
+      nlTrack.appendChild(tick);
+      var lbl = document.createElement('div');
+      lbl.className = 'ticklabel';
+      lbl.style.left = (t / NL_MAX * 100) + '%';
+      lbl.textContent = (t === 60) ? L().nlHourMark : String(t);
+      nlTrack.appendChild(lbl);
+    }
+    var marker = document.createElement('div');
+    marker.className = 'marker';
+    marker.style.left = (Math.min(value, NL_MAX) / NL_MAX * 100) + '%';
+    if (carried) marker.style.background = '#2F9E69';
+    nlTrack.appendChild(marker);
+  }
+
+  function resetNl(){
+    nlAnimating = false; nlDone = false;
+    var p = NL_PAIRS[nlIdx];
+    nlValue = p.a;
+    nlStemEl.textContent = L().nlStem(p);
+    renderNlTrack(nlValue, false);
+    nlSum.textContent = '';
+    nlBtn.disabled = false;
+    nlBtn.textContent = L().nlStartBtn;
+    buildNlChips();
+  }
+
+  function nlStep(){
+    var p = NL_PAIRS[nlIdx];
+    var target = p.a + p.b;
+    if (nlValue < target){
+      nlValue = Math.min(nlValue + 5, target);
+      renderNlTrack(nlValue, nlValue >= 60);
+      setTimeout(nlStep, 300);
+    } else {
+      nlDone = true; nlAnimating = false;
+      var h = Math.floor(target / 60), m = target % 60;
+      nlSum.innerHTML = L().nlSumLine(p.a, p.b, target, h, m);
+      nlBtn.textContent = L().nlResetBtn;
+      nlBtn.disabled = false;
+    }
+  }
+
+  nlBtn.addEventListener('click', function(){
+    if (nlAnimating) return;
+    if (!nlDone){
+      nlAnimating = true;
+      nlBtn.disabled = true;
+      nlStep();
+    } else {
+      resetNl();
+    }
+  });
+
+  /* ========== 4. 時刻 + 時間量 = 時刻（逐步） ========== */
+  var fwdIdx = 0, fwdStep = 0;
+  var fwdChipsEl = document.getElementById('fwdChips');
+  var fwdStepNum = document.getElementById('fwdStepNum');
+  var fwdStepLine = document.getElementById('fwdStepLine');
+  var fwdPrev = document.getElementById('fwdPrev');
+  var fwdNext = document.getElementById('fwdNext');
+  var fwdDots = document.getElementById('fwdDots');
+
+  function buildFwdChips(){
+    fwdChipsEl.textContent = '';
+    FWD_EXAMPLES.forEach(function(e, i){
+      var b = makeChip(L().fwdChipLabel(e), i === fwdIdx);
+      b.addEventListener('click', function(){
+        if (fwdIdx === i) return;
+        fwdIdx = i; fwdStep = 0;
+        buildFwdChips(); renderFwdStep();
+      });
+      fwdChipsEl.appendChild(b);
+    });
+  }
+
+  function renderFwdStep(){
+    var e = FWD_EXAMPLES[fwdIdx];
+    var steps = L().fwdSteps(e);
+    fwdStepLine.innerHTML = steps[fwdStep];
+    fwdStepNum.textContent = L().stepOf(fwdStep + 1, steps.length);
+    fwdPrev.disabled = (fwdStep === 0);
+    fwdNext.disabled = (fwdStep === steps.length - 1);
+    buildDots(fwdDots, steps.length, fwdStep);
+  }
+
+  fwdPrev.addEventListener('click', function(){ if (fwdStep > 0){ fwdStep--; renderFwdStep(); } });
+  fwdNext.addEventListener('click', function(){
+    var e = FWD_EXAMPLES[fwdIdx];
+    var len = L().fwdSteps(e).length;
+    if (fwdStep < len - 1){ fwdStep++; renderFwdStep(); }
+  });
+
+  /* ========== 5. 時刻 − 時刻 = 時間量（逐步） ========== */
+  var diffIdx = 0, diffStep = 0;
+  var diffChipsEl = document.getElementById('diffChips');
+  var diffStepNum = document.getElementById('diffStepNum');
+  var diffStepLine = document.getElementById('diffStepLine');
+  var diffPrev = document.getElementById('diffPrev');
+  var diffNext = document.getElementById('diffNext');
+  var diffDots = document.getElementById('diffDots');
+
+  function buildDiffChips(){
+    diffChipsEl.textContent = '';
+    DIFF_EXAMPLES.forEach(function(e, i){
+      var b = makeChip(L().diffChipLabel(e), i === diffIdx);
+      b.addEventListener('click', function(){
+        if (diffIdx === i) return;
+        diffIdx = i; diffStep = 0;
+        buildDiffChips(); renderDiffStep();
+      });
+      diffChipsEl.appendChild(b);
+    });
+  }
+
+  function renderDiffStep(){
+    var e = DIFF_EXAMPLES[diffIdx];
+    var steps = L().diffSteps(e);
+    diffStepLine.innerHTML = steps[diffStep];
+    diffStepNum.textContent = L().stepOf(diffStep + 1, steps.length);
+    diffPrev.disabled = (diffStep === 0);
+    diffNext.disabled = (diffStep === steps.length - 1);
+    buildDots(diffDots, steps.length, diffStep);
+  }
+
+  diffPrev.addEventListener('click', function(){ if (diffStep > 0){ diffStep--; renderDiffStep(); } });
+  diffNext.addEventListener('click', function(){
+    var e = DIFF_EXAMPLES[diffIdx];
+    var len = L().diffSteps(e).length;
+    if (diffStep < len - 1){ diffStep++; renderDiffStep(); }
+  });
+
+  /* ========== 試題 ========== */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
+  function buildQuiz(){
+    var d = L();
+    var list = quizSet();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    qTotal.textContent = list.length;
+    list.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ========== 小遊戲：趕上下一班車 ========== */
+  var gRound = 0, gScore = 0, gMistake = false, hintLevel = 0;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gAskText = document.getElementById('gAskText');
+  var gAnswers = document.getElementById('gAnswers');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRound];
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    gHintBtn.textContent = d.gHintBtn;
+
+    gAskText.textContent = d.gScenario[gRound](round);
+    gAnswers.textContent = '';
+
+    if (round.kind === 'time'){
+      var correct = addMinutes(round.h, round.m, round.add);
+      var choices = shuffle([correct].concat(round.wrong));
+      choices.forEach(function(c){
+        var label = d.clk(c.h, c.m);
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = label;
+        var isRight = (c.h === correct.h && c.m === correct.m);
+        b.addEventListener('click', function(){ onAnswer(b, isRight, d.clk(correct.h, correct.m)); });
+        gAnswers.appendChild(b);
+      });
+    } else {
+      var correctDur = diffMinutes(round.h1, round.m1, round.h2, round.m2);
+      var vals = shuffle([correctDur].concat(round.wrong));
+      vals.forEach(function(v){
+        var h = Math.floor(v / 60), m = v % 60;
+        var label = d.dur(h, m);
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = label;
+        var isRight = (v === correctDur);
+        b.addEventListener('click', function(){ onAnswer(b, isRight, d.dur(Math.floor(correctDur / 60), correctDur % 60)); });
+        gAnswers.appendChild(b);
+      });
+    }
+
+    if (mode === 'ahead'){
+      hintLevel = 1;
+      elHint.textContent = d.gHint1;
+    } else {
+      elHint.textContent = '';
+    }
+  }
+
+  function onAnswer(btn, isRight, correctLabel){
+    if (btn.disabled) return;
+    var d = L();
+    if (isRight){
+      var all = gAnswers.querySelectorAll('.opt');
+      for (var i = 0; i < all.length; i++) all[i].disabled = true;
+      btn.classList.add('right');
+      if (gMistake){
+        gScore += 5;
+        gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry(correctLabel) + '</span>';
+      } else {
+        gScore += 10;
+        gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst(correctLabel) + '</span>';
+      }
+      if (gRound === ROUNDS.length - 1){
+        gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
+      } else {
+        gMsg.innerHTML += ' ' + d.gClear;
+        gNext.disabled = false;
+      }
+    } else {
+      gMistake = true;
+      btn.disabled = true;
+      btn.classList.add('wrong');
+      gScore = Math.max(0, gScore - 3);
+      gMsg.innerHTML = '<span class="no">' + d.gWrong(btn.textContent) + '</span>';
+    }
+    elScore.textContent = gScore;
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  gHintBtn.addEventListener('click', function(){
+    var d = L();
+    var round = ROUNDS[gRound];
+    hintLevel++;
+    if (hintLevel === 1){
+      elHint.textContent = d.gHint1;
+    } else {
+      if (round.kind === 'time'){
+        var toHour = 60 - round.m;
+        if (round.add > toHour) elHint.textContent = d.gHint2Cross(toHour);
+        else elHint.textContent = d.gHint2Plain(round.m + round.add);
+      } else {
+        if (round.h1 === round.h2) elHint.textContent = d.gHint2Same;
+        else elHint.textContent = d.gHint2Cross(60 - round.m1);
+      }
+      gHintBtn.disabled = true;
+    }
+  });
+
+  /* ========== 全部重繪 ========== */
+  function renderAll(){
+    applyStatic();
+    buildModeCards();
+    resetLadder();
+    stepHour = 3; stepMinIdx = 0; renderStep();
+    resetNl();
+    fwdIdx = 0; fwdStep = 0; buildFwdChips(); renderFwdStep();
+    diffIdx = 0; diffStep = 0; buildDiffChips(); renderDiffStep();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+  /* 記錄最後上的課，供首頁「繼續上次」使用 */
+  try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-3/math/time/', zh:'時間偵察兵 — 秒、非整點、時間加減', en:'The Time Scout', icon:'⏱️'})); } catch(e){}
+
+})();
+</script>
+</body>
+</html>

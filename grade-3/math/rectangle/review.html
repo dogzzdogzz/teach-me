@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>方方正正複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .qpic{width:130px;height:130px;margin:6px auto 12px;display:block}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 方方正正複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：正方形、長方形、周長、乘法、數字交錯出現，<strong>每一批的圖形和數字都是新出的</strong>，
+    背答案沒有用，要真的會判斷。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= 幾何工具（與上課頁相同的邏輯，任何角度都成立） ================= */
+  function dist(a,b){ return Math.sqrt((b[0]-a[0])*(b[0]-a[0])+(b[1]-a[1])*(b[1]-a[1])); }
+  function sub(a,b){ return [a[0]-b[0], a[1]-b[1]]; }
+  function add(a,b){ return [a[0]+b[0], a[1]+b[1]]; }
+  function scl(a,k){ return [a[0]*k, a[1]*k]; }
+  function unit(a){ var m = Math.sqrt(a[0]*a[0]+a[1]*a[1]); return m ? [a[0]/m, a[1]/m] : [0,0]; }
+  function mid(a,b){ return [(a[0]+b[0])/2, (a[1]+b[1])/2]; }
+  function angleAt(prev, cur, next){
+    var v1 = sub(prev, cur), v2 = sub(next, cur);
+    var m1 = Math.sqrt(v1[0]*v1[0]+v1[1]*v1[1]), m2 = Math.sqrt(v2[0]*v2[0]+v2[1]*v2[1]);
+    var cosv = (v1[0]*v2[0]+v1[1]*v2[1])/(m1*m2);
+    cosv = Math.max(-1, Math.min(1, cosv));
+    return Math.acos(cosv) * 180 / Math.PI;
+  }
+  function rotatePt(p, c, deg){
+    var rad = deg * Math.PI / 180, cosv = Math.cos(rad), sinv = Math.sin(rad);
+    var d = sub(p, c);
+    return [c[0] + d[0]*cosv - d[1]*sinv, c[1] + d[0]*sinv + d[1]*cosv];
+  }
+  function rectPts(cx, cy, hw, hh, rot){
+    var c = [cx,cy];
+    var raw = [[cx-hw,cy-hh],[cx+hw,cy-hh],[cx+hw,cy+hh],[cx-hw,cy+hh]];
+    return raw.map(function(p){ return rotatePt(p, c, rot||0); });
+  }
+  function rhombusPts(cx, cy, dv, dh, rot){
+    var c = [cx,cy];
+    var raw = [[cx,cy-dv],[cx+dh,cy],[cx,cy+dv],[cx-dh,cy]];
+    return raw.map(function(p){ return rotatePt(p, c, rot||0); });
+  }
+  function paraPts(cx, cy, halfW, halfH, slant, rot){
+    var c = [cx,cy];
+    var raw = [[cx-halfW-slant,cy+halfH],[cx+halfW-slant,cy+halfH],[cx+halfW+slant,cy-halfH],[cx-halfW+slant,cy-halfH]];
+    return raw.map(function(p){ return rotatePt(p, c, rot||0); });
+  }
+  function shapeProps(pts){
+    var n = pts.length, sides = [], angles = [], i;
+    for (i = 0; i < n; i++){
+      sides.push(dist(pts[i], pts[(i+1)%n]));
+      angles.push(angleAt(pts[(i-1+n)%n], pts[i], pts[(i+1)%n]));
+    }
+    var maxS = sides[0], minS = sides[0];
+    for (i = 1; i < n; i++){ if (sides[i] > maxS) maxS = sides[i]; if (sides[i] < minS) minS = sides[i]; }
+    var allEq = (maxS - minS) < 1.5;
+    var oppEq = Math.abs(sides[0]-sides[2]) < 1.5 && Math.abs(sides[1]-sides[3]) < 1.5;
+    var allRight = true;
+    for (i = 0; i < n; i++){ if (Math.abs(angles[i]-90) >= 1.5) allRight = false; }
+    var name = 'other';
+    if (allRight && allEq) name = 'square';
+    else if (allRight && oppEq) name = 'rectangle';
+    else if (allEq) name = 'rhombus';
+    else if (oppEq) name = 'parallelogram';
+    return { sides:sides, angles:angles, allEq:allEq, oppEq:oppEq, allRight:allRight, name:name };
+  }
+  function sideGroups(sides){
+    var groups = [], i, g, found;
+    for (i = 0; i < sides.length; i++){
+      found = -1;
+      for (g = 0; g < groups.length; g++){
+        if (Math.abs(groups[g].len - sides[i]) < 1.5){ found = g; break; }
+      }
+      if (found >= 0) groups[found].idxs.push(i);
+      else groups.push({ len: sides[i], idxs:[i] });
+    }
+    return groups;
+  }
+  var TICK_COLORS = ['#E8871E', '#3B7DD8'];
+  function shapeSVGMarkup(pts, opts){
+    opts = opts || {};
+    var props = shapeProps(pts);
+    var n = pts.length;
+    var pointsStr = pts.map(function(p){ return p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' ');
+    var parts = [];
+    parts.push('<polygon points="'+pointsStr+'" fill="'+(opts.fill||'#FDF0E0')+'" stroke="'+(opts.stroke||'#2B2A33')+'" stroke-width="4"/>');
+    if (opts.ticks){
+      var groups = sideGroups(props.sides);
+      groups.forEach(function(g, gi){
+        var color = groups.length === 1 ? '#2F9E69' : TICK_COLORS[gi % TICK_COLORS.length];
+        var tickCount = groups.length === 1 ? 1 : gi + 1;
+        g.idxs.forEach(function(sideIdx){
+          var a = pts[sideIdx], b = pts[(sideIdx+1)%n];
+          parts.push('<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" stroke="'+color+'" stroke-width="4"/>');
+          var dir = unit(sub(b,a)), normal = [-dir[1], dir[0]], m = mid(a,b);
+          for (var t = 0; t < tickCount; t++){
+            var offset = (t - (tickCount-1)/2) * 9;
+            var base = add(m, scl(dir, offset));
+            var p1 = add(base, scl(normal, -7)), p2 = add(base, scl(normal, 7));
+            parts.push('<line x1="'+p1[0].toFixed(1)+'" y1="'+p1[1].toFixed(1)+'" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+'" stroke="'+color+'" stroke-width="3.5"/>');
+          }
+        });
+      });
+    }
+    if (opts.rightAngles){
+      for (var i = 0; i < n; i++){
+        if (Math.abs(props.angles[i]-90) < 1.5){
+          var cur = pts[i], prev = pts[(i-1+n)%n], next = pts[(i+1)%n];
+          var u1 = unit(sub(prev,cur)), u2 = unit(sub(next,cur));
+          var sz = 16;
+          var q1 = add(cur, scl(u1,sz)), q2 = add(cur, scl(add(u1,u2), sz)), q3 = add(cur, scl(u2,sz));
+          parts.push('<path d="M'+cur[0].toFixed(1)+','+cur[1].toFixed(1)+' L'+q1[0].toFixed(1)+','+q1[1].toFixed(1)+' L'+q2[0].toFixed(1)+','+q2[1].toFixed(1)+' L'+q3[0].toFixed(1)+','+q3[1].toFixed(1)+' Z" fill="#E3F4EB" stroke="#2F9E69" stroke-width="2"/>');
+        }
+      }
+    }
+    if (opts.diagonals){
+      parts.push('<line x1="'+pts[0][0].toFixed(1)+'" y1="'+pts[0][1].toFixed(1)+'" x2="'+pts[2][0].toFixed(1)+'" y2="'+pts[2][1].toFixed(1)+'" stroke="#3B7DD8" stroke-width="2.5" stroke-dasharray="6,5"/>');
+      parts.push('<line x1="'+pts[1][0].toFixed(1)+'" y1="'+pts[1][1].toFixed(1)+'" x2="'+pts[3][0].toFixed(1)+'" y2="'+pts[3][1].toFixed(1)+'" stroke="#D64545" stroke-width="2.5" stroke-dasharray="6,5"/>');
+    }
+    return parts.join('');
+  }
+  function pic(pts, extra){
+    var o = { ticks:true, rightAngles:true };
+    for (var k in (extra||{})) o[k] = extra[k];
+    return '<svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" class="qpic">' + shapeSVGMarkup(pts, o) + '</svg>';
+  }
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang:'zh-Hant', title:'方方正正複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 方方正正複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：正方形、長方形、周長、乘法、數字交錯出現，<strong>每一批的圖形和數字都是新出的</strong>，背答案沒有用，要真的會判斷。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang:'en', title:'Squares & Rectangles Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Squares & Rectangles Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving squares, rectangles, perimeter, multiplication and place value — <strong>every batch uses fresh shapes and numbers</strong>, so memorising answers won’t help; you have to really judge.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { rectangle:'方形', perimeter:'周長', multiply:'乘法', numbers:'數字' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { rectangle:'⬜ 方方正正的祕密 — 正方形與長方形', perimeter:'📏 繞一圈量量看 — 周長', multiply:'✖️ 乘法', numbers:'🔢 數字' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { rectangle:'Shapes', perimeter:'Perimeter', multiply:'Multiplication', numbers:'Numbers' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { rectangle:'⬜ Secrets of Squares & Rectangles', perimeter:'📏 Perimeter', multiply:'✖️ Multiplication', numbers:'🔢 Numbers' }
+    }
+  };
+  var LINK_HREFS = { rectangle:'index.html', perimeter:'../perimeter/', multiply:'../multiply/', numbers:'../numbers/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function shuffleWithAnswer(correctText, wrongTexts){
+    var opts = shuffle([correctText].concat(wrongTexts));
+    return { opts: opts, ans: opts.indexOf(correctText) };
+  }
+  function mixNumOpts(correct, candidates){
+    var out = []; var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (!seen[key]){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3){
+      var lo = correct - step, hi = correct + step;
+      if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    var opts = shuffle([correct].concat(out.slice(0,3)));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新圖形／新數字 ---------- */
+  var RECT_OPTS4 = {
+    zh:['4 個角都是直角，四邊都一樣長','4 個角都是直角，對邊相等','角不是直角，對邊相等','四邊都一樣長，角不是直角'],
+    en:['All 4 angles right, all 4 sides equal','All 4 angles right, opposite sides equal','Angles not right, opposite sides equal','All 4 sides equal, angles not right']
+  };
+  var SQUARE_OPTS4 = {
+    zh:['4 個角都是直角，四邊都一樣長','對邊相等，但角不是直角','四邊都一樣長，但只有 2 個角是直角','只有對邊相等，四邊不是都一樣長'],
+    en:['All 4 angles right, all 4 sides equal','Opposite sides equal, but angles not right','All 4 sides equal, but only 2 angles right','Only opposite sides equal, not all 4 sides']
+  };
+  var INCLUSION_OPTS = {
+    zh:['是，因為正方形也符合「4 個角是直角、對邊相等」的條件','不是，因為正方形的邊都一樣長，跟長方形不同','不是，因為長方形比較大、正方形比較小','沒辦法比較，這是兩種完全不同的形狀'],
+    en:['Yes, because a square also meets “4 right angles, opposite sides equal”','No, because a square’s sides are all equal, unlike a rectangle','No, because a rectangle is bigger and a square is smaller','Can’t compare — completely different shapes']
+  };
+  var REVERSE_OPTS = {
+    zh:['不是，因為長方形不一定四邊都一樣長','是，因為兩者角都是直角','是，因為對邊都相等','不是，因為長方形角不是直角'],
+    en:['No, because a rectangle doesn’t always have all 4 sides equal','Yes, because both have right angles','Yes, because opposite sides are equal in both','No, because a rectangle’s angles aren’t right']
+  };
+  var ROTATE_OPTS = {
+    zh:['還是，因為角度和邊長都沒有改變','不是了，因為看起來像菱形','不是了，因為變成長方形了','不確定，要重新量過'],
+    en:['Still a square — angles and side lengths didn’t change','No longer — it looks like a rhombus','No longer — it became a rectangle','Not sure, needs re-measuring']
+  };
+  var DIAG_OPTS = {
+    zh:['一樣長','不一樣長','沒辦法比較','只有正方形的對角線才會一樣長'],
+    en:['Equal in length','Not equal in length','Can’t compare','Only a square’s diagonals are equal']
+  };
+  var SHAPE_NAME_OPTS = {
+    zh:['正方形','長方形','菱形','梯形'],
+    en:['Square','Rectangle','Rhombus','Trapezoid']
+  };
+  var PARA_NAME_OPTS = {
+    zh:['長方形','正方形','平行四邊形','菱形'],
+    en:['Rectangle','Square','Parallelogram','Rhombus']
+  };
+
+  function randRot(){ return pick([0, 12, -15, 22, -28, 35, -40, 50, 63, -70]); }
+
+  var GENS = [
+    { id:'rectProps', cat:'rectangle',
+      make: function(){
+        var hw = 40 + rand(41); // 40..80
+        var hh;
+        do { hh = 25 + rand(46); } while (Math.abs(hw - hh) < 14); // 25..70, keep distinct groups
+        var rot = randRot();
+        return { pts: rectPts(110,110,hw,hh,rot) };
+      },
+      fmt: function(d, lang){
+        var texts = RECT_OPTS4[lang];
+        var r = shuffleWithAnswer(texts[1], [texts[0], texts[2], texts[3]]);
+        return {
+          pic: pic(d.pts),
+          stem: lang === 'zh' ? '圖中的長方形，哪一句話是對的？' : 'Which statement about this rectangle is correct?',
+          opts: r.opts, ans: r.ans,
+          why: lang === 'zh' ? '4 個角都標了直角記號，但上下和左右的邊分屬不同顏色（不同組），代表只有「對邊」相等。' : 'All 4 corners are marked right angles, but top/bottom and left/right are different colored groups — only “opposite sides” are equal.'
+        };
+      } },
+    { id:'squareProps', cat:'rectangle',
+      make: function(){
+        var s = 40 + rand(36); // 40..75
+        var rot = rand(360);
+        return { pts: rectPts(110,110,s,s,rot) };
+      },
+      fmt: function(d, lang){
+        var texts = SQUARE_OPTS4[lang];
+        var r = shuffleWithAnswer(texts[0], [texts[1], texts[2], texts[3]]);
+        return {
+          pic: pic(d.pts),
+          stem: lang === 'zh' ? '圖中的正方形，哪一句話是對的？' : 'Which statement about this square is correct?',
+          opts: r.opts, ans: r.ans,
+          why: lang === 'zh' ? '4 個角都標了直角記號，4 條邊也都用同一種顏色標成一樣長 —— 4 個角是直角、四邊都相等。' : 'All 4 corners are marked right angles, and all 4 sides are marked equal with the same color.'
+        };
+      } },
+    { id:'inclusionYesNo', cat:'rectangle',
+      make: function(){
+        var s = 40 + rand(36); var rot = rand(360);
+        return { pts: rectPts(110,110,s,s,rot) };
+      },
+      fmt: function(d, lang){
+        var texts = INCLUSION_OPTS[lang];
+        var r = shuffleWithAnswer(texts[0], [texts[1], texts[2], texts[3]]);
+        return {
+          pic: pic(d.pts),
+          stem: lang === 'zh' ? '正方形是不是長方形？' : 'Is a square a rectangle?',
+          opts: r.opts, ans: r.ans,
+          why: lang === 'zh' ? '長方形只要求「4 個角是直角、對邊相等」，正方形也符合這兩個條件，所以正方形也是長方形。' : 'A rectangle only needs “4 right angles, opposite sides equal” — a square meets both, so a square is also a rectangle.'
+        };
+      } },
+    { id:'reverseInclusionYesNo', cat:'rectangle',
+      make: function(){
+        var hw = 40 + rand(41); var hh;
+        do { hh = 25 + rand(46); } while (Math.abs(hw - hh) < 14);
+        var rot = randRot();
+        return { pts: rectPts(110,110,hw,hh,rot) };
+      },
+      fmt: function(d, lang){
+        var texts = REVERSE_OPTS[lang];
+        var r = shuffleWithAnswer(texts[0], [texts[1], texts[2], texts[3]]);
+        return {
+          pic: pic(d.pts),
+          stem: lang === 'zh' ? '長方形是不是正方形？' : 'Is a rectangle a square?',
+          opts: r.opts, ans: r.ans,
+          why: lang === 'zh' ? '圖中長方形的對邊分別相等，但上下的長度和左右的長度不一樣，不是四邊都相等，所以不是正方形。' : 'The opposite sides are equal, but the top/bottom length differs from left/right — not all 4 sides equal, so it isn’t a square.'
+        };
+      } },
+    { id:'rhombusID', cat:'rectangle',
+      make: function(){
+        var dv, dh;
+        do { dv = 45 + rand(35); dh = 30 + rand(35); } while (Math.abs(dv - dh) < 15);
+        var rot = randRot();
+        return { pts: rhombusPts(110,110,dv,dh,rot) };
+      },
+      fmt: function(d, lang){
+        var texts = SHAPE_NAME_OPTS[lang];
+        var r = shuffleWithAnswer(texts[2], [texts[0], texts[1], texts[3]]);
+        return {
+          pic: pic(d.pts),
+          stem: lang === 'zh' ? '圖中的四邊形，四邊都一樣長，但角不是直角。這是什麼形狀？' : 'This quadrilateral has all 4 sides equal, but the angles aren’t right angles. What shape is it?',
+          opts: r.opts, ans: r.ans,
+          why: lang === 'zh' ? '四邊都一樣長，但角不是直角，所以不是正方形也不是長方形（兩者都需要直角）—— 這是菱形。' : 'All 4 sides equal, but no right angles — not a square or rectangle (both need right angles) — this is a rhombus.'
+        };
+      } },
+    { id:'parallelogramID', cat:'rectangle',
+      make: function(){
+        var halfW, halfH, slant;
+        do {
+          halfW = 35 + rand(35); halfH = 25 + rand(25); slant = 20 + rand(25);
+        } while (Math.abs(2*halfW - Math.hypot(2*slant, 2*halfH)) < 12);
+        var rot = randRot();
+        return { pts: paraPts(110,110,halfW,halfH,slant,rot) };
+      },
+      fmt: function(d, lang){
+        var texts = PARA_NAME_OPTS[lang];
+        var r = shuffleWithAnswer(texts[2], [texts[0], texts[1], texts[3]]);
+        return {
+          pic: pic(d.pts),
+          stem: lang === 'zh' ? '圖中的四邊形，對邊相等，但角不是直角、四邊也不是都一樣長。這是什麼形狀？' : 'This quadrilateral has opposite sides equal, but the angles aren’t right angles and not all 4 sides are equal. What shape is it?',
+          opts: r.opts, ans: r.ans,
+          why: lang === 'zh' ? '對邊相等但角不是直角，所以不是長方形；四邊也不是都一樣長，所以也不是菱形 —— 這是平行四邊形。' : 'Opposite sides equal but angles not right — not a rectangle; not all sides equal — not a rhombus either. This is a parallelogram.'
+        };
+      } },
+    { id:'rotationInvariance', cat:'rectangle',
+      make: function(){
+        var s = 40 + rand(36);
+        var rot = 5 + rand(80); // 5..84, clearly non-trivial rotation
+        return { pts: rectPts(110,110,s,s,rot) };
+      },
+      fmt: function(d, lang){
+        var texts = ROTATE_OPTS[lang];
+        var r = shuffleWithAnswer(texts[0], [texts[1], texts[2], texts[3]]);
+        return {
+          pic: pic(d.pts),
+          stem: lang === 'zh' ? '這個正方形轉了角度，角度和邊長都沒有改變（看看角上的直角記號）。轉完以後，它還是正方形嗎？' : 'This square was rotated — angles and side lengths haven’t changed (look at the right-angle marks). Is it still a square?',
+          opts: r.opts, ans: r.ans,
+          why: lang === 'zh' ? '旋轉不會改變邊長和角度，圖上的直角記號證明 4 個角還是 90 度，所以轉完之後它還是正方形。' : 'Rotating doesn’t change side lengths or angles — the marks show the 4 corners are still 90°, so it’s still a square.'
+        };
+      } },
+    { id:'diagonalEqual', cat:'rectangle',
+      make: function(){
+        var isSquare = pick([true, false]);
+        var rot = randRot();
+        var pts;
+        if (isSquare){
+          var s = 40 + rand(36);
+          pts = rectPts(110,110,s,s,rot);
+        } else {
+          var hw = 40 + rand(41), hh;
+          do { hh = 25 + rand(46); } while (Math.abs(hw - hh) < 14);
+          pts = rectPts(110,110,hw,hh,rot);
+        }
+        return { pts: pts };
+      },
+      fmt: function(d, lang){
+        var texts = DIAG_OPTS[lang];
+        var r = shuffleWithAnswer(texts[0], [texts[1], texts[2], texts[3]]);
+        return {
+          pic: pic(d.pts, { diagonals:true }),
+          stem: lang === 'zh' ? '圖中畫出了兩條對角線，哪一句話是對的？' : 'Two diagonals are drawn. Which statement is correct?',
+          opts: r.opts, ans: r.ans,
+          why: lang === 'zh' ? '不管是長方形還是正方形，兩條對角線一定一樣長。' : 'Whether it’s a rectangle or a square, the two diagonals are always equal in length.'
+        };
+      } },
+    { id:'perimeter', cat:'perimeter',
+      make: function(){
+        var l = 4 + rand(37), w;
+        do { w = 3 + rand(30); } while (w === l);
+        var per = (l + w) * 2;
+        var m = mixNumOpts(per, [l + w, l * w, per + 2]);
+        return { l:l, w:w, per:per, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '長方形長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分，周長是多少？' : 'A rectangle is ' + d.l + ' cm long and ' + d.w + ' cm wide. What is its perimeter?',
+          opts: d.opts.map(function(v){ return v + (lang === 'zh' ? ' 公分' : ' cm'); }),
+          ans: d.ans,
+          why: lang === 'zh' ? '周長 ＝ (長 + 寬) × 2 ＝ (' + d.l + ' + ' + d.w + ') × 2 ＝ ' + d.per + ' 公分。' : 'Perimeter = (length + width) × 2 = (' + d.l + ' + ' + d.w + ') × 2 = ' + d.per + ' cm.'
+        };
+      } },
+    { id:'multiply', cat:'multiply',
+      make: function(){
+        var a = 2 + rand(8); // 2..9
+        var b = 11 + rand(88); // 11..98
+        var prod = a * b;
+        var m = mixNumOpts(prod, [a * (b + 1), (a + 1) * b, prod + a]);
+        return { a:a, b:b, prod:prod, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.a + ' × ' + d.b + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: d.a + ' × ' + d.b + ' = ' + d.prod + '。'
+        };
+      } },
+    { id:'placeValue', cat:'numbers',
+      make: function(){
+        var n = 1000 + rand(8999);
+        var digits = String(n).split('').map(Number);
+        var tens = digits[2];
+        var others = [digits[0], digits[1], digits[3]].filter(function(v){ return v !== tens; });
+        while (others.length < 3){ others.push((tens + 1 + others.length) % 10); }
+        var m = mixNumOpts(tens, others.slice(0,3));
+        return { n:n, tens:tens, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.n + ' 這個數，十位數字是多少？' : 'In the number ' + d.n + ', what digit is in the tens place?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? d.n + ' 從右邊數來第二位（十位）是 ' + d.tens + '。' : 'In ' + d.n + ', the second digit from the right (the tens place) is ' + d.tens + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：11 種題型各一題＋隨機 1 題（限自己主題，避免重複同種） ---------- */
+  function makePlan(){
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){ return g.cat === 'rectangle'; });
+    slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){ return { gen: g, data: g.make() }; });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      box.appendChild(n); box.appendChild(c);
+      if (q.pic){
+        var picWrap = document.createElement('div');
+        picWrap.innerHTML = q.pic;
+        box.appendChild(picWrap.firstChild);
+      }
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(stem);
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

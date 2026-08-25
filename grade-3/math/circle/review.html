@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>圓形複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .scene{width:100%;max-width:180px;height:auto;display:block;margin:0 auto 10px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 圓形複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：圓、周長、乘法、除法交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 幾何繪圖工具（跟上課頁同一套邏輯） ---------- */
+  var PXCM = 12, PAD = 30;
+  function polar(cx, cy, rpx, angleDeg){
+    var rad = angleDeg * Math.PI / 180;
+    return { x: cx + rpx * Math.cos(rad), y: cy - rpx * Math.sin(rad) };
+  }
+  function circleFig(cfg){
+    var maxR = 0, i;
+    for (i = 0; i < cfg.circles.length; i++) if (cfg.circles[i].r > maxR) maxR = cfg.circles[i].r;
+    var rpxMax = maxR * PXCM;
+    var size = rpxMax * 2 + PAD * 2;
+    var cx = size / 2, cy = size / 2;
+    var svg = '<svg class="scene" viewBox="0 0 ' + size.toFixed(0) + ' ' + size.toFixed(0) + '" role="img">';
+    cfg.circles.forEach(function(c){
+      var rp = c.r * PXCM;
+      svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + rp.toFixed(1) +
+        '" fill="none" stroke="' + (c.color || '#E8871E') + '" stroke-width="' + (c.width || 3) + '"' +
+        (c.dash ? ' stroke-dasharray="6,5"' : '') + '/>';
+    });
+    (cfg.segs || []).forEach(function(s){
+      var rp = (s.r != null ? s.r : maxR) * PXCM;
+      var p1 = polar(cx, cy, rp, s.a1);
+      var p2 = (s.a2 == null) ? { x: cx, y: cy } : polar(cx, cy, rp, s.a2);
+      svg += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) +
+        '" stroke="' + (s.color || '#2F9E69') + '" stroke-width="' + (s.width || 4) + '"' +
+        (s.dash ? ' stroke-dasharray="6,5"' : '') + ' stroke-linecap="round"/>';
+      if (s.label){
+        var mx = (p1.x + p2.x) / 2 + (s.dx || 0), my = (p1.y + p2.y) / 2 + (s.dy != null ? s.dy : -8);
+        svg += '<text x="' + mx.toFixed(1) + '" y="' + my.toFixed(1) + '" font-size="13" font-weight="700" fill="' +
+          (s.color || '#2F9E69') + '" text-anchor="middle">' + s.label + '</text>';
+      }
+    });
+    if (cfg.showCenter){
+      svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="4" fill="#2B2A33"/>';
+    }
+    svg += '</svg>';
+    return svg;
+  }
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang:'zh-Hant', title:'圓形複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 圓形複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：圓、周長、乘法、除法交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang:'en', title:'Circles Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Circles Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving circles, perimeter, multiplication and division — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { circle:'圓', perimeter:'周長', multiply:'乘法', divide:'除法' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { circle:'⭕ 圓 — 圓規畫圓趣', perimeter:'📏 周長 — 繞一圈量量看', multiply:'✖️ 乘法', divide:'➗ 除法' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { circle:'Circles', perimeter:'Perimeter', multiply:'Multiplication', divide:'Division' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { circle:'⭕ Circles — Drawing Circles', perimeter:'📏 Perimeter', multiply:'✖️ Multiplication', divide:'➗ Division' }
+    }
+  };
+
+  var LINK_HREFS = { circle:'index.html', perimeter:'../perimeter/', multiply:'../multiply/', divide:'../divide/' };
+  var UNIT = { zh: function(v){ return v + ' 公分'; }, en: function(v){ return v + ' cm'; } };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function makeWrongs(correct, candidates, minVal){
+    minVal = (minVal == null) ? 1 : minVal;
+    var out = [];
+    var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (!seen[key] && c >= minVal){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3){
+      var lo = correct - step, hi = correct + step;
+      if (lo >= minVal && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  function mixOpts(correct, candidates, minVal){
+    var wrongs = makeWrongs(correct, candidates, minVal);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var GENS = [
+    { id:'rFindD', cat:'circle',
+      make: function(used){
+        var r = pickUnused([2,3,4,5,6,7,8,9,10,11,12], used);
+        var d = r * 2;
+        var m = mixOpts(d, [r, r * 3, d + 2]);
+        return { r:r, d:d, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '這個圓的半徑是 ' + d.r + ' 公分，直徑是多少公分？' : 'This circle has a radius of ' + d.r + ' cm. What is its diameter?',
+          pic: circleFig({ circles:[{ r:d.r, color:'#E8871E' }], segs:[{ a1:30, a2:null, r:d.r, color:'#2F9E69', width:4, label:UNIT[lang](d.r), dy:-8 }], showCenter:true }),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? '直徑 ＝ 半徑 × 2 ＝ ' + d.r + ' × 2 ＝ ' + d.d + ' 公分。' : 'Diameter = radius × 2 = ' + d.r + ' × 2 = ' + d.d + ' cm.'
+        };
+      } },
+    { id:'dFindR', cat:'circle',
+      make: function(used){
+        var d = pickUnused([6,8,10,12,14,16,18,20,22,24], used);
+        var r = d / 2;
+        var m = mixOpts(r, [d, d * 2, r + 2]);
+        return { d:d, r:r, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '這個圓的直徑是 ' + d.d + ' 公分，半徑是多少公分？' : 'This circle has a diameter of ' + d.d + ' cm. What is its radius?',
+          pic: circleFig({ circles:[{ r:d.r, color:'#E8871E' }], segs:[{ a1:20, a2:200, r:d.r, color:'#E8871E', width:4, label:UNIT[lang](d.d), dy:-8 }], showCenter:true }),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? '半徑 ＝ 直徑 ÷ 2 ＝ ' + d.d + ' ÷ 2 ＝ ' + d.r + ' 公分。' : 'Radius = diameter ÷ 2 = ' + d.d + ' ÷ 2 = ' + d.r + ' cm.'
+        };
+      } },
+    { id:'compassOpening', cat:'circle',
+      make: function(used){
+        var dd = pickUnused([6,8,10,12,14,16,18,20], used);
+        var r = dd / 2;
+        var m = mixOpts(r, [dd, dd * 2, r + 3]);
+        return { d:dd, r:r, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(dd, lang){
+        return {
+          stem: lang === 'zh' ? '要用圓規畫一個直徑 ' + dd.d + ' 公分的圓，圓規應該張開多少公分？' : 'To draw a circle with a diameter of ' + dd.d + ' cm using a compass, how wide should it be opened?',
+          opts: dd.opts.map(String), ans: dd.ans,
+          why: lang === 'zh'
+            ? '圓規張開的距離是半徑，不是直徑。半徑 ＝ 直徑 ÷ 2 ＝ ' + dd.d + ' ÷ 2 ＝ ' + dd.r + ' 公分。'
+            : 'A compass opens to the radius, not the diameter. Radius = diameter ÷ 2 = ' + dd.d + ' ÷ 2 = ' + dd.r + ' cm.'
+        };
+      } },
+    { id:'whichIsDiameter', cat:'circle',
+      make: function(used){
+        var r = pickUnused([3,4,5,6,7,8], used);
+        var a1 = rand(180);
+        var a2 = a1 + 180;
+        var b1 = rand(360);
+        var gap = 60 + rand(91); // 60..150, never 180 -> never a diameter
+        var b2 = (b1 + gap) % 360;
+        var diamIsFirst = Math.random() < 0.5;
+        return { r:r, a1:a1, a2:a2, b1:b1, b2:b2, diamIsFirst:diamIsFirst };
+      },
+      fmt: function(d, lang){
+        var letterA = d.diamIsFirst ? 'A' : 'B';
+        var letterB = d.diamIsFirst ? 'B' : 'A';
+        var segAangles = d.diamIsFirst ? [d.a1, d.a2] : [d.b1, d.b2];
+        var segBangles = d.diamIsFirst ? [d.b1, d.b2] : [d.a1, d.a2];
+        var opts = lang === 'zh' ? ['線段 A','線段 B','兩條都是','兩條都不是'] : ['Segment A','Segment B','Both','Neither'];
+        return {
+          stem: lang === 'zh' ? '這個圓裡有兩條線段 A、B，哪一條才是這個圓的直徑？' : 'This circle has two segments, A and B. Which one is the diameter?',
+          pic: circleFig({ circles:[{ r:d.r, color:'#E8871E' }],
+            segs:[
+              { a1:segAangles[0], a2:segAangles[1], r:d.r, color:'#3B7DD8', width:4, label:'A', dy:-8 },
+              { a1:segBangles[0], a2:segBangles[1], r:d.r, color:'#D64545', width:4, label:'B', dy:-8 }
+            ], showCenter:true }),
+          opts: opts, ans: 0,
+          why: lang === 'zh'
+            ? '線段 A 通過圓心，是直徑；線段 B 沒有通過圓心，只是普通的線段（弦），不是直徑。'
+            : 'Segment A passes through the center, so it’s the diameter. Segment B does not pass through the center — it’s just an ordinary chord, not a diameter.'
+        };
+      } },
+    { id:'equalRadii', cat:'circle',
+      make: function(used){
+        var r = pickUnused([3,4,5,6,7,8], used);
+        var a1 = rand(360);
+        var a2 = (a1 + 90 + rand(180)) % 360;
+        return { r:r, a1:a1, a2:a2 };
+      },
+      fmt: function(d, lang){
+        var opts = lang === 'zh' ? ['A 比較長','B 比較長','兩條一樣長','沒辦法比較'] : ['A is longer','B is longer','They are the same length','It can’t be compared'];
+        return {
+          stem: lang === 'zh' ? '這個圓裡畫了兩條半徑 A、B，方向不一樣，哪一條比較長？' : 'This circle has two radii, A and B, pointing in different directions. Which one is longer?',
+          pic: circleFig({ circles:[{ r:d.r, color:'#E8871E' }],
+            segs:[
+              { a1:d.a1, a2:null, r:d.r, color:'#3B7DD8', width:4, label:'A', dy:-8 },
+              { a1:d.a2, a2:null, r:d.r, color:'#D64545', width:4, label:'B', dy:-8 }
+            ], showCenter:true }),
+          opts: opts, ans: 2,
+          why: lang === 'zh'
+            ? '同一個圓的所有半徑長度都一樣，跟畫的方向沒有關係，A、B 都是 ' + d.r + ' 公分，一樣長。'
+            : 'Every radius of the same circle is the same length, no matter which direction it points — A and B are both ' + d.r + ' cm, so they’re equal.'
+        };
+      } },
+    { id:'concentricSameCenter', cat:'circle',
+      make: function(used){
+        var r1 = pickUnused([2,3,4], used);
+        var r2 = r1 + pick([3,4,5,6]);
+        return { r1:r1, r2:r2 };
+      },
+      fmt: function(d, lang){
+        var opts = lang === 'zh' ? ['半徑一樣','直徑一樣','圓心一樣','面積一樣'] : ['Same radius','Same diameter','Same center','Same area'];
+        return {
+          stem: lang === 'zh' ? '圖上這兩個圓，圓心都在正中間同一點，這兩個圓有什麼共同點？' : 'These two circles share the exact same center point. What do they have in common?',
+          pic: circleFig({ circles:[{ r:d.r1, color:'#3B7DD8' }, { r:d.r2, color:'#E8871E' }], showCenter:true }),
+          opts: opts, ans: 2,
+          why: lang === 'zh'
+            ? '這兩個圓的圓心是同一個點，只是半徑不同（' + d.r1 + ' 公分和 ' + d.r2 + ' 公分），這樣的圓叫做「同心圓」。'
+            : 'These circles share one center point but have different radii (' + d.r1 + ' cm and ' + d.r2 + ' cm) — circles like this are called "concentric circles."'
+        };
+      } },
+    { id:'compareRvsD', cat:'circle',
+      make: function(used){
+        var n = pickUnused([6,8,10,12,14], used);
+        return { n:n, rSmall:n / 2 };
+      },
+      fmt: function(d, lang){
+        var opts = lang === 'zh'
+          ? ['半徑 ' + d.n + ' 公分的圓', '直徑 ' + d.n + ' 公分的圓', '兩個圓一樣大', '沒辦法比較']
+          : ['The one with radius ' + d.n + ' cm', 'The one with diameter ' + d.n + ' cm', 'They are the same size', 'It can’t be compared'];
+        return {
+          stem: lang === 'zh'
+            ? '一個圓的半徑是 ' + d.n + ' 公分，另一個圓的直徑是 ' + d.n + ' 公分，哪一個圓比較大？'
+            : 'One circle has a radius of ' + d.n + ' cm, and another has a diameter of ' + d.n + ' cm. Which circle is bigger?',
+          pic: circleFig({ circles:[{ r:d.n, color:'#2F9E69' }, { r:d.rSmall, color:'#E8871E', dash:true }], showCenter:true }),
+          opts: opts, ans: 0,
+          why: lang === 'zh'
+            ? '半徑 ' + d.n + ' 公分的圓，直徑是 ' + (d.n * 2) + ' 公分；直徑 ' + d.n + ' 公分的圓，半徑只有 ' + d.rSmall + ' 公分。半徑 ' + d.n + ' 公分的那個圓比較大。'
+            : 'A circle with radius ' + d.n + ' cm has a diameter of ' + (d.n * 2) + ' cm; a circle with diameter ' + d.n + ' cm has a radius of only ' + d.rSmall + ' cm. So the radius-' + d.n + '-cm circle is bigger.'
+        };
+      } },
+    { id:'doubleDiameterNewRadius', cat:'circle',
+      make: function(used){
+        var r0 = pickUnused([3,4,5,6,7,8], used);
+        var d0 = r0 * 2;
+        var newD = d0 * 2;
+        var newR = newD / 2;
+        var m = mixOpts(newR, [newD, r0, r0 * 3]);
+        return { r0:r0, d0:d0, newD:newD, newR:newR, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一個圓的半徑是 ' + d.r0 + ' 公分，要畫一個新圓，新圓的直徑是原本直徑的 2 倍，新圓的半徑要設定成多少公分？'
+            : 'A circle has a radius of ' + d.r0 + ' cm. A new circle’s diameter is twice the original diameter. What radius should the new circle be set to?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '原本直徑 ＝ ' + d.r0 + ' × 2 ＝ ' + d.d0 + ' 公分，新圓直徑 ＝ ' + d.d0 + ' × 2 ＝ ' + d.newD + ' 公分，新圓半徑 ＝ ' + d.newD + ' ÷ 2 ＝ ' + d.newR + ' 公分。'
+            : 'Original diameter = ' + d.r0 + ' × 2 = ' + d.d0 + ' cm. New diameter = ' + d.d0 + ' × 2 = ' + d.newD + ' cm, so new radius = ' + d.newD + ' ÷ 2 = ' + d.newR + ' cm.'
+        };
+      } },
+    { id:'perimeterRect', cat:'perimeter',
+      make: function(used){
+        var l = pickUnused([4,5,6,7,8,9,10], used);
+        var w = pick([2,3,4,5,6]);
+        var P = (l + w) * 2;
+        var m = mixOpts(P, [l * w, l + w, P + 2]);
+        return { l:l, w:w, P:P, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '長方形長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分，周長是多少公分？' : 'A rectangle is ' + d.l + ' cm long and ' + d.w + ' cm wide. What is its perimeter?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '(長 + 寬) × 2 ＝ (' + d.l + ' + ' + d.w + ') × 2 ＝ ' + d.P + ' 公分。'
+            : '(length + width) × 2 = (' + d.l + ' + ' + d.w + ') × 2 = ' + d.P + ' cm.'
+        };
+      } },
+    { id:'multiplyTwoByOne', cat:'multiply',
+      make: function(used){
+        var a = pickUnused([12,13,14,21,22,23,31,32,41,42], used);
+        var k = pick([2,3,4]);
+        var p = a * k;
+        var m = mixOpts(p, [p - k, p + k, a + k]);
+        return { a:a, k:k, p:p, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.a + ' × ' + d.k + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? d.a + ' × ' + d.k + ' ＝ ' + d.p + '。' : d.a + ' × ' + d.k + ' = ' + d.p + '.'
+        };
+      } },
+    { id:'divideEqualShare', cat:'divide',
+      make: function(used){
+        var n = pickUnused([3,4,5,6], used);
+        var per = pick([4,5,6,7,8]);
+        var total = n * per;
+        var m = mixOpts(per, [per - 1, per + 1, total]);
+        return { n:n, per:per, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.total + ' 顆糖平分給 ' + d.n + ' 個人，每人分到幾顆？' : d.total + ' candies shared equally among ' + d.n + ' people. How many does each get?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? d.total + ' ÷ ' + d.n + ' ＝ ' + d.per + ' 顆。' : d.total + ' ÷ ' + d.n + ' = ' + d.per + '.'
+        };
+      } }
+  ];
+
+  var EXTRA_POOL_IDS = ['rFindD','dFindR','compassOpening','doubleDiameterNewRadius'];
+
+  /* ---------- 出一批 12 題：8 種圓形題各一 ＋ 3 種交錯題各一 ＋ 1 題隨機加碼 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice(); // 11 slots: 8 circle + 3 interleaved
+    var extraPool = GENS.filter(function(g){ return EXTRA_POOL_IDS.indexOf(g.id) >= 0; });
+    slots.push(pick(extraPool)); // 12th slot
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      if (q.pic){
+        var picDiv = document.createElement('div');
+        picDiv.innerHTML = q.pic;
+        box.appendChild(picDiv);
+      }
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

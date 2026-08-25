@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>規律接接看複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:19px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:8px 20px;font-size:17px;font-weight:700;cursor:pointer;min-height:44px;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:16px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:16px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(30px,6vw,42px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:17px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:14px;
+    font-weight:700;border-radius:999px;padding:2px 14px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:13px;
+    font-weight:700;border-radius:999px;padding:2px 12px;margin-left:6px;
+  }
+  .stem{margin:10px 0 14px;font-size:21px;text-align:center}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:14px;
+    font-size:22px;font-weight:700;cursor:pointer;color:var(--ink);min-height:56px;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:16px;color:var(--muted);min-height:22px;text-align:center}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:14px 20px;font-size:18px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:17px;display:none;text-align:center;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:19px;
+    font-weight:700;padding:12px 26px;cursor:pointer;margin-top:16px;min-height:48px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:18px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 規律接接看複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：圖形規律、數的規律、加減互逆，還交錯了數數與湊十，<strong>每一批數字都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang:'zh-Hant', title:'規律接接看複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 規律接接看複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：圖形規律、數的規律、加減互逆，還交錯了數數與湊十，<strong>每一批數字都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang:'en', title:'What Comes Next? Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 What Comes Next? Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving shape patterns, number patterns, hopping forward/back, plus counting and making ten — <strong>every batch uses fresh numbers</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { incNext:'數的規律', decNext:'數的規律', shapeNext:'圖形規律', shapePos:'圖形規律', twoStep:'數的規律', hop:'加減互逆', numbers:'數數', bonds:'湊十', addsub:'加減' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { incNext:'📖 上課 — 數的規律', decNext:'📖 上課 — 數的規律', shapeNext:'📖 上課 — 圖形規律', shapePos:'📖 上課 — 圖形規律', twoStep:'📖 上課 — 數的規律', hop:'📖 上課 — 往前跳、往回跳', numbers:'🔢 數字探險隊', bonds:'🤝 好朋友配對', addsub:'🚂 加加減減小火車' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { incNext:'Number pattern', decNext:'Number pattern', shapeNext:'Shape pattern', shapePos:'Shape pattern', twoStep:'Number pattern', hop:'Inverse ops', numbers:'Counting', bonds:'Make ten', addsub:'Add/subtract' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { incNext:'📖 Lesson — Number Patterns', decNext:'📖 Lesson — Number Patterns', shapeNext:'📖 Lesson — Shape Patterns', shapePos:'📖 Lesson — Shape Patterns', twoStep:'📖 Lesson — Number Patterns', hop:'📖 Lesson — Hop Forward, Hop Back', numbers:'🔢 Number Explorers', bonds:'🤝 Number Buddies', addsub:'🚂 Add & Subtract Train' }
+    }
+  };
+
+  var LINK_HREFS = {
+    incNext:'index.html', decNext:'index.html', shapeNext:'index.html', shapePos:'index.html', twoStep:'index.html', hop:'index.html',
+    numbers:'../numbers/', bonds:'../number-bonds/', addsub:'../add-sub/'
+  };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 保證 N 個相異、非負、且不等於正解的錯誤選項 */
+  function makeWrongs(correct, candidates, count){
+    var out = [];
+    var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (c >= 0 && !seen[key]){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < count){
+      var lo = correct - step, hi = correct + step;
+      if (lo >= 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < count && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    return out.slice(0, count);
+  }
+  function mixOpts(correct, candidates){
+    var wrongs = makeWrongs(correct, candidates, 2);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 圖形選項洗牌：正解 + 兩個不同的圖形，不做等值比較（圖形沒有數值等值問題） */
+  function mixShapeOpts(correct, wrongIcons){
+    var opts = shuffle([correct].concat(wrongIcons));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  var SHAPE_UNITS = [
+    { unit:['🔺','⬜'], decoy:'⭐' },
+    { unit:['🟢','🟢','🟡'], decoy:'🔷' },
+    { unit:['🔴','🔴','🔵'], decoy:'🟨' }
+  ];
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，答案一律用程式算出 ---------- */
+  var GENS = [
+    { id:'incNext', cat:'incNext',
+      make: function(used){
+        var step = pick([2, 3, 4, 5]);
+        var start = pickUnused([1,2,3,4,5,6,7,8,9,10], used);
+        var nums = [start, start + step, start + 2 * step, start + 3 * step];
+        var next = start + 4 * step;
+        var m = mixOpts(next, [next - step, next + step]);
+        return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.nums.join('、') + '、<br>下一個是多少？' : d.nums.join(', ') + ', …<br>What comes next?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '每次都加 ' + d.step + '：' + d.nums[3] + ' + ' + d.step + ' = ' + d.next + '。'
+            : 'It adds ' + d.step + ' each time: ' + d.nums[3] + ' + ' + d.step + ' = ' + d.next + '.'
+        };
+      } },
+    { id:'decNext', cat:'decNext',
+      make: function(used){
+        var step = pick([2, 3, 5]);
+        var start = pickUnused([20,22,24,26,28,30,32,34], used);
+        var nums = [start, start - step, start - 2 * step, start - 3 * step];
+        var next = start - 4 * step;
+        var m = mixOpts(next, [next - step, next + step]);
+        return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.nums.join('、') + '、<br>下一個是多少？' : d.nums.join(', ') + ', …<br>What comes next?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '每次都減 ' + d.step + '：' + d.nums[3] + ' − ' + d.step + ' = ' + d.next + '。不是每個規律都越來越大！'
+            : 'It subtracts ' + d.step + ' each time: ' + d.nums[3] + ' − ' + d.step + ' = ' + d.next + '. Not every pattern gets bigger!'
+        };
+      } },
+    { id:'shapeNext', cat:'shapeNext',
+      make: function(used){
+        var uIdx = pickUnused([0,1,2], used);
+        var su = SHAPE_UNITS[uIdx];
+        var reps = pick([2, 3]);
+        var seq = [];
+        for (var r = 0; r < reps; r++) seq = seq.concat(su.unit);
+        var correct = su.unit[0];
+        var wrong1 = su.unit[su.unit.length - 1];
+        var m = mixShapeOpts(correct, [wrong1, su.decoy]);
+        return { seq:seq, unit:su.unit, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: (lang === 'zh' ? d.seq.join('') + '<br>接下來是哪一個？' : d.seq.join('') + '<br>What comes next?'),
+          opts: d.opts, ans: d.ans,
+          why: lang === 'zh'
+            ? '重複的一組是「' + d.unit.join('') + '」，做完一輪後又要從頭開始，所以是 ' + d.correct + '。'
+            : 'The repeating group is “' + d.unit.join('') + '”. After one round it starts again, so it’s ' + d.correct + '.'
+        };
+      } },
+    { id:'shapePos', cat:'shapePos',
+      make: function(used){
+        var uIdx = pickUnused([0,1,2], used);
+        var su = SHAPE_UNITS[uIdx];
+        var reps = 2;
+        var seq = [];
+        for (var r = 0; r < reps; r++) seq = seq.concat(su.unit);
+        var len = su.unit.length;
+        var pos = seq.length + 1 + pick([0, 1, 2]); // 位置一定超過已顯示的長度
+        var correctIdx = (pos - 1) % len;
+        var correct = su.unit[correctIdx];
+        // 選一個「值」跟正解不同的錯誤選項（AAB 這種組內有重複圖案時，不能只用索引位移，
+        // 否則可能選到跟正解一模一樣的圖案，見審查腳本抓到的等值 bug）
+        var altIcons = su.unit.filter(function(ic){ return ic !== correct; });
+        var wrong1 = altIcons.length ? altIcons[0] : su.decoy;
+        var m = mixShapeOpts(correct, [wrong1, su.decoy]);
+        return { seq:seq, unit:su.unit, pos:pos, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? d.seq.join('') + '（共 ' + d.seq.length + ' 個）<br>第 ' + d.pos + ' 個會是哪一個？'
+            : d.seq.join('') + ' (' + d.seq.length + ' shapes total)<br>What is the ' + d.pos + 'th one?',
+          opts: d.opts, ans: d.ans,
+          why: lang === 'zh'
+            ? '重複的一組是「' + d.unit.join('') + '」，每 ' + d.unit.length + ' 個一組，照順序推下去就是 ' + d.correct + '。'
+            : 'The repeating group is “' + d.unit.join('') + '”, ' + d.unit.length + ' per group — counting through the groups gives ' + d.correct + '.'
+        };
+      } },
+    { id:'twoStep', cat:'twoStep',
+      make: function(used){
+        var step = pick([2, 3]);
+        var start = pickUnused([2,3,4,5,6,7,8], used);
+        var nums = [start, start + step, start + 2 * step, start + 3 * step];
+        var blank1 = start + 4 * step;
+        var blank2 = start + 5 * step;
+        var m = mixOpts(blank2, [blank1, blank2 + step]);
+        return { nums:nums, step:step, blank1:blank1, blank2:blank2, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? d.nums.join('、') + '、___、___<br>第二個空格是多少？'
+            : d.nums.join(', ') + ', ___, ___<br>What is the second blank?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '每次加 ' + d.step + '：' + d.nums[3] + '+' + d.step + '=' + d.blank1 + '（第一格），' + d.blank1 + '+' + d.step + '=' + d.blank2 + '（第二格）。'
+            : 'It adds ' + d.step + ' each time: ' + d.nums[3] + '+' + d.step + '=' + d.blank1 + ' (first blank), ' + d.blank1 + '+' + d.step + '=' + d.blank2 + ' (second blank).'
+        };
+      } },
+    { id:'hop', cat:'hop',
+      make: function(used){
+        var a = pickUnused([1,2,3,4,5,6], used);
+        var b = 1 + rand(Math.max(1, 9 - a));
+        var c = a + b;
+        var m = mixOpts(a, [c, b]);
+        return { a:a, b:b, c:c, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? d.a + ' + ' + d.b + ' = ' + d.c + '，<br>那麼 ' + d.c + ' − ' + d.b + ' = ?'
+            : d.a + ' + ' + d.b + ' = ' + d.c + ',<br>so ' + d.c + ' − ' + d.b + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '往前跳 ' + d.b + ' 格到 ' + d.c + '，往回跳 ' + d.b + ' 格會跳回 ' + d.a + '。'
+            : 'Hop forward ' + d.b + ' to reach ' + d.c + ', hop back ' + d.b + ' and you land on ' + d.a + ' again.'
+        };
+      } },
+    { id:'numbers', cat:'numbers',
+      make: function(used){
+        var step = pick([2, 5, 10]);
+        var k = pickUnused([3, 4, 5, 6], used);
+        var answer = step * k;
+        var m = mixOpts(answer, [answer - step, answer + step]);
+        return { step:step, k:k, answer:answer, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '從 0 開始，每次加 ' + d.step + '，加了 ' + d.k + ' 次之後是多少？'
+            : 'Starting at 0 and adding ' + d.step + ' each time, what number do you reach after ' + d.k + ' jumps?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.step + ' × ' + d.k + ' = ' + d.answer + '。'
+            : d.step + ' × ' + d.k + ' = ' + d.answer + '.'
+        };
+      } },
+    { id:'bonds', cat:'bonds',
+      make: function(used){
+        var n = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var need = 10 - n;
+        var m = mixOpts(need, [need - 1, need + 1]);
+        return { n:n, need:need, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.n + ' + ___ = 10',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? d.n + ' + ' + d.need + ' = 10。' : d.n + ' + ' + d.need + ' = 10.'
+        };
+      } },
+    { id:'addsub', cat:'addsub',
+      make: function(used){
+        var isAdd = rand(2) === 0;
+        var a, b, answer;
+        if (isAdd){
+          a = pickUnused([2,3,4,5,6,7,8], used);
+          b = 1 + rand(Math.max(1, 20 - a));
+          answer = a + b;
+        } else {
+          a = pickUnused([10,11,12,13,14,15,16], used);
+          b = 1 + rand(a - 1);
+          answer = a - b;
+        }
+        var m = mixOpts(answer, [answer - 1, answer + 1]);
+        return { isAdd:isAdd, a:a, b:b, answer:answer, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.isAdd ? (d.a + ' + ' + d.b + ' = ?') : (d.a + ' − ' + d.b + ' = ?'),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? (d.isAdd ? d.a + ' + ' + d.b + ' = ' + d.answer + '。' : d.a + ' − ' + d.b + ' = ' + d.answer + '。')
+            : (d.isAdd ? d.a + ' + ' + d.b + ' = ' + d.answer + '.' : d.a + ' − ' + d.b + ' = ' + d.answer + '.')
+        };
+      } }
+  ];
+
+  var OWN_IDS = ['incNext', 'decNext', 'shapeNext', 'shapePos', 'twoStep', 'hop'];
+
+  /* ---------- 出一批 12 題：9 種題型各一題＋隨機 3 題（限自己主題，數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){ return OWN_IDS.indexOf(g.id) >= 0; });
+    for (var i = 0; i < 3; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

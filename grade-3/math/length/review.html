@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>長度複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 長度複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：長度、周長、乘法、除法交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang:'zh-Hant', title:'長度複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 長度複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：長度、周長、乘法、除法交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang:'en', title:'Length Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Length Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving length, perimeter, multiplication and division — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { length:'長度', perimeter:'周長', multiply:'乘法', divide:'除法' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: {
+        length:'📖 長度 — 長度單位家族', perimeter:'📖 周長 — 繞一圈量量看',
+        multiply:'📖 直式乘法工廠（上課）', divide:'🗂️ 除法 — 速查卡'
+      }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { length:'Length', perimeter:'Perimeter', multiply:'Multiplication', divide:'Division' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: {
+        length:'📖 Length — The Length Unit Family', perimeter:'📖 Perimeter — Once Around the Edge',
+        multiply:'📖 The Column Multiplication Factory (lesson)', divide:'🗂️ Division — cheat sheet'
+      }
+    }
+  };
+
+  var LINK_HREFS = { length:'index.html', perimeter:'../perimeter/index.html', multiply:'../multiply/index.html', divide:'../divide/reference.html' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function uniqOptions(correct, candidates){
+    var out = [];
+    var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (!seen[key]){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3){
+      var lo = correct - step, hi = correct + step;
+      if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  function mixOpts(correct, candidates){
+    var wrongs = uniqOptions(correct, candidates);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var GENS = [
+    { id:'cmToMm', cat:'length',
+      make: function(used){
+        var cm = pickUnused([2,3,4,5,6,7,8,9,11,12,13,14,15,16,18,19,20,22,24,25,27,28,30], used);
+        var mm = cm * 10;
+        var m = mixOpts(mm, [cm, cm * 100, cm + 10]);
+        return { cm:cm, mm:mm, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.cm + ' 公分等於多少毫米？' : d.cm + ' cm is how many mm?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? '1 公分 ＝ 10 毫米，' + d.cm + ' × 10 ＝ ' + d.mm + '。' : '1 cm = 10 mm, and ' + d.cm + ' × 10 = ' + d.mm + '.'
+        };
+      } },
+    { id:'mToCm', cat:'length',
+      make: function(used){
+        var m0 = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var cm = m0 * 100;
+        var m = mixOpts(cm, [m0, m0 * 10, m0 + 100]);
+        return { m:m0, cm:cm, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.m + ' 公尺等於多少公分？' : d.m + ' m is how many cm?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? '1 公尺 ＝ 100 公分，' + d.m + ' × 100 ＝ ' + d.cm + '。' : '1 m = 100 cm, and ' + d.m + ' × 100 = ' + d.cm + '.'
+        };
+      } },
+    { id:'kmToM', cat:'length',
+      make: function(used){
+        var km = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var mt = km * 1000;
+        var m = mixOpts(mt, [km, km * 100, km + 1000]);
+        return { km:km, mt:mt, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.km + ' 公里等於多少公尺？' : d.km + ' km is how many m?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? '1 公里 ＝ 1000 公尺，' + d.km + ' × 1000 ＝ ' + d.mt + '。' : '1 km = 1000 m, and ' + d.km + ' × 1000 = ' + d.mt + '.'
+        };
+      } },
+    { id:'compoundToSmall', cat:'length',
+      make: function(used){
+        var big = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var small = 1 + rand(99);
+        var total = big * 100 + small;
+        var m = mixOpts(total, [big + small, big * 100, big * 1000 + small]);
+        return { big:big, small:small, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.big + ' 公尺 ' + d.small + ' 公分等於多少公分？' : d.big + ' m ' + d.small + ' cm is how many cm?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.big + ' 公尺 ＝ ' + (d.big * 100) + ' 公分，' + (d.big * 100) + ' ＋ ' + d.small + ' ＝ ' + d.total + '。'
+            : d.big + ' m = ' + (d.big * 100) + ' cm, and ' + (d.big * 100) + ' + ' + d.small + ' = ' + d.total + '.'
+        };
+      } },
+    { id:'smallToCompound', cat:'length',
+      make: function(){
+        var total, bigBack, smallBack;
+        for (var tries = 0; tries < 40; tries++){
+          total = 101 + rand(894);
+          bigBack = Math.floor(total / 100); smallBack = total % 100;
+          if (smallBack !== 0 && bigBack !== smallBack) break;
+        }
+        var vTotal = total, vDrop = bigBack * 100, vOff = (bigBack + 1) * 100 + smallBack, vSwap = smallBack * 100 + bigBack;
+        return { total:total, bigBack:bigBack, smallBack:smallBack, vTotal:vTotal, vDrop:vDrop, vOff:vOff, vSwap:vSwap };
+      },
+      fmt: function(d, lang){
+        var opts, ans;
+        if (lang === 'zh'){
+          opts = shuffle([
+            { t:d.bigBack + '公尺' + d.smallBack + '公分', v:d.vTotal },
+            { t:d.bigBack + '公尺', v:d.vDrop },
+            { t:(d.bigBack + 1) + '公尺' + d.smallBack + '公分', v:d.vOff },
+            { t:d.smallBack + '公尺' + d.bigBack + '公分', v:d.vSwap }
+          ]);
+        } else {
+          opts = shuffle([
+            { t:d.bigBack + ' m ' + d.smallBack + ' cm', v:d.vTotal },
+            { t:d.bigBack + ' m', v:d.vDrop },
+            { t:(d.bigBack + 1) + ' m ' + d.smallBack + ' cm', v:d.vOff },
+            { t:d.smallBack + ' m ' + d.bigBack + ' cm', v:d.vSwap }
+          ]);
+        }
+        ans = 0;
+        for (var i = 0; i < opts.length; i++) if (opts[i].v === d.vTotal) { ans = i; break; }
+        return {
+          stem: lang === 'zh' ? d.total + ' 公分等於幾公尺幾公分？' : d.total + ' cm equals how many m and cm?',
+          opts: opts.map(function(o){ return o.t; }), ans: ans,
+          why: lang === 'zh'
+            ? d.total + ' ÷ 100 ＝ ' + d.bigBack + ' ⋯ 餘 ' + d.smallBack + '，也就是 ' + d.bigBack + ' 公尺 ' + d.smallBack + ' 公分。'
+            : d.total + ' ÷ 100 = ' + d.bigBack + ' ⋯ remainder ' + d.smallBack + ', that is ' + d.bigBack + ' m ' + d.smallBack + ' cm.'
+        };
+      } },
+    { id:'kmMCompound', cat:'length',
+      make: function(){
+        var total, bigBack, smallBack;
+        for (var tries = 0; tries < 40; tries++){
+          total = 1001 + rand(8997);
+          bigBack = Math.floor(total / 1000); smallBack = total % 1000;
+          if (smallBack !== 0 && bigBack !== smallBack) break;
+        }
+        var vTotal = total, vDrop = bigBack * 1000, vOff = (bigBack + 1) * 1000 + smallBack, vSwap = smallBack * 1000 + bigBack;
+        return { total:total, bigBack:bigBack, smallBack:smallBack, vTotal:vTotal, vDrop:vDrop, vOff:vOff, vSwap:vSwap };
+      },
+      fmt: function(d, lang){
+        var opts, ans;
+        if (lang === 'zh'){
+          opts = shuffle([
+            { t:d.bigBack + '公里' + d.smallBack + '公尺', v:d.vTotal },
+            { t:d.bigBack + '公里', v:d.vDrop },
+            { t:(d.bigBack + 1) + '公里' + d.smallBack + '公尺', v:d.vOff },
+            { t:d.smallBack + '公里' + d.bigBack + '公尺', v:d.vSwap }
+          ]);
+        } else {
+          opts = shuffle([
+            { t:d.bigBack + ' km ' + d.smallBack + ' m', v:d.vTotal },
+            { t:d.bigBack + ' km', v:d.vDrop },
+            { t:(d.bigBack + 1) + ' km ' + d.smallBack + ' m', v:d.vOff },
+            { t:d.smallBack + ' km ' + d.bigBack + ' m', v:d.vSwap }
+          ]);
+        }
+        ans = 0;
+        for (var i = 0; i < opts.length; i++) if (opts[i].v === d.vTotal) { ans = i; break; }
+        return {
+          stem: lang === 'zh' ? d.total + ' 公尺等於幾公里幾公尺？' : d.total + ' m equals how many km and m?',
+          opts: opts.map(function(o){ return o.t; }), ans: ans,
+          why: lang === 'zh'
+            ? d.total + ' ÷ 1000 ＝ ' + d.bigBack + ' ⋯ 餘 ' + d.smallBack + '，也就是 ' + d.bigBack + ' 公里 ' + d.smallBack + ' 公尺。'
+            : d.total + ' ÷ 1000 = ' + d.bigBack + ' ⋯ remainder ' + d.smallBack + ', that is ' + d.bigBack + ' km ' + d.smallBack + ' m.'
+        };
+      } },
+    { id:'mixedSum', cat:'length',
+      make: function(){
+        var aBig = 1 + rand(5), aSmall = 1 + rand(99);
+        var bBig = 1 + rand(5), bSmall = 1 + rand(99);
+        var aTotal = aBig * 100 + aSmall, bTotal = bBig * 100 + bSmall;
+        var total = aTotal + bTotal;
+        var naive = aBig + aSmall + bBig + bSmall;
+        var wrongFactor = aBig * 10 + aSmall + bBig * 10 + bSmall;
+        var m = mixOpts(total, [naive, wrongFactor, total + 10]);
+        return { aBig:aBig, aSmall:aSmall, bBig:bBig, bSmall:bSmall, aTotal:aTotal, bTotal:bTotal, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? d.aBig + ' 公尺 ' + d.aSmall + ' 公分，加上 ' + d.bBig + ' 公尺 ' + d.bSmall + ' 公分，一共多少公分？'
+            : d.aBig + ' m ' + d.aSmall + ' cm plus ' + d.bBig + ' m ' + d.bSmall + ' cm — what is the total in cm?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '先統一成公分：' + d.aTotal + ' ＋ ' + d.bTotal + ' ＝ ' + d.total + ' 公分。'
+            : 'Unify to cm first: ' + d.aTotal + ' + ' + d.bTotal + ' = ' + d.total + ' cm.'
+        };
+      } },
+    { id:'rulerRead', cat:'length',
+      make: function(used){
+        var mm, cmPart, mmPart;
+        for (var tries = 0; tries < 40; tries++){
+          mm = pickUnused([11,12,13,14,15,16,17,18,19,21,23,25,27,29,32,34,36,38,41,43,45,47,52,54,56,58,63,65,67,72,74,76,81,83,85,92,94,96,98], used);
+          cmPart = Math.floor(mm / 10); mmPart = mm % 10;
+          if (cmPart !== mmPart) break;
+        }
+        return { mm:mm, cmPart:cmPart, mmPart:mmPart };
+      },
+      fmt: function(d, lang){
+        var vCorrect = d.mm, vSwap = d.mmPart * 10 + d.cmPart, vSum = (d.cmPart + d.mmPart) * 10, vConfuse = d.mm * 10;
+        var opts;
+        if (lang === 'zh'){
+          opts = shuffle([
+            { t:d.cmPart + '公分' + d.mmPart + '毫米', v:vCorrect },
+            { t:d.mmPart + '公分' + d.cmPart + '毫米', v:vSwap },
+            { t:(d.cmPart + d.mmPart) + '公分', v:vSum },
+            { t:d.mm + '公分', v:vConfuse }
+          ]);
+        } else {
+          opts = shuffle([
+            { t:d.cmPart + ' cm ' + d.mmPart + ' mm', v:vCorrect },
+            { t:d.mmPart + ' cm ' + d.cmPart + ' mm', v:vSwap },
+            { t:(d.cmPart + d.mmPart) + ' cm', v:vSum },
+            { t:d.mm + ' cm', v:vConfuse }
+          ]);
+        }
+        var ans = 0;
+        for (var i = 0; i < opts.length; i++) if (opts[i].v === vCorrect) { ans = i; break; }
+        return {
+          stem: lang === 'zh' ? '尺上的指標在 ' + d.mm + ' 毫米的位置，這是幾公分幾毫米？' : 'A ruler’s pointer is at the ' + d.mm + ' mm mark. What is that in cm and mm?',
+          opts: opts.map(function(o){ return o.t; }), ans: ans,
+          why: lang === 'zh'
+            ? d.cmPart + ' 個大格（公分）＋ ' + d.mmPart + ' 個小格（毫米）＝ ' + d.cmPart + ' 公分 ' + d.mmPart + ' 毫米。'
+            : d.cmPart + ' big marks (cm) + ' + d.mmPart + ' small marks (mm) = ' + d.cmPart + ' cm ' + d.mmPart + ' mm.'
+        };
+      } },
+    { id:'perimRect', cat:'perimeter',
+      make: function(used){
+        var l = pickUnused([4,5,6,7,8,9,10,11,12,13,14], used);
+        var w = 2 + rand(10);
+        var P = (l + w) * 2;
+        var m = mixOpts(P, [l + w, l * w, P - 2, P + 2]);
+        return { l:l, w:w, P:P, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '長方形長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分，周長是多少？' : 'A rectangle is ' + d.l + ' cm long and ' + d.w + ' cm wide. What is its perimeter?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? '(' + d.l + ' + ' + d.w + ') × 2 = ' + d.P + ' 公分。' : '(' + d.l + ' + ' + d.w + ') × 2 = ' + d.P + ' cm.'
+        };
+      } },
+    { id:'multiplyTwoByOne', cat:'multiply',
+      make: function(used){
+        var a = pickUnused([12,13,15,16,21,22,24,25,31,32,34,41,42,43], used);
+        var dd = pick([2,3,4]);
+        var p = a * dd;
+        var m = mixOpts(p, [p + 10, p - 10, a + dd]);
+        return { a:a, dd:dd, p:p, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.a + ' × ' + d.dd + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh' ? d.a + ' × ' + d.dd + ' = ' + d.p + '。' : d.a + ' × ' + d.dd + ' = ' + d.p + '.'
+        };
+      } },
+    { id:'divideRemainder', cat:'divide',
+      make: function(used){
+        var k = pickUnused([3,4,5,6,7], used);
+        var q = pick([2,3,4,5,6]);
+        var r = 1 + rand(k - 1);
+        var dividend = k * q + r;
+        var wrongTuples = [
+          { q:q - 1, r:r + k },
+          { q:q + 1, r:r },
+          { q:q, r: r + 1 === k ? Math.max(0, r - 1) : r + 1 }
+        ];
+        var tuples = shuffle([{ q:q, r:r }].concat(wrongTuples));
+        var ansIdx = 0;
+        for (var i = 0; i < tuples.length; i++){
+          if (tuples[i].q === q && tuples[i].r === r){ ansIdx = i; break; }
+        }
+        return { dividend:dividend, k:k, q:q, r:r, tuples:tuples, ans:ansIdx };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.dividend + ' ÷ ' + d.k + ' = ?',
+          opts: d.tuples.map(function(tt){ return lang === 'zh' ? ('商 ' + tt.q + ' 餘 ' + tt.r) : (tt.q + ' r ' + tt.r); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.k + ' × ' + d.q + ' ＝ ' + (d.k * d.q) + '，' + d.dividend + ' − ' + (d.k * d.q) + ' ＝ ' + d.r + '，所以商 ' + d.q + '、餘 ' + d.r + '。'
+            : d.k + ' × ' + d.q + ' = ' + (d.k * d.q) + ', and ' + d.dividend + ' − ' + (d.k * d.q) + ' = ' + d.r + ', so ' + d.q + ' r ' + d.r + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：11 種基本題型各一題＋隨機 1 題（限自己主題，數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['cmToMm','mToCm','compoundToSmall','mixedSum'].indexOf(g.id) >= 0;
+    });
+    for (var i = 0; i < 1; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我重量 — 秤秤看有多重</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  h3{font-size:18px;margin:4px 0}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .btnrow{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .target{font-size:20px;margin-top:14px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px;text-align:center;cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .mode .mbig{font-size:26px}
+  .mode h3{font-size:17px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:16px;display:grid;gap:10px}
+
+  /* --- weight-lesson-only additions --- */
+  .cmprow{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin-top:18px;align-items:flex-end}
+  .cmpcard{
+    border:2px solid var(--line);background:var(--card);border-radius:16px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;padding:8px;text-align:center;color:var(--ink);
+  }
+  .cmpcard .cicon{font-size:34px}
+  .cmpcard .cname{font-weight:700;font-size:14px;margin-top:4px}
+  .cmpcard .cweight{font-size:13px;color:var(--muted);margin-top:2px;min-height:18px}
+  .cmpcard.right{border-color:var(--green);background:var(--green-soft)}
+  .cmpcard.wrong{border-color:var(--red);background:var(--red-soft)}
+  .cmpcard:disabled{cursor:default}
+  .cmpfb{margin-top:14px;font-size:15px;text-align:center;color:var(--muted);min-height:24px}
+
+  .objbig{text-align:center;font-size:60px;margin-top:6px}
+  .objask{text-align:center;font-size:18px;margin-top:4px}
+  .unitrow{display:flex;justify-content:center;gap:14px;margin-top:16px;flex-wrap:wrap}
+  .unitbtn{
+    border:2px solid var(--line);background:var(--card);border-radius:16px;
+    padding:14px 26px;font-size:20px;font-weight:700;cursor:pointer;color:var(--ink);min-width:100px;
+  }
+  .unitbtn.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .unitbtn.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .unitbtn:disabled{cursor:default;opacity:.9}
+  .objfb{text-align:center;margin-top:14px;font-size:16px;color:var(--muted);min-height:24px}
+
+  .stair{display:flex;flex-direction:column;gap:0;margin-top:20px;align-items:stretch}
+  .stairstep{
+    border:2px solid var(--line);background:var(--card);border-radius:14px;
+    padding:14px 18px;display:flex;justify-content:space-between;align-items:center;
+    margin-top:8px;transition:.2s;
+  }
+  .stairstep.here{border-color:var(--orange);background:var(--orange-soft)}
+  .stairstep .lv{font-weight:700;font-size:16px;color:var(--muted)}
+  .stairstep.here .lv{color:var(--orange)}
+  .stairstep .val{font-size:22px;font-weight:700}
+  .laddereq{margin-top:14px;font-size:16px;min-height:24px;text-align:center;color:var(--muted)}
+  .laddereq b{color:var(--green)}
+  .subhead{margin-top:26px;font-size:17px;font-weight:700;color:var(--ink)}
+  .subhead:first-child{margin-top:0}
+  .sublead{color:var(--muted);font-size:14px;margin-top:2px}
+
+  .compoundrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:16px}
+  .compoundcard{border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--bg)}
+  .compoundcard h4{font-size:15px;color:var(--blue);margin-bottom:8px}
+  .compoundcard .line{font-size:16px;margin-top:4px}
+  .compoundcard .final{margin-top:8px;font-size:19px;font-weight:700;color:var(--green)}
+
+  .dialwrap{text-align:center;margin-top:10px}
+  .tickchooser{display:flex;justify-content:center;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .dialsteps{margin-top:16px;font-size:15px;display:grid;gap:8px}
+  .dialsteps .step{padding:10px 14px;border-radius:12px;background:var(--bg);border:1px solid var(--line)}
+  .dialsteps .step b{color:var(--orange)}
+  .dialresult{margin-top:12px;text-align:center;font-size:21px;font-weight:700;color:var(--green)}
+  .minidial{margin:10px auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">⚖️ 秤秤看有多重</h1>
+    <p class="sub" data-i18n="sub">公斤與公克：大不一定重，讀秤面要先看刻度</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    大大的枕頭不一定比小小的石頭重 —— <strong>重量不是看大小，是看秤上的數字</strong>。
+    這一課要學公克、公斤，還有 <strong>1 公斤 ＝ 1000 公克</strong>。
+  </div>
+
+  <!-- 模式選擇 -->
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
+  </div>
+
+  <!-- 1. 重量不是大小 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">重量不是大小</h2>
+    <p class="lead" data-i18n="s1lead">選一組東西，猜猜看哪一個比較重 —— 有時候答案會讓你嚇一跳！</p>
+
+    <div class="card">
+      <div class="chips" id="cmpChips"></div>
+      <p class="objask" data-i18n="cmpAsk">你覺得哪一個比較重？點一下猜猜看！</p>
+      <div class="cmprow" id="cmpRow" data-i18n-aria="cmpAria" aria-label="兩個東西，猜猜哪一個比較重"></div>
+      <p class="cmpfb" id="cmpFb"></p>
+    </div>
+  </section>
+
+  <!-- 2. 找到適合的單位 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">公克與公斤：找到適合的單位</h2>
+    <p class="lead" data-i18n="s2lead">點選下面的東西，猜猜它大概多重，該用公克還是公斤？</p>
+
+    <div class="card">
+      <div class="chips" id="objChips"></div>
+      <div class="objbig" id="objIcon">📎</div>
+      <p class="objask" id="objAsk"></p>
+      <div class="unitrow" id="objUnits"></div>
+      <p class="objfb" id="objFb"></p>
+    </div>
+  </section>
+
+  <!-- 3. 換算階梯與化聚 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">換算階梯與化聚：1 公斤 ＝ 1000 公克</h2>
+    <p class="lead" data-i18n="s3lead">先練習公斤和公克互相換算，再看看「幾公斤幾公克」跟「幾公克」怎麼互相改寫。</p>
+
+    <div class="card">
+      <p class="subhead" data-i18n="s3aH">換算階梯</p>
+      <p class="sublead" data-i18n="s3aLead">選方向，再選一個數字，按「算算看」揭曉答案。</p>
+      <div class="chips" id="dirChips"></div>
+      <div class="chips" id="ladderChips"></div>
+      <div class="stair" id="stair"></div>
+      <p class="laddereq" id="ladderEq"></p>
+      <div class="btnrow">
+        <button class="btn" id="ladderGoBtn" type="button" data-i18n="ladderGoBtn">算算看！</button>
+      </div>
+
+      <p class="subhead" data-i18n="s3bH">化聚小教室：兩種寫法，一樣重</p>
+      <p class="sublead" data-i18n="s3bLead">選一個例子，看看「幾公斤幾公克」跟「幾公克」怎麼互相換算。</p>
+      <div class="chips" id="compoundChips"></div>
+      <div class="compoundrow">
+        <div class="compoundcard">
+          <h4 data-i18n="compA">拆開來：公斤公克 → 公克</h4>
+          <p class="line" id="compALine1"></p>
+          <p class="line" id="compALine2"></p>
+          <p class="final" id="compAFinal"></p>
+        </div>
+        <div class="compoundcard">
+          <h4 data-i18n="compB">合起來：公克 → 公斤公克</h4>
+          <p class="line" id="compBLine1"></p>
+          <p class="line" id="compBLine2"></p>
+          <p class="final" id="compBFinal"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 讀秤面 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">讀秤面：先看刻度，再讀數字</h2>
+    <p class="lead" data-i18n="s4lead">同一根指針，指的位置永遠不會變 —— 但「一小格」代表多少公克會改變答案！換一個刻度試試看。</p>
+
+    <div class="card">
+      <div class="dialwrap" id="dialBox" data-i18n-aria="dialAria" aria-label="秤面，指針停在4大格又3小格的地方"></div>
+      <div class="tickchooser" id="tickChips"></div>
+      <div class="dialsteps">
+        <p class="step" data-i18n="dstep1">1️⃣ 看單位：這台秤的數字是<b>公克</b>。</p>
+        <p class="step" data-i18n="dstep2"><span id="dBigVal"></span></p>
+        <p class="step" data-i18n="dstep3"><span id="dSmallVal"></span></p>
+        <p class="step" data-i18n="dstep4"><span id="dReadVal"></span></p>
+      </div>
+      <p class="dialresult" id="dialResult"></p>
+    </div>
+  </section>
+
+  <!-- 5. 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">試題</span>
+    <h2 data-i18n="s5h2">檢查一下學會了沒</h2>
+    <p class="lead" data-i18n="s5lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 6. 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">小遊戲</span>
+    <h2 data-i18n="s6h2">過磅囉</h2>
+    <p class="lead" data-i18n="s6lead">秤重、換算、比大小，通通都可能考到，看清楚題目再回答！答錯只扣一點分，隨時可以再試！</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <p class="target" id="gAskLine">
+        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
+      </p>
+      <div id="gPic"></div>
+      <p class="hint" id="gHint"></p>
+      <div class="opts" id="gAnswers"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 學完之後 -->
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的三個動作</h2>
+    <div class="card">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。</li>
+        <li data-i18n="next3">❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>重量不是大小，是秤上的數字 —— 1 公斤 ＝ 1000 公克，換算前先看刻度。</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= 共用：秤面 SVG ================= */
+  var TOTAL_TICKS = 50, MAJOR_EVERY = 5;
+  function polarXY(cx, cy, r, thetaDeg){
+    var rad = thetaDeg * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
+  }
+  function dialTheta(raw){ return 180 * (1 - raw / TOTAL_TICKS); }
+  function buildDialSVG(raw, big){
+    var W = big ? 300 : 170, H = big ? 190 : 118;
+    var cx = W / 2, cy = H - 14;
+    var rOuter = big ? 128 : 74, rLabel = big ? 148 : 90, rNeedle = big ? 106 : 60;
+    var fs = big ? 13 : 10;
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" style="max-width:' + W + 'px;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg">';
+    svg += '<path d="M ' + (cx - rOuter) + ' ' + cy + ' A ' + rOuter + ' ' + rOuter + ' 0 0 1 ' + (cx + rOuter) + ' ' + cy + '" fill="none" stroke="#E8E2D6" stroke-width="2"/>';
+    for (var i = 0; i <= TOTAL_TICKS; i++){
+      var theta = dialTheta(i);
+      var isMajor = (i % MAJOR_EVERY === 0);
+      var p1 = polarXY(cx, cy, isMajor ? rOuter - 14 : rOuter - 7, theta);
+      var p2 = polarXY(cx, cy, rOuter, theta);
+      svg += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) + '" stroke="' + (isMajor ? '#2B2A33' : '#B9B3A0') + '" stroke-width="' + (isMajor ? 2.4 : 1.2) + '"/>';
+      if (isMajor){
+        var lp = polarXY(cx, cy, rLabel, theta);
+        svg += '<text x="' + lp.x.toFixed(1) + '" y="' + lp.y.toFixed(1) + '" font-size="' + fs + '" text-anchor="middle" dominant-baseline="middle" fill="#6B6875">' + (i / MAJOR_EVERY) + '</text>';
+      }
+    }
+    var ntheta = dialTheta(raw);
+    var np = polarXY(cx, cy, rNeedle, ntheta);
+    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + np.x.toFixed(1) + '" y2="' + np.y.toFixed(1) + '" stroke="#D64545" stroke-width="3" stroke-linecap="round"/>';
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#2B2A33"/>';
+    svg += '</svg>';
+    return svg;
+  }
+  function dialReading(raw, tickG){ return raw * tickG; }
+
+  /* ================= 語言無關的資料 ================= */
+  var CMP_PAIRS = [
+    { a:{icon:'🛏️', size:'big',   w:500}, b:{icon:'🪨', size:'small', w:900} },
+    { a:{icon:'🎈', size:'big',   w:5},   b:{icon:'🔑', size:'small', w:50} },
+    { a:{icon:'🍉', size:'big',   w:3000},b:{icon:'⚙️', size:'small', w:400} }
+  ];
+  var CMP_SIZE = { big:{w:150,h:112}, small:{w:76,h:76} };
+
+  var OBJECTS = [
+    { icon:'📎', wG:1,     unit:'g' },
+    { icon:'🧂', wG:1000,  unit:'kg' },
+    { icon:'🍎', wG:150,   unit:'g' },
+    { icon:'🎒', wG:3000,  unit:'kg' },
+    { icon:'🧒', wG:35000, unit:'kg' },
+    { icon:'🍬', wG:3,     unit:'g' }
+  ];
+
+  var LADDER_KG = [1,2,3,4,5,6,7,8,9];
+  var LADDER_G  = [2000,3000,4000,5000,6000,7000,8000,9000];
+
+  var COMPOUND_EX = [
+    { kg:1, g:250 }, { kg:2, g:300 }, { kg:3, g:600 }, { kg:4, g:50 }
+  ];
+
+  var DIAL_RAW = 23; // 固定：4 大格又 3 小格
+  var TICKS = [10, 20, 50];
+
+  var ROUNDS = [
+    { kind:'estimate', wG:150,  choices:[150,1500,15,15000] },
+    { kind:'ladder',   kg:4,    choices:[4000,400,40000,40] },
+    { kind:'dial',     raw:17,  tickG:10, choices:[170,50,340,150] },
+    { kind:'compound', kg:3, g:150, choices:[3150,315,3015,300] },
+    { kind:'compare',  aG:900, bG:1100, aWho:0, bWho:1 }
+  ];
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '教我重量 — 秤秤看有多重',
+      btn: 'EN',
+      langAria: '切換語言',
+      home: '← 回 teach-me 首頁',
+      h1: '⚖️ 秤秤看有多重',
+      sub: '公斤與公克：大不一定重，讀秤面要先看刻度',
+      intro: '大大的枕頭不一定比小小的石頭重 —— <strong>重量不是看大小，是看秤上的數字</strong>。這一課要學公克、公斤，還有 <strong>1 公斤 ＝ 1000 公克</strong>。',
+      nav1: '📖 上課（本頁）', nav2: '🗂️ 速查卡', nav3: '🔁 複習挑戰', nav4: '👨‍👩‍👧 給家長',
+      modeTitle: '今天想怎麼學？（隨時可以換）',
+      modes: {
+        ahead:  { icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：慢慢看範例就好，試題只出 6 題基礎題，遊戲會自動給提示。' },
+        school: { icon:'🏫', h:'跟上進度', p:'學校正在教，完整練習', banner:'跟上模式：完整 10 題，包含 4 題兩步驟文字題。' },
+        boost:  { icon:'💪', h:'補強練習', p:'學過但還不穩，加強', banner:'補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。' }
+      },
+      eb1:'範例教學 1', eb2:'範例教學 2', eb3:'範例教學 3', eb4:'範例教學 4', eb5:'試題', eb6:'小遊戲',
+      s1h2:'重量不是大小',
+      s1lead:'選一組東西，猜猜看哪一個比較重 —— 有時候答案會讓你嚇一跳！',
+      cmpAsk:'你覺得哪一個比較重？點一下猜猜看！',
+      cmpAria:'兩個東西，猜猜哪一個比較重',
+      cmpNames: [
+        { a:'枕頭', b:'石頭' },
+        { a:'氣球', b:'鑰匙' },
+        { a:'大西瓜', b:'小鐵球' }
+      ],
+      cmpChipLabel: function(i){ return I18N.zh.cmpNames[i].a + ' vs ' + I18N.zh.cmpNames[i].b; },
+      wLabel: function(g){ return g + ' 公克'; },
+      cmpHidden: '？公克',
+      cmpRight: function(name, w){ return '<b>答對了！</b>' + name + '比較重（' + w + ' 公克）。'; },
+      cmpWrong: function(guessName, guessW, rightName, rightW){
+        return '<b>再想想：</b>' + guessName + ' 是 ' + guessW + ' 公克，' + rightName + ' 是 ' + rightW + ' 公克 —— 看大小猜不準，要看秤上的數字。';
+      },
+      s2h2:'公克與公斤：找到適合的單位',
+      s2lead:'點選下面的東西，猜猜它大概多重，該用公克還是公斤？',
+      objNames: ['一根迴紋針', '一包鹽巴', '一顆蘋果', '一個書包', '一個五年級小孩', '一顆糖果'],
+      objAsk: function(i){ return I18N.zh.objNames[i] + '，大概多重，該用哪個單位？'; },
+      unitG: '公克', unitKg: '公斤',
+      objRight: function(name, val, unit){ return '<b>答對了！</b>' + name + '大約 ' + val + ' ' + unit + '。'; },
+      objWrong: function(name, val, unit){ return '<b>再想想：</b>' + name + '大約 ' + val + ' ' + unit + '，比較常用這個單位。'; },
+      s3h2:'換算階梯與化聚：1 公斤 ＝ 1000 公克',
+      s3lead:'先練習公斤和公克互相換算，再看看「幾公斤幾公克」跟「幾公克」怎麼互相改寫。',
+      s3aH:'換算階梯', s3aLead:'選方向，再選一個數字，按「算算看」揭曉答案。',
+      dirKgToG:'公斤 → 公克（×1000）', dirGToKg:'公克 → 公斤（÷1000）',
+      ladderGoBtn:'算算看！',
+      lvKg:'公斤', lvG:'公克',
+      ladderPrompt:'選一個數字，按「算算看」！',
+      ladderEqKgToG: function(kg, g){ return kg + ' 公斤 × 1000 ＝ <b>' + g + ' 公克</b>'; },
+      ladderEqGToKg: function(g, kg){ return g + ' 公克 ÷ 1000 ＝ <b>' + kg + ' 公斤</b>'; },
+      s3bH:'化聚小教室：兩種寫法，一樣重',
+      s3bLead:'選一個例子，看看「幾公斤幾公克」跟「幾公克」怎麼互相換算。',
+      compChipLabel: function(kg, g){ return kg + '公斤' + g + '公克'; },
+      compA:'拆開來：公斤公克 → 公克',
+      compALine1: function(kg){ return kg + ' 公斤 ＝ ' + (kg * 1000) + ' 公克'; },
+      compALine2: function(kg, g, total){ return (kg * 1000) + ' ＋ ' + g + ' ＝ ' + total; },
+      compAFinal: function(total){ return '答案：' + total + ' 公克'; },
+      compB:'合起來：公克 → 公斤公克',
+      compBLine1: function(total){ return total + ' ÷ 1000 ＝ 商 ' + Math.floor(total / 1000) + ' 餘 ' + (total % 1000); },
+      compBLine2:'商是公斤數，餘數是公克數',
+      compBFinal: function(kg, g){ return '答案：' + kg + ' 公斤 ' + g + ' 公克'; },
+      s4h2:'讀秤面：先看刻度，再讀數字',
+      s4lead:'同一根指針，指的位置永遠不會變 —— 但「一小格」代表多少公克會改變答案！換一個刻度試試看。',
+      dialAria:'秤面，指針停在4大格又3小格的地方',
+      dstep1:'1️⃣ 看單位：這台秤的數字是<b>公克</b>。',
+      dstep2:'2️⃣ 看一大格多少：',
+      dstep3:'3️⃣ 看一小格多少：',
+      dstep4:'4️⃣ 再讀：指針停在 4 大格又 3 小格',
+      dBigVal: function(tick){ return '一大格 ＝ 5 個小格 ＝ 5 × ' + tick + ' ＝ ' + (tick * 5) + ' 公克'; },
+      dSmallVal: function(tick){ return '一小格 ＝ ' + tick + ' 公克（目前選的刻度）'; },
+      dReadVal: function(tick){ return '4 × ' + (tick * 5) + ' ＋ 3 × ' + tick + ' ＝ 23 × ' + tick; },
+      dResult: function(v){ return '讀出來是 <b>' + v + ' 公克</b>' + (v >= 1000 ? '（也就是 ' + Math.floor(v/1000) + ' 公斤 ' + (v%1000) + ' 公克）' : '') + '！'; },
+      s5h2:'檢查一下學會了沒', s5lead:'直接點答案，馬上告訴你為什麼。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      cAll:'全對！你已經是秤重高手 🏆',
+      cGood:'很棒！錯的那幾題再看一次說明。',
+      cTry:'沒關係，回到上面再看一次範例。',
+      qs: [
+        { stem:'一根迴紋針的重量大約是多少？', opts:['1 公克','1 公斤','10 公克','100 公克'], ans:0,
+          why:'迴紋針非常輕，大約只有 1 公克，比 1 公斤輕太多了。' },
+        { stem:'一包鹽巴（一整包食鹽）的重量大約是多少？', opts:['1 公斤','1 公克','10 公斤','100 公克'], ans:0,
+          why:'一包鹽巴大約重 1 公斤（1000 公克），用公克講會出現一長串數字，所以用公斤比較方便。' },
+        { stem:'3 公斤 ＝ 多少公克？', opts:['300 公克','3000 公克','30 公克','30000 公克'], ans:1,
+          why:'1 公斤 ＝ 1000 公克，3 × 1000 ＝ 3000，所以是 3000 公克（不是 ×100，公斤換公克要 ×1000）。' },
+        { stem:'5000 公克 ＝ 多少公斤？', opts:['5 公斤','50 公斤','500 公斤','5000 公斤'], ans:0,
+          why:'5000 ÷ 1000 ＝ 5，所以是 5 公斤。' },
+        { stem:'2 公斤 300 公克 ＝ 多少公克？', opts:['2300 公克','2000 公克','500 公克','302 公克'], ans:0,
+          why:'2 公斤 ＝ 2000 公克，2000 ＋ 300 ＝ 2300，所以是 2300 公克。' },
+        { stem:'秤面上，一小格是 20 公克，指針停在「過了 4 大格，再多 3 小格」的地方，這是多少公克？', opts:['460 公克','140 公克','230 公克','400 公克'], ans:0,
+          why:'一大格 ＝ 5 個小格 ＝ 5 × 20 ＝ 100 公克，4 大格 ＝ 400 公克，再加 3 小格 ＝ 3 × 20 ＝ 60 公克，400 ＋ 60 ＝ 460 公克。' }
+      ],
+      qsAdv: [
+        { stem:'文字題：小美的書包重 2 公斤 500 公克，小華的書包重 2700 公克，誰的書包比較重？', opts:['小美','小華','一樣重','沒辦法比較'], ans:1,
+          why:'先統一單位：小美 2 公斤 500 公克 ＝ 2500 公克，2500 小於 2700，所以小華的書包比較重。' },
+        { stem:'文字題：媽媽買了 1 公斤 700 公克的雞肉，又買了 500 公克的魚，一共是多少公斤多少公克？', opts:['2 公斤 200 公克','1 公斤 700 公克','2 公斤 700 公克','1 公斤 200 公克'], ans:0,
+          why:'先統一成公克：1700 ＋ 500 ＝ 2200 公克，2200 公克 ＝ 2 公斤 200 公克。' },
+        { stem:'文字題：一個購物籃最多可以裝 5 公斤的東西，已經裝了 3 公斤 200 公克的水果，還可以再裝多少公克才不超過限制？', opts:['1800 公克','1700 公克','2800 公克','1200 公克'], ans:0,
+          why:'5 公斤 ＝ 5000 公克，3 公斤 200 公克 ＝ 3200 公克，5000 − 3200 ＝ 1800，所以還可以再裝 1800 公克。' },
+        { stem:'文字題：爸爸的體重是 70 公斤，比小明重 25 公斤 300 公克，小明的體重是多少？', opts:['44 公斤 700 公克','45 公斤 300 公克','44 公斤 300 公克','45 公斤 700 公克'], ans:0,
+          why:'先統一成公克：70000 − 25300 ＝ 44700 公克 ＝ 44 公斤 700 公克。' }
+      ],
+      qsBoost: [
+        { stem:'迷思檢查：一顆棒球和一顆氣球，棒球比較小、氣球比較大，哪一個比較重？（棒球約 145 公克，氣球約 5 公克）', opts:['棒球','氣球','一樣重','沒辦法比較'], ans:0,
+          why:'棒球雖然比較小，卻有 145 公克；氣球雖然比較大，卻只有 5 公克。重量要看秤上的數字，不能只看大小。' },
+        { stem:'迷思檢查：1 公斤等於多少公克？', opts:['1000 公克','100 公克','10000 公克','10 公克'], ans:0,
+          why:'公斤換算公克要 ×1000（不是 ×100，×100 是公分和公尺之間才用的關係），所以 1 公斤 ＝ 1000 公克。' }
+      ],
+      s6h2:'過磅囉', s6lead:'秤重、換算、比大小，通通都可能考到，看清楚題目再回答！答錯只扣一點分，隨時可以再試！',
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
+      gAskEstimate: function(name){ return name + '大概多重？'; },
+      gAskLadder: function(kg){ return kg + ' 公斤 ＝ 多少公克？'; },
+      gAskDial:'秤面上，一小格是 10 公克，指針停在圖上的位置，這是多少公克？',
+      gAskCompound: function(kg, g){ return kg + ' 公斤 ' + g + ' 公克 ＝ 多少公克？'; },
+      gAskCompare: function(aName, aW, bName, bW){ return aName + '的水壺 ' + aW + ' 公克，' + bName + '的水壺 ' + bW + ' 公克，誰的比較重？'; },
+      gameObjName:'一顆蘋果',
+      gCompareNames:['小明','小華'],
+      gHintBtn:'💡 提示',
+      gHint1:'提示 1：先想清楚這一題是估重量、換算、讀秤面，還是比大小。',
+      gHint2: function(txt){ return '提示 2：正解跟「' + txt + '」有關。'; },
+      gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gCorrectFirst: function(txt){ return '答對了！' + txt + '，+20 分！'; },
+      gCorrectRetry: function(txt){ return '答對了！' + txt + '，+10 分。'; },
+      gWrong: function(txt){ return txt + ' 不對，再試一次，−5 分。'; },
+      gClear:'按「下一關」繼續下一題！',
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      ebNext:'學完之後', nextH2:'把它記牢的三個動作',
+      next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
+      next3:'❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
+      footer:'把整頁縮成一句：<strong>重量不是大小，是秤上的數字 —— 1 公斤 ＝ 1000 公克，換算前先看刻度。</strong>'
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'Teach Me Weight — How Heavy Is It?',
+      btn: '中',
+      langAria: 'Switch language',
+      home: '← Back to teach-me home',
+      h1: '⚖️ How Heavy Is It?',
+      sub: 'Kilograms and grams: bigger isn’t always heavier, and dial scales need care',
+      intro: 'A big pillow isn’t always heavier than a small stone — <strong>weight is about the number on the scale, not the size</strong>. This lesson covers grams, kilograms, and <strong>1 kg = 1000 g</strong>.',
+      nav1: '📖 Lesson (this page)', nav2: '🗂️ Cheat sheet', nav3: '🔁 Review challenge', nav4: '👨‍👩‍👧 For parents',
+      modeTitle: 'How do you want to learn today? (switch anytime)',
+      modes: {
+        ahead:  { icon:'🚀', h:'Learning ahead', p:'First time meeting this topic', banner:'Ahead mode: enjoy the examples above at your own pace — the quiz has just the 6 basics, and the game shows a hint automatically.' },
+        school: { icon:'🏫', h:'School pace', p:'Learning it at school now', banner:'School mode: the full 10 questions, including 4 two-step word problems.' },
+        boost:  { icon:'💪', h:'Boost', p:'Learned it, still shaky', banner:'Boost mode: 2 misconception checks first, 12 questions in total — then head to the Review Challenge.' }
+      },
+      eb1:'Example 1', eb2:'Example 2', eb3:'Example 3', eb4:'Example 4', eb5:'Quiz', eb6:'Game',
+      s1h2:'Weight Is Not Size',
+      s1lead:'Pick a pair and guess which one is heavier — the answer might surprise you!',
+      cmpAsk:'Which one do you think is heavier? Tap to guess!',
+      cmpAria:'Two objects — guess which one is heavier',
+      cmpNames: [
+        { a:'Pillow', b:'Stone' },
+        { a:'Balloon', b:'Keys' },
+        { a:'Watermelon', b:'Small iron ball' }
+      ],
+      cmpChipLabel: function(i){ return I18N.en.cmpNames[i].a + ' vs ' + I18N.en.cmpNames[i].b; },
+      wLabel: function(g){ return g + ' g'; },
+      cmpHidden: '? g',
+      cmpRight: function(name, w){ return '<b>Correct!</b> ' + name + ' is heavier (' + w + ' g).'; },
+      cmpWrong: function(guessName, guessW, rightName, rightW){
+        return '<b>Think again:</b> ' + guessName + ' is ' + guessW + ' g and ' + rightName + ' is ' + rightW + ' g \u2014 size is not a reliable guide, read the number on the scale.';
+      },
+      s2h2:'Grams and Kilograms: Picking the Right Unit',
+      s2lead:'Tap an object below and guess about how heavy it is — grams or kilograms?',
+      objNames: ['a paperclip', 'a bag of salt', 'an apple', 'a school backpack', 'a 5th-grade student', 'a piece of candy'],
+      objAsk: function(i){ return 'About how heavy is ' + I18N.en.objNames[i] + ', and which unit fits?'; },
+      unitG: 'grams', unitKg: 'kilograms',
+      objRight: function(name, val, unit){ return '<b>Correct!</b> ' + name + ' weighs about ' + val + ' ' + unit + '.'; },
+      objWrong: function(name, val, unit){ return '<b>Think again:</b> ' + name + ' weighs about ' + val + ' ' + unit + ' — that unit fits better.'; },
+      s3h2:'The Conversion Ladder and Regrouping: 1 kg = 1000 g',
+      s3lead:'First practice converting kilograms and grams, then see how “X kg Y g” and “Z g” rewrite each other.',
+      s3aH:'The Conversion Ladder', s3aLead:'Pick a direction, then a number, and press “Work it out” to reveal the answer.',
+      dirKgToG:'kg → g (×1000)', dirGToKg:'g → kg (÷1000)',
+      ladderGoBtn:'Work it out!',
+      lvKg:'kg', lvG:'g',
+      ladderPrompt:'Pick a number, then press “Work it out”!',
+      ladderEqKgToG: function(kg, g){ return kg + ' kg × 1000 = <b>' + g + ' g</b>'; },
+      ladderEqGToKg: function(g, kg){ return g + ' g ÷ 1000 = <b>' + kg + ' kg</b>'; },
+      s3bH:'Regrouping Corner: Two Ways to Write the Same Weight',
+      s3bLead:'Pick an example and see how “X kg Y g” and “Z g” convert into each other.',
+      compChipLabel: function(kg, g){ return kg + 'kg' + g + 'g'; },
+      compA:'Split apart: kg + g → g',
+      compALine1: function(kg){ return kg + ' kg = ' + (kg * 1000) + ' g'; },
+      compALine2: function(kg, g, total){ return (kg * 1000) + ' + ' + g + ' = ' + total; },
+      compAFinal: function(total){ return 'Answer: ' + total + ' g'; },
+      compB:'Put together: g → kg + g',
+      compBLine1: function(total){ return total + ' ÷ 1000 = ' + Math.floor(total / 1000) + ' r ' + (total % 1000); },
+      compBLine2:'The quotient is kg, the remainder is g',
+      compBFinal: function(kg, g){ return 'Answer: ' + kg + ' kg ' + g + ' g'; },
+      s4h2:'Reading a Dial Scale: Check the Ticks First',
+      s4lead:'The needle never moves — but what “one small tick” is worth changes the answer! Try a different tick value.',
+      dialAria:'A dial scale, needle stopped 4 large ticks and 3 small ticks along',
+      dstep1:'1️⃣ Check the unit: the numbers on this scale are <b>grams</b>.',
+      dstep2:'2️⃣ Check what one large tick is worth:',
+      dstep3:'3️⃣ Check what one small tick is worth:',
+      dstep4:'4️⃣ Now read it: the needle is at 4 large ticks plus 3 small ticks',
+      dBigVal: function(tick){ return 'One large tick = 5 small ticks = 5 × ' + tick + ' = ' + (tick * 5) + ' g'; },
+      dSmallVal: function(tick){ return 'One small tick = ' + tick + ' g (the setting you picked)'; },
+      dReadVal: function(tick){ return '4 × ' + (tick * 5) + ' + 3 × ' + tick + ' = 23 × ' + tick; },
+      dResult: function(v){ return 'The reading is <b>' + v + ' g</b>' + (v >= 1000 ? ' (that’s ' + Math.floor(v/1000) + ' kg ' + (v%1000) + ' g)' : '') + '!'; },
+      s5h2:'Check What You’ve Learned', s5lead:'Tap an answer and we’ll tell you why right away.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll:'Perfect score! You’re a weighing master 🏆',
+      cGood:'Great job! Re-read the explanations for the ones you missed.',
+      cTry:'That’s okay — scroll up and look at the examples one more time.',
+      qs: [
+        { stem:'About how much does a paperclip weigh?', opts:['1 g','1 kg','10 g','100 g'], ans:0,
+          why:'A paperclip is very light — about 1 g, far lighter than 1 kg.' },
+        { stem:'About how much does a bag of salt weigh?', opts:['1 kg','1 g','10 kg','100 g'], ans:0,
+          why:'A bag of salt weighs about 1 kg (1000 g) — saying it in grams would be a long string of digits, so kilograms fit better.' },
+        { stem:'3 kg = how many grams?', opts:['300 g','3000 g','30 g','30000 g'], ans:1,
+          why:'1 kg = 1000 g, and 3 × 1000 = 3000, so it’s 3000 g (not ×100 — kg to g is always ×1000).' },
+        { stem:'5000 g = how many kilograms?', opts:['5 kg','50 kg','500 kg','5000 kg'], ans:0,
+          why:'5000 ÷ 1000 = 5, so it’s 5 kg.' },
+        { stem:'2 kg 300 g = how many grams?', opts:['2300 g','2000 g','500 g','302 g'], ans:0,
+          why:'2 kg = 2000 g, and 2000 + 300 = 2300, so it’s 2300 g.' },
+        { stem:'On a dial, one small tick is worth 20 g. The needle is at “4 large ticks plus 3 small ticks”. What’s the reading?', opts:['460 g','140 g','230 g','400 g'], ans:0,
+          why:'One large tick = 5 small ticks = 5 × 20 = 100 g. 4 large ticks = 400 g, plus 3 small ticks = 3 × 20 = 60 g. 400 + 60 = 460 g.' }
+      ],
+      qsAdv: [
+        { stem:'Word problem: Mia’s backpack weighs 2 kg 500 g, and Jay’s weighs 2700 g. Whose backpack is heavier?', opts:['Mia','Jay','The same','Can’t tell'], ans:1,
+          why:'First unify the units: Mia’s 2 kg 500 g = 2500 g. 2500 is less than 2700, so Jay’s backpack is heavier.' },
+        { stem:'Word problem: Mom bought 1 kg 700 g of chicken and another 500 g of fish. What’s the total weight?', opts:['2 kg 200 g','1 kg 700 g','2 kg 700 g','1 kg 200 g'], ans:0,
+          why:'Unify to grams first: 1700 + 500 = 2200 g, and 2200 g = 2 kg 200 g.' },
+        { stem:'Word problem: A shopping basket holds at most 5 kg. It already has 3 kg 200 g of fruit in it. How many more grams can it hold before going over?', opts:['1800 g','1700 g','2800 g','1200 g'], ans:0,
+          why:'5 kg = 5000 g, and 3 kg 200 g = 3200 g. 5000 − 3200 = 1800, so it can hold 1800 more grams.' },
+        { stem:'Word problem: Dad weighs 70 kg, which is 25 kg 300 g more than Jay. How much does Jay weigh?', opts:['44 kg 700 g','45 kg 300 g','44 kg 300 g','45 kg 700 g'], ans:0,
+          why:'Unify to grams: 70000 − 25300 = 44700 g = 44 kg 700 g.' }
+      ],
+      qsBoost: [
+        { stem:'Misconception check: a baseball is small and a balloon is big — which is heavier? (Baseball is about 145 g, balloon about 5 g.)', opts:['The baseball','The balloon','The same','Can’t tell'], ans:0,
+          why:'The baseball is smaller but weighs 145 g; the balloon is bigger but weighs only 5 g. Weight is about the number on the scale, not size alone.' },
+        { stem:'Misconception check: 1 kg equals how many grams?', opts:['1000 g','100 g','10000 g','10 g'], ans:0,
+          why:'Converting kg to g is always ×1000 (not ×100 — ×100 is for centimeters and meters), so 1 kg = 1000 g.' }
+      ],
+      s6h2:'Weigh-In Time', s6lead:'Estimating, converting, reading dials and comparing weights can all show up — read carefully! A wrong guess only costs a little — try again anytime!',
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
+      gAskEstimate: function(name){ return 'About how heavy is ' + name + '?'; },
+      gAskLadder: function(kg){ return kg + ' kg = how many grams?'; },
+      gAskDial:'On the dial, one small tick is worth 10 g. Read the needle in the picture — what is the weight?',
+      gAskCompound: function(kg, g){ return kg + ' kg ' + g + ' g = how many grams?'; },
+      gAskCompare: function(aName, aW, bName, bW){ return aName + '’s water bottle is ' + aW + ' g, ' + bName + '’s is ' + bW + ' g. Whose is heavier?'; },
+      gameObjName:'an apple',
+      gCompareNames:['Ming', 'Hua'],
+      gHintBtn:'💡 Hint',
+      gHint1:'Hint 1: first work out if this is an estimate, a conversion, a dial reading, or a comparison.',
+      gHint2: function(txt){ return 'Hint 2: the answer is related to “' + txt + '”.'; },
+      gNextBtn:'Next round', gRestartBtn:'Restart',
+      gCorrectFirst: function(txt){ return 'Correct! ' + txt + ' — +20 points!'; },
+      gCorrectRetry: function(txt){ return 'Correct! ' + txt + ' — +10 points.'; },
+      gWrong: function(txt){ return txt + ' isn’t right — try again. −5 points.'; },
+      gClear:'Press “Next round” for the next question!',
+      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      ebNext:'After the lesson', nextH2:'Three moves that make it stick',
+      next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
+      next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
+      next3:'❓ Anything unclear — ask your parents or your AI teacher until it clicks. Good learners ask.',
+      footer:'The whole page in one line: <strong>weight is about the number on the scale, not the size — 1 kg = 1000 g, and check the ticks before you convert.</strong>'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
+  var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+
+  function buildModeCards(){
+    var d = L();
+    modeCards.textContent = '';
+    ['ahead','school','boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  /* ---------- 1. 重量不是大小 ---------- */
+  var cmpIdx = 0;
+  var cmpChips = document.getElementById('cmpChips');
+  var cmpRow = document.getElementById('cmpRow');
+  var cmpFb = document.getElementById('cmpFb');
+
+  function buildCmpChips(){
+    cmpChips.textContent = '';
+    CMP_PAIRS.forEach(function(p, i){
+      var b = makeChip(L().cmpChipLabel(i), i === cmpIdx);
+      b.addEventListener('click', function(){ cmpIdx = i; buildCmpChips(); renderCmp(); });
+      cmpChips.appendChild(b);
+    });
+  }
+
+  function renderCmp(){
+    var d = L();
+    var pair = CMP_PAIRS[cmpIdx];
+    var names = d.cmpNames[cmpIdx];
+    cmpRow.textContent = '';
+    cmpFb.textContent = '';
+    ['a','b'].forEach(function(side){
+      var item = pair[side];
+      var name = names[side];
+      var sz = CMP_SIZE[item.size];
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'cmpcard';
+      btn.style.width = sz.w + 'px'; btn.style.height = sz.h + 'px';
+      btn.innerHTML = '<div class="cicon">' + item.icon + '</div><div class="cname">' + name + '</div><div class="cweight">' + d.cmpHidden + '</div>';
+      btn.addEventListener('click', function(){
+        var all = cmpRow.querySelectorAll('.cmpcard');
+        for (var k = 0; k < all.length; k++) all[k].disabled = true;
+        var winner = pair.a.w > pair.b.w ? 'a' : 'b';
+        var wEl = cmpRow.children[winner === 'a' ? 0 : 1];
+        var lEl = cmpRow.children[winner === 'a' ? 1 : 0];
+        wEl.classList.add('right');
+        wEl.querySelector('.cweight').textContent = d.wLabel(pair[winner].w);
+        var loser = winner === 'a' ? 'b' : 'a';
+        lEl.querySelector('.cweight').textContent = d.wLabel(pair[loser].w);
+        if (side === winner){
+          cmpFb.innerHTML = d.cmpRight(names[winner], pair[winner].w);
+        } else {
+          btn.classList.add('wrong');
+          cmpFb.innerHTML = d.cmpWrong(name, item.w, names[winner], pair[winner].w);
+        }
+      });
+      cmpRow.appendChild(btn);
+    });
+  }
+
+  /* ---------- 2. 找到適合的單位 ---------- */
+  var objIdx = 0;
+  var objChips = document.getElementById('objChips');
+  var objIcon = document.getElementById('objIcon');
+  var objAsk = document.getElementById('objAsk');
+  var objUnits = document.getElementById('objUnits');
+  var objFb = document.getElementById('objFb');
+
+  function buildObjChips(){
+    var d = L();
+    objChips.textContent = '';
+    OBJECTS.forEach(function(o, i){
+      var b = makeChip(o.icon, i === objIdx);
+      b.addEventListener('click', function(){ objIdx = i; buildObjChips(); renderObj(); });
+      objChips.appendChild(b);
+    });
+  }
+
+  function renderObj(){
+    var d = L();
+    var o = OBJECTS[objIdx];
+    objIcon.textContent = o.icon;
+    objAsk.textContent = d.objAsk(objIdx);
+    objFb.textContent = '';
+    objUnits.textContent = '';
+    var name = d.objNames[objIdx];
+    var dispVal = o.unit === 'g' ? o.wG : (o.wG / 1000);
+    [['g', d.unitG], ['kg', d.unitKg]].forEach(function(pair){
+      var unitKey = pair[0], unitLabel = pair[1];
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'unitbtn'; b.textContent = unitLabel;
+      b.addEventListener('click', function(){
+        var all = objUnits.querySelectorAll('.unitbtn');
+        for (var k = 0; k < all.length; k++) all[k].disabled = true;
+        var good = (unitKey === o.unit);
+        b.classList.add(good ? 'right' : 'wrong');
+        if (!good){
+          var rightBtn = objUnits.children[o.unit === 'g' ? 0 : 1];
+          rightBtn.classList.add('right');
+        }
+        var trueLabel = o.unit === 'g' ? d.unitG : d.unitKg;
+        objFb.innerHTML = good ? d.objRight(name, dispVal, trueLabel) : d.objWrong(name, dispVal, trueLabel);
+      });
+      objUnits.appendChild(b);
+    });
+  }
+
+  /* ---------- 3a. 換算階梯 ---------- */
+  var dir = 'kgToG';
+  var ladderVal = LADDER_KG[2];
+  var dirChips = document.getElementById('dirChips');
+  var ladderChips = document.getElementById('ladderChips');
+  var stairEl = document.getElementById('stair');
+  var ladderEq = document.getElementById('ladderEq');
+  var ladderGoBtn = document.getElementById('ladderGoBtn');
+  var ladderRevealed = false;
+
+  function buildDirChips(){
+    var d = L();
+    dirChips.textContent = '';
+    [['kgToG', d.dirKgToG], ['gToKg', d.dirGToKg]].forEach(function(pair){
+      var b = makeChip(pair[1], pair[0] === dir);
+      b.addEventListener('click', function(){
+        if (dir === pair[0]) return;
+        dir = pair[0];
+        ladderVal = (dir === 'kgToG') ? LADDER_KG[2] : LADDER_G[2];
+        ladderRevealed = false;
+        buildDirChips(); buildLadderChips(); renderStair();
+      });
+      dirChips.appendChild(b);
+    });
+  }
+
+  function buildLadderChips(){
+    var d = L();
+    ladderChips.textContent = '';
+    var pool = (dir === 'kgToG') ? LADDER_KG : LADDER_G;
+    var unitLabel = (dir === 'kgToG') ? d.lvKg : d.lvG;
+    pool.forEach(function(v){
+      var b = makeChip(v + ' ' + unitLabel, v === ladderVal);
+      b.addEventListener('click', function(){
+        ladderVal = v; ladderRevealed = false;
+        buildLadderChips(); renderStair();
+      });
+      ladderChips.appendChild(b);
+    });
+  }
+
+  function renderStair(){
+    var d = L();
+    stairEl.textContent = '';
+    var kgVal, gVal;
+    if (dir === 'kgToG'){ kgVal = ladderVal; gVal = ladderRevealed ? kgVal * 1000 : null; }
+    else { gVal = ladderVal; kgVal = ladderRevealed ? gVal / 1000 : null; }
+    [['kg', kgVal, d.lvKg], ['g', gVal, d.lvG]].forEach(function(row){
+      var step = document.createElement('div');
+      step.className = 'stairstep' + ((dir === 'kgToG' ? row[0] === 'kg' : row[0] === 'g') ? ' here' : '');
+      var lv = document.createElement('span'); lv.className = 'lv'; lv.textContent = row[2];
+      var val = document.createElement('span'); val.className = 'val'; val.textContent = row[1] === null ? '？' : row[1];
+      step.appendChild(lv); step.appendChild(val);
+      stairEl.appendChild(step);
+    });
+    if (!ladderRevealed){
+      ladderEq.textContent = d.ladderPrompt;
+    } else if (dir === 'kgToG'){
+      ladderEq.innerHTML = d.ladderEqKgToG(kgVal, gVal);
+    } else {
+      ladderEq.innerHTML = d.ladderEqGToKg(gVal, kgVal);
+    }
+  }
+
+  ladderGoBtn.addEventListener('click', function(){
+    ladderRevealed = true;
+    renderStair();
+  });
+
+  /* ---------- 3b. 化聚小教室 ---------- */
+  var compIdx = 0;
+  var compoundChips = document.getElementById('compoundChips');
+  var compALine1 = document.getElementById('compALine1');
+  var compALine2 = document.getElementById('compALine2');
+  var compAFinal = document.getElementById('compAFinal');
+  var compBLine1 = document.getElementById('compBLine1');
+  var compBLine2 = document.getElementById('compBLine2');
+  var compBFinal = document.getElementById('compBFinal');
+
+  function buildCompoundChips(){
+    var d = L();
+    compoundChips.textContent = '';
+    COMPOUND_EX.forEach(function(ex, i){
+      var b = makeChip(d.compChipLabel(ex.kg, ex.g), i === compIdx);
+      b.addEventListener('click', function(){ compIdx = i; buildCompoundChips(); renderCompound(); });
+      compoundChips.appendChild(b);
+    });
+  }
+
+  function renderCompound(){
+    var d = L();
+    var ex = COMPOUND_EX[compIdx];
+    var total = ex.kg * 1000 + ex.g;
+    compALine1.textContent = d.compALine1(ex.kg);
+    compALine2.textContent = d.compALine2(ex.kg, ex.g, total);
+    compAFinal.textContent = d.compAFinal(total);
+    compBLine1.textContent = d.compBLine1(total);
+    compBLine2.textContent = d.compBLine2;
+    compBFinal.textContent = d.compBFinal(Math.floor(total / 1000), total % 1000);
+  }
+
+  /* ---------- 4. 讀秤面 ---------- */
+  var tickG = TICKS[1];
+  var dialBox = document.getElementById('dialBox');
+  var tickChips = document.getElementById('tickChips');
+  var dBigVal = document.getElementById('dBigVal');
+  var dSmallVal = document.getElementById('dSmallVal');
+  var dReadVal = document.getElementById('dReadVal');
+  var dialResult = document.getElementById('dialResult');
+
+  function buildTickChips(){
+    tickChips.textContent = '';
+    TICKS.forEach(function(t){
+      var b = makeChip((lang === 'zh' ? '一小格 ＝ ' : '1 tick = ') + t + (lang === 'zh' ? ' 公克' : ' g'), t === tickG);
+      b.addEventListener('click', function(){ tickG = t; buildTickChips(); renderDial(); });
+      tickChips.appendChild(b);
+    });
+  }
+
+  function renderDial(){
+    var d = L();
+    dialBox.innerHTML = buildDialSVG(DIAL_RAW, true);
+    dBigVal.textContent = d.dBigVal(tickG);
+    dSmallVal.textContent = d.dSmallVal(tickG);
+    dReadVal.textContent = d.dReadVal(tickG);
+    dialResult.innerHTML = d.dResult(dialReading(DIAL_RAW, tickG));
+  }
+
+  /* ---------- 5. 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
+  function buildQuiz(){
+    var d = L();
+    var list = quizSet();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    qTotal.textContent = list.length;
+    list.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 6. 小遊戲：過磅囉 ---------- */
+  var gRound = 0, gScore = 0, gMistake = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gAskLine = document.getElementById('gAskLine');
+  var gPic = document.getElementById('gPic');
+  var gAnswers = document.getElementById('gAnswers');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+  var hintLevel = 0;
+
+  function roundInfo(round){
+    var d = L();
+    if (round.kind === 'estimate'){
+      return { ask: d.gAskEstimate(d.gameObjName), answer: round.wG, choices: round.choices, hint2: String(round.wG) };
+    }
+    if (round.kind === 'ladder'){
+      return { ask: d.gAskLadder(round.kg), answer: round.kg * 1000, choices: round.choices, hint2: (round.kg * 1000) + (lang === 'zh' ? ' 公克' : ' g') };
+    }
+    if (round.kind === 'dial'){
+      return { ask: d.gAskDial, answer: dialReading(round.raw, round.tickG), choices: round.choices, hint2: String(dialReading(round.raw, round.tickG)), dial: round.raw };
+    }
+    if (round.kind === 'compound'){
+      var total = round.kg * 1000 + round.g;
+      return { ask: d.gAskCompound(round.kg, round.g), answer: total, choices: round.choices, hint2: String(total) };
+    }
+    // compare
+    var names = d.gCompareNames;
+    var winIdx = round.aG > round.bG ? 0 : 1;
+    var winName = names[winIdx];
+    return { ask: d.gAskCompare(names[0], round.aG, names[1], round.bG), answerName: winName, choices: names.slice(), hint2: winName };
+  }
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRound];
+    var info = roundInfo(round);
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    gHintBtn.textContent = d.gHintBtn;
+    elHint.textContent = mode === 'ahead' ? d.gHint1 : '';
+    if (mode === 'ahead') hintLevel = 1;
+
+    var askSpan = document.createElement('span'); askSpan.textContent = info.ask;
+    gAskLine.textContent = '';
+    gAskLine.appendChild(askSpan);
+    gAskLine.appendChild(gHintBtn);
+
+    gPic.textContent = '';
+    if (info.dial !== undefined){
+      gPic.innerHTML = buildDialSVG(info.dial, false);
+    }
+
+    gAnswers.textContent = '';
+    info.choices.forEach(function(v){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'opt';
+      var isRight = round.kind === 'compare' ? (v === info.answerName) : (v === info.answer);
+      var label = round.kind === 'compare' ? v
+        : (round.kind === 'dial' || round.kind === 'ladder' || round.kind === 'compound')
+          ? v + (lang === 'zh' ? ' 公克' : ' g')
+          : v + (lang === 'zh' ? ' 公克' : ' g');
+      b.textContent = label;
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        if (isRight){
+          var all = gAnswers.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          b.classList.add('right');
+          if (gMistake){
+            gScore += 10;
+            gMsg.innerHTML = '<span class="yes" style="color:var(--green);font-weight:700">' + d.gCorrectRetry(label) + '</span>';
+          } else {
+            gScore += 20;
+            gMsg.innerHTML = '<span class="yes" style="color:var(--green);font-weight:700">' + d.gCorrectFirst(label) + '</span>';
+          }
+          if (gRound === ROUNDS.length - 1){
+            gMsg.innerHTML = '<span style="color:var(--green);font-weight:700">' + d.gWin(gScore) + '</span>';
+          } else {
+            gMsg.innerHTML += ' ' + d.gClear;
+            gNext.disabled = false;
+          }
+        } else {
+          gMistake = true;
+          b.disabled = true;
+          b.classList.add('wrong');
+          gScore = Math.max(0, gScore - 5);
+          gMsg.innerHTML = '<span style="color:var(--red);font-weight:700">' + d.gWrong(label) + '</span>';
+        }
+        elScore.textContent = gScore;
+      });
+      gAnswers.appendChild(b);
+    });
+
+    gHintBtn.onclick = function(){
+      hintLevel++;
+      if (hintLevel === 1){
+        elHint.textContent = d.gHint1;
+      } else {
+        elHint.textContent = d.gHint2(info.hint2);
+        gHintBtn.disabled = true;
+      }
+    };
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildModeCards();
+    buildCmpChips(); renderCmp();
+    buildObjChips(); renderObj();
+    buildDirChips(); buildLadderChips(); ladderRevealed = false; renderStair();
+    buildCompoundChips(); renderCompound();
+    buildTickChips(); renderDial();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+  /* 記錄最後上的課，供首頁「繼續上次」使用 */
+  try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-3/math/weight/', zh:'秤秤看有多重', en:'How Heavy Is It?', icon:'⚖️'})); } catch(e){}
+
+})();
+</script>
+</body>
+</html>

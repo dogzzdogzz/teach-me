@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>時鐘複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+    min-height:44px;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:19px;text-align:center}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:14px 8px;
+    font-size:20px;cursor:pointer;color:var(--ink);min-height:56px;font-weight:700;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;justify-content:center;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;min-height:48px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+  .clockmini{display:inline-block;vertical-align:middle;margin:0 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 時鐘複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：時鐘、數字、加減交錯出現，<strong>每一批的時間都是新出的</strong>，
+    背答案沒有用，要真的會看。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 時鐘 SVG（跟上課頁用同一套角度公式） ---------- */
+  function polar(cx, cy, angleDeg, radius){
+    var rad = angleDeg * Math.PI / 180;
+    return { x: cx + radius * Math.sin(rad), y: cy - radius * Math.cos(rad) };
+  }
+  function clockSVG(h, m, size){
+    size = size || 130;
+    var cx = size / 2, cy = size / 2, r = size / 2 - 14;
+    var hourAngle = ((h % 12) + m / 60) * 30;
+    var minAngle = m * 6;
+    var hp = polar(cx, cy, hourAngle, r * 0.52);
+    var mp = polar(cx, cy, minAngle, r * 0.82);
+    var svg = '<svg class="clockmini" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#FFFFFF" stroke="#2B2A33" stroke-width="4"/>';
+    for (var i = 1; i <= 12; i++){
+      var tp = polar(cx, cy, i * 30, r - 18);
+      svg += '<text x="' + tp.x.toFixed(1) + '" y="' + (tp.y + 5).toFixed(1) + '" font-size="14" text-anchor="middle" fill="#6B6875" font-weight="700">' + i + '</text>';
+    }
+    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + hp.x.toFixed(1) + '" y2="' + hp.y.toFixed(1) + '" stroke="#E8871E" stroke-width="6" stroke-linecap="round"/>';
+    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + mp.x.toFixed(1) + '" y2="' + mp.y.toFixed(1) + '" stroke="#3B7DD8" stroke-width="4" stroke-linecap="round"/>';
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="5" fill="#2B2A33"/>';
+    svg += '</svg>';
+    return svg;
+  }
+
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang:'zh-Hant', title:'時鐘複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 時鐘複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：時鐘、數字、加減交錯出現，<strong>每一批的時間都是新出的</strong>，背答案沒有用，要真的會看。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang:'en', title:'Clock Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Clock Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving clocks, numbers and addition/subtraction — <strong>every batch uses fresh times</strong>, so memorising answers won’t help; you have to really read the clock.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { clock:'時鐘', numbers:'數字', addsub:'加減' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { clock:'🕐 時鐘 — 時鐘小偵探', numbers:'🔢 數字 — 數字探險隊', addsub:'➕ 加減 — 加加減減大冒險' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { clock:'Clocks', numbers:'Numbers', addsub:'Add/Sub' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { clock:'🕐 Clocks — The Clock Detective', numbers:'🔢 Numbers — The Number Explorers', addsub:'➕ Add/Sub — The Add & Subtract Adventure' }
+    }
+  };
+
+  var LINK_HREFS = { clock:'index.html', numbers:'../numbers/', addsub:'../add-sub/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 從 1..12 挑 n 個相異數字，排除 exclude 裡列出的數字 */
+  function pickHours(n, exclude){
+    var pool = [];
+    for (var h = 1; h <= 12; h++){ if (exclude.indexOf(h) < 0) pool.push(h); }
+    var chosen = shuffle(pool).slice(0, n);
+    return chosen;
+  }
+  function timeLabel(h, half, lang){
+    if (lang === 'zh') return half ? (h + '點半') : (h + '點');
+    return half ? ('half past ' + h) : (h + ' o’clock');
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字（角度公式跟上課頁一致） ---------- */
+  var DAILY_G = [
+    { h:7, m:0, icon:'🛌', zh:'起床', en:'wake up' },
+    { h:7, m:30, icon:'🍳', zh:'吃早餐', en:'have breakfast' },
+    { h:8, m:0, icon:'🎒', zh:'上學', en:'go to school' },
+    { h:12, m:0, icon:'🍚', zh:'吃午餐', en:'have lunch' },
+    { h:21, m:0, icon:'😴', zh:'睡覺', en:'go to sleep' }
+  ];
+
+  var GENS = [
+    { id:'readWhole', cat:'clock',
+      make: function(){
+        var h = 1 + rand(12);
+        var wrongs = pickHours(2, [h]);
+        var opts = shuffle([h].concat(wrongs));
+        return { h:h, opts:opts, ans:opts.indexOf(h) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: (lang === 'zh' ? '看時鐘，現在幾點？' : 'Look at the clock — what time is it?') + clockSVG(d.h, 0),
+          opts: d.opts.map(function(v){ return timeLabel(v, false, lang); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '短針指著 ' + d.h + '，長針指著 12，是 ' + d.h + ' 點整。'
+            : 'The short hand points at ' + d.h + ' and the long hand at 12 — it’s ' + d.h + ' o’clock.'
+        };
+      } },
+    { id:'readHalf', cat:'clock',
+      make: function(){
+        var h = 1 + rand(12);
+        var trapHour = h % 12 + 1;
+        var wrongs = pickHours(2, [h, trapHour]);
+        var opts = shuffle([h].concat(wrongs));
+        return { h:h, opts:opts, ans:opts.indexOf(h) };
+      },
+      fmt: function(d, lang){
+        var nx = d.h % 12 + 1;
+        return {
+          stem: (lang === 'zh' ? '看時鐘，現在幾點半？' : 'Look at the clock — what time is it?') + clockSVG(d.h, 30),
+          opts: d.opts.map(function(v){ return timeLabel(v, true, lang); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '長針指 6 是「半」，短針在 ' + d.h + ' 和 ' + nx + ' 中間，是 ' + d.h + ' 點半。'
+            : 'The long hand at 6 means half past; the short hand sits between ' + d.h + ' and ' + nx + ' — it’s half past ' + d.h + '.'
+        };
+      } },
+    { id:'minuteMeaning', cat:'clock',
+      make: function(){
+        var pos = pick([12, 6]);
+        var h = 1 + rand(12);
+        var m = pos === 12 ? 0 : 30;
+        var isWhole = pos === 12;
+        var opts = shuffle(['whole', 'half']);
+        return { h:h, m:m, pos:pos, isWhole:isWhole, opts:opts, ans: opts.indexOf(isWhole ? 'whole' : 'half') };
+      },
+      fmt: function(d, lang){
+        var labelFor = function(k){
+          if (lang === 'zh') return k === 'whole' ? '整點' : '半點';
+          return k === 'whole' ? 'o’clock' : 'half past';
+        };
+        return {
+          stem: (lang === 'zh'
+            ? '長針指著 ' + d.pos + '，這是整點還是半點？'
+            : 'The long hand points at ' + d.pos + ' — is this o’clock or half past?') + clockSVG(d.h, d.m),
+          opts: d.opts.map(labelFor),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '長針指 12 是「整點」，長針指 6 是「半點」，這次長針指著 ' + d.pos + '，是「' + labelFor(d.isWhole ? 'whole' : 'half') + '」。'
+            : 'Long hand at 12 means o’clock; at 6 means half past. Here it points at ' + d.pos + ', so it’s “' + labelFor(d.isWhole ? 'whole' : 'half') + '”.'
+        };
+      } },
+    { id:'compareCloser', cat:'clock',
+      make: function(){
+        var h = 1 + rand(12);
+        var opts = shuffle(['whole', 'half']);
+        return { h:h, opts:opts, ans: opts.indexOf('half') };
+      },
+      fmt: function(d, lang){
+        var nx = d.h % 12 + 1;
+        var labelFor = function(k){ return timeLabel(d.h, k === 'half', lang); };
+        return {
+          stem: (lang === 'zh'
+            ? d.h + ' 點和 ' + d.h + ' 點半，短針比較靠近 ' + nx + ' 的是哪一個？'
+            : 'Between ' + d.h + ' o’clock and half past ' + d.h + ', which has the short hand closer to ' + nx + '?')
+            + clockSVG(d.h, 0) + clockSVG(d.h, 30),
+          opts: d.opts.map(labelFor),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.h + ' 點半時，短針已經走到 ' + d.h + ' 和 ' + nx + ' 中間，比 ' + d.h + ' 點更靠近 ' + nx + '。'
+            : 'At half past ' + d.h + ', the short hand has moved between ' + d.h + ' and ' + nx + ' — closer to ' + nx + ' than at ' + d.h + ' o’clock.'
+        };
+      } },
+    { id:'activityMatch', cat:'clock',
+      make: function(){
+        var idx = rand(DAILY_G.length);
+        var others = [];
+        for (var i = 0; i < DAILY_G.length; i++){ if (i !== idx) others.push(i); }
+        var wrongIdx = shuffle(others).slice(0, 2);
+        var opts = shuffle([idx].concat(wrongIdx));
+        return { idx:idx, opts:opts, ans: opts.indexOf(idx) };
+      },
+      fmt: function(d, lang){
+        var item = DAILY_G[d.idx];
+        return {
+          stem: (lang === 'zh' ? '這是做什麼的時間？' : 'What time of day is this for?') + clockSVG(item.h, item.m),
+          opts: d.opts.map(function(i){ var it = DAILY_G[i]; return it.icon + (lang === 'zh' ? it.zh : it.en); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? timeLabel(item.h % 12 === 0 ? 12 : item.h % 12, item.m === 30, 'zh') + '通常是「' + item.zh + '」的時間。'
+            : 'That time is usually for “' + item.en + '”.'
+        };
+      } },
+    { id:'sameTime', cat:'clock',
+      make: function(){
+        var factH = 1 + rand(12);
+        var same = rand(2) === 0;
+        var shownH = same ? factH : pickHours(1, [factH])[0];
+        return { factH:factH, shownH:shownH, same:same };
+      },
+      fmt: function(d, lang){
+        var opts = lang === 'zh' ? ['一樣', '不一樣'] : ['Yes, the same', 'No, different'];
+        return {
+          stem: (lang === 'zh'
+            ? '上學時間是 ' + d.factH + ' 點整。' + clockSVG(d.shownH, 0) + '現在的時間，跟上學時間一樣嗎？'
+            : 'School starts at ' + d.factH + ' o’clock.' + clockSVG(d.shownH, 0) + 'Is this clock showing the same time?'),
+          opts: opts,
+          ans: d.same ? 0 : 1,
+          why: lang === 'zh'
+            ? (d.same
+              ? '短針指著 ' + d.shownH + '，跟上學時間 ' + d.factH + ' 點一樣。'
+              : '短針指著 ' + d.shownH + '，跟上學時間 ' + d.factH + ' 點不一樣。')
+            : (d.same
+              ? 'The short hand points at ' + d.shownH + ', the same as the school start time of ' + d.factH + '.'
+              : 'The short hand points at ' + d.shownH + ', different from the school start time of ' + d.factH + '.')
+        };
+      } },
+    { id:'placeValue', cat:'numbers',
+      make: function(){
+        var tens = 1 + rand(9);
+        var ones = rand(10);
+        var num = tens * 10 + ones;
+        var askTens = rand(2) === 0;
+        var correct = askTens ? tens : ones;
+        var seen = {}; seen[String(correct)] = true;
+        var wrongs = [];
+        var candidates = shuffle([tens, ones, (correct + 3) % 10, (correct + 7) % 10]);
+        candidates.forEach(function(c){
+          var key = String(c);
+          if (!seen[key] && wrongs.length < 2){ seen[key] = true; wrongs.push(c); }
+        });
+        while (wrongs.length < 2){
+          var v = rand(10);
+          if (!seen[String(v)]){ seen[String(v)] = true; wrongs.push(v); }
+        }
+        var opts = shuffle([correct].concat(wrongs));
+        return { num:num, tens:tens, ones:ones, askTens:askTens, correct:correct, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? d.num + ' 裡面，有幾個' + (d.askTens ? '十' : '一') + '？'
+            : 'In ' + d.num + ', how many ' + (d.askTens ? 'tens' : 'ones') + ' are there?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.num + ' 的十位是 ' + d.tens + '、個位是 ' + d.ones + '，所以有 ' + d.correct + ' 個' + (d.askTens ? '十' : '一') + '。'
+            : d.num + ' has tens digit ' + d.tens + ' and ones digit ' + d.ones + ', so there are ' + d.correct + ' ' + (d.askTens ? 'tens' : 'ones') + '.'
+        };
+      } },
+    { id:'addSub', cat:'addsub',
+      make: function(){
+        var isAdd = rand(2) === 0;
+        var a, b, ans, op;
+        if (isAdd){
+          a = 1 + rand(9); b = 1 + rand(9);
+          if (a + b > 20){ b = 20 - a; if (b < 1) b = 1; }
+          ans = a + b; op = '+';
+        } else {
+          a = 10 + rand(11); // 10..20
+          b = 1 + rand(a - 1);
+          ans = a - b; op = '−';
+        }
+        var wrongs = [];
+        var seen = {}; seen[String(ans)] = true;
+        [ans - 1, ans + 1, ans - 2].forEach(function(v){
+          var key = String(v);
+          if (v >= 0 && !seen[key] && wrongs.length < 2){ seen[key] = true; wrongs.push(v); }
+        });
+        while (wrongs.length < 2){
+          var v2 = ans + 3 + wrongs.length;
+          if (!seen[String(v2)]){ seen[String(v2)] = true; wrongs.push(v2); }
+        }
+        var opts = shuffle([ans].concat(wrongs));
+        return { a:a, b:b, op:op, ans:ans, opts:opts, ansIdx: opts.indexOf(ans) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.a + ' ' + d.op + ' ' + d.b + ' = ?',
+          opts: d.opts.map(String),
+          ans: d.ansIdx,
+          why: lang === 'zh'
+            ? d.a + ' ' + d.op + ' ' + d.b + ' = ' + d.ans + '。'
+            : d.a + ' ' + d.op + ' ' + d.b + ' = ' + d.ans + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：8 種題型各一題＋隨機 4 題（限時鐘類，題型可重複） ---------- */
+  function makePlan(){
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['readWhole', 'readHalf', 'activityMatch', 'sameTime'].indexOf(g.id) >= 0;
+    });
+    for (var i = 0; i < 4; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make() };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.innerHTML = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

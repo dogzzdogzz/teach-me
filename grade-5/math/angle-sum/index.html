@@ -326,15 +326,36 @@
   "use strict";
 
   /* ---------- shared shape renderers (numbers only, language-neutral) ---------- */
-  function triShape(txtA, txtB, txtC, aria){
+  function triShape(txtA, txtB, txtC, aria, angA, angB){
+    // Draw the triangle the labels actually describe: build it from the two base
+    // angles, then fit it into the viewBox with a UNIFORM scale so the angles are
+    // preserved exactly (a non-uniform fit would silently distort them).
+    var A, B, C;
+    var a = parseFloat(angA), b = parseFloat(angB);
+    if (isFinite(a) && isFinite(b) && a > 0 && b > 0 && a + b < 179) {
+      var ta = Math.tan(a * Math.PI / 180), tb = Math.tan(b * Math.PI / 180);
+      var ux = tb / (ta + tb);
+      A = { x:0, y:0 }; B = { x:1, y:0 }; C = { x:ux, y:-ux * ta };
+      var minX = Math.min(A.x, B.x, C.x), maxX = Math.max(A.x, B.x, C.x);
+      var minY = Math.min(A.y, B.y, C.y), maxY = Math.max(A.y, B.y, C.y);
+      var BOX = { x:60, y:38, w:220, h:104 };
+      var k = Math.min(BOX.w / (maxX - minX), BOX.h / (maxY - minY || 1));
+      var offX = BOX.x + (BOX.w - (maxX - minX) * k) / 2 - minX * k;
+      var offY = BOX.y + (BOX.h - (maxY - minY) * k) / 2 - minY * k;
+      var put = function(P){ return { x: P.x * k + offX, y: P.y * k + offY }; };
+      A = put(A); B = put(B); C = put(C);
+    } else {
+      A = { x:70, y:150 }; B = { x:270, y:150 }; C = { x:170, y:40 };
+    }
+    var r = function(n){ return Math.round(n * 10) / 10; };
     return '<svg class="scene" viewBox="0 0 340 190" role="img" aria-label="' + aria + '">' +
-      '<polygon points="70,150 270,150 170,40" fill="none" stroke="#2B2A33" stroke-width="3"/>' +
-      '<circle cx="70" cy="150" r="24" fill="#D64545"/>' +
-      '<text x="70" y="157" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtA + '</text>' +
-      '<circle cx="270" cy="150" r="24" fill="#3B7DD8"/>' +
-      '<text x="270" y="157" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtB + '</text>' +
-      '<circle cx="170" cy="40" r="24" fill="#E8871E"/>' +
-      '<text x="170" y="47" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtC + '</text>' +
+      '<polygon points="' + r(A.x) + ',' + r(A.y) + ' ' + r(B.x) + ',' + r(B.y) + ' ' + r(C.x) + ',' + r(C.y) + '" fill="none" stroke="#2B2A33" stroke-width="3"/>' +
+      '<circle cx="' + r(A.x) + '" cy="' + r(A.y) + '" r="24" fill="#D64545"/>' +
+      '<text x="' + r(A.x) + '" y="' + r(A.y + 7) + '" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtA + '</text>' +
+      '<circle cx="' + r(B.x) + '" cy="' + r(B.y) + '" r="24" fill="#3B7DD8"/>' +
+      '<text x="' + r(B.x) + '" y="' + r(B.y + 7) + '" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtB + '</text>' +
+      '<circle cx="' + r(C.x) + '" cy="' + r(C.y) + '" r="24" fill="#E8871E"/>' +
+      '<text x="' + r(C.x) + '" y="' + r(C.y + 7) + '" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtC + '</text>' +
       '</svg>';
   }
 
@@ -716,7 +737,7 @@
   function renderMystery(){
     buildMysteryChips();
     var m = MYSTERIES[mysteryIdx];
-    mysteryScene.innerHTML = triShape(m.a + '°', m.b + '°', m.ans + '°', L().ariaTri);
+    mysteryScene.innerHTML = triShape(m.a + '°', m.b + '°', m.ans + '°', L().ariaTri, m.a, m.b);
     mysteryEqEl.innerHTML = '<span class="yes">' + L().mysteryEq(m.a, m.b, m.ans) + '</span>';
   }
 
@@ -803,11 +824,11 @@
   function renderRoundScene(round, revealed){
     var ansTxt = revealed ? round.answer + '°' : '?';
     if (round.shape === 'triangle'){
-      return triShape(round.given[0] + '°', round.given[1] + '°', ansTxt, L().ariaTri);
+      return triShape(round.given[0] + '°', round.given[1] + '°', ansTxt, L().ariaTri, round.given[0], round.given[1]);
     } else if (round.shape === 'quad'){
       return quadShape(round.given[0] + '°', round.given[1] + '°', round.given[2] + '°', ansTxt, L().ariaQuad);
     } else {
-      return triShape(ansTxt, ansTxt, round.given[0] + '°', L().ariaIso);
+      return triShape(ansTxt, ansTxt, round.given[0] + '°', L().ariaIso, (180 - round.given[0]) / 2, (180 - round.given[0]) / 2);
     }
   }
 

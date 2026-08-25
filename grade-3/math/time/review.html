@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>時間複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;justify-content:center;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+  .clockmini{display:block;margin:8px auto 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 時間複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：時間、加減法、乘法、數的位值交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang:'zh-Hant', title:'時間複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 時間複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：時間、加減法、乘法、數的位值交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang:'en', title:'Time Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Time Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving time, addition/subtraction, multiplication and place value — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { time:'時間', addsub:'加減法', multiply:'乘法', numbers:'數的位值' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { time:'🗂️ 時間 — 速查卡', addsub:'📖 加減法（上課）', multiply:'📖 乘法（上課）', numbers:'📖 數的位值（上課）' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { time:'Time', addsub:'Addition/Subtraction', multiply:'Multiplication', numbers:'Place value' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { time:'🗂️ Time — cheat sheet', addsub:'📖 Addition/Subtraction (lesson)', multiply:'📖 Multiplication (lesson)', numbers:'📖 Place value (lesson)' }
+    }
+  };
+
+  var LINK_HREFS = { time:'reference.html', addsub:'../add-sub/', multiply:'../multiply/', numbers:'../numbers/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function clk(h, m){ return h + ':' + (m < 10 ? '0' + m : String(m)); }
+  function dur(h, m){ return (h > 0) ? (h + '時' + m + '分') : (m + '分'); }
+  function addMinutes(h, m, add){
+    var total = h * 60 + m + add;
+    return { h: Math.floor(total / 60), m: total % 60 };
+  }
+  function diffMinutes(h1, m1, h2, m2){ return (h2 * 60 + m2) - (h1 * 60 + m1); }
+  /* 保證選項字串互不相同（依字串比較即可 —— 這裡的選項都是格式化過的時間／數量文字，
+     不會出現「3/12」對「1/4」那種數值相同但字串不同的情形，因為時間一律先化成同一種格式再比較） */
+  function uniqPush(list, seen, val){
+    var key = String(val);
+    if (!seen[key]){ seen[key] = true; list.push(val); return true; }
+    return false;
+  }
+
+  /* ---------- 時鐘 SVG（跟上課頁同一顆公式） ---------- */
+  function polar(cx, cy, angleDeg, radius){
+    var rad = angleDeg * Math.PI / 180;
+    return { x: cx + radius * Math.sin(rad), y: cy - radius * Math.cos(rad) };
+  }
+  function clockSVG(h, m){
+    var size = 130, cx = size / 2, cy = size / 2, r = size / 2 - 12;
+    var hourAngle = ((h % 12) + m / 60) * 30;
+    var minAngle = m * 6;
+    var hp = polar(cx, cy, hourAngle, r * 0.52);
+    var mp = polar(cx, cy, minAngle, r * 0.82);
+    var svg = '<svg class="clockmini" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#FFFFFF" stroke="#2B2A33" stroke-width="4"/>';
+    for (var i = 1; i <= 12; i++){
+      var tp = polar(cx, cy, i * 30, r - 18);
+      svg += '<text x="' + tp.x.toFixed(1) + '" y="' + (tp.y + 5).toFixed(1) + '" font-size="13" text-anchor="middle" fill="#6B6875" font-weight="700">' + i + '</text>';
+    }
+    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + hp.x.toFixed(1) + '" y2="' + hp.y.toFixed(1) + '" stroke="#E8871E" stroke-width="6" stroke-linecap="round"/>';
+    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + mp.x.toFixed(1) + '" y2="' + mp.y.toFixed(1) + '" stroke="#3B7DD8" stroke-width="4" stroke-linecap="round"/>';
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="5" fill="#2B2A33"/>';
+    svg += '</svg>';
+    return svg;
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，答案一律程式算出來 ---------- */
+  var GENS = [
+    { id:'readClock', cat:'time',
+      make: function(used){
+        var h = pickUnused([1,2,3,4,5,6,7,8,9,10,11,12], used);
+        var idx = 1 + rand(11); // 1..11，避開整點
+        var m = idx * 5;
+        var wrongH = (h % 12) + 1;
+        var seen = {}; seen[clk(h, m)] = true; var wrongs = [];
+        uniqPush(wrongs, seen, clk(h, idx * 1));       // 把長針數字直接當分鐘（常見粗心錯）
+        uniqPush(wrongs, seen, clk(wrongH, m));         // 短針看錯下一個數字
+        uniqPush(wrongs, seen, clk(h, (idx === 11 ? idx - 2 : idx + 1) * 5)); // 看錯一格
+        while (wrongs.length < 3){
+          var altIdx = 1 + rand(11);
+          uniqPush(wrongs, seen, clk(h, altIdx * 5));
+        }
+        var opts = shuffle([clk(h, m)].concat(wrongs.slice(0, 3)));
+        return { h:h, m:m, idx:idx, opts:opts, ans:opts.indexOf(clk(h, m)) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: (lang === 'zh' ? '看時鐘，現在是幾點幾分？' : 'Look at the clock — what time is it?') + clockSVG(d.h, d.m),
+          opts: d.opts, ans: d.ans,
+          why: lang === 'zh'
+            ? '長針指著 ' + d.idx + '，' + d.idx + '×5＝' + d.m + ' 分，短針指的是 ' + d.h + '，所以是 ' + clk(d.h, d.m) + '。'
+            : 'The long hand points at ' + d.idx + ', so ' + d.idx + '×5 = ' + d.m + ' minutes; the short hand shows ' + d.h + ', so it’s ' + clk(d.h, d.m) + '.'
+        };
+      } },
+    { id:'minuteRead', cat:'time',
+      make: function(used){
+        var idx = pickUnused([1,2,3,4,5,6,7,8,9,10,11], used);
+        var m = idx * 5;
+        var showH = 1 + rand(12);
+        var seen = {}; seen[String(m)] = true; var wrongs = [];
+        uniqPush(wrongs, seen, idx);
+        uniqPush(wrongs, seen, m + 5);
+        uniqPush(wrongs, seen, m > 5 ? m - 5 : m + 10);
+        var step = 6;
+        while (wrongs.length < 3){ uniqPush(wrongs, seen, m + step); step += 5; }
+        var opts = shuffle([m].concat(wrongs.slice(0, 3))).map(String);
+        return { idx:idx, m:m, showH:showH, opts:opts, ans:opts.indexOf(String(m)) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: (lang === 'zh' ? '看時鐘，長針指著數字 ' + d.idx + '，代表幾分？' : 'Look at the clock — the long hand points at ' + d.idx + '. How many minutes is that?') + clockSVG(d.showH, d.m),
+          opts: d.opts.map(function(v){ return lang === 'zh' ? v + '分' : v + ' min'; }), ans: d.ans,
+          why: lang === 'zh'
+            ? '長針每指一個數字代表 5 分，' + d.idx + '×5＝' + d.m + ' 分。'
+            : 'Every number the long hand points at means 5 minutes: ' + d.idx + '×5 = ' + d.m + ' minutes.'
+        };
+      } },
+    { id:'secToMin', cat:'time',
+      make: function(used){
+        var k = pickUnused([1, 2, 3], used);
+        var r = 1 + rand(59);
+        var total = k * 60 + r;
+        var seen = {}; seen[k + '分' + r + '秒'] = true; var wrongs = [];
+        uniqPush(wrongs, seen, (k + 1) + '分' + r + '秒');
+        uniqPush(wrongs, seen, k + '分' + (r > 5 ? r - 5 : r + 5) + '秒');
+        uniqPush(wrongs, seen, (k > 1 ? k - 1 : k + 2) + '分' + r + '秒');
+        var opts = shuffle([k + '分' + r + '秒'].concat(wrongs.slice(0, 3)));
+        return { k:k, r:r, total:total, opts:opts, ans:opts.indexOf(k + '分' + r + '秒') };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.total + ' 秒 ＝ 幾分幾秒？' : d.total + ' seconds = how many minutes and seconds?',
+          opts: d.opts.map(function(v){ return lang === 'zh' ? v : v.replace(/(\d+)分(\d+)秒/, '$1 min $2 sec'); }),
+          ans: d.opts.indexOf(d.k + '分' + d.r + '秒'),
+          why: lang === 'zh'
+            ? d.total + ' 秒裡面有 ' + d.k + ' 個 60 秒，剩下 ' + d.r + ' 秒，所以是 ' + d.k + ' 分 ' + d.r + ' 秒。'
+            : d.total + ' seconds contains ' + d.k + ' groups of 60, with ' + d.r + ' left over — that’s ' + d.k + ' min ' + d.r + ' sec.'
+        };
+      } },
+    { id:'minToHour', cat:'time',
+      make: function(used){
+        var k = pickUnused([1, 2, 3], used);
+        var r = 1 + rand(59);
+        var total = k * 60 + r;
+        var seen = {}; seen[k + '時' + r + '分'] = true; var wrongs = [];
+        uniqPush(wrongs, seen, (k + 1) + '時' + r + '分');
+        uniqPush(wrongs, seen, k + '時' + (r > 5 ? r - 5 : r + 5) + '分');
+        uniqPush(wrongs, seen, (k + 2) + '時' + r + '分'); // 值恆等於 total+120，跟正解不同（不是把 total 直接當分寫，那樣會跟正解同值）
+        var opts = shuffle([k + '時' + r + '分'].concat(wrongs.slice(0, 3)));
+        return { k:k, r:r, total:total, opts:opts, ans:opts.indexOf(k + '時' + r + '分') };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.total + ' 分 ＝ 幾時幾分？' : d.total + ' minutes = how many hours and minutes?',
+          opts: d.opts.map(function(v){ return lang === 'zh' ? v : v.replace(/(\d+)時(\d+)分/, '$1 h $2 min').replace(/(\d+)分$/, '$1 min'); }),
+          ans: d.opts.indexOf(d.k + '時' + d.r + '分'),
+          why: lang === 'zh'
+            ? d.total + ' 分裡面有 ' + d.k + ' 個 60 分，剩下 ' + d.r + ' 分，所以是 ' + d.k + ' 時 ' + d.r + ' 分。'
+            : d.total + ' minutes contains ' + d.k + ' groups of 60, with ' + d.r + ' left over — that’s ' + d.k + ' h ' + d.r + ' min.'
+        };
+      } },
+    { id:'durAddNoCarry', cat:'time',
+      make: function(used){
+        var a = pickUnused([10, 15, 20, 25, 30], used);
+        var maxB = 55 - a;
+        var b = 5 * (1 + rand(Math.max(1, Math.floor(maxB / 5))));
+        var sum = a + b;
+        var seen = {}; seen[String(sum)] = true; var wrongs = [];
+        uniqPush(wrongs, seen, sum + 5);
+        uniqPush(wrongs, seen, Math.abs(a - b));
+        uniqPush(wrongs, seen, sum + 10);
+        var opts = shuffle([sum].concat(wrongs.slice(0, 3))).map(function(v){ return v + '分'; });
+        return { a:a, b:b, sum:sum, opts:opts, ans:opts.indexOf(sum + '分') };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '掃地花了 ' + d.a + ' 分，拖地花了 ' + d.b + ' 分，一共花多少時間？' : 'Sweeping took ' + d.a + ' minutes, mopping took ' + d.b + ' minutes. How much time in total?',
+          opts: lang === 'zh' ? d.opts : d.opts.map(function(v){ return v.replace('分', ' min'); }),
+          ans: d.ans,
+          why: lang === 'zh' ? d.a + ' ＋ ' + d.b + ' ＝ ' + d.sum + '，一共 ' + d.sum + ' 分。' : d.a + ' + ' + d.b + ' = ' + d.sum + ' minutes.'
+        };
+      } },
+    { id:'durAddCarry', cat:'time',
+      make: function(used){
+        var a = pickUnused([30, 35, 40, 45], used);
+        var b = 5 * (7 + rand(6)); // 35..60，確保與 a 相加會滿 60
+        var sum = a + b;
+        var h = Math.floor(sum / 60), m = sum % 60;
+        var correct = h + '時' + m + '分';
+        var seen = {}; seen[correct] = true; var wrongs = [];
+        uniqPush(wrongs, seen, '0時' + sum + '分'); // 記法陷阱：分沒有進位（跟正解數值相同，屬於刻意的記法誘答，why 會明講不能這樣寫）
+        uniqPush(wrongs, seen, h + '時' + (m > 5 ? m - 5 : m + 5) + '分');
+        uniqPush(wrongs, seen, (h + 1) + '時' + m + '分');
+        var opts = shuffle([correct].concat(wrongs.slice(0, 3)));
+        return { a:a, b:b, sum:sum, h:h, m:m, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '上課 ' + d.a + ' 分，下課 ' + d.b + ' 分，一共經過多少時間？' : 'Class lasted ' + d.a + ' minutes, and the break lasted ' + d.b + ' minutes. How much time in total?',
+          opts: lang === 'zh' ? d.opts : d.opts.map(function(v){ return v.replace(/(\d+)時(\d+)分/, '$1 h $2 min'); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.a + ' ＋ ' + d.b + ' ＝ ' + d.sum + ' 分 ＝ 60 分 ＋ ' + d.m + ' 分 ＝ ' + d.h + ' 時 ' + d.m + ' 分（分不能寫到 60 以上，不能寫成「0 時 ' + d.sum + ' 分」）。'
+            : d.a + ' + ' + d.b + ' = ' + d.sum + ' minutes = 60 + ' + d.m + ' = ' + d.h + ' h ' + d.m + ' min (minutes can’t be 60 or more, so it can’t be written “0 h ' + d.sum + ' min”).'
+        };
+      } },
+    { id:'fwdTime', cat:'time',
+      make: function(used){
+        var h = pickUnused([1,2,3,4,5,6,7,8,9,10,11], used);
+        var m = 5 * (5 + rand(7)); // 25..55
+        var addOpts = [15,20,25,30,35,40,45,50];
+        var add = pick(addOpts.filter(function(v){ return v > 60 - m; })) || 30;
+        var r = addMinutes(h, m, add);
+        var correct = clk(r.h, r.m);
+        var seen = {}; seen[correct] = true; var wrongs = [];
+        uniqPush(wrongs, seen, clk(h, m));               // 忘記加，停在原本的時刻
+        uniqPush(wrongs, seen, clk((r.h % 12) + 1, r.m)); // 整點跳過頭，多算一個小時
+        uniqPush(wrongs, seen, clk(r.h, r.m > 5 ? r.m - 5 : r.m + 5)); // 分鐘看錯一格
+        var step = 10;
+        while (wrongs.length < 3){
+          var alt = addMinutes(h, m, add + step);
+          uniqPush(wrongs, seen, clk(alt.h % 13 === 0 ? 12 : alt.h % 13, alt.m));
+          step += 10;
+        }
+        var opts = shuffle([correct].concat(wrongs.slice(0, 3)));
+        return { h:h, m:m, add:add, r:r, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '現在 ' + clk(d.h, d.m) + '，再過 ' + d.add + ' 分鐘，是幾點？' : 'It’s ' + clk(d.h, d.m) + ' now. ' + d.add + ' minutes later, what time is it?',
+          opts: d.opts, ans: d.ans,
+          why: lang === 'zh'
+            ? '先走到整點 ' + (d.h + 1) + ':00，用了 60－' + d.m + '＝' + (60 - d.m) + ' 分；還剩 ' + d.add + '－' + (60 - d.m) + '＝' + (d.add - (60 - d.m)) + ' 分，再走過去就是 ' + clk(d.r.h, d.r.m) + '（分鐘不能直接相加寫成超過 60，那樣是錯的）。'
+            : 'First reach ' + (d.h + 1) + ':00 using 60 − ' + d.m + ' = ' + (60 - d.m) + ' minutes; ' + (d.add - (60 - d.m)) + ' minutes remain, landing at ' + clk(d.r.h, d.r.m) + ' (you can’t just add the minutes past 60).'
+        };
+      } },
+    { id:'diffTime', cat:'time',
+      make: function(used){
+        var h1 = pickUnused([1,2,3,4,5,6,7,8,9,10,11], used);
+        var m1 = 5 * (4 + rand(8)); // 20..55
+        var h2 = h1 + 1;
+        var m2 = 5 * rand(12); // 0..55
+        var total = diffMinutes(h1, m1, h2, m2);
+        var raw4 = (h2 * 100 + m2) - (h1 * 100 + m1); // 把時刻當四位數直接相減的誤解
+        var correct = total + '分';
+        var seen = {}; seen[correct] = true; var wrongs = [];
+        uniqPush(wrongs, seen, raw4 + '分');
+        uniqPush(wrongs, seen, Math.abs(m1 - m2) + '分');
+        uniqPush(wrongs, seen, (total + 10) + '分');
+        var step = 20;
+        while (wrongs.length < 3){ uniqPush(wrongs, seen, (total + step) + '分'); step += 10; }
+        var opts = shuffle([correct].concat(wrongs.slice(0, 3)));
+        return { h1:h1, m1:m1, h2:h2, m2:m2, total:total, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '從 ' + clk(d.h1, d.m1) + ' 到 ' + clk(d.h2, d.m2) + '，經過了多久？' : 'From ' + clk(d.h1, d.m1) + ' to ' + clk(d.h2, d.m2) + ', how much time passed?',
+          opts: lang === 'zh' ? d.opts : d.opts.map(function(v){ return v.replace('分', ' min'); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '先算 ' + clk(d.h1, d.m1) + ' 走到 ' + (d.h1 + 1) + ':00 用了 ' + (60 - d.m1) + ' 分，再算走到 ' + clk(d.h2, d.m2) + ' 用了 ' + d.m2 + ' 分，' + (60 - d.m1) + '＋' + d.m2 + '＝' + d.total + ' 分。'
+            : 'Count from ' + clk(d.h1, d.m1) + ' to ' + (d.h1 + 1) + ':00 (' + (60 - d.m1) + ' minutes), then to ' + clk(d.h2, d.m2) + ' (' + d.m2 + ' minutes): ' + (60 - d.m1) + ' + ' + d.m2 + ' = ' + d.total + ' minutes.'
+        };
+      } },
+    { id:'addsub', cat:'addsub',
+      make: function(used){
+        var a = 200 + pickUnused([120,230,340,450,560,670], used);
+        var b = 100 + rand(400);
+        var sum = a + b;
+        var seen = {}; var wrongs = [];
+        uniqPush(wrongs, seen, sum + 10);
+        uniqPush(wrongs, seen, sum - 100);
+        uniqPush(wrongs, seen, Math.abs(a - b));
+        seen[String(sum)] = true;
+        var opts = shuffle([sum].concat(wrongs.slice(0, 3))).map(String);
+        return { a:a, b:b, sum:sum, opts:opts, ans:opts.indexOf(String(sum)) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.a + ' + ' + d.b + ' = ?',
+          opts: d.opts, ans: d.ans,
+          why: lang === 'zh' ? d.a + ' + ' + d.b + ' = ' + d.sum + '。' : d.a + ' + ' + d.b + ' = ' + d.sum + '.'
+        };
+      } },
+    { id:'multiply', cat:'multiply',
+      make: function(used){
+        var a = pickUnused([2,3,4,5,6,7,8], used);
+        var b = 10 + rand(20);
+        var product = a * b;
+        var seen = {}; var wrongs = [];
+        uniqPush(wrongs, seen, a * (b + 1));
+        uniqPush(wrongs, seen, a * (b - 1));
+        uniqPush(wrongs, seen, product + 10);
+        seen[String(product)] = true;
+        var opts = shuffle([product].concat(wrongs.slice(0, 3))).map(String);
+        return { a:a, b:b, product:product, opts:opts, ans:opts.indexOf(String(product)) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.a + ' × ' + d.b + ' = ?',
+          opts: d.opts, ans: d.ans,
+          why: lang === 'zh' ? d.a + ' × ' + d.b + ' = ' + d.product + '。' : d.a + ' × ' + d.b + ' = ' + d.product + '.'
+        };
+      } },
+    { id:'numbers', cat:'numbers',
+      make: function(used){
+        var digits = shuffle([1,2,3,4,5,6,7,8,9]).slice(0, 4);
+        var n = digits[0] * 1000 + digits[1] * 100 + digits[2] * 10 + digits[3];
+        var correct = digits[0];
+        var seen = {}; var wrongs = [];
+        uniqPush(wrongs, seen, digits[1]);
+        uniqPush(wrongs, seen, digits[2]);
+        uniqPush(wrongs, seen, digits[3]);
+        seen[String(correct)] = true;
+        var opts = shuffle([correct].concat(wrongs.slice(0, 3))).map(String);
+        return { n:n, correct:correct, opts:opts, ans:opts.indexOf(String(correct)) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.n + ' 的千位數字是多少？' : 'In ' + d.n + ', what digit is in the thousands place?',
+          opts: d.opts, ans: d.ans,
+          why: lang === 'zh' ? d.n + ' 從左邊數來第一個數字（千位）是 ' + d.correct + '。' : 'The leftmost digit (thousands place) of ' + d.n + ' is ' + d.correct + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：時間類全部各一題（8 種）＋ 3 種交錯主題各一題 ＋ 1 題隨機時間類extra ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var timeGens = GENS.filter(function(g){ return g.cat === 'time'; });
+    slots.push(pick(timeGens));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

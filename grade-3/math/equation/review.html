@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>算式填充題複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 算式填充題複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：找（　）、除法、兩步驟、加減直式交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang:'zh-Hant', title:'算式填充題複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 算式填充題複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：找（　）、除法、兩步驟、加減直式交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang:'en', title:'Fill-in-the-Blank Equations Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Fill-in-the-Blank Equations Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving mystery-number equations, division, two-step problems and column addition/subtraction — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { equation:'找數字', divide:'除法', twostep:'兩步驟', addsub:'加減直式' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { equation:'❓ 找出神祕數字 — 算式填充題', divide:'➗ 除法 — 分東西大隊', twostep:'🪜 兩步驟 — 兩步驟解題王', addsub:'🧾 加減直式 — 加減直式大挑戰' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { equation:'Mystery Number', divide:'Division', twostep:'Two-Step', addsub:'Column Add/Sub' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { equation:'❓ Find the Mystery Number', divide:'➗ Division — The Sharing Squad', twostep:'🪜 Two-Step — The Two-Step Solver', addsub:'🧾 Column Add/Sub Challenge' }
+    }
+  };
+
+  var LINK_HREFS = { equation:'index.html', divide:'../divide/', twostep:'../two-step/', addsub:'../add-sub/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function randRange(lo, hi){ return lo + rand(hi - lo + 1); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 保證 3 個相異、且不等於正解的錯誤選項；優先用「常見錯誤」候選，不夠再往外補 */
+  function makeWrongs(correct, candidates){
+    var out = [];
+    var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (c > 0 && !seen[key]){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3){
+      var lo = correct - step, hi = correct + step;
+      if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < 3 && hi > 0 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  function mixOpts(correct, candidates){
+    var wrongs = makeWrongs(correct, candidates);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字；每個答案都代回原式驗證過 (req.16) ---------- */
+  var GENS = [
+    { id:'addFirst', cat:'equation',
+      make: function(used){
+        var b = pickUnused([3,4,5,6,7,8,9,10,12,15,18,20], used);
+        var ans = randRange(3, 40);
+        var c = ans + b;
+        var wrongSameOp = c + b; // 誤把加號再加一次
+        var m = mixOpts(ans, [wrongSameOp, b, c]);
+        return { b:b, ans:ans, c:c, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '（　）＋ ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(  ) + ' + d.b + ' = ' + d.c + '. What should (  ) be?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh'
+            ? '逆運算：' + d.c + ' － ' + d.b + ' ＝ ' + d.ans + '。代回去：' + d.ans + ' ＋ ' + d.b + ' ＝ ' + d.c + '，正確。'
+            : 'Inverse: ' + d.c + ' − ' + d.b + ' = ' + d.ans + '. Check: ' + d.ans + ' + ' + d.b + ' = ' + d.c + ', correct.'
+        };
+      } },
+    { id:'subFirst', cat:'equation',
+      make: function(used){
+        var ansTotal = pickUnused([15,18,20,24,25,28,30,35,40,45], used);
+        var b = randRange(1, ansTotal - 2);
+        var c = ansTotal - b;
+        var ans = ansTotal;
+        var wrongSameOp = Math.abs(c - b); // 誤把加號改成再減一次
+        var m = mixOpts(ans, [wrongSameOp, b, c]);
+        return { b:b, ans:ans, c:c, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '（　）－ ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(  ) − ' + d.b + ' = ' + d.c + '. What should (  ) be?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh'
+            ? '（　）在前面，逆運算是加回去：' + d.c + ' ＋ ' + d.b + ' ＝ ' + d.ans + '。代回去：' + d.ans + ' － ' + d.b + ' ＝ ' + d.c + '，正確。'
+            : '(  ) is first, so add it back: ' + d.c + ' + ' + d.b + ' = ' + d.ans + '. Check: ' + d.ans + ' − ' + d.b + ' = ' + d.c + ', correct.'
+        };
+      } },
+    { id:'subSecond', cat:'equation',
+      make: function(used){
+        var a = pickUnused([12,15,18,20,24,25,28,30,35,40], used);
+        var c = randRange(1, a - 1);
+        var ans = a - c;
+        var wrongInverse = a + c; // 誤把 a、c 加起來
+        var m = mixOpts(ans, [wrongInverse, a, c]);
+        return { a:a, c:c, ans:ans, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.a + ' － （　）＝ ' + d.c + '，（　）應該填多少？' : d.a + ' − (  ) = ' + d.c + '. What should (  ) be?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh'
+            ? '（　）在中間，不能用加的：' + d.a + ' － ' + d.c + ' ＝ ' + d.ans + '。代回去：' + d.a + ' － ' + d.ans + ' ＝ ' + d.c + '，正確。'
+            : '(  ) is in the middle, so don’t add: ' + d.a + ' − ' + d.c + ' = ' + d.ans + '. Check: ' + d.a + ' − ' + d.ans + ' = ' + d.c + ', correct.'
+        };
+      } },
+    { id:'mulFirst', cat:'equation',
+      make: function(used){
+        var b = pickUnused([2,3,4,5,6,7,8,9], used);
+        var ans = randRange(2, 12);
+        var c = ans * b;
+        var wrongSameOp = c * b;
+        var m = mixOpts(ans, [wrongSameOp, b, c]);
+        return { b:b, ans:ans, c:c, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '（　）× ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(  ) × ' + d.b + ' = ' + d.c + '. What should (  ) be?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh'
+            ? '逆運算：' + d.c + ' ÷ ' + d.b + ' ＝ ' + d.ans + '。代回去：' + d.ans + ' × ' + d.b + ' ＝ ' + d.c + '，正確。'
+            : 'Inverse: ' + d.c + ' ÷ ' + d.b + ' = ' + d.ans + '. Check: ' + d.ans + ' × ' + d.b + ' = ' + d.c + ', correct.'
+        };
+      } },
+    { id:'divFirst', cat:'equation',
+      make: function(used){
+        var b = pickUnused([2,3,4,5,6,7,8,9], used);
+        var c = randRange(2, 12);
+        var ans = c * b;
+        var wrongAdd = b + c;
+        var m = mixOpts(ans, [wrongAdd, b, c]);
+        return { b:b, c:c, ans:ans, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '（　）÷ ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(  ) ÷ ' + d.b + ' = ' + d.c + '. What should (  ) be?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh'
+            ? '逆運算：' + d.c + ' × ' + d.b + ' ＝ ' + d.ans + '。代回去：' + d.ans + ' ÷ ' + d.b + ' ＝ ' + d.c + '，正確。'
+            : 'Inverse: ' + d.c + ' × ' + d.b + ' = ' + d.ans + '. Check: ' + d.ans + ' ÷ ' + d.b + ' = ' + d.c + ', correct.'
+        };
+      } },
+    { id:'divSecond', cat:'equation',
+      make: function(used){
+        var ans = pickUnused([2,3,4,5,6,7,8,9], used);
+        var c = randRange(2, 9);
+        var a = ans * c;
+        var wrongInverse = a * c;
+        var m = mixOpts(ans, [wrongInverse, a, c]);
+        return { a:a, c:c, ans:ans, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.a + ' ÷ （　）＝ ' + d.c + '，（　）應該填多少？' : d.a + ' ÷ (  ) = ' + d.c + '. What should (  ) be?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh'
+            ? '（　）在中間，用被除數 ÷ 商：' + d.a + ' ÷ ' + d.c + ' ＝ ' + d.ans + '。代回去：' + d.a + ' ÷ ' + d.ans + ' ＝ ' + d.c + '，正確。'
+            : '(  ) is in the middle: dividend ÷ quotient = ' + d.a + ' ÷ ' + d.c + ' = ' + d.ans + '. Check: ' + d.a + ' ÷ ' + d.ans + ' = ' + d.c + ', correct.'
+        };
+      } },
+    { id:'wordAdd', cat:'equation',
+      make: function(used){
+        var b = pickUnused([3,4,5,6,7,8,9,10,12], used);
+        var ans = randRange(3, 30);
+        var c = ans + b;
+        var wrongSameOp = b + c;
+        var m = mixOpts(ans, [wrongSameOp, b, c]);
+        return { b:b, ans:ans, c:c, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '小美原本有一些貼紙，又買了 ' + d.b + ' 張後，一共有 ' + d.c + ' 張，小美原本有幾張貼紙？'
+            : 'Mia had some stickers. After buying ' + d.b + ' more, she has ' + d.c + ' in total. How many did she start with?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh'
+            ? '列式：（　）＋ ' + d.b + ' ＝ ' + d.c + '，逆運算：' + d.c + ' － ' + d.b + ' ＝ ' + d.ans + '。'
+            : 'Equation: (  ) + ' + d.b + ' = ' + d.c + '. Inverse: ' + d.c + ' − ' + d.b + ' = ' + d.ans + '.'
+        };
+      } },
+    { id:'wordSub', cat:'equation',
+      make: function(used){
+        var ansTotal = pickUnused([12,15,18,20,24,25,28,30], used);
+        var b = randRange(1, ansTotal - 2);
+        var c = ansTotal - b;
+        var ans = ansTotal;
+        var wrongSameOp = Math.abs(c - b);
+        var m = mixOpts(ans, [wrongSameOp, b, c]);
+        return { b:b, ans:ans, c:c, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一盒餅乾原本有（　）片，吃掉 ' + d.b + ' 片後剩下 ' + d.c + ' 片，這盒餅乾原本有幾片？'
+            : 'A box of cookies had (  ) pieces. After eating ' + d.b + ', ' + d.c + ' are left. How many were there originally?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh'
+            ? '列式：（　）－ ' + d.b + ' ＝ ' + d.c + '，逆運算：' + d.c + ' ＋ ' + d.b + ' ＝ ' + d.ans + '。'
+            : 'Equation: (  ) − ' + d.b + ' = ' + d.c + '. Inverse: ' + d.c + ' + ' + d.b + ' = ' + d.ans + '.'
+        };
+      } },
+    { id:'sibDivide', cat:'divide',
+      make: function(used){
+        var M = pickUnused([2,3,4,5,6,7,8,9], used);
+        var k = randRange(2, 9);
+        var N = M * k;
+        var m = mixOpts(k, [k - 1, k + 1, M]);
+        return { N:N, M:M, k:k, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.N + ' 顆糖，每 ' + d.M + ' 顆一份，可以分成幾份？' : d.N + ' candies, ' + d.M + ' per group — how many groups?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh' ? d.N + ' ÷ ' + d.M + ' ＝ ' + d.k + '。' : d.N + ' ÷ ' + d.M + ' = ' + d.k + '.'
+        };
+      } },
+    { id:'sibTwoStep', cat:'twostep',
+      make: function(used){
+        var a = pickUnused([20,25,30,35,40,45,50,55,60], used);
+        var b = randRange(1, Math.min(a, 20));
+        var c = randRange(1, 30);
+        var ans = a - b + c;
+        var m = mixOpts(ans, [a - b - c, a + b - c, a - b]);
+        return { a:a, b:b, c:c, ans:ans, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '小華有 ' + d.a + ' 元，買了 ' + d.b + ' 元的東西後，又得到 ' + d.c + ' 元，現在有多少元？'
+            : 'Jay has $' + d.a + '. He spends $' + d.b + ', then gets $' + d.c + ' more. How much does he have now?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh'
+            ? d.a + ' － ' + d.b + ' ＋ ' + d.c + ' ＝ ' + d.ans + '。'
+            : d.a + ' − ' + d.b + ' + ' + d.c + ' = ' + d.ans + '.'
+        };
+      } },
+    { id:'sibAddSub', cat:'addsub',
+      make: function(used){
+        var a = pickUnused([23,34,45,56,67,78,25,36,47,58], used);
+        var b = randRange(10, 90);
+        var ans = a + b;
+        var m = mixOpts(ans, [ans - 10, ans + 10, a - b < 0 ? ans + 1 : Math.abs(a - b)]);
+        return { a:a, b:b, ans:ans, opts:m.opts, ansIdx:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.a + ' + ' + d.b + ' = ?',
+          opts: d.opts.map(String), ans: d.ansIdx,
+          why: lang === 'zh' ? '用直式對齊位值加起來：' + d.a + ' ＋ ' + d.b + ' ＝ ' + d.ans + '。' : 'Line up place values and add: ' + d.a + ' + ' + d.b + ' = ' + d.ans + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：8 種算式填充題型各一題＋3 種相關單元交錯＋1 題隨機加碼 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice(); // 11 題：8 own + 3 sibling
+    var extraPool = GENS.filter(function(g){
+      return ['addFirst','subFirst','subSecond','mulFirst','divFirst','divSecond'].indexOf(g.id) >= 0;
+    });
+    for (var i = 0; i < 1; i++) slots.push(pick(extraPool)); // 補到 12 題
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>重量複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .qpic{margin:8px 0}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 重量複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：重量、除法、乘法交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 秤面 SVG（跟上課頁同一套畫法） ---------- */
+  var TOTAL_TICKS = 50, MAJOR_EVERY = 5;
+  function polarXY(cx, cy, r, thetaDeg){
+    var rad = thetaDeg * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
+  }
+  function dialTheta(raw){ return 180 * (1 - raw / TOTAL_TICKS); }
+  function buildDialSVG(raw){
+    var W = 170, H = 118, cx = W / 2, cy = H - 14, rOuter = 74, rLabel = 90, rNeedle = 60, fs = 10;
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="170" height="' + H + '" xmlns="http://www.w3.org/2000/svg">';
+    svg += '<path d="M ' + (cx - rOuter) + ' ' + cy + ' A ' + rOuter + ' ' + rOuter + ' 0 0 1 ' + (cx + rOuter) + ' ' + cy + '" fill="none" stroke="#E8E2D6" stroke-width="2"/>';
+    for (var i = 0; i <= TOTAL_TICKS; i++){
+      var theta = dialTheta(i);
+      var isMajor = (i % MAJOR_EVERY === 0);
+      var p1 = polarXY(cx, cy, isMajor ? rOuter - 12 : rOuter - 6, theta);
+      var p2 = polarXY(cx, cy, rOuter, theta);
+      svg += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) + '" stroke="' + (isMajor ? '#2B2A33' : '#B9B3A0') + '" stroke-width="' + (isMajor ? 2.2 : 1.1) + '"/>';
+      if (isMajor){
+        var lp = polarXY(cx, cy, rLabel, theta);
+        svg += '<text x="' + lp.x.toFixed(1) + '" y="' + lp.y.toFixed(1) + '" font-size="' + fs + '" text-anchor="middle" dominant-baseline="middle" fill="#6B6875">' + (i / MAJOR_EVERY) + '</text>';
+      }
+    }
+    var nt = dialTheta(raw);
+    var np = polarXY(cx, cy, rNeedle, nt);
+    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + np.x.toFixed(1) + '" y2="' + np.y.toFixed(1) + '" stroke="#D64545" stroke-width="3" stroke-linecap="round"/>';
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#2B2A33"/>';
+    svg += '</svg>';
+    return svg;
+  }
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang:'zh-Hant', title:'重量複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 重量複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：重量、除法、乘法交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang:'en', title:'Weight Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Weight Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving weight, division and multiplication — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { weight:'重量', divide:'除法', multiply:'乘法' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { weight:'📖 重量 — 秤秤看有多重', divide:'📖 除法 — 分東西大隊', multiply:'📖 乘法 — 上課' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { weight:'Weight', divide:'Division', multiply:'Multiplication' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { weight:'📖 Weight — How Heavy Is It?', divide:'📖 Division — The Sharing Squad', multiply:'📖 Multiplication — Lesson' }
+    }
+  };
+
+  var LINK_HREFS = { weight:'index.html', divide:'../divide/index.html', multiply:'../multiply/index.html' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 整數選項防呆：去重、剔除等於正解的候選，不足 3 個就用固定步長補齊 */
+  function dedupWrongsInt(correct, candidates){
+    var out = [];
+    var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      c = Math.round(c);
+      var key = String(c);
+      if (c > 0 && !seen[key]){ seen[key] = true; out.push(c); }
+    });
+    var step = Math.max(1, Math.round(Math.abs(correct) / 20) || 1);
+    var tries = 0;
+    while (out.length < 3 && tries < 200){
+      tries++;
+      var cand = correct + step * (out.length + 1) * (tries % 2 === 0 ? 1 : -1);
+      cand = Math.round(cand);
+      var key2 = String(cand);
+      if (cand > 0 && !seen[key2]){ seen[key2] = true; out.push(cand); }
+    }
+    return out.slice(0, 3);
+  }
+  function mixOptsInt(correct, candidates){
+    var wrongs = dedupWrongsInt(correct, candidates);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 字串型選項防呆（商餘、比較題）：去重字串，不足就從候選池補 */
+  function mixOptsStr(correctStr, candidateStrs, pool){
+    var out = [correctStr];
+    var seen = {}; seen[correctStr] = true;
+    (candidateStrs || []).forEach(function(s){
+      if (!seen[s]){ seen[s] = true; out.push(s); }
+    });
+    var pi = 0;
+    while (out.length < 4 && pool && pi < pool.length){
+      var s2 = pool[pi++];
+      if (!seen[s2]){ seen[s2] = true; out.push(s2); }
+    }
+    var opts = shuffle(out.slice(0, 4));
+    return { opts: opts, ans: opts.indexOf(correctStr) };
+  }
+  function fmtKgG(totalG, unitKg, unitG){
+    var kg = Math.floor(totalG / 1000), g = totalG % 1000;
+    if (kg === 0) return g + ' ' + unitG;
+    if (g === 0) return kg + ' ' + unitKg;
+    return kg + ' ' + unitKg + ' ' + g + ' ' + unitG;
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var OBJ_POOL = [
+    { icon:'📎', g:1,     wrongs:[10,100,1000] },
+    { icon:'🍬', g:3,     wrongs:[30,300,15] },
+    { icon:'🔑', g:50,    wrongs:[5,500,150] },
+    { icon:'🍎', g:150,   wrongs:[15,1500,1000] },
+    { icon:'🧂', g:1000,  wrongs:[100,10000,500] },
+    { icon:'🍉', g:3000,  wrongs:[300,30000,3500] },
+    { icon:'🎒', g:4000,  wrongs:[400,40000,4500] },
+    { icon:'🧒', g:35000, wrongs:[3500,350000,35500] }
+  ];
+  var NAME_PAIRS = [['小明','小華'],['小美','小傑'],['阿光','小英']];
+  var NAME_PAIRS_EN = [['Ming','Hua'],['Mia','Jay'],['Kai','Ying']];
+
+  var GENS = [
+    { id:'estimateWeight', cat:'weight',
+      make: function(used){
+        var idx = pickUnused([0,1,2,3,4,5,6,7], used);
+        var o = OBJ_POOL[idx];
+        var m = mixOptsInt(o.g, o.wrongs);
+        return { icon:o.icon, g:o.g, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 公克' : ' g';
+        return {
+          stem: lang === 'zh' ? d.icon + ' 這個東西大約多重？' : 'About how heavy is this ' + d.icon + '?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh' ? '這個東西大約是 ' + d.g + ' 公克。' : 'It weighs about ' + d.g + ' g.'
+        };
+      } },
+    { id:'ladderKgToG', cat:'weight',
+      make: function(used){
+        var kg = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var correct = kg * 1000;
+        var m = mixOptsInt(correct, [kg * 100, correct + 100, kg * 10000]);
+        return { kg:kg, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 公克' : ' g';
+        return {
+          stem: d.kg + (lang === 'zh' ? ' 公斤 ＝ 多少公克？' : ' kg = how many grams?'),
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '1 公斤 ＝ 1000 公克，' + d.kg + ' × 1000 ＝ ' + d.correct + '，所以是 ' + d.correct + ' 公克。'
+            : '1 kg = 1000 g, and ' + d.kg + ' × 1000 = ' + d.correct + ', so it’s ' + d.correct + ' g.'
+        };
+      } },
+    { id:'ladderGToKg', cat:'weight',
+      make: function(used){
+        var g = pickUnused([2000,3000,4000,5000,6000,7000,8000,9000], used);
+        var correct = g / 1000;
+        var m = mixOptsInt(correct, [g / 100, correct + 1, correct > 1 ? correct - 1 : correct + 2]);
+        return { g:g, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 公斤' : ' kg';
+        return {
+          stem: d.g + (lang === 'zh' ? ' 公克 ＝ 多少公斤？' : ' g = how many kilograms?'),
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.g + ' ÷ 1000 ＝ ' + d.correct + '，所以是 ' + d.correct + ' 公斤。'
+            : d.g + ' ÷ 1000 = ' + d.correct + ', so it’s ' + d.correct + ' kg.'
+        };
+      } },
+    { id:'compoundToGrams', cat:'weight',
+      make: function(used){
+        var kg = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var gRem = 1 + rand(999);
+        var correct = kg * 1000 + gRem;
+        var m = mixOptsInt(correct, [kg * 100 + gRem, gRem, kg + gRem]);
+        return { kg:kg, gRem:gRem, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 公克' : ' g';
+        return {
+          stem: lang === 'zh'
+            ? d.kg + ' 公斤 ' + d.gRem + ' 公克 ＝ 多少公克？'
+            : d.kg + ' kg ' + d.gRem + ' g = how many grams?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.kg + ' 公斤 ＝ ' + (d.kg * 1000) + ' 公克，' + (d.kg * 1000) + ' ＋ ' + d.gRem + ' ＝ ' + d.correct + '。'
+            : d.kg + ' kg = ' + (d.kg * 1000) + ' g, and ' + (d.kg * 1000) + ' + ' + d.gRem + ' = ' + d.correct + '.'
+        };
+      } },
+    { id:'compoundFromGrams', cat:'weight',
+      make: function(used){
+        var total;
+        for (var tries = 0; tries < 30; tries++){
+          total = 1001 + rand(8998);
+          if (total % 1000 !== 0 && used.indexOf(String(total)) < 0) break;
+        }
+        used.push(String(total));
+        var kg = Math.floor(total / 1000), rem = total % 1000;
+        var wA = kg * 1000 + (total % 100);
+        var wB = (kg - 1) * 1000 + rem; // kg-1 >= 0 恆成立（total>=1001 -> kg>=1）
+        var wC = total + 100;
+        var m = mixOptsInt(total, [wA, wB, wC]);
+        return { total:total, kg:kg, rem:rem, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unitKg = lang === 'zh' ? '公斤' : ' kg', unitG = lang === 'zh' ? '公克' : ' g';
+        return {
+          stem: d.total + (lang === 'zh' ? ' 公克 ＝ 幾公斤幾公克？' : ' g = how many kilograms and grams?'),
+          opts: d.opts.map(function(v){ return fmtKgG(v, unitKg, unitG); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.total + ' ÷ 1000 ＝ 商 ' + d.kg + ' 餘 ' + d.rem + '，所以是 ' + d.kg + ' 公斤 ' + d.rem + ' 公克。'
+            : d.total + ' ÷ 1000 = ' + d.kg + ' r ' + d.rem + ', so it’s ' + d.kg + ' kg ' + d.rem + ' g.'
+        };
+      } },
+    { id:'addMixedUnits', cat:'weight',
+      make: function(used){
+        var kg1 = pickUnused([1,2,3,4,5,6], used);
+        var gRem1 = 400 + rand(500); // 400~899，容易湊成進位
+        var g2 = 300 + rand(600); // 300~899
+        var correct = kg1 * 1000 + gRem1 + g2;
+        var m = mixOptsInt(correct, [kg1 * 1000 + gRem1, gRem1 + g2, correct + 100]);
+        return { kg1:kg1, gRem1:gRem1, g2:g2, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unitKg = lang === 'zh' ? '公斤' : ' kg', unitG = lang === 'zh' ? '公克' : ' g';
+        return {
+          stem: lang === 'zh'
+            ? '媽媽買了 ' + d.kg1 + ' 公斤 ' + d.gRem1 + ' 公克的雞肉，又買了 ' + d.g2 + ' 公克的魚，一共是多少公斤多少公克？'
+            : 'Mom bought ' + d.kg1 + ' kg ' + d.gRem1 + ' g of chicken and another ' + d.g2 + ' g of fish. What is the total weight?',
+          opts: d.opts.map(function(v){ return fmtKgG(v, unitKg, unitG); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '先統一成公克：' + (d.kg1 * 1000 + d.gRem1) + ' ＋ ' + d.g2 + ' ＝ ' + d.correct + ' 公克，也就是 ' + fmtKgG(d.correct, '公斤', '公克') + '。'
+            : 'Unify to grams first: ' + (d.kg1 * 1000 + d.gRem1) + ' + ' + d.g2 + ' = ' + d.correct + ' g, which is ' + fmtKgG(d.correct, 'kg', 'g') + '.'
+        };
+      } },
+    { id:'compareMixedUnits', cat:'weight',
+      make: function(used){
+        var pairIdx = rand(NAME_PAIRS.length);
+        var aKg = 1 + rand(5), aRem = rand(999);
+        var aG = aKg * 1000 + aRem;
+        var bG;
+        for (var tries = 0; tries < 30; tries++){
+          bG = 500 + rand(6000);
+          if (bG !== aG) break;
+        }
+        var winner = aG > bG ? 0 : 1;
+        return { pairIdx:pairIdx, aKg:aKg, aRem:aRem, aG:aG, bG:bG, winner:winner };
+      },
+      fmt: function(d, lang){
+        var names = lang === 'zh' ? NAME_PAIRS[d.pairIdx] : NAME_PAIRS_EN[d.pairIdx];
+        var unitKg = lang === 'zh' ? '公斤' : ' kg', unitG = lang === 'zh' ? '公克' : ' g';
+        var correctName = names[d.winner];
+        var fillerZh = ['一樣重', '沒辦法比較'];
+        var fillerEn = ['The same', 'Can’t tell'];
+        var m = mixOptsStr(correctName, [names[1 - d.winner]], (lang === 'zh' ? fillerZh : fillerEn));
+        return {
+          stem: lang === 'zh'
+            ? names[0] + '的水壺 ' + fmtKgG(d.aG, unitKg, unitG) + '，' + names[1] + '的水壺 ' + d.bG + ' ' + unitG + '，誰的水壺比較重？'
+            : names[0] + '’s water bottle is ' + fmtKgG(d.aG, unitKg, unitG) + ', and ' + names[1] + '’s is ' + d.bG + unitG + '. Whose is heavier?',
+          opts: m.opts,
+          ans: m.ans,
+          why: lang === 'zh'
+            ? '先統一單位：' + names[0] + ' ＝ ' + d.aG + ' 公克，' + names[1] + ' ＝ ' + d.bG + ' 公克，' + correctName + '的水壺比較重。'
+            : 'Unify the units first: ' + names[0] + ' = ' + d.aG + ' g, ' + names[1] + ' = ' + d.bG + ' g, so ' + correctName + '’s bottle is heavier.'
+        };
+      } },
+    { id:'remainingCapacity', cat:'weight',
+      make: function(used){
+        var limitKg = pickUnused([3,4,5,6,7,8,9], used);
+        var curKg = 1 + rand(limitKg - 1);
+        var curRem = rand(999);
+        var curTotal = curKg * 1000 + curRem;
+        var limitTotal = limitKg * 1000;
+        var correct = limitTotal - curTotal;
+        var m = mixOptsInt(correct, [limitTotal - curKg * 1000, correct + 100, curTotal]);
+        return { limitKg:limitKg, curKg:curKg, curRem:curRem, curTotal:curTotal, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 公克' : ' g';
+        return {
+          stem: lang === 'zh'
+            ? '一個購物籃最多可以裝 ' + d.limitKg + ' 公斤的東西，已經裝了 ' + d.curKg + ' 公斤 ' + d.curRem + ' 公克的水果，還可以再裝多少公克才不超過限制？'
+            : 'A basket holds at most ' + d.limitKg + ' kg. It already has ' + d.curKg + ' kg ' + d.curRem + ' g of fruit in it. How many more grams can it hold?',
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.limitKg + ' 公斤 ＝ ' + (d.limitKg * 1000) + ' 公克，' + (d.limitKg * 1000) + ' − ' + d.curTotal + ' ＝ ' + d.correct + '。'
+            : d.limitKg + ' kg = ' + (d.limitKg * 1000) + ' g, and ' + (d.limitKg * 1000) + ' − ' + d.curTotal + ' = ' + d.correct + '.'
+        };
+      } },
+    { id:'dialReading', cat:'weight',
+      make: function(used){
+        var raw = pickUnused([7,11,13,17,19,23,27,29,31,33,37,41,43,47], used);
+        var tickG = pick([10, 20, 50]);
+        var otherTick = pick([10, 20, 50].filter(function(t){ return t !== tickG; }));
+        var large = Math.floor(raw / 5), small = raw % 5;
+        var correct = raw * tickG;
+        var m = mixOptsInt(correct, [(large + small) * tickG, large * (5 * tickG), raw * otherTick]);
+        return { raw:raw, tickG:tickG, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? ' 公克' : ' g';
+        var large = Math.floor(d.raw / 5), small = d.raw % 5;
+        return {
+          stem: lang === 'zh'
+            ? '秤面上，一小格是 ' + d.tickG + ' 公克，指針停在圖上的位置，這是多少公克？'
+            : 'On the dial, one small tick is worth ' + d.tickG + ' g. Read the needle in the picture — what is the weight?',
+          pic: buildDialSVG(d.raw),
+          opts: d.opts.map(function(v){ return v + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '指針過了 ' + large + ' 大格又 ' + small + ' 小格，一大格 ＝ 5 × ' + d.tickG + ' ＝ ' + (5 * d.tickG) + ' 公克，' + large + ' × ' + (5 * d.tickG) + ' ＋ ' + small + ' × ' + d.tickG + ' ＝ ' + d.correct + '。'
+            : 'The needle passed ' + large + ' large ticks and ' + small + ' small ticks. One large tick = 5 × ' + d.tickG + ' = ' + (5 * d.tickG) + ' g. ' + large + ' × ' + (5 * d.tickG) + ' + ' + small + ' × ' + d.tickG + ' = ' + d.correct + '.'
+        };
+      } },
+    { id:'divideFact', cat:'divide',
+      make: function(used){
+        var divisor = pick([3,4,5,6,7,8,9]);
+        var dividend = pickUnused([21,26,31,37,42,47,53,58,64,69,73,78,84,89], used);
+        var q = Math.floor(dividend / divisor), r = dividend % divisor;
+        var correctStr = 'QR:' + q + ':' + r;
+        var candidates = [
+          'QR:' + (q + 1) + ':' + r,
+          'QR:' + q + ':' + (r + 1),
+          'QR:' + (q > 0 ? q - 1 : q + 2) + ':' + r
+        ];
+        var m = mixOptsStr(correctStr, candidates, ['QR:' + q + ':' + (r > 0 ? r - 1 : r + 2)]);
+        return { dividend:dividend, divisor:divisor, q:q, r:r, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        function fromKey(key){
+          var parts = key.split(':');
+          return lang === 'zh' ? ('商 ' + parts[1] + '、餘 ' + parts[2]) : (parts[1] + ' r ' + parts[2]);
+        }
+        return {
+          stem: d.dividend + ' ÷ ' + d.divisor + ' ＝ ？',
+          opts: d.opts.map(fromKey),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.divisor + ' × ' + d.q + ' ＝ ' + (d.divisor * d.q) + '，' + d.dividend + ' − ' + (d.divisor * d.q) + ' ＝ ' + d.r + '，所以商 ' + d.q + '、餘 ' + d.r + '。'
+            : d.divisor + ' × ' + d.q + ' = ' + (d.divisor * d.q) + ', and ' + d.dividend + ' − ' + (d.divisor * d.q) + ' = ' + d.r + ', so it’s ' + d.q + ' r ' + d.r + '.'
+        };
+      } },
+    { id:'multiplyFact', cat:'multiply',
+      make: function(used){
+        var f1 = pick([2,3,4,5,6,7,8,9]);
+        var f2 = pickUnused([12,13,14,16,17,18,21,23,24,26,27,32,34,36], used);
+        var correct = f1 * f2;
+        var m = mixOptsInt(correct, [correct + f1, (f1 - 1) * f2, correct - f2]);
+        return { f1:f1, f2:f2, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.f1 + ' × ' + d.f2 + ' ＝ ？',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.f1 + ' × ' + d.f2 + ' ＝ ' + d.correct + '。'
+            : d.f1 + ' × ' + d.f2 + ' = ' + d.correct + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：9 種重量題型各一題＋除法/乘法各一題＋隨機 1 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){ return g.cat === 'weight'; });
+    for (var i = 0; i < 1; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      if (q.pic){
+        var pic = document.createElement('div');
+        pic.className = 'qpic'; pic.innerHTML = q.pic;
+        box.appendChild(pic);
+      }
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

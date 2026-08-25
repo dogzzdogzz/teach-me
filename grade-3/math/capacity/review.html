@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>容量複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 容量複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：讀量杯、公升毫升換算、加減比較，還交錯幾題除法、乘法，
+    <strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      langAria: '切換語言',
+      htmlLang:'zh-Hant', title:'容量複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      h1:'🔁 容量複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：讀量杯、公升毫升換算、加減比較，還交錯幾題除法、乘法，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria: 'Switch language',
+      htmlLang:'en', title:'Capacity Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      h1:'🔁 Capacity Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong>: reading measuring cups, converting liters/mL, addition and comparison, plus a few division and multiplication questions worked in — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { capacity:'容量', multiply:'乘法', divide:'除法' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      linkNames: { capacity:'🗂️ 容量 — 速查卡', multiply:'🗂️ 乘法 — 速查卡', divide:'🗂️ 除法 — 速查卡' },
+      fmtLmL: function(L, mL){ return L + '公升' + mL + '毫升'; }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { capacity:'Capacity', multiply:'Multiplication', divide:'Division' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { capacity:'🗂️ Capacity — cheat sheet', multiply:'🗂️ Multiplication — cheat sheet', divide:'🗂️ Division — cheat sheet' },
+      fmtLmL: function(L, mL){ return L + ' L ' + mL + ' mL'; }
+    }
+  };
+
+  var LINK_HREFS = { capacity:'reference.html', multiply:'../multiply/reference.html', divide:'../divide/reference.html' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 保證 3 個相異、且不等於正解的整數錯誤選項（皆為正整數） */
+  function makeWrongsInt(correct, candidates){
+    var out = [];
+    var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (!seen[key] && c > 0){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3){
+      var lo = correct - step, hi = correct + step;
+      if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  function mixOptsNum(correct, candidates){
+    var wrongs = makeWrongsInt(correct, candidates);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 混合單位選項（{L,mL} 物件）：用 value=L*1000+mL 去重，保證 4 個選項的「值」都不同 */
+  function mixOptsMixed(correctL, correctML, candidates){
+    var correctVal = correctL * 1000 + correctML;
+    var out = [{ L: correctL, mL: correctML, val: correctVal }];
+    var seenVals = {}; seenVals[correctVal] = true;
+    (candidates || []).forEach(function(c){
+      if (c.mL < 0 || c.L < 0) return;
+      var v = c.L * 1000 + c.mL;
+      if (!seenVals[v]){ seenVals[v] = true; out.push({ L:c.L, mL:c.mL, val:v }); }
+    });
+    var bump = 100;
+    while (out.length < 4){
+      var v2 = correctVal + bump;
+      if (!seenVals[v2]){ seenVals[v2] = true; out.push({ L: Math.floor(v2 / 1000), mL: v2 % 1000, val: v2 }); }
+      bump += 100;
+    }
+    var shuffled = shuffle(out.slice(0, 4));
+    var ansIdx = 0;
+    for (var i = 0; i < shuffled.length; i++){ if (shuffled[i].val === correctVal){ ansIdx = i; break; } }
+    return { opts: shuffled, ans: ansIdx };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var GENS = [
+    { id:'readCup', cat:'capacity',
+      make: function(used){
+        var tickValue = pickUnused([10, 50, 100], used);
+        var ticks = 2 + rand(8); /* 2..9 */
+        var amount = ticks * tickValue;
+        var candidates = [ticks * 10, ticks * 100, ticks, (ticks - 1) * tickValue, (ticks + 1) * tickValue];
+        var m = mixOptsNum(amount, candidates);
+        return { tickValue:tickValue, ticks:ticks, amount:amount, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '量杯上，一小格＝' + d.tickValue + '毫升，水位在第 ' + d.ticks + ' 格，是多少毫升？'
+            : 'On a measuring cup, 1 tick = ' + d.tickValue + ' mL, and the water is at tick ' + d.ticks + '. How many mL is that?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.ticks + ' × ' + d.tickValue + ' ＝ ' + d.amount + '，水位在第 ' + d.ticks + ' 格就是 ' + d.amount + ' 毫升。'
+            : d.ticks + ' × ' + d.tickValue + ' = ' + d.amount + ', so the water at tick ' + d.ticks + ' is ' + d.amount + ' mL.'
+        };
+      } },
+    { id:'convertLtoML', cat:'capacity',
+      make: function(used){
+        var L = pickUnused([1, 2, 3, 4], used);
+        var mL = pick([0, 100, 200, 300, 400, 500, 600, 700, 800, 900]);
+        var total = L * 1000 + mL;
+        var candidates = [L * 100 + mL, mL, total + 100, total - 100];
+        var m = mixOptsNum(total, candidates);
+        return { L:L, mL:mL, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.L + ' 公升 ' + d.mL + ' 毫升 ＝ ？毫升' : d.L + ' liter(s) ' + d.mL + ' mL = ? mL',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.L + ' 公升 ＝ ' + (d.L * 1000) + ' 毫升，' + (d.L * 1000) + ' ＋ ' + d.mL + ' ＝ ' + d.total + ' 毫升。'
+            : d.L + ' liter(s) = ' + (d.L * 1000) + ' mL, and ' + (d.L * 1000) + ' + ' + d.mL + ' = ' + d.total + ' mL.'
+        };
+      } },
+    { id:'convertMLtoL', cat:'capacity',
+      make: function(used){
+        var L = pickUnused([1, 2, 3, 4], used);
+        var mL = pick([50, 150, 250, 350, 450, 550, 650, 750, 850, 950]);
+        var total = L * 1000 + mL;
+        var candidates = [
+          { L: Math.floor(total / 100), mL: total % 100 },
+          { L: L, mL: mL + 100 },
+          { L: L * 10, mL: Math.floor(mL / 10) }
+        ];
+        var m = mixOptsMixed(L, mL, candidates);
+        return { total:total, L:L, mL:mL, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: d.total + (lang === 'zh' ? ' 毫升 ＝ ？公升？毫升' : ' mL = ? liters ? mL'),
+          opts: d.opts.map(function(o){ return t.fmtLmL(o.L, o.mL); }), ans: d.ans,
+          why: lang === 'zh'
+            ? d.total + ' ÷ 1000 ＝ ' + d.L + '…餘 ' + d.mL + '，所以是 ' + d.L + ' 公升 ' + d.mL + ' 毫升。'
+            : d.total + ' ÷ 1000 = ' + d.L + ' remainder ' + d.mL + ', so it’s ' + d.L + ' liter(s) ' + d.mL + ' mL.'
+        };
+      } },
+    { id:'addMixedUnits', cat:'capacity',
+      make: function(used){
+        var aL = pickUnused([1, 2], used);
+        var aML = pick([0, 100, 200, 300, 400, 500]);
+        var bML = pick([50, 100, 150, 200, 250, 300, 350, 400]);
+        var totalA = aL * 1000 + aML;
+        var total = totalA + bML;
+        var candidates = [aML + bML, Math.floor(totalA / 10) + bML, total + 100, total - 100];
+        var m = mixOptsNum(total, candidates);
+        return { aL:aL, aML:aML, bML:bML, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '文字題：小美有一瓶 ' + d.aL + ' 公升 ' + d.aML + ' 毫升的鮮奶和一瓶 ' + d.bML + ' 毫升的豆漿，兩瓶一共有多少毫升？'
+            : 'Word problem: Mia has a ' + d.aL + ' L ' + d.aML + ' mL bottle of milk and a ' + d.bML + ' mL box of soy milk. How many mL in total?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.aL + ' 公升 ' + d.aML + ' 毫升 ＝ ' + (d.aL * 1000 + d.aML) + ' 毫升，先統一單位再相加：' + (d.aL * 1000 + d.aML) + ' ＋ ' + d.bML + ' ＝ ' + d.total + ' 毫升。'
+            : d.aL + ' L ' + d.aML + ' mL = ' + (d.aL * 1000 + d.aML) + ' mL — convert to the same unit first, then add: ' + (d.aL * 1000 + d.aML) + ' + ' + d.bML + ' = ' + d.total + ' mL.'
+        };
+      } },
+    { id:'fitsCapacity', cat:'capacity',
+      make: function(used){
+        var capacity = pickUnused([1000, 1500, 2000, 2500, 3000], used);
+        var poured = pick([200, 400, 600, 800]);
+        while (poured >= capacity) poured = Math.floor(capacity / 2 / 100) * 100;
+        var remaining = capacity - poured;
+        var candidates = [poured, capacity, capacity + poured];
+        var m = mixOptsNum(remaining, candidates);
+        return { capacity:capacity, poured:poured, remaining:remaining, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '文字題：水壺最多可以裝 ' + d.capacity + ' 毫升，已經倒了 ' + d.poured + ' 毫升，還可以再加多少毫升才會裝滿？'
+            : 'Word problem: A kettle holds at most ' + d.capacity + ' mL. ' + d.poured + ' mL has already been poured in. How much more can be added?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.capacity + ' － ' + d.poured + ' ＝ ' + d.remaining + '，還可以再加 ' + d.remaining + ' 毫升。'
+            : d.capacity + ' − ' + d.poured + ' = ' + d.remaining + ', so ' + d.remaining + ' more mL can be added.'
+        };
+      } },
+    { id:'gridRelation', cat:'capacity',
+      make: function(used){
+        var opts4 = [
+          { major:100, n:2 }, { major:100, n:4 }, { major:100, n:5 }, { major:100, n:10 },
+          { major:200, n:2 }, { major:200, n:4 }, { major:200, n:5 }, { major:200, n:10 },
+          { major:500, n:2 }, { major:500, n:5 }, { major:500, n:10 }
+        ];
+        var combo = pick(opts4);
+        var major = combo.major, n = combo.n;
+        var minor = major / n;
+        var candidates = [major, major * n, minor + n];
+        var m = mixOptsNum(minor, candidates);
+        return { major:major, n:n, minor:minor, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '量杯上，一大格是 ' + d.major + ' 毫升，這一大格被平分成 ' + d.n + ' 小格，一小格是幾毫升？'
+            : 'On a measuring cup, one big square is ' + d.major + ' mL, split into ' + d.n + ' equal ticks. How many mL is one tick?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.major + ' ÷ ' + d.n + ' ＝ ' + d.minor + '，一小格是 ' + d.minor + ' 毫升。'
+            : d.major + ' ÷ ' + d.n + ' = ' + d.minor + ', so one tick is ' + d.minor + ' mL.'
+        };
+      } },
+    { id:'multiplyCheck', cat:'multiply',
+      make: function(used){
+        var per = pickUnused([100, 150, 200, 250, 300, 350, 400, 450, 500], used);
+        var n = pick([2, 3, 4, 5, 6]);
+        var total = per * n;
+        var candidates = [per + n, per * (n - 1), per * (n + 1)];
+        var m = mixOptsNum(total, candidates);
+        return { per:per, n:n, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '每瓶水有 ' + d.per + ' 毫升，一共有 ' + d.n + ' 瓶，全部一共多少毫升？'
+            : 'Each bottle holds ' + d.per + ' mL, and there are ' + d.n + ' bottles. How many mL in total?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.per + ' × ' + d.n + ' ＝ ' + d.total + ' 毫升。'
+            : d.per + ' × ' + d.n + ' = ' + d.total + ' mL.'
+        };
+      } },
+    { id:'shareDivide', cat:'divide',
+      make: function(used){
+        var options = [
+          { total:1000, ns:[2, 4, 5, 10] },
+          { total:2000, ns:[2, 4, 5, 8] },
+          { total:500, ns:[2, 5] }
+        ];
+        var choice = pick(options);
+        var total = choice.total;
+        var n = pickUnused(choice.ns, used);
+        var share = total / n;
+        var candidates = [total, n, share * 2];
+        var m = mixOptsNum(share, candidates);
+        return { total:total, n:n, share:share, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var t = TXT[lang];
+        var totalL = d.total / 1000;
+        var totalLabel = lang === 'zh' ? (totalL + ' 公升') : (totalL + ' L');
+        return {
+          stem: lang === 'zh'
+            ? '把 ' + totalLabel + '的果汁平分給 ' + d.n + ' 個人，每人可以分到多少毫升？'
+            : 'Share ' + totalLabel + ' of juice equally among ' + d.n + ' people. How many mL does each person get?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.total + ' ÷ ' + d.n + ' ＝ ' + d.share + '，每人分到 ' + d.share + ' 毫升。'
+            : d.total + ' ÷ ' + d.n + ' = ' + d.share + ', so each person gets ' + d.share + ' mL.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：8 種題型各一題＋隨機 4 題（限容量類，數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){ return g.cat === 'capacity'; });
+    for (var i = 0; i < 4; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
