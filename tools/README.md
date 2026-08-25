@@ -32,7 +32,7 @@ python3 tools/check_i18n.py $(find . -name '*.html' -not -path './tools/*' | sor
 - `LEAK` —— 中文文字節點掉在所有 `data-i18n` 元素之外（用 tag stack 判定，
   巢狀 `<strong>`／`<br>` 不算；void 元素不進 stack —— 這個 bug 曾經藏了 19 個真殘留）
 - `PARITY` —— zh／en key 沒有一一對應
-- `EN-CJK` —— `I18N.en` 裡有中文。**目前有 36 筆是刻意的**（中文數字、八折這類
+- `EN-CJK` —— `I18N.en` 裡有中文。**目前有 39 筆是刻意的**（中文數字、八折這類
   「中文本身就是教材」的字串），`en.btn` 的 `'中'` 也是正常的。
 
 ## 3. 題庫與選項檢查
@@ -144,7 +144,18 @@ node tools/breaktest.js grade-2/math/time
 不是整份輸出裡隨便一個子字串。原檔與改壞版**跑同一個亂數種子**（`SIMGEN_SEED`），
 不然兩次抽到不同參數，「只有改壞版失敗」可能只是運氣。
 （`SIMGEN_SEED=42 node tools/simgen.js <review.html> 1000` 也可以自己用來重現某一批。）
-目前：add-sub 6 筆、time 27 筆，全部會被抓到。
+目前：add-sub 6 筆、time 27 筆、length 35 筆，全部會被抓到。
+
+**檢查腳本自己也會有洞，而且補洞也會補錯**（2026-08-26 length 那一課，第三輪 codex 審查）：
+- `cms[q.ans]` 在 `ans` 越界時是 `undefined`，`undefined > 800` 是 false —— 整題沒被驗到卻是綠的。
+  **凡是用索引取值再拿去比較的，先驗索引合法。**
+- 靠「渲染結果的樣式」判斷該不該檢查（例如用 `rx="8"` 找長條）會 fail-open：
+  樣式一改，檢查就整個靜靜消失。改壞測試證明了這件事。現在改成
+  `rulerSVG` 直接輸出 `data-from`／`data-to`，**再加一個和樣式無關的第二偵測器**
+  （長條矩形的 y/height），兩個都沒中才算「這一題沒有圖」。
+- 神諭表（`BANK_EXPECTED`／`BANK_RULER`）只比對「有的題目」的話，**刪掉一題不會有人發現**。
+  要連長度一起比。
+- 註解寫的推導和旁邊的常數要一致 —— 審查者第一個抓的就是「註解算出 304，你寫 310」。
 
 **兩支都要先用「刻意改壞」的版本驗過會噴錯再拿去跑真檔** —— 現在用 `tools/breaktest.js`
 （§3e）跑，清單進版控。**沒響也要追原因**：add-sub 那一輪有一條沒響，

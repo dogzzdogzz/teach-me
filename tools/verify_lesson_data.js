@@ -45,6 +45,9 @@ const ARITH = /^\s*(\d+)\s*([+−-])\s*(\d+)\s*=\s*\?\s*$/;
   if (zh.length !== en.length) fail(`${bank}: zh/en length mismatch`);
   zh.forEach((q, i) => {
     const e = en[i];
+    /* 題數對不上時，這裡直接讀 en[i] 會丟 TypeError，整份報告變成 stack trace，
+       真正的錯誤訊息反而看不到。先擋掉，讓上面那筆 length mismatch 好好印出來。 */
+    if (!e){ fail(`${bank}[${i}]: missing in en`); return; }
     if (q.ans !== e.ans) fail(`${bank}[${i}]: ans differs zh=${q.ans} en=${e.ans}`);
     [['zh', q], ['en', e]].forEach(([L, item]) => {
       if (item.opts.length !== 4) fail(`${bank}[${i}] ${L}: ${item.opts.length} options`);

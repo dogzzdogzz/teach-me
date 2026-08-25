@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>量長度複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 70px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:6px 18px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:24px 0 4px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:6px;font-size:16px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:18px 22px;margin:20px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:16px;margin-top:18px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 12px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:12px 8px;
+    font-size:18px;cursor:pointer;color:var(--ink);min-height:50px;
+    display:flex;align-items:center;justify-content:center;font-weight:700;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:20px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:14px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:18px;
+    font-weight:700;padding:14px 26px;cursor:pointer;margin-top:16px;min-height:52px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 量長度複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己算一次 —— 算出來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：讀尺、公分公尺換算、長度加減交錯出現，<strong>每一批的數字都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'量長度複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 量長度複習挑戰',
+      sub:'不看速查卡、自己算一次 —— 算出來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：讀尺、公分公尺換算、長度加減交錯出現，<strong>每一批的數字都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Measuring Length Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Measuring Length Review Challenge',
+      sub:'No peeking at the cheat sheet — the moment you work it out is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving ruler reading, cm/metre conversion and length arithmetic — <strong>every batch uses fresh numbers</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ ruler:'讀尺', unit:'公分公尺', word:'文字題' },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        ruler:'📏 一大格就是 1 公分（範例教學 1）',
+        zero:'0️⃣ 頭要對準 0（範例教學 2）',
+        meter:'📐 100 公分接成 1 公尺（範例教學 3）',
+        calc:'➕ 接起來、剪掉（範例教學 4）'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ ruler:'Reading a ruler', unit:'cm and metres', word:'Word problem' },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        ruler:'📏 One Big Space Is 1 Centimetre (Example 1)',
+        zero:'0️⃣ Line the Start Up With 0 (Example 2)',
+        meter:'📐 100 Centimetres Make 1 Metre (Example 3)',
+        calc:'➕ Join It On, Cut It Off (Example 4)'
+      }
+    }
+  };
+
+  var LINK_HREFS = {
+    ruler:'index.html#secRuler', zero:'index.html#secZero',
+    meter:'index.html#secMeter', calc:'index.html#secCalc'
+  };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+
+  /* 長度值一律用物件表示，這樣「同一個長度的兩種寫法」也能被當成同一個值擋掉：
+       {t:'cm', n}          15 公分
+       {t:'m',  n}          2 公尺
+       {t:'comp', m, c}     1 公尺 30 公分
+     去重的鍵是「換算成公分之後的數」—— 100 公分和 1 公尺是同一個答案，
+     字串比對看不出來，孩子卻看得出來。 */
+  function cmOf(v){
+    if (v.t === 'cm') return v.n;
+    if (v.t === 'm') return v.n * 100;
+    return v.m * 100 + v.c;
+  }
+  function lenStr(v, lang){
+    if (v.t === 'cm') return lang === 'zh' ? (v.n + ' 公分') : (v.n + ' cm');
+    if (v.t === 'm') return lang === 'zh' ? (v.n + ' 公尺') : (v.n + ' m');
+    return lang === 'zh' ? (v.m + ' 公尺 ' + v.c + ' 公分') : (v.m + ' m ' + v.c + ' cm');
+  }
+  function CM(n){ return { t:'cm', n:n }; }
+  function M(n){ return { t:'m', n:n }; }
+  function COMP(m, c){ return { t:'comp', m:m, c:c }; }
+
+  /* 誘答：先用「真的會犯的錯」當候選，不夠再用保底。
+     保底一律是「長得像答案的長度」，不是垃圾字串；候選與保底都要
+     (a) 換算成公分之後不重複、(b) 不落在 taboo（題幹裡看得到的數字）上。 */
+  function mixOpts(correct, cands, fallback, taboo){
+    var out = [], seen = {};
+    var ban = taboo || [];
+    seen[cmOf(correct)] = true;
+    function ok(v){
+      if (v === null || v === undefined) return false;
+      if (v.t === 'comp' && (v.c < 1 || v.c > 99)) return false;
+      if (cmOf(v) < 1) return false;
+      if (seen[cmOf(v)]) return false;
+      if (ban.indexOf(cmOf(v)) >= 0) return false;
+      return true;
+    }
+    (cands || []).forEach(function(c){
+      if (out.length >= 3) return;
+      if (ok(c)){ seen[cmOf(c)] = true; out.push(c); }
+    });
+    var i = 0;
+    while (out.length < 3 && i < 60){
+      var f = fallback(i);
+      i++;
+      if (ok(f)){ seen[cmOf(f)] = true; out.push(f); }
+    }
+    var opts = shuffle([correct].concat(out));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+
+  /* 尺（和上課頁、速查卡同一套畫法）：0 到 max 公分，一大格 1 公分，
+     尺身兩端都比 0 和 max 多出一小段，跟真正的尺一樣。 */
+  function rulerSVG(o){
+    var max = o.max || 15;
+    var unit = o.unit || 24;
+    var padL = 28, padR = 28;
+    var w = padL + max * unit + padR;
+    var barY = 14, barH = 26;
+    var rTop = 56, rH = 42;
+    var h = rTop + rH + 4;
+    var s = '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h +
+            '" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    s += '<rect x="' + (padL - 16) + '" y="' + rTop + '" width="' + (max * unit + 32) + '" height="' + rH +
+         '" rx="6" fill="#FDF0E0" stroke="#E8871E" stroke-width="3"/>';
+    for (var i = 0; i <= max; i++){
+      var x = padL + i * unit;
+      var hot = (i === 0);
+      s += '<line x1="' + x + '" y1="' + rTop + '" x2="' + x + '" y2="' + (rTop + 15) +
+           '" stroke="' + (hot ? '#2F9E69' : '#2B2A33') + '" stroke-width="' + (hot ? 4 : 2) + '"/>';
+      s += '<text x="' + x + '" y="' + (rTop + 34) + '" font-size="12" text-anchor="middle" fill="' +
+           (hot ? '#2F9E69' : '#6B6875') + '" font-weight="' + (hot ? '800' : '700') + '">' + i + '</text>';
+    }
+    var bx = padL + o.from * unit, bw = (o.to - o.from) * unit;
+    s += '<rect x="' + bx + '" y="' + barY + '" width="' + bw + '" height="' + barH +
+         '" rx="7" fill="#3B7DD8"/>';
+    if (o.icon){
+      s += '<text x="' + (bx + 5) + '" y="' + (barY + barH - 7) + '" font-size="17">' + o.icon + '</text>';
+    }
+    var ends = [bx, bx + bw];
+    for (var e = 0; e < ends.length; e++){
+      s += '<line x1="' + ends[e] + '" y1="' + (barY - 4) + '" x2="' + ends[e] + '" y2="' + (rTop + 15) +
+           '" stroke="#D64545" stroke-width="2" stroke-dasharray="5 4"/>';
+    }
+    s += '</svg>';
+    return s;
+  }
+
+  var PENS = ['✏️','🖍️','🖊️','🖌️','📎','🥕'];
+
+  /* 估測題的物品：num ＋ unit 就是「大約多長」的正解，
+     每一個都附一句孩子驗得起來的理由（門比大人高一點、課本放得進書包）。 */
+  var OBJS = [
+    { unit:'cm', num:18,
+      zhAsk:'✏️ 一枝新鉛筆大約多長？',      enAsk:'✏️ About how long is a brand-new pencil?',
+      zhWhy:'鉛筆放在尺上，大約從 0 量到 18，所以是 18 公分。',
+      enWhy:'Lay a pencil on a ruler and it reaches about 18, so it is about 18 cm.' },
+    { unit:'cm', num:26,
+      zhAsk:'📕 課本的長邊大約多長？',      enAsk:'📕 About how long is the long side of a textbook?',
+      zhWhy:'課本比鉛筆長一點，大約 26 公分，剛好放得進書包。',
+      enWhy:'A textbook is a bit longer than a pencil, about 26 cm — it still fits in a school bag.' },
+    { unit:'cm', num:75,
+      zhAsk:'🪑 書桌的高度大約多高？',      enAsk:'🪑 About how tall is a desk?',
+      zhWhy:'書桌大約到大人的腰，差不多 75 公分。',
+      enWhy:'A desk comes up to about an adult’s waist, which is about 75 cm.' },
+    { unit:'cm', num:1,
+      zhAsk:'🖐️ 小指的寬度大約多寬？',     enAsk:'🖐️ About how wide is your little finger?',
+      zhWhy:'小指的寬度差不多就是尺上的一大格，也就是 1 公分。',
+      enWhy:'Your little finger is about as wide as one big space on the ruler, which is 1 cm.' },
+    { unit:'m', num:2,
+      zhAsk:'🚪 教室門的高度大約多高？',    enAsk:'🚪 About how tall is a classroom door?',
+      zhWhy:'門比大人再高一點，大約 2 公尺，也就是 200 公分。',
+      enWhy:'A door is a bit taller than a grown-up: about 2 m, which is 200 cm.' },
+    { unit:'m', num:8,
+      zhAsk:'🏫 教室的長邊大約多長？',      enAsk:'🏫 About how long is the long side of a classroom?',
+      zhWhy:'教室要走十幾步才走得完，大約 8 公尺，也就是 800 公分。',
+      enWhy:'It takes a dozen steps to cross a classroom: about 8 m, which is 800 cm.' }
+  ];
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 讀尺：左邊對準 0，右邊的數字就是答案 */
+    { id:'readRuler', cat:'ruler', grp:'ruler',
+      make:function(used){
+        /* to 最多 13，to+2 才不會超出 0~15 的尺 —— 誘答也不該指到尺以外的地方。 */
+        var to = pickUnused([4,5,6,7,8,9,10,11,12,13], used);
+        var correct = CM(to);
+        var cands = [ CM(to + 1), CM(to - 1), CM(to + 2) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [to - 2, to + 3, to - 3, to + 4];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 15) ? CM(v) : null;
+        }, []);
+        return { from:0, to:to, icon:pick(PENS), correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:(lang === 'zh' ? '這個東西有多長？' : 'How long is this?') +
+               rulerSVG({ from:d.from, to:d.to, icon:d.icon }),
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? '左邊對準 0，右邊對著 ' + d.to + ' → ' + (d.to - d.from) + ' 公分。'
+            : 'Left end on 0, right end at ' + d.to + ' → ' + (d.to - d.from) + ' cm.'
+        };
+      } },
+    /* 2. 讀尺：左邊沒對準 0，要用右邊的數字減掉左邊的（這一課最大的陷阱） */
+    { id:'readRulerOffset', cat:'ruler', grp:'zero',
+      make:function(used){
+        var from = 1 + rand(4);
+        var len = pickUnused([4,5,6,7,8,9,10,11], used);
+        var to = from + len;
+        var correct = CM(len);
+        var cands = [ CM(to), CM(from + to), CM(len + 1) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [len - 1, len + 2, len - 2, len + 3];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 15) ? CM(v) : null;
+        }, []);
+        return { from:from, to:to, icon:pick(PENS), correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:(lang === 'zh' ? '這個東西有多長？' : 'How long is this?') +
+               rulerSVG({ from:d.from, to:d.to, icon:d.icon }),
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? '左邊對著 ' + d.from + '，不是 0，所以不能直接讀右邊：' +
+              d.to + ' － ' + d.from + ' ＝ ' + (d.to - d.from) + ' 公分。'
+            : 'The left end is at ' + d.from + ', not 0, so the right-hand number is not the answer: ' +
+              d.to + ' − ' + d.from + ' = ' + (d.to - d.from) + ' cm.'
+        };
+      } },
+    /* 3. 幾公尺是幾公分 */
+    { id:'mToCm', cat:'unit', grp:'meter',
+      make:function(used){
+        var m = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var correct = CM(m * 100);
+        var cands = [ CM(m * 10), CM(m * 1000), CM(100) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [m * 100 + 100, m * 100 - 100, m * 100 + 10, m * 100 + 50];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 9000) ? CM(v) : null;
+        }, []);
+        return { m:m, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh' ? (d.m + ' 公尺是幾公分？') : ('How many centimetres are in ' + d.m + ' m?'),
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? '1 公尺 ＝ 100 公分，所以 ' + d.m + ' 公尺 ＝ ' + d.m + ' × 100 ＝ ' + (d.m * 100) + ' 公分。'
+            : '1 m = 100 cm, so ' + d.m + ' m = ' + d.m + ' × 100 = ' + (d.m * 100) + ' cm.'
+        };
+      } },
+    /* 4. 整百公分是幾公尺 */
+    { id:'cmToM', cat:'unit', grp:'meter',
+      make:function(used){
+        var m = pickUnused([2,3,4,5,6,7,8,9], used);
+        var cm = m * 100;
+        var correct = M(m);
+        var cands = [ M(m * 10), M(m + 1), M(m - 1) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [m + 2, m + 3, m * 2, m + 4];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 90) ? M(v) : null;
+        }, []);
+        return { m:m, cm:cm, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh' ? (d.cm + ' 公分是幾公尺？') : ('How many metres are in ' + d.cm + ' cm?'),
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? '100 公分是 1 公尺，' + d.cm + ' 公分裡面有 ' + d.m + ' 個 100，所以是 ' + d.m + ' 公尺。'
+            : '100 cm is 1 m, and ' + d.cm + ' cm contains ' + d.m + (d.m === 1 ? ' group' : ' groups') + ' of 100 cm, so it is ' + d.m + ' m.'
+        };
+      } },
+    /* 5. 幾公尺幾公分 → 全部用公分寫（1 公尺 5 公分 寫成 15 公分是最經典的錯） */
+    { id:'compoundToCm', cat:'unit', grp:'meter',
+      make:function(used){
+        var m = 1 + rand(2);
+        /* c 不取 2：m 也可能是 2，那時「忘了公尺」的誘答 CM(c) 會變成「2 公分」，
+           看起來就像把題幹的「2 公尺」抄回來。 */
+        var c = pickUnused([3,4,5,6,7,8,9,15,25,35,45,55,65,75,85,94], used);
+        var n = m * 100 + c;
+        var correct = CM(n);
+        var cands = [ CM(m * 10 + c), CM(c), CM(m * 100) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [n + 10, n - 10, n + 1, n - 1];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 400) ? CM(v) : null;
+        }, []);
+        return { m:m, c:c, n:n, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? (d.m + ' 公尺 ' + d.c + ' 公分，全部用公分寫是多少？')
+            : ('How is ' + d.m + ' m ' + d.c + ' cm written using only centimetres?'),
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? d.m + ' 公尺 ＝ ' + (d.m * 100) + ' 公分，再加 ' + d.c + ' 公分 ＝ ' + d.n + ' 公分。'
+            : d.m + ' m = ' + (d.m * 100) + ' cm, plus ' + d.c + ' cm makes ' + d.n + ' cm.'
+        };
+      } },
+    /* 6. 全部用公分寫的長度 → 幾公尺幾公分 */
+    { id:'cmToCompound', cat:'unit', grp:'meter',
+      make:function(used){
+        var m = 1 + rand(2);
+        var c = pickUnused([12,14,16,23,27,34,38,41,47,52,58,63,69,76,84,91,95], used);
+        var n = m * 100 + c;
+        var correct = COMP(m, c);
+        var cands = [ COMP(m, Math.floor(c / 10)), COMP(m, c % 10), COMP(m + 1, c) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [[m, c + 10], [m, c - 10], [m + 1, c - 10], [m, c + 20]];
+          var p = alt[i % alt.length];
+          return COMP(p[0], p[1]);
+        }, []);
+        return { m:m, c:c, n:n, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? (d.n + ' 公分，用幾公尺幾公分寫是多少？')
+            : ('How is ' + d.n + ' cm written in metres and centimetres?'),
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? d.n + ' 公分裡面有 ' + d.m + ' 個 100，剩下 ' + d.c + ' 公分，所以是 ' + d.m + ' 公尺 ' + d.c + ' 公分。'
+            : d.n + ' cm contains ' + d.m + (d.m === 1 ? ' group' : ' groups') + ' of 100 cm, with ' + d.c + ' cm left over, so it is ' + d.m + ' m ' + d.c + ' cm.'
+        };
+      } },
+    /* 7. 接起來（同單位相加） */
+    { id:'addLength', cat:'word', grp:'calc',
+      make:function(used){
+        var a = pickUnused([12,16,21,24,28,33,35,42,46,51,55,62,68], used);
+        var b = 5 + rand(35);
+        var sum = a + b;
+        var correct = CM(sum);
+        var cands = [ CM(a - b), CM(sum + 10), CM(sum - 10) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [sum + 1, sum - 1, sum + 20, sum - 20];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 200) ? CM(v) : null;
+        }, [a, b]);
+        return { a:a, b:b, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? ('一條緞帶長 ' + d.a + ' 公分，<br>再接上一條 ' + d.b + ' 公分的緞帶。<br>接起來一共幾公分？')
+            : ('One ribbon is ' + d.a + ' cm long.<br>Another ribbon, ' + d.b + ' cm long, is joined onto the end of it.<br>How long is the joined ribbon?'),
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? '接起來要用加的：' + d.a + ' ＋ ' + d.b + ' ＝ ' + (d.a + d.b) + ' 公分。'
+            : 'Joining means adding: ' + d.a + ' + ' + d.b + ' = ' + (d.a + d.b) + ' cm.'
+        };
+      } },
+    /* 8. 剪掉（同單位相減） */
+    { id:'subLength', cat:'word', grp:'calc',
+      make:function(used){
+        var a = pickUnused([42,47,53,58,61,66,72,78,83,88,92,96], used);
+        var b = 10 + rand(25);
+        var rest = a - b;
+        var correct = CM(rest);
+        var cands = [ CM(a + b), CM(rest + 10), CM(rest - 10) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [rest + 1, rest - 1, rest + 20, rest - 20];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 200) ? CM(v) : null;
+        }, [a, b]);
+        return { a:a, b:b, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? ('一條繩子長 ' + d.a + ' 公分，剪掉 ' + d.b + ' 公分。<br>還剩下幾公分？')
+            : ('A string is ' + d.a + ' cm long, and a piece ' + d.b + ' cm long is cut off.<br>How many centimetres are left?'),
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? '剪掉要用減的：' + d.a + ' － ' + d.b + ' ＝ ' + (d.a - d.b) + ' 公分。'
+            : 'Cutting off means subtracting: ' + d.a + ' − ' + d.b + ' = ' + (d.a - d.b) + ' cm.'
+        };
+      } },
+    /* 9. 公尺減公分：一定要先把公尺換成公分 */
+    { id:'meterMinus', cat:'word', grp:'calc',
+      make:function(used){
+        var m = 1 + rand(2);
+        var b = pickUnused([10,15,20,25,30,35,40,45,50,55,60,65,70], used);
+        var total = m * 100;
+        var rest = total - b;
+        var correct = CM(rest);
+        var cands = [ CM(total), CM(total + b), (m === 2 ? CM(100 - b) : null), CM(rest + 10) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [rest - 10, rest + 20, rest - 20, rest + 5];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 400) ? CM(v) : null;
+        }, [b]);
+        return { m:m, b:b, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? ('一條繩子長 ' + d.m + ' 公尺，剪掉 ' + d.b + ' 公分。<br>還剩下幾公分？')
+            : ('A string is ' + d.m + ' m long, and a piece ' + d.b + ' cm long is cut off.<br>How many centimetres are left?'),
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? '先換算：' + d.m + ' 公尺 ＝ ' + (d.m * 100) + ' 公分，再相減：' +
+              (d.m * 100) + ' － ' + d.b + ' ＝ ' + (d.m * 100 - d.b) + ' 公分。'
+            : 'Convert first: ' + d.m + ' m = ' + (d.m * 100) + ' cm, then subtract: ' +
+              (d.m * 100) + ' − ' + d.b + ' = ' + (d.m * 100 - d.b) + ' cm.'
+        };
+      } },
+    /* 10. 估測：這種東西大約多長（數字要對，單位也要對） */
+    { id:'pickUnit', cat:'unit', grp:'meter',
+      make:function(used){
+        var idx = Number(pickUnused([0,1,2,3,4,5], used));
+        var o = OBJS[idx];
+        var num = o.num;
+        var correct = (o.unit === 'cm') ? CM(num) : M(num);
+        var cands = (o.unit === 'cm')
+          ? [ M(num), CM(num * 10), CM(num >= 10 ? Math.round(num / 10) : num * 5) ]
+          : [ CM(num), M(num * 10), CM(num * 10) ];
+        var mix = mixOpts(correct, cands, function(i){
+          if (o.unit === 'cm'){
+            var alt = [num + 3, num - 3, num + 7, num * 2];
+            var v = alt[i % alt.length];
+            return (v >= 1 && v <= 800) ? CM(v) : null;
+          }
+          var altM = [num + 1, num + 2, num + 3, num + 4];
+          var vm = altM[i % altM.length];
+          return (vm >= 1 && vm <= 80) ? M(vm) : null;
+        }, []);
+        return { idx:idx, obj:o, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh' ? d.obj.zhAsk : d.obj.enAsk,
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh' ? d.obj.zhWhy : d.obj.enWhy
+        };
+      } },
+    /* 11. 比長短：四個長度寫法不同，要先都換成公分才能比 */
+    { id:'compareLength', cat:'unit', grp:'meter',
+      make:function(used){
+        var small = 30 + rand(14) * 5;                 /* 30 ~ 95，一定用公分寫 */
+        var bigPool = [];
+        for (var v = 100; v <= 260; v += 5) bigPool.push(v);
+        var bigs = shuffle(bigPool).slice(0, 3);
+        used.push(String(small));
+        var vals = [small].concat(bigs);
+        var objs = vals.map(function(x){
+          if (x < 100) return CM(x);
+          if (x % 100 === 0) return (rand(2) === 0) ? M(x / 100) : CM(x);
+          return (rand(2) === 0) ? COMP(Math.floor(x / 100), x % 100) : CM(x);
+        });
+        var best = objs[0];
+        objs.forEach(function(o){ if (cmOf(o) > cmOf(best)) best = o; });
+        var opts = shuffle(objs);
+        return { vals:vals, correct:best, opts:opts, ans:opts.indexOf(best) };
+      },
+      fmt:function(d, lang){
+        var cms = d.opts.map(function(v){ return cmOf(v); });
+        return {
+          stem:lang === 'zh' ? '下面哪一個最長？' : 'Which of these is the longest?',
+          opts:d.opts.map(function(v){ return lenStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? '都換成公分再比：' + cms.join('、') + ' —— 最大的是 ' + cmOf(d.correct) +
+              ' 公分，也就是 ' + lenStr(d.correct, lang) + '。'
+            : 'Turn them all into centimetres first: ' + cms.join(', ') + ' — the biggest is ' +
+              cmOf(d.correct) + ' cm, which is ' + lenStr(d.correct, lang) + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：11 種題型各一題＋核心題型隨機 1 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['readRuler','readRulerOffset','compoundToCm','addLength','subLength'].indexOf(g.id) >= 0;
+    });
+    slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var grp = item.gen.grp;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[grp] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
