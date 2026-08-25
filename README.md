@@ -38,7 +38,7 @@
 | 🔁 規律接接看 | 數的規律 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/parents.html) |
 
 
-## 二年級（5 個主題）
+## 二年級（6 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
 |------|------|:---:|:---:|:---:|:---:|
@@ -47,8 +47,9 @@
 | 🍪 乘法排排隊 | 九九乘法 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/parents.html) |
 | ⏰ 時間小管家 | 幾點幾分與日期 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/time/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/time/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/time/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/time/parents.html) |
 | 📏 量尺小達人 | 長度（公分與公尺） | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/length/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/length/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/length/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/length/parents.html) |
+| 🍬 分一分小幫手 | 分裝與平分 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/divide/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/divide/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/divide/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/divide/parents.html) |
 
-二年級的其他單元（分裝與平分、兩步驟問題、容量與重量、平面圖形、立體形體、統計表）課程還在準備中。
+二年級的其他單元（兩步驟問題、容量與重量、平面圖形、立體形體、統計表）課程還在準備中。
 
 
 ## 三年級（17 個主題）
@@ -117,7 +118,7 @@ lessons.js                     # 全站唯一的課程清單（哪個年級有�
 grade-1/ … grade-6/index.html  # 年級頁：領域摘要＋該年級的課程清單（依領域分區）
 docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調整與深度規格）
 grade-1/math/                  # 一年級：單元整理＋ 9 個四頁迷你課程
-grade-2/math/                  # 二年級：單元整理＋ 5 個四頁迷你課程（numbers／add-sub／multiply／time／length）
+grade-2/math/                  # 二年級：單元整理＋ 6 個四頁迷你課程（numbers／add-sub／multiply／time／length／divide）
 grade-3/math/                  # 三年級：單元整理＋ 17 個四頁迷你課程
 grade-4/math/                  # 四年級：單元整理（課程準備中）
 grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你課程

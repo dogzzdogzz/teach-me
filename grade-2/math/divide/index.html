@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我分一分 — 分一分小幫手</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.75; font-size:18px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:8px 20px;font-size:16px;font-weight:700;cursor:pointer;min-height:44px;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:36px 0 8px}
+  header h1{font-size:clamp(30px,7vw,46px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:19px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:22px 24px;margin:26px 0;font-size:19px;text-align:center;
+  }
+  section{margin-top:50px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:3px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:16px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:10px 24px;font-size:19px;font-weight:700;cursor:pointer;color:var(--ink);min-height:48px;
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .hopline{margin-top:14px;font-size:19px;min-height:32px;text-align:center}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:19px;
+    font-weight:700;padding:14px 28px;cursor:pointer;min-height:52px;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .btnrow{display:flex;gap:14px;margin-top:16px;flex-wrap:wrap}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:19px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:14px 10px;
+    font-size:19px;cursor:pointer;color:var(--ink);min-height:52px;
+    display:flex;align-items:center;justify-content:center;font-weight:700;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:16px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:14px 20px;font-size:17px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:17px;margin-top:14px}
+  .gamemsg{margin-top:14px;font-size:18px;min-height:28px}
+  .hint{color:var(--muted);font-size:16px;margin-top:6px;min-height:22px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  footer{
+    margin-top:60px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:26px;font-size:19px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:16px;text-align:center;cursor:pointer;font-size:16px;color:var(--ink);min-height:96px;
+  }
+  .mode .mbig{font-size:28px}
+  .mode h3{font-size:18px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:17px;display:grid;gap:12px}
+
+  /* --- 這一課專用 --- */
+  .picwrap{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:10px}
+  /* 一份一份數出來的數列：數過的亮起來，還沒數到的留白 */
+  .countline{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px;min-height:34px}
+  .cnum{
+    border:2px solid var(--line);border-radius:10px;padding:2px 10px;
+    font-size:16px;font-weight:800;color:#C9C4B8;background:var(--card);
+  }
+  .cnum.on{color:var(--orange);border-color:var(--orange);background:var(--orange-soft)}
+  .bigeq{font-size:28px;font-weight:800;color:var(--green);letter-spacing:1px}
+  .bigans{font-size:26px;font-weight:800;color:var(--green)}
+  .gopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
+  .gopt{
+    border:3px solid var(--line);background:var(--card);border-radius:16px;padding:16px 10px;
+    font-size:21px;font-weight:800;color:var(--ink);cursor:pointer;min-height:60px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .gopt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gopt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .gopt:disabled{cursor:default;opacity:.9}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🍬 分一分小幫手</h1>
+    <p class="sub" data-i18n="sub">分裝與平分，用乘法算式找答案</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    每份幾個 × 幾份 ＝ 總數。<br>缺哪一格，就找哪一格！
+  </div>
+
+  <!-- 模式選擇 -->
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
+  </div>
+
+  <!-- 1. 一包一包裝 -->
+  <section id="secPack">
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">一包一包裝</h2>
+    <p class="lead" data-i18n="s1lead">每包裝一樣多，裝到不夠再裝一包就停，數數看有幾包。</p>
+    <div class="card">
+      <div class="picwrap" id="packPic"></div>
+      <div class="countline" id="packCount"></div>
+      <p class="hopline" id="packLine"></p>
+      <div class="btnrow">
+        <button class="btn" id="packBtn" type="button" data-i18n="s1BtnNext">再裝一包</button>
+        <button class="btn ghost" id="packReset" type="button" data-i18n="s1BtnReset">重新來一次</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 一個一個輪流發 -->
+  <section id="secShare">
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">一個一個輪流發</h2>
+    <p class="lead" data-i18n="s2lead">一人一個輪流發，發到不夠再發一輪就停，這樣每個人一樣多。</p>
+    <div class="card">
+      <div class="picwrap" id="sharePic"></div>
+      <div class="countline" id="shareCount"></div>
+      <p class="hopline" id="shareLine"></p>
+      <div class="btnrow">
+        <button class="btn" id="shareBtn" type="button" data-i18n="s2BtnNext">再發一輪</button>
+        <button class="btn ghost" id="shareReset" type="button" data-i18n="s2BtnReset">重新來一次</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 同樣的數字，兩種問法 -->
+  <section id="secBoth">
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">同樣的數字，兩種問法</h2>
+    <p class="lead" data-i18n="s3lead">答案都是 4，可是 4 的意思不一樣。</p>
+    <div class="card">
+      <div class="chips" id="bothChips"></div>
+      <div class="picwrap" id="bothPic"></div>
+      <p class="hopline" id="bothLine"></p>
+      <div class="btnrow">
+        <button class="btn" id="bothBtn" type="button" data-i18n="s3BtnNext">下一步</button>
+        <button class="btn ghost" id="bothReset" type="button" data-i18n="s3BtnReset">重新來一次</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 用乘法算式找答案 -->
+  <section id="secEq">
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">用乘法算式找答案</h2>
+    <p class="lead" data-i18n="s4lead">把空格寫出來，再想九九乘法。</p>
+    <div class="card">
+      <div class="chips" id="eqChips"></div>
+      <p class="hopline" id="eqLine"></p>
+      <div class="btnrow">
+        <button class="btn" id="eqBtn" type="button" data-i18n="s4BtnNext">下一步</button>
+        <button class="btn ghost" id="eqReset" type="button" data-i18n="s4BtnReset">重新來一次</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">試題</span>
+    <h2 data-i18n="s5h2">檢查一下</h2>
+    <p class="lead" data-i18n="s5lead">點一下答案，馬上知道對不對！</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 6. 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">小遊戲</span>
+    <h2 data-i18n="s6h2">分一分大挑戰</h2>
+    <p class="lead" data-i18n="s6lead">先看清楚問的是幾份，還是每份幾個！</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <p class="hopline" id="gAskLine"></p>
+      <div class="picwrap" id="gPic"></div>
+      <p class="hint" id="gHint"></p>
+      <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
+      </div>
+      <div class="gopts" id="gAnswers"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 學完之後 -->
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的三個動作</h2>
+    <div class="card">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a>。</li>
+        <li data-i18n="next3">❓ 看不懂就問爸媽或 AI 老師，會問問題的人學最快。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>每份幾個 × 幾份 ＝ 總數，缺哪一格就找哪一格！</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 語言無關的資料 ---------- */
+  /* 四個情境。圖案放在這裡（語言無關），單位詞（顆／包）放在字典裡，
+     兩邊用 si（情境編號）對齊。 */
+  var SCENES = [
+    { icon:'🍬' },
+    { icon:'🍎' },
+    { icon:'🍪' },
+    { icon:'✏️' }
+  ];
+
+  /* 範例 1（分裝／包含除）：12 顆糖，每包 3 顆，一包一包裝 → 4 包。
+     知道「每份幾個」，要找的是「幾份」。 */
+  var PACK_EX = { si:0, total:12, per:3 };
+  /* 範例 2（平分／等分除）：12 個蘋果分給 3 個小朋友，一個一個輪流發 → 每人 4 個。
+     知道「幾份」，要找的是「每份幾個」。 */
+  var SHARE_EX = { si:1, total:12, n:3 };
+  /* 範例 3：同樣的 12 和 3，兩種問法。答案的數字都是 4，單位不一樣 ——
+     這一課最容易搞混的就是這一點，所以刻意用同一組數字。 */
+  var BOTH_EX = { si:0, total:12, k:3 };
+  /* 範例 4：用乘法算式找答案。kind 決定空格在哪一格：
+     分裝是「每份 × □」，平分是「□ × 份數」。 */
+  var EQ_CASES = [
+    { kind:'pack',  si:0, total:18, k:6 },
+    { kind:'share', si:2, total:20, k:4 },
+    { kind:'pack',  si:3, total:24, k:8 }
+  ];
+  /* 遊戲：五關，兩種問法交錯。opts 是純數字，單位由 kind 決定
+     （分裝問幾份 → 份的單位；平分問每份幾個 → 個的單位），
+     所以沒有第二個要跟著對齊的陣列。
+     誘答都是真的會犯的錯：把題目給的數字抄回來（搞錯空格的位置）、
+     除以 2、或是用減的。 */
+  var ROUNDS = [
+    { kind:'pack',  si:0, total:12, k:3, opts:[4, 3, 6],  ans:0 },
+    { kind:'share', si:1, total:12, k:4, opts:[4, 3, 8],  ans:1 },
+    { kind:'pack',  si:2, total:20, k:5, opts:[5, 4, 15], ans:1 },
+    { kind:'share', si:3, total:18, k:3, opts:[9, 3, 6],  ans:2 },
+    { kind:'pack',  si:0, total:24, k:4, opts:[8, 4, 6],  ans:2 }
+  ];
+
+  /* 一顆一顆畫出來（還沒分的樣子）：每列最多 10 個。
+     svg 上寫 data-count，檢查腳本靠它驗「畫出來的數量等於題目的總數」，
+     不必從像素反推，改樣式也不會讓檢查靜靜失效。 */
+  function itemsSVG(n, icon, o){
+    o = o || {};
+    var size = o.size || 26, perRow = o.perRow || 10;
+    var cols = Math.min(n, perRow) || 1;
+    var rows = Math.ceil(n / perRow) || 1;
+    var w = cols * size + 14, h = rows * size + 12;
+    var s = '<svg data-count="' + n + '" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h +
+            '" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    for (var i = 0; i < n; i++){
+      var x = 7 + (i % perRow) * size;
+      var y = 6 + Math.floor(i / perRow) * size;
+      s += '<text x="' + x + '" y="' + (y + size - 8) + '" font-size="' + (size - 6) + '">' + icon + '</text>';
+    }
+    s += '</svg>';
+    return s;
+  }
+
+  /* 分裝的圖：bags 個已經裝好的袋子（每袋 per 個），還沒裝的散在下面。
+     袋子每列最多 5 個，per 最多 9 個，手機上也放得下。 */
+  function packSVG(total, per, bags, icon){
+    var size = 20, padIn = 8, gap = 10, perRow = 5;
+    var bagW = per * size + padIn * 2, bagH = size + padIn * 2;
+    var cols = Math.min(Math.max(bags, 1), perRow);
+    var rows = Math.ceil(bags / perRow) || 1;
+    var left = total - bags * per;
+    var looseRows = Math.ceil(left / 10);
+    /* 寬度要同時容納「裝好的袋子」和「還沒裝的那一堆」—— 只量袋子的話，
+       一開始（0 袋）的圖會把散落的東西整排切掉，孩子數到的總數就是錯的。 */
+    var looseW = (left > 0) ? (7 + Math.min(left, 10) * 26 + 6) : 0;
+    var w = Math.max(cols * (bagW + gap) + 10, looseW);
+    var h = rows * (bagH + gap) + 8 + (left > 0 ? looseRows * 26 + 14 : 0);
+    var s = '<svg data-total="' + total + '" data-per="' + per + '" data-bags="' + bags +
+            '" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h +
+            '" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    for (var b = 0; b < bags; b++){
+      var bx = 5 + (b % perRow) * (bagW + gap);
+      var by = 4 + Math.floor(b / perRow) * (bagH + gap);
+      s += '<rect x="' + bx + '" y="' + by + '" width="' + bagW + '" height="' + bagH +
+           '" rx="10" fill="#E3F4EB" stroke="#2F9E69" stroke-width="3"/>';
+      for (var i = 0; i < per; i++){
+        s += '<text x="' + (bx + padIn + i * size) + '" y="' + (by + padIn + size - 4) +
+             '" font-size="' + (size - 4) + '">' + icon + '</text>';
+      }
+    }
+    if (left > 0){
+      var ly = rows * (bagH + gap) + 10;
+      for (var j = 0; j < left; j++){
+        s += '<text x="' + (7 + (j % 10) * 26) + '" y="' + (ly + Math.floor(j / 10) * 26 + 18) +
+             '" font-size="20">' + icon + '</text>';
+      }
+    }
+    s += '</svg>';
+    return s;
+  }
+
+  /* 平分的圖：n 個盤子，每個盤子裡有 rounds 個，還沒發的散在下面。 */
+  function shareSVG(total, n, rounds, icon){
+    var size = 20, padIn = 8, gap = 12;
+    var cellN = Math.max(rounds, 1);
+    var plateW = cellN * size + padIn * 2, plateH = size + padIn * 2 + 16;
+    var left = total - rounds * n;
+    var looseRows = Math.ceil(left / 10);
+    /* 同上：一開始（0 輪）盤子是空的，整堆東西都還散在下面。 */
+    var looseW = (left > 0) ? (7 + Math.min(left, 10) * 26 + 6) : 0;
+    var w = Math.max(n * (plateW + gap) + 10, looseW);
+    var h = plateH + 10 + (left > 0 ? looseRows * 26 + 14 : 0);
+    var s = '<svg data-total="' + total + '" data-plates="' + n + '" data-rounds="' + rounds +
+            '" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h +
+            '" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    for (var p = 0; p < n; p++){
+      var px = 5 + p * (plateW + gap);
+      s += '<rect x="' + px + '" y="4" width="' + plateW + '" height="' + (plateH - 16) +
+           '" rx="12" fill="#E8F0FB" stroke="#3B7DD8" stroke-width="3"/>';
+      for (var i = 0; i < rounds; i++){
+        s += '<text x="' + (px + padIn + i * size) + '" y="' + (4 + padIn + size - 4) +
+             '" font-size="' + (size - 4) + '">' + icon + '</text>';
+      }
+      s += '<text x="' + (px + plateW / 2) + '" y="' + (plateH + 1) +
+           '" font-size="13" text-anchor="middle" fill="#3B7DD8" font-weight="800">' + rounds + '</text>';
+    }
+    if (left > 0){
+      var ly = plateH + 8;
+      for (var j = 0; j < left; j++){
+        s += '<text x="' + (7 + (j % 10) * 26) + '" y="' + (ly + Math.floor(j / 10) * 26 + 18) +
+             '" font-size="20">' + icon + '</text>';
+      }
+    }
+    s += '</svg>';
+    return s;
+  }
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'教我分一分 — 分一分小幫手', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      h1:'🍬 分一分小幫手', sub:'分裝與平分，用乘法算式找答案',
+      intro:'每份幾個 × 幾份 ＝ 總數。<br>缺哪一格，就找哪一格！',
+      nav1:'📖 上課（本頁）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      modeTitle:'今天想怎麼學？（隨時可以換）',
+      modes:{
+        ahead:  { icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：範例慢慢按，試題只出 6 題基礎題，遊戲會自動給提示。' },
+        school: { icon:'🏫', h:'跟上進度', p:'學校正在教，完整練習', banner:'跟上模式：完整 10 題，包含 4 題文字題。' },
+        boost:  { icon:'💪', h:'補強練習', p:'學過但還不穩，加強', banner:'補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。' }
+      },
+      eb1:'範例教學 1', eb2:'範例教學 2', eb3:'範例教學 3', eb4:'範例教學 4', eb5:'試題', eb6:'小遊戲',
+      s1h2:'一包一包裝', s1lead:'每包裝一樣多，裝到不夠再裝一包就停，數數看有幾包。',
+      s2h2:'一個一個輪流發', s2lead:'一人一個輪流發，發到不夠再發一輪就停，這樣每個人一樣多。',
+      s3h2:'同樣的數字，兩種問法', s3lead:'答案都是 4，可是 4 的意思不一樣。',
+      s4h2:'用乘法算式找答案', s4lead:'把空格寫出來，再想九九乘法。',
+      s5h2:'檢查一下', s5lead:'點一下答案，馬上知道對不對！',
+      s6h2:'分一分大挑戰', s6lead:'先看清楚問的是幾份，還是每份幾個！',
+      ebNext:'學完之後', nextH2:'把它記牢的三個動作',
+      next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a>。',
+      next3:'❓ 看不懂就問爸媽或 AI 老師，會問問題的人學最快。',
+      footer:'把整頁縮成一句：<strong>每份幾個 × 幾份 ＝ 總數，缺哪一格就找哪一格！</strong>',
+
+      /* 情境的單位詞。索引和資料區的 SCENES 對齊。 */
+      scenes:[
+        { thing:'糖果', item:'顆', grp:'包' },
+        { thing:'蘋果', item:'個', grp:'籃' },
+        { thing:'餅乾', item:'片', grp:'盤' },
+        { thing:'鉛筆', item:'枝', grp:'盒' }
+      ],
+      qtyThing:function(si, n){ return n + ' ' + this.scenes[si].item + this.scenes[si].thing; },
+      qtyItem:function(si, n){ return n + ' ' + this.scenes[si].item; },
+      qtyGrp:function(si, n){ return n + ' ' + this.scenes[si].grp; },
+      itemWord:function(si){ return this.scenes[si].item; },
+      grpWord:function(si){ return this.scenes[si].grp; },
+
+      s1BtnNext:'再裝一包', s1BtnReset:'重新來一次', s1BtnAgain:'再裝一次',
+      p1Start:function(c){
+        return '一共 ' + this.qtyThing(c.si, c.total) + '。按「再裝一包」，每 ' +
+               this.qtyItem(c.si, c.per) + '裝成一' + this.grpWord(c.si) + '。';
+      },
+      p1Step:function(c, bags, left){
+        return '裝好 ' + this.qtyGrp(c.si, bags) + '，還剩 ' + this.qtyItem(c.si, left) + '。';
+      },
+      p1End:function(c, g){
+        return this.qtyThing(c.si, c.total) + '剛好裝完，一共 <span class="bigans">' +
+               this.qtyGrp(c.si, g) + '</span><br><span class="bigeq">' +
+               c.per + ' × ' + g + ' ＝ ' + c.total + '</span>';
+      },
+
+      s2BtnNext:'再發一輪', s2BtnReset:'重新來一次', s2BtnAgain:'再發一次',
+      p2Start:function(c){
+        return '一共 ' + this.qtyThing(c.si, c.total) + '，分給 ' + c.n +
+               ' 個小朋友。按「再發一輪」，每人先拿 1 ' + this.itemWord(c.si) + '。';
+      },
+      p2Step:function(c, rounds, left){
+        return '發了 ' + rounds + ' 輪，每人 ' + this.qtyItem(c.si, rounds) +
+               '，還剩 ' + this.qtyItem(c.si, left) + '。';
+      },
+      p2End:function(c, q){
+        return '發完了！每人 <span class="bigans">' + this.qtyItem(c.si, q) +
+               '</span><br><span class="bigeq">' + q + ' × ' + c.n + ' ＝ ' + c.total + '</span>';
+      },
+
+      bothChip:function(c, kind){
+        return kind === 'pack'
+          ? ('📦 分裝：每' + this.grpWord(c.si) + ' ' + this.qtyItem(c.si, c.k))
+          : ('🤝 平分：分給 ' + c.k + ' 個小朋友');
+      },
+      s3BtnNext:'下一步', s3BtnReset:'重新來一次', s3BtnAgain:'再看一次',
+      b0:function(c){
+        return '一樣是 ' + this.qtyThing(c.si, c.total) + '，一樣有 ' + c.k +
+               '。按「下一步」看看差在哪裡。';
+      },
+      b1:function(c, kind){
+        return kind === 'pack'
+          ? ('知道的是「每' + this.grpWord(c.si) + '幾' + this.itemWord(c.si) + '」，要找的是「幾' + this.grpWord(c.si) + '」。')
+          : ('知道的是「幾個小朋友」，要找的是「每人幾' + this.itemWord(c.si) + '」。');
+      },
+      b2:function(c, kind, ans){
+        if (kind === 'pack'){
+          var seq = [];
+          for (var i = 1; i <= ans; i++) seq.push(i * c.k);
+          return '一' + this.grpWord(c.si) + '一' + this.grpWord(c.si) + '裝：' + seq.join('、') + ' —— 剛好裝完。';
+        }
+        return '一' + this.itemWord(c.si) + '一' + this.itemWord(c.si) + '輪流發，發了 ' + ans + ' 輪 —— 剛好發完。';
+      },
+      b3:function(c, kind, ans){
+        return kind === 'pack'
+          ? ('答案是 <span class="bigans">' + this.qtyGrp(c.si, ans) + '</span>（單位是「' + this.grpWord(c.si) +
+             '」）。<br><span class="bigeq">' + c.k + ' × ' + ans + ' ＝ ' + c.total +
+             '</span><br>兩種問法的答案都是 ' + ans + '，可是這個 ' + ans + ' 是' + this.grpWord(c.si) + '數。')
+          : ('答案是每人 <span class="bigans">' + this.qtyItem(c.si, ans) + '</span>（單位是「' + this.itemWord(c.si) +
+             '」）。<br><span class="bigeq">' + ans + ' × ' + c.k + ' ＝ ' + c.total +
+             '</span><br>兩種問法的答案都是 ' + ans + '，可是這個 ' + ans + ' 是每人拿到的' + this.itemWord(c.si) + '數。');
+      },
+
+      eqChip:function(c){
+        return c.kind === 'pack'
+          ? ('📦 ' + this.qtyThing(c.si, c.total) + '，每' + this.grpWord(c.si) + ' ' + this.qtyItem(c.si, c.k))
+          : ('🤝 ' + this.qtyThing(c.si, c.total) + '，分給 ' + c.k + ' 個小朋友');
+      },
+      s4BtnNext:'下一步', s4BtnReset:'重新來一次', s4BtnAgain:'再看一次',
+      e0:'按「下一步」，一步一步找答案。',
+      e1:function(c){
+        return c.kind === 'pack'
+          ? ('知道每' + this.grpWord(c.si) + ' ' + this.qtyItem(c.si, c.k) + '，要找幾' + this.grpWord(c.si) + '。')
+          : ('知道有 ' + c.k + ' 個小朋友，要找每人幾' + this.itemWord(c.si) + '。');
+      },
+      e2:function(c){
+        return '寫成算式：<span class="bigeq">' +
+               (c.kind === 'pack' ? (c.k + ' × □ ＝ ' + c.total) : ('□ × ' + c.k + ' ＝ ' + c.total)) +
+               '</span>';
+      },
+      e3:function(c, ans){
+        return '想九九乘法：' +
+               (c.kind === 'pack' ? (c.k + ' × ' + ans + ' ＝ ' + c.total) : (ans + ' × ' + c.k + ' ＝ ' + c.total)) +
+               '，所以 □ 是 ' + ans + '。';
+      },
+      e4:function(c, ans){
+        return c.kind === 'pack'
+          ? ('乘回去檢查剛好分完，答案是 <span class="bigans">' + this.qtyGrp(c.si, ans) + '</span>')
+          : ('乘回去檢查剛好分完，答案是每人 <span class="bigans">' + this.qtyItem(c.si, ans) + '</span>');
+      },
+
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了！</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      cAll:'全對！你是分東西小高手 🏆',
+      cGood:'很棒！錯的那幾題再看一次說明。',
+      cTry:'沒關係，回到上面再按一次「下一步」。',
+      qs:[
+        { stem:'🍬 12 顆糖果，每包裝 3 顆。<br>可以裝幾包？',
+          opts:['3 包','4 包','9 包','12 包'], ans:1,
+          why:'一包一包裝：3、6、9、12 —— 裝了 4 包。3 × 4 ＝ 12。' },
+        { stem:'🍎 12 個蘋果，平分給 3 個小朋友。<br>每人幾個？',
+          opts:['4 個','3 個','6 個','9 個'], ans:0,
+          why:'一個一個輪流發，發 4 輪剛好發完，每人 4 個。4 × 3 ＝ 12。' },
+        { stem:'🍪 每盤放 5 片餅乾，放了 4 盤。<br>一共幾片？',
+          opts:['9 片','25 片','16 片','20 片'], ans:3,
+          why:'每盤 5 片、有 4 盤：5 × 4 ＝ 20 片。' },
+        { stem:'🍬 20 顆糖果，每包裝 5 顆。<br>裝好之後有幾包？',
+          opts:['4 顆','5 包','4 包','20 包'], ans:2,
+          why:'20 裡面有 4 個 5：5 × 4 ＝ 20。問的是幾包，所以答案是 4 包。' },
+        { stem:'🍬 18 顆糖果，每包裝 6 顆。<br>哪一個算式可以找到「幾包」？',
+          opts:['6 ＋ □ ＝ 18','6 × □ ＝ 18','18 × 6 ＝ □','6 － □ ＝ 18'], ans:1,
+          why:'每包 6 顆 × 幾包 ＝ 18 顆，所以是 6 × □ ＝ 18，□ 是 3。' },
+        { stem:'🍪 15 片餅乾平分給 3 個小朋友。<br>哪一種分法才是平分？',
+          opts:['4、5、6','5、5、5','3、5、7','6、6、3'], ans:1,
+          why:'平分就是每個人一樣多：5、5、5，加起來剛好 15 片。' }
+      ],
+      qsAdv:[
+        { stem:'🍬 24 顆糖果，每包裝 4 顆。<br>裝好之後有幾包？',
+          opts:['6 包','4 包','8 包','20 包'], ans:0,
+          why:'4 × 6 ＝ 24，24 裡面有 6 個 4，所以有 6 包。' },
+        { stem:'🍎 30 個蘋果，平分裝進 5 個籃子。<br>每籃幾個？',
+          opts:['5 個','25 個','6 個','15 個'], ans:2,
+          why:'6 × 5 ＝ 30，所以每籃 6 個。' },
+        { stem:'🍪 一盒餅乾有 12 片。<br>把 2 盒的餅乾平分給 6 個小朋友。<br>每人幾片？',
+          opts:['2 片','4 片','12 片','24 片'], ans:1,
+          why:'先算一共：12 × 2 ＝ 24 片；再平分：4 × 6 ＝ 24，所以每人 4 片。' },
+        { stem:'✏️ 28 枝鉛筆，每盒裝 7 枝，剛好裝完。<br>下面哪一句話是對的？',
+          opts:['每盒 4 枝','一共有 7 盒','一共有 28 盒','一共有 4 盒'], ans:3,
+          why:'28 裡面有 4 個 7：7 × 4 ＝ 28。4 是盒數，7 才是每盒的枝數。' }
+      ],
+      qsBoost:[
+        { stem:'迷思檢查：🍬 20 顆糖果，每包裝 4 顆。<br>可以裝幾包？',
+          opts:['4 包','5 包','16 包','20 包'], ans:1,
+          why:'4 是每包的顆數，不是包數。20 裡面有 5 個 4：4 × 5 ＝ 20，所以是 5 包。' },
+        { stem:'迷思檢查：🍪 18 片餅乾平分給 3 個小朋友，每人 6 片。<br>這裡的 3 是什麼？',
+          opts:['每人分到 3 片','有 3 個小朋友','一共 3 片','剩下 3 片'], ans:1,
+          why:'3 是人數，也就是分成 3 份；6 才是每人分到的片數。' }
+      ],
+
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
+      gAsk:function(r){
+        return r.kind === 'pack'
+          ? (this.qtyThing(r.si, r.total) + '，每' + this.grpWord(r.si) + '裝 ' + this.qtyItem(r.si, r.k) + '。可以裝幾' + this.grpWord(r.si) + '？')
+          : (this.qtyThing(r.si, r.total) + '，平分給 ' + r.k + ' 個小朋友。每人幾' + this.itemWord(r.si) + '？');
+      },
+      gOpt:function(r, n){
+        return r.kind === 'pack' ? this.qtyGrp(r.si, n) : this.qtyItem(r.si, n);
+      },
+      gHintBtn:'💡 提示',
+      gHint1:function(r){
+        return r.kind === 'pack'
+          ? ('一' + this.grpWord(r.si) + '一' + this.grpWord(r.si) + '裝，數數看可以裝幾' + this.grpWord(r.si) + '。')
+          : ('一' + this.itemWord(r.si) + '一' + this.itemWord(r.si) + '輪流發，看每個人拿到幾' + this.itemWord(r.si) + '。');
+      },
+      gHint2:function(r){
+        return '提示：想九九乘法 —— ' +
+               (r.kind === 'pack' ? (r.k + ' × □ ＝ ' + r.total) : ('□ × ' + r.k + ' ＝ ' + r.total));
+      },
+      gWhy:function(r, ans){
+        return r.kind === 'pack'
+          ? (r.k + ' × ' + ans + ' ＝ ' + r.total + '，所以是 ' + this.qtyGrp(r.si, ans) + '。')
+          : (ans + ' × ' + r.k + ' ＝ ' + r.total + '，所以每人 ' + this.qtyItem(r.si, ans) + '。');
+      },
+      gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gCorrectFirst:function(v){ return '答對了！＋20 分！答案就是 ' + v + '。'; },
+      gCorrectRetry:function(v){ return '答對了！＋10 分。答案就是 ' + v + '。'; },
+      gTryAgain:'再看一次：問的是幾份，還是每份幾個？',
+      gClear:'按「下一關」繼續分。',
+      gWin:function(score){ return '五關全過！最後得分 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; }
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Teach Me Sharing — Pack and Share', btn:'中',
+      home:'← Back to teach-me home',
+      h1:'🍬 Pack and Share', sub:'Packing and equal sharing, solved with a times-table sentence',
+      intro:'How many in each group × how many groups = the total.<br>Whichever box is empty, that is the one you look for!',
+      nav1:'📖 Lesson (this page)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      modeTitle:'How do you want to learn today? (switch anytime)',
+      modes:{
+        ahead:  { icon:'🚀', h:'Learning ahead', p:'First time meeting this topic', banner:'Ahead mode: step through the examples slowly — the quiz has just the 6 basics, and the game shows a hint automatically.' },
+        school: { icon:'🏫', h:'School pace', p:'Learning it at school now', banner:'School mode: the full 10 questions, including 4 word problems.' },
+        boost:  { icon:'💪', h:'Boost', p:'Learned it, still shaky', banner:'Boost mode: 2 misconception checks first, 12 questions total — then head to the Review Challenge.' }
+      },
+      eb1:'Example 1', eb2:'Example 2', eb3:'Example 3', eb4:'Example 4', eb5:'Quiz', eb6:'Game',
+      s1h2:'Fill One Bag at a Time', s1lead:'Every bag holds the same amount — keep filling bags until there is not enough for another one, then count the bags.',
+      s2h2:'Deal Them Out One at a Time', s2lead:'Deal one each, round by round, until there is not enough for another round — then everyone has the same.',
+      s3h2:'Same Numbers, Two Different Questions', s3lead:'Both answers are 4 — but the two 4s mean different things.',
+      s4h2:'Let a Times-Table Sentence Find It', s4lead:'Write the sentence with an empty box, then think of your times tables.',
+      s5h2:'Quick Check', s5lead:'Tap an answer and find out right away!',
+      s6h2:'Pack-and-Share Challenge', s6lead:'Check first: is the question asking how many groups, or how many in each group?',
+      ebNext:'After the lesson', nextH2:'Three moves that make it stick',
+      next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
+      next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a>.',
+      next3:'❓ Anything unclear — ask your parents or your AI teacher. Good learners ask.',
+      footer:'The whole page in one line: <strong>how many in each group × how many groups = the total, so look for whichever box is empty!</strong>',
+
+      scenes:[
+        { item:'sweet',   itemN:'sweets',   grp:'bag',    grpN:'bags' },
+        { item:'apple',   itemN:'apples',   grp:'basket', grpN:'baskets' },
+        { item:'biscuit', itemN:'biscuits', grp:'plate',  grpN:'plates' },
+        { item:'pencil',  itemN:'pencils',  grp:'box',    grpN:'boxes' }
+      ],
+      qtyThing:function(si, n){ return n + ' ' + (n === 1 ? this.scenes[si].item : this.scenes[si].itemN); },
+      qtyItem:function(si, n){ return n + ' ' + (n === 1 ? this.scenes[si].item : this.scenes[si].itemN); },
+      qtyGrp:function(si, n){ return n + ' ' + (n === 1 ? this.scenes[si].grp : this.scenes[si].grpN); },
+      itemWord:function(si){ return this.scenes[si].item; },
+      grpWord:function(si){ return this.scenes[si].grp; },
+
+      s1BtnNext:'Pack one more bag', s1BtnReset:'Start over', s1BtnAgain:'Pack them again',
+      p1Start:function(c){
+        return 'There are ' + this.qtyThing(c.si, c.total) + '. Press “Pack one more bag” — every ' +
+               this.qtyItem(c.si, c.per) + ' go into one ' + this.grpWord(c.si) + '.';
+      },
+      p1Step:function(c, bags, left){
+        return this.qtyGrp(c.si, bags) + ' packed, ' + this.qtyItem(c.si, left) + ' still loose.';
+      },
+      p1End:function(c, g){
+        return 'All ' + this.qtyThing(c.si, c.total) + ' are packed: <span class="bigans">' +
+               this.qtyGrp(c.si, g) + '</span><br><span class="bigeq">' +
+               c.per + ' × ' + g + ' = ' + c.total + '</span>';
+      },
+
+      s2BtnNext:'Deal one more round', s2BtnReset:'Start over', s2BtnAgain:'Deal them again',
+      p2Start:function(c){
+        return 'There are ' + this.qtyThing(c.si, c.total) + ' for ' + c.n +
+               ' children. Press “Deal one more round” — each child takes 1 ' + this.itemWord(c.si) + ' per round.';
+      },
+      p2Step:function(c, rounds, left){
+        return 'After ' + rounds + ' rounds each child has ' + this.qtyItem(c.si, rounds) +
+               ', and ' + this.qtyItem(c.si, left) + ' are still left.';
+      },
+      p2End:function(c, q){
+        return 'All dealt out! Each child gets <span class="bigans">' + this.qtyItem(c.si, q) +
+               '</span><br><span class="bigeq">' + q + ' × ' + c.n + ' = ' + c.total + '</span>';
+      },
+
+      bothChip:function(c, kind){
+        return kind === 'pack'
+          ? ('📦 Packing: ' + this.qtyItem(c.si, c.k) + ' in each ' + this.grpWord(c.si))
+          : ('🤝 Sharing: ' + c.k + ' children');
+      },
+      s3BtnNext:'Next step', s3BtnReset:'Start over', s3BtnAgain:'Look again',
+      b0:function(c){
+        return 'Same ' + this.qtyThing(c.si, c.total) + ', same ' + c.k +
+               '. Press “Next step” and see what changes.';
+      },
+      b1:function(c, kind){
+        return kind === 'pack'
+          ? ('Known: how many in each ' + this.grpWord(c.si) + '. Wanted: how many ' + this.scenes[c.si].grpN + '.')
+          : ('Known: how many children. Wanted: how many ' + this.scenes[c.si].itemN + ' each child gets.');
+      },
+      b2:function(c, kind, ans){
+        if (kind === 'pack'){
+          var seq = [];
+          for (var i = 1; i <= ans; i++) seq.push(i * c.k);
+          return 'Fill one ' + this.grpWord(c.si) + ' at a time: ' + seq.join(', ') + ' — nothing left over.';
+        }
+        return 'Deal them out one at a time: ' + ans + ' rounds — nothing left over.';
+      },
+      b3:function(c, kind, ans){
+        return kind === 'pack'
+          ? ('The answer is <span class="bigans">' + this.qtyGrp(c.si, ans) + '</span> (counted in ' + this.scenes[c.si].grpN +
+             ').<br><span class="bigeq">' + c.k + ' × ' + ans + ' = ' + c.total +
+             '</span><br>Both questions answer ' + ans + ', but this ' + ans + ' counts ' + this.scenes[c.si].grpN + '.')
+          : ('The answer is <span class="bigans">' + this.qtyItem(c.si, ans) + '</span> each (counted in ' + this.scenes[c.si].itemN +
+             ').<br><span class="bigeq">' + ans + ' × ' + c.k + ' = ' + c.total +
+             '</span><br>Both questions answer ' + ans + ', but this ' + ans + ' counts ' + this.scenes[c.si].itemN + ' per child.');
+      },
+
+      eqChip:function(c){
+        return c.kind === 'pack'
+          ? ('📦 ' + this.qtyThing(c.si, c.total) + ', ' + this.qtyItem(c.si, c.k) + ' in each ' + this.grpWord(c.si))
+          : ('🤝 ' + this.qtyThing(c.si, c.total) + ' for ' + c.k + ' children');
+      },
+      s4BtnNext:'Next step', s4BtnReset:'Start over', s4BtnAgain:'Look again',
+      e0:'Press “Next step” and find the answer one step at a time.',
+      e1:function(c){
+        return c.kind === 'pack'
+          ? ('Known: ' + this.qtyItem(c.si, c.k) + ' in each ' + this.grpWord(c.si) + '. Wanted: how many ' + this.scenes[c.si].grpN + '.')
+          : ('Known: ' + c.k + ' children. Wanted: how many ' + this.scenes[c.si].itemN + ' each child gets.');
+      },
+      e2:function(c){
+        return 'Write the sentence: <span class="bigeq">' +
+               (c.kind === 'pack' ? (c.k + ' × □ = ' + c.total) : ('□ × ' + c.k + ' = ' + c.total)) +
+               '</span>';
+      },
+      e3:function(c, ans){
+        return 'Think of your times tables: ' +
+               (c.kind === 'pack' ? (c.k + ' × ' + ans + ' = ' + c.total) : (ans + ' × ' + c.k + ' = ' + c.total)) +
+               ', so the box is ' + ans + '.';
+      },
+      e4:function(c, ans){
+        return c.kind === 'pack'
+          ? ('Multiply back to check — nothing left over, so the answer is <span class="bigans">' + this.qtyGrp(c.si, ans) + '</span>')
+          : ('Multiply back to check — nothing left over, so each child gets <span class="bigans">' + this.qtyItem(c.si, ans) + '</span>');
+      },
+
+      qDoneLabel:'Answered', qRightLabel:'Correct', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>That’s right!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll:'All correct! You are a sharing champion 🏆',
+      cGood:'Great work! Read the explanations for the ones you missed.',
+      cTry:'No problem — go back up and press “Next step” once more.',
+      qs:[
+        { stem:'🍬 There are 12 sweets, and each bag holds 3 sweets.<br>How many bags can be filled?',
+          opts:['3 bags','4 bags','9 bags','12 bags'], ans:1,
+          why:'Fill one bag at a time: 3, 6, 9, 12 — that is 4 bags. 3 × 4 = 12.' },
+        { stem:'🍎 12 apples are shared equally among 3 children.<br>How many apples does each child get?',
+          opts:['4 apples','3 apples','6 apples','9 apples'], ans:0,
+          why:'Deal them out one at a time: after 4 rounds nothing is left, so each child gets 4. 4 × 3 = 12.' },
+        { stem:'🍪 Each plate holds 5 biscuits, and there are 4 plates.<br>How many biscuits altogether?',
+          opts:['9 biscuits','25 biscuits','16 biscuits','20 biscuits'], ans:3,
+          why:'5 biscuits on each of 4 plates: 5 × 4 = 20 biscuits.' },
+        { stem:'🍬 There are 20 sweets, and each bag holds 5 sweets.<br>How many bags are there once they are packed?',
+          opts:['4 sweets','5 bags','4 bags','20 bags'], ans:2,
+          why:'20 contains four groups of 5: 5 × 4 = 20. The question asks for bags, so the answer is 4 bags.' },
+        { stem:'🍬 There are 18 sweets, and each bag holds 6 sweets.<br>Which sentence finds “how many bags”?',
+          opts:['6 + □ = 18','6 × □ = 18','18 × 6 = □','6 − □ = 18'], ans:1,
+          why:'6 sweets in each bag × how many bags = 18 sweets, so it is 6 × □ = 18, and the box is 3.' },
+        { stem:'🍪 15 biscuits are shared equally among 3 children.<br>Which way of splitting them is equal sharing?',
+          opts:['4, 5, 6','5, 5, 5','3, 5, 7','6, 6, 3'], ans:1,
+          why:'Equal sharing means everyone gets the same: 5, 5, 5 adds up to exactly 15 biscuits.' }
+      ],
+      qsAdv:[
+        { stem:'🍬 There are 24 sweets, and each bag holds 4 sweets.<br>How many bags are there once they are packed?',
+          opts:['6 bags','4 bags','8 bags','20 bags'], ans:0,
+          why:'4 × 6 = 24, and 24 contains six groups of 4, so there are 6 bags.' },
+        { stem:'🍎 30 apples are packed equally into 5 baskets.<br>How many apples are in each basket?',
+          opts:['5 apples','25 apples','6 apples','15 apples'], ans:2,
+          why:'6 × 5 = 30, so each basket holds 6 apples.' },
+        { stem:'🍪 One box holds 12 biscuits.<br>The biscuits from 2 boxes are shared equally among 6 children.<br>How many biscuits does each child get?',
+          opts:['2 biscuits','4 biscuits','12 biscuits','24 biscuits'], ans:1,
+          why:'First the total: 12 × 2 = 24 biscuits. Then share them: 4 × 6 = 24, so each child gets 4.' },
+        { stem:'✏️ There are 28 pencils, and each box holds 7 pencils, with none left over.<br>Which sentence is true?',
+          opts:['4 pencils in each box','7 boxes in total','28 boxes in total','4 boxes in total'], ans:3,
+          why:'28 contains four groups of 7: 7 × 4 = 28. The 4 counts boxes; the 7 is how many pencils are in each box.' }
+      ],
+      qsBoost:[
+        { stem:'Misconception check: 🍬 there are 20 sweets, and each bag holds 4 sweets.<br>How many bags can be filled?',
+          opts:['4 bags','5 bags','16 bags','20 bags'], ans:1,
+          why:'The 4 is how many sweets go in each bag, not the number of bags. 20 contains five groups of 4: 4 × 5 = 20, so it is 5 bags.' },
+        { stem:'Misconception check: 🍪 18 biscuits are shared equally among 3 children, and each child gets 6.<br>What does the 3 tell you?',
+          opts:['each child gets 3 biscuits','there are 3 children','3 biscuits altogether','3 biscuits left over'], ans:1,
+          why:'The 3 is the number of children — the number of equal parts. The 6 is how many biscuits each child gets.' }
+      ],
+
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
+      gAsk:function(r){
+        return r.kind === 'pack'
+          ? ('There are ' + this.qtyThing(r.si, r.total) + ', and each ' + this.grpWord(r.si) + ' holds ' + this.qtyItem(r.si, r.k) + '. How many ' + this.scenes[r.si].grpN + ' can be filled?')
+          : (this.qtyThing(r.si, r.total) + ' are shared equally among ' + r.k + ' children. How many does each child get?');
+      },
+      gOpt:function(r, n){
+        return r.kind === 'pack' ? this.qtyGrp(r.si, n) : this.qtyItem(r.si, n);
+      },
+      gHintBtn:'💡 Hint',
+      gHint1:function(r){
+        return r.kind === 'pack'
+          ? ('Fill one ' + this.grpWord(r.si) + ' at a time and count how many ' + this.scenes[r.si].grpN + ' you get.')
+          : ('Deal them out one at a time and see how many each child ends up with.');
+      },
+      gHint2:function(r){
+        return 'Hint: think of your times tables — ' +
+               (r.kind === 'pack' ? (r.k + ' × □ = ' + r.total) : ('□ × ' + r.k + ' = ' + r.total));
+      },
+      gWhy:function(r, ans){
+        return r.kind === 'pack'
+          ? (r.k + ' × ' + ans + ' = ' + r.total + ', so the answer is ' + this.qtyGrp(r.si, ans) + '.')
+          : (ans + ' × ' + r.k + ' = ' + r.total + ', so each child gets ' + this.qtyItem(r.si, ans) + '.');
+      },
+      gNextBtn:'Next round', gRestartBtn:'Restart',
+      gCorrectFirst:function(v){ return 'Correct on the first try! +20 points! The answer is ' + v + '.'; },
+      gCorrectRetry:function(v){ return 'Correct! +10 points. The answer is ' + v + '.'; },
+      gTryAgain:'Look again: is the question asking how many groups, or how many in each group?',
+      gClear:'Press “Next round” to keep sharing.',
+      gWin:function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; }
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
+  var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+
+  function buildModeCards(){
+    var d = L();
+    modeCards.textContent = '';
+    ['ahead','school','boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  /* ---------- 1. 一包一包裝 ---------- */
+  var packBags = 0;
+  var packMax = PACK_EX.total / PACK_EX.per;
+  var packPic = document.getElementById('packPic');
+  var packCount = document.getElementById('packCount');
+  var packLine = document.getElementById('packLine');
+  var packBtn = document.getElementById('packBtn');
+  var packReset = document.getElementById('packReset');
+
+  function renderPack(){
+    var d = L();
+    packPic.innerHTML = packSVG(PACK_EX.total, PACK_EX.per, packBags, SCENES[PACK_EX.si].icon);
+    /* 數過的份數一格一格亮起來：孩子看到的是「一包一包數」的過程，不是一個結果數字。 */
+    packCount.textContent = '';
+    for (var i = 1; i <= packMax; i++){
+      var s = document.createElement('span');
+      s.className = 'cnum' + (i <= packBags ? ' on' : '');
+      s.textContent = String(i * PACK_EX.per);
+      packCount.appendChild(s);
+    }
+    if (packBags === 0) packLine.innerHTML = d.p1Start(PACK_EX);
+    else if (packBags >= packMax) packLine.innerHTML = d.p1End(PACK_EX, packMax);
+    else packLine.innerHTML = d.p1Step(PACK_EX, packBags, PACK_EX.total - packBags * PACK_EX.per);
+    packBtn.textContent = (packBags >= packMax) ? d.s1BtnAgain : d.s1BtnNext;
+  }
+  packBtn.addEventListener('click', function(){
+    packBags = (packBags >= packMax) ? 0 : packBags + 1;
+    renderPack();
+  });
+  packReset.addEventListener('click', function(){ packBags = 0; renderPack(); });
+
+  /* ---------- 2. 一個一個輪流發 ---------- */
+  var shareRounds = 0;
+  var shareMax = SHARE_EX.total / SHARE_EX.n;
+  var sharePic = document.getElementById('sharePic');
+  var shareCount = document.getElementById('shareCount');
+  var shareLine = document.getElementById('shareLine');
+  var shareBtn = document.getElementById('shareBtn');
+  var shareReset = document.getElementById('shareReset');
+
+  function renderShare(){
+    var d = L();
+    sharePic.innerHTML = shareSVG(SHARE_EX.total, SHARE_EX.n, shareRounds, SCENES[SHARE_EX.si].icon);
+    shareCount.textContent = '';
+    for (var i = 1; i <= shareMax; i++){
+      var s = document.createElement('span');
+      s.className = 'cnum' + (i <= shareRounds ? ' on' : '');
+      s.textContent = String(i * SHARE_EX.n);
+      shareCount.appendChild(s);
+    }
+    if (shareRounds === 0) shareLine.innerHTML = d.p2Start(SHARE_EX);
+    else if (shareRounds >= shareMax) shareLine.innerHTML = d.p2End(SHARE_EX, shareMax);
+    else shareLine.innerHTML = d.p2Step(SHARE_EX, shareRounds, SHARE_EX.total - shareRounds * SHARE_EX.n);
+    shareBtn.textContent = (shareRounds >= shareMax) ? d.s2BtnAgain : d.s2BtnNext;
+  }
+  shareBtn.addEventListener('click', function(){
+    shareRounds = (shareRounds >= shareMax) ? 0 : shareRounds + 1;
+    renderShare();
+  });
+  shareReset.addEventListener('click', function(){ shareRounds = 0; renderShare(); });
+
+  /* ---------- 3. 同樣的數字，兩種問法 ---------- */
+  var BOTH_KINDS = ['pack','share'];
+  var bothIdx = 0, bothStep = 0;
+  var bothAns = BOTH_EX.total / BOTH_EX.k;
+  var bothChips = document.getElementById('bothChips');
+  var bothPic = document.getElementById('bothPic');
+  var bothLine = document.getElementById('bothLine');
+  var bothBtn = document.getElementById('bothBtn');
+  var bothReset = document.getElementById('bothReset');
+
+  function buildBothChips(){
+    var d = L();
+    bothChips.textContent = '';
+    BOTH_KINDS.forEach(function(kind, i){
+      var b = makeChip(d.bothChip(BOTH_EX, kind), i === bothIdx);
+      b.addEventListener('click', function(){ bothIdx = i; bothStep = 0; buildBothChips(); renderBoth(); });
+      bothChips.appendChild(b);
+    });
+  }
+  function renderBoth(){
+    var d = L(), kind = BOTH_KINDS[bothIdx];
+    var icon = SCENES[BOTH_EX.si].icon;
+    /* 第 2 步之後才把分好的樣子畫出來 —— 在那之前只看到還沒分的一堆。 */
+    if (bothStep >= 2){
+      bothPic.innerHTML = (kind === 'pack')
+        ? packSVG(BOTH_EX.total, BOTH_EX.k, bothAns, icon)
+        : shareSVG(BOTH_EX.total, BOTH_EX.k, bothAns, icon);
+    } else {
+      bothPic.innerHTML = itemsSVG(BOTH_EX.total, icon);
+    }
+    var parts = [];
+    if (bothStep >= 1) parts.push(d.b1(BOTH_EX, kind));
+    if (bothStep >= 2) parts.push(d.b2(BOTH_EX, kind, bothAns));
+    if (bothStep >= 3) parts.push(d.b3(BOTH_EX, kind, bothAns));
+    bothLine.innerHTML = parts.length ? parts.join('<br>') : d.b0(BOTH_EX);
+    bothBtn.textContent = (bothStep >= 3) ? d.s3BtnAgain : d.s3BtnNext;
+  }
+  bothBtn.addEventListener('click', function(){
+    bothStep = (bothStep >= 3) ? 0 : bothStep + 1;
+    renderBoth();
+  });
+  bothReset.addEventListener('click', function(){ bothStep = 0; renderBoth(); });
+
+  /* ---------- 4. 用乘法算式找答案 ---------- */
+  var eqIdx = 0, eqStep = 0;
+  var eqChips = document.getElementById('eqChips');
+  var eqLine = document.getElementById('eqLine');
+  var eqBtn = document.getElementById('eqBtn');
+  var eqReset = document.getElementById('eqReset');
+
+  function buildEqChips(){
+    var d = L();
+    eqChips.textContent = '';
+    EQ_CASES.forEach(function(c, i){
+      var b = makeChip(d.eqChip(c), i === eqIdx);
+      b.addEventListener('click', function(){ eqIdx = i; eqStep = 0; buildEqChips(); renderEq(); });
+      eqChips.appendChild(b);
+    });
+  }
+  function renderEq(){
+    var d = L(), c = EQ_CASES[eqIdx];
+    var ans = c.total / c.k;
+    var parts = [];
+    if (eqStep >= 1) parts.push(d.e1(c));
+    if (eqStep >= 2) parts.push(d.e2(c));
+    if (eqStep >= 3) parts.push(d.e3(c, ans));
+    if (eqStep >= 4) parts.push(d.e4(c, ans));
+    eqLine.innerHTML = parts.length ? parts.join('<br>') : d.e0;
+    eqBtn.textContent = (eqStep >= 4) ? d.s4BtnAgain : d.s4BtnNext;
+  }
+  eqBtn.addEventListener('click', function(){
+    eqStep = (eqStep >= 4) ? 0 : eqStep + 1;
+    renderEq();
+  });
+  eqReset.addEventListener('click', function(){ eqStep = 0; renderEq(); });
+
+  /* ---------- 5. 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
+  function buildQuiz(){
+    var d = L();
+    var list = quizSet();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    qTotal.textContent = list.length;
+    list.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 6. 小遊戲：分一分大挑戰 ---------- */
+  var gRound = 0, gScore = 0, gMistake = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gAskLine = document.getElementById('gAskLine');
+  var gPic = document.getElementById('gPic');
+  var gAnswers = document.getElementById('gAnswers');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+  var hintLevel = 0;
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRound];
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    gAskLine.innerHTML = '<span style="font-size:20px;font-weight:800">' + d.gAsk(round) + '</span>';
+    gPic.innerHTML = itemsSVG(round.total, SCENES[round.si].icon);
+
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    gHintBtn.textContent = d.gHintBtn;
+    if (mode === 'ahead'){
+      hintLevel = 1;
+      elHint.textContent = d.gHint1(round);
+    } else {
+      elHint.textContent = '';
+    }
+
+    gAnswers.textContent = '';
+    round.opts.forEach(function(o, oi){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'gopt';
+      b.textContent = d.gOpt(round, o);
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        var dd = L();
+        var lbl = dd.gOpt(round, round.opts[round.ans]);
+        if (oi === round.ans){
+          var all = gAnswers.querySelectorAll('.gopt');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          b.classList.add('right');
+          if (gRound === ROUNDS.length - 1){
+            gScore += gMistake ? 10 : 20;
+            gMsg.innerHTML = '<span class="yes">' + dd.gWin(gScore) + '</span> ' + dd.gWhy(round, round.opts[round.ans]);
+          } else {
+            if (gMistake){
+              gScore += 10;
+              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectRetry(lbl) + '</span> ' + dd.gWhy(round, round.opts[round.ans]);
+            } else {
+              gScore += 20;
+              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectFirst(lbl) + '</span> ' + dd.gWhy(round, round.opts[round.ans]);
+            }
+            gMsg.innerHTML += ' ' + dd.gClear;
+            gNext.disabled = false;
+          }
+        } else {
+          gMistake = true;
+          b.disabled = true;
+          b.classList.add('wrong');
+          gMsg.innerHTML = '<span class="no">' + dd.gTryAgain + '</span>';
+        }
+        elScore.textContent = gScore;
+      });
+      gAnswers.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  gHintBtn.addEventListener('click', function(){
+    hintLevel++;
+    if (hintLevel === 1){
+      elHint.textContent = L().gHint1(ROUNDS[gRound]);
+    } else {
+      elHint.textContent = L().gHint2(ROUNDS[gRound]);
+      gHintBtn.disabled = true;
+    }
+  });
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildModeCards();
+    packBags = 0; renderPack();
+    shareRounds = 0; renderShare();
+    bothStep = 0; buildBothChips(); renderBoth();
+    eqStep = 0; buildEqChips(); renderEq();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+  /* 記錄最後上的課，供首頁「繼續上次」使用 */
+  try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-2/math/divide/', zh:'分一分小幫手 — 分裝與平分', en:'Pack and Share', icon:'🍬'})); } catch(e){}
+
+})();
+</script>
+</body>
+</html>

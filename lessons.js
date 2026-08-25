@@ -3,7 +3,7 @@
    `tools/check_lessons.py` 會拿這份清單跟磁碟上的資料夾逐一比對，對不上就報錯。 */
 window.TEACHME_LESSONS = {
   1: ['add-sub', 'clock', 'length', 'money', 'number-bonds', 'numbers', 'pattern', 'shapes', 'two-digit'],
-  2: ['add-sub', 'length', 'multiply', 'numbers', 'time'],
+  2: ['add-sub', 'divide', 'length', 'multiply', 'numbers', 'time'],
   3: ['add-sub', 'angle', 'capacity', 'circle', 'decimal', 'divide', 'equation', 'fraction', 'length', 'multiply', 'numbers', 'perimeter', 'rectangle', 'table', 'time', 'two-step', 'weight'],
   4: [],
   5: ['angle-sum', 'area', 'average', 'big-units', 'common-factor', 'decimal', 'factor', 'fraction-add', 'fraction-divide', 'fraction-multiply', 'multiple', 'operations', 'percent', 'polygon', 'prisms', 'rounding', 'solid', 'statistics', 'symbol', 'symmetry', 'time', 'volume', 'weight'],

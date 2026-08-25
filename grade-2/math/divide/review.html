@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分一分複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 70px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:6px 18px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:24px 0 4px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:6px;font-size:16px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:18px 22px;margin:20px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:16px;margin-top:18px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 12px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:12px 8px;
+    font-size:18px;cursor:pointer;color:var(--ink);min-height:50px;
+    display:flex;align-items:center;justify-content:center;font-weight:700;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:20px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:14px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:18px;
+    font-weight:700;padding:14px 26px;cursor:pointer;margin-top:16px;min-height:52px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 分一分複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己算一次 —— 算出來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：分裝、平分、乘法算式、單位交錯出現，<strong>每一批的數字都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'分一分複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 分一分複習挑戰',
+      sub:'不看速查卡、自己算一次 —— 算出來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：分裝、平分、乘法算式、單位交錯出現，<strong>每一批的數字都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Pack and Share Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Pack and Share Review Challenge',
+      sub:'No peeking at the cheat sheet — the moment you work it out is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving packing, equal sharing, times-table sentences and units — <strong>every batch uses fresh numbers</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ pack:'分裝', share:'平分', eq:'算式', unit:'單位' },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        pack:'📦 一包一包裝（範例教學 1）',
+        share:'🤝 一個一個輪流發（範例教學 2）',
+        both:'🔀 同樣的數字，兩種問法（範例教學 3）',
+        eq:'✖️ 用乘法算式找答案（範例教學 4）'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ pack:'Packing', share:'Equal sharing', eq:'Number sentence', unit:'Units' },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        pack:'📦 Fill One Bag at a Time (Example 1)',
+        share:'🤝 Deal Them Out One at a Time (Example 2)',
+        both:'🔀 Same Numbers, Two Questions (Example 3)',
+        eq:'✖️ Let a Times-Table Sentence Find It (Example 4)'
+      }
+    }
+  };
+
+  var LINK_HREFS = {
+    pack:'index.html#secPack', share:'index.html#secShare',
+    both:'index.html#secBoth', eq:'index.html#secEq'
+  };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+
+  /* 四個情境。單位詞放在這裡（產生器要在 Node 裡跑，不能碰 I18N），
+     檢查設定檔有自己一份同樣的表（tools/checks/grade-2-divide.js 的 SCENE_TRUTH），
+     兩份對不上就會被抓到 —— 不然等於拿產生器自己的字去比產生器自己的字。 */
+  var SCENES = [
+    { icon:'🍬', zh:{ thing:'糖果', item:'顆', grp:'包' }, en:{ item:'sweet',   itemN:'sweets',   grp:'bag',    grpN:'bags'    } },
+    { icon:'🍎', zh:{ thing:'蘋果', item:'個', grp:'籃' }, en:{ item:'apple',   itemN:'apples',   grp:'basket', grpN:'baskets' } },
+    { icon:'🍪', zh:{ thing:'餅乾', item:'片', grp:'盤' }, en:{ item:'biscuit', itemN:'biscuits', grp:'plate',  grpN:'plates'  } },
+    { icon:'✏️', zh:{ thing:'鉛筆', item:'枝', grp:'盒' }, en:{ item:'pencil',  itemN:'pencils',  grp:'box',    grpN:'boxes'   } }
+  ];
+  /* 「12 顆糖果」／“12 sweets”：中文是數量＋單位＋東西，英文是數量＋名詞（要分單複數）。 */
+  function qtyThing(si, n, lang){
+    var s = SCENES[si];
+    return lang === 'zh' ? (n + ' ' + s.zh.item + s.zh.thing)
+                         : (n + ' ' + (n === 1 ? s.en.item : s.en.itemN));
+  }
+  function qtyItem(si, n, lang){
+    var s = SCENES[si];
+    return lang === 'zh' ? (n + ' ' + s.zh.item)
+                         : (n + ' ' + (n === 1 ? s.en.item : s.en.itemN));
+  }
+  function qtyGrp(si, n, lang){
+    var s = SCENES[si];
+    return lang === 'zh' ? (n + ' ' + s.zh.grp)
+                         : (n + ' ' + (n === 1 ? s.en.grp : s.en.grpN));
+  }
+  function itemWord(si, lang){ return lang === 'zh' ? SCENES[si].zh.item : SCENES[si].en.item; }
+  function itemWordN(si, lang){ return lang === 'zh' ? SCENES[si].zh.item : SCENES[si].en.itemN; }
+  function grpWord(si, lang){ return lang === 'zh' ? SCENES[si].zh.grp : SCENES[si].en.grp; }
+  function grpWordN(si, lang){ return lang === 'zh' ? SCENES[si].zh.grp : SCENES[si].en.grpN; }
+
+  /* 選項一律是物件，去重比的是「單位種類＋數量」——
+     「4 包」和「4 顆」是不同的答案（單位不一樣），「4 包」和「4 包」才是重複的。
+     這一課最容易搞混的就是單位，所以單位一定要進去重鍵。 */
+  function IT(si, n){ return { u:'item', si:si, n:n }; }
+  function GR(si, n){ return { u:'grp',  si:si, n:n }; }
+  function EQ(op, k, total){ return { u:'eq', op:op, k:k, total:total }; }
+  function PH(p, n, si){ return { u:'phr', p:p, n:n, si:si }; }
+  function TR(a, b, c){ return { u:'triple', a:a, b:b, c:c }; }
+
+  function vkeyOf(v){
+    if (!v) return 'nil';
+    if (v.u === 'item' || v.u === 'grp') return v.u + '#' + v.n;
+    if (v.u === 'eq') return 'eq#' + v.op;
+    if (v.u === 'phr') return 'phr#' + v.p + '#' + v.n;
+    if (v.u === 'triple') return 'triple#' + v.a + ',' + v.b + ',' + v.c;
+    return 'raw';
+  }
+
+  function eqStr(v, lang){
+    var eq = lang === 'zh' ? ' ＝ ' : ' = ';
+    var plus = lang === 'zh' ? ' ＋ ' : ' + ';
+    var minus = lang === 'zh' ? ' － ' : ' − ';
+    if (v.op === 'mulBox')  return v.k + ' × □' + eq + v.total;
+    if (v.op === 'boxMul')  return '□ × ' + v.k + eq + v.total;
+    if (v.op === 'addBox')  return v.k + plus + '□' + eq + v.total;
+    if (v.op === 'subBox')  return v.k + minus + '□' + eq + v.total;
+    return v.total + ' × ' + v.k + eq + '□';
+  }
+  function phrStr(v, lang){
+    var n = v.n, si = v.si;
+    if (lang === 'zh'){
+      if (v.p === 'grpCount')  return '有 ' + n + ' ' + grpWord(si, 'zh');
+      if (v.p === 'perItem')   return '每' + grpWord(si, 'zh') + '有 ' + n + ' ' + itemWord(si, 'zh');
+      if (v.p === 'totalItem') return '一共有 ' + n + ' ' + itemWord(si, 'zh');
+      return '剩下 ' + n + ' ' + itemWord(si, 'zh');
+    }
+    if (v.p === 'grpCount')  return qtyGrp(si, n, 'en') + ' in total';
+    if (v.p === 'perItem')   return qtyItem(si, n, 'en') + ' in each ' + grpWord(si, 'en');
+    if (v.p === 'totalItem') return qtyItem(si, n, 'en') + ' in total';
+    return qtyItem(si, n, 'en') + ' left over';
+  }
+  function valStr(v, lang){
+    if (v.u === 'item') return qtyItem(v.si, v.n, lang);
+    if (v.u === 'grp')  return qtyGrp(v.si, v.n, lang);
+    if (v.u === 'eq')   return eqStr(v, lang);
+    if (v.u === 'phr')  return phrStr(v, lang);
+    return lang === 'zh' ? (v.a + '、' + v.b + '、' + v.c) : (v.a + ', ' + v.b + ', ' + v.c);
+  }
+
+  /* 誘答：先用「真的會犯的錯」當候選，不夠再用保底。
+     保底一律是「長得像答案的數」，不是垃圾字串；候選與保底都要通過去重。 */
+  function mixOpts(correct, cands, fallback){
+    var out = [], seen = {};
+    seen[vkeyOf(correct)] = true;
+    function ok(v){
+      if (!v) return false;
+      if ((v.u === 'item' || v.u === 'grp') && !(v.n >= 1)) return false;
+      if (seen[vkeyOf(v)]) return false;
+      return true;
+    }
+    (cands || []).forEach(function(c){
+      if (out.length >= 3) return;
+      if (ok(c)){ seen[vkeyOf(c)] = true; out.push(c); }
+    });
+    var i = 0;
+    while (out.length < 3 && i < 60){
+      var f = fallback(i);
+      i++;
+      if (ok(f)){ seen[vkeyOf(f)] = true; out.push(f); }
+    }
+    var opts = shuffle([correct].concat(out));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+
+  /* 還沒分的那一堆：一顆一顆畫出來，每列最多 10 個。
+     data-count 讓檢查腳本驗「畫出來的數量等於題目的總數」。 */
+  function itemsSVG(n, icon){
+    var size = 24, perRow = 10;
+    var cols = Math.min(n, perRow) || 1;
+    var rows = Math.ceil(n / perRow) || 1;
+    var w = cols * size + 12, h = rows * size + 10;
+    var s = '<svg data-count="' + n + '" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h +
+            '" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    for (var i = 0; i < n; i++){
+      s += '<text x="' + (6 + (i % perRow) * size) + '" y="' + (5 + Math.floor(i / perRow) * size + size - 7) +
+           '" font-size="18">' + icon + '</text>';
+    }
+    s += '</svg>';
+    return s;
+  }
+
+  /* 2~9 之間抽一個，可以指定要避開哪一個數。 */
+  function pickPer(avoid){
+    var pool = [2,3,4,5,6,7,8,9].filter(function(x){ return x !== avoid; });
+    return pick(pool);
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 分裝（包含除）：知道每份幾個，要找幾份 */
+    { id:'packing', cat:'pack', grp:'pack',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var g = pickUnused([2,3,4,5,6], used);
+        var per = pickPer();
+        var total = per * g;
+        var correct = GR(si, g);
+        /* 誘答：把「每包幾顆」抄回來當包數（最經典的錯）、多數一包、用減的。 */
+        var cands = [ GR(si, per), GR(si, g + 1), GR(si, total - per) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [g - 1, g + 2, g + 3, total];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 54) ? GR(si, v) : null;
+        });
+        return { si:si, per:per, g:g, total:total, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:(lang === 'zh'
+                 ? (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'zh') + '，每' + grpWord(d.si, 'zh') +
+                    '裝 ' + qtyItem(d.si, d.per, 'zh') + '。<br>可以裝幾' + grpWord(d.si, 'zh') + '？')
+                 : (SCENES[d.si].icon + ' There are ' + qtyThing(d.si, d.total, 'en') + ', and each ' +
+                    grpWord(d.si, 'en') + ' holds ' + qtyItem(d.si, d.per, 'en') + '.<br>How many ' +
+                    grpWordN(d.si, 'en') + ' can be filled?')) + itemsSVG(d.total, SCENES[d.si].icon),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? (d.per + ' × ' + d.g + ' ＝ ' + d.total + '，' + d.total + ' 裡面有 ' + d.g + ' 個 ' + d.per +
+               '，所以可以裝 ' + qtyGrp(d.si, d.g, 'zh') + '。')
+            : (d.per + ' × ' + d.g + ' = ' + d.total + ', so ' + d.total + ' contains ' + d.g +
+               ' groups of ' + d.per + ' — that is ' + qtyGrp(d.si, d.g, 'en') + '.')
+        };
+      } },
+    /* 2. 平分（等分除）：知道幾份，要找每份幾個 */
+    { id:'sharing', cat:'share', grp:'share',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var n = pickUnused([2,3,4,5,6], used);
+        var q = pickPer();
+        var total = n * q;
+        var correct = IT(si, q);
+        /* 誘答：把「幾個人」抄回來當每人幾個、多發一輪、用減的。 */
+        var cands = [ IT(si, n), IT(si, q + 1), IT(si, total - n) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [q - 1, q + 2, q + 3, total];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 54) ? IT(si, v) : null;
+        });
+        return { si:si, n:n, q:q, total:total, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:(lang === 'zh'
+                 ? (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'zh') + '，平分給 ' + d.n +
+                    ' 個小朋友。<br>每人幾' + itemWord(d.si, 'zh') + '？')
+                 : (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'en') + ' are shared equally among ' +
+                    d.n + ' children.<br>How many does each child get?')) + itemsSVG(d.total, SCENES[d.si].icon),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? ('一' + itemWord(d.si, 'zh') + '一' + itemWord(d.si, 'zh') + '輪流發，發了 ' + d.q +
+               ' 輪剛好發完：' + d.q + ' × ' + d.n + ' ＝ ' + d.total + '，每人 ' + qtyItem(d.si, d.q, 'zh') + '。')
+            : ('Deal them out one at a time: after ' + d.q + ' rounds nothing is left. ' +
+               d.q + ' × ' + d.n + ' = ' + d.total + ', so each child gets ' + qtyItem(d.si, d.q, 'en') + '.')
+        };
+      } },
+    /* 3. 分裝該用哪個乘法算式：空格在後面（每份 × □） */
+    { id:'packEq', cat:'eq', grp:'eq',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var g = pickUnused([2,3,4,5,6,7,8,9], used);
+        /* 「k ＋ □ ＝ 總數」也解得出正解的唯一情況是 k ＝ 2 且答案 ＝ 2（總數 4）——
+           m(k − 1) ＝ k 只有 k ＝ m ＝ 2 這一組整數解。所以只在 g ＝ 2 時避開 per ＝ 2，
+           3 包各 3 顆這種正方形的抽法要留著。 */
+        var per = pickPer(g === 2 ? 2 : 0);
+        var total = per * g;
+        var correct = EQ('mulBox', per, total);
+        /* 誘答只用加、減、和「反過來乘」——
+           不放 □ × 每份 ＝ 總數，那個算式也算得出答案（乘法可以交換），
+           放進來就會有兩個正確選項。 */
+        var opts = shuffle([correct, EQ('addBox', per, total), EQ('subBox', per, total), EQ('mulFlip', per, total)]);
+        return { si:si, per:per, g:g, total:total, correct:correct, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'zh') + '，每' + grpWord(d.si, 'zh') +
+               '裝 ' + qtyItem(d.si, d.per, 'zh') + '。<br>哪一個算式可以找到「幾' + grpWord(d.si, 'zh') + '」？')
+            : (SCENES[d.si].icon + ' There are ' + qtyThing(d.si, d.total, 'en') + ', and each ' +
+               grpWord(d.si, 'en') + ' holds ' + qtyItem(d.si, d.per, 'en') + '.<br>Which sentence finds how many ' +
+               grpWordN(d.si, 'en') + ' there are?'),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? ('每' + grpWord(d.si, 'zh') + ' ' + d.per + ' × 幾' + grpWord(d.si, 'zh') + ' ＝ ' + d.total +
+               '，所以是 ' + d.per + ' × □ ＝ ' + d.total + '，□ 是 ' + d.g + '。')
+            : (d.per + ' in each ' + grpWord(d.si, 'en') + ' × how many ' + grpWordN(d.si, 'en') + ' = ' + d.total +
+               ', so it is ' + d.per + ' × □ = ' + d.total + ', and the box is ' + d.g + '.')
+        };
+      } },
+    /* 4. 平分該用哪個乘法算式：空格在前面（□ × 份數） */
+    { id:'shareEq', cat:'eq', grp:'eq',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var n = pickUnused([2,3,4,5,6,7,8,9], used);
+        /* 理由同 packEq：只有 n ＝ 2、q ＝ 2 時「2 ＋ □ ＝ 4」也成立。 */
+        var q = pickPer(n === 2 ? 2 : 0);
+        var total = n * q;
+        var correct = EQ('boxMul', n, total);
+        var opts = shuffle([correct, EQ('addBox', n, total), EQ('subBox', n, total), EQ('mulFlip', n, total)]);
+        return { si:si, n:n, q:q, total:total, correct:correct, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'zh') + '平分給 ' + d.n +
+               ' 個小朋友。<br>哪一個算式可以找到「每人幾' + itemWord(d.si, 'zh') + '」？')
+            : (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'en') + ' are shared equally among ' + d.n +
+               ' children.<br>Which sentence finds how many each child gets?'),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? ('每人幾' + itemWord(d.si, 'zh') + ' × ' + d.n + ' 個人 ＝ ' + d.total + '，所以是 □ × ' + d.n +
+               ' ＝ ' + d.total + '，□ 是 ' + d.q + '。')
+            : ('How many each child gets × ' + d.n + ' children = ' + d.total + ', so it is □ × ' + d.n +
+               ' = ' + d.total + ', and the box is ' + d.q + '.')
+        };
+      } },
+    /* 5. 單位（這一課的迷思）：算出來的數字是份數，不是每份的個數 */
+    { id:'unitPick', cat:'unit', grp:'both',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var g = pickUnused([2,3,4,5,6], used);
+        var per = pickPer(g);              /* per ≠ g，不然「每包 g 個」會變成真的 */
+        var total = per * g;
+        var correct = GR(si, g);
+        /* 刻意的單位誘答：同一個數字、錯的單位。 */
+        var cands = [ IT(si, g), GR(si, per), GR(si, total) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [GR(si, g + 1), GR(si, g - 1), IT(si, per), IT(si, total)];
+          return alt[i % alt.length];
+        });
+        return { si:si, per:per, g:g, total:total, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'zh') + '，每' + grpWord(d.si, 'zh') +
+               '裝 ' + qtyItem(d.si, d.per, 'zh') + '，剛好裝完。<br>裝好之後有幾' + grpWord(d.si, 'zh') + '？')
+            : (SCENES[d.si].icon + ' There are ' + qtyThing(d.si, d.total, 'en') + ', and each ' +
+               grpWord(d.si, 'en') + ' holds ' + qtyItem(d.si, d.per, 'en') + ', with none left over.<br>How many ' +
+               grpWordN(d.si, 'en') + ' are there once they are packed?'),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? (d.per + ' × ' + d.g + ' ＝ ' + d.total + '。問的是幾' + grpWord(d.si, 'zh') + '，所以答案是 ' +
+               qtyGrp(d.si, d.g, 'zh') + '，不是 ' + qtyItem(d.si, d.g, 'zh') + '。')
+            : (d.per + ' × ' + d.g + ' = ' + d.total + '. The question asks for ' + grpWordN(d.si, 'en') +
+               ', so the answer is ' + qtyGrp(d.si, d.g, 'en') + ', not ' + qtyItem(d.si, d.g, 'en') + '.')
+        };
+      } },
+    /* 6. 乘回去：每份幾個 × 幾份 ＝ 總數（分裝與平分的驗算） */
+    { id:'totalCheck', cat:'pack', grp:'eq',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var g = pickUnused([2,3,4,5,6], used);
+        var per = pickPer();
+        var total = per * g;
+        var correct = IT(si, total);
+        /* 誘答：用加的、少乘一份、把每份的數字乘自己。 */
+        var cands = [ IT(si, per + g), IT(si, total - per), IT(si, per * per) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [total + per, total - g, total + g, total + 1];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 81) ? IT(si, v) : null;
+        });
+        return { si:si, per:per, g:g, total:total, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? (SCENES[d.si].icon + ' 每' + grpWord(d.si, 'zh') + '放 ' + qtyItem(d.si, d.per, 'zh') +
+               SCENES[d.si].zh.thing + '，放了 ' + qtyGrp(d.si, d.g, 'zh') + '。<br>一共幾' + itemWord(d.si, 'zh') + '？')
+            : (SCENES[d.si].icon + ' Each ' + grpWord(d.si, 'en') + ' holds ' + qtyItem(d.si, d.per, 'en') +
+               ', and there are ' + qtyGrp(d.si, d.g, 'en') + '.<br>How many ' + itemWordN(d.si, 'en') + ' altogether?'),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? ('每份幾' + itemWord(d.si, 'zh') + ' × 幾份 ＝ 總數：' + d.per + ' × ' + d.g + ' ＝ ' + d.total +
+               '，一共 ' + qtyItem(d.si, d.total, 'zh') + '。')
+            : ('How many in each group × how many groups = the total: ' + d.per + ' × ' + d.g + ' = ' + d.total +
+               ', so there are ' + qtyItem(d.si, d.total, 'en') + '.')
+        };
+      } },
+    /* 7. 排成幾排，每排幾個（平分的另一種說法） */
+    { id:'arrayRow', cat:'share', grp:'share',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var r = pickUnused([2,3,4,5,6], used);
+        var c = pickPer();
+        var total = r * c;
+        var correct = IT(si, c);
+        var cands = [ IT(si, r), IT(si, c + 1), IT(si, total - r) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [c - 1, c + 2, c + 3, total];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 54) ? IT(si, v) : null;
+        });
+        return { si:si, r:r, c:c, total:total, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'zh') + '排成 ' + d.r +
+               ' 排，每排一樣多。<br>每排幾' + itemWord(d.si, 'zh') + '？')
+            : (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'en') + ' are laid out in ' + d.r +
+               ' equal rows.<br>How many are in each row?'),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? ('排成 ' + d.r + ' 排就是分成 ' + d.r + ' 份：' + d.c + ' × ' + d.r + ' ＝ ' + d.total +
+               '，所以每排 ' + qtyItem(d.si, d.c, 'zh') + '。')
+            : (d.r + ' equal rows means ' + d.r + ' equal parts: ' + d.c + ' × ' + d.r + ' = ' + d.total +
+               ', so each row has ' + qtyItem(d.si, d.c, 'en') + '.')
+        };
+      } },
+    /* 8. 這個數字是什麼意思（份數還是每份的個數） */
+    { id:'meaningOf', cat:'unit', grp:'both',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var g = pickUnused([2,3,4,5,6], used);
+        var per = pickPer(g);              /* per ≠ g，不然「每包 g 個」也會是對的 */
+        var total = per * g;
+        var correct = PH('grpCount', g, si);
+        var opts = shuffle([correct, PH('perItem', g, si), PH('totalItem', g, si), PH('leftItem', g, si)]);
+        return { si:si, per:per, g:g, total:total, correct:correct, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? (SCENES[d.si].icon + ' 小明說：「' + qtyThing(d.si, d.total, 'zh') + '，每' + grpWord(d.si, 'zh') +
+               '裝 ' + qtyItem(d.si, d.per, 'zh') + '，可以裝 ' + qtyGrp(d.si, d.g, 'zh') + '。」<br>這個 ' +
+               d.g + ' 是什麼意思？')
+            : (SCENES[d.si].icon + ' Ming says: “' + qtyThing(d.si, d.total, 'en') + ', ' +
+               qtyItem(d.si, d.per, 'en') + ' in each ' + grpWord(d.si, 'en') + ', so that makes ' +
+               qtyGrp(d.si, d.g, 'en') + '.”<br>What does the ' + d.g + ' mean?'),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? (d.g + ' 是' + grpWord(d.si, 'zh') + '數：' + d.per + ' × ' + d.g + ' ＝ ' + d.total +
+               '。每' + grpWord(d.si, 'zh') + '的' + itemWord(d.si, 'zh') + '數是 ' + d.per + '。')
+            : (d.g + ' counts the ' + grpWordN(d.si, 'en') + ': ' + d.per + ' × ' + d.g + ' = ' + d.total +
+               '. The number in each ' + grpWord(d.si, 'en') + ' is ' + d.per + '.')
+        };
+      } },
+    /* 9. 平分一定要一樣多：四種分法都加得到總數，只有一種是平分 */
+    { id:'equalCheck', cat:'share', grp:'share',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var q = pickUnused([3,4,5,6,7,8,9], used);
+        var total = 3 * q;
+        var correct = TR(q, q, q);
+        /* 三個誘答加起來都等於總數，但沒有一個是「一樣多」——
+           孩子要看的是「公平」，不是「加起來對不對」。 */
+        var opts = shuffle([correct, TR(q - 1, q, q + 1), TR(q - 2, q, q + 2), TR(q + 1, q + 1, q - 2)]);
+        return { si:si, q:q, total:total, correct:correct, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'zh') + '平分給 3 個小朋友。<br>哪一種分法才是平分？')
+            : (SCENES[d.si].icon + ' ' + qtyThing(d.si, d.total, 'en') +
+               ' are shared equally among 3 children.<br>Which way of splitting them is equal sharing?'),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why:lang === 'zh'
+            ? ('平分就是每個人一樣多：' + d.q + '、' + d.q + '、' + d.q + '，加起來剛好 ' +
+               qtyItem(d.si, d.total, 'zh') + '。其他三種加起來也對，可是分得不一樣多。')
+            : ('Equal sharing means everyone gets the same: ' + d.q + ', ' + d.q + ', ' + d.q + ' adds up to exactly ' +
+               qtyItem(d.si, d.total, 'en') + '. The other three also add up, but the shares are not equal.')
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：9 種題型各一題＋核心題型隨機 3 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['packing','sharing','unitPick','packEq','totalCheck'].indexOf(g.id) >= 0;
+    });
+    shuffle(extraPool).slice(0, 3).forEach(function(g){ slots.push(g); });
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var grp = item.gen.grp;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[grp] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
