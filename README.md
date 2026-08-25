@@ -38,13 +38,14 @@
 | 🔁 規律接接看 | 數的規律 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/parents.html) |
 
 
-## 二年級（1 個主題）
+## 二年級（2 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
 |------|------|:---:|:---:|:---:|:---:|
+| 🧱 三位數積木 | 1000 以內的數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/numbers/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/numbers/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/numbers/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/numbers/parents.html) |
 | 🍪 乘法排排隊 | 九九乘法 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/multiply/parents.html) |
 
-二年級的其他單元（1000 以內的數、直式加減、長度、時間、平面圖形、統計表）課程還在準備中。
+二年級的其他單元（直式加減、分裝與平分、長度、時間、平面圖形、統計表）課程還在準備中。
 
 
 ## 三年級（17 個主題）
@@ -112,7 +113,7 @@ index.html                     # 首頁：選年級＋「▶ 繼續上次的課�
 grade-1/ … grade-6/index.html  # 年級頁：領域摘要＋該年級的課程清單（依領域分區）
 docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調整與深度規格）
 grade-1/math/                  # 一年級：單元整理＋ 9 個四頁迷你課程
-grade-2/math/                  # 二年級：單元整理＋ 1 個四頁迷你課程（multiply）
+grade-2/math/                  # 二年級：單元整理＋ 2 個四頁迷你課程（numbers／multiply）
 grade-3/math/                  # 三年級：單元整理＋ 17 個四頁迷你課程
 grade-4/math/                  # 四年級：單元整理（課程準備中）
 grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你課程
