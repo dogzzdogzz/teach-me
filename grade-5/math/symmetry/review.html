@@ -80,8 +80,8 @@
     <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
   </div>
   <nav class="coursenav">
-    <a href="index.html" data-i18n="nav1">📖 上課</a>
-    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
     <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
   </nav>
 
@@ -123,7 +123,7 @@
       langAria: '切換語言',
       htmlLang:'zh-Hant', title:'線對稱複習挑戰', btn:'EN',
       home:'← 回 teach-me 首頁',
-      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）',
       h1:'🔁 線對稱複習挑戰',
       sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
       intro:'12 題<strong>混合題</strong>：線對稱、對稱軸、對稱點，還會混一點三角形與四邊形的角度，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會判斷。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
@@ -135,7 +135,7 @@
       langAria: 'Switch language',
       htmlLang:'en', title:'Line Symmetry Review Challenge', btn:'中',
       home:'← Back to teach-me home',
-      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)',
       h1:'🔁 Line Symmetry Review Challenge',
       sub:'No peeking at notes — the moment you recall it is the moment it sticks',
       intro:'12 <strong>mixed questions</strong> on line symmetry, axes, and symmetric points, interleaved with a little triangle/quadrilateral angle practice — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really judge it.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
@@ -189,6 +189,25 @@
   function mixOpts(correct, wrongs){
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 誘答選項要「彼此」也不重複：只跟正解比較的話，兩個誘答可能算出同一個數，
+     孩子就只看到 3 個不同的選項（例：三角形第三角 85 度時 a+b 和 c+10 都是 95）。 */
+  function uniqWrongs(correct, cands, nextVal){
+    var out = [], seen = {};
+    seen[String(correct)] = true;
+    for (var i = 0; i < cands.length; i++){
+      var v = cands[i];
+      if (v == null || seen[String(v)]) continue;
+      seen[String(v)] = true; out.push(v);
+      if (out.length === 3) return out;
+    }
+    var guard = 0;
+    while (out.length < 3 && guard < 100){
+      var extra = nextVal(guard++);
+      if (extra == null || seen[String(extra)]) continue;
+      seen[String(extra)] = true; out.push(extra);
+    }
+    return out;
   }
 
   /* ---------- 對稱軸數量表（含 0 條與無數條的圖形） ---------- */
@@ -359,9 +378,8 @@
           b = 20 + rand(120);
           c = 180 - a - b;
         } while (c < 10 || c > 140);
-        var wrongs = [a + b, c + 10, Math.max(1, c - 10)].filter(function(v){ return v !== c; });
-        while (wrongs.length < 3) wrongs.push(c + 20 + wrongs.length);
-        var m = mixOpts(c, wrongs.slice(0, 3));
+        var wrongs = uniqWrongs(c, [a + b, c + 10, Math.max(1, c - 10)], function(k){ return c + 20 + k * 5; });
+        var m = mixOpts(c, wrongs);
         return { a:a, b:b, c:c, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -386,9 +404,8 @@
           c = 50 + rand(80);
           d4 = 360 - a - b - c;
         } while (d4 < 10 || d4 > 170);
-        var wrongs = [a, d4 + 10, Math.max(1, d4 - 10)].filter(function(v){ return v !== d4; });
-        while (wrongs.length < 3) wrongs.push(d4 + 20 + wrongs.length);
-        var m = mixOpts(d4, wrongs.slice(0, 3));
+        var wrongs = uniqWrongs(d4, [a, d4 + 10, Math.max(1, d4 - 10)], function(k){ return d4 + 20 + k * 5; });
+        var m = mixOpts(d4, wrongs);
         return { a:a, b:b, c:c, d:d4, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){

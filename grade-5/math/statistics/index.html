@@ -111,6 +111,9 @@
   .chart-bar.picked{stroke:#2B2A33;stroke-width:2.5}
   .chart-point{cursor:pointer}
   .chart-point:hover{opacity:.8}
+  .chart-hit{cursor:pointer}
+  .chart-hit:focus{outline:3px solid #3B7DD8;outline-offset:2px}
+  .chart-hit:focus-visible{outline:3px solid #3B7DD8;outline-offset:2px}
   .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:14px;justify-content:center}
   .legend .sw{display:inline-block;width:15px;height:15px;border-radius:4px;margin-right:6px;vertical-align:-2px}
   .unitchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center}
@@ -138,8 +141,8 @@
   </div>
   <nav class="coursenav">
     <span data-i18n="nav1">📖 上課（本頁）</span>
-    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
-    <a href="review.html" data-i18n="nav3">🔁 複習挑戰</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
   </nav>
 
   <header>
@@ -407,6 +410,19 @@
     };
   }
 
+  /* 只綁 click 的圖形元素用鍵盤到不了、也沒有 focus 樣式。
+     這裡統一補 role/tabindex/Enter-Space（作法同 grade-3/table 的資料表格）。 */
+  function makeActivatable(el, idx, onClick, label){
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    if (label) el.setAttribute('aria-label', label);
+    var cls = el.getAttribute('class');
+    el.setAttribute('class', cls ? (cls + ' chart-hit') : 'chart-hit');
+    el.addEventListener('click', function(){ onClick(idx); });
+    el.addEventListener('keydown', function(ev){
+      if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); onClick(idx); }
+    });
+  }
   function addBars(geom, values, color, opts){
     opts = opts || {};
     var widthRatio = opts.widthRatio || 0.5;
@@ -425,7 +441,7 @@
         lbl.textContent = String(v);
         geom.svg.appendChild(lbl);
       }
-      if (opts.onClick) rect.addEventListener('click', (function(idx){ return function(){ opts.onClick(idx); }; })(i));
+      if (opts.onClick) makeActivatable(rect, i, opts.onClick, opts.labels ? opts.labels[i] : null);
     });
     return bars;
   }
@@ -446,8 +462,8 @@
       geom.svg.appendChild(rectA); geom.svg.appendChild(rectB);
       groups.push({ a: rectA, b: rectB });
       if (opts.onClick){
-        rectA.addEventListener('click', (function(idx){ return function(){ opts.onClick(idx); }; })(i));
-        rectB.addEventListener('click', (function(idx){ return function(){ opts.onClick(idx); }; })(i));
+        makeActivatable(rectA, i, opts.onClick, opts.labels ? opts.labels[i] : null);
+        makeActivatable(rectB, i, opts.onClick, opts.labels ? opts.labels[i] : null);
       }
     });
     return groups;
@@ -464,7 +480,7 @@
       if (opts.highlightSet && opts.highlightSet.indexOf(i) >= 0) c.setAttribute('stroke', '#2B2A33'), c.setAttribute('stroke-width', '2.5');
       geom.svg.appendChild(c);
       dots.push(c);
-      if (opts.onClick) c.addEventListener('click', (function(idx){ return function(){ opts.onClick(idx); }; })(i));
+      if (opts.onClick) makeActivatable(c, i, opts.onClick, opts.labels ? opts.labels[i] : null);
     });
     if (opts.highlightSegment != null){
       var i0 = opts.highlightSegment, i1 = i0 + 1;
@@ -497,7 +513,7 @@
       home:'← 回 teach-me 首頁',
       h1:'📊 資料偵察隊', sub:'看懂統計圖表，找出資料裡的真相',
       intro:'圖表是<strong>資料的另一種語言</strong>：同一堆數字，畫成長條圖、折線圖看起來完全不一樣。<br>今天我們要學會<strong>正確讀圖</strong>，也要學會抓出<strong>會騙人的圖表</strong>。',
-      nav1:'📖 上課（本頁）', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰',
+      nav1:'📖 上課（本頁）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（隨機新題）',
       modeTitle:'今天想怎麼學？（隨時可以換）',
       modes:{
         ahead:{ icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：慢慢看範例就好，試題只出 6 題基礎題，遊戲會自動給提示。' },
@@ -604,7 +620,7 @@
       home:'← Back to teach-me home',
       h1:'📊 The Data Detective Squad', sub:'Read statistical charts and find the truth in the data',
       intro:'A chart is <strong>another language for data</strong>: the same numbers look completely different as a bar chart or a line graph.<br>Today we will learn to <strong>read charts correctly</strong> — and to spot <strong>charts that lie</strong>.',
-      nav1:'📖 Lesson (this page)', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge',
+      nav1:'📖 Lesson (this page)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (fresh questions)',
       modeTitle:'How do you want to learn today? (switch anytime)',
       modes:{
         ahead:{ icon:'🚀', h:'Learning ahead', p:'First time meeting this topic', banner:'Ahead mode: enjoy the examples at your own pace — the quiz has just the 6 basics, and the game shows a hint automatically.' },
@@ -720,9 +736,9 @@
       opts:['下降 5 度','上升 5 度','下降 10 度','上升 12 度'], ans:0,
       why:'週二是 25 度，週三是 20 度，25 − 20 = 5，是下降 5 度。' },
     { kind:'none',
-      stem:'小美想呈現全班「最喜歡的顏色」，四種顏色各有多少人喜歡，應該用哪種圖表？',
+      stem:'小美想比較全班四種顏色各有「多少人」喜歡，還要一眼看出哪一種最多、第一名比第二名多幾個人，應該用哪種圖表？',
       opts:['長條圖','折線圖','複合長條圖','圓餅圖'], ans:0,
-      why:'比較不同類別（顏色）的數量，適合用長條圖。' },
+      why:'要讀出「幾個人」和「多幾個人」，長條圖最好 —— 每條的高度就是人數，可以直接比高度。圓餅圖看的是各佔全班的「比例」，不容易讀出人數差幾個；折線圖是看隨時間的變化；複合長條圖是同時比兩組資料。' },
     { kind:'bar-total',
       stem:'下面這張圖是某商店四天賣出的雨傘數，四天總共賣出幾把？',
       cats:['週一','週二','週三','週四'], values:[12,18,9,15], yUnit:'把',
@@ -751,9 +767,9 @@
       opts:['Down 5°','Up 5°','Down 10°','Up 12°'], ans:0,
       why:'Tuesday was 25° and Wednesday was 20°. 25 − 20 = 5, a drop of 5°.' },
     { kind:'none',
-      stem:'Mia wants to show how many classmates like each of 4 favorite colors — which chart should she use?',
+      stem:'Mia wants to compare HOW MANY classmates like each of 4 colors, and see at a glance which is highest and by how many people. Which chart should she use?',
       opts:['Bar chart','Line graph','Grouped bar chart','Pie chart'], ans:0,
-      why:'Comparing amounts across different categories (colors) calls for a bar chart.' },
+      why:'To read off counts and differences ("how many more"), a bar chart is best — each bar\'s height IS the count, so you can compare heights directly. A pie chart shows each colour\'s SHARE of the class, which makes exact counts and differences hard to read; a line graph shows change over time; a grouped bar chart compares two data sets at once.' },
     { kind:'bar-total',
       stem:'This chart shows umbrellas sold over 4 days at a shop. What is the total sold?',
       cats:['Mon','Tue','Wed','Thu'], values:[12,18,9,15], yUnit:'',
@@ -924,6 +940,7 @@
     });
     addBars(geom, values, COLOR_GREEN, {
       highlightIdx: ex1Picked,
+      labels: d.WEEKDAYS.slice(0, 5),
       onClick: function(i){
         ex1Picked = i;
         var cat = d.WEEKDAYS.slice(0, 5)[i];
@@ -949,6 +966,7 @@
     });
     addLine(geom, EX2_VALUES, COLOR_BLUE, {
       highlightSegment: ex2Segment >= 0 ? ex2Segment : null,
+      labels: cats,
       onClick: function(i){
         ex2Picked = i; ex2Segment = -1;
         document.getElementById('ex2Line').innerHTML = d.ex2PointLine(cats[i], EX2_VALUES[i]);
@@ -986,6 +1004,7 @@
     var hatchB = makeHatchPattern(geom.svg, COLOR_ORANGE);
     addGroupedBars(geom, EX3_A, EX3_B, COLOR_GREEN, hatchB, {
       highlightIdx: ex3Picked,
+      labels: cats,
       onClick: function(i){
         ex3Picked = i;
         var a = EX3_A[i], b = EX3_B[i];
@@ -1262,6 +1281,8 @@
         vs = cats.map(function(){ return randInt(3, 25); });
         i1 = randInt(0, n - 1); i2 = randInt(0, n - 1);
       } while (i1 === i2 || vs[i1] === vs[i2]);
+      /* 題目問「i1 比 i2 多多少」，所以 i1 一定要是比較大的那個，否則問法和正解不符 */
+      if (vs[i1] < vs[i2]){ var swapTmp = i1; i1 = i2; i2 = swapTmp; }
       var big = Math.max(vs[i1], vs[i2]), small = Math.min(vs[i1], vs[i2]);
       var diff = big - small;
       var m2 = mixOpts(diff, [vs[i1] + vs[i2], diff + 1, Math.max.apply(null, vs)]);

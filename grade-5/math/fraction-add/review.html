@@ -80,8 +80,8 @@
     <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
   </div>
   <nav class="coursenav">
-    <a href="index.html" data-i18n="nav1">📖 上課</a>
-    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
     <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
   </nav>
 
@@ -123,7 +123,7 @@
       langAria: '切換語言',
       htmlLang:'zh-Hant', title:'通分加減複習挑戰', btn:'EN',
       home:'← 回 teach-me 首頁',
-      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）',
       h1:'🔁 通分加減複習挑戰',
       sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
       intro:'12 題<strong>混合題</strong>：異分母加減、擴分約分、比較大小、最小公倍數、分數乘法交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
@@ -135,7 +135,7 @@
       langAria: 'Switch language',
       htmlLang:'en', title:'Common Denominators Review Challenge', btn:'中',
       home:'← Back to teach-me home',
-      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)',
       h1:'🔁 Common Denominators Review Challenge',
       sub:'No peeking at notes — the moment you recall it is the moment it sticks',
       intro:'12 <strong>mixed questions</strong> interleaving unlike-fraction addition/subtraction, expanding/simplifying, comparing size, least common multiples, and multiplying fractions — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
@@ -193,17 +193,32 @@
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
-  /* 從候選字串中挑出跟正解不同、彼此不重複的 n 個錯誤選項 */
+  /* 去重要看「值」不是字串：'1/3' 和 '2/6' 值一樣，兩個都放
+     孩子看到的其實只有 3 個選項。 */
+  function optKey(v){
+    var t = String(v).trim();
+    var m = /^(-?\d+)\s*\/\s*(\d+)$/.exec(t);
+    if (m && Number(m[2]) !== 0) return 'N' + (Number(m[1]) / Number(m[2]));
+    var n = Number(t);
+    return (t === '' || isNaN(n)) ? 'S' + t : 'N' + n;
+  }
+  /* 從候選字串中挑出跟正解不同、彼此「值」也不重複的 n 個錯誤選項 */
   function uniqueWrongs(correct, cands, n){
-    var out = [];
+    var out = [], seen = {};
+    seen[optKey(correct)] = true;
     cands.forEach(function(c){
-      if (c && c !== correct && out.indexOf(c) < 0) out.push(c);
+      if (!c) return;
+      var k = optKey(c);
+      if (!seen[k]){ seen[k] = true; out.push(c); }
     });
-    var i = 1;
-    while (out.length < n){
-      var f = correct + '#' + i;
-      if (out.indexOf(f) < 0) out.push(f);
-      i++;
+    /* 保底也要長得像答案：舊版會生出「3/4#1」這種字串給孩子選 */
+    var fm = /^(-?\d+)\s*\/\s*(\d+)$/.exec(String(correct).trim());
+    for (var i = 1; out.length < n && i < 40; i++){
+      var cand = fm ? (fm[1] + '/' + (Number(fm[2]) + i)) : String(Number(correct) + i);
+      if (fm && i % 2 === 0) cand = (Number(fm[1]) + i) + '/' + fm[2];
+      var kk = optKey(cand);
+      if (seen[kk]) continue;
+      seen[kk] = true; out.push(cand);
     }
     return out.slice(0, n);
   }

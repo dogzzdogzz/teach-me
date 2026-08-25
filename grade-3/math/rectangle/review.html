@@ -81,10 +81,10 @@
     <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
   </div>
   <nav class="coursenav">
-    <a href="index.html" data-i18n="nav1">📖 上課</a>
-    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
     <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
-    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
   </nav>
 
   <header>
@@ -151,6 +151,16 @@
     var c = [cx,cy];
     var raw = [[cx-halfW-slant,cy+halfH],[cx+halfW-slant,cy+halfH],[cx+halfW+slant,cy-halfH],[cx-halfW+slant,cy-halfH]];
     return raw.map(function(p){ return rotatePt(p, c, rot||0); });
+  }
+  /* 旋轉之後最遠的頂點必須留在 viewBox（中心 110,110、半徑 110）之內，
+     還要留邊給刻度與直角記號；平行四邊形的 halfW+slant 最大到 113，會被切掉。 */
+  function fitPts(pts, maxR){
+    var cx = 110, cy = 110, far = 0;
+    maxR = maxR || 100;
+    pts.forEach(function(p){ var dd = Math.sqrt((p[0]-cx)*(p[0]-cx) + (p[1]-cy)*(p[1]-cy)); if (dd > far) far = dd; });
+    if (far <= maxR) return pts;
+    var k = maxR / far;
+    return pts.map(function(p){ return [cx + (p[0]-cx)*k, cy + (p[1]-cy)*k]; });
   }
   function shapeProps(pts){
     var n = pts.length, sides = [], angles = [], i;
@@ -238,7 +248,7 @@
       langAria: '切換語言',
       htmlLang:'zh-Hant', title:'方方正正複習挑戰', btn:'EN',
       home:'← 回 teach-me 首頁',
-      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
       h1:'🔁 方方正正複習挑戰',
       sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
       intro:'12 題<strong>混合題</strong>：正方形、長方形、周長、乘法、數字交錯出現，<strong>每一批的圖形和數字都是新出的</strong>，背答案沒有用，要真的會判斷。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
@@ -250,7 +260,7 @@
       langAria: 'Switch language',
       htmlLang:'en', title:'Squares & Rectangles Review Challenge', btn:'中',
       home:'← Back to teach-me home',
-      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
       h1:'🔁 Squares & Rectangles Review Challenge',
       sub:'No peeking at notes — the moment you recall it is the moment it sticks',
       intro:'12 <strong>mixed questions</strong> interleaving squares, rectangles, perimeter, multiplication and place value — <strong>every batch uses fresh shapes and numbers</strong>, so memorising answers won’t help; you have to really judge.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
@@ -357,7 +367,7 @@
         var hh;
         do { hh = 25 + rand(46); } while (Math.abs(hw - hh) < 14); // 25..70, keep distinct groups
         var rot = randRot();
-        return { pts: rectPts(110,110,hw,hh,rot) };
+        return { pts: fitPts(rectPts(110,110,hw,hh,rot)) };
       },
       fmt: function(d, lang){
         var texts = RECT_OPTS4[lang];
@@ -373,7 +383,7 @@
       make: function(){
         var s = 40 + rand(36); // 40..75
         var rot = rand(360);
-        return { pts: rectPts(110,110,s,s,rot) };
+        return { pts: fitPts(rectPts(110,110,s,s,rot)) };
       },
       fmt: function(d, lang){
         var texts = SQUARE_OPTS4[lang];
@@ -388,7 +398,7 @@
     { id:'inclusionYesNo', cat:'rectangle',
       make: function(){
         var s = 40 + rand(36); var rot = rand(360);
-        return { pts: rectPts(110,110,s,s,rot) };
+        return { pts: fitPts(rectPts(110,110,s,s,rot)) };
       },
       fmt: function(d, lang){
         var texts = INCLUSION_OPTS[lang];
@@ -405,7 +415,7 @@
         var hw = 40 + rand(41); var hh;
         do { hh = 25 + rand(46); } while (Math.abs(hw - hh) < 14);
         var rot = randRot();
-        return { pts: rectPts(110,110,hw,hh,rot) };
+        return { pts: fitPts(rectPts(110,110,hw,hh,rot)) };
       },
       fmt: function(d, lang){
         var texts = REVERSE_OPTS[lang];
@@ -422,7 +432,7 @@
         var dv, dh;
         do { dv = 45 + rand(35); dh = 30 + rand(35); } while (Math.abs(dv - dh) < 15);
         var rot = randRot();
-        return { pts: rhombusPts(110,110,dv,dh,rot) };
+        return { pts: fitPts(rhombusPts(110,110,dv,dh,rot)) };
       },
       fmt: function(d, lang){
         var texts = SHAPE_NAME_OPTS[lang];
@@ -441,7 +451,7 @@
           halfW = 35 + rand(35); halfH = 25 + rand(25); slant = 20 + rand(25);
         } while (Math.abs(2*halfW - Math.hypot(2*slant, 2*halfH)) < 12);
         var rot = randRot();
-        return { pts: paraPts(110,110,halfW,halfH,slant,rot) };
+        return { pts: fitPts(paraPts(110,110,halfW,halfH,slant,rot)) };
       },
       fmt: function(d, lang){
         var texts = PARA_NAME_OPTS[lang];
@@ -457,7 +467,7 @@
       make: function(){
         var s = 40 + rand(36);
         var rot = 5 + rand(80); // 5..84, clearly non-trivial rotation
-        return { pts: rectPts(110,110,s,s,rot) };
+        return { pts: fitPts(rectPts(110,110,s,s,rot)) };
       },
       fmt: function(d, lang){
         var texts = ROTATE_OPTS[lang];
@@ -476,11 +486,11 @@
         var pts;
         if (isSquare){
           var s = 40 + rand(36);
-          pts = rectPts(110,110,s,s,rot);
+          pts = fitPts(rectPts(110,110,s,s,rot));
         } else {
           var hw = 40 + rand(41), hh;
           do { hh = 25 + rand(46); } while (Math.abs(hw - hh) < 14);
-          pts = rectPts(110,110,hw,hh,rot);
+          pts = fitPts(rectPts(110,110,hw,hh,rot));
         }
         return { pts: pts };
       },

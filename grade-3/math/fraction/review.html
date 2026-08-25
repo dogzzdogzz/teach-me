@@ -82,10 +82,10 @@
     <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
   </div>
   <nav class="coursenav">
-    <a href="index.html" data-i18n="nav1">📖 上課</a>
-    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
     <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
-    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
   </nav>
 
   <header>
@@ -208,7 +208,11 @@
       var allDifferent = angles.every(function(a){ return Math.abs(a - equal) > 6; });
       if (allDifferent) return angles;
     }
-    return [70, 150, 80, 60];
+    /* 保底也必須是「n 塊」—— 寫死 4 個角度時，n=3 或 5 會畫出塊數不對的蛋糕 */
+    var dev = [];
+    for (var k = 0; k < n; k++) dev.push(((k % 2 === 0) ? 1 : -1) * (0.30 - k * 0.02));
+    var mean = dev.reduce(function(a, b){ return a + b; }, 0) / n;
+    return dev.map(function(v){ return equal * (1 + (v - mean)); });
   }
 
   var I18N = {
@@ -216,7 +220,7 @@
       langAria: '切換語言',
       htmlLang:'zh-Hant', title:'分數複習挑戰', btn:'EN',
       home:'← 回 teach-me 首頁',
-      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
       h1:'🔁 分數複習挑戰',
       sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
       intro:'12 題<strong>混合題</strong>：分數、除法、乘法交錯出現，<strong>每一批的數字和蛋糕圖都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
@@ -228,7 +232,7 @@
       langAria: 'Switch language',
       htmlLang:'en', title:'Fractions Review Challenge', btn:'中',
       home:'← Back to teach-me home',
-      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
       h1:'🔁 Fractions Review Challenge',
       sub:'No peeking at notes — the moment you recall it is the moment it sticks',
       intro:'12 <strong>mixed questions</strong> interleaving fractions, division and multiplication — <strong>every batch uses fresh numbers and freshly drawn cake pictures</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
@@ -280,15 +284,42 @@
   /* 從候選字串中湊出 3 個相異、且不等於正解文字的錯誤選項 */
   function makeWrongTexts(correctText, candidates){
     var out = [];
-    var seen = {}; seen[correctText] = true;
+    /* 去重要看「值」不是字串：'2/8' 和 '1/4' 值一樣，兩個都放進去
+       孩子看到的其實只有 3 個選項。 */
+    var seen = {}; seen[fracKey(correctText)] = true;
     (candidates || []).forEach(function(c){
-      if (!seen[c]){ seen[c] = true; out.push(c); }
+      var k = fracKey(c);
+      if (!seen[k]){ seen[k] = true; out.push(c); }
     });
     return out.slice(0, 3);
   }
+  function fracKey(v){
+    var t = String(v).trim();
+    var m = /^(-?\d+)\s*\/\s*(\d+)$/.exec(t);
+    if (m && Number(m[2]) !== 0) return 'N' + (Number(m[1]) / Number(m[2]));
+    var n = Number(t);
+    return (t === '' || isNaN(n)) ? 'S' + t : 'N' + n;
+  }
   function mixTextOpts(correctText, candidates){
     var wrongs = makeWrongTexts(correctText, candidates);
-    while (wrongs.length < 3) wrongs.push(correctText + '·' + wrongs.length); /* 保底，理論上不會用到 */
+    /* 保底選項也必須長得像一個答案：舊寫法會生出「2/4·2」這種字串給孩子選 */
+    var mm = /^(\d+)\/(\d+)$/.exec(correctText);
+    var isInt = /^-?\d+$/.test(correctText);
+    for (var k = 1; wrongs.length < 3 && k < 12; k++){
+      var cands = mm
+        ? [mm[1] + '/' + (Number(mm[2]) + k),
+           (Number(mm[2]) - k > Number(mm[1])) ? (mm[1] + '/' + (Number(mm[2]) - k)) : null,
+           (Number(mm[1]) + k < Number(mm[2])) ? ((Number(mm[1]) + k) + '/' + mm[2]) : null]
+        : (isInt ? [String(Number(correctText) + k), (Number(correctText) - k > 0) ? String(Number(correctText) - k) : null] : []);
+      for (var ci = 0; ci < cands.length && wrongs.length < 3; ci++){
+        var c = cands[ci];
+        if (!c || fracKey(c) === fracKey(correctText)) continue;
+        var dupByValue = false;
+        for (var wi = 0; wi < wrongs.length; wi++){ if (fracKey(wrongs[wi]) === fracKey(c)) dupByValue = true; }
+        if (!dupByValue) wrongs.push(c);
+      }
+    }
+    while (wrongs.length < 3) wrongs.push(correctText + '·' + wrongs.length); /* 真正最後的保底 */
     var opts = shuffle([correctText].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correctText) };
   }
@@ -347,7 +378,7 @@
       },
       fmt:function(d, lang){
         var correct = d.sum + '/' + d.n;
-        var mix = mixTextOpts(correct, [d.sum + '/' + (d.n * 2), d.a + '/' + d.n, d.b + '/' + d.n]);
+        var mix = mixTextOpts(correct, [d.sum + '/' + (d.n * 2), d.a + '/' + d.n, d.b + '/' + d.n, (d.sum + 1) + '/' + d.n, d.sum + '/' + (d.n + 1)]);
         return {
           stem: (d.a + '/' + d.n) + ' + ' + (d.b + '/' + d.n) + ' = ?',
           pic: { type:'bar', n:d.n, a:d.a, b:d.b },

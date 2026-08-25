@@ -1,114 +1,74 @@
-# Review backlog — 2026-08-25
+# Review backlog — 2026-08-25（第二輪，已清空）
 
-Findings from a Codex per-lesson review of all 49 lessons, adjudicated by six independent
-verifier agents and spot-checked by hand. **Everything listed here is CONFIRMED REAL and
-still unfixed.** False positives and already-fixed items have been removed.
+上一版（2026-08-25 早上）列出的 33 筆問題**全部處理完畢**：31 筆修掉、2 筆判定為
+不需要改（理由記在下面）。這一輪另外**新發現 8 筆**，也一起修掉了。
 
-## How this list was produced (so you can trust or re-derive it)
+**目前沒有已知未修的問題。** 這份文件保留下來的價值是最後兩節：
+「判定為不需要改的」（不要再被重新提報）和「這一輪學到的」。
 
-1. `codex exec --sandbox read-only` run once per lesson, scoped to that lesson's 4 pages,
-   capped at 8 file reads — 49 runs, none died.
-2. Raw output: 82 HIGH / 45 MEDIUM / 125 LOW. That count is **inflated**: 158 findings were
-   one systemic `data-i18n-aria` issue counted per page, and some transcripts repeat their
-   report twice. Deduplicated to 112 non-aria HIGH/MEDIUM findings.
-3. Those 112 were split across six verifier agents told to adjudicate, not fix.
-   Result: ~67 real, ~30 false, a handful unsure.
-4. 34 were fixed on 2026-08-25 (see git log). The rest are below.
-
-**Two systematic false-positive classes to ignore if you re-run the review:**
-- *"`parents.html` is missing"* on a grade-5 lesson. 19 grade-5 lessons predate the
-  four-page spec; `teaching-framework.md` §六之一 records them as 待補. Only `big-units`,
-  `fraction-divide`, `prisms`, `rounding` have the fourth page.
-- *"equal-value options"* in the three whitelisted cases from §六之二 (odd-one-out questions,
-  notation-is-the-lesson questions, and stems that already say 「記得約分」).
+檢查工具已經進版控 → **`tools/`**（見 `tools/README.md`）。
+前兩輪它們都寫在暫存目錄裡、事後遺失、被重寫兩次 —— 不要再這樣做。
 
 ---
 
-## Wrong or misleading content
+## 這一輪的驗證（每一筆都跑過）
 
-| Lesson | File | What is wrong | What it should be |
-|---|---|---|---|
-| `grade-5/big-units` | `review.html` ~377 | `multiplierCheck` keys `100` for 公畝→公頃 | 1 公畝 = 0.01 公頃 — key `0.01` |
-| `grade-5/big-units` | `index.html` ~259 | Lead text says 往上一階「× 100」 | Should be `÷ 100`; contradicts its own `ladderUpBtn` two lines later |
-| `grade-5/decimal` | `reference.html` ~106 | 「商的小數位數不變」 | Contradicted by the next line (append zeros and keep dividing): 1.2÷8 = 0.15 goes 1dp→2dp |
-| `grade-5/prisms` | `reference.html` ~95 | 「圓錐尖端不算正式頂點」 | Taiwan curriculum counts the cone's apex as 頂點. State 「1 個（圓錐尖端）」 |
-| `grade-5/multiple` | `index.html` ~404 | Options include `54`, the stem's own stated boundary (「45 和 54 之間」) | Replace `54` with e.g. `50` |
-| `grade-5/fraction-multiply` | `reference.html` ~135/175 | 假分數 labelled 「比 1 大」 | Excludes `n/n`; should be 「大於或等於 1」 |
-| `grade-5/common-factor` | `index.html` ~221 | Orange arc spans x=50→470 (a jump of 12) but is captioned `+6` | Relabel 「+12（兩次各跳 6 格）」, or split into two +6 arcs |
-| `grade-5/symmetry` | `index.html` (zh ~489 / en ~614) | `gClear` promises 「+20 分」 but the code only ever does `gScore += 10` | Either award 20 or change the text to +10 |
-| `grade-3/multiply` | `parents.html` ~198 | English says "at least 2 out of 3 quiz questions"; Chinese says 「≥ 2/3」 (a proportion) | Quizzes are 6/10/12 questions — English gives parents a far too low bar |
-| `grade-3/length` | `parents.html` ~115 | Tells the parent to "count ladder boxes" to explain why m→cm is ×100 but cm→mm is ×10 | Both are one adjacent step; point at the factor itself, not the step count |
-| `grade-1/add-sub` | `parents.html` ~154 | 「5 人／已擺 3 副／還差幾副」 is a missing-addend problem but labelled 拿走／比較 practice | Relabel as 「還差多少」 (missing addend) |
+| 檢查 | 結果 |
+|---|---|
+| `tools/check_syntax.py`（184 個 inline script） | 0 個語法錯誤 |
+| `tools/check_i18n.py`（185 頁：綁定／殘留／key 對應／英文字典中文） | 0 個問題（36 筆 EN-CJK 是刻意的教材內容，`grade-5/math/index.html` 是轉址頁） |
+| `tools/check_quiz.py`（題庫張數／選項數／中英正解索引／等值選項） | 0 個問題（8 筆等值是 §六之二 的合法例外） |
+| `tools/check_links.py` | 0 個死連結 |
+| `tools/sweep.html` → `runSweep`（184 頁 × 中英 = **368 次載入**，點完所有試題與遊戲） | 0 個錯誤 |
+| `tools/sweep.html` → `sweepOptions`（49 個產生器 × 10～25 批） | 0 個問題 |
+| 針對性驗證 | 直式除法版面逐步截圖、長度階梯 ▲/▼ 算式、乘法切換語言後的按鈕與 `<strong>`、對稱／公因數通關鎖定＋不再被多點覆蓋、統計 `computeDiff` 40 回全部「大的在前」、時間第 5 關不再有 270 分、大單位公頃→公畝正解 100、矩形 72 個圖形頂點全在 viewBox 內、角度 A/B 標籤 17 張圖全都有 |
 
-## Ambiguous questions (a correct child can be marked wrong)
+---
 
-| Lesson | File | Problem | Suggested fix |
-|---|---|---|---|
-| `grade-5/statistics` | `index.html` ~723 | 「全班最喜歡的顏色」 keys only 長條圖 while offering 圓餅圖 — a pie chart is legitimate for whole-class proportion data | Reword stem to 「根據本課教的三種圖表」, or accept pie |
-| `grade-5/statistics` | `review.html` ~175/543 | `chooseType` generator has the same pie ambiguity | Same fix, in the generator |
-| `grade-5/statistics` | `index.html` ~1259 | `computeDiff` picks `i1`/`i2` with no order constraint, but the prompt always reads 「A 比 B 多多少」 while keying `abs()` | Force `i1` to the larger value, or use neutral 「相差多少」 |
-| `grade-5/polygon` | `review.html` ~305 | `sectorFraction` offers the unreduced `deg/360` alongside the reduced key (90 → `1/4` vs `90/360`) | Add 「答案要化到最簡」 to the stem, or drop the candidate |
-| `grade-5/fraction-multiply` | `review.html` | `mixedXint`, `areaModel`, `fracAdd` each have an entry where a distractor equals the key (`6`≡`12/2`, `1/2`≡`6/12`, `2/3`≡`4/6`) and the stem does not say 「記得約分」 | Add 「（記得約分）」 to those three stems, or swap the distractors |
-| `grade-5/decimal` | `review.html` ~382 | `fracAddSimple` 1/3+1/6 keys `1/2` while offering `3/6` | Replace `3/6`, or require simplest form in the stem |
-| `grade-5/rounding` | `review.html` ~272 | `makeWrongs` dedupes by exact string, so `roundDecimalStr(n,0)` can yield a wrong option numerically equal to the key (8.95 → key `9.0`, wrong `9`) | Dedupe with `parseFloat(a) === parseFloat(b)` |
-| `grade-5/symmetry` | `review.html` ~362, ~389 | `angleTriangle` wrongs `[a+b, c+10, c-10]` and `angleQuad` `[a, d4+10, d4-10]` are filtered against the key but not each other, so two buttons can show the same number | Dedupe wrongs by value before `mixOpts` |
-| `grade-3/time` | game `ROUNDS` ~311 | `{h:0, m:270}` renders as plain 「270 分」 and is marked wrong against 「4 時 30 分」, but 270 分 is a valid normalisation — unlike the deliberate 「0時75分」 traps it carries no `f:true` flag | Add the flag and confirm intent, or accept 270 分 |
+## 判定為不需要改的（不要再重新提報）
 
-## Broken or misleading pictures
+1. **`grade-1/shapes`「兩個三角形可以合成一個正方形」** —— 上一版列為待判斷。
+   維持原文。`s4lead` 用的是「**可以**合成」（存在敘述，為真），畫面上畫的
+   本來就是等腰直角三角形；真正有歧義的那道試題早就改成「圖中的兩個三角形」
+   並在 `why` 裡寫明「兩個一樣大的三角形不一定都能合成正方形」。
+   要加註解就得引入「直角」—— 那不是一年級的詞彙，違反 §三 的年段規範
+   （一句 ≤ 12 字、不用未教的詞）。**代價大於收益，所以不改。**
+2. **8 筆等值選項** 是 §六之二 明文的合法例外：反向題（`percent` 哪個**不**等於 50%）、
+   記法本身就是考點（`rounding` 的 `10.0` vs `10`，`why` 有明講不能寫成 10）、
+   題幹已寫「記得約分」（`fraction-multiply`）。
+3. **36 筆「英文字典裡有中文」** 是中文本身就是教材的字串（中文數字、八折），
+   `en.btn` 的 `'中'` 也是正常的。
+4. **五年級 19 課沒有 `parents.html`** 是 §六之一 記錄的待補，不是缺陷。
 
-| Lesson | File | Problem | Suggested fix |
-|---|---|---|---|
-| `grade-5/solid` | `index.html` ~1018 | `drawSurfaceNet` puts the top face at `y0 - ww` with `y0 = 6 + hh`; shipped preset `{l:5,w:3,h:2}` gives `y = -8`, clipped by the viewBox | `y0 = 6 + Math.max(hh, ww)` and grow `totalH` |
-| `grade-5/solid` | `reference.html` ~124 | Mnemonic says look for 「一直排 4 個」 but the first net rendered on that page (`VALID_NETS[0]`) has a maximum run of 3 | Show a run-of-4 net first, or caveat the mnemonic |
-| `grade-5/fraction-divide` | `reference.html` ~64 | `.barrow` cells are a fixed 26px, so a 3-of-8 shaded region renders the same width as 3-of-4 — the picture fails to show the halving the lesson teaches | Cell width inversely proportional to segment count (`208px / segments`) |
-| `grade-5/statistics` | `reference.html` ~236 | The chart-anatomy list names 「⑤ 圖例」 but `buildAnatomy()` renders a single-series bar chart with no legend | Drop the callout, or render a two-series chart |
-| `grade-3/fraction` | `index.html` ~794 | `makePie()` draws all `n` sector lines regardless of shaded count, so the "before we cut" cake already appears sliced — contradicting its own caption | Draw one undivided circle when `!warmCut` |
-| `grade-3/divide` | `index.html` ~868 | `#longdivBox` is plain text in a `white-space:pre` div — no division bracket, quotient digits never positioned | Draw a real long-division layout |
-| `grade-3/angle` | `review.html` ~205 | `overlaySVG` draws ray A orange and ray B green with no letter labels and no legend, yet the stem asks "which is bigger, A or B" | Label the rays |
-| `grade-3/rectangle` | `review.html` ~439 | `paraPts` x-extent reaches `cx ± (halfW + slant)`; max 69+44 = 113 exceeds the viewBox radius 110 | Cap `halfW + slant ≤ ~85` |
+## 這一輪新發現並修掉的 8 筆
 
-## Code defects
+前 4 筆只有瀏覽器抓得到（靜態檢查全綠），已寫成 §六之三 的規範。
 
-| Lesson | File | Problem | Suggested fix |
-|---|---|---|---|
-| `grade-3/length` | `index.html` ~964 | `renderLadder()` always calls `ladderEqDown()` (×). A correct `ladderEqUp()` (÷) exists at ~494 and is never called | Call `ladderEqUp()` when the step was ▲ |
-| `grade-3/multiply` | `index.html` ~1039 | Toggle handler uses `s3narr.innerHTML` but `renderAll()` uses `.textContent`, exposing literal `<strong>` markup; `applyStatic()` also resets the button label to "Show" on every re-render while the table stays visible | Use `innerHTML` in both; restore the label from `s3shown` |
-| `grade-5/common-factor` | `index.html` ~834 | After the final round is won, remaining wrong buttons stay clickable and can dock score or overwrite the win message | Disable the grid once `foundCount === needCount` on the last round |
-| `grade-5/area` | `review.html` ~372 | `angleMissing`'s retry loop gives up after 30 tries and keeps the last draw, which can have `a + b ≥ 180` → a third angle ≤ 0° | On bailout, fall back to a fixed safe pair |
-| `grade-3/fraction` | `review.html` ~291 | `mixTextOpts` fallback yields a literal `"2/4·2"` when `addSameDen` draws `a = b = 1, n = 4` | Replace the fallback with a real distractor |
-| `grade-3/fraction` | `review.html` ~211 | `randUnequalAngles` fallback returns a length-4 array regardless of `n` (3 or 5) | Return an `n`-length array |
-| `grade-3/fraction` | `index.html` ~1217 | Round `{d:4, ladderOther:8}` calls `gHint2Bigger(1, 1, round.d)`, producing the literal hint 「1/4 和 1/4」 | Pass `round.d` and `round.ladderOther` |
-| `grade-5/statistics` | `index.html` ~463 | `.chart-point` circles have a mouse click handler only — no `tabindex`, no keydown, no focus style | Add `role="button"`, `tabindex="0"`, Enter/Space handler (see `grade-3/table` for the pattern already used) |
+| 課程／檔案 | 問題 | 怎麼修 |
+|---|---|---|
+| `grade-5/polygon` `review.html` | `mixOpts` 保底選項生出 **「60·2°」「1/16·2」** 這種字串給孩子選；成因是 `fractionMultiplyWord` 抽到兩個一樣的分數時，兩個誘答塌成同一個字串 | 保底改成生「長得像答案」的數；去重改成比值；產生器不再抽到重複分數，並多給兩個候選 |
+| `grade-5/fraction-add` `review.html` | 同一個毛病的另一版（保底是 `'3/4#1'`）；另有兩個誘答彼此等值 | `uniqueWrongs` 改成值去重 ＋ 生真的誘答 |
+| `grade-5/percent` `review.html` | `simplifyFrac` 的 `[4,6]` 產生 `3/6` 和 `2/4` 兩個等值誘答 | `mixOpts` 值去重 ＋ 多給候選 |
+| `grade-3/fraction` `review.html` | `addSameDen` 抽到 a=b 時，`2/8` 和 `1/4` 兩個誘答等值 | 文字選項也改成值去重 |
+| `fraction-multiply/review.html` 的 `intXfrac`／`mixedXint` | backlog 只列了 3 個產生器，實際上 `intXfrac` 有 4/6 筆、`mixedXint` 有 6/6 筆的誘答與正解等值 | 四個產生器的題幹都補上「答案用最簡的帶分數或整數表示／記得約分」 |
+| `grade-5/symmetry` `index.html` | 通關後剩下的（不對稱）按鈕還能點，會扣分或蓋掉通關訊息 | 通關即鎖定整個網格（與 `common-factor` 同一個修法） |
+| `grade-5/decimal` `review.html` | `fracAddSimple` 的 `1/2+1/6` 有兩個誘答（`4/8`、`2/6`／`1/3`）等值 | 換成三個值互異的迷思型誘答 |
+| `grade-3/rectangle` `review.html` | 除了 backlog 指出的平行四邊形，長方形／正方形旋轉後頂點距中心 106px（viewBox 半徑 110），刻度與直角記號會貼邊 | 加一個通用 `fitPts()` 護欄，所有圖形一律縮到半徑 100 內（40 萬次模擬 0 例外、0 誤判形狀） |
 
-## Judgment calls left open
+## 這一輪學到的（下次審查請直接套用）
 
-- `grade-3/capacity` 「倒進去的量一樣多，容量就一樣多」 conflates poured amount with container
-  capacity. Matches standard grade-3 curriculum wording; no worked example exposes it.
-  Two verifiers marked this UNSURE.
-- `grade-1/shapes` "two equal right triangles make a square" holds only for isosceles right
-  triangles. Every triangle actually drawn is isosceles, so nothing on screen contradicts
-  it — but the wording generalises further than the pictures justify.
-- `grade-5/solid` 「錯開一格」 (`review.html` ~337) is ambiguous: a 1-column offset gives an
-  invalid 2×2 block, a 2-column offset gives a valid S-hexomino. The code looks right; only
-  the prose is unclear.
-
-## Verification tooling worth rebuilding
-
-The checkers used in that session lived in a session scratchpad and are gone. Each caught
-defects the others could not:
-
-- **key binding** — every `data-i18n` / `data-i18n-aria` key exists in *both* dicts. Catches
-  a key missing from both, which zh/en parity cannot see.
-- **CJK leak** — no Chinese text node outside a `data-i18n` element, judged with a tag stack
-  so nested `<strong>`/`<br>` inside a translated parent is not a false positive. Void
-  elements (`<br>`, `<img>`) must not be pushed onto the stack — that bug hid 19 real leaks
-  from one agent's own checker.
-- **equal-value options** — compare option values as rationals **including units** (`1 公克`
-  and `1 公斤` are not equal), across quiz banks *and* game `ROUNDS`. Checking only the banks
-  misses a whole class of bug.
-- **English-dict scan** — Chinese left inside `I18N.en`. Note `en.btn` is legitimately `中`.
-- **browser sweep** — load every page in a real browser, toggle language, click all modes,
-  answer every quiz item, play the game, collect console errors. This is what found the
-  `data-i18n-aria` handler missing from 135 pages; static analysis had passed them all.
-  Test `reference.html`, `review.html` and `parents.html` too, not just `index.html` — that
-  omission is exactly why the 135-page bug survived the first sweep.
+1. **靜態檢查全綠不代表沒事。** 這一輪 8 筆新發現裡有 4 筆只有「在瀏覽器裡連按
+   十批產生器、把選項抓下來比值」才看得到。`tools/sweep.html` 的
+   `sweepOptions` 就是為此而生。
+2. **backlog 上的數量常常低估。** 「三個產生器有等值誘答」實際查下去是
+   「四個產生器、共 12 個 pool 條目」。修的時候要把同一個檔案的同類程式碼
+   一起掃過，不要只修被點名的那三個。
+3. **backlog 的路徑會寫錯。** 「`grade-3/time` 的 `{h:0,m:270}`」其實在
+   `grade-5/math/time/index.html:311`。行號通常是對的，路徑要自己確認。
+4. **寫檢查腳本一定要先用「已知有問題」的假檔驗證它會噴錯。**
+   這一輪的瀏覽器 harness 先拿一個故意壞掉的頁面測過（短 nav、會 throw 的按鈕、
+   空容器、看得見的 undefined／NaN、壞掉的語言切換 —— 六種都要抓到）才拿去跑真檔。
+5. **`localStorage` 會跨測試殘留。** harness 一定要在載入頁面**之前**寫好
+   `teachme-lang`，否則頁面用英文開場，斷言全部誤判。
+6. **修圖形時用模擬掃過整個參數空間**，不要只看一個 preset：矩形 40 萬次、
+   對稱角度 24 萬次、`addSameDen` 全部 119 種組合 —— 這樣才知道真的修好了。

@@ -157,9 +157,9 @@
   </div>
   <nav class="coursenav">
     <span data-i18n="nav1">📖 上課（本頁）</span>
-    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
-    <a href="review.html" data-i18n="nav3">🔁 複習挑戰</a>
-    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
   </nav>
 
   <header>
@@ -454,7 +454,7 @@
       home:'← 回 teach-me 首頁',
       h1:'📏 長度單位家族', sub:'毫米、公分、公尺、公里 —— 怎麼選、怎麼換算',
       intro:'量不同的東西，要選對單位：硬幣很薄，用<strong>毫米</strong>；鉛筆不長，用<strong>公分</strong>；<br>門很高，用<strong>公尺</strong>；走很遠的路，用<strong>公里</strong>。',
-      nav1:'📖 上課（本頁）', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰', nav4:'👨‍👩‍👧 給家長',
+      nav1:'📖 上課（本頁）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
       modeTitle:'今天想怎麼學？（隨時可以換）',
       modes:{
         ahead:{ icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：慢慢看範例就好，試題只出 6 題基礎題，遊戲會自動給提示。' },
@@ -640,7 +640,7 @@
       home:'← Back to teach-me home',
       h1:'📏 The Length Unit Family', sub:'Millimeters, centimeters, meters, kilometers — choosing and converting',
       intro:'Different things need different units: a coin is thin, use <strong>millimeters</strong>; a pencil isn’t long, use <strong>centimeters</strong>;<br>a door is tall, use <strong>meters</strong>; a long walk, use <strong>kilometers</strong>.',
-      nav1:'📖 Lesson (this page)', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge', nav4:'👨‍👩‍👧 For parents',
+      nav1:'📖 Lesson (this page)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
       modeTitle:'How do you want to learn today? (switch anytime)',
       modes:{
         ahead:{ icon:'🚀', h:'Learning ahead', p:'First time meeting this topic', banner:'Ahead mode: enjoy the examples at your own pace — the quiz has just the 6 basics, and the game shows a hint automatically.' },
@@ -940,6 +940,7 @@
   /* ========== 3. 單位階梯 ========== */
   var ladderKmIdx = 0;
   var ladderLevel = 0; // 0=km,1=m,2=cm,3=mm
+  var ladderDir = 'down';  /* 上一步是往上(÷)還是往下(×)，算式要跟著換 */
   var ladderChips = document.getElementById('ladderChips');
   var stairEl = document.getElementById('stair');
   var ladderEq = document.getElementById('ladderEq');
@@ -956,7 +957,7 @@
     ladderChips.textContent = '';
     LADDER_KM.forEach(function(km, i){
       var b = makeChip(L().ladderChipLabel(km), i === ladderKmIdx);
-      b.addEventListener('click', function(){ ladderKmIdx = i; ladderLevel = 0; buildLadderChips(); renderLadder(); });
+      b.addEventListener('click', function(){ ladderKmIdx = i; ladderLevel = 0; ladderDir = 'down'; buildLadderChips(); renderLadder(); });
       ladderChips.appendChild(b);
     });
   }
@@ -978,8 +979,12 @@
       row.appendChild(lv); row.appendChild(val);
       stairEl.appendChild(row);
     }
-    if (ladderLevel === 0){
+    if (ladderLevel === 0 && ladderDir !== 'up'){
       ladderEq.textContent = d.ladderPrompt;
+    } else if (ladderDir === 'up'){
+      /* 往上一階是「÷」—— 之前不管往上往下都印 × 的算式，跟按鈕上寫的相反 */
+      var upFromU = d.unitNames[LEVEL_KEYS[ladderLevel + 1]], upToU = d.unitNames[LEVEL_KEYS[ladderLevel]];
+      ladderEq.innerHTML = d.ladderEqUp(levelValue(ladderLevel + 1), upFromU, LEVEL_FACTOR[ladderLevel + 1], levelValue(ladderLevel), upToU);
     } else {
       var fromU = d.unitNames[LEVEL_KEYS[ladderLevel - 1]], toU = d.unitNames[LEVEL_KEYS[ladderLevel]];
       ladderEq.innerHTML = d.ladderEqDown(levelValue(ladderLevel - 1), fromU, LEVEL_FACTOR[ladderLevel], levelValue(ladderLevel), toU);
@@ -989,10 +994,10 @@
   }
 
   ladderDownBtn.addEventListener('click', function(){
-    if (ladderLevel < LEVEL_KEYS.length - 1){ ladderLevel++; renderLadder(); }
+    if (ladderLevel < LEVEL_KEYS.length - 1){ ladderLevel++; ladderDir = 'down'; renderLadder(); }
   });
   ladderUpBtn.addEventListener('click', function(){
-    if (ladderLevel > 0){ ladderLevel--; renderLadder(); }
+    if (ladderLevel > 0){ ladderLevel--; ladderDir = 'up'; renderLadder(); }
   });
 
   /* ========== 4. 化聚 ========== */

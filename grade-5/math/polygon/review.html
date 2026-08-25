@@ -80,8 +80,8 @@
     <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
   </div>
   <nav class="coursenav">
-    <a href="index.html" data-i18n="nav1">📖 上課</a>
-    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
     <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
   </nav>
 
@@ -122,7 +122,7 @@
       langAria: '切換語言',
       htmlLang:'zh-Hant', title:'多邊形與扇形複習挑戰', btn:'EN',
       home:'← 回 teach-me 首頁',
-      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）',
       h1:'🔁 多邊形與扇形複習挑戰',
       sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
       intro:'12 題<strong>混合題</strong>：多邊形、扇形、三角形角度、對稱、分數乘法交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
@@ -134,7 +134,7 @@
       langAria: 'Switch language',
       htmlLang:'en', title:'Polygons & Sectors Review Challenge', btn:'中',
       home:'← Back to teach-me home',
-      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)',
       h1:'🔁 Polygons & Sectors Review Challenge',
       sub:'No peeking at notes — the moment you recall it is the moment it sticks',
       intro:'12 <strong>mixed questions</strong> interleaving polygons, sectors, triangle angles, symmetry and fraction multiplication — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
@@ -199,18 +199,49 @@
     var f = reduceFrac(num, den);
     return f.num + '/' + f.den;
   }
-  /* 保證最多 3 個相異、且不等於正解的錯誤選項 */
-  function pickWrongs3(correct, candidates){
-    var out = []; var seen = {}; seen[String(correct)] = true;
+  /* 去重要看「值」不是字串：'1/4' 和 '2/8' 字串不同、值一樣，
+     孩子看到的其實只有 3 個選項。 */
+  function optVal(v){
+    var t = String(v).trim().replace(/°/g, '');
+    var m = /^(-?\d+)\s*\/\s*(\d+)$/.exec(t);
+    if (m && Number(m[2]) !== 0) return Number(m[1]) / Number(m[2]);
+    var n = Number(t);
+    return (t === '' || isNaN(n)) ? null : n;
+  }
+  function dupKey(v){ var n = optVal(v); return n === null ? 'S' + String(v) : 'N' + n; }
+  /* 保證最多 3 個「值」相異、且不等於正解的錯誤選項 */
+  function pickWrongs3(correct, candidates, seen){
+    var out = [];
+    seen = seen || {}; seen[dupKey(correct)] = true;
     (candidates || []).forEach(function(c){
-      var key = String(c);
-      if (!seen[key]){ seen[key] = true; out.push(c); }
+      var k = dupKey(c);
+      if (!seen[k]){ seen[k] = true; out.push(c); }
     });
     return out.slice(0, 3);
   }
+  /* 候選不夠時的保底：舊版會生出「60·2」「1/16·2」這種字串給孩子選，
+     這裡改成生一個真的長得像答案的誘答。 */
+  function fallbackWrongs(correct, need, seen){
+    var out = [];
+    var fm = /^(-?\d+)\s*\/\s*(\d+)$/.exec(String(correct).trim());
+    for (var k = 1; out.length < need && k < 40; k++){
+      var cands = fm
+        ? [fm[1] + '/' + (Number(fm[2]) + k), (Number(fm[1]) + k) + '/' + fm[2]]
+        : [Number(correct) + k, Number(correct) - k];
+      for (var i = 0; i < cands.length && out.length < need; i++){
+        var c = cands[i];
+        if (!fm && (isNaN(Number(c)) || Number(c) <= 0)) continue;
+        var dk = dupKey(c);
+        if (seen[dk]) continue;
+        seen[dk] = true; out.push(c);
+      }
+    }
+    return out;
+  }
   function mixOpts(correct, candidates){
-    var wrongs = pickWrongs3(correct, candidates);
-    while (wrongs.length < 3){ wrongs.push(String(correct) + '·' + wrongs.length); }
+    var seen = {};
+    var wrongs = pickWrongs3(correct, candidates, seen);
+    if (wrongs.length < 3) wrongs = wrongs.concat(fallbackWrongs(correct, 3 - wrongs.length, seen));
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -308,7 +339,7 @@
       },
       fmt: function(d, lang){
         return {
-          stem: lang === 'zh' ? '扇形的圓心角是 ' + d.deg + '°，這個扇形是整個圓的幾分之幾？' : 'A sector has a central angle of ' + d.deg + '°. What fraction of the whole circle is it?',
+          stem: lang === 'zh' ? '扇形的圓心角是 ' + d.deg + '°，這個扇形是整個圓的幾分之幾？（答案要化到最簡分數）' : 'A sector has a central angle of ' + d.deg + '°. What fraction of the whole circle is it? (Give the answer in simplest form.)',
           opts: d.opts,
           ans: d.ans,
           why: lang === 'zh'
@@ -402,7 +433,9 @@
       make: function(used){
         var pool1 = [[1,2],[2,3],[3,4],[1,3],[2,5],[3,5],[1,4]];
         var pool2 = [[1,2],[1,3],[2,3],[1,4],[3,4],[1,5]];
-        var f1 = pick(pool1), f2 = pick(pool2);
+        var f1 = pick(pool1), f2 = pick(pool2), guard = 0;
+        /* 兩個分數相同時，「只乘第一個」和「只乘第二個」會變成同一個誘答 */
+        while (f1[0] === f2[0] && f1[1] === f2[1] && guard++ < 20) f2 = pick(pool2);
         var a = f1[0], b = f1[1], c = f2[0], d2 = f2[1];
         var num = a * c, den = b * d2;
         var r = reduceFrac(num, den);
@@ -411,7 +444,7 @@
         var justSecond = c + '/' + d2;
         var sumR = reduceFrac(a * d2 + c * b, b * d2);
         var sumStr = sumR.num + '/' + sumR.den;
-        var m = mixOpts(correct, [justFirst, justSecond, sumStr]);
+        var m = mixOpts(correct, [justFirst, justSecond, sumStr, (a + c) + '/' + (b * d2), a + '/' + (b * d2)]);
         return { a:a, b:b, c:c, d:d2, num:r.num, den:r.den, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
