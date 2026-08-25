@@ -20,7 +20,7 @@
 - 🏫 **跟上進度**：學校正在教 —— 完整 10 題，含課本型文字題
 - 💪 **補強練習**：學過但不穩 —— 迷思檢查優先，共 12 題，做完導向複習挑戰
 
-## 目前的課程（五年級，12 個主題）
+## 目前的課程（五年級，19 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 |
 |------|------|:---:|:---:|:---:|
@@ -36,8 +36,15 @@
 | 🦋 對摺魔鏡 | 線對稱 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/symmetry/review.html) |
 | 🕵️ 角度偵探 | 三角形/四邊形內角和 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/angle-sum/review.html) |
 | ⚖️ 平均分配站 | 平均 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/average/review.html) |
+| 🎩 運算律魔術師 | 整數四則與運算律 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/operations/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/operations/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/operations/review.html) |
+| 🔍 符號偵探社 | 用符號代表數 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/symbol/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/symbol/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/symbol/review.html) |
+| 🔷 多邊形轉轉盤 | 多邊形與扇形 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/polygon/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/polygon/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/polygon/review.html) |
+| 📦 展開圖工作坊 | 立體形體與展開圖 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/solid/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/solid/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/solid/review.html) |
+| ⏰ 時間管理局 | 時間的乘除計算 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/time/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/time/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/time/review.html) |
+| 🏋️ 大力士磅秤 | 公噸與重量單位 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/weight/review.html) |
+| 📊 資料偵察隊 | 統計圖表 | [📖](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-5/math/statistics/review.html) |
 
-五年級尚未有課程的單元：整數四則與運算律、多邊形與扇形、時間的乘除、公噸、統計圖表。
+✅ 五年級 108 課綱的主要學習單元已全部有對應課程。
 
 ## 資料夾結構
 
@@ -49,7 +56,7 @@ index.html                     # 首頁：選年級＋「▶ 繼續上次的課�
 grade-1/ … grade-6/index.html  # 年級頁：領域摘要；五年級為完整課程頁（依領域分區列課程）
 docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調整與深度規格）
 grade-1/math/ … grade-4/math/  # 一～四年級：單元整理（課程準備中）
-grade-5/math/                  # 五年級：單元整理＋ 12 個三頁迷你課程
+grade-5/math/                  # 五年級：單元整理＋ 19 個三頁迷你課程
 │   └── <主題>/                #   factor / multiple / common-factor / fraction-add /
 │       ├── index.html         #   fraction-multiply / decimal / percent / area /
 │       ├── reference.html     #   volume / symmetry / angle-sum / average

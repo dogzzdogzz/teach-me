@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>統計圖表複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .chartbox svg{width:100%;height:auto;display:block;max-width:400px;margin:10px auto}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;font-size:13px;margin-top:2px}
+  .legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 統計圖表複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：讀圖、平均、小數、百分率交錯出現，<strong>每一批的數字和圖表都是新出的</strong>，
+    背答案沒有用，要真的會算、會看圖。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var COLOR_GREEN = '#2F9E69', COLOR_ORANGE = '#E8871E', COLOR_BLUE = '#3B7DD8', COLOR_INK = '#2B2A33';
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'統計圖表複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      h1:'🔁 統計圖表複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：讀圖、平均、小數、百分率交錯出現，<strong>每一批的數字和圖表都是新出的</strong>，背答案沒有用，要真的會算、會看圖。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Statistics Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      h1:'🔁 Statistics Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving chart reading, averages, decimals and percentages — <strong>every batch uses fresh numbers and charts</strong>, so memorising answers won’t help. <br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var POOLS = {
+    zh: {
+      WEEKDAYS:['星期一','星期二','星期三','星期四','星期五','星期六','星期日'],
+      MONTHS:['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'],
+      FRUITS:['蘋果','香蕉','橘子','葡萄','西瓜','鳳梨'],
+      SPORTS:['籃球','足球','羽球','桌球'],
+      WEEKS:['第1週','第2週','第3週','第4週','第5週','第6週'],
+      CLASSES:['五年一班','五年二班','五年三班','五年四班']
+    },
+    en: {
+      WEEKDAYS:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      MONTHS:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+      FRUITS:['apple','banana','orange','grape','watermelon','pineapple'],
+      SPORTS:['basketball','soccer','badminton','table tennis'],
+      WEEKS:['Week 1','Week 2','Week 3','Week 4','Week 5','Week 6'],
+      CLASSES:['Class 1','Class 2','Class 3','Class 4']
+    }
+  };
+  var POOL_LEN = { WEEKDAYS:7, MONTHS:12, FRUITS:6, SPORTS:4 };
+  var TYPE_LABELS = {
+    zh:{ bar:'長條圖', line:'折線圖', grouped:'複合長條圖', pie:'圓餅圖' },
+    en:{ bar:'Bar chart', line:'Line graph', grouped:'Grouped bar chart', pie:'Pie chart' }
+  };
+  var SCEN = [
+    { correct:'bar',
+      zh:'比較全班最喜歡的四種運動，各有多少人喜歡', en:'Comparing how many classmates like each of 4 sports',
+      whyZh:'比較不同類別的數量，適合用長條圖。', whyEn:'Comparing amounts across categories calls for a bar chart.' },
+    { correct:'line',
+      zh:'記錄一株植物連續 14 天的高度變化', en:'Recording a plant’s height every day for 14 days',
+      whyZh:'資料隨時間變化，適合用折線圖。', whyEn:'The data changes over time, so a line graph fits.' },
+    { correct:'grouped',
+      zh:'比較兩班在四次月考的平均分數', en:'Comparing two classes’ average scores across four exams',
+      whyZh:'兩組資料要並排比較，適合用複合長條圖。', whyEn:'Two groups compared side by side call for a grouped bar chart.' },
+    { correct:'line',
+      zh:'記錄某城市一整年 12 個月的降雨量', en:'Recording a city’s rainfall across all 12 months of a year',
+      whyZh:'降雨量隨月份（時間）變化，適合用折線圖。', whyEn:'Rainfall changes with the months, so a line graph fits.' },
+    { correct:'bar',
+      zh:'比較四種顏色粉筆，哪一種最多人喜歡', en:'Comparing 4 colors of chalk to see which is most popular',
+      whyZh:'比較不同類別（顏色）的數量，適合用長條圖。', whyEn:'Comparing categories (colors) calls for a bar chart.' },
+    { correct:'line',
+      zh:'記錄一位同學一學期六次小考的分數變化', en:'Recording one student’s scores across 6 quizzes in a term',
+      whyZh:'分數隨考試次序（時間）變化，適合用折線圖。', whyEn:'Scores change over successive quizzes (time), so a line graph fits.' }
+  ];
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { statistics:'讀圖', average:'平均', decimal:'小數', percent:'百分率' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { statistics:'📊 讀圖 — 資料偵察隊', average:'📖 平均 — 平均分配站', decimal:'💰 小數 — 小數商店', percent:'🎯 百分率 — 百分百大挑戰' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { statistics:'Charts', average:'Averages', decimal:'Decimals', percent:'Percent' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { statistics:'📊 Charts — The Data Detective Squad', average:'📖 Averages — The Level-Up Station', decimal:'💰 Decimals — The Decimal Shop', percent:'🎯 Percent — The 100% Challenge' }
+    }
+  };
+  var LINK_HREFS = { statistics:'index.html', average:'../average/', decimal:'../decimal/', percent:'../percent/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function randInt(min, max){ return min + Math.floor(Math.random() * (max - min + 1)); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){ var k = rand(j + 1); var t = a[j]; a[j] = a[k]; a[k] = t; }
+    return a;
+  }
+  function range(n){ var a = []; for (var i = 0; i < n; i++) a.push(i); return a; }
+  function sum(arr){ return arr.reduce(function(a, b){ return a + b; }, 0); }
+  function round1(x){ return Math.round(x * 10) / 10; }
+  function makeWrongs(correct, candidates){
+    var out = []; var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (!seen[key]){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3){
+      var lo = round1(correct - step), hi = round1(correct + step);
+      if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  function mixOpts(correct, candidates){
+    var wrongs = makeWrongs(correct, candidates);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  function niceStep(maxVal){
+    if (maxVal <= 10) return 1;
+    if (maxVal <= 20) return 2;
+    if (maxVal <= 50) return 5;
+    return 10;
+  }
+  function niceAxisMax(maxVal, step){ return Math.ceil((maxVal + 0.0001) / step) * step; }
+  function makeNumsForAvg(avg, n){
+    var nums;
+    for (var tries = 0; tries < 40; tries++){
+      var devs = [], total = 0, i;
+      for (i = 0; i < n - 1; i++){ var d = rand(9) - 4; devs.push(d); total += d; }
+      devs.push(-total);
+      devs = shuffle(devs);
+      nums = devs.map(function(dv){ return avg + dv; });
+      if (nums.every(function(v){ return v > 0; })) return nums;
+    }
+    return nums;
+  }
+
+  /* ---------- SVG 圖表繪製核心 ---------- */
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(SVGNS, tag);
+    for (var k in attrs){ if (attrs.hasOwnProperty(k)) el.setAttribute(k, attrs[k]); }
+    return el;
+  }
+  function valueToPx(value, axisMin, axisMax, plotHeight){ return ((value - axisMin) / (axisMax - axisMin)) * plotHeight; }
+  function valueToY(value, axisMin, axisMax, plotTop, plotHeight){ return plotTop + plotHeight - valueToPx(value, axisMin, axisMax, plotHeight); }
+  var patternSeq = 0;
+
+  function makeChartFrame(container, spec){
+    var W = spec.width || 400, H = spec.height || 230;
+    var marginLeft = 46, marginRight = 16, marginTop = 14, marginBottom = 40;
+    var plotLeft = marginLeft, plotRight = W - marginRight;
+    var plotTop = marginTop, plotBottom = H - marginBottom;
+    var plotWidth = plotRight - plotLeft, plotHeight = plotBottom - plotTop;
+    var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+    var axisMin = spec.axisMin, axisMax = spec.axisMax, gridStep = spec.gridStep;
+    for (var v = axisMin; v <= axisMax + 1e-9; v += gridStep){
+      var y = valueToY(v, axisMin, axisMax, plotTop, plotHeight);
+      var isBase = Math.abs(v - axisMin) < 1e-9;
+      svg.appendChild(svgEl('line', { x1: plotLeft, y1: y, x2: plotRight, y2: y, stroke: isBase ? COLOR_INK : '#E8E2D6', 'stroke-width': isBase ? 2 : 1 }));
+      var lbl = svgEl('text', { x: plotLeft - 8, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: '#6B6875' });
+      lbl.textContent = String(Math.round(v * 100) / 100);
+      svg.appendChild(lbl);
+    }
+    svg.appendChild(svgEl('line', { x1: plotLeft, y1: plotTop, x2: plotLeft, y2: plotBottom, stroke: COLOR_INK, 'stroke-width': 2 }));
+    var n = spec.categories.length;
+    var slot = plotWidth / n;
+    var catX = [];
+    for (var i = 0; i < n; i++){
+      var cx = plotLeft + slot * i + slot / 2;
+      catX.push(cx);
+      var xl = svgEl('text', { x: cx, y: plotBottom + 16, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 600, fill: COLOR_INK });
+      xl.textContent = spec.categories[i];
+      svg.appendChild(xl);
+    }
+    if (spec.yAxisLabel){
+      var yl = svgEl('text', { x: 4, y: plotTop - 4, 'text-anchor': 'start', 'font-size': 11, 'font-weight': 700, fill: '#6B6875' });
+      yl.textContent = spec.yAxisLabel;
+      svg.appendChild(yl);
+    }
+    container.textContent = '';
+    container.appendChild(svg);
+    return {
+      svg: svg, plotLeft: plotLeft, plotRight: plotRight, plotTop: plotTop, plotBottom: plotBottom,
+      plotWidth: plotWidth, plotHeight: plotHeight, slot: slot, catX: catX,
+      yFor: function(v){ return valueToY(v, axisMin, axisMax, plotTop, plotHeight); },
+      pxFor: function(v){ return valueToPx(v, axisMin, axisMax, plotHeight); }
+    };
+  }
+  function addBars(geom, values, color, opts){
+    opts = opts || {};
+    var barW = geom.slot * (opts.widthRatio || 0.5);
+    values.forEach(function(v, i){
+      var h = geom.pxFor(v);
+      var x = geom.catX[i] - barW / 2;
+      var y = geom.yFor(v);
+      var rect = svgEl('rect', { x: x, y: y, width: barW, height: h, fill: color, stroke: COLOR_INK, 'stroke-width': 1, rx: 3 });
+      if (opts.highlightIdx === i) rect.setAttribute('stroke-width', '2.5');
+      geom.svg.appendChild(rect);
+      if (opts.showValue){
+        var lbl = svgEl('text', { x: geom.catX[i], y: y - 6, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: COLOR_INK });
+        lbl.textContent = String(v);
+        geom.svg.appendChild(lbl);
+      }
+    });
+  }
+  function addGroupedBars(geom, valuesA, valuesB, colorA, patternFillB){
+    var pairW = geom.slot * 0.62;
+    var barW = pairW / 2 - 2;
+    valuesA.forEach(function(vA, i){
+      var vB = valuesB[i];
+      var cx = geom.catX[i];
+      var xA = cx - pairW / 2, xB = cx + pairW / 2 - barW;
+      var rectA = svgEl('rect', { x: xA, y: geom.yFor(vA), width: barW, height: geom.pxFor(vA), fill: colorA, stroke: COLOR_INK, 'stroke-width': 1, rx: 3 });
+      var rectB = svgEl('rect', { x: xB, y: geom.yFor(vB), width: barW, height: geom.pxFor(vB), fill: patternFillB, stroke: COLOR_INK, 'stroke-width': 1, rx: 3 });
+      geom.svg.appendChild(rectA); geom.svg.appendChild(rectB);
+      var lblA = svgEl('text', { x: xA + barW / 2, y: geom.yFor(vA) - 5, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: COLOR_INK });
+      lblA.textContent = String(vA);
+      var lblB = svgEl('text', { x: xB + barW / 2, y: geom.yFor(vB) - 5, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: COLOR_INK });
+      lblB.textContent = String(vB);
+      geom.svg.appendChild(lblA); geom.svg.appendChild(lblB);
+    });
+  }
+  function addLine(geom, values, color){
+    var pts = values.map(function(v, i){ return geom.catX[i] + ',' + geom.yFor(v); }).join(' ');
+    geom.svg.appendChild(svgEl('polyline', { points: pts, fill: 'none', stroke: color, 'stroke-width': 3 }));
+    values.forEach(function(v, i){
+      geom.svg.appendChild(svgEl('circle', { cx: geom.catX[i], cy: geom.yFor(v), r: 5.5, fill: color }));
+      var lbl = svgEl('text', { x: geom.catX[i], y: geom.yFor(v) - 10, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: COLOR_INK });
+      lbl.textContent = String(v);
+      geom.svg.appendChild(lbl);
+    });
+  }
+  function makeHatchPattern(svg, color){
+    patternSeq++;
+    var id = 'rvhatch' + patternSeq;
+    var defs = svgEl('defs', {});
+    var pat = svgEl('pattern', { id: id, width: 6, height: 6, patternTransform: 'rotate(45)', patternUnits: 'userSpaceOnUse' });
+    pat.appendChild(svgEl('rect', { width: 6, height: 6, fill: color }));
+    pat.appendChild(svgEl('line', { x1: 0, y1: 0, x2: 0, y2: 6, stroke: '#fff', 'stroke-width': 2.2 }));
+    defs.appendChild(pat);
+    svg.insertBefore(defs, svg.firstChild);
+    return 'url(#' + id + ')';
+  }
+
+  function renderChart(container, chart){
+    container.textContent = '';
+    if (chart.kind === 'bar'){
+      var geom = makeChartFrame(container, {
+        width: 380, height: 220, categories: chart.categories,
+        axisMin: chart.axisMin, axisMax: chart.axisMax, gridStep: chart.gridStep, yAxisLabel: chart.yUnit
+      });
+      addBars(geom, chart.values, COLOR_GREEN, { highlightIdx: chart.highlightIdx, showValue: !!chart.showValue });
+    } else if (chart.kind === 'line'){
+      var geom2 = makeChartFrame(container, {
+        width: 380, height: 220, categories: chart.categories,
+        axisMin: chart.axisMin, axisMax: chart.axisMax, gridStep: chart.gridStep, yAxisLabel: chart.yUnit
+      });
+      addLine(geom2, chart.values, COLOR_BLUE);
+    } else if (chart.kind === 'grouped'){
+      var geom3 = makeChartFrame(container, {
+        width: 380, height: 220, categories: chart.categories,
+        axisMin: chart.axisMin, axisMax: chart.axisMax, gridStep: chart.gridStep, yAxisLabel: chart.yUnit
+      });
+      var hatch = makeHatchPattern(geom3.svg, COLOR_ORANGE);
+      addGroupedBars(geom3, chart.valuesA, chart.valuesB, COLOR_GREEN, hatch);
+      var leg = document.createElement('div');
+      leg.className = 'legend';
+      leg.innerHTML = '<span><span class="sw" style="background:' + COLOR_GREEN + '"></span>' + chart.nameA + '</span>' +
+        '<span><span class="sw" style="background:' + COLOR_ORANGE + '"></span>' + chart.nameB + ' (╱╱)</span>';
+      container.appendChild(leg);
+    }
+  }
+
+  /* ---------- 題目產生器 ---------- */
+  function pickPoolName(){ return pick(['WEEKDAYS', 'MONTHS', 'FRUITS', 'SPORTS']); }
+
+  var GENS = [
+    { id:'statBarRead', cat:'statistics',
+      make: function(){
+        var poolName = pickPoolName();
+        var poolLen = POOL_LEN[poolName];
+        var n = Math.min(poolLen, pick([4, 5]));
+        var idxs = shuffle(range(poolLen)).slice(0, n);
+        var unit = pick([1, 2, 5, 10]);
+        var squares = idxs.map(function(){ return randInt(2, 9); });
+        var values = squares.map(function(s){ return s * unit; });
+        var qIdx = randInt(0, n - 1);
+        var correct = values[qIdx];
+        var m = mixOpts(correct, [squares[qIdx], correct + unit, correct - unit]);
+        return { poolName:poolName, idxs:idxs, unit:unit, squares:squares, values:values, qIdx:qIdx, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var cats = d.idxs.map(function(i){ return POOLS[lang][d.poolName][i]; });
+        return {
+          stem: lang === 'zh' ? '下面長條圖中，「' + cats[d.qIdx] + '」代表多少？（一格 = ' + d.unit + '）'
+                               : 'In this bar chart, what does “' + cats[d.qIdx] + '” represent? (1 square = ' + d.unit + ')',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? cats[d.qIdx] + '是 ' + d.squares[d.qIdx] + ' 格，一格代表 ' + d.unit + '，' + d.squares[d.qIdx] + ' × ' + d.unit + ' = ' + d.values[d.qIdx] + '。'
+            : cats[d.qIdx] + ' is ' + d.squares[d.qIdx] + ' squares, each worth ' + d.unit + ': ' + d.squares[d.qIdx] + ' × ' + d.unit + ' = ' + d.values[d.qIdx] + '.',
+          chart: { kind:'bar', categories:cats, values:d.values, axisMin:0, axisMax: 9 * d.unit, gridStep:d.unit, highlightIdx:d.qIdx }
+        };
+      } },
+    { id:'statBarTotal', cat:'statistics',
+      make: function(){
+        var poolName = pickPoolName();
+        var poolLen = POOL_LEN[poolName];
+        var n = Math.min(poolLen, pick([4, 5]));
+        var idxs = shuffle(range(poolLen)).slice(0, n);
+        var values = idxs.map(function(){ return randInt(3, 20); });
+        var total = sum(values);
+        var m = mixOpts(total, [total - values[0], total + values[0], Math.max.apply(null, values)]);
+        return { poolName:poolName, idxs:idxs, values:values, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var cats = d.idxs.map(function(i){ return POOLS[lang][d.poolName][i]; });
+        var step = niceStep(Math.max.apply(null, d.values));
+        return {
+          stem: lang === 'zh' ? '把這張長條圖裡所有的數值加起來，總共是多少？' : 'Add up every bar in this chart — what is the total?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.values.join(' + ') + ' = ' + sum(d.values) + '。'
+            : d.values.join(' + ') + ' = ' + sum(d.values) + '.',
+          chart: { kind:'bar', categories:cats, values:d.values, axisMin:0, axisMax: niceAxisMax(Math.max.apply(null, d.values), step), gridStep:step, showValue:true }
+        };
+      } },
+    { id:'statLineTrend', cat:'statistics',
+      make: function(){
+        var poolName = pick(['MONTHS', 'WEEKDAYS']);
+        var poolLen = POOL_LEN[poolName];
+        var n = pick(poolName === 'WEEKDAYS' ? [4, 5] : [4, 5, 6]);
+        var start = randInt(0, poolLen - n);
+        var idxs = range(n).map(function(i){ return start + i; });
+        var values = [randInt(10, 40)];
+        for (var i = 1; i < n; i++){
+          var prev = values[i - 1];
+          var delta;
+          do { delta = randInt(-10, 10); } while (delta === 0);
+          var nv = prev + delta;
+          if (nv < 5) nv = prev + Math.abs(delta);
+          values.push(nv);
+        }
+        var segIdx = randInt(0, n - 2);
+        var delta2 = values[segIdx + 1] - values[segIdx];
+        var absD = Math.abs(delta2);
+        var m = { poolName:poolName, idxs:idxs, values:values, segIdx:segIdx, delta:delta2, absD:absD };
+        return m;
+      },
+      fmt: function(d, lang){
+        var cats = d.idxs.map(function(i){ return POOLS[lang][d.poolName][i]; });
+        var up = lang === 'zh' ? '上升' : 'Up';
+        var down = lang === 'zh' ? '下降' : 'Down';
+        var dirWord = d.delta >= 0 ? up : down;
+        var oppWord = d.delta >= 0 ? down : up;
+        var fmt1 = lang === 'zh' ? function(w, v){ return w + ' ' + v; } : function(w, v){ return w + ' ' + v; };
+        var correctText = fmt1(dirWord, d.absD);
+        var opts = shuffle([correctText, fmt1(oppWord, d.absD), fmt1(dirWord, d.absD + 2), fmt1(oppWord, d.absD + 2)]);
+        var step = niceStep(Math.max.apply(null, d.values));
+        return {
+          stem: lang === 'zh'
+            ? '從「' + cats[d.segIdx] + '」到「' + cats[d.segIdx + 1] + '」，數值是上升還是下降？變化了多少？'
+            : 'From “' + cats[d.segIdx] + '” to “' + cats[d.segIdx + 1] + '”, did the value go up or down, and by how much?',
+          opts: opts, ans: opts.indexOf(correctText),
+          why: lang === 'zh'
+            ? cats[d.segIdx] + ' 是 ' + d.values[d.segIdx] + '，' + cats[d.segIdx + 1] + ' 是 ' + d.values[d.segIdx + 1] + '，' +
+              (d.delta >= 0 ? (d.values[d.segIdx + 1] + ' − ' + d.values[d.segIdx] + ' = ' + d.absD + '，是上升。') : (d.values[d.segIdx] + ' − ' + d.values[d.segIdx + 1] + ' = ' + d.absD + '，是下降。'))
+            : cats[d.segIdx] + ' is ' + d.values[d.segIdx] + ' and ' + cats[d.segIdx + 1] + ' is ' + d.values[d.segIdx + 1] + ' — a ' + (d.delta >= 0 ? 'rise' : 'drop') + ' of ' + d.absD + '.',
+          chart: { kind:'line', categories:cats, values:d.values, axisMin:0, axisMax: niceAxisMax(Math.max.apply(null, d.values), step), gridStep:step }
+        };
+      } },
+    { id:'statGroupedDiff', cat:'statistics',
+      make: function(){
+        var n = pick([3, 4]);
+        var start = randInt(0, 6 - n);
+        var idxs = range(n).map(function(i){ return start + i; });
+        var classIdxs = shuffle(range(4)).slice(0, 2);
+        var a, b, qIdx;
+        for (var tries = 0; tries < 30; tries++){
+          a = idxs.map(function(){ return randInt(8, 25); });
+          b = idxs.map(function(){ return randInt(8, 25); });
+          qIdx = randInt(0, n - 1);
+          if (a[qIdx] !== b[qIdx]) break;
+        }
+        var diff = Math.abs(a[qIdx] - b[qIdx]);
+        var m = mixOpts(diff, [a[qIdx] + b[qIdx], diff + 2, Math.max.apply(null, a.concat(b))]);
+        return { idxs:idxs, classIdxs:classIdxs, a:a, b:b, qIdx:qIdx, diff:diff, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var cats = d.idxs.map(function(i){ return POOLS[lang].WEEKS[i]; });
+        var nameA = POOLS[lang].CLASSES[d.classIdxs[0]], nameB = POOLS[lang].CLASSES[d.classIdxs[1]];
+        var maxV = Math.max.apply(null, d.a.concat(d.b));
+        var step = niceStep(maxV);
+        return {
+          stem: lang === 'zh' ? cats[d.qIdx] + '，兩班資源回收公斤數相差多少？' : 'In ' + cats[d.qIdx] + ', how many kg do the two classes’ recycling amounts differ by?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? cats[d.qIdx] + '：' + nameA + ' ' + d.a[d.qIdx] + '，' + nameB + ' ' + d.b[d.qIdx] + '，相差 ' + d.diff + '。'
+            : 'In ' + cats[d.qIdx] + ': ' + nameA + ' has ' + d.a[d.qIdx] + ', ' + nameB + ' has ' + d.b[d.qIdx] + ' — a difference of ' + d.diff + '.',
+          chart: { kind:'grouped', categories:cats, valuesA:d.a, valuesB:d.b, nameA:nameA, nameB:nameB, axisMin:0, axisMax: niceAxisMax(maxV, step), gridStep:step, yUnit: lang === 'zh' ? '公斤' : 'kg' }
+        };
+      } },
+    { id:'statChooseType', cat:'statistics',
+      make: function(){
+        var idx = randInt(0, SCEN.length - 1);
+        var types = shuffle(['bar', 'line', 'grouped', 'pie']);
+        return { idx:idx, types:types };
+      },
+      fmt: function(d, lang){
+        var sc = SCEN[d.idx];
+        var opts = d.types.map(function(t){ return TYPE_LABELS[lang][t]; });
+        var ans = d.types.indexOf(sc.correct);
+        return {
+          stem: (lang === 'zh' ? sc.zh : sc.en) + (lang === 'zh' ? '，最適合用哪一種圖表？' : ' — which chart fits best?'),
+          opts: opts, ans: ans,
+          why: lang === 'zh' ? sc.whyZh : sc.whyEn
+        };
+      } },
+    { id:'statMisleading', cat:'statistics',
+      make: function(){
+        var base = randInt(20, 60);
+        var diff = randInt(3, 6);
+        var vA = base, vB = base + diff;
+        var axisMin = Math.max(0, base - randInt(5, 10));
+        var axisMax = vB + randInt(3, 8);
+        var m = mixOpts(diff, [diff * 3, vA, vB]);
+        var step = niceStep(axisMax - axisMin) === 1 ? Math.max(1, Math.round((axisMax - axisMin) / 3)) : niceStep(axisMax - axisMin);
+        return { vA:vA, vB:vB, axisMin:axisMin, axisMax:axisMax, diff:diff, step:step, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '這張長條圖的縱軸沒有從 0 開始，A、B 兩根長條看起來差很多，實際上只差多少？'
+            : 'This bar chart’s axis doesn’t start at 0, so A and B look very different — what is the real difference?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? 'A 是 ' + d.vA + '，B 是 ' + d.vB + '，' + d.vB + ' − ' + d.vA + ' = ' + d.diff + '，實際只差 ' + d.diff + '。'
+            : 'A is ' + d.vA + ' and B is ' + d.vB + '. ' + d.vB + ' − ' + d.vA + ' = ' + d.diff + ' — the real gap is small.',
+          chart: { kind:'bar', categories:['A', 'B'], values:[d.vA, d.vB], axisMin:d.axisMin, axisMax:d.axisMax, gridStep:d.step, showValue:true }
+        };
+      } },
+    { id:'avgFromList', cat:'average',
+      make: function(used){
+        var n = pick([2, 3, 4, 5]);
+        var avg = pickUnused([6,7,8,9,10,11,12,14,15,16,18,20,22,24,25], used);
+        var nums = makeNumsForAvg(avg, n);
+        var s = sum(nums);
+        var m = mixOpts(avg, [avg - 1, avg + 1, s]);
+        return { n:n, nums:nums, avg:avg, sum:s, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '這組數字：' + d.nums.join('、') + '，平均是多少？' : 'What is the average of: ' + d.nums.join(', ') + '?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.nums.join(' + ') + ' = ' + d.sum + '，' + d.sum + ' ÷ ' + d.n + ' = ' + d.avg + '。'
+            : d.nums.join(' + ') + ' = ' + d.sum + ', and ' + d.sum + ' ÷ ' + d.n + ' = ' + d.avg + '.'
+        };
+      } },
+    { id:'decimalDivide', cat:'decimal',
+      make: function(used){
+        var k = pickUnused([2, 3, 4, 5, 6], used);
+        var qt = 20 + rand(70);
+        var dividendTenths = qt * k;
+        var dividend = round1(dividendTenths / 10);
+        var q = round1(qt / 10);
+        var m = mixOpts(q, [round1(q - 0.1), round1(q + 0.1), round1(q * 2)]);
+        return { k:k, dividend:dividend, dividendTenths:dividendTenths, q:q, qt:qt, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.dividend + ' ÷ ' + d.k + ' = ?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.dividend + ' 裡面有 ' + d.dividendTenths + ' 個 0.1，' + d.dividendTenths + ' ÷ ' + d.k + ' = ' + d.qt + ' 個 0.1，也就是 ' + d.q + '。'
+            : d.dividend + ' is ' + d.dividendTenths + ' tenths. ' + d.dividendTenths + ' ÷ ' + d.k + ' = ' + d.qt + ' tenths, which is ' + d.q + '.'
+        };
+      } },
+    { id:'percentOfWhole', cat:'percent',
+      make: function(used){
+        var pct = pickUnused([10, 20, 25, 50], used);
+        var unitPart = 100 / pct;
+        var k = randInt(4, 20);
+        var whole = unitPart * k;
+        var result = k;
+        var m = mixOpts(result, [whole - result, result * 2, pct]);
+        return { pct:pct, whole:whole, result:result, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.whole + ' 的 ' + d.pct + '% 是多少？' : 'What is ' + d.pct + '% of ' + d.whole + '?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.whole + ' × ' + d.pct + '% = ' + d.whole + ' × ' + d.pct + '/100 = ' + d.result + '。'
+            : d.whole + ' × ' + d.pct + '% = ' + d.whole + ' × ' + d.pct + '/100 = ' + d.result + '.'
+        };
+      } }
+  ];
+
+  var EXTRA_IDS = ['statBarRead', 'statBarTotal', 'statLineTrend', 'statGroupedDiff', 'statMisleading'];
+  var EXTRA_POOL = GENS.filter(function(g){ return EXTRA_IDS.indexOf(g.id) >= 0; });
+
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    for (var i = 0; i < 3; i++) slots.push(pick(EXTRA_POOL));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var chartHolder = document.createElement('div');
+      chartHolder.className = 'chartbox';
+      if (q.chart) renderChart(chartHolder, q.chart);
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      if (q.chart) box.appendChild(chartHolder);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

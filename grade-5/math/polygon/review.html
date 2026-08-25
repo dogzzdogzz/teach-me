@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>多邊形與扇形複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 多邊形與扇形複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：多邊形、扇形、三角形角度、對稱、分數乘法交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'多邊形與扇形複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      h1:'🔁 多邊形與扇形複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：多邊形、扇形、三角形角度、對稱、分數乘法交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Polygons & Sectors Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      h1:'🔁 Polygons & Sectors Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving polygons, sectors, triangle angles, symmetry and fraction multiplication — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { polygon:'多邊形', sector:'扇形', angleSum:'三角形角度', symmetry:'對稱', fractionMultiply:'分數乘法' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: {
+        polygon:'🔷 多邊形與扇形 — 多邊形轉轉盤', sector:'🔷 多邊形與扇形 — 多邊形轉轉盤',
+        angleSum:'🕵️ 角度偵探 — 內角和的祕密', symmetry:'🦋 對稱課', fractionMultiply:'✖️ 分數乘法課'
+      }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { polygon:'Polygons', sector:'Sectors', angleSum:'Triangle angles', symmetry:'Symmetry', fractionMultiply:'Fraction × Fraction' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: {
+        polygon:'🔷 Polygons & Sectors — Polygons & Pizza Slices', sector:'🔷 Polygons & Sectors — Polygons & Pizza Slices',
+        angleSum:'🕵️ Angle Detective — Interior Angle Sums', symmetry:'🦋 Symmetry lesson', fractionMultiply:'✖️ Fraction Multiplication lesson'
+      }
+    }
+  };
+
+  var LINK_HREFS = { polygon:'index.html', sector:'index.html', angleSum:'../angle-sum/', symmetry:'../symmetry/', fractionMultiply:'../fraction-multiply/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function gcd(a, b){ return b ? gcd(b, a % b) : a; }
+  function reduceFrac(num, den){
+    var g = gcd(num, den);
+    return { num: num / g, den: den / g };
+  }
+  function fracStr(num, den){
+    var f = reduceFrac(num, den);
+    return f.num + '/' + f.den;
+  }
+  /* 保證最多 3 個相異、且不等於正解的錯誤選項 */
+  function pickWrongs3(correct, candidates){
+    var out = []; var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (!seen[key]){ seen[key] = true; out.push(c); }
+    });
+    return out.slice(0, 3);
+  }
+  function mixOpts(correct, candidates){
+    var wrongs = pickWrongs3(correct, candidates);
+    while (wrongs.length < 3){ wrongs.push(String(correct) + '·' + wrongs.length); }
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  var POLY_EACH = { 3:60, 4:90, 5:108, 6:120, 8:135, 9:140, 10:144, 12:150 };
+  var SECTOR_ANGLES = [30,45,60,90,120,135,150,180,210,240,270,300,330];
+  var SECTOR_FRACS = [
+    {frac:'1/12',deg:30}, {frac:'1/8',deg:45}, {frac:'1/6',deg:60}, {frac:'1/4',deg:90},
+    {frac:'1/3',deg:120}, {frac:'1/2',deg:180}, {frac:'2/3',deg:240}, {frac:'3/4',deg:270}
+  ];
+
+  /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  var GENS = [
+    { id:'polygonSum', cat:'polygon',
+      make: function(used){
+        var n = pickUnused([4,5,6,7,8,9,10,12], used);
+        var sum = (n - 2) * 180;
+        var m = mixOpts(sum, [n * 180, (n - 1) * 180, (n - 3) * 180 > 0 ? (n - 3) * 180 : n * 90]);
+        return { n:n, sum:sum, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.n + ' 邊形的內角和是多少度？' : 'What is the sum of the interior angles of an ' + d.n + '-sided polygon?',
+          opts: d.opts.map(function(v){ return v + '°'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '(' + d.n + '−2)×180° ＝ ' + d.sum + '°。'
+            : '(' + d.n + '−2)×180° = ' + d.sum + '°.'
+        };
+      } },
+    { id:'polygonEach', cat:'polygon',
+      make: function(used){
+        var ns = Object.keys(POLY_EACH).map(Number);
+        var n = pickUnused(ns, used);
+        var sum = (n - 2) * 180;
+        var each = POLY_EACH[n];
+        var otherNs = ns.filter(function(x){ return x !== n; });
+        var mismatched = POLY_EACH[pick(otherNs)];
+        var m = mixOpts(each, [sum, 180, mismatched]);
+        return { n:n, sum:sum, each:each, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '正' + d.n + '邊形，每一個內角是多少度？' : 'In a regular ' + d.n + '-gon, how big is each interior angle?',
+          opts: d.opts.map(function(v){ return v + '°'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '內角和 ＝(' + d.n + '−2)×180°＝' + d.sum + '°，' + d.sum + '°÷' + d.n + '＝' + d.each + '°。'
+            : 'Angle sum = (' + d.n + '−2)×180°=' + d.sum + '°, and ' + d.sum + '°÷' + d.n + '=' + d.each + '°.'
+        };
+      } },
+    { id:'polygonFromSum', cat:'polygon',
+      make: function(used){
+        var n = pickUnused([4,5,6,7,8,9,10], used);
+        var sum = (n - 2) * 180;
+        var m = mixOpts(n, [n - 1, n + 1, n + 2]);
+        return { n:n, sum:sum, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '一個多邊形的內角和是 ' + d.sum + '°，這是幾邊形？' : 'A polygon\'s interior angles sum to ' + d.sum + '°. How many sides does it have?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.sum + '÷180＝' + (d.sum / 180) + '，再加 2 ＝ ' + d.n + '（因為內角和公式是 (n−2)×180°）。'
+            : d.sum + '÷180=' + (d.sum / 180) + ', plus 2 gives ' + d.n + ' (since the formula is (n−2)×180°).'
+        };
+      } },
+    { id:'triangleCount', cat:'polygon',
+      make: function(used){
+        var n = pickUnused([4,5,6,7,8,9,10], used);
+        var c = n - 2;
+        var m = mixOpts(c, [n, n - 1, n - 3 > 0 ? n - 3 : n + 1]);
+        return { n:n, c:c, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '從' + d.n + '邊形的一個頂點畫對角線，可以切成幾個三角形？' : 'Drawing diagonals from one vertex of an ' + d.n + '-sided polygon, how many triangles does it split into?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.n + '−2＝' + d.c + ' 個三角形。'
+            : d.n + '−2=' + d.c + ' triangles.'
+        };
+      } },
+    { id:'sectorFraction', cat:'sector',
+      make: function(used){
+        var deg = pickUnused(SECTOR_ANGLES, used);
+        var f = reduceFrac(deg, 360);
+        var correct = f.num + '/' + f.den;
+        var wrongPool = ['1/2','1/3','1/4','1/6','1/8','1/12','2/3','3/4'].filter(function(x){ return x !== correct; });
+        var unreduced = deg + '/360';
+        var m = mixOpts(correct, [unreduced].concat(shuffle(wrongPool)));
+        return { deg:deg, num:f.num, den:f.den, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '扇形的圓心角是 ' + d.deg + '°，這個扇形是整個圓的幾分之幾？' : 'A sector has a central angle of ' + d.deg + '°. What fraction of the whole circle is it?',
+          opts: d.opts,
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.deg + '÷360，約分後是 ' + d.num + '/' + d.den + '。'
+            : d.deg + '÷360, reduced, is ' + d.num + '/' + d.den + '.'
+        };
+      } },
+    { id:'sectorFromFraction', cat:'sector',
+      make: function(used){
+        var pickedIdx = pickUnused(SECTOR_FRACS.map(function(_, i){ return i; }), used);
+        var item = SECTOR_FRACS[pickedIdx];
+        var parts = item.frac.split('/');
+        var num = parseInt(parts[0], 10), den = parseInt(parts[1], 10);
+        var forgetDivide = num * 360;
+        var denAsDeg = den * 10;
+        var otherDeg = pick(SECTOR_FRACS.filter(function(x){ return x.deg !== item.deg; })).deg;
+        var m = mixOpts(item.deg, [forgetDivide, denAsDeg, otherDeg]);
+        return { frac:item.frac, deg:item.deg, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '一個扇形是整個圓的 ' + d.frac + '，它的圓心角是多少度？' : 'A sector covers ' + d.frac + ' of the whole circle. What is its central angle?',
+          opts: d.opts.map(function(v){ return v + '°'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '整個圓是 360°，360° × ' + d.frac + ' ＝ ' + d.deg + '°。'
+            : 'A full circle is 360°, and 360° × ' + d.frac + ' = ' + d.deg + '°.'
+        };
+      } },
+    { id:'sectorRemaining', cat:'sector',
+      make: function(used){
+        var deg = pickUnused(SECTOR_ANGLES, used);
+        var rem = 360 - deg;
+        var fRem = reduceFrac(rem, 360);
+        var fOrig = reduceFrac(deg, 360);
+        var correct = fRem.num + '/' + fRem.den;
+        var origStr = fOrig.num + '/' + fOrig.den;
+        var wrongPool = ['1/2','1/3','1/4','1/6','1/8','1/12','2/3','3/4'].filter(function(x){ return x !== correct && x !== origStr; });
+        var m = mixOpts(correct, [origStr].concat(shuffle(wrongPool)));
+        return { deg:deg, rem:rem, num:fRem.num, den:fRem.den, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '一個扇形的圓心角是 ' + d.deg + '°，剩下沒有塗色的部分是整個圓的幾分之幾？' : 'A sector has a central angle of ' + d.deg + '°. What fraction of the circle is the uncoloured remainder?',
+          opts: d.opts,
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '剩下的圓心角是 360−' + d.deg + '＝' + d.rem + '°，' + d.rem + '÷360 約分後是 ' + d.num + '/' + d.den + '。'
+            : 'The remaining central angle is 360−' + d.deg + '=' + d.rem + '°, and ' + d.rem + '÷360 reduces to ' + d.num + '/' + d.den + '.'
+        };
+      } },
+    { id:'angleSumThird', cat:'angleSum',
+      make: function(used){
+        var a, b, tries = 0;
+        do {
+          a = 20 + rand(100);
+          b = 20 + rand(100);
+          tries++;
+        } while (a + b >= 170 && tries < 50);
+        var third = 180 - a - b;
+        var m = mixOpts(third, [180 - a, 180 - b, a + b]);
+        return { a:a, b:b, third:third, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '三角形的兩個角是 ' + d.a + '° 和 ' + d.b + '°，第三個角是多少度？' : 'A triangle has two angles of ' + d.a + '° and ' + d.b + '°. What is the third angle?',
+          opts: d.opts.map(function(v){ return v + '°'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '180−' + d.a + '−' + d.b + '＝' + d.third + '°（三角形三個角加起來永遠是 180°）。'
+            : '180−' + d.a + '−' + d.b + '=' + d.third + '° (a triangle\'s three angles always sum to 180°).'
+        };
+      } },
+    { id:'symmetrySides', cat:'symmetry',
+      make: function(used){
+        var n = pickUnused([3,4,5,6,8], used);
+        var m = mixOpts(n, [n - 1, n + 1, n * 2]);
+        return { n:n, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '正' + d.n + '邊形有幾條對稱軸？' : 'How many lines of symmetry does a regular ' + d.n + '-gon have?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '正' + d.n + '邊形有 ' + d.n + ' 條對稱軸 —— 邊數是幾，對稱軸就有幾條。'
+            : 'A regular ' + d.n + '-gon has ' + d.n + ' lines of symmetry — the number of lines always matches the number of sides.'
+        };
+      } },
+    { id:'fractionMultiplyWord', cat:'fractionMultiply',
+      make: function(used){
+        var pool1 = [[1,2],[2,3],[3,4],[1,3],[2,5],[3,5],[1,4]];
+        var pool2 = [[1,2],[1,3],[2,3],[1,4],[3,4],[1,5]];
+        var f1 = pick(pool1), f2 = pick(pool2);
+        var a = f1[0], b = f1[1], c = f2[0], d2 = f2[1];
+        var num = a * c, den = b * d2;
+        var r = reduceFrac(num, den);
+        var correct = r.num + '/' + r.den;
+        var justFirst = a + '/' + b;
+        var justSecond = c + '/' + d2;
+        var sumR = reduceFrac(a * d2 + c * b, b * d2);
+        var sumStr = sumR.num + '/' + sumR.den;
+        var m = mixOpts(correct, [justFirst, justSecond, sumStr]);
+        return { a:a, b:b, c:c, d:d2, num:r.num, den:r.den, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '全班有 ' + d.a + '/' + d.b + ' 是女生，女生裡面有 ' + d.c + '/' + d.d + ' 喜歡畫畫，喜歡畫畫的女生占全班的幾分之幾？'
+            : d.a + '/' + d.b + ' of the class are girls, and ' + d.c + '/' + d.d + ' of the girls like drawing. What fraction of the whole class is that?',
+          opts: d.opts,
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.a + '/' + d.b + ' × ' + d.c + '/' + d.d + ' ＝ ' + d.num + '/' + d.den + '（分子乘分子、分母乘分母，再約分）。'
+            : d.a + '/' + d.b + ' × ' + d.c + '/' + d.d + ' = ' + d.num + '/' + d.den + ' (multiply numerators, multiply denominators, then reduce).'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：9 種題型各一題＋隨機 3 題（限多邊形/扇形類，數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['polygonSum','polygonEach','sectorFraction','sectorFromFraction'].indexOf(g.id) >= 0;
+    });
+    for (var i = 0; i < 3; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      var seenHref = {};
+      cats.forEach(function(c){
+        var href = LINK_HREFS[c];
+        if (seenHref[href]) return;
+        seenHref[href] = true;
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = href; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

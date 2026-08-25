@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>多邊形轉轉盤 — 正多邊形與扇形</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .scene{width:100%;height:auto;display:block;margin:0 auto;max-width:280px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;justify-content:center}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 20px;font-size:18px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px;text-align:center;cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .mode .mbig{font-size:26px}
+  .mode h3{font-size:17px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:16px;display:grid;gap:10px}
+
+  /* --- polygon-lesson-only additions --- */
+  .gallery{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;margin-top:16px}
+  .gallery .item{text-align:center;width:150px}
+  .gallery .item .scene{max-width:130px}
+  .gallery .item .lbl{margin-top:6px;font-weight:700;font-size:15px}
+  .trapgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-top:18px}
+  .trapcard{background:var(--bg);border:2px solid var(--line);border-radius:16px;padding:16px;text-align:center}
+  .trapcard .reveal{margin-top:10px;font-size:14px;min-height:44px}
+  .trapcard .reveal.yes{color:var(--green);font-weight:700}
+  .trapcard .reveal.no{color:var(--red);font-weight:700}
+  .trilabel{font-size:17px;margin-top:12px;text-align:center;min-height:26px}
+  .trilabel b{color:var(--green)}
+  .trifinal{margin-top:8px;text-align:center;font-size:19px;font-weight:700;color:var(--orange);min-height:26px}
+  .eachline{font-size:18px;margin-top:12px;text-align:center;min-height:26px}
+  .eachline b{color:var(--green)}
+  .rangewrap{display:flex;align-items:center;gap:14px;margin-top:18px;flex-wrap:wrap;justify-content:center}
+  .rangewrap input[type=range]{flex:1;min-width:180px;accent-color:var(--green)}
+  .secline{font-size:18px;margin-top:14px;text-align:center}
+  .fracbig{font-size:32px;color:var(--orange);font-weight:700}
+  .secangle{font-size:22px;font-weight:700;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔷 多邊形轉轉盤</h1>
+    <p class="sub" data-i18n="sub">正多邊形的內角和，還有扇形的圓心角</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    每個多邊形的內角加起來都有一個祕密公式；扇形則是<strong>圓的一部分</strong>。<br>
+    這一課帶你切三角形、轉扇形，把兩個祕密都找出來！
+  </div>
+
+  <!-- 模式選擇 -->
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
+  </div>
+
+  <!-- 1. 正多邊形是什麼 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">正多邊形是什麼？</h2>
+    <p class="lead" data-i18n="s1lead">點選下面的形狀，看看正多邊形長什麼樣子。</p>
+    <div class="card">
+      <p data-i18n="s1def">正多邊形一定要符合兩個條件：<strong>所有邊長都相等</strong>，而且<strong>所有角度也都相等</strong>。</p>
+      <div class="chips" id="polyChips"></div>
+      <div id="polyScene"></div>
+      <p class="eachline" id="polyCaption"></p>
+    </div>
+
+    <div class="card">
+      <p style="font-weight:700" data-i18n="trapTitle">陷阱檢查：邊長相等就一定是正多邊形嗎？</p>
+      <div class="trapgrid" id="trapGrid"></div>
+    </div>
+  </section>
+
+  <!-- 2. 內角和大切割 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">內角和大切割</h2>
+    <p class="lead" data-i18n="s2lead">從一個頂點畫對角線，把多邊形切成一個一個三角形，看看內角和怎麼算出來。</p>
+    <div class="card">
+      <div class="chips" id="triChips"></div>
+      <div id="triScene"></div>
+      <p class="trilabel" id="triLabel"></p>
+      <p class="trifinal" id="triFinal"></p>
+      <div class="btnrow">
+        <button class="btn" id="triAddBtn" type="button" data-i18n="triAddBtn">➕ 切出一個三角形</button>
+        <button class="btn ghost" id="triResetBtn" type="button" data-i18n="triResetBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 正多邊形的每一個角 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">正多邊形的每一個角</h2>
+    <p class="lead" data-i18n="s3lead">正多邊形的每個角一樣大，只要把內角和平分給每一個角就好。</p>
+    <div class="card">
+      <div class="chips" id="eachChips"></div>
+      <div id="eachScene"></div>
+      <p class="eachline" id="eachLine"></p>
+    </div>
+  </section>
+
+  <!-- 4. 扇形轉轉盤 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">扇形轉轉盤</h2>
+    <p class="lead" data-i18n="s4lead">拖拉滑桿或點選常見角度，看看扇形是整個圓的幾分之幾。</p>
+    <div class="card">
+      <div id="secScene"></div>
+      <p class="secline"><span data-i18n="secAngleLabel">圓心角</span> <span class="secangle" id="secAngleTxt">90°</span></p>
+      <div class="rangewrap">
+        <input type="range" id="secRange" min="15" max="360" step="15" value="90">
+      </div>
+      <div class="chips" id="secChips"></div>
+      <p class="secline" id="secFracLine"></p>
+    </div>
+  </section>
+
+  <!-- 5. 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb5">試題</span>
+    <h2 data-i18n="s5h2">六題檢查一下</h2>
+    <p class="lead" data-i18n="s5lead">直接點答案，馬上告訴你為什麼。</p>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 6. 小遊戲 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">小遊戲</span>
+    <h2 data-i18n="s6h2">轉盤大師</h2>
+    <p class="lead" data-i18n="s6lead">看清楚出現的是多邊形還是扇形，選出正確答案。答對愈快，分數愈高！</p>
+    <div class="card game">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <div id="gScene"></div>
+      <p class="hint"><button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button></p>
+      <p class="hint" id="gHint"></p>
+      <div id="gCards" class="opts"></div>
+      <p id="gMsg" class="gamemsg"></p>
+      <div class="btnrow">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 學完之後 -->
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的三個動作</h2>
+    <div class="card">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。</li>
+        <li data-i18n="next3">❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>n 邊形內角和是 (n−2)×180°；圓心角占 360° 的幾分之幾，扇形就是圓的幾分之幾。</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 語言無關的幾何工具 ---------- */
+  function gcd(a, b){ return b ? gcd(b, a % b) : a; }
+  function fracOf360(angle){
+    var g = gcd(angle, 360);
+    return { num: angle / g, den: 360 / g };
+  }
+  function polyPts(n, cx, cy, r){
+    var pts = [];
+    for (var k = 0; k < n; k++){
+      var t = -Math.PI / 2 + k * 2 * Math.PI / n;
+      pts.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]);
+    }
+    return pts;
+  }
+  function ptsToStr(pts){
+    return pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ');
+  }
+  function tickMarks(pts, color){
+    var s = '';
+    for (var i = 0; i < pts.length; i++){
+      var a = pts[i], b = pts[(i + 1) % pts.length];
+      var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      var dx = b[0] - a[0], dy = b[1] - a[1];
+      var len = Math.sqrt(dx * dx + dy * dy) || 1;
+      var ux = -dy / len, uy = dx / len;
+      var tlen = 7;
+      var x1 = mx - ux * tlen / 2, y1 = my - uy * tlen / 2;
+      var x2 = mx + ux * tlen / 2, y2 = my + uy * tlen / 2;
+      s += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="' + color + '" stroke-width="2.5"/>';
+    }
+    return s;
+  }
+  function polarPt(cx, cy, r, deg){
+    var rad = (deg - 90) * Math.PI / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  }
+  function regularPolygonSVG(n, aria){
+    var pts = polyPts(n, 100, 100, 76);
+    var s = '<svg class="scene" viewBox="0 0 200 200" role="img" aria-label="' + aria + '">';
+    s += '<polygon points="' + ptsToStr(pts) + '" fill="#E3F4EB" stroke="#2B2A33" stroke-width="3"/>';
+    s += tickMarks(pts, '#2F9E69');
+    pts.forEach(function(p){
+      s += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="4.5" fill="#2B2A33"/>';
+    });
+    s += '</svg>';
+    return s;
+  }
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      htmlLang: 'zh-Hant',
+      title: '多邊形轉轉盤 — 正多邊形與扇形',
+      btn: 'EN',
+      home: '← 回 teach-me 首頁',
+      nav1: '📖 上課（本頁）', nav2: '🗂️ 速查卡', nav3: '🔁 複習挑戰',
+      h1: '🔷 多邊形轉轉盤',
+      sub: '正多邊形的內角和，還有扇形的圓心角',
+      intro: '每個多邊形的內角加起來都有一個祕密公式；扇形則是<strong>圓的一部分</strong>。<br>這一課帶你切三角形、轉扇形，把兩個祕密都找出來！',
+      modeTitle: '今天想怎麼學？（隨時可以換）',
+      modes: {
+        ahead:  { icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：慢慢玩上面的範例就好，試題只出 6 題基礎題，遊戲會自動給提示。' },
+        school: { icon:'🏫', h:'跟上進度', p:'學校正在教，完整練習', banner:'跟上模式：完整 10 題，包含 4 題像課本一樣的文字題。' },
+        boost:  { icon:'💪', h:'補強練習', p:'學過但還不穩，加強', banner:'補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。' }
+      },
+      eb1: '範例教學 1', eb2: '範例教學 2', eb3: '範例教學 3', eb4: '範例教學 4',
+      eb5: '試題', eb6: '小遊戲',
+      s1h2: '正多邊形是什麼？',
+      s1lead: '點選下面的形狀，看看正多邊形長什麼樣子。',
+      s1def: '正多邊形一定要符合兩個條件：<strong>所有邊長都相等</strong>，而且<strong>所有角度也都相等</strong>。',
+      polyChip: function(n){ return I18N.zh.polyName(n); },
+      polyName: function(n){
+        var names = {3:'正三角形',4:'正方形',5:'正五邊形',6:'正六邊形',7:'正七邊形',8:'正八邊形'};
+        return names[n] || (n + '邊形');
+      },
+      plainName: function(n){
+        var names = {3:'三角形',4:'四邊形',5:'五邊形',6:'六邊形',7:'七邊形',8:'八邊形'};
+        return names[n] || (n + '邊形');
+      },
+      polyCaption: function(n){ return I18N.zh.polyName(n) + '　有 ' + n + ' 條邊、' + n + ' 個角，邊長全部相等，角度也全部相等。'; },
+      s1aria: function(n){ return I18N.zh.polyName(n) + '，' + n + ' 條邊等長的圖形'; },
+      trapTitle: '陷阱檢查：邊長相等就一定是正多邊形嗎？',
+      trapSquareLbl: '正方形', trapRhombusLbl: '菱形',
+      trapSquareAria: '正方形，四邊等長、四個角都是直角',
+      trapRhombusAria: '菱形，四邊等長，但角度不相等',
+      trapBtn: '這是正多邊形嗎？',
+      trapSquareAns: '<span class="reveal yes">✔ 是正多邊形！四個邊相等，四個角也都相等（都是 90°）。</span>',
+      trapRhombusAns: '<span class="reveal no">✘ 不是正多邊形。菱形四個邊雖然相等，但角度不相等（兩個角比較尖、兩個角比較鈍），所以不是正多邊形。</span>',
+      s2h2: '內角和大切割',
+      s2lead: '從一個頂點畫對角線，把多邊形切成一個一個三角形，看看內角和怎麼算出來。',
+      triChip: function(n){ return I18N.zh.plainName(n); },
+      triAddBtn: '➕ 切出一個三角形', triResetBtn: '重新開始',
+      triAria: function(n){ return n + '邊形切三角形示意圖'; },
+      triLabel: function(s, n){
+        if (s === 0) return '這是一個' + I18N.zh.plainName(n) + '，還沒有切喔，按「切出一個三角形」開始！';
+        return '已經切出 <b>' + s + '</b> 個三角形　　目前的內角和：' + s + ' × 180° = <b>' + (s * 180) + '°</b>';
+      },
+      triFinal: function(n){ return '全部切完了！' + I18N.zh.plainName(n) + '可以切成 (' + n + '−2) 個三角形 ＝ ' + (n - 2) + ' 個，內角和 ＝ (' + n + '−2) × 180° ＝ ' + ((n - 2) * 180) + '°！'; },
+      s3h2: '正多邊形的每一個角',
+      s3lead: '正多邊形的每個角一樣大，只要把內角和平分給每一個角就好。',
+      eachChip: function(n){ return I18N.zh.polyName(n); },
+      eachAria: function(n){ return I18N.zh.polyName(n) + '，標示每一個角相等'; },
+      eachLine: function(n){
+        var sum = (n - 2) * 180;
+        var each = sum / n;
+        return I18N.zh.polyName(n) + '的內角和 ＝ (' + n + '−2)×180° ＝ ' + sum + '°　　每一個角 ＝ ' + sum + '°÷' + n + ' ＝ <b>' + each + '°</b>';
+      },
+      s4h2: '扇形轉轉盤',
+      s4lead: '拖拉滑桿或點選常見角度，看看扇形是整個圓的幾分之幾。',
+      secAngleLabel: '圓心角',
+      secAria: function(deg){ return '圓心角 ' + deg + ' 度的扇形圖，標出半徑、弧、圓心角'; },
+      secRadiusLbl: '半徑', secArcLbl: '弧', secCenterLbl: '圓心角',
+      secFracLine: function(deg, num, den){
+        if (deg >= 360) return '圓心角 360°，這就是<b>整個圓</b>（360/360 ＝ 1）。';
+        return '圓心角 ' + deg + '°，是整個圓（360°）的 <span class="fracbig">' + num + '/' + den + '</span>　（' + deg + ' ÷ 360，約分之後就是 ' + num + '/' + den + '）';
+      },
+      s5h2: '六題檢查一下',
+      s5lead: '直接點答案，馬上告訴你為什麼。',
+      qDoneLabel: '已作答', qRightLabel: '答對', qRightUnit: '題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      cAll: '全對！你已經是多邊形與扇形高手 🏆',
+      cGood: '很棒！錯的那幾題再看一次說明。',
+      cTry: '沒關係，回到上面再切一次三角形、轉一次扇形。',
+      qs: [
+        { stem:'圖形要符合什麼條件，才能叫做「正多邊形」？',
+          opts:['所有邊長都相等就可以','所有角度都相等就可以','所有邊長相等，而且所有角度也都相等','邊數是偶數就可以'], ans:2,
+          why:'菱形四個邊都相等，但角度不相等，所以不是正多邊形；正多邊形一定要「邊長全部相等」而且「角度也全部相等」，兩個條件缺一不可。' },
+        { stem:'六邊形的內角和是多少度？',
+          opts:['720°','1080°','900°','360°'], ans:0,
+          why:'六邊形可以從一個頂點切成 (6−2)=4 個三角形，4×180°=720°。' },
+        { stem:'n 邊形的內角和公式是哪一個？',
+          opts:['n × 180°','(n − 2) × 180°','(n − 1) × 180°','n × 360°'], ans:1,
+          why:'從一個頂點畫對角線，可以把 n 邊形切成 (n−2) 個三角形，每個三角形都是 180°，所以內角和 ＝ (n−2) × 180°。' },
+        { stem:'正六邊形，每一個內角是多少度？',
+          opts:['120°','135°','108°','90°'], ans:0,
+          why:'內角和 ＝(6−2)×180°=720°，720°÷6=120°。' },
+        { stem:'扇形的圓心角是 90°，這個扇形是整個圓的幾分之幾？',
+          opts:['1/4','1/2','1/3','1/8'], ans:0,
+          why:'整個圓是 360°，90 ÷ 360 ＝ 1/4。' },
+        { stem:'扇形的圓心角是 270°，這個扇形是整個圓的幾分之幾？',
+          opts:['3/4','1/4','2/3','1/2'], ans:0,
+          why:'270 ÷ 360 ＝ 3/4。' }
+      ],
+      qsAdv: [
+        { stem:'正八邊形的內角和是多少度？',
+          opts:['1080°','1440°','900°','1260°'], ans:0,
+          why:'(8−2)×180°=6×180°=1080°。' },
+        { stem:'一個正十邊形，每一個內角是多少度？',
+          opts:['144°','180°','160°','108°'], ans:0,
+          why:'內角和＝(10−2)×180°=1440°，1440°÷10=144°。' },
+        { stem:'把時鐘鐘面平分成 6 等份，像切蛋糕一樣，每一份扇形的圓心角是多少度？這一份是整個圓的幾分之幾？',
+          opts:['60°，1/6','60°，1/3','30°，1/12','72°，1/5'], ans:0,
+          why:'360°÷6=60°，60÷360＝1/6。' },
+        { stem:'從六邊形的一個頂點畫對角線，可以把它切成幾個三角形？它的內角和是多少度？',
+          opts:['4 個三角形，720°','6 個三角形，1080°','3 個三角形，540°','5 個三角形，900°'], ans:0,
+          why:'n−2＝6−2＝4 個三角形，4×180°=720°。' }
+      ],
+      qsBoost: [
+        { stem:'計算六邊形的內角和，下面哪一個算式是對的？',
+          opts:['(6 − 2) × 180° = 720°','6 × 180° = 1080°','6 × 90° = 540°','(6 + 2) × 180° = 1440°'], ans:0,
+          why:'六邊形要先從一個頂點切成 (6−2)=4 個三角形，4×180°=720°才對；「6×180°」多算了 2 個三角形，是常見的錯誤算法。' },
+        { stem:'一個扇形的圓心角從 60° 變成 120°（半徑不變），下面哪一句話正確？',
+          opts:['這個扇形占整個圓的比例會變成原來的兩倍','半徑會變成原來的兩倍','弧長會變成原來的一半','圓心角變大，圓就會變小'], ans:0,
+          why:'60° 是整個圓的 60/360=1/6，120° 是 120/360=1/3=2/6，比例確實變成兩倍；但半徑是圓本身的大小，不會因為圓心角改變而跟著變。' }
+      ],
+      s6h2: '轉盤大師',
+      s6lead: '看清楚出現的是多邊形還是扇形，選出正確答案。答對愈快，分數愈高！',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
+      gHintBtn: '💡 提示',
+      gNextBtn: '下一關', gRestartBtn: '重新開始',
+      gAskSum: function(name){ return name + '的內角和是多少度？'; },
+      gAskEach: function(name){ return name + '，每一個內角是多少度？'; },
+      gAskFrac: function(deg){ return '圓心角 ' + deg + '°，這個扇形是整個圓的幾分之幾？'; },
+      gCorrectFirst: function(ans){ return '答對了！正確答案是 ' + ans + '，+20 分！'; },
+      gCorrectRetry: function(ans){ return '答對了！正確答案是 ' + ans + '，+10 分。'; },
+      gWrong: function(v){ return v + ' 不對，再試一次，−5 分。'; },
+      gClear: '按「下一關」繼續下一題。',
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      ebNext: '學完之後', nextH2: '把它記牢的三個動作',
+      next1: '🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2: '🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
+      next3: '❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
+      footer: '把整頁縮成一句：<strong>n 邊形內角和是 (n−2)×180°；圓心角占 360° 的幾分之幾，扇形就是圓的幾分之幾。</strong>'
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'Polygons & Pizza Slices',
+      btn: '中',
+      home: '← Back to teach-me home',
+      nav1: '📖 Lesson (this page)', nav2: '🗂️ Cheat sheet', nav3: '🔁 Review challenge',
+      h1: '🔷 Polygons & Pizza Slices',
+      sub: 'The interior-angle sum of regular polygons, and sectors of a circle',
+      intro: 'Every polygon\'s interior angles add up to a secret formula; a sector is <strong>a slice of a circle</strong>.<br>This lesson has you cut triangles and spin a sector to uncover both secrets!',
+      modeTitle: 'How do you want to learn today? (switch anytime)',
+      modes: {
+        ahead:  { icon:'🚀', h:'Learning ahead', p:'First time meeting this topic', banner:'Ahead mode: enjoy the examples above at your own pace — the quiz has just the 6 basics, and the game shows a hint automatically.' },
+        school: { icon:'🏫', h:'School pace', p:'Learning it at school now', banner:'School mode: the full 10 questions, including 4 textbook-style word problems.' },
+        boost:  { icon:'💪', h:'Boost', p:'Learned it, still shaky', banner:'Boost mode: 2 misconception checks first, 12 questions in total — then head to the Review Challenge.' }
+      },
+      eb1: 'Example 1', eb2: 'Example 2', eb3: 'Example 3', eb4: 'Example 4',
+      eb5: 'Quiz', eb6: 'Game',
+      s1h2: 'What Is a Regular Polygon?',
+      s1lead: 'Tap a shape below to see what a regular polygon looks like.',
+      s1def: 'A regular polygon must meet two conditions: <strong>all sides are equal length</strong>, AND <strong>all angles are equal</strong>.',
+      polyChip: function(n){ return I18N.en.polyName(n); },
+      polyName: function(n){
+        var names = {3:'Equilateral triangle',4:'Square',5:'Regular pentagon',6:'Regular hexagon',7:'Regular heptagon',8:'Regular octagon'};
+        return names[n] || ('Regular ' + n + '-gon');
+      },
+      plainName: function(n){
+        var names = {3:'triangle',4:'quadrilateral',5:'pentagon',6:'hexagon',7:'heptagon',8:'octagon'};
+        return names[n] || (n + '-gon');
+      },
+      polyCaption: function(n){ return I18N.en.polyName(n) + ' — has ' + n + ' sides and ' + n + ' angles; all sides are equal, and all angles are equal too.'; },
+      s1aria: function(n){ return I18N.en.polyName(n) + ', a shape with ' + n + ' equal sides'; },
+      trapTitle: 'Trap check: does “equal sides” always mean “regular polygon”?',
+      trapSquareLbl: 'Square', trapRhombusLbl: 'Rhombus',
+      trapSquareAria: 'A square, four equal sides and four right angles',
+      trapRhombusAria: 'A rhombus, four equal sides but unequal angles',
+      trapBtn: 'Is this a regular polygon?',
+      trapSquareAns: '<span class="reveal yes">✔ Yes, it\'s regular! Four equal sides, and four equal angles too (all 90°).</span>',
+      trapRhombusAns: '<span class="reveal no">✘ Not regular. A rhombus has four equal sides, but its angles aren\'t equal (two are sharper, two are wider) — so it fails the angle condition.</span>',
+      s2h2: 'The Big Triangle Cut',
+      s2lead: 'Draw diagonals from one vertex to split a polygon into triangles, and watch the interior-angle sum add up.',
+      triChip: function(n){ return I18N.en.plainName(n); },
+      triAddBtn: '➕ Cut Out a Triangle', triResetBtn: 'Start Over',
+      triAria: function(n){ return n + '-gon split into triangles'; },
+      triLabel: function(s, n){
+        if (s === 0) return 'This is a ' + I18N.en.plainName(n) + ' — nothing cut yet. Press “Cut Out a Triangle” to begin!';
+        return I18N.en.plainName(n) + ': <b>' + s + '</b> triangle(s) cut so far — running total: ' + s + ' × 180° = <b>' + (s * 180) + '°</b>';
+      },
+      triFinal: function(n){ return 'All done! A ' + I18N.en.plainName(n) + ' splits into (' + n + '−2) triangles = ' + (n - 2) + ', so the interior-angle sum = (' + n + '−2) × 180° = ' + ((n - 2) * 180) + '°!'; },
+      s3h2: 'Each Angle of a Regular Polygon',
+      s3lead: 'Every angle in a regular polygon is the same size — just share the total out evenly.',
+      eachChip: function(n){ return I18N.en.polyName(n); },
+      eachAria: function(n){ return I18N.en.polyName(n) + ', marking that every angle is equal'; },
+      eachLine: function(n){
+        var sum = (n - 2) * 180;
+        var each = sum / n;
+        return I18N.en.polyName(n) + ': angle sum = (' + n + '−2)×180° = ' + sum + '°　　each angle = ' + sum + '°÷' + n + ' = <b>' + each + '°</b>';
+      },
+      s4h2: 'The Sector Dial',
+      s4lead: 'Drag the slider or tap a common angle, and see what fraction of the whole circle the sector covers.',
+      secAngleLabel: 'Central angle',
+      secAria: function(deg){ return 'A sector with a ' + deg + '-degree central angle, labeled with radius, arc, and central angle'; },
+      secRadiusLbl: 'Radius', secArcLbl: 'Arc', secCenterLbl: 'Central angle',
+      secFracLine: function(deg, num, den){
+        if (deg >= 360) return 'Central angle 360° — that\'s <b>the whole circle</b> (360/360 = 1).';
+        return 'Central angle ' + deg + '° is <span class="fracbig">' + num + '/' + den + '</span> of the whole circle (360°)　(' + deg + ' ÷ 360, reduced, gives ' + num + '/' + den + ')';
+      },
+      s5h2: 'Six Quick Questions',
+      s5lead: 'Tap an answer and we\'ll tell you why right away.',
+      qDoneLabel: 'Answered', qRightLabel: 'Correct:', qRightUnit: '',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      cAll: 'Perfect score! You\'re a polygons-and-sectors master 🏆',
+      cGood: 'Great job! Re-read the explanations for the ones you missed.',
+      cTry: 'That\'s okay — scroll up and cut a triangle or spin the sector one more time.',
+      qs: [
+        { stem:'What condition must a shape meet to be called a "regular polygon"?',
+          opts:['Just having all sides equal is enough','Just having all angles equal is enough','All sides must be equal, AND all angles must be equal','It just needs an even number of sides'], ans:2,
+          why:'A rhombus has four equal sides but unequal angles, so it isn’t a regular polygon. A regular polygon needs BOTH equal side lengths AND equal angles — neither condition alone is enough.' },
+        { stem:'What is the sum of the interior angles of a hexagon?',
+          opts:['720°','1080°','900°','360°'], ans:0,
+          why:'A hexagon can be split into (6−2)=4 triangles from one vertex, and 4×180°=720°.' },
+        { stem:'Which formula gives the sum of the interior angles of an n-sided polygon?',
+          opts:['n × 180°','(n − 2) × 180°','(n − 1) × 180°','n × 360°'], ans:1,
+          why:'Drawing diagonals from one vertex splits an n-gon into (n−2) triangles, and each triangle is 180°, so the sum = (n−2) × 180°.' },
+        { stem:'In a regular hexagon, how big is each interior angle?',
+          opts:['120°','135°','108°','90°'], ans:0,
+          why:'The angle sum = (6−2)×180°=720°, and 720°÷6=120°.' },
+        { stem:'A sector has a central angle of 90°. What fraction of the whole circle is it?',
+          opts:['1/4','1/2','1/3','1/8'], ans:0,
+          why:'A full circle is 360°, and 90 ÷ 360 = 1/4.' },
+        { stem:'A sector has a central angle of 270°. What fraction of the whole circle is it?',
+          opts:['3/4','1/4','2/3','1/2'], ans:0,
+          why:'270 ÷ 360 = 3/4.' }
+      ],
+      qsAdv: [
+        { stem:'What is the sum of the interior angles of a regular octagon?',
+          opts:['1080°','1440°','900°','1260°'], ans:0,
+          why:'(8−2)×180°=6×180°=1080°.' },
+        { stem:'In a regular decagon, how big is each interior angle?',
+          opts:['144°','180°','160°','108°'], ans:0,
+          why:'The angle sum = (10−2)×180°=1440°, and 1440°÷10=144°.' },
+        { stem:'A clock face is cut into 6 equal slices, like a cake. What is the central angle of each slice, and what fraction of the circle is it?',
+          opts:['60°, 1/6','60°, 1/3','30°, 1/12','72°, 1/5'], ans:0,
+          why:'360°÷6=60°, and 60÷360 = 1/6.' },
+        { stem:'Drawing diagonals from one vertex of a hexagon, how many triangles does it split into? What is its angle sum?',
+          opts:['4 triangles, 720°','6 triangles, 1080°','3 triangles, 540°','5 triangles, 900°'], ans:0,
+          why:'n−2 = 6−2 = 4 triangles, and 4×180°=720°.' }
+      ],
+      qsBoost: [
+        { stem:'Which calculation correctly finds the interior-angle sum of a hexagon?',
+          opts:['(6 − 2) × 180° = 720°','6 × 180° = 1080°','6 × 90° = 540°','(6 + 2) × 180° = 1440°'], ans:0,
+          why:'A hexagon splits into (6−2)=4 triangles from one vertex, so 4×180°=720° is correct. "6×180°" counts 2 triangles too many — a very common mistake.' },
+        { stem:'A sector’s central angle changes from 60° to 120° (radius unchanged). Which statement is correct?',
+          opts:['The fraction of the circle it covers becomes twice as much','The radius becomes twice as long','The arc length becomes half as long','A bigger central angle makes the circle smaller'], ans:0,
+          why:'60° is 60/360=1/6 of the circle, and 120° is 120/360=1/3=2/6 — exactly double. But the radius is a property of the circle itself; changing the central angle doesn’t change it.' }
+      ],
+      s6h2: 'Dial Master',
+      s6lead: 'Watch for whether a polygon or a sector shows up, then pick the correct answer. The faster you answer, the more points you score!',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
+      gHintBtn: '💡 Hint',
+      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      gAskSum: function(name){ return 'What is the interior-angle sum of a ' + name + '?'; },
+      gAskEach: function(name){ return 'In a ' + name + ', how big is each interior angle?'; },
+      gAskFrac: function(deg){ return 'A sector has a central angle of ' + deg + '°. What fraction of the whole circle is it?'; },
+      gCorrectFirst: function(ans){ return 'Correct on the first try! The answer is ' + ans + ' — +20 points!'; },
+      gCorrectRetry: function(ans){ return 'Correct! The answer is ' + ans + ' — +10 points.'; },
+      gWrong: function(v){ return v + ' isn’t right — try again. −5 points.'; },
+      gClear: 'Press "Next round" to try the next question.',
+      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press "Restart" to play again.'; },
+      ebNext: 'After the lesson', nextH2: 'Three moves that make it stick',
+      next1: '🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
+      next2: '🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
+      next3: '❓ Anything unclear — ask your parents or your AI teacher until it clicks. Good learners ask.',
+      footer: 'The whole page in one line: <strong>an n-gon’s interior-angle sum is (n−2)×180°; a sector’s share of the circle equals its central angle’s share of 360°.</strong>'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
+  var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+
+  function buildModeCards(){
+    var d = L();
+    modeCards.textContent = '';
+    ['ahead','school','boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+
+  /* ---------- 1. 正多邊形是什麼 ---------- */
+  var GALLERY_NS = [3, 4, 5, 6, 8];
+  var polyIdx = 0;
+  var polyChips = document.getElementById('polyChips');
+  var polyScene = document.getElementById('polyScene');
+  var polyCaption = document.getElementById('polyCaption');
+
+  function buildPolyChips(){
+    var d = L();
+    polyChips.textContent = '';
+    GALLERY_NS.forEach(function(n, i){
+      var b = makeChip(d.polyChip(n), i === polyIdx);
+      b.addEventListener('click', function(){ polyIdx = i; buildPolyChips(); renderPolyScene(); });
+      polyChips.appendChild(b);
+    });
+  }
+
+  function renderPolyScene(){
+    var d = L();
+    var n = GALLERY_NS[polyIdx];
+    polyScene.textContent = '';
+    polyScene.innerHTML = regularPolygonSVG(n, d.s1aria(n));
+    polyCaption.innerHTML = d.polyCaption(n);
+  }
+
+  /* ---------- 1b. 陷阱檢查：正方形 vs 菱形 ---------- */
+  var trapGrid = document.getElementById('trapGrid');
+
+  function squareSVG(aria){
+    return '<svg class="scene" viewBox="0 0 200 200" role="img" aria-label="' + aria + '">' +
+      '<polygon points="40,40 160,40 160,160 40,160" fill="#E3F4EB" stroke="#2B2A33" stroke-width="3"/>' +
+      tickMarks([[40,40],[160,40],[160,160],[40,160]], '#2F9E69') +
+      '<circle cx="40" cy="40" r="4.5" fill="#2B2A33"/><circle cx="160" cy="40" r="4.5" fill="#2B2A33"/>' +
+      '<circle cx="160" cy="160" r="4.5" fill="#2B2A33"/><circle cx="40" cy="160" r="4.5" fill="#2B2A33"/>' +
+      '</svg>';
+  }
+  function rhombusSVG(aria){
+    var pts = [[100,10],[170,90],[100,170],[30,90]];
+    return '<svg class="scene" viewBox="0 0 200 200" role="img" aria-label="' + aria + '">' +
+      '<polygon points="' + ptsToStr(pts) + '" fill="#FDF0E0" stroke="#2B2A33" stroke-width="3"/>' +
+      tickMarks(pts, '#E8871E') +
+      pts.map(function(p){ return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="4.5" fill="#2B2A33"/>'; }).join('') +
+      '</svg>';
+  }
+
+  function buildTrapGrid(){
+    var d = L();
+    trapGrid.textContent = '';
+    [
+      { svg: squareSVG(d.trapSquareAria), lbl: d.trapSquareLbl, ans: d.trapSquareAns },
+      { svg: rhombusSVG(d.trapRhombusAria), lbl: d.trapRhombusLbl, ans: d.trapRhombusAns }
+    ].forEach(function(item){
+      var card = document.createElement('div');
+      card.className = 'trapcard';
+      var scene = document.createElement('div');
+      scene.innerHTML = item.svg;
+      var lbl = document.createElement('p');
+      lbl.style.fontWeight = '700'; lbl.style.marginTop = '6px';
+      lbl.textContent = item.lbl;
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'btn ghost';
+      btn.style.marginTop = '10px'; btn.style.fontSize = '14px'; btn.style.padding = '6px 14px';
+      btn.textContent = d.trapBtn;
+      var reveal = document.createElement('p');
+      reveal.className = 'reveal';
+      btn.addEventListener('click', function(){
+        reveal.innerHTML = item.ans;
+        btn.disabled = true;
+      });
+      card.appendChild(scene); card.appendChild(lbl); card.appendChild(btn); card.appendChild(reveal);
+      trapGrid.appendChild(card);
+    });
+  }
+
+  /* ---------- 2. 內角和大切割 ---------- */
+  var TRI_NS = [4, 5, 6, 7, 8];
+  var triN = 5;
+  var triS = 0; // 已切出的三角形數
+  var triChips = document.getElementById('triChips');
+  var triScene = document.getElementById('triScene');
+  var triLabel = document.getElementById('triLabel');
+  var triFinal = document.getElementById('triFinal');
+  var triAddBtn = document.getElementById('triAddBtn');
+  var triResetBtn = document.getElementById('triResetBtn');
+  var TRI_COLORS = ['#E3F4EB', '#FDF0E0', '#E8F0FB', '#FBE9E9', '#F3E9FB', '#EAF6E9'];
+
+  function buildTriChips(){
+    var d = L();
+    triChips.textContent = '';
+    TRI_NS.forEach(function(n){
+      var b = makeChip(d.triChip(n), n === triN);
+      b.addEventListener('click', function(){
+        if (triN === n) return;
+        triN = n; triS = 0;
+        buildTriChips(); renderTriScene();
+      });
+      triChips.appendChild(b);
+    });
+  }
+
+  function renderTriScene(){
+    var d = L();
+    var n = triN, s = triS;
+    var pts = polyPts(n, 150, 140, 108);
+    var svg = '<svg class="scene" viewBox="0 0 300 280" role="img" aria-label="' + d.triAria(n) + '" style="max-width:320px">';
+    // shaded triangles 1..s : (0, j, j+1)
+    for (var j = 1; j <= s; j++){
+      var a = pts[0], b = pts[j], c = pts[j + 1];
+      svg += '<polygon points="' + ptsToStr([a, b, c]) + '" fill="' + TRI_COLORS[(j - 1) % TRI_COLORS.length] + '" stroke="none"/>';
+    }
+    // polygon outline
+    svg += '<polygon points="' + ptsToStr(pts) + '" fill="none" stroke="#2B2A33" stroke-width="3"/>';
+    // diagonals needed to show s triangles: (0,k) for k=2..min(s+1, n-2)
+    var maxK = Math.min(s + 1, n - 2);
+    for (var k = 2; k <= maxK; k++){
+      svg += '<line x1="' + pts[0][0].toFixed(1) + '" y1="' + pts[0][1].toFixed(1) + '" x2="' + pts[k][0].toFixed(1) + '" y2="' + pts[k][1].toFixed(1) + '" stroke="#2B2A33" stroke-width="2" stroke-dasharray="6 4"/>';
+    }
+    // vertex dots
+    pts.forEach(function(p){ svg += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="5" fill="#2B2A33"/>'; });
+    svg += '</svg>';
+    triScene.textContent = '';
+    triScene.innerHTML = svg;
+    triLabel.innerHTML = d.triLabel(s, n);
+    triFinal.textContent = (s === n - 2) ? d.triFinal(n) : '';
+    triAddBtn.disabled = (s >= n - 2);
+  }
+
+  triAddBtn.addEventListener('click', function(){
+    if (triS < triN - 2){ triS++; renderTriScene(); }
+  });
+  triResetBtn.addEventListener('click', function(){
+    triS = 0; renderTriScene();
+  });
+
+  /* ---------- 3. 正多邊形的每一個角 ---------- */
+  var EACH_NS = [3, 4, 5, 6, 8];
+  var eachIdx = 0;
+  var eachChips = document.getElementById('eachChips');
+  var eachScene = document.getElementById('eachScene');
+  var eachLine = document.getElementById('eachLine');
+
+  function buildEachChips(){
+    var d = L();
+    eachChips.textContent = '';
+    EACH_NS.forEach(function(n, i){
+      var b = makeChip(d.eachChip(n), i === eachIdx);
+      b.addEventListener('click', function(){ eachIdx = i; buildEachChips(); renderEachScene(); });
+      eachChips.appendChild(b);
+    });
+  }
+
+  function renderEachScene(){
+    var d = L();
+    var n = EACH_NS[eachIdx];
+    eachScene.textContent = '';
+    eachScene.innerHTML = regularPolygonSVG(n, d.eachAria(n));
+    eachLine.innerHTML = d.eachLine(n);
+  }
+
+  /* ---------- 4. 扇形轉轉盤 ---------- */
+  var SEC_CHIPS = [30, 45, 60, 90, 120, 180, 270, 360];
+  var secAngle = 90;
+  var secScene = document.getElementById('secScene');
+  var secAngleTxt = document.getElementById('secAngleTxt');
+  var secRange = document.getElementById('secRange');
+  var secChips = document.getElementById('secChips');
+  var secFracLine = document.getElementById('secFracLine');
+
+  function sectorSVG(deg, aria){
+    var cx = 130, cy = 130, r = 95;
+    var s = '<svg class="scene" viewBox="0 0 260 260" role="img" aria-label="' + aria + '" style="max-width:260px">';
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + '#E8E2D6' + '" stroke-width="2"/>';
+    if (deg >= 360){
+      s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#FDF0E0" stroke="#E8871E" stroke-width="3"/>';
+    } else {
+      var p1 = polarPt(cx, cy, r, 0);
+      var p2 = polarPt(cx, cy, r, deg);
+      var large = deg > 180 ? 1 : 0;
+      var path = 'M' + cx + ',' + cy + ' L' + p1[0].toFixed(1) + ',' + p1[1].toFixed(1) +
+        ' A' + r + ',' + r + ' 0 ' + large + ' 1 ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1) + ' Z';
+      s += '<path d="' + path + '" fill="#FDF0E0" stroke="#E8871E" stroke-width="3"/>';
+      // radius lines highlighted
+      s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p1[0].toFixed(1) + '" y2="' + p1[1].toFixed(1) + '" stroke="#3B7DD8" stroke-width="3"/>';
+      s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p2[0].toFixed(1) + '" y2="' + p2[1].toFixed(1) + '" stroke="#3B7DD8" stroke-width="3"/>';
+      // arc highlight
+      s += '<path d="M' + p1[0].toFixed(1) + ',' + p1[1].toFixed(1) + ' A' + r + ',' + r + ' 0 ' + large + ' 1 ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1) + '" fill="none" stroke="#D64545" stroke-width="4"/>';
+    }
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="#2B2A33"/>';
+    s += '</svg>';
+    return s;
+  }
+
+  function renderSecScene(){
+    var d = L();
+    secAngleTxt.textContent = secAngle + '°';
+    secScene.textContent = '';
+    secScene.innerHTML = sectorSVG(secAngle, d.secAria(secAngle));
+    var f = fracOf360(secAngle);
+    secFracLine.innerHTML = d.secFracLine(secAngle, f.num, f.den);
+    secRange.value = secAngle;
+  }
+
+  function buildSecChips(){
+    var d = L();
+    secChips.textContent = '';
+    SEC_CHIPS.forEach(function(v){
+      var b = makeChip(v + '°', v === secAngle);
+      b.addEventListener('click', function(){ secAngle = v; buildSecChips(); renderSecScene(); });
+      secChips.appendChild(b);
+    });
+  }
+
+  secRange.addEventListener('input', function(){
+    secAngle = parseInt(secRange.value, 10);
+    buildSecChips();
+    renderSecScene();
+  });
+
+  /* ---------- 5. 試題 ---------- */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
+  function buildQuiz(){
+    var d = L();
+    var list = quizSet();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    qTotal.textContent = list.length;
+    list.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ---------- 6. 小遊戲：轉盤大師 ---------- */
+  var ROUNDS = [
+    { type:'polygon', n:5, ask:'sum', ans:540, choices:[540,900,360,720],
+      hint1z:'先想：從一個頂點畫對角線，五邊形可以切成幾個三角形？', hint2z:function(){ return '提示：五邊形可以切成 3 個三角形，3 × 180° = 540°。'; },
+      hint1e:'Think: drawing diagonals from one vertex, how many triangles does a pentagon split into?', hint2e:function(){ return 'Hint: a pentagon splits into 3 triangles, and 3 × 180° = 540°.'; } },
+    { type:'sector', angle:90, ans:'1/4', choices:['1/4','1/2','1/3','1/8'],
+      hint1z:'先想：整個圓是 360°，90° 占了 360° 的幾分之幾？', hint2z:function(){ return '提示：90 ÷ 360，兩個數字可以同時除以 90，變成 1/4。'; },
+      hint1e:'Think: a full circle is 360°. What fraction of 360° is 90°?', hint2e:function(){ return 'Hint: 90 ÷ 360 — divide both by 90 to get 1/4.'; } },
+    { type:'polygon', n:6, ask:'each', ans:120, choices:[120,720,108,135],
+      hint1z:'先想：先算出六邊形的內角和，再平分給 6 個角。', hint2z:function(){ return '提示：內角和是 720°，720 ÷ 6 = 120°。'; },
+      hint1e:'Think: first find the hexagon’s angle sum, then share it evenly among 6 angles.', hint2e:function(){ return 'Hint: the angle sum is 720°, and 720 ÷ 6 = 120°.'; } },
+    { type:'sector', angle:120, ans:'1/3', choices:['1/3','1/4','2/3','1/6'],
+      hint1z:'先想：120° 是 360° 的幾分之幾？試著約分看看。', hint2z:function(){ return '提示：120 ÷ 360 可以同時除以 120，變成 1/3。'; },
+      hint1e:'Think: what fraction of 360° is 120°? Try reducing it.', hint2e:function(){ return 'Hint: 120 ÷ 360 — divide both by 120 to get 1/3.'; } },
+    { type:'polygon', n:8, ask:'sum', ans:1080, choices:[1080,1440,900,1260],
+      hint1z:'先想：正八邊形從一個頂點可以切出幾個三角形？', hint2z:function(){ return '提示：八邊形可以切成 6 個三角形，6 × 180° = 1080°。'; },
+      hint1e:'Think: how many triangles can a regular octagon be cut into from one vertex?', hint2e:function(){ return 'Hint: an octagon splits into 6 triangles, and 6 × 180° = 1080°.'; } }
+  ];
+
+  var gRound = 0, gScore = 0, gMistake = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gScene = document.getElementById('gScene');
+  var gCards = document.getElementById('gCards');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+  var hintLevel = 0;
+
+  function roundQuestionText(round){
+    var d = L();
+    if (round.type === 'polygon'){
+      var name = d.polyName(round.n);
+      return round.ask === 'sum' ? d.gAskSum(name) : d.gAskEach(name);
+    }
+    return d.gAskFrac(round.angle);
+  }
+
+  function roundHint1(round){ return lang === 'zh' ? round.hint1z : round.hint1e; }
+  function roundHint2(round){ return (lang === 'zh' ? round.hint2z : round.hint2e)(); }
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRound];
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    gHintBtn.textContent = d.gHintBtn;
+    if (mode === 'ahead'){
+      hintLevel = 1;
+      elHint.textContent = roundHint1(round);
+    } else {
+      elHint.textContent = '';
+    }
+
+    gScene.textContent = '';
+    if (round.type === 'polygon'){
+      gScene.innerHTML = regularPolygonSVG(round.n, d.polyName(round.n));
+    } else {
+      gScene.innerHTML = sectorSVG(round.angle, d.secAria(round.angle));
+    }
+
+    var askEl = document.createElement('p');
+    askEl.className = 'secline';
+    askEl.style.fontWeight = '700';
+    askEl.textContent = roundQuestionText(round);
+    gScene.appendChild(askEl);
+
+    gCards.textContent = '';
+    var choiceStrs = round.choices.map(function(c){ return round.type === 'polygon' ? (c + '°') : c; });
+    var correctStr = round.type === 'polygon' ? (round.ans + '°') : round.ans;
+    choiceStrs.forEach(function(v){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'opt'; b.textContent = v;
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        if (v === correctStr){
+          var all = gCards.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          b.classList.add('right');
+          if (gMistake){
+            gScore += 10;
+            gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry(correctStr) + '</span>';
+          } else {
+            gScore += 20;
+            gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst(correctStr) + '</span>';
+          }
+          if (gRound === ROUNDS.length - 1){
+            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
+          } else {
+            gMsg.innerHTML += ' ' + d.gClear;
+            gNext.disabled = false;
+          }
+        } else {
+          gMistake = true;
+          b.disabled = true;
+          b.classList.add('wrong');
+          gScore = Math.max(0, gScore - 5);
+          gMsg.innerHTML = '<span class="no">' + d.gWrong(v) + '</span>';
+        }
+        elScore.textContent = gScore;
+      });
+      gCards.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+
+  gHintBtn.addEventListener('click', function(){
+    var round = ROUNDS[gRound];
+    hintLevel++;
+    if (hintLevel === 1){
+      elHint.textContent = roundHint1(round);
+    } else {
+      elHint.textContent = roundHint2(round);
+      gHintBtn.disabled = true;
+    }
+  });
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildModeCards();
+    buildPolyChips(); renderPolyScene();
+    buildTrapGrid();
+    buildTriChips(); renderTriScene();
+    buildEachChips(); renderEachScene();
+    buildSecChips(); renderSecScene();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+  /* 記錄最後上的課，供首頁「繼續上次」使用 */
+  try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-5/math/polygon/', zh:'多邊形轉轉盤 — 正多邊形與扇形', en:'Polygons & Pizza Slices', icon:'🔷'})); } catch(e){}
+
+})();
+</script>
+</body>
+</html>

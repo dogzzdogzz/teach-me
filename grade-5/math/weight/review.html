@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>公噸複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:16px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 公噸複習挑戰</h1>
+    <p data-i18n="sub">不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：公噸、小數、體積、平均交錯出現，<strong>每一批的數字都是新出的</strong>，
+    背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 靜態文字 ---------- */
+  var I18N = {
+    zh: {
+      htmlLang:'zh-Hant', title:'公噸複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡', nav3:'🔁 複習挑戰（本頁）',
+      h1:'🔁 公噸複習挑戰',
+      sub:'不看課本、憑記憶答 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：公噸、小數、體積、平均交錯出現，<strong>每一批的數字都是新出的</strong>，背答案沒有用，要真的會算。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      htmlLang:'en', title:'Tonnes Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet', nav3:'🔁 Review challenge (this page)',
+      h1:'🔁 Tonnes Review Challenge',
+      sub:'No peeking at notes — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving tonnes, decimals, volume and averages — <strong>every batch uses fresh numbers</strong>, so memorising answers won’t help; you have to really compute.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      cats: { weight:'公噸', decimal:'小數', volume:'體積', average:'平均' },
+      fbRight: '<b>答對了。</b> ',
+      fbWrong: function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪一課：'; },
+      linkNames: { weight:'🏋️ 公噸 — 大力士磅秤', decimal:'💰 小數 — 小數商店', volume:'🧊 體積 — 體積積木塔', average:'⚖️ 平均 — 平均分配站' }
+    },
+    en: {
+      qn: function(i){ return 'Question ' + i; },
+      cats: { weight:'Tonnes', decimal:'Decimals', volume:'Volume', average:'Averages' },
+      fbRight: '<b>Correct!</b> ',
+      fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      linkNames: { weight:'🏋️ Tonnes — The Heavy-Duty Scale', decimal:'💰 Decimals — The Decimal Shop', volume:'🧊 Volume — The Block Tower', average:'⚖️ Averages — The Level-Up Station' }
+    }
+  };
+
+  var LINK_HREFS = { weight:'index.html', decimal:'../decimal/', volume:'../volume/', average:'../average/' };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function sum(arr){ return arr.reduce(function(a, b){ return a + b; }, 0); }
+  /* 整數字串除法：把整數 num 除以 10 的冪次 denom，回傳乾淨的小數字串，完全不用浮點除法 */
+  function divExact(num, denom){
+    var neg = num < 0; num = Math.abs(num);
+    var whole = Math.floor(num / denom);
+    var rem = num - whole * denom;
+    if (rem === 0) return String((neg ? -whole : whole));
+    var digits = String(denom).length - 1;
+    var decStr = String(rem);
+    while (decStr.length < digits) decStr = '0' + decStr;
+    decStr = decStr.replace(/0+$/, '');
+    return (neg ? '-' : '') + whole + '.' + decStr;
+  }
+  /* 保證 3 個相異、且不等於正解的錯誤選項（數值型；先用候選值去重，不夠再往外補） */
+  function makeWrongs(correct, candidates){
+    var out = [];
+    var seen = {}; seen[String(correct)] = true;
+    (candidates || []).forEach(function(c){
+      var key = String(c);
+      if (!seen[key]){ seen[key] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3){
+      var lo = correct - step, hi = correct + step;
+      if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  /* 把選項值（數字）＋正解洗牌，回傳 {opts, ans}；opts 內容仍是數字，交給各題型的 fmt 自行轉成字串 */
+  function mixOpts(correct, candidates){
+    var wrongs = makeWrongs(correct, candidates);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  /* 公噸公斤互換：把 (t, kgRem) 編碼成單一整數，方便當作 mixOpts 的候選值使用 */
+  function encodeTKg(t, kgRem){ return t * 10000 + kgRem; }
+  function decodeTKg(enc){ return { t: Math.floor(enc / 10000), kgRem: enc - Math.floor(enc / 10000) * 10000 }; }
+  function fmtCompound(t, kgRem, lang){
+    return lang === 'zh' ? (t + '公噸' + kgRem + '公斤') : (t + ' t ' + kgRem + ' kg');
+  }
+
+  /* 產生 n 個正整數，平均剛好是 avg，數字全部大於 0（純整數運算，抄自平均課的作法） */
+  function makeNumsForAvg(avg, n){
+    var nums;
+    for (var tries = 0; tries < 40; tries++){
+      var devs = [], total = 0, i;
+      for (i = 0; i < n - 1; i++){
+        var d = rand(9) - 4; // -4..4
+        devs.push(d); total += d;
+      }
+      devs.push(-total);
+      devs = shuffle(devs);
+      nums = devs.map(function(dv){ return avg + dv; });
+      if (nums.every(function(v){ return v > 0; })) return nums;
+    }
+    return nums;
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字（一律用整數公斤／十分位運算，避免浮點誤差） ---------- */
+  var KG_POOL = [1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000];
+
+  var GENS = [
+    { id:'kgToTon', cat:'weight',
+      make: function(used){
+        var kg = pickUnused(KG_POOL, used);
+        var tonStr = divExact(kg, 1000);
+        var wrong100 = divExact(kg, 100); // 誤把 ÷1000 當成 ÷100
+        var candidates = [wrong100, divExact(kg + 100, 1000), divExact(kg - 100, 1000)];
+        var seen = {}; seen[tonStr] = true;
+        var wrongs = [];
+        candidates.forEach(function(c){ if (!seen[c]){ seen[c] = true; wrongs.push(c); } });
+        var step = 2;
+        while (wrongs.length < 3){
+          var extraStr = divExact(kg + 100 * step, 1000);
+          if (!seen[extraStr]){ seen[extraStr] = true; wrongs.push(extraStr); }
+          step++;
+        }
+        var optsStr = shuffle([tonStr].concat(wrongs.slice(0, 3)));
+        return { kg:kg, tonStr:tonStr, optsStr:optsStr, ans:optsStr.indexOf(tonStr) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.kg + ' 公斤 = 多少公噸？' : d.kg + ' kg = how many tonnes?',
+          opts: d.optsStr.map(function(v){ return lang === 'zh' ? v + '公噸' : v + ' t'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.kg + ' ÷ 1000 = ' + d.tonStr + '，所以是 ' + d.tonStr + ' 公噸。'
+            : d.kg + ' ÷ 1000 = ' + d.tonStr + ', so it is ' + d.tonStr + ' t.'
+        };
+      } },
+    { id:'tonToKg', cat:'weight',
+      make: function(used){
+        var kg = pickUnused(KG_POOL, used);
+        var tonStr = divExact(kg, 1000);
+        var m = mixOpts(kg, [kg / 10, kg * 10, kg + 500, kg - 500].filter(function(v){ return v > 0 && Number.isInteger(v); }));
+        return { kg:kg, tonStr:tonStr, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.tonStr + ' 公噸 = 多少公斤？' : d.tonStr + ' t = how many kilograms?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.tonStr + ' × 1000 = ' + d.kg + '，所以是 ' + d.kg + ' 公斤。'
+            : d.tonStr + ' × 1000 = ' + d.kg + ', so it is ' + d.kg + ' kg.'
+        };
+      } },
+    { id:'compoundToKg', cat:'weight',
+      make: function(used){
+        var t = pickUnused([1,2,3,4,5,6,7], used);
+        var kgRem = (1 + rand(98)) * 10; // 10~980，10 的倍數
+        var total = t * 1000 + kgRem;
+        var wrong100 = t * 100 + kgRem; // 誤把公噸 ×100
+        var m = mixOpts(total, [wrong100, total + 100, total - 100]);
+        return { t:t, kgRem:kgRem, total:total, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.t + ' 公噸 ' + d.kgRem + ' 公斤 = 多少公斤？' : d.t + ' t ' + d.kgRem + ' kg = how many kilograms?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.t + ' 公噸 = ' + (d.t * 1000) + ' 公斤，' + (d.t * 1000) + ' + ' + d.kgRem + ' = ' + d.total + ' 公斤。'
+            : d.t + ' t = ' + (d.t * 1000) + ' kg, and ' + (d.t * 1000) + ' + ' + d.kgRem + ' = ' + d.total + ' kg.'
+        };
+      } },
+    { id:'kgToCompound', cat:'weight',
+      make: function(used){
+        var total = pickUnused([1010,1250,1500,1800,2100,2350,2600,2900,3150,3400,3700,4050,4300,4600,4900,5250,5500,5800,6100,6450], used);
+        var t = Math.floor(total / 1000);
+        var kgRem = total - t * 1000;
+        var correctEnc = encodeTKg(t, kgRem);
+        var wrongEncs = [];
+        // 迷思：只取後兩位當公斤餘數（把 ÷1000 誤當成 ÷100）
+        wrongEncs.push(encodeTKg(t, total % 100));
+        if (t > 0) wrongEncs.push(encodeTKg(t - 1, kgRem));
+        wrongEncs.push(encodeTKg(t + 1, kgRem));
+        var seen = {}; seen[correctEnc] = true;
+        var wrongs = [];
+        wrongEncs.forEach(function(w){ if (!seen[w]){ seen[w] = true; wrongs.push(w); } });
+        var extra = 2;
+        while (wrongs.length < 3){
+          var w2 = encodeTKg(t + extra, kgRem);
+          if (!seen[w2]){ seen[w2] = true; wrongs.push(w2); }
+          extra++;
+        }
+        var encsAll = shuffle([correctEnc].concat(wrongs.slice(0, 3)));
+        return { total:total, t:t, kgRem:kgRem, encsAll:encsAll, ans:encsAll.indexOf(correctEnc) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.total + ' 公斤 = 幾公噸幾公斤？' : d.total + ' kg = how many tonnes and kilograms?',
+          opts: d.encsAll.map(function(enc){ var dd = decodeTKg(enc); return fmtCompound(dd.t, dd.kgRem, lang); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.total + ' ÷ 1000 = ' + d.t + ' 餘 ' + d.kgRem + '，所以是 ' + d.t + ' 公噸 ' + d.kgRem + ' 公斤。'
+            : d.total + ' ÷ 1000 = ' + d.t + ' remainder ' + d.kgRem + ', so it is ' + d.t + ' t ' + d.kgRem + ' kg.'
+        };
+      } },
+    { id:'truckTotal', cat:'weight',
+      make: function(used){
+        var limitT = pickUnused([3,4,5,6,7,8,9], used);
+        var kg1 = (2 + rand(18)) * 100; // 200~1900
+        var kg2 = (2 + rand(18)) * 100;
+        var total = kg1 + kg2;
+        var tonStr = divExact(total, 1000);
+        var wrong100 = divExact(total, 100);
+        var candidates = [wrong100, divExact(total + 200, 1000), divExact(total - 200, 1000)];
+        var seen = {}; seen[tonStr] = true;
+        var wrongs = [];
+        candidates.forEach(function(c){ if (!seen[c]){ seen[c] = true; wrongs.push(c); } });
+        var step = 2;
+        while (wrongs.length < 3){
+          var extraStr = divExact(total + 200 * step, 1000);
+          if (!seen[extraStr]){ seen[extraStr] = true; wrongs.push(extraStr); }
+          step++;
+        }
+        var optsStr = shuffle([tonStr].concat(wrongs.slice(0, 3)));
+        return { limitT:limitT, kg1:kg1, kg2:kg2, total:total, tonStr:tonStr, optsStr:optsStr, ans:optsStr.indexOf(tonStr) };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '卡車上有 ' + d.kg1 + ' 公斤和 ' + d.kg2 + ' 公斤兩批貨物，總重是多少公噸？'
+            : 'A truck carries two loads of ' + d.kg1 + ' kg and ' + d.kg2 + ' kg. What is the total weight in tonnes?',
+          opts: d.optsStr.map(function(v){ return lang === 'zh' ? v + '公噸' : v + ' t'; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.kg1 + ' + ' + d.kg2 + ' = ' + d.total + ' 公斤 = ' + d.tonStr + ' 公噸。'
+            : d.kg1 + ' + ' + d.kg2 + ' = ' + d.total + ' kg = ' + d.tonStr + ' t.'
+        };
+      } },
+    { id:'splitShares', cat:'weight',
+      make: function(used){
+        var n = pickUnused([2,3,4,5], used);
+        var perBox = (2 + rand(38)) * 50; // 100~1950，50 的倍數
+        var total = perBox * n;
+        var t = Math.floor(total / 1000);
+        var kgRem = total - t * 1000;
+        var m = mixOpts(perBox, [total, perBox + 50, perBox - 50]);
+        return { n:n, perBox:perBox, total:total, t:t, kgRem:kgRem, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var compoundStr = d.t > 0 ? fmtCompound(d.t, d.kgRem, lang) : (lang === 'zh' ? d.kgRem + '公斤' : d.kgRem + ' kg');
+        return {
+          stem: lang === 'zh'
+            ? '一批貨物總重 ' + compoundStr + '（' + d.total + ' 公斤），平均裝進 ' + d.n + ' 箱，每箱裝多少公斤？'
+            : 'A shipment weighing ' + compoundStr + ' (' + d.total + ' kg) is split evenly into ' + d.n + ' boxes. How many kg per box?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? compoundStr + ' = ' + d.total + ' 公斤，' + d.total + ' ÷ ' + d.n + ' = ' + d.perBox + ' 公斤。'
+            : compoundStr + ' = ' + d.total + ' kg, and ' + d.total + ' ÷ ' + d.n + ' = ' + d.perBox + ' kg.'
+        };
+      } },
+    { id:'decimalDivide', cat:'decimal',
+      make: function(used){
+        var k = pickUnused([2, 3, 4, 5, 6], used);
+        var qt = 20 + rand(70); // 商的十分位整數，代表 2.0～8.9
+        var dividendTenths = qt * k;
+        var dividend = divExact(dividendTenths, 10);
+        var q = divExact(qt, 10);
+        var m = mixOpts(qt, [qt - 1, qt + 1, qt * 2].map(function(v){ return v; }));
+        // m 是以「十分位整數」比較，opts 顯示時要轉成小數字串
+        return { k:k, dividend:dividend, dividendTenths:dividendTenths, q:q, qt:qt, optsQt:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: d.dividend + ' ÷ ' + d.k + ' = ?',
+          opts: d.optsQt.map(function(v){ return divExact(v, 10); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.dividend + ' 裡面有 ' + d.dividendTenths + ' 個 0.1，' + d.dividendTenths + ' ÷ ' + d.k + ' = ' + d.qt + ' 個 0.1，也就是 ' + d.q + '。'
+            : d.dividend + ' is ' + d.dividendTenths + ' tenths. ' + d.dividendTenths + ' ÷ ' + d.k + ' = ' + d.qt + ' tenths, which is ' + d.q + '.'
+        };
+      } },
+    { id:'cuboidVolume', cat:'volume',
+      make: function(used){
+        var l = pickUnused([3,4,5,6,7,8], used);
+        var w = pick([2,3,4,5]);
+        var h = pick([2,3,4,5]);
+        var v = l * w * h;
+        var m = mixOpts(v, [l * w, w * h, l + w + h, l * w * (h + 1)]);
+        return { l:l, w:w, h:h, v:v, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        var unit = lang === 'zh' ? '立方公分' : 'cm³';
+        return {
+          stem: lang === 'zh'
+            ? '長方體長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分、高 ' + d.h + ' 公分，體積是多少立方公分？'
+            : 'A cuboid is ' + d.l + ' cm long, ' + d.w + ' cm wide and ' + d.h + ' cm tall. What is its volume?',
+          opts: d.opts.map(function(v){ return v + (lang === 'zh' ? '' : ' ') + unit; }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.v + ' 立方公分。'
+            : d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.v + ' cm³.'
+        };
+      } },
+    { id:'avgCalc', cat:'average',
+      make: function(used){
+        var n = pick([2, 3, 4]);
+        var avg = pickUnused([6,7,8,9,10,12,14,15,16,18,20], used);
+        var nums = makeNumsForAvg(avg, n);
+        var s = sum(nums);
+        var m = mixOpts(avg, [avg - 1, avg + 1, s]);
+        return { n:n, nums:nums, avg:avg, sum:s, opts:m.opts, ans:m.ans };
+      },
+      fmt: function(d, lang){
+        return {
+          stem: lang === 'zh' ? '這組數字：' + d.nums.join('、') + '，平均是多少？' : 'What is the average of: ' + d.nums.join(', ') + '?',
+          opts: d.opts.map(String),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.nums.join(' + ') + ' = ' + d.sum + '，' + d.sum + ' ÷ ' + d.n + ' = ' + d.avg + '。'
+            : d.nums.join(' + ') + ' = ' + d.sum + ', and ' + d.sum + ' ÷ ' + d.n + ' = ' + d.avg + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：9 種題型各一題＋隨機 3 題（限公噸類，數字不重複） ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){ return g.cat === 'weight'; });
+    for (var i = 0; i < 3; i++) slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongCats = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongCats[cat] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var cats = [];
+    for (var c in wrongCats) if (wrongCats[c]) cats.push(c);
+    if (cats.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      cats.forEach(function(c){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[c]; a.textContent = t.linkNames[c];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  /* 換一批新題目 = 重新產生題目資料；切語言 = 同一批題目換語言呈現 */
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
