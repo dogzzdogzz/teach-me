@@ -145,7 +145,7 @@ node tools/breaktest.js grade-2/math/time
 不然兩次抽到不同參數，「只有改壞版失敗」可能只是運氣。
 （`SIMGEN_SEED=42 node tools/simgen.js <review.html> 1000` 也可以自己用來重現某一批。）
 目前：add-sub 6、time 27、length 35、divide 62、two-step 109、capacity-weight 105、
-shapes 114、solid 97、table 112 —— 二年級九課共 667 筆，全部會被抓到。
+shapes 114、solid 97、table 130 —— 二年級九課共 685 筆，全部會被抓到。
 
 **四頁都會被複製進暫存目錄**（2026-08-26 起）。以前只複製 `index.html` 與 `review.html`，
 所以任何針對 `reference.html`／`parents.html` 的斷言在這裡**永遠跑不到** —— 那些斷言等於

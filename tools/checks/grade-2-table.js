@@ -639,7 +639,82 @@ module.exports = {
       replace:'        var cols = [0,0,1];' },
     { file:'index', expect:'the checker expects "2 張"',
       find:"          opts:['8 張','2 張','5 張','10 張'], ans:1,",
-      replace:"          opts:['8 張','4 張','5 張','10 張'], ans:1," }
+      replace:"          opts:['8 張','4 張','5 張','10 張'], ans:1," },
+
+    /* --- 正字畫記的筆畫位置（2026-08-26）---
+       筆數對、位置錯：以前的檢查只比 data-count 和 <line> 的數目，所以
+       「中間那一橫畫在長豎左邊」三頁一起錯了也全綠。三頁的斷言都住在
+       data.check 裡（它自己去讀另外兩頁），所以 review 那一筆要寫 via:'index'。 */
+    { file:'index', expect:'must extend to the RIGHT of the long vertical',
+      find:'      [ox + 11, oy + 11, ox + 18, oy + 11],',
+      replace:'      [ox + 4, oy + 11, ox + 11, oy + 11],' },
+    { file:'reference', expect:'must extend to the RIGHT of the long vertical',
+      find:'      [ox + 11, oy + 11, ox + 18, oy + 11],',
+      replace:'      [ox + 4, oy + 11, ox + 11, oy + 11],' },
+    { file:'review', via:'index', expect:'must extend to the RIGHT of the long vertical',
+      find:'      [ox + 11, oy + 11, ox + 18, oy + 11],',
+      replace:'      [ox + 4, oy + 11, ox + 11, oy + 11],' },
+    /* 中短橫沒有接在長豎上：浮在右邊一格。 */
+    { file:'index', expect:'must start on the long vertical',
+      find:'      [ox + 11, oy + 11, ox + 18, oy + 11],',
+      replace:'      [ox + 13, oy + 11, ox + 18, oy + 11],' },
+    /* 左短豎跑到長豎右邊：兩豎都在右邊，那不是正字。 */
+    { file:'index', expect:'must be to the LEFT of the long vertical',
+      find:'      [ox + 4, oy + 9,  ox + 4,  oy + 19],',
+      replace:'      [ox + 16, oy + 9,  ox + 16,  oy + 19],' },
+    /* 左短豎接不到下橫：正字缺一角。 */
+    { file:'index', expect:'it must reach the bottom bar',
+      find:'      [ox + 4, oy + 9,  ox + 4,  oy + 19],',
+      replace:'      [ox + 4, oy + 9,  ox + 4,  oy + 15],' },
+    /* 五筆變四筆：一組五筆的規則整個垮掉。 */
+    { file:'index', expect:'must be five strokes',
+      find:'      [ox + 4, oy + 9,  ox + 4,  oy + 19],\n',
+      replace:'' },
+    /* 三頁畫的不是同一個正字：一頁改對、另一頁忘了跟上。 */
+    { file:'reference', expect:'do not draw the same 正',
+      find:'      [ox + 11, oy + 11, ox + 18, oy + 11],',
+      replace:'      [ox + 11, oy + 11, ox + 17, oy + 11],' },
+    /* 認不出 strokesZH：整組筆畫等於沒被檢查，要響亮地失敗。 */
+    { file:'review', via:'index', expect:'not checked at all',
+      find:'  function strokesZH(k, ox, oy){',
+      replace:'  function strokesZH_renamed(k, ox, oy){' },
+    /* 畫記倒著長：筆數、座標、陣列都沒變，畫出來卻是從最後一筆開始。
+       只讀座標陣列的檢查看不到（第一輪 codex 審查的 HIGH）。 */
+    { file:'index', expect:'the strokes have to grow in writing order',
+      find:'    return pts.slice(0, k);\n  }\n  function strokesEN(k, ox, oy){',
+      replace:'    return pts.slice(5 - k);\n  }\n  function strokesEN(k, ox, oy){' },
+    /* 漏掉一個 ox：第一組（ox=0）完全正常，第二組會疊回第一組上面。 */
+    { file:'index', expect:'does not move with ox/oy',
+      find:'      [ox + 11, oy + 3, ox + 11, oy + 19],',
+      replace:'      [11, oy + 3, ox + 11, oy + 19],' },
+    /* 左短豎穿到上橫：變成兩條貫穿的豎線，那不是正字（第一輪審查的 MEDIUM）。 */
+    { file:'index', expect:'must start below the top bar',
+      find:'      [ox + 4, oy + 9,  ox + 4,  oy + 19],',
+      replace:'      [ox + 4, oy + 1,  ox + 4,  oy + 19],' },
+    /* 左短豎貼到長豎旁邊：兩條線黏成一條粗線。 */
+    { file:'index', expect:'merge into one thick stroke',
+      find:'      [ox + 4, oy + 9,  ox + 4,  oy + 19],',
+      replace:'      [ox + 10, oy + 9,  ox + 10,  oy + 19],' },
+    /* 中短橫短得看不見：畫面上只剩長豎。 */
+    { file:'index', expect:'it disappears into the vertical',
+      find:'      [ox + 11, oy + 11, ox + 18, oy + 11],',
+      replace:'      [ox + 11, oy + 11, ox + 12, oy + 11],' },
+    /* 左短豎起點只離上橫 1，圓頭線帽一蓋就接上去了：看起來還是兩條貫穿的豎線。 */
+    { file:'index', expect:'below the top bar, less than the',
+      find:'      [ox + 4, oy + 9,  ox + 4,  oy + 19],',
+      replace:'      [ox + 4, oy + 4,  ox + 4,  oy + 19],' },
+    /* 線寬 0：兩條「靠太近」的檢查會靜靜地什麼都不擋。 */
+    { file:'index', expect:'must be a positive number',
+      find:'stroke="#2B2A33" stroke-width="3" stroke-linecap="round"',
+      replace:'stroke="#2B2A33" stroke-width="0" stroke-linecap="round"' },
+    /* 只在 ox=0 與 ox=7 對的位移：抽兩個數字驗的話會過，真正的原點是 3、37…… */
+    { file:'index', expect:'does not move with ox/oy',
+      find:'      [ox + 2, oy + 3,  ox + 20, oy + 3],',
+      replace:'      [ox + ox * (ox - 7) + 2, oy + 3,  ox + 20, oy + 3],' },
+    /* 讀不到版面常數就等於沒有驗真正的原點 —— 要響亮地失敗。 */
+    { file:'index', expect:'the real group origins are not checked',
+      find:'    var gw = 24, gap = 10, rowH = 26, pad = 3, perRow = 5;',
+      replace:'    var gw = 24, gap = 10, rowH = 26, pad = 3, perRow = 5, spare = 0;' }
   ],
 
   sim: {
@@ -1389,6 +1464,140 @@ module.exports = {
         try { return new Function(src.slice(a, b) + '\n; return I18N;')(); }
         catch (e){ fail(`${file}: the I18N literal does not evaluate (${e.message})`); return null; }
       };
+      /* --- 正字畫記的筆畫位置（2026-08-26 加）---
+         三頁各有一份 strokesZH。以前的檢查只數「畫了幾筆」（data-count 對上 <line> 數目），
+         沒有人看筆畫「畫在哪裡」—— 所以「中間那一橫畫在長豎的左邊」三頁一起錯了，
+         六個靜態檢查、30000 批模擬、兩種語言的瀏覽器掃描全部綠燈。
+         神諭不是程式碼本身，是「正」這個字的相對關係（拿 PingFang TC 渲染出來量的）：
+         上下兩橫都貫穿長豎、長豎從上橫拉到下橫、中短橫**從長豎往右**、
+         左短豎在長豎左邊、起點在上橫下面且高於中短橫、往下接到下橫。
+         **把整個函式跑起來，不是只讀那個座標陣列**：真正畫出去的是回傳值，
+         `return pts.slice(0, k)` 改成 `slice(5 - k)` 的話筆數一樣、陣列一樣，
+         畫記卻會從最後一筆開始長（第一輪 codex 審查的 HIGH）。 */
+      const STROKE_PAGES = ['index.html', 'reference.html', 'review.html'];
+      const strokeSets = {};
+      const j5 = v => JSON.stringify(v);
+      STROKE_PAGES.forEach(file => {
+        const abs = pathMod.join(lessonDir, file);
+        if (!fsMod.existsSync(abs)){ fail(`${file} is missing from ${lessonDir} — this lesson is four pages`); return; }
+        const src = fsMod.readFileSync(abs, 'utf8');
+        const a = src.indexOf('function strokesZH(');
+        const ret = (a < 0) ? -1 : src.indexOf('return pts.slice', a);
+        const end = (ret < 0) ? -1 : src.indexOf('\n  }', ret);
+        if (a < 0 || ret < 0 || end < 0){
+          fail(`${file}: cannot locate the strokesZH function, so the 正 strokes are not checked at all`);
+          return;
+        }
+        let fn;
+        try { fn = new Function(src.slice(a, end + 4) + '\n; return strokesZH;')(); }
+        catch (e){ fail(`${file}: strokesZH does not evaluate (${e.message})`); return; }
+        const okShape = (v, label) => {
+          if (!Array.isArray(v) || v.some(s => !Array.isArray(s) || s.length !== 4 || s.some(n => !Number.isFinite(n)))){
+            fail(`${file}: ${label} is not a list of strokes with four finite coordinates: ${j5(v)}`);
+            return false;
+          }
+          return true;
+        };
+        let full;
+        try { full = fn(5, 0, 0); } catch (e){ fail(`${file}: strokesZH(5) throws (${e.message})`); return; }
+        if (!okShape(full, 'strokesZH(5)')) return;
+        if (full.length !== 5){ fail(`${file}: one tally group must be five strokes, strokesZH(5) draws ${full.length}`); return; }
+        /* 逐筆長出來的順序：畫 k 筆一定是五筆的前 k 筆（按筆順長，不是倒著長）。 */
+        for (let k = 0; k <= 5; k++){
+          let got;
+          try { got = fn(k, 0, 0); } catch (e){ fail(`${file}: strokesZH(${k}) throws (${e.message})`); return; }
+          if (!okShape(got, `strokesZH(${k})`)) return;
+          if (j5(got) !== j5(full.slice(0, k))){
+            fail(`${file}: strokesZH(${k}) draws ${j5(got)}, it must be the first ${k} of the five strokes ${j5(full.slice(0, k))} — the strokes have to grow in writing order`);
+            return;
+          }
+        }
+        /* 位移要整組跟著走。漏掉一個 ox／oy 時 ox=0 的第一組完全正常，
+           只有第二組會疊回第一組上面 —— 只有這一條抓得到。
+           **偏移量用 tallySVG 自己算出來的那些原點**（pad／gw／gap／rowH 從同一頁讀），
+           不是隨手挑兩個數字：挑兩個數字的話，「剛好只在那兩個數字對」的寫法照樣會過
+           （`ox + ox * (ox - 7) + 2` 在 ox=0 與 ox=7 都對）—— 第二輪 codex 審查的 LOW。 */
+        const layoutM = src.match(/var gw = (\d+), gap = (\d+), rowH = (\d+), pad = (\d+), perRow = (\d+);/);
+        if (!layoutM) fail(`${file}: cannot find the tally layout constants (gw/gap/rowH/pad/perRow), so the real group origins are not checked`);
+        const origins = [[7, 13]];
+        if (layoutM){
+          const gwV = +layoutM[1], gapV = +layoutM[2], rowHV = +layoutM[3], padV = +layoutM[4], perRowV = +layoutM[5];
+          /* 和 tallySVG 裡的算法逐字一樣：前兩列（每列 perRow 組）的原點。 */
+          for (let g = 0; g < perRowV * 2; g++){
+            origins.push([padV + (g % perRowV) * (gwV + gapV), padV + Math.floor(g / perRowV) * rowHV]);
+          }
+        }
+        let movedOk = true;
+        origins.forEach(o => {
+          const moved = fn(5, o[0], o[1]);
+          const want = full.map(s => [s[0] + o[0], s[1] + o[1], s[2] + o[0], s[3] + o[1]]);
+          if (j5(moved) !== j5(want)){
+            movedOk = false;
+            fail(`${file}: strokesZH does not move with ox/oy — at (${o[0]},${o[1]}) it draws ${j5(moved)}, expected ${j5(want)}`);
+          }
+        });
+        if (!movedOk) return;
+        strokeSets[file] = full;
+        const isH = s => s[1] === s[3] && s[0] !== s[2];
+        const isV = s => s[0] === s[2] && s[1] !== s[3];
+        const top = full[0], vert = full[1], mid = full[2], left = full[3], bottom = full[4];
+        const shape = [[top, isH, '1 (top horizontal)'], [vert, isV, '2 (the long vertical)'],
+                       [mid, isH, '3 (the middle short horizontal)'], [left, isV, '4 (the left short vertical)'],
+                       [bottom, isH, '5 (bottom horizontal)']];
+        let shapeOk = true;
+        shape.forEach(([s, test, name]) => {
+          if (!test(s)){ shapeOk = false; fail(`${file}: 正 stroke ${name} is not drawn the right way round: ${j5(s)}`); }
+        });
+        /* 形狀不對的話，下面的左右上下比較沒有意義（拿 y 當 x 比會亂噴）。 */
+        if (!shapeOk) return;
+        const topY = top[1], botY = bottom[1], vx = vert[0], midY = mid[1];
+        const spans = (bar, x) => Math.min(bar[0], bar[2]) <= x && x <= Math.max(bar[0], bar[2]);
+        /* 兩筆平行線靠得比線寬還近，畫面上就黏成一條粗線 —— 線寬從同一頁讀出來，不要自己編一個數字。
+           要讀**畫記那一行自己的**線寬（tallySVG 裡輸出的那個），不是整頁第一個 stroke-width：
+           別的地方多一個細線就會把門檻調鬆，而 0 會讓下面兩條檢查靜靜消失
+           （第二輪 codex 審查的 MEDIUM）。 */
+        const svgA = src.indexOf('function tallySVG(');
+        const svgEnd = (svgA < 0) ? -1 : src.indexOf('\n  }', svgA);
+        const swM = (svgA < 0 || svgEnd < 0) ? null : src.slice(svgA, svgEnd).match(/stroke-width="(-?\d+(?:\.\d+)?)"/);
+        const sw = (swM && Number(swM[1]) > 0) ? Number(swM[1]) : null;
+        if (!swM) fail(`${file}: cannot find the tally stroke-width inside tallySVG, so “two strokes merge into one” cannot be checked`);
+        else if (!(Number(swM[1]) > 0)) fail(`${file}: the tally stroke-width is "${swM[1]}", it must be a positive number — otherwise the clearance checks quietly pass anything`);
+        if (!(topY < botY)) fail(`${file}: 正 stroke 1 is at y=${topY} and stroke 5 at y=${botY} — the top bar must sit above the bottom bar`);
+        if (!spans(top, vx)) fail(`${file}: 正 stroke 1 does not cross the long vertical at x=${vx}`);
+        if (!spans(bottom, vx)) fail(`${file}: 正 stroke 5 does not cross the long vertical at x=${vx}`);
+        if (Math.min(vert[1], vert[3]) !== topY || Math.max(vert[1], vert[3]) !== botY){
+          fail(`${file}: 正 stroke 2 runs y=${Math.min(vert[1], vert[3])}~${Math.max(vert[1], vert[3])}, it must run from the top bar (y=${topY}) to the bottom bar (y=${botY})`);
+        }
+        if (!(topY < midY && midY < botY)) fail(`${file}: 正 stroke 3 is at y=${midY}, it must sit between the two bars (y=${topY} and y=${botY})`);
+        const midL = Math.min(mid[0], mid[2]), midR = Math.max(mid[0], mid[2]);
+        if (midL !== vx) fail(`${file}: 正 stroke 3 starts at x=${midL}, it must start on the long vertical (x=${vx})`);
+        if (!(midR > vx)) fail(`${file}: 正 stroke 3 ends at x=${midR}, it must extend to the RIGHT of the long vertical (x=${vx}) — a middle bar on the left is not the character 正`);
+        else if (sw !== null && midR - vx < sw) fail(`${file}: 正 stroke 3 is only ${midR - vx} long, thinner than the ${sw} stroke width — it disappears into the vertical`);
+        const outerR = Math.max(top[0], top[2], bottom[0], bottom[2]);
+        const outerL = Math.min(top[0], top[2], bottom[0], bottom[2]);
+        if (midR > outerR) fail(`${file}: 正 stroke 3 runs out to x=${midR}, past the outer bars (x=${outerR})`);
+        if (!(left[0] < vx)) fail(`${file}: 正 stroke 4 sits at x=${left[0]}, it must be to the LEFT of the long vertical (x=${vx})`);
+        else if (sw !== null && vx - left[0] < sw) fail(`${file}: 正 stroke 4 sits ${vx - left[0]} from the long vertical, closer than the ${sw} stroke width — the two verticals merge into one thick stroke`);
+        if (!(left[0] > outerL)) fail(`${file}: 正 stroke 4 sits at x=${left[0]}, on or outside the left end of the bars (x=${outerL})`);
+        if (Math.max(left[1], left[3]) !== botY) fail(`${file}: 正 stroke 4 ends at y=${Math.max(left[1], left[3])}, it must reach the bottom bar (y=${botY})`);
+        if (!(Math.min(left[1], left[3]) < midY)) fail(`${file}: 正 stroke 4 starts at y=${Math.min(left[1], left[3])}, it must start above the middle horizontal (y=${midY})`);
+        if (!(Math.min(left[1], left[3]) > topY)) fail(`${file}: 正 stroke 4 starts at y=${Math.min(left[1], left[3])}, it must start below the top bar (y=${topY}) — a second full-height vertical is not the character 正`);
+        else if (sw !== null && Math.min(left[1], left[3]) - topY < sw){
+          fail(`${file}: 正 stroke 4 starts ${Math.min(left[1], left[3]) - topY} below the top bar, less than the ${sw} stroke width — with round caps it still touches the bar and reads as a second full-height vertical`);
+        }
+      });
+      /* 三頁畫的必須是同一個正字。一頁改對、另一頁忘了改，是這次缺陷的實際形狀。 */
+      {
+        const drawn = Object.keys(strokeSets);
+        if (drawn.length > 1){
+          const ref = drawn[0], refJSON = j5(strokeSets[ref]);
+          drawn.slice(1).forEach(file => {
+            if (j5(strokeSets[file]) !== refJSON){
+              fail(`${file} and ${ref} do not draw the same 正: ${j5(strokeSets[file])} vs ${refJSON}`);
+            }
+          });
+        }
+      }
       /* 逐字神諭。只比關鍵字的話，「平手時隨便選一類」也含有「平手」——
          這一課整套規則的唯一性可以被反過來教，檢查照樣是綠的（第三輪審查的 CRITICAL）。
          所以這裡比的是整個字串，不是裡面有沒有某個詞。 */
