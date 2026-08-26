@@ -30,6 +30,10 @@ function configFor(p){
 const CFG = configFor(target).sim;
 const INVARIANTS = CFG.INVARIANTS || {};
 const STEM_ECHO_OK = CFG.stemEchoOk || {};
+/* 可選：拿到「渲染出來的那一題」再驗一次。INVARIANTS 只看得到資料，
+   看不到題幹與解釋 —— 題幹是拼出來的，資料對不代表印出來的字是對的
+   （例如連加題印了幾個加項，就必須等於資料說的次數）。 */
+const RENDER_CHECK = CFG.renderCheck || null;
 
 /* 可選的固定亂數種子。tools/breaktest.js 會用同一個種子跑「原檔」與「改壞版」，
    這樣「只有改壞版失敗」才真的是改壞造成的，不是抽到不同的參數。 */
@@ -45,10 +49,16 @@ if (process.env.SIMGEN_SEED){
   };
 }
 
-const START = '/* ---------- 工具 ---------- */';
+/* 預設從「工具」那一段開始切。少數課的 fmt() 會用到更前面宣告的文字表
+   （grade-2/numbers 的 TXT：題幹要印「百位／十位／個位」），那種課在自己的
+   設定檔裡用 blockStart 把起點往前移。起點往前移的區段必須也是不碰 DOM 的，
+   不然這裡跑不起來 —— 換句話說，這個選項只允許「純資料」往前擴，不是萬用逃生門。 */
+const START = CFG.blockStart || '/* ---------- 工具 ---------- */';
 const END = '/* ---------- 出一批';
 const i = src.indexOf(START), j = src.indexOf(END);
-if (i < 0 || j < 0) throw new Error('cannot locate GENS block');
+if (i < 0) throw new Error('cannot locate the block start marker: ' + START);
+if (j < 0) throw new Error('cannot locate GENS block');
+if (i > j) throw new Error('blockStart appears after the GENS block: ' + START);
 const { GENS } = new Function(src.slice(i, j) + '\n; return {GENS:GENS};')();
 console.log('generators:', GENS.map(g => g.id).join(', '));
 
@@ -124,6 +134,11 @@ for (let batch = 0; batch < BATCHES; batch++){
           else fail(g.id, lang + ' distractor ' + o + ' is copied straight out of the stem');
         }
       });
+
+      if (RENDER_CHECK){
+        const r = RENDER_CHECK(d, q, lang, g.id);
+        if (r) fail(g.id, lang + ' ' + r);
+      }
 
       if (/undefined|NaN/.test(q.stem + q.why)) fail(g.id, lang + ' undefined/NaN in text: ' + q.why.slice(0, 80));
 

@@ -157,6 +157,14 @@ key（`grade-2/math/time/review.html` → `tools/checks/grade-2-time.js`），**
   **正解與誘答分開驗** —— `dateAfter` 的「7 月 33 日」是刻意的誘答，但正解永遠是合法日期。
   範圍要從課程自己的規則推出來（時 1~12、分 0~59、月長只有 28/29/30/31、
   `weeksToDays` 的 k 是 2~5 所以天數上限 42），不要隨手給一個大數。
+- `sim.blockStart`：切片起點。預設是「工具」那一段的註解；少數課的 `fmt()` 會用到
+  更前面宣告的文字表（`grade-2/numbers` 的 `TXT`：題幹要印「百位／十位／個位」），
+  那種課用這個把起點往前移。**往前擴的那一段必須也不碰 DOM**，
+  不然這裡跑不起來 —— 這不是萬用逃生門，只允許「純資料」往前擴。
+- `sim.renderCheck(d, q, lang, genId)`：拿**渲染出來的那一題**再驗一次。
+  `INVARIANTS` 只看得到資料，看不到題幹與解釋，可是題幹是拼出來的 ——
+  `grade-2/multiply` 的連加題會印出 b 個加項，那個數量必須真的等於 b，
+  不然孩子看到的是另一道題（資料層全對、模擬全綠，只有數畫面上的字才看得到）。
 - `sim.stemEchoOk`：哪些「把題幹的數字放進選項」是刻意的迷思誘答。值可以是布林，
   但**建議寫成謂詞** `function(d, opt, lang, idx)`，只放行那一個值 ——
   整個產生器全開的話，不小心抄回別的數字也會被一起蓋掉。
@@ -186,8 +194,10 @@ node tools/breaktest.js grade-2/math/time
 不是整份輸出裡隨便一個子字串。原檔與改壞版**跑同一個亂數種子**（`SIMGEN_SEED`），
 不然兩次抽到不同參數，「只有改壞版失敗」可能只是運氣。
 （`SIMGEN_SEED=42 node tools/simgen.js <review.html> 1000` 也可以自己用來重現某一批。）
-目前：add-sub 6、time 27、length 35、divide 62、two-step 109、capacity-weight 105、
-shapes 114、solid 97、table 130 —— 二年級九課共 685 筆，全部會被抓到。
+目前：add-sub 6、numbers 25、multiply 19、time 27、length 35、divide 62、two-step 109、
+capacity-weight 105、shapes 114、solid 97、table 130 —— **二年級十一課共 729 筆**，全部會被抓到。
+（`numbers` 與 `multiply` 的設定是 2026-08-26 補的：那兩課在設定檔機制出現之前就上線，
+在那之前 `simgen` 對它們會直接報 `no check config`，等於**完全沒有保護**。）
 
 **四頁都會被複製進暫存目錄**（2026-08-26 起）。以前只複製 `index.html` 與 `review.html`，
 所以任何針對 `reference.html`／`parents.html` 的斷言在這裡**永遠跑不到** —— 那些斷言等於
