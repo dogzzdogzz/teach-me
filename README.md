@@ -38,7 +38,7 @@
 | 🔁 規律接接看 | 數的規律 | [📖](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-1/math/pattern/parents.html) |
 
 
-## 二年級（6 個主題）
+## 二年級（11 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
 |------|------|:---:|:---:|:---:|:---:|
@@ -48,8 +48,13 @@
 | ⏰ 時間小管家 | 幾點幾分與日期 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/time/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/time/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/time/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/time/parents.html) |
 | 📏 量尺小達人 | 長度（公分與公尺） | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/length/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/length/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/length/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/length/parents.html) |
 | 🍬 分一分小幫手 | 分裝與平分 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/divide/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/divide/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/divide/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/divide/parents.html) |
+| 👣 兩步驟小偵探 | 兩步驟問題 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/two-step/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/two-step/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/two-step/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/two-step/parents.html) |
+| ⚖️ 誰裝得多？誰比較重？ | 容量與重量 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/capacity-weight/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/capacity-weight/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/capacity-weight/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/capacity-weight/parents.html) |
+| 🔺 邊和頂點大發現 | 平面圖形的構成要素 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/shapes/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/shapes/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/shapes/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/shapes/parents.html) |
+| 🧊 立體形體探險隊 | 立體形體 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/solid/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/solid/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/solid/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/solid/parents.html) |
+| 📊 分類整理小達人 | 分類與統計表 | [📖](https://dogzzdogzz.github.io/teach-me/grade-2/math/table/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-2/math/table/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-2/math/table/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-2/math/table/parents.html) |
 
-二年級的其他單元（兩步驟問題、容量與重量、平面圖形、立體形體、統計表）課程還在準備中。
+二年級 108 課綱的主要學習單元都已經有課了 🎉
 
 
 ## 三年級（17 個主題）
@@ -118,7 +123,7 @@ lessons.js                     # 全站唯一的課程清單（哪個年級有�
 grade-1/ … grade-6/index.html  # 年級頁：領域摘要＋該年級的課程清單（依領域分區）
 docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調整與深度規格）
 grade-1/math/                  # 一年級：單元整理＋ 9 個四頁迷你課程
-grade-2/math/                  # 二年級：單元整理＋ 6 個四頁迷你課程（numbers／add-sub／multiply／time／length／divide）
+grade-2/math/                  # 二年級：單元整理＋ 11 個四頁迷你課程（numbers／add-sub／multiply／time／length／divide／two-step／capacity-weight／shapes／solid／table）
 grade-3/math/                  # 三年級：單元整理＋ 17 個四頁迷你課程
 grade-4/math/                  # 四年級：單元整理（課程準備中）
 grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你課程
@@ -138,7 +143,7 @@ grade-6/math/                  # 六年級：單元整理（課程準備中）
 | 年級 | 重點內容 | 單元整理 |
 |------|----------|----------|
 | 一年級 | 100 以內的數、加減法、形狀、時鐘整點半點 | [grade-1/math](grade-1/math/README.md) |
-| 二年級 | 1000 以內的數、直式加減、九九乘法、幾點幾分與日期、公分與公尺 | [grade-2/math](grade-2/math/README.md) |
+| 二年級 | 1000 以內的數、直式加減、九九乘法、幾點幾分與日期、公分與公尺、分裝與平分、兩步驟問題、容量與重量、平面圖形、立體形體、統計表 | [grade-2/math](grade-2/math/README.md) |
 | 三年級 | 萬以內的數、乘除直式、分數與小數入門、周長、圓 | [grade-3/math](grade-3/math/README.md) |
 | 四年級 | 大數與概數、四則混合、帶分數、角度、面積公式 | [grade-4/math](grade-4/math/README.md) |
 | 五年級 | **因數與倍數**、通分與異分母加減、分數小數乘除、體積 | [grade-5/math](grade-5/math/README.md) |

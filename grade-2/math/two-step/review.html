@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>兩步驟複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 70px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:6px 18px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:24px 0 4px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:6px;font-size:16px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:18px 22px;margin:20px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:16px;margin-top:18px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 12px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:12px 8px;
+    font-size:18px;cursor:pointer;color:var(--ink);min-height:50px;
+    display:flex;align-items:center;justify-content:center;font-weight:700;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:20px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:14px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:18px;
+    font-weight:700;padding:14px 26px;cursor:pointer;margin-top:16px;min-height:52px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 兩步驟複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己算一次 —— 算出來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：兩步驟、中間數、順序，再交錯一步的加減與 1000 以內的數，<strong>每一批的數字都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'兩步驟複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 兩步驟複習挑戰',
+      sub:'不看速查卡、自己算一次 —— 算出來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：兩步驟、中間數、順序，再交錯一步的加減與 1000 以內的數，<strong>每一批的數字都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Two-Step Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Two-Step Review Challenge',
+      sub:'No peeking at the cheat sheet — the moment you work it out is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> on two-step problems, middle numbers and event order, interleaved with one-step adding and subtracting and with numbers up to 1000 — <strong>every batch uses fresh numbers</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ two:'兩步驟', mid:'中間數', order:'順序', add:'一步加減', num:'數的合成' },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        story:'🍪 故事變了兩次（範例教學 1）',
+        flow:'🧭 中間數住在中間那一格（範例教學 2）',
+        eq:'✍️ 寫成兩個算式（範例教學 3）',
+        mid:'🔍 小安太早交卷了（範例教學 4）',
+        addsub:'🧮 回去複習：二、三位數的直式加減',
+        numbers:'🔢 回去複習：1000 以內的數'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ two:'Two steps', mid:'Middle number', order:'Order', add:'One step', num:'Building numbers' },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        story:'🍪 The Story Changes Twice (Example 1)',
+        flow:'🧭 The Middle Number Lives in the Middle Box (Example 2)',
+        eq:'✍️ Write It as Two Number Sentences (Example 3)',
+        mid:'🔍 Ann Stopped Too Soon (Example 4)',
+        addsub:'🧮 Revisit: adding and subtracting in columns',
+        numbers:'🔢 Revisit: numbers up to 1000'
+      }
+    }
+  };
+
+  var LINK_HREFS = {
+    story:'index.html#secStory', flow:'index.html#secFlow',
+    eq:'index.html#secEq', mid:'index.html#secMid',
+    addsub:'../add-sub/index.html', numbers:'../numbers/index.html'
+  };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function between(lo, hi){ return lo + rand(hi - lo + 1); }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+
+  /* 這一課的數字上限。兩步驟的內容（含進階）一律 200 以內；
+     交錯進來的「1000 以內的數」是另一課的範圍，所以只有那一個產生器放到 999。
+     tools/checks/grade-2-two-step.js 的 RANGE 用的就是這兩個數，改這裡要一起改。 */
+  var MAXV = 200;
+
+  /* 四個情境。單位詞與動詞放在這裡（產生器要在 Node 裡跑，不能碰 I18N），
+     檢查設定檔有自己一份同樣的表（SCENE_TRUTH），兩份對不上就會被抓到 ——
+     不然等於拿產生器自己的字去比產生器自己的字。 */
+  var SCENES = [
+    { icon:'🍪', zh:{ thing:'餅乾', unit:'片', place:'盤子上', add:'放上', sub:'吃掉' },
+                 en:{ item:'biscuit', itemN:'biscuits', place:'on the plate',  add:'put on the plate',  sub:'eaten' } },
+    { icon:'📚', zh:{ thing:'書',   unit:'本', place:'書架上', add:'放上', sub:'借走' },
+                 en:{ item:'book',    itemN:'books',    place:'on the shelf',  add:'put on the shelf',  sub:'borrowed' } },
+    { icon:'🍬', zh:{ thing:'糖果', unit:'顆', place:'袋子裡', add:'放進', sub:'送出' },
+                 en:{ item:'sweet',   itemN:'sweets',   place:'in the bag',    add:'put in the bag',    sub:'given away' } },
+    { icon:'🍎', zh:{ thing:'蘋果', unit:'個', place:'籃子裡', add:'放進', sub:'拿走' },
+                 en:{ item:'apple',   itemN:'apples',   place:'in the basket', add:'put in the basket', sub:'taken out' } }
+  ];
+
+  function qtyItem(si, n, lang){
+    var s = SCENES[si];
+    return lang === 'zh' ? (n + ' ' + s.zh.unit)
+                         : (n + ' ' + (n === 1 ? s.en.item : s.en.itemN));
+  }
+  function unitWord(si, lang){ return lang === 'zh' ? SCENES[si].zh.unit : SCENES[si].en.itemN; }
+  function verbWord(si, op, lang){
+    var s = SCENES[si];
+    return lang === 'zh' ? (op === '+' ? s.zh.add : s.zh.sub) : (op === '+' ? s.en.add : s.en.sub);
+  }
+  function opSym(op, lang){
+    return lang === 'zh' ? (op === '+' ? '＋' : '－') : (op === '+' ? '+' : '−');
+  }
+  function eqStr(x, op, y, z, lang){
+    return x + ' ' + opSym(op, lang) + ' ' + y + (lang === 'zh' ? ' ＝ ' : ' = ') + z;
+  }
+  /* 「盤子上有 8 片餅乾。」／“There are 8 biscuits on the plate.” */
+  function startLine(si, n, lang){
+    var s = SCENES[si];
+    return lang === 'zh'
+      ? (s.zh.place + '有 ' + n + ' ' + s.zh.unit + s.zh.thing + '。')
+      : ('There are ' + n + ' ' + (n === 1 ? s.en.item : s.en.itemN) + ' ' + s.en.place + '.');
+  }
+  /* second ＝ 這一步和上一步是同一種運算（都加或都減），中文加「又」、英文用 Another。 */
+  function stepLine(si, op, n, second, lang){
+    var s = SCENES[si];
+    if (lang === 'zh') return (second ? '又' : '') + verbWord(si, op, 'zh') + ' ' + n + ' ' + s.zh.unit + '。';
+    return op === '+'
+      ? ((second ? 'Another ' + n : n + ' more') + ' are ' + s.en.add + '.')
+      : ((second ? 'Another ' + n : String(n)) + ' are ' + s.en.sub + '.');
+  }
+  /* 時間標記版（用在句子順序被打亂的題目），不加「又」／Another。 */
+  function stepAt(si, op, n, when, lang){
+    var s = SCENES[si];
+    return lang === 'zh'
+      ? (when + verbWord(si, op, 'zh') + ' ' + n + ' ' + s.zh.unit + '。')
+      : (when + ' ' + n + ' are ' + (op === '+' ? s.en.add : s.en.sub) + '.');
+  }
+  var WHEN = { zh:{ w1:'早上', w2:'中午', w3:'下午' },
+               en:{ w1:'In the morning', w2:'At noon', w3:'In the afternoon' } };
+  function askLine(si, lang){
+    return lang === 'zh' ? ('現在有幾' + SCENES[si].zh.unit + '？')
+                         : ('How many ' + SCENES[si].en.itemN + ' are there now?');
+  }
+  function storyLines(d, lang){
+    return startLine(d.si, d.a, lang) + '<br>' + stepLine(d.si, d.o1, d.b, false, lang) +
+           '<br>' + stepLine(d.si, d.o2, d.c, d.o1 === d.o2, lang) + '<br>' + askLine(d.si, lang);
+  }
+
+  /* 流程圖：開始 → ? → ?（複習挑戰不先給中間數，那正是要算的東西）。
+     每個箭頭上寫著這一步做什麼。畫面上只有 <rect> 與 <text> 兩種元素，
+     檢查設定檔會把這張圖的最大右緣量出來，跟 width 比一次。 */
+  var FLOWLAB = { zh:{ start:'開始', mid:'中間數', ans:'答案' },
+                  en:{ start:'start', mid:'middle', ans:'answer' } };
+  function flowSVG(start, o1, b, o2, c, lang){
+    var lab = FLOWLAB[lang];
+    var boxW = 88, boxH = 52, gap = 48, padX = 8, topPad = 22;
+    var w = padX * 2 + boxW * 3 + gap * 2;
+    var h = topPad + boxH + 20;
+    var cells = [
+      { v:String(start), fill:'#E8F0FB', line:'#3B7DD8', lb:lab.start },
+      { v:'?',           fill:'#FDF0E0', line:'#E8871E', lb:lab.mid },
+      { v:'?',           fill:'#E3F4EB', line:'#2F9E69', lb:lab.ans }
+    ];
+    var s = '<svg data-start="' + start + '" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h +
+            '" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    for (var i = 0; i < 3; i++){
+      var bx = padX + i * (boxW + gap);
+      s += '<rect x="' + bx + '" y="' + topPad + '" width="' + boxW + '" height="' + boxH +
+           '" rx="12" fill="' + cells[i].fill + '" stroke="' + cells[i].line + '" stroke-width="3"/>';
+      s += '<text x="' + (bx + boxW / 2) + '" y="' + (topPad - 6) +
+           '" font-size="12" text-anchor="middle" fill="' + cells[i].line + '" font-weight="800">' + cells[i].lb + '</text>';
+      s += '<text x="' + (bx + boxW / 2) + '" y="' + (topPad + 38) +
+           '" font-size="26" text-anchor="middle" fill="' + cells[i].line + '" font-weight="800">' + cells[i].v + '</text>';
+      if (i < 2){
+        var ax = bx + boxW + gap / 2;
+        var lbl = (i === 0 ? opSym(o1, lang) + ' ' + b : opSym(o2, lang) + ' ' + c);
+        s += '<text x="' + ax + '" y="' + (topPad + 18) +
+             '" font-size="13" text-anchor="middle" fill="#6B6875" font-weight="800">' + lbl + '</text>';
+        s += '<text x="' + ax + '" y="' + (topPad + 42) +
+             '" font-size="20" text-anchor="middle" fill="#6B6875">→</text>';
+      }
+    }
+    s += '</svg>';
+    return s;
+  }
+  /* make() 時就把兩種語言的圖都畫好，fmt() 直接用 —— 檢查設定檔量的是
+     孩子真的會看到的那一份 markup，不是重算一次公式。 */
+  function flowPair(d){
+    return { zh:flowSVG(d.a, d.o1, d.b, d.o2, d.c, 'zh'), en:flowSVG(d.a, d.o1, d.b, d.o2, d.c, 'en') };
+  }
+
+  /* 題幹也一樣在 make() 時就組好存進 d.stems，fmt() 直接拿來用。
+     這樣檢查設定檔驗到的是**孩子真的會讀到的那一句**，而不是自己再組一次 ——
+     不然「把放上寫成吃掉」這種錯（算術完全沒變）從資料層看不出來。 */
+  function recStems(d, build){
+    d.stems = { zh:build(d, 'zh'), en:build(d, 'en') };
+    return d;
+  }
+  function stemStory(d, lang){
+    return SCENES[d.si].icon + ' ' + storyLines(d, lang) + d.flow[lang];
+  }
+  function stemThreeLines(d, lang, tail){
+    return SCENES[d.si].icon + ' ' + startLine(d.si, d.a, lang) + '<br>' +
+           stepLine(d.si, d.o1, d.b, false, lang) + '<br>' +
+           stepLine(d.si, d.o2, d.c, false, lang) + '<br>' + tail;
+  }
+  function stemStopTooEarly(d, lang){
+    var claim = lang === 'zh'
+      ? ('小安算 ' + eqStr(d.a, d.o1, d.b, d.mid, 'zh') + '，就說答案是 ' + qtyItem(d.si, d.mid, 'zh') + '。<br>正確答案是幾' + unitWord(d.si, 'zh') + '？')
+      : ('Ann works out ' + eqStr(d.a, d.o1, d.b, d.mid, 'en') + ' and says the answer is ' + qtyItem(d.si, d.mid, 'en') + '.<br>What is the correct answer?');
+    return stemThreeLines(d, lang, claim);
+  }
+  function stemMidMeaning(d, lang){
+    var ask = lang === 'zh'
+      ? ('小安先算 ' + eqStr(d.a, d.o1, d.b, d.mid, 'zh') + '。<br>這個 ' + d.mid + ' 是什麼意思？')
+      : ('Ann starts with ' + eqStr(d.a, d.o1, d.b, d.mid, 'en') + '.<br>What does that ' + d.mid + ' mean?');
+    return stemThreeLines(d, lang, ask);
+  }
+  function stemMidValue(d, lang){
+    var ask = lang === 'zh'
+      ? (verbWord(d.si, d.o1, 'zh') + '以後，還沒' + verbWord(d.si, d.o2, 'zh') + '。<br>這時候有幾' + unitWord(d.si, 'zh') + '？')
+      : ('After those ' + d.b + ' ' + unitWord(d.si, 'en') + ' are ' + verbWord(d.si, d.o1, 'en') +
+         ', before any are ' + verbWord(d.si, d.o2, 'en') + ':<br>how many ' + unitWord(d.si, 'en') + ' are there?');
+    return stemThreeLines(d, lang, ask);
+  }
+  function stemOutOfOrder(d, lang){
+    var w = WHEN[lang];
+    var head = (lang === 'zh')
+      ? (w.w1 + startLine(d.si, d.a, 'zh'))
+      : (w.w1 + ' ' + startLine(d.si, d.a, 'en').charAt(0).toLowerCase() + startLine(d.si, d.a, 'en').slice(1));
+    return SCENES[d.si].icon + ' ' + stepAt(d.si, d.o2, d.c, w.w3, lang) + '<br>' + head + '<br>' +
+           stepAt(d.si, d.o1, d.b, w.w2, lang) + '<br>' + askLine(d.si, lang);
+  }
+  function stemOneStep(d, lang){
+    return lang === 'zh'
+      ? ('🧮 這一題只要算一步。<br>' + d.a + ' ' + opSym(d.op, 'zh') + ' ' + d.b + ' ＝ ?')
+      : ('🧮 This one only needs one step.<br>' + d.a + ' ' + opSym(d.op, 'en') + ' ' + d.b + ' = ?');
+  }
+  function stemPlaceValue(d, lang){
+    var enParts = d.h + (d.h === 1 ? ' hundred' : ' hundreds') + ', ' +
+                  d.t + (d.t === 1 ? ' ten' : ' tens') + ' and ' +
+                  d.o + (d.o === 1 ? ' one' : ' ones');
+    return lang === 'zh'
+      ? ('🔢 ' + d.h + ' 個百、' + d.t + ' 個十、' + d.o + ' 個一。<br>合起來是多少？')
+      : ('🔢 ' + enParts + '.<br>What number is that?');
+  }
+
+  /* 選項一律是物件。去重鍵含種類：帶單位的數量（item）、片語（phr）、純數字（raw）。 */
+  function IT(si, n){ return { u:'item', si:si, n:n }; }
+  function PH(p, n, si, o){ return { u:'phr', p:p, n:n, si:si, op:o }; }
+  function RAW(n){ return { u:'raw', n:n }; }
+
+  function vkeyOf(v){
+    if (!v) return 'nil';
+    if (v.u === 'item') return 'item#' + v.n;
+    if (v.u === 'raw')  return 'raw#' + v.n;
+    if (v.u === 'phr')  return 'phr#' + v.p + '#' + v.n;
+    return 'bad';
+  }
+
+  function phrStr(v, lang){
+    var n = v.n, si = v.si;
+    if (lang === 'zh'){
+      if (v.p === 'after1'){
+        return v.op === '-' ? (verbWord(si, '-', 'zh') + '之後還剩 ' + n + ' ' + unitWord(si, 'zh'))
+                            : (verbWord(si, '+', 'zh') + '之後一共有 ' + n + ' ' + unitWord(si, 'zh'));
+      }
+      if (v.p === 'nowTotal')  return '現在一共有 ' + n + ' ' + unitWord(si, 'zh');
+      if (v.p === 'second')    return verbWord(si, v.op, 'zh') + '了 ' + n + ' ' + unitWord(si, 'zh');
+      return '一開始有 ' + n + ' ' + unitWord(si, 'zh');
+    }
+    if (v.p === 'after1'){
+      return v.op === '-' ? (n + ' ' + unitWord(si, 'en') + ' were left after some were ' + verbWord(si, '-', 'en'))
+                          : ('there were ' + n + ' ' + unitWord(si, 'en') + ' after more were ' + verbWord(si, '+', 'en'));
+    }
+    if (v.p === 'nowTotal')  return 'there are ' + n + ' ' + unitWord(si, 'en') + ' now';
+    if (v.p === 'second')    return n + ' ' + unitWord(si, 'en') + ' were ' + verbWord(si, v.op, 'en');
+    return 'there were ' + n + ' ' + unitWord(si, 'en') + ' at the start';
+  }
+  function valStr(v, lang){
+    if (v.u === 'item') return qtyItem(v.si, v.n, lang);
+    if (v.u === 'raw')  return String(v.n);
+    return phrStr(v, lang);
+  }
+
+  /* 誘答：先用「真的會犯的錯」當候選，不夠再用保底。
+     taboo 是「題幹裡看得到的數字」—— 誘答不可以把題幹的數字原封不動抄回來
+     （唯一的例外是 stopTooEarly，那一題的中間數本來就印在題幹上，是刻意的迷思誘答）。
+     保底一律是「長得像答案的數」，不是垃圾字串；候選與保底都要通過去重與 taboo。 */
+  function mixOpts(correct, cands, fallback, taboo){
+    var out = [], seen = {}, tb = taboo || [];
+    seen[vkeyOf(correct)] = true;
+    function numOf(v){ return (v && (v.u === 'item' || v.u === 'raw')) ? v.n : null; }
+    function ok(v){
+      if (!v) return false;
+      var n = numOf(v);
+      if (n !== null && !(n >= 1)) return false;
+      if (n !== null && tb.indexOf(n) >= 0) return false;
+      if (seen[vkeyOf(v)]) return false;
+      return true;
+    }
+    (cands || []).forEach(function(c){
+      if (out.length >= 3) return;
+      if (ok(c)){ seen[vkeyOf(c)] = true; out.push(c); }
+    });
+    var i = 0;
+    while (out.length < 3 && i < 80){
+      var f = fallback(i);
+      i++;
+      if (ok(f)){ seen[vkeyOf(f)] = true; out.push(f); }
+    }
+    var opts = shuffle([correct].concat(out));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+  /* 保底的數字要落在課程範圍裡，否則寧可回 null 讓下一個候選遞補。 */
+  function itIn(si, v){ return (v >= 1 && v <= MAXV) ? IT(si, v) : null; }
+  function rawIn(v, hi){ return (v >= 1 && v <= hi) ? RAW(v) : null; }
+
+  function whyTwo(d, mid, ans, lang){
+    return lang === 'zh'
+      ? ('先算中間數：' + eqStr(d.a, d.o1, d.b, mid, 'zh') + '。再算一步：' +
+         eqStr(mid, d.o2, d.c, ans, 'zh') + '。答案是 ' + qtyItem(d.si, ans, 'zh') + '。')
+      : ('Middle number first: ' + eqStr(d.a, d.o1, d.b, mid, 'en') + '. Then one more step: ' +
+         eqStr(mid, d.o2, d.c, ans, 'en') + '. The answer is ' + qtyItem(d.si, ans, 'en') + '.');
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 加減：先變多、再變少 */
+    { id:'twoAddSub', cat:'two', grp:'flow',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var a = pickUnused([20,25,30,35,40,45,50,55,60,65,70], used);
+        var b, c, mid, ans;
+        /* b ＝ c 時兩步剛好抵銷，答案會等於一開始的數量 —— 題幹裡看得到的數字
+           變成正解，這一題就問不出「有沒有算完第二步」。 */
+        do {
+          b = between(5, 30);
+          mid = a + b;
+          c = between(5, Math.min(60, mid - 5));
+          ans = mid - c;
+        } while (b === c || ans < 5 || mid > MAXV || ans > MAXV);
+        var d = { si:si, a:a, b:b, c:c, o1:'+', o2:'-', mid:mid, ans:ans, correct:IT(si, ans) };
+        /* 誘答：停在中間數（這一課唯一要抓的迷思）、全部加起來、漏掉中間那一步。 */
+        var cands = [ IT(si, mid), itIn(si, a + b + c), itIn(si, a - c) ];
+        var mix = mixOpts(d.correct, cands, function(i){
+          var alt = [ans + 10, ans - 10, ans + 1, ans + 20, mid + c, ans + 2];
+          return itIn(si, alt[i % alt.length]);
+        }, [a, b, c]);
+        d.opts = mix.opts; d.ans_i = mix.ans; d.flow = flowPair(d);
+        return recStems(d, stemStory);
+      },
+      fmt:function(d, lang){
+        return {
+          stem:d.stems[lang],
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans_i,
+          why:whyTwo(d, d.mid, d.ans, lang)
+        };
+      } },
+
+    /* 2. 減加：先變少、再變多 */
+    { id:'twoSubAdd', cat:'two', grp:'flow',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var a = pickUnused([30,36,42,48,54,60,66,72,78,84,90], used);
+        var b, mid, c;
+        do {
+          b = between(5, Math.min(50, a - 10));
+          mid = a - b;
+          c = between(5, 40);
+        } while (b === c || mid === b || mid === c);
+        var ans = mid + c;
+        var d = { si:si, a:a, b:b, c:c, o1:'-', o2:'+', mid:mid, ans:ans, correct:IT(si, ans) };
+        /* 誘答：停在中間數、兩次都減、全部加起來。 */
+        var cands = [ IT(si, mid), itIn(si, mid - c), itIn(si, a + b + c) ];
+        var mix = mixOpts(d.correct, cands, function(i){
+          var alt = [ans + 10, ans - 10, ans + 1, ans - 2, a + c, ans + 20];
+          return itIn(si, alt[i % alt.length]);
+        }, [a, b, c]);
+        d.opts = mix.opts; d.ans_i = mix.ans; d.flow = flowPair(d);
+        return recStems(d, stemStory);
+      },
+      fmt:function(d, lang){
+        return {
+          stem:d.stems[lang],
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans_i,
+          why:whyTwo(d, d.mid, d.ans, lang)
+        };
+      } },
+
+    /* 3. 加加：連續變多兩次 */
+    { id:'twoAddAdd', cat:'two', grp:'flow',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var a = pickUnused([20,24,28,32,36,40,44,48,52,56,60], used);
+        var b, c, mid;
+        do {
+          b = between(5, 30);
+          c = between(5, 30);
+          mid = a + b;
+        } while (b === c || mid === c);
+        var ans = mid + c;
+        var d = { si:si, a:a, b:b, c:c, o1:'+', o2:'+', mid:mid, ans:ans, correct:IT(si, ans) };
+        /* 誘答：停在中間數、只把後面兩次加起來、漏掉中間那一步。 */
+        var cands = [ IT(si, mid), itIn(si, b + c), itIn(si, a + c) ];
+        var mix = mixOpts(d.correct, cands, function(i){
+          var alt = [ans + 10, ans - 10, ans + 1, ans - 2, ans + 20, ans - 20];
+          return itIn(si, alt[i % alt.length]);
+        }, [a, b, c]);
+        d.opts = mix.opts; d.ans_i = mix.ans; d.flow = flowPair(d);
+        return recStems(d, stemStory);
+      },
+      fmt:function(d, lang){
+        return {
+          stem:d.stems[lang],
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans_i,
+          why:whyTwo(d, d.mid, d.ans, lang)
+        };
+      } },
+
+    /* 4. 減減：連續變少兩次 */
+    { id:'twoSubSub', cat:'two', grp:'flow',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var a = pickUnused([45,50,55,60,65,70,75,80,85,90,95], used);
+        var b, c, mid, ans;
+        do {
+          b = between(5, 30);
+          c = between(5, 30);
+          mid = a - b;
+          ans = mid - c;
+        } while (b === c || mid === b || mid === c || ans < 5);
+        var d = { si:si, a:a, b:b, c:c, o1:'-', o2:'-', mid:mid, ans:ans, correct:IT(si, ans) };
+        /* 誘答：停在中間數、只算一共拿走多少、第二步用加的。 */
+        var cands = [ IT(si, mid), itIn(si, b + c), itIn(si, mid + c) ];
+        var mix = mixOpts(d.correct, cands, function(i){
+          var alt = [ans + 10, ans - 10, ans + 1, ans - 2, ans + 20, a + c];
+          return itIn(si, alt[i % alt.length]);
+        }, [a, b, c]);
+        d.opts = mix.opts; d.ans_i = mix.ans; d.flow = flowPair(d);
+        return recStems(d, stemStory);
+      },
+      fmt:function(d, lang){
+        return {
+          stem:d.stems[lang],
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans_i,
+          why:whyTwo(d, d.mid, d.ans, lang)
+        };
+      } },
+
+    /* 5. 迷思題：題幹把中間數印出來，孩子要看出那還不是答案。
+       這是全課唯一「題幹的數字可以當誘答」的產生器 —— 設定檔的 noEcho
+       只放行 mid 這一個值，其他數字照樣會被抓。 */
+    { id:'stopTooEarly', cat:'mid', grp:'mid',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var a = pickUnused([40,45,50,55,60,65,70,75,80,85,90], used);
+        var b, c, mid;
+        do {
+          b = between(10, 35);
+          c = between(5, 30);
+          mid = a - b;
+        } while (b === c || mid === b || mid === c || mid <= c);
+        var ans = mid + c;
+        var d = { si:si, a:a, b:b, c:c, o1:'-', o2:'+', mid:mid, ans:ans, correct:IT(si, ans) };
+        /* 誘答：中間數本身（刻意）、第二步用減的、只把兩次的量加起來。 */
+        var cands = [ IT(si, mid), itIn(si, mid - c), itIn(si, b + c) ];
+        var mix = mixOpts(d.correct, cands, function(i){
+          var alt = [ans + 10, ans - 10, ans + 1, ans - 2, a + c, ans + 20];
+          return itIn(si, alt[i % alt.length]);
+        }, [a, b, c]);
+        d.opts = mix.opts; d.ans_i = mix.ans;
+        return recStems(d, stemStopTooEarly);
+      },
+      fmt:function(d, lang){
+        var claim = lang === 'zh'
+          ? ('小安算 ' + eqStr(d.a, d.o1, d.b, d.mid, 'zh') + '，就說答案是 ' + qtyItem(d.si, d.mid, 'zh') + '。<br>正確答案是幾' + unitWord(d.si, 'zh') + '？')
+          : ('Ann works out ' + eqStr(d.a, d.o1, d.b, d.mid, 'en') + ' and says the answer is ' + qtyItem(d.si, d.mid, 'en') + '.<br>What is the correct answer?');
+        return {
+          stem:d.stems[lang],
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans_i,
+          why:lang === 'zh'
+            ? (d.mid + ' 是中間數，不是答案。再算一步：' + eqStr(d.mid, d.o2, d.c, d.ans, 'zh') +
+               '，答案是 ' + qtyItem(d.si, d.ans, 'zh') + '。')
+            : (d.mid + ' is the middle number, not the answer. One more step: ' +
+               eqStr(d.mid, d.o2, d.c, d.ans, 'en') + ', so the answer is ' + qtyItem(d.si, d.ans, 'en') + '.')
+        };
+      } },
+
+    /* 6. 中間數是什麼意思：題幹給算式一，問那個數代表哪一件事。
+       只用「一加一減」的題型 —— 兩步同向時，中間數的說法會不只一種。 */
+    { id:'midMeaning', cat:'mid', grp:'eq',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var a = pickUnused([30,36,42,48,54,60,66,72,78,84,90], used);
+        var addFirst = rand(2) === 0;
+        var b, c, mid, ans;
+        do {
+          b = between(8, 30);
+          c = between(5, 30);
+          mid = addFirst ? (a + b) : (a - b);
+          ans = addFirst ? (mid - c) : (mid + c);
+        } while (b === c || mid < 8 || mid === b || mid === c || mid === a || ans < 5 || mid > MAXV || ans > MAXV);
+        var o1 = addFirst ? '+' : '-', o2 = addFirst ? '-' : '+';
+        var correct = PH('after1', mid, si, o1);
+        var opts = shuffle([correct, PH('nowTotal', mid, si, o1), PH('second', mid, si, o2), PH('start', mid, si, o1)]);
+        return recStems({ si:si, a:a, b:b, c:c, o1:o1, o2:o2, mid:mid, ans:ans,
+                 correct:correct, opts:opts, ans_i:opts.indexOf(correct) }, stemMidMeaning);
+      },
+      fmt:function(d, lang){
+        var ask = lang === 'zh'
+          ? ('小安先算 ' + eqStr(d.a, d.o1, d.b, d.mid, 'zh') + '。<br>這個 ' + d.mid + ' 是什麼意思？')
+          : ('Ann starts with ' + eqStr(d.a, d.o1, d.b, d.mid, 'en') + '.<br>What does that ' + d.mid + ' mean?');
+        return {
+          stem:d.stems[lang],
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans_i,
+          why:lang === 'zh'
+            ? (eqStr(d.a, d.o1, d.b, d.mid, 'zh') + ' 算的是第一件事做完之後的數量，所以 ' + d.mid +
+               ' 是' + verbWord(d.si, d.o1, 'zh') + '之後的' + unitWord(d.si, 'zh') + '數。它是中間數，再算一步才是答案 ' +
+               qtyItem(d.si, d.ans, 'zh') + '。')
+            : (eqStr(d.a, d.o1, d.b, d.mid, 'en') + ' works out how many there were after the first change, so ' +
+               d.mid + ' counts the ' + unitWord(d.si, 'en') + ' right after some were ' + verbWord(d.si, d.o1, 'en') +
+               '. It is the middle number; one more step gives the answer, ' + qtyItem(d.si, d.ans, 'en') + '.')
+        };
+      } },
+
+    /* 7. 問中間數本身：題幹明講「第一件事做完、第二件事還沒發生」，
+       所以答案唯一，不會和「兩步都算完」混在一起。 */
+    { id:'midValue', cat:'mid', grp:'story',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var a = pickUnused([30,36,42,48,54,60,66,72,78,84,90], used);
+        var addFirst = rand(2) === 0;
+        var b, c, mid, ans;
+        do {
+          b = between(8, 30);
+          c = between(5, 30);
+          mid = addFirst ? (a + b) : (a - b);
+          ans = addFirst ? (mid - c) : (mid + c);
+        } while (b === c || mid < 8 || mid === b || mid === c || mid === a || ans < 5 || mid > MAXV || ans > MAXV ||
+                 ans === a || ans === b || ans === c);
+        var o1 = addFirst ? '+' : '-', o2 = addFirst ? '-' : '+';
+        var d = { si:si, a:a, b:b, c:c, o1:o1, o2:o2, mid:mid, ans:ans, correct:IT(si, mid) };
+        /* 誘答：兩步都算完（反過來的迷思）、第一步用錯方向、跳過第一步先做第二步。 */
+        var cands = [ IT(si, ans), itIn(si, o1 === '+' ? a - b : a + b), itIn(si, o2 === '+' ? a + c : a - c) ];
+        var mix = mixOpts(d.correct, cands, function(i){
+          var alt = [mid + 10, mid - 10, mid + 1, mid - 2, mid + 20, mid - 20];
+          return itIn(si, alt[i % alt.length]);
+        }, [a, b, c]);
+        d.opts = mix.opts; d.ans_i = mix.ans;
+        return recStems(d, stemMidValue);
+      },
+      fmt:function(d, lang){
+        var ask = lang === 'zh'
+          ? (verbWord(d.si, d.o1, 'zh') + '以後，還沒' + verbWord(d.si, d.o2, 'zh') + '。<br>這時候有幾' + unitWord(d.si, 'zh') + '？')
+          : ('After those ' + d.b + ' ' + unitWord(d.si, 'en') + ' are ' + verbWord(d.si, d.o1, 'en') +
+             ', before any are ' + verbWord(d.si, d.o2, 'en') + ':<br>how many ' + unitWord(d.si, 'en') + ' are there?');
+        return {
+          stem:d.stems[lang],
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans_i,
+          why:lang === 'zh'
+            ? ('這一步只做第一件事：' + eqStr(d.a, d.o1, d.b, d.mid, 'zh') + '，中間數是 ' +
+               qtyItem(d.si, d.mid, 'zh') + '。這一題只問到第一步；第二件事算完才會變成 ' + qtyItem(d.si, d.ans, 'zh') + '。')
+            : ('This step only does the first change: ' + eqStr(d.a, d.o1, d.b, d.mid, 'en') +
+               ', so the middle number is ' + qtyItem(d.si, d.mid, 'en') + '. This question stops there; only after the second change is it ' +
+               qtyItem(d.si, d.ans, 'en') + '.')
+        };
+      } },
+
+    /* 8. 順序被打亂：句子先寫下午的事，孩子要先找出「一開始有多少」。 */
+    { id:'outOfOrder', cat:'order', grp:'eq',
+      make:function(used){
+        var si = rand(SCENES.length);
+        var a = pickUnused([40,48,56,64,72,80,88,96,104,112,120], used);
+        var addFirst = rand(2) === 0;
+        var b, c, mid, ans;
+        do {
+          b = between(8, 35);
+          c = between(5, 30);
+          mid = addFirst ? (a + b) : (a - b);
+          ans = addFirst ? (mid - c) : (mid + c);
+        } while (b === c || mid < 8 || mid === b || mid === c || mid === a || ans < 5 || mid > MAXV || ans > MAXV);
+        var o1 = addFirst ? '+' : '-', o2 = addFirst ? '-' : '+';
+        var d = { si:si, a:a, b:b, c:c, o1:o1, o2:o2, mid:mid, ans:ans, correct:IT(si, ans) };
+        /* 誘答：停在中間數、把題目第一句的數量當成一開始的量、只算了一件事。 */
+        var cands = [ IT(si, mid), itIn(si, o2 === '+' ? a + c : a - c), itIn(si, o1 === '+' ? a + b + c : a - b - c) ];
+        var mix = mixOpts(d.correct, cands, function(i){
+          var alt = [ans + 10, ans - 10, ans + 1, ans - 2, ans + 20, ans - 20];
+          return itIn(si, alt[i % alt.length]);
+        }, [a, b, c]);
+        d.opts = mix.opts; d.ans_i = mix.ans;
+        return recStems(d, stemOutOfOrder);
+      },
+      fmt:function(d, lang){
+        return {
+          stem:d.stems[lang],
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans_i,
+          why:lang === 'zh'
+            ? ('先找出一開始有 ' + qtyItem(d.si, d.a, 'zh') + '，再照事情發生的先後算：' +
+               eqStr(d.a, d.o1, d.b, d.mid, 'zh') + '，' + eqStr(d.mid, d.o2, d.c, d.ans, 'zh') +
+               '。答案是 ' + qtyItem(d.si, d.ans, 'zh') + '。')
+            : ('First find the starting amount, ' + qtyItem(d.si, d.a, 'en') +
+               ', then follow the order things happened: ' + eqStr(d.a, d.o1, d.b, d.mid, 'en') + ', then ' +
+               eqStr(d.mid, d.o2, d.c, d.ans, 'en') + '. The answer is ' + qtyItem(d.si, d.ans, 'en') + '.')
+        };
+      } },
+
+    /* 9. 交錯：一步就算得出來的加減（二、三位數的直式加減那一課）。 */
+    { id:'oneStep', cat:'add', grp:'addsub',
+      make:function(used){
+        var a = pickUnused([28,35,46,57,64,73,82,95,106,118,124], used);
+        var plus = rand(2) === 0;
+        var b, ans;
+        do {
+          b = between(6, plus ? 70 : Math.min(70, a - 5));
+          ans = plus ? (a + b) : (a - b);
+        } while (ans < 5 || ans > MAXV || ans === a || ans === b);
+        var correct = RAW(ans);
+        /* 誘答：加減用反了、進位或借位少算 10、多算 1。 */
+        var cands = [ rawIn(plus ? a - b : a + b, MAXV), rawIn(ans - 10, MAXV), rawIn(ans + 1, MAXV) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [ans + 10, ans - 1, ans + 20, ans - 20, ans + 2, ans - 2];
+          return rawIn(alt[i % alt.length], MAXV);
+        }, [a, b]);
+        return recStems({ a:a, b:b, op:plus ? '+' : '-', ans:ans, correct:correct, opts:mix.opts, ans_i:mix.ans }, stemOneStep);
+      },
+      fmt:function(d, lang){
+        return {
+          stem:d.stems[lang],
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans_i,
+          why:lang === 'zh'
+            ? (eqStr(d.a, d.op, d.b, d.ans, 'zh') + '。這一題只有一件事，算一次就好。')
+            : (eqStr(d.a, d.op, d.b, d.ans, 'en') + '. There is only one change here, so one step is enough.')
+        };
+      } },
+
+    /* 10. 交錯：位值合成（1000 以內的數那一課）。這一題的範圍是 999，不是 200。 */
+    { id:'placeValue', cat:'num', grp:'numbers',
+      make:function(used){
+        var h = pickUnused([1,2,3,4,5,6,7,8], used);
+        var t, o;
+        do { t = between(1, 9); o = between(1, 9); } while (t === o);
+        var n = h * 100 + t * 10 + o;
+        var correct = RAW(n);
+        /* 誘答：十位和個位對調、百位多一、漏掉個位。 */
+        var cands = [ rawIn(h * 100 + o * 10 + t, 999), rawIn((h + 1) * 100 + t * 10 + o, 999), rawIn(h * 100 + t * 10, 999) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [n + 100, n - 100, n + 10, n - 10, n + 1, n - 1];
+          return rawIn(alt[i % alt.length], 999);
+        }, [h, t, o]);
+        return recStems({ h:h, t:t, o:o, n:n, correct:correct, opts:mix.opts, ans_i:mix.ans }, stemPlaceValue);
+      },
+      fmt:function(d, lang){
+        return {
+          stem:d.stems[lang],
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans_i,
+          why:lang === 'zh'
+            ? (d.h + ' 個百是 ' + (d.h * 100) + '，' + d.t + ' 個十是 ' + (d.t * 10) + '，' +
+               d.o + ' 個一是 ' + d.o + '。合起來是 ' + d.n + '。')
+            : (d.h + (d.h === 1 ? ' hundred makes ' : ' hundreds make ') + (d.h * 100) + ', ' +
+               d.t + (d.t === 1 ? ' ten makes ' : ' tens make ') + (d.t * 10) + ', and ' +
+               d.o + (d.o === 1 ? ' one makes ' : ' ones make ') + d.o + ' — that is ' + d.n + '.')
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：10 種題型各一題＋核心題型隨機 2 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['twoAddSub','twoSubAdd','twoSubSub','stopTooEarly','midValue'].indexOf(g.id) >= 0;
+    });
+    shuffle(extraPool).slice(0, 2).forEach(function(g){ slots.push(g); });
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var grp = item.gen.grp;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[grp] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

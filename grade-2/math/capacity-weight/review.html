@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>比比看複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 70px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:6px 18px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:24px 0 4px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:6px;font-size:16px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:18px 22px;margin:20px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:16px;margin-top:18px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 12px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .picrow{display:flex;justify-content:center;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-top:8px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:12px 8px;
+    font-size:17px;cursor:pointer;color:var(--ink);min-height:50px;
+    display:flex;align-items:center;justify-content:center;font-weight:700;text-align:center;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:20px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:14px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:18px;
+    font-weight:700;padding:14px 26px;cursor:pointer;margin-top:16px;min-height:52px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 比比看複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己想一次 —— 想出來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：倒倒看、天平、數杯數、數積木、排順序交錯出現，<strong>每一批的數字都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'比比看複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 比比看複習挑戰',
+      sub:'不看速查卡、自己想一次 —— 想出來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：倒倒看、天平、數杯數、數積木、排順序交錯出現，<strong>每一批的數字都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Comparing Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Comparing Review Challenge',
+      sub:'No peeking at the cheat sheet — the moment you work it out is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving pouring, balances, counting cups, counting blocks and putting things in order — <strong>every batch uses fresh numbers</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ cap:'容量', w:'重量', mis:'迷思', ord:'排順序', how:'方法' },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        pour:'🫗 倒倒看，誰裝得多（範例教學 1）',
+        bal:'⚖️ 放上天平，誰比較重（範例教學 2）',
+        cup:'🥤 用同一個杯子量幾杯（範例教學 3）',
+        blk:'🟧 用一樣的積木秤幾個（範例教學 4）'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ cap:'Capacity', w:'Weight', mis:'Misconception', ord:'Ordering', how:'Method' },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        pour:'🫗 Pour It Over and See Which Holds More (Example 1)',
+        bal:'⚖️ Put Them on a Balance (Example 2)',
+        cup:'🥤 Count How Many Cups, Same Cup (Example 3)',
+        blk:'🟧 Count How Many Blocks (Example 4)'
+      }
+    }
+  };
+
+  var LINK_HREFS = {
+    pour:'index.html#secPour', bal:'index.html#secBal',
+    cup:'index.html#secCup', blk:'index.html#secBlk'
+  };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+
+  /* 容器：cap 一定等於 w × h ÷ 600（和上課頁同一套）。畫出來的高矮和「裝得多不多」
+     是分開的兩件事 —— 花瓶最高卻不是最多，這一課的第一個迷思就靠它。
+     單位詞放在這裡（產生器要在 Node 裡跑，不能碰 I18N），檢查設定檔有獨立的一份
+     真值表逐字比對，不然等於拿產生器自己的字去比產生器自己的字。 */
+  var AREA_PER_CUP = 600;
+  var CONTAINERS = [
+    { icon:'🫖', w:60,  h:80,  cap:8, zh:'水壺',   en:'kettle' },
+    { icon:'🏺', w:30,  h:100, cap:5, zh:'花瓶',   en:'vase'   },
+    { icon:'🥛', w:40,  h:60,  cap:4, zh:'玻璃杯', en:'glass'  },
+    { icon:'🥣', w:100, h:36,  cap:6, zh:'碗',     en:'bowl'   },
+    { icon:'🪣', w:90,  h:60,  cap:9, zh:'水桶',   en:'bucket' },
+    { icon:'🍶', w:50,  h:60,  cap:5, zh:'瓶子',   en:'bottle' }
+  ];
+  var ITEMS = [
+    { icon:'🍓', wt:2,  size:1, zh:'草莓',     en:'strawberry' },
+    { icon:'🎈', wt:1,  size:5, zh:'氣球',     en:'balloon'    },
+    { icon:'🍎', wt:4,  size:2, zh:'蘋果',     en:'apple'      },
+    { icon:'🍊', wt:4,  size:2, zh:'橘子',     en:'orange'     },
+    { icon:'🥔', wt:5,  size:2, zh:'馬鈴薯',   en:'potato'     },
+    { icon:'🧸', wt:6,  size:4, zh:'玩具熊',   en:'teddy bear' },
+    { icon:'🪨', wt:9,  size:1, zh:'石頭',     en:'stone'      },
+    { icon:'🍉', wt:14, size:5, zh:'西瓜',     en:'watermelon' }
+  ];
+  /* 沒有名字的兩個瓶子。「杯子不一樣大」那一題一定要用它們：
+     換成水壺、水桶這種在別題有固定杯數的容器，讀過整課的孩子就能從別的地方
+     把答案推出來，「沒辦法比」就不再是唯一正解了。 */
+  var UNKNOWNS = [
+    { icon:'🫙', zh:'甲瓶', en:'jar A' },
+    { icon:'🍯', zh:'乙瓶', en:'jar B' }
+  ];
+  /* 一樣大的箱子：看不出裡面裝什麼，只能靠線索接龍（傳遞性）。 */
+  /* wt 從頭到尾不顯示給孩子（箱子一樣大、看不出裡面裝什麼），但它必須存在：
+     上課頁的遊戲用同一份輕重排順序，兩邊要是各講各的，同一個 🟥 紅箱就會
+     在遊戲裡最重、在複習題裡最輕。 */
+  var BOXES = [
+    { icon:'🟥', wt:8, zh:'紅箱', en:'red box'    },
+    { icon:'🟦', wt:5, zh:'藍箱', en:'blue box'   },
+    { icon:'🟨', wt:3, zh:'黃箱', en:'yellow box' },
+    { icon:'🟩', wt:6, zh:'綠箱', en:'green box'  }
+  ];
+  var CUP_ICON = '🥤', BLK_ICON = '🟧';
+
+  function cName(i, lang){
+    var c = CONTAINERS[i];
+    return lang === 'zh' ? (c.icon + ' ' + c.zh) : (c.icon + ' the ' + c.en);
+  }
+  function iName(i, lang){
+    var t = ITEMS[i];
+    return lang === 'zh' ? (t.icon + ' ' + t.zh) : (t.icon + ' the ' + t.en);
+  }
+  function bName(i, lang){
+    var b = BOXES[i];
+    return lang === 'zh' ? (b.icon + ' ' + b.zh) : (b.icon + ' the ' + b.en);
+  }
+  /* 甲瓶／乙瓶本身就是名字，英文不加 the。 */
+  function uName(i, lang){
+    var u = UNKNOWNS[i];
+    return u.icon + ' ' + (lang === 'zh' ? u.zh : u.en);
+  }
+  function nameOf(cat, i, lang){
+    if (cat === 'C') return cName(i, lang);
+    if (cat === 'I') return iName(i, lang);
+    if (cat === 'U') return uName(i, lang);
+    return bName(i, lang);
+  }
+  function nCup(n, lang){ return lang === 'zh' ? (n + ' 杯') : (n + (n === 1 ? ' cup' : ' cups')); }
+  function nBlk(n, lang){ return lang === 'zh' ? (n + ' 個') : (n + (n === 1 ? ' block' : ' blocks')); }
+
+  /* 這一課的方法句子。正解只有一個 —— 「把甲裝滿倒進乙」也是對的做法，
+     所以刻意不放進誘答，不然會有兩個正確選項。 */
+  var METHODS = {
+    zh:[
+      '用同一個小杯子分別裝滿，數各是幾杯',
+      '看哪一個比較高',
+      '一個用大杯、一個用小杯，比杯數',
+      '看哪一個比較重',
+      '放上天平：沉下去的那一邊比較重，平平的就一樣重',
+      '看哪一個比較大',
+      '一邊放大積木、一邊放小積木，比個數'
+    ],
+    en:[
+      'fill both with the same small cup and count the cups',
+      'look at which one is taller',
+      'use a big cup for one and a small cup for the other, then compare the counts',
+      'look at which one is heavier',
+      'put one on each side of a balance: the lower side is heavier, and a level balance means they weigh the same',
+      'look at which one is bigger',
+      'put big blocks on one side and small blocks on the other, then compare the counts'
+    ]
+  };
+
+  /* 選項一律是物件。去重的鍵要含「種類」—— 只比數字的話，
+     「5 杯」和「5 個」會被當成同一個答案，可是它們量的根本不是同一件事。 */
+  /* cat 決定「這個名字是誰」，也決定講的是容量還是重量：
+     'I'（東西）＝比較重，'C'／'U'（容器）＝裝得比較多。 */
+  function VP(cat, id){ return { u:'pick', cat:cat, id:id }; }   /* 甲比較多／比較重 */
+  function VS(dom){ return { u:'same', dom:dom }; }              /* 兩個一樣 */
+  function VN(dom){ return { u:'no', dom:dom }; }                /* 沒辦法比 */
+  function NU(n, unit){ return { u:'num', n:n, unit:unit }; }    /* 3 杯／3 個 */
+  function RL(a, b){ return { u:'rel', a:a, b:b }; }             /* 甲箱比乙箱重 */
+  function OD(cat, ids){ return { u:'ord', cat:cat, ids:ids.slice() }; }
+  function MT(id){ return { u:'mt', id:id }; }
+
+  function vkeyOf(v){
+    if (!v) return 'nil';
+    if (v.u === 'pick') return 'pick#' + v.cat + '#' + v.id;
+    if (v.u === 'same') return 'same#' + v.dom;
+    if (v.u === 'no')   return 'no#' + v.dom;
+    if (v.u === 'num')  return 'num#' + v.unit + '#' + v.n;
+    if (v.u === 'rel')  return 'rel#' + v.a + '#' + v.b;
+    if (v.u === 'ord')  return 'ord#' + v.cat + '#' + v.ids.join(',');
+    if (v.u === 'mt')   return 'mt#' + v.id;
+    return 'raw';
+  }
+
+  function valStr(v, lang){
+    if (v.u === 'pick'){
+      return v.cat === 'I'
+        ? (iName(v.id, lang) + (lang === 'zh' ? '比較重' : ' is heavier'))
+        : (nameOf(v.cat, v.id, lang) + (lang === 'zh' ? '裝得比較多' : ' holds more'));
+    }
+    if (v.u === 'same'){
+      if (lang === 'zh') return v.dom === 'cap' ? '兩個一樣多' : '兩個一樣重';
+      return v.dom === 'cap' ? 'they hold the same' : 'they weigh the same';
+    }
+    if (v.u === 'no'){
+      if (lang === 'zh') return v.dom === 'cap' ? '沒辦法比' : '沒辦法知道';
+      return 'there is no way to tell';
+    }
+    if (v.u === 'num') return v.unit === 'cup' ? nCup(v.n, lang) : nBlk(v.n, lang);
+    if (v.u === 'rel'){
+      return lang === 'zh'
+        ? (bName(v.a, 'zh') + '比 ' + bName(v.b, 'zh') + '重')
+        : (bName(v.a, 'en') + ' is heavier than ' + bName(v.b, 'en'));
+    }
+    if (v.u === 'ord'){
+      return v.ids.map(function(id){ return nameOf(v.cat, id, lang); }).join(' → ');
+    }
+    return METHODS[lang][v.id];
+  }
+
+  /* 這一課看得到的量：杯數就是容器的杯數（最多 9 杯），積木就是東西的積木數
+     （最多 14 個）。誘答不可以跑出這個範圍 —— 「17 杯」在這一課根本不存在。 */
+  var MAX_CUP = 9, MAX_BLK = 14;
+  /* 數字題的四個選項：候選先濾掉超出範圍的和重複的，不夠再從 1..max 依序補。
+     這樣「保底」也永遠是這一課看得到的數，不會冒出範圍外的東西。 */
+  function numOpts(correct, unit, cands){
+    var max = unit === 'cup' ? MAX_CUP : MAX_BLK;
+    var out = [], seen = {};
+    seen[String(correct.n)] = true;
+    (cands || []).forEach(function(v){
+      if (out.length >= 3) return;
+      if (!(v >= 1 && v <= max) || seen[String(v)]) return;
+      seen[String(v)] = true; out.push(NU(v, unit));
+    });
+    for (var v = 1; v <= max && out.length < 3; v++){
+      if (seen[String(v)]) continue;
+      seen[String(v)] = true; out.push(NU(v, unit));
+    }
+    var opts = shuffle([correct].concat(out));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+
+  /* 四個固定選項（判斷題）也要洗牌，不然正解永遠在同一格。 */
+  function fixed4(correct, others){
+    var opts = shuffle([correct].concat(others));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+
+  /* 容器圖：底線對齊（BASE），高矮可以直接看。fill 是裝了幾杯，spill 是滿出來幾杯。
+     畫布寬度要蓋住滿出來的水花，不然那幾滴會被整段切掉。 */
+  var BASE = 108, PAD = 12;
+  function jarSVG(c, fill, spill){
+    var wet = Math.max(0, Math.min(c.cap, fill));
+    var wh = Math.round(c.h * wet / c.cap);
+    var top = BASE - c.h;
+    var sp = Math.max(0, spill || 0);
+    var drops = Math.min(sp, 4);
+    var w = PAD + c.w + PAD + (drops > 0 ? 40 : 0);
+    /* 同上：畫布高度要蓋住最後一滴水花。 */
+    var h = Math.max(BASE + 12, drops > 0 ? (top + 16 + (drops - 1) * 10 + 6) : 0);
+    var s = '<svg data-cap="' + c.cap + '" data-fill="' + wet + '" data-spill="' + sp +
+            '" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h +
+            '" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    if (wh > 0){
+      s += '<rect x="' + (PAD + 3) + '" y="' + (BASE - wh) + '" width="' + (c.w - 6) +
+           '" height="' + wh + '" rx="4" fill="#9AD1F0"/>';
+    }
+    s += '<rect x="' + PAD + '" y="' + top + '" width="' + c.w + '" height="' + c.h +
+         '" rx="8" fill="none" stroke="#3B7DD8" stroke-width="3"/>';
+    s += '<rect x="' + (PAD - 6) + '" y="' + BASE + '" width="' + (c.w + 12) +
+         '" height="4" rx="2" fill="#E8E2D6"/>';
+    for (var i = 0; i < drops; i++){
+      s += '<text x="' + (PAD + c.w + 2 + i * 7) + '" y="' + (top + 16 + i * 10) + '" font-size="12">💧</text>';
+    }
+    s += '</svg>';
+    return s;
+  }
+
+  /* 天平：tilt ＝ 1 左邊沉、-1 右邊沉、0 是平的。東西畫多大由 size 決定。 */
+  function balanceSVG(left, right, tilt){
+    var W = 240, H = 150, cx = 120, pivot = 46, arm = 84, drop = 14, hang = 26;
+    var ly = pivot + tilt * drop, ry = pivot - tilt * drop;
+    var s = '<svg data-tilt="' + tilt + '" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H +
+            '" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    s += '<rect x="' + (cx - 42) + '" y="126" width="84" height="8" rx="4" fill="#C9C4B8"/>';
+    s += '<polygon points="' + cx + ',' + pivot + ' ' + (cx - 14) + ',126 ' + (cx + 14) + ',126" fill="#C9C4B8"/>';
+    s += '<line x1="' + (cx - arm) + '" y1="' + ly + '" x2="' + (cx + arm) + '" y2="' + ry +
+         '" stroke="#6B6875" stroke-width="6" stroke-linecap="round"/>';
+    [[cx - arm, ly, left], [cx + arm, ry, right]].forEach(function(p){
+      var px = p[0], py = p[1], obj = p[2];
+      s += '<line x1="' + px + '" y1="' + py + '" x2="' + px + '" y2="' + (py + hang) +
+           '" stroke="#6B6875" stroke-width="2"/>';
+      s += '<rect x="' + (px - 24) + '" y="' + (py + hang) + '" width="48" height="6" rx="3" fill="#E8871E"/>';
+      if (obj){
+        var fs = 13 + obj.size * 3;
+        s += '<text x="' + px + '" y="' + (py + hang - 4) + '" font-size="' + fs +
+             '" text-anchor="middle">' + obj.icon + '</text>';
+      }
+    });
+    s += '</svg>';
+    return s;
+  }
+
+  /* 一排一排的杯子／積木，一顆一顆數得到。 */
+  function rowSVG(n, icon, px){
+    var size = px || 20, perRow = 10, step = size + 4;
+    var cols = Math.min(n, perRow) || 1;
+    var rows = Math.ceil(n / perRow) || 1;
+    var w = cols * step + 14;
+    /* 高度要算到「基線 ＋ 下緣」：emoji 會掉到基線下面大約三成字級，
+       只用 size + 8 的話，大杯（30px）那一排會被切掉最下面幾個像素。 */
+    var h = 4 + (rows - 1) * (size + 8) + size + Math.ceil(size * 0.3) + 3;
+    var s = '<svg data-count="' + n + '" data-px="' + size + '" width="' + w + '" height="' + h +
+            '" viewBox="0 0 ' + w + ' ' + h + '" style="max-width:100%;height:auto" ' +
+            'xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    for (var i = 0; i < n; i++){
+      s += '<text x="' + (5 + (i % perRow) * step) + '" y="' +
+           (4 + Math.floor(i / perRow) * (size + 8) + size) + '" font-size="' + size + '">' + icon + '</text>';
+    }
+    s += '</svg>';
+    return s;
+  }
+  function cell(svg, label){
+    return '<div style="text-align:center;font-size:14px;color:#6B6875">' + svg +
+           '<div style="font-weight:700;color:#2B2A33">' + label + '</div></div>';
+  }
+  function picrow(inner){ return '<div class="picrow">' + inner + '</div>'; }
+
+  /* 「多幾杯／多幾個」用得到的組合：第一個一定要比第二個多，而且不可以剛好是兩倍
+     —— 兩倍的時候「答成比較小的那個數」剛好等於正確的差，誘答就變成第二個正解。
+     全部合格的組合先列出來直接抽，不要用「抽到不合就重抽」的迴圈：那種寫法
+     總有一次會抽不到，然後把壞資料原封不動端出去。 */
+  function diffPairs(n, valOf){
+    var out = [];
+    for (var i = 0; i < n; i++){
+      for (var j = 0; j < n; j++){
+        if (i === j) continue;
+        var a = valOf(i), b = valOf(j);
+        if (a > b && a !== 2 * b) out.push([i, j]);
+      }
+    }
+    return out;
+  }
+  var CUP_DIFF_PAIRS = diffPairs(CONTAINERS.length, function(i){ return CONTAINERS[i].cap; });
+  var BLK_DIFF_PAIRS = diffPairs(ITEMS.length, function(i){ return ITEMS[i].wt; });
+  function pickPairUnused(pairs, used){
+    var avail = pairs.filter(function(p){ return used.indexOf(p.join('-')) < 0; });
+    var v = avail.length ? pick(avail) : pick(pairs);
+    used.push(v.join('-'));
+    return v;
+  }
+
+  /* 兩個不一樣的索引。 */
+  function pickPair(len, firstPool, used){
+    var a = pickUnused(firstPool, used);
+    var b = a;
+    while (b === a) b = rand(len);
+    return [a, b];
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 倒倒看（直接比較容量）：把甲裝滿倒進空的乙，看水怎麼樣。 */
+    { id:'pourCompare', cat:'cap', grp:'pour',
+      make:function(used){
+        var p = pickPair(CONTAINERS.length, [0,1,2,3,4,5], used);
+        var a = p[0], b = p[1];
+        var ca = CONTAINERS[a].cap, cb = CONTAINERS[b].cap;
+        var correct = ca > cb ? VP('C', a) : (ca < cb ? VP('C', b) : VS('cap'));
+        var pool = [VP('C', a), VP('C', b), VS('cap'), VN('cap')]
+          .filter(function(v){ return vkeyOf(v) !== vkeyOf(correct); });
+        var mix = fixed4(correct, pool);
+        return { a:a, b:b, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var A = CONTAINERS[d.a], B = CONTAINERS[d.b];
+        var na = cName(d.a, lang), nb = cName(d.b, lang);
+        var spill = Math.max(0, A.cap - B.cap);
+        var stem;
+        if (lang === 'zh'){
+          var tail = A.cap > B.cap ? '，水滿出來了。' : (A.cap < B.cap ? '，' + nb + '還有空位。' : '，剛好裝滿，沒有剩下。');
+          stem = '把 ' + na + '裝滿的水，全部倒進空的 ' + nb + tail + '<br>哪一個裝得比較多？';
+        } else {
+          var tl = A.cap > B.cap ? ' — the water spills over.'
+                 : (A.cap < B.cap ? ' — there is still room to spare.'
+                                  : ' — it fills exactly, with nothing left over.');
+          stem = na + ' is filled right up, and all of it is poured into ' + nb + ', which was empty' + tl +
+                 '<br>Which one holds more?';
+        }
+        return {
+          stem: stem + picrow(cell(jarSVG(B, Math.min(A.cap, B.cap), spill), nb)),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (A.cap > B.cap ? ('水滿出來，表示 ' + nb + '裝不下，所以 ' + na + '裝得比較多。')
+              : A.cap < B.cap ? ('倒完還有空位，表示 ' + nb + '裝得下還有剩，所以 ' + nb + '裝得比較多。')
+              : '剛好裝滿又沒有剩下，表示兩個裝得一樣多。')
+            : (A.cap > B.cap ? ('It spilled over, so ' + nb + ' could not take it all — ' + na + ' holds more.')
+              : A.cap < B.cap ? ('There was room left, so ' + nb + ' could take it all and more — ' + nb + ' holds more.')
+              : 'It filled up exactly with nothing left over, so the two hold the same.')
+        };
+      } },
+
+    /* 2. 放上天平（直接比較重量）：沉下去的那一邊比較重。 */
+    { id:'balanceTilt', cat:'w', grp:'bal',
+      make:function(used){
+        var p = pickPair(ITEMS.length, [0,1,2,3,4,5,6,7], used);
+        var a = p[0], b = p[1];
+        var wa = ITEMS[a].wt, wb = ITEMS[b].wt;
+        var correct = wa > wb ? VP('I', a) : (wa < wb ? VP('I', b) : VS('w'));
+        var pool = [VP('I', a), VP('I', b), VS('w'), VN('w')]
+          .filter(function(v){ return vkeyOf(v) !== vkeyOf(correct); });
+        var mix = fixed4(correct, pool);
+        return { a:a, b:b, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var A = ITEMS[d.a], B = ITEMS[d.b];
+        var na = iName(d.a, lang), nb = iName(d.b, lang);
+        var tilt = A.wt > B.wt ? 1 : (A.wt < B.wt ? -1 : 0);
+        var down = tilt === 1 ? na : nb;
+        var stem;
+        if (lang === 'zh'){
+          stem = (tilt === 0)
+            ? ('天平兩邊各放一個：一邊是 ' + na + '，一邊是 ' + nb + '。天平是平的。<br>哪一個比較重？')
+            : ('天平兩邊各放一個：一邊是 ' + na + '，一邊是 ' + nb + '。 ' + down + '那一邊沉下去了。<br>哪一個比較重？');
+        } else {
+          stem = (tilt === 0)
+            ? ('One thing on each side of the balance: ' + na + ' and ' + nb + '. It stays perfectly level.<br>Which one is heavier?')
+            : ('One thing on each side of the balance: ' + na + ' and ' + nb + '. The side with ' + down +
+               ' goes down.<br>Which one is heavier?');
+        }
+        return {
+          stem: stem + picrow(balanceSVG(A, B, tilt)),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (tilt === 0 ? '天平是平的，就是兩邊一樣重。'
+                          : ('沉下去的那一邊比較重，所以 ' + down + '比較重。'))
+            : (tilt === 0 ? 'A level balance means the two sides weigh the same.'
+                          : ('The side that goes down is the heavier one, so ' + down + ' is heavier.'))
+        };
+      } },
+
+    /* 3. 用同一個小杯子量（間接比較容量）。 */
+    { id:'sameCup', cat:'cap', grp:'cup',
+      make:function(used){
+        var p = pickPair(CONTAINERS.length, [0,1,2,3,4,5], used);
+        var a = p[0], b = p[1];
+        var na = CONTAINERS[a].cap, nb = CONTAINERS[b].cap;
+        var correct = na > nb ? VP('C', a) : (na < nb ? VP('C', b) : VS('cap'));
+        var pool = [VP('C', a), VP('C', b), VS('cap'), VN('cap')]
+          .filter(function(v){ return vkeyOf(v) !== vkeyOf(correct); });
+        var mix = fixed4(correct, pool);
+        return { a:a, b:b, na:na, nb:nb, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var na = cName(d.a, lang), nb = cName(d.b, lang);
+        var hi = Math.max(d.na, d.nb), lo = Math.min(d.na, d.nb);
+        var more = d.na > d.nb ? na : nb;
+        var stem = lang === 'zh'
+          ? ('用同一個 ' + CUP_ICON + ' 小杯子量：' + na + ' ' + nCup(d.na, 'zh') + '，' + nb + ' ' + nCup(d.nb, 'zh') +
+             '。<br>哪一個裝得比較多？')
+          : ('Measured with the same ' + CUP_ICON + ' small cup: ' + na + ' took ' + nCup(d.na, 'en') +
+             ' and ' + nb + ' took ' + nCup(d.nb, 'en') + '.<br>Which one holds more?');
+        return {
+          stem: stem + picrow(cell(rowSVG(d.na, CUP_ICON, 18), na) + cell(rowSVG(d.nb, CUP_ICON, 18), nb)),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.na === d.nb ? ('同一個杯子量出來都是 ' + nCup(d.na, 'zh') + '，兩個一樣多。')
+               : ('同一個杯子量出來，' + hi + ' 杯比 ' + lo + ' 杯多，所以 ' + more + '裝得比較多。'))
+            : (d.na === d.nb ? ('Using the same cup, both took ' + nCup(d.na, 'en') + ', so they hold the same.')
+               : ('Measured with the same cup, ' + hi + ' is more than ' + lo + ', so ' + more + ' holds more.'))
+        };
+      } },
+
+    /* 4. 杯子不一樣大（這一課的迷思）：大杯的杯數比較少時，真的比不出來。 */
+    { id:'diffCup', cat:'mis', grp:'cup',
+      make:function(used){
+        var a = 0, b = 1;              /* 沒有名字的兩個瓶子，別題不會提到它們的杯數 */
+        used.push('U');
+        /* 大杯的杯數一定要比小杯少。反過來（3 大杯 vs 2 小杯）是比得出來的：
+           大杯比小杯大，3 大杯一定多過 2 小杯 —— 那就不是「沒辦法比」了。 */
+        var nb = 3 + rand(6);          /* 小杯 3~8 杯 */
+        var na = 2 + rand(nb - 2);     /* 大杯 2~(小杯 − 1) 杯 */
+        var correct = VN('cap');
+        var mix = fixed4(correct, [VP('U', a), VP('U', b), VS('cap')]);
+        return { a:a, b:b, na:na, nb:nb, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var na = uName(d.a, lang), nb = uName(d.b, lang);
+        var stem = lang === 'zh'
+          ? ('用大杯量 ' + na + '，量出 ' + nCup(d.na, 'zh') + '；用小杯量 ' + nb + '，量出 ' + nCup(d.nb, 'zh') +
+             '。<br>哪一個裝得比較多？')
+          : ('Measured with a big cup, ' + na + ' took ' + nCup(d.na, 'en') + '; measured with a small cup, ' +
+             nb + ' took ' + nCup(d.nb, 'en') + '.<br>Which one holds more?');
+        return {
+          stem: stem + picrow(cell(rowSVG(d.na, CUP_ICON, 28), na) + cell(rowSVG(d.nb, CUP_ICON, 14), nb)),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '兩邊的杯子不一樣大，而且大杯量出來的杯數比較少 —— 這時候杯數多的不一定裝得多，所以還不知道。要用同一個杯子再量一次。'
+            : 'The two cups were different sizes, and the big cup gave the smaller count — here more cups need not mean more, so nobody can tell yet. Measure both again with one single cup.'
+        };
+      } },
+
+    /* 5. 用一樣的積木秤（間接比較重量）。 */
+    { id:'blockWeigh', cat:'w', grp:'blk',
+      make:function(used){
+        var p = pickPair(ITEMS.length, [0,1,2,3,4,5,6,7], used);
+        var a = p[0], b = p[1];
+        var na = ITEMS[a].wt, nb = ITEMS[b].wt;
+        var correct = na > nb ? VP('I', a) : (na < nb ? VP('I', b) : VS('w'));
+        var pool = [VP('I', a), VP('I', b), VS('w'), VN('w')]
+          .filter(function(v){ return vkeyOf(v) !== vkeyOf(correct); });
+        var mix = fixed4(correct, pool);
+        return { a:a, b:b, na:na, nb:nb, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var na = iName(d.a, lang), nb = iName(d.b, lang);
+        var hi = Math.max(d.na, d.nb), lo = Math.min(d.na, d.nb);
+        var more = d.na > d.nb ? na : nb;
+        var stem = lang === 'zh'
+          ? ('用一樣的 ' + BLK_ICON + ' 積木秤：' + na + ' ' + nBlk(d.na, 'zh') + '，' + nb + ' ' + nBlk(d.nb, 'zh') +
+             '。<br>哪一個比較重？')
+          : ('Weighed with identical ' + BLK_ICON + ' blocks: ' + na + ' took ' + nBlk(d.na, 'en') +
+             ' and ' + nb + ' took ' + nBlk(d.nb, 'en') + '.<br>Which one is heavier?');
+        return {
+          stem: stem + picrow(cell(rowSVG(d.na, BLK_ICON, 18), na) + cell(rowSVG(d.nb, BLK_ICON, 18), nb)),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.na === d.nb ? ('每個積木都一樣重，兩個都是 ' + nBlk(d.na, 'zh') + '，所以一樣重。')
+               : ('每個積木都一樣重，' + hi + ' 個比 ' + lo + ' 個多，所以 ' + more + '比較重。'))
+            : (d.na === d.nb ? ('The blocks are identical and both took ' + nBlk(d.na, 'en') + ', so they weigh the same.')
+               : ('The blocks are identical, and ' + hi + ' is more than ' + lo + ', so ' + more + ' is heavier.'))
+        };
+      } },
+
+    /* 6. 多幾杯（同一個杯子量出來的差）。 */
+    { id:'cupDiff', cat:'cap', grp:'cup',
+      make:function(used){
+        var pr = pickPairUnused(CUP_DIFF_PAIRS, used);
+        var a = pr[0], b = pr[1];
+        var na = CONTAINERS[a].cap, nb = CONTAINERS[b].cap;
+        var diff = na - nb;
+        var correct = NU(diff, 'cup');
+        /* 誘答：用加的、答成題目給的小數字、答成題目給的大數字 —— 都要在範圍內。 */
+        var mix = numOpts(correct, 'cup', [na + nb, nb, na, diff + 1, diff + 2]);
+        return { a:a, b:b, na:na, nb:nb, diff:diff, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var na = cName(d.a, lang), nb = cName(d.b, lang);
+        var stem = lang === 'zh'
+          ? ('用同一個 ' + CUP_ICON + ' 小杯子量：' + na + ' ' + nCup(d.na, 'zh') + '，' + nb + ' ' + nCup(d.nb, 'zh') +
+             '。<br>' + na + '比 ' + nb + '多裝幾杯？')
+          : ('Measured with the same ' + CUP_ICON + ' small cup: ' + na + ' took ' + nCup(d.na, 'en') +
+             ' and ' + nb + ' took ' + nCup(d.nb, 'en') + '.<br>How many more cups did ' + na + ' take?');
+        return {
+          stem: stem + picrow(cell(rowSVG(d.na, CUP_ICON, 18), na) + cell(rowSVG(d.nb, CUP_ICON, 18), nb)),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.na + ' － ' + d.nb + ' ＝ ' + d.diff + '，' + na + '多裝 ' + nCup(d.diff, 'zh') + '。')
+            : (d.na + ' − ' + d.nb + ' = ' + d.diff + ', so ' + na + ' took ' + nCup(d.diff, 'en') + ' more.')
+        };
+      } },
+
+    /* 7. 多幾個積木（一樣的積木秤出來的差）。 */
+    { id:'blockDiff', cat:'w', grp:'blk',
+      make:function(used){
+        var pr = pickPairUnused(BLK_DIFF_PAIRS, used);
+        var a = pr[0], b = pr[1];
+        var na = ITEMS[a].wt, nb = ITEMS[b].wt;
+        var diff = na - nb;
+        var correct = NU(diff, 'blk');
+        var mix = numOpts(correct, 'blk', [na + nb, nb, na, diff + 1, diff + 2]);
+        return { a:a, b:b, na:na, nb:nb, diff:diff, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var na = iName(d.a, lang), nb = iName(d.b, lang);
+        var stem = lang === 'zh'
+          ? ('用一樣的 ' + BLK_ICON + ' 積木秤：' + na + ' ' + nBlk(d.na, 'zh') + '，' + nb + ' ' + nBlk(d.nb, 'zh') +
+             '。<br>' + na + '比 ' + nb + '多幾個積木？')
+          : ('Weighed with identical ' + BLK_ICON + ' blocks: ' + na + ' took ' + nBlk(d.na, 'en') +
+             ' and ' + nb + ' took ' + nBlk(d.nb, 'en') + '.<br>How many more blocks did ' + na + ' take?')
+        ;
+        return {
+          stem: stem + picrow(cell(rowSVG(d.na, BLK_ICON, 18), na) + cell(rowSVG(d.nb, BLK_ICON, 18), nb)),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.na + ' － ' + d.nb + ' ＝ ' + d.diff + '，' + na + '多 ' + nBlk(d.diff, 'zh') + '積木。')
+            : (d.na + ' − ' + d.nb + ' = ' + d.diff + ', so ' + na + ' took ' + nBlk(d.diff, 'en') + ' more.')
+        };
+      } },
+
+    /* 8. 接龍（傳遞性）：甲比乙重、乙比丙重 → 甲一定比丙重。 */
+    { id:'transitive', cat:'w', grp:'bal',
+      make:function(used){
+        /* 抽三個箱子之後照真正的輕重排好，線索才不會跟遊戲那邊互相矛盾。 */
+        var first = pickUnused([0,1,2,3], used);
+        var rest = shuffle([0,1,2,3].filter(function(x){ return x !== first; })).slice(0, 2);
+        var tri = [first].concat(rest).sort(function(x, y){ return BOXES[y].wt - BOXES[x].wt; });
+        var a = tri[0], b = tri[1], c = tri[2];
+        var correct = RL(a, c);
+        var mix = fixed4(correct, [RL(c, a), VS('w'), VN('w')]);
+        return { a:a, b:b, c:c, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var A = bName(d.a, lang), B = bName(d.b, lang), C = bName(d.c, lang);
+        var stem = lang === 'zh'
+          ? ('三個一樣大的箱子：' + A + '比 ' + B + '重，' + B + '比 ' + C + '重。<br>哪一句話一定對？')
+          : ('Three boxes of the same size: ' + A + ' is heavier than ' + B + ', and ' + B +
+             ' is heavier than ' + C + '.<br>Which sentence must be true?');
+        return {
+          stem: stem + picrow(cell(balanceSVG({ icon:BOXES[d.a].icon, size:3 }, { icon:BOXES[d.b].icon, size:3 }, 1), A + ' / ' + B) +
+                              cell(balanceSVG({ icon:BOXES[d.b].icon, size:3 }, { icon:BOXES[d.c].icon, size:3 }, 1), B + ' / ' + C)),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (A + '比 ' + B + '重、' + B + '比 ' + C + '重，中間都是 ' + B + '，接起來就是 ' + A + '比 ' + C + '重。')
+            : (A + ' is heavier than ' + B + ', and ' + B + ' is heavier than ' + C + '. ' + B +
+               ' sits in the middle of both clues, so ' + A + ' is heavier than ' + C + '.')
+        };
+      } },
+
+    /* 9. 排順序：三個量出來的數，從多到少（或從重到輕）。 */
+    { id:'orderThree', cat:'ord', grp:'cup',
+      make:function(used){
+        var dom = pickUnused(['cap','w'], used) === 'cap' ? 'cap' : 'w';
+        var cat = dom === 'cap' ? 'C' : 'I';
+        var table = dom === 'cap' ? CONTAINERS : ITEMS;
+        /* 三個值必須兩兩不同，不然「唯一的正確順序」不成立。
+           先把索引「按量的值」分組，洗牌後取三組、每組挑一個 —— 一定拿得到三個
+           不同的值。用「抽到重複就重抽」的迴圈的話，抽不到的那一次會讓 ids 短少，
+           後面格式化 undefined 直接丟例外，整頁題目都渲染不出來。 */
+        var valOf = function(id){ return dom === 'cap' ? CONTAINERS[id].cap : ITEMS[id].wt; };
+        var byVal = {};
+        for (var k = 0; k < table.length; k++){
+          var v = valOf(k);
+          (byVal[v] = byVal[v] || []).push(k);
+        }
+        var ids = shuffle(Object.keys(byVal)).slice(0, 3).map(function(v){ return pick(byVal[v]); });
+        var order = ids.slice().sort(function(x, y){ return valOf(y) - valOf(x); });
+        var rev = order.slice().reverse();
+        var s01 = [order[1], order[0], order[2]];
+        var s12 = [order[0], order[2], order[1]];
+        var correct = OD(cat, order);
+        var mix = fixed4(correct, [OD(cat, rev), OD(cat, s01), OD(cat, s12)]);
+        return { dom:dom, cat:cat, ids:ids, order:order, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var icon = d.dom === 'cap' ? CUP_ICON : BLK_ICON;
+        var valOf = function(id){ return d.dom === 'cap' ? CONTAINERS[id].cap : ITEMS[id].wt; };
+        var qty = function(n){ return d.dom === 'cap' ? nCup(n, lang) : nBlk(n, lang); };
+        var listZh = d.ids.map(function(id){ return nameOf(d.cat, id, 'zh') + ' ' + qty(valOf(id)); }).join('，');
+        var listEn = d.ids.map(function(id){ return nameOf(d.cat, id, 'en') + ' took ' + qty(valOf(id)); }).join(', ');
+        var stem = lang === 'zh'
+          ? ((d.dom === 'cap' ? ('用同一個 ' + icon + ' 小杯子量：') : ('用一樣的 ' + icon + ' 積木秤：')) + listZh +
+             '。<br>' + (d.dom === 'cap' ? '從裝得多到裝得少排排看。' : '從重到輕排排看。'))
+          : ((d.dom === 'cap' ? ('Measured with the same ' + icon + ' small cup: ') : ('Weighed with identical ' + icon + ' blocks: ')) +
+             listEn + '.<br>' + (d.dom === 'cap' ? 'Put them in order, the one that holds most first.' : 'Put them in order, heaviest first.'));
+        var pics = d.ids.map(function(id){
+          return cell(rowSVG(valOf(id), icon, 16), nameOf(d.cat, id, lang) + ' ' + qty(valOf(id)));
+        }).join('');
+        var nums = d.order.map(valOf);
+        return {
+          stem: stem + picrow(pics),
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? ('從多到少是 ' + nums.join('、') + '，所以順序是 ' + valStr(d.correct, 'zh') + '。')
+            : ('From most to fewest: ' + nums.join(', ') + ' — so the order is ' + valStr(d.correct, 'en') + '.')
+        };
+      } },
+
+    /* 10. 該怎麼比（方法題）。「把甲裝滿倒進乙」也是對的做法，所以不放進誘答。 */
+    { id:'howToCompare', cat:'how', grp:'pour',
+      make:function(used){
+        var dom = pickUnused(['cap','w'], used) === 'cap' ? 'cap' : 'w';
+        var table = dom === 'cap' ? CONTAINERS : ITEMS;
+        var a = rand(table.length), b = a;
+        while (b === a) b = rand(table.length);
+        var correct = dom === 'cap' ? MT(0) : MT(4);
+        var others = dom === 'cap' ? [MT(1), MT(2), MT(3)] : [MT(5), MT(6), MT(1)];
+        var mix = fixed4(correct, others);
+        return { dom:dom, a:a, b:b, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      fmt:function(d, lang){
+        var na = d.dom === 'cap' ? cName(d.a, lang) : iName(d.a, lang);
+        var nb = d.dom === 'cap' ? cName(d.b, lang) : iName(d.b, lang);
+        var stem = lang === 'zh'
+          ? ('想知道 ' + na + '和 ' + nb + (d.dom === 'cap' ? '哪一個裝得多' : '哪一個比較重') + '，可以怎麼做？')
+          : ('To find out which of ' + na + ' and ' + nb + (d.dom === 'cap' ? ' holds more' : ' is heavier') +
+             ', what should you do?');
+        return {
+          stem: stem,
+          opts:d.opts.map(function(v){ return valStr(v, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.dom === 'cap'
+                ? '要用同一個杯子量兩邊，杯數才能比。高矮和輕重都決定不了裝得多不多。'
+                : '天平沉下去的那一邊比較重；如果天平是平的，就是兩個一樣重。大小和高矮都決定不了輕重。')
+            : (d.dom === 'cap'
+                ? 'Both have to be measured with one single cup before the counts can be compared. Height and weight settle nothing here.'
+                : 'The side of the balance that goes down is the heavier one, and if it stays level the two weigh the same. Size and height settle nothing here.')
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：10 種題型各一題＋核心題型隨機 2 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['pourCompare','balanceTilt','sameCup','blockWeigh','orderThree'].indexOf(g.id) >= 0;
+    });
+    shuffle(extraPool).slice(0, 2).forEach(function(g){ slots.push(g); });
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var grp = item.gen.grp;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[grp] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

@@ -144,7 +144,24 @@ node tools/breaktest.js grade-2/math/time
 不是整份輸出裡隨便一個子字串。原檔與改壞版**跑同一個亂數種子**（`SIMGEN_SEED`），
 不然兩次抽到不同參數，「只有改壞版失敗」可能只是運氣。
 （`SIMGEN_SEED=42 node tools/simgen.js <review.html> 1000` 也可以自己用來重現某一批。）
-目前：add-sub 6 筆、time 27 筆、length 35 筆、divide 57 筆，全部會被抓到。
+目前：add-sub 6、time 27、length 35、divide 62、two-step 109、capacity-weight 105、
+shapes 114、solid 97、table 112 —— 二年級九課共 667 筆，全部會被抓到。
+
+**四頁都會被複製進暫存目錄**（2026-08-26 起）。以前只複製 `index.html` 與 `review.html`，
+所以任何針對 `reference.html`／`parents.html` 的斷言在這裡**永遠跑不到** —— 那些斷言等於
+沒有被證明過，而「跑不到」和「通過」在輸出上長得一模一樣。是 `grade-2/solid` 那一課
+把這個洞挖出來的。三個要注意的地方：
+
+- **改壞的「頁面」和跑起來的「檢查腳本」是兩件事。** 只有 `index`／`review` 各自有一支腳本
+  （`verify_lesson_data.js`／`simgen.js`）；`reference`／`parents` 是被 `data.check` 從旁邊
+  讀進來的，所以 break 用 `via` 指定由誰去跑，預設 `review` 跑自己、其餘三頁交給 `index`。
+  baseline 迴圈的 `['review','index']` 是**檢查腳本**的清單，不是要複製的檔案清單 ——
+  混為一談的話會寫出一個看起來對、其實把 baseline 查錯地方的版本（第一版就是這樣壞的）。
+- **`via` 只有在「沒寫」時才套預設**：用 `b.via || 預設` 的話，`via:''` 會靜靜地掉進
+  `index`，而那一支剛好也噴同一句話時，這一筆會被**誤判成證明過了**。
+- **缺頁要報 `[SETUP-FAIL]`，不可以讓 `readFileSync` 直接炸掉整個 run**；
+  同理，不認得的 `b.file` 以前會讓 `SRC[b.file]` 是 `undefined`，下一行 `.split` 丟
+  TypeError 打死整批結果。要響亮地失敗，不要靜靜地爆炸。
 
 divide 那一課的 57 筆裡有 9 筆是**第一輪 codex 審查抓到的缺陷**補上的守門條件：
 選項必須屬於這一題自己的情境（不然糖果題會冒出「5 籃」）、算式誘答要把 □ 解出來

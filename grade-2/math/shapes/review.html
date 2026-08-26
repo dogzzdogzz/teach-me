@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>圖形複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 70px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:6px 18px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:24px 0 4px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:6px;font-size:16px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:18px 22px;margin:20px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:16px;margin-top:18px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 12px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .stem svg{display:block;margin:10px auto 0}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:12px 8px;
+    font-size:18px;cursor:pointer;color:var(--ink);min-height:50px;
+    display:flex;align-items:center;justify-content:center;font-weight:700;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:20px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:14px 20px;font-size:16px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:18px;
+    font-weight:700;padding:14px 26px;cursor:pointer;margin-top:16px;min-height:52px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 圖形複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己數一次 —— 數出來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：邊、頂點、角、分類交錯出現，<strong>每一批的圖形和數字都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'圖形複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 圖形複習挑戰',
+      sub:'不看速查卡、自己數一次 —— 數出來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：邊、頂點、角、分類交錯出現，<strong>每一批的圖形和數字都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Shapes Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Shapes Review Challenge',
+      sub:'No peeking at the cheat sheet — count it yourself, and that is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving sides, corners, angles and sorting — <strong>every batch brings fresh shapes and numbers</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ side:'邊', vert:'頂點', ang:'角', sort:'分類' },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        secStraw:'🥤 吸管和黏土做形狀（範例教學 1）',
+        secSides:'📏 一條一條數邊（範例教學 2）',
+        secVerts:'📍 一個一個數頂點（範例教學 3）',
+        secTable:'🔺 三角形、四邊形和圓（範例教學 4）'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ side:'Sides', vert:'Corners', ang:'Angles', sort:'Sorting' },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        secStraw:'🥤 Build a Shape from Straws and Clay (Example 1)',
+        secSides:'📏 Count the Sides One by One (Example 2)',
+        secVerts:'📍 Count the Corners One by One (Example 3)',
+        secTable:'🔺 Triangles, Quadrilaterals and Circles (Example 4)'
+      }
+    }
+  };
+
+  var LINK_HREFS = {
+    secStraw:'index.html#secStraw', secSides:'index.html#secSides',
+    secVerts:'index.html#secVerts', secTable:'index.html#secTable'
+  };
+
+  /* ---------- 工具 ---------- */
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+
+  /* 圖形的頂點座標，依邊數分組。每一組都放好幾個長得不一樣的 ——
+     這一課的重點就是「長相不重要，邊數才重要」，所以圖形一定要歪、要斜、要不等長。 */
+  var POLYS = {
+    3: [ [[62,12],[116,104],[8,104]],
+         [[112,20],[70,112],[10,54]],
+         [[22,12],[112,104],[8,104]] ],
+    4: [ [[18,18],[106,18],[106,106],[18,106]],
+         [[36,16],[92,16],[120,108],[8,108]],
+         [[30,10],[118,34],[96,112],[10,88]],
+         [[64,8],[120,62],[64,116],[8,62]] ],
+    5: [ [[64,8],[117,47],[97,109],[31,109],[11,47]],
+         [[20,14],[110,10],[120,80],[62,116],[8,72]] ],
+    6: [ [[64,8],[112,36],[112,92],[64,120],[16,92],[16,36]],
+         [[30,10],[100,14],[124,60],[96,112],[34,116],[8,62]] ]
+  };
+
+  var STROKE = 5, PAD = 20;
+  /* 畫布的寬高要蓋住圖形自己畫出去的最大右緣／下緣（座標＋線寬的一半）。
+     data-sides 只是給檢查腳本對照用的 —— 檢查腳本還是自己數 points 有幾對。 */
+  function polySVG(pts){
+    var maxX = 0, maxY = 0, i, s = [];
+    for (i = 0; i < pts.length; i++){
+      if (pts[i][0] > maxX) maxX = pts[i][0];
+      if (pts[i][1] > maxY) maxY = pts[i][1];
+      s.push(pts[i][0] + ',' + pts[i][1]);
+    }
+    var w = Math.ceil(maxX + STROKE / 2 + PAD), h = Math.ceil(maxY + STROKE / 2 + PAD);
+    return '<svg data-sides="' + pts.length + '" width="' + w + '" height="' + h +
+           '" viewBox="0 0 ' + w + ' ' + h + '" style="max-width:100%;height:auto" ' +
+           'xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">' +
+           '<polygon points="' + s.join(' ') + '" fill="#E3F4EB" stroke="#2F9E69" stroke-width="' +
+           STROKE + '" stroke-linejoin="round"/></svg>';
+  }
+
+  /* 選項一律是物件。去重鍵含「單位種類」—— 「4 條邊」和「4 個頂點」數字一樣，
+     卻是兩個完全不同的答案，只比數字會把它們當成重複。 */
+  function SD(n){ return { u:'side', n:n }; }        /* 幾條邊 */
+  function VX(n){ return { u:'vert', n:n }; }        /* 幾個頂點 */
+  function AG(n){ return { u:'ang',  n:n }; }        /* 幾個角 */
+  function CT(n, s){ return { u:'cnt', n:n, s:s }; } /* 做出幾個三角形／四邊形 */
+  function NM(k){ return { u:'name', k:k }; }        /* 圖形的名字 */
+  function SY(p, n){ return { u:'say', p:p, n:(n === undefined ? null : n) }; }  /* 一句話 */
+
+  function vkeyOf(v){
+    if (!v) return 'nil';
+    if (v.u === 'side' || v.u === 'vert' || v.u === 'ang') return v.u + '#' + v.n;
+    if (v.u === 'cnt')  return 'cnt#' + v.s + '#' + v.n;
+    if (v.u === 'name') return 'name#' + v.k;
+    if (v.u === 'say')  return 'say#' + v.p + '#' + v.n;
+    return 'raw';
+  }
+
+  var NAMES = {
+    tri:    { zh:'三角形', en:'a triangle' },
+    quad:   { zh:'四邊形', en:'a quadrilateral' },
+    circle: { zh:'圓',     en:'a circle' },
+    square: { zh:'正方形', en:'a square' },
+    rect:   { zh:'長方形', en:'a rectangle' }
+  };
+  function shapeWord(s, lang, n){
+    if (lang === 'zh') return s === 3 ? '三角形' : '四邊形';
+    var one = s === 3 ? 'triangle' : 'quadrilateral';
+    return n === 1 ? one : one + 's';
+  }
+  function sayStr(v, lang){
+    if (lang === 'zh'){
+      if (v.p === 'vert')       return '它有 ' + v.n + ' 個頂點';
+      if (v.p === 'noVert')     return '它沒有頂點';
+      if (v.p === 'sideShape')  return v.n + ' 條直的邊圍一圈、不交叉、接點都轉彎的圖形';
+      if (v.p === 'noStraight') return '沒有直的邊的圖形';
+      return '?';
+    }
+    if (v.p === 'vert')       return 'It has ' + v.n + (v.n === 1 ? ' corner' : ' corners');
+    if (v.p === 'noVert')     return 'It has no corners';
+    if (v.p === 'sideShape')  return 'a shape made of ' + v.n + ' straight sides in one non-crossing loop that turns at every join';
+    if (v.p === 'noStraight') return 'a shape with no straight sides';
+    return '?';
+  }
+  function valStr(v, lang){
+    if (v.u === 'side') return lang === 'zh' ? (v.n + ' 條邊') : (v.n + (v.n === 1 ? ' side' : ' sides'));
+    if (v.u === 'vert') return lang === 'zh' ? (v.n + ' 個頂點') : (v.n + (v.n === 1 ? ' corner' : ' corners'));
+    if (v.u === 'ang')  return lang === 'zh' ? (v.n + ' 個角') : (v.n + (v.n === 1 ? ' angle' : ' angles'));
+    if (v.u === 'cnt')  return lang === 'zh' ? (v.n + ' 個' + shapeWord(v.s, 'zh', v.n))
+                                             : (v.n + ' ' + shapeWord(v.s, 'en', v.n));
+    if (v.u === 'name') return NAMES[v.k][lang];
+    return sayStr(v, lang);
+  }
+
+  /* 誘答：先用「真的會犯的錯」當候選，不夠再用保底。
+     保底一律是「長得像答案的數」，不是垃圾字串；候選與保底都要通過去重。 */
+  function mixOpts(correct, cands, fallback){
+    var out = [], seen = {};
+    seen[vkeyOf(correct)] = true;
+    function ok(v){
+      if (!v) return false;
+      if ((v.u === 'side' || v.u === 'vert' || v.u === 'ang' || v.u === 'cnt') && !(v.n >= 1)) return false;
+      if (seen[vkeyOf(v)]) return false;
+      return true;
+    }
+    (cands || []).forEach(function(c){
+      if (out.length >= 3) return;
+      if (ok(c)){ seen[vkeyOf(c)] = true; out.push(c); }
+    });
+    var i = 0;
+    while (out.length < 3 && i < 60){
+      var f = fallback(i);
+      i++;
+      if (ok(f)){ seen[vkeyOf(f)] = true; out.push(f); }
+    }
+    var opts = shuffle([correct].concat(out));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+
+  /* 1、2、…、n 的數數序列（解釋裡「繞一圈數過去」用的）。 */
+  function seqTo(n, lang){
+    var a = [], i;
+    for (i = 1; i <= n; i++) a.push(i);
+    return a.join(lang === 'zh' ? '、' : ', ');
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新圖形／新數字，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 看圖數邊 */
+    { id:'countSides', cat:'side', grp:'secSides',
+      make:function(used){
+        var n = pickUnused([3,4,5,6], used);
+        var pts = pick(POLYS[n]);
+        var correct = SD(n);
+        /* 誘答：多數一條、少數一條、把頂點也算進去多算兩條。 */
+        var cands = [ SD(n + 1), SD(n - 1), SD(n + 2) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [n + 3, n - 2, n + 4, 2];
+          var v = alt[i % alt.length];
+          return (v >= 2 && v <= 9) ? SD(v) : null;
+        });
+        return { n:n, pts:pts, svg:polySVG(pts), correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      text:function(d, lang){
+        return {
+          stem:(lang === 'zh' ? '這個圖形有幾條直的邊？' : 'How many straight sides does this shape have?') + '<br>' + d.svg,
+          why:lang === 'zh'
+            ? ('從一個頂點開始繞一圈數：' + seqTo(d.n, 'zh') + ' —— 一共 ' + d.n + ' 條邊。')
+            : ('Start at one corner and go all the way round: ' + seqTo(d.n, 'en') + ' — that is ' + d.n + ' sides.')
+        };
+      } },
+    /* 2. 看圖數頂點 */
+    { id:'countVertices', cat:'vert', grp:'secVerts',
+      make:function(used){
+        var n = pickUnused([3,4,5,6], used);
+        var pts = pick(POLYS[n]);
+        var correct = VX(n);
+        var cands = [ VX(n + 1), VX(n - 1), VX(n + 2) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [n + 3, n - 2, n + 4, 2];
+          var v = alt[i % alt.length];
+          return (v >= 2 && v <= 9) ? VX(v) : null;
+        });
+        return { n:n, pts:pts, svg:polySVG(pts), correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      text:function(d, lang){
+        return {
+          stem:(lang === 'zh' ? '這個圖形有幾個頂點？' : 'How many corners does this shape have?') + '<br>' + d.svg,
+          why:lang === 'zh'
+            ? ('兩段直線相接又轉彎的地方就是頂點，繞一圈數到 ' + d.n + ' 個。它有 ' + d.n + ' 條邊，所以也有 ' + d.n + ' 個頂點。')
+            : ('A corner is where straight sides meet and change direction; going round gives ' + d.n + '. It has ' + d.n +
+               ' sides, so it has ' + d.n + ' corners too.')
+        };
+      } },
+    /* 3. 知道邊數，找頂點數（這一課的核心規則） */
+    { id:'sidesToVertices', cat:'vert', grp:'secStraw',
+      make:function(used){
+        var n = pickUnused([3,4,5,6,7,8], used);
+        var correct = VX(n);
+        var cands = [ VX(n + 1), VX(n - 1), VX(n + 2) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [n + 3, n - 2, 2, 3];
+          var v = alt[i % alt.length];
+          return (v >= 2 && v <= 11) ? VX(v) : null;
+        });
+        return { n:n, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      text:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? ('一個圖形用直的邊接成一圈，一共有 ' + d.n + ' 條邊。<br>它有幾個頂點？')
+            : ('A shape is made of straight sides joined into a loop, and it has ' + d.n +
+               ' sides.<br>How many corners does it have?'),
+          why:lang === 'zh'
+            ? ('直的邊接成一圈時，邊有幾條，頂點就有幾個：' + d.n + ' 條邊就有 ' + d.n + ' 個頂點。')
+            : ('When straight sides are joined into a loop, there is one corner for every side: ' +
+               d.n + ' sides means ' + d.n + ' corners.')
+        };
+      } },
+    /* 4. 知道頂點數，找邊數（同一條規則，反過來問） */
+    { id:'verticesToSides', cat:'side', grp:'secStraw',
+      make:function(used){
+        var n = pickUnused([3,4,5,6,7,8], used);
+        var correct = SD(n);
+        var cands = [ SD(n - 1), SD(n + 1), SD(n + 2) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [n + 3, n - 2, 2, 3];
+          var v = alt[i % alt.length];
+          return (v >= 2 && v <= 11) ? SD(v) : null;
+        });
+        return { n:n, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      text:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? ('一個圖形用直的邊接成一圈，一共有 ' + d.n + ' 個頂點。<br>它有幾條直的邊？')
+            : ('A shape is made of straight sides joined into a loop, and it has ' + d.n +
+               ' corners.<br>How many straight sides does it have?'),
+          why:lang === 'zh'
+            ? ('直的邊接成一圈時，頂點有幾個，邊就有幾條：' + d.n + ' 個頂點就有 ' + d.n + ' 條邊。')
+            : ('When straight sides are joined into a loop, there is one side for every corner: ' +
+               d.n + ' corners means ' + d.n + ' sides.')
+        };
+      } },
+    /* 5. 每個頂點配一個角 */
+    { id:'angleCount', cat:'ang', grp:'secVerts',
+      make:function(used){
+        var n = pickUnused([3,4,5,6,7,8], used);
+        var correct = AG(n);
+        var cands = [ AG(n + 1), AG(n - 1), AG(n + 2) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [n + 3, n - 2, 2, 3];
+          var v = alt[i % alt.length];
+          return (v >= 2 && v <= 11) ? AG(v) : null;
+        });
+        return { n:n, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      text:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? ('一個圖形有 ' + d.n + ' 個頂點，每個頂點上都張開 1 個角。<br>它一共有幾個角？')
+            : ('A shape has ' + d.n + ' corners, and an angle opens up at every corner.<br>' +
+               'How many angles does it have altogether?'),
+          why:lang === 'zh'
+            ? ('一個頂點配一個角：' + d.n + ' 個頂點就有 ' + d.n + ' 個角。')
+            : ('One angle for each corner: ' + d.n + ' corners means ' + d.n + ' angles.')
+        };
+      } },
+    /* 6. 由邊數說出名字（三角形／四邊形） */
+    { id:'nameByCount', cat:'sort', grp:'secTable',
+      make:function(used){
+        var n = pickUnused([3,4], used);
+        var correct = NM(n === 3 ? 'tri' : 'quad');
+        /* 誘答：另一個名字、圓（根本沒有直的邊）、正方形（4 條邊不一定一樣長）。 */
+        var opts = shuffle([correct, NM(n === 3 ? 'quad' : 'tri'), NM('circle'), NM('square')]);
+        return { n:n, correct:correct, opts:opts, ans:opts.indexOf(correct) };
+      },
+      text:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? ('一個圖形用 ' + d.n + ' 條直的邊接成一圈。<br>一定可以叫它什麼？')
+            : ('A shape is made of ' + d.n + ' straight sides joined into a loop.<br>' +
+               'Which name is certainly correct?'),
+          why:lang === 'zh'
+            ? (d.n === 3
+                ? '3 條直的邊接成一圈就是三角形。'
+                : '4 條直的邊接成一圈就是四邊形。它不一定是正方形，因為 4 條邊不一定一樣長。')
+            : (d.n === 3
+                ? '3 straight sides joined into a loop make a triangle.'
+                : '4 straight sides joined into a loop make a quadrilateral. It need not be a square — the 4 sides need not be equal.')
+        };
+      } },
+    /* 7. 沒有頂點的是誰（圓的迷思） */
+    { id:'noVertex', cat:'sort', grp:'secTable',
+      make:function(used){
+        var correct = NM('circle');
+        var others = shuffle(['tri','quad','square','rect']).slice(0, 3);
+        var opts = shuffle([correct].concat(others.map(function(k){ return NM(k); })));
+        return { others:others, correct:correct, opts:opts, ans:opts.indexOf(correct) };
+      },
+      text:function(d, lang){
+        return {
+          stem:lang === 'zh' ? '下面哪一個圖形沒有頂點？' : 'Which of these shapes has no corners?',
+          why:lang === 'zh'
+            ? '圓是彎彎的一圈，沒有直的邊，也沒有相接又轉彎的地方，所以沒有頂點。'
+            : 'A circle is one curved loop with no straight sides, so straight sides never meet and change direction — it has no corners.'
+        };
+      } },
+    /* 8. 兩種圖形的邊加起來（把邊數的知識接到乘法與加法） */
+    { id:'sumSides', cat:'side', grp:'secSides',
+      make:function(used){
+        var a = pickUnused([1,2,3], used);
+        var b = pick([1,2,3]);
+        var t = 3 * a + 4 * b;
+        var correct = SD(t);
+        /* 誘答：全部當成三角形算、全部當成四邊形算、多算一條。 */
+        var cands = [ SD(3 * (a + b)), SD(4 * (a + b)), SD(t + 1) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [t - 1, t + 2, t - 2, t + 3];
+          var v = alt[i % alt.length];
+          return (v >= 2 && v <= 26) ? SD(v) : null;
+        });
+        return { a:a, b:b, total:t, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      text:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? ('🔺 ' + d.a + ' 個三角形和 🟩 ' + d.b + ' 個四邊形。<br>它們的邊加起來一共幾條？')
+            : ('🔺 ' + d.a + (d.a === 1 ? ' triangle' : ' triangles') + ' and 🟩 ' + d.b +
+               (d.b === 1 ? ' quadrilateral' : ' quadrilaterals') + '.<br>How many sides do they have altogether?'),
+          why:lang === 'zh'
+            ? ('一個三角形 3 條邊、一個四邊形 4 條邊：3 × ' + d.a + ' ＝ ' + (3 * d.a) + '，4 × ' + d.b +
+               ' ＝ ' + (4 * d.b) + '，' + (3 * d.a) + ' ＋ ' + (4 * d.b) + ' ＝ ' + d.total + ' 條邊。')
+            : ('A triangle has 3 sides and a quadrilateral has 4: 3 × ' + d.a + ' = ' + (3 * d.a) + ', 4 × ' +
+               d.b + ' = ' + (4 * d.b) + ', and ' + (3 * d.a) + ' + ' + (4 * d.b) + ' = ' + d.total + ' sides.')
+        };
+      } },
+    /* 9. 吸管做圖形：邊數就是每個圖形要用幾根 */
+    { id:'strawsToShapes', cat:'sort', grp:'secStraw',
+      make:function(used){
+        var s = pick([3,4]);
+        var k = pickUnused([2,3,4,5,6], used);
+        var total = s * k;
+        var correct = CT(k, s);
+        var cands = [ CT(k + 1, s), CT(k - 1, s), CT(k + 2, s) ];
+        var mix = mixOpts(correct, cands, function(i){
+          var alt = [k + 3, k - 2, 1, 2];
+          var v = alt[i % alt.length];
+          return (v >= 1 && v <= 8) ? CT(v, s) : null;
+        });
+        return { s:s, k:k, total:total, correct:correct, opts:mix.opts, ans:mix.ans };
+      },
+      text:function(d, lang){
+        var w = shapeWord(d.s, lang, 2);
+        return {
+          stem:lang === 'zh'
+            ? ('🥤 ' + d.total + ' 根吸管剛好全部用完，做成一樣的' + w + '，每個用 ' + d.s + ' 根。<br>每個圖形都分開做，不共用吸管。<br>可以做幾個' + w + '？')
+            : ('🥤 ' + d.total + ' straws are all used up making identical ' + w + ', ' + d.s +
+               ' straws for each one.<br>The shapes are separate and share no straws.<br>How many ' + w + ' are made?'),
+          why:lang === 'zh'
+            ? ('一個' + shapeWord(d.s, 'zh', 1) + '有 ' + d.s + ' 條邊，要 ' + d.s + ' 根吸管：' +
+               d.s + ' × ' + d.k + ' ＝ ' + d.total + '，所以可以做 ' + d.k + ' 個。')
+            : ('One ' + shapeWord(d.s, 'en', 1) + ' has ' + d.s + ' sides, so it takes ' + d.s +
+               ' straws: ' + d.s + ' × ' + d.k + ' = ' + d.total + ', so ' + d.k + ' are made.')
+        };
+      } },
+    /* 10. 什麼樣的圖形一定是四邊形（正方形、長方形都算在內） */
+    { id:'mustBeQuad', cat:'sort', grp:'secTable',
+      make:function(used){
+        var correct = SY('sideShape', 4);
+        /* 誘答都不是四邊形：圍 3 條、5 條、6 條直的邊，或根本沒有直的邊（圓）。 */
+        var pool = [ SY('sideShape', 3), SY('sideShape', 5), SY('sideShape', 6), SY('noStraight') ];
+        var others = shuffle(pool).slice(0, 3);
+        var opts = shuffle([correct].concat(others));
+        return { correct:correct, opts:opts, ans:opts.indexOf(correct) };
+      },
+      text:function(d, lang){
+        return {
+          stem:lang === 'zh' ? '下面哪一種圖形一定是四邊形？' : 'Which kind of shape is certainly a quadrilateral?',
+          why:lang === 'zh'
+            ? '四邊形就是 4 條直的邊接成一圈的圖形，邊長不長、歪不歪都沒關係。'
+            : 'A quadrilateral is any shape made of 4 straight sides joined into a loop — long or short, wonky or neat.'
+        };
+      } },
+    /* 11. 哪一句話對：邊數與頂點數一樣多 */
+    { id:'sameCountSay', cat:'vert', grp:'secStraw',
+      make:function(used){
+        var n = pickUnused([3,4,5,6,7,8], used);
+        var correct = SY('vert', n);
+        var opts = shuffle([correct, SY('vert', n + 1), SY('vert', n - 1), SY('noVert')]);
+        return { n:n, correct:correct, opts:opts, ans:opts.indexOf(correct) };
+      },
+      text:function(d, lang){
+        return {
+          stem:lang === 'zh'
+            ? ('一個圖形用直的邊接成一圈，有 ' + d.n + ' 條直的邊。<br>下面哪一句話是對的？')
+            : ('A shape is made of straight sides joined into a loop, and it has ' + d.n +
+               ' straight sides.<br>Which sentence is true?'),
+          why:lang === 'zh'
+            ? ('直的邊圍成一圈，邊有幾條，頂點就有幾個：' + d.n + ' 條邊就有 ' + d.n + ' 個頂點。')
+            : ('Straight sides in a loop give one corner for every side: ' + d.n + ' sides means ' + d.n + ' corners.')
+        };
+      } }
+  ];
+
+  /* 每個產生器只寫 text()（題幹與解釋），fmt() 由這裡統一補上。
+     關鍵在 make() 收尾時把兩種語言的題幹與解釋算出來存進 d —— 檢查腳本只看得到 d，
+     題幹不進 d 的話，「接成一圈」這句話被刪掉不會有任何檢查響（codex 審查抓到）。
+     fmt() 之後只是把存好的那一份讀出來，所以畫面上的字和被檢查的字保證是同一份。 */
+  GENS.forEach(function(g){
+    var make0 = g.make;
+    g.make = function(used){
+      var d = make0.call(g, used);
+      d.text = { zh: g.text(d, 'zh'), en: g.text(d, 'en') };
+      return d;
+    };
+    g.fmt = function(d, lang){
+      return {
+        stem: d.text[lang].stem,
+        opts: d.opts.map(function(v){ return valStr(v, lang); }),
+        ans:  d.ans,
+        why:  d.text[lang].why
+      };
+    };
+  });
+
+  /* ---------- 出一批 12 題：11 種題型各一題＋核心題型隨機 1 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['countSides','countVertices','nameByCount','sameCountSay'].indexOf(g.id) >= 0;
+    });
+    shuffle(extraPool).slice(0, 1).forEach(function(g){ slots.push(g); });
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var grp = item.gen.grp;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[grp] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
