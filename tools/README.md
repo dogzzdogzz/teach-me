@@ -58,6 +58,48 @@ python3 tools/check_parents.py $(find . -name parents.html | sort)
 
 早期手寫的 29 頁鍵名各自不同，只跑通用檢查並印出 `NOTE:`（不是失敗）。
 
+**2026-08-26 起還檢查「延伸資源」區塊**（teaching-framework §六之四），而且是在
+「早期手寫頁提前 return」**之前**跑 —— 全站 60 頁都要有這一段，不分新舊：
+
+- **這一段是用 `html.parser` 解析的，不是用正規式掃 markup。** 三輪 codex 審查裡，
+  「用正規式讀 HTML」是唯一反覆製造 fail-open 的來源：`<A HREF=…>` 大寫標籤看不到、
+  引號值裡面塞 `title='href="…" rel="…"'` 可以假冒屬性、
+  整個假區塊藏在 HTML 註解裡也能過。換成解析器之後這三種一起消失
+  （註解根本不會進 `handle_starttag`），屬性名稱也由解析器正規化。
+- 整段住在**自己的容器** `<div class="resblock">`，容器裡**不可以有巢狀 `<div>`**；
+  剛好要有一個容器，多一個少一個都報錯。
+- **屬性照名字比對**：`data-href`／`data-rel`／`data-target` 不會被當成
+  `href`／`rel`／`target`，同一個屬性重複出現也會報錯。
+- **每一列的每一個 `<a>` 都驗**（不是只驗第一個，描述裡多塞的連結也算）：絕對 https、
+  `target="_blank"`、`rel` **拆成 token** 後必須同時有 `noopener` 與 `noreferrer`
+  （`rel="notnoopener noreferrerx"` 這種字串包含法會被擋掉），
+  **而且必須落在這一列自己的網域上**。`<li>` 之外的落單 `<a>` 也會被抓到。
+- **列鍵與網域綁定**：`r1`＝junyiacademy.org、`r2`＝khanacademy.org、`r3`＝youtube.com、
+  `r4`＝tcool.cc，網域用 `urlparse().hostname` 比對（`junyiacademy.org.evil` 會被擋掉）。
+  **`r1` 與 `r4` 是必要的**；`r2`／`r3` 可以缺（4 課沒有誠實對得上的 Khan 單元、
+  50 課沒有 Numberblocks），但**只要出現就必須是上表裡的那一列**。列的順序固定 r1→r4。
+- **標題與描述的編號必須一致**：`r1t` 配 `r1d`，不可以配 `r2d`；同一個鍵不可以出現兩次。
+- `s6`／`s6p1`／`s6note` 三個鍵都要真的綁在 markup 上，**每個鍵在 zh 與 en 兩本字典都查得到**，
+  **英文字典的值不可以有中文**（平台名要羅馬拼音）。
+- `s6note` 中英文都要寫出**日期**（`連結最後檢查：YYYY-MM-DD`／`Links last checked …`）
+  **和第三方免責那句話** —— 那是安全聲明，不是裝飾，所以兩件事分開驗。
+  日期還要是**真的日曆日**（`2099-99-99` 會被擋）且中英文寫的是同一天。
+- **英文殘留檢查會先把 `\uXXXX`、`\u{...}`、`\xNN` 還原**再判 —— 不然 `"\u4e2d\u6587"`
+  畫面上是中文、檢查卻看不到。三個要注意的地方：
+  ⚠️ 還原**不能**用 `codecs.decode(..., 'unicode_escape')` —— 那條路徑會把真正的中文字
+  丟掉，變成整條檢查靜靜 fail open（第二輪審查抓到的）；
+  ⚠️ 要看**反斜線的奇偶**，`\\u4e2d` 是字面文字不是逃逸，不然會誤報；
+  ⚠️ surrogate pair 要合併回一個字。
+
+斷言全部釘在**產生出來的 markup** 上，不是釘在樣式上 —— 改 CSS 不會讓檢查靜靜消失。
+**25 筆改壞測試全過**（23 筆必須噴錯 ＋ 2 筆必須**不**噴錯），涵蓋三輪 codex 審查提出的
+每一種 fail-open：只從 en 字典拿掉一個鍵、`r1t` 配 `r2d`、描述裡多塞一個指向別的網域的連結、
+`<A HREF>` 大寫標籤、引號值裡假冒屬性、`data-href` 仿冒屬性、重複的 `rel`、
+`rel` 的 token 詐術、仿冒網域 `junyiacademy.org.evil`、`\u4e2d\u6587` 與 `\u{4e2d}` 逃逸、
+不存在的日期、中英文日期不一致、`<li>` 外的落單連結、兩個容器、巢狀 `<div>`。
+兩筆「必須不噴錯」是：**藏在 HTML 註解裡的假區塊**（不可以被當成真的）、
+**`\\u4e2d` 這種字面文字**（不可以誤報成中文殘留）。
+
 ## 3c. 課程清單與堂數
 
 ```bash
@@ -194,6 +236,16 @@ python3 tools/check_links.py .
 ```
 
 所有 `href`／`src`／meta refresh 指到的本地檔案都要存在。
+
+**2026-08-26 起還擋「孩子看的三頁出現站外網址」**（teaching-framework §六之一）。
+在那之前這條規則**寫在規範裡但沒有任何檢查在盯**：§六之四 只允許 `parents.html` 放站外連結，
+可是沒有東西攔得住有人在 `index`／`reference`／`review` 放一個 YouTube 連結，
+而那三頁是孩子自己在看的。現在 `index.html`／`reference.html`／`review.html`
+出現任何 `href`／`src`／`action`／`poster`／`data` 的**站外網址**就報 `[EXTERNAL]`：
+不分大小寫、不只 http(s)（`ftp:` 之類一樣擋）、協定相對的 `//host` 也擋、
+CSS 的 `@import`／`url()` 指向站外也擋；`mailto:`／`data:`／`tel:` 這種不離開本機的照舊放行。
+`parents.html` **不在這個規則裡**（它就是唯一的例外）。
+大寫標籤、`ftp:`、協定相對三種形狀都驗過會噴錯，而且不會誤傷 `parents.html`。
 
 ## 5. 瀏覽器實測（**最重要的一個**）
 
