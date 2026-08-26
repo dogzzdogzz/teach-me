@@ -195,7 +195,16 @@ node tools/breaktest.js grade-2/math/time
 不然兩次抽到不同參數，「只有改壞版失敗」可能只是運氣。
 （`SIMGEN_SEED=42 node tools/simgen.js <review.html> 1000` 也可以自己用來重現某一批。）
 目前：add-sub 6、numbers 25、multiply 19、time 27、length 35、divide 62、two-step 109、
-capacity-weight 105、shapes 114、solid 97、table 130 —— **二年級十一課共 729 筆**，全部會被抓到。
+capacity-weight 105、shapes 114、solid 97、table 130 —— **二年級十一課共 729 筆**，
+再加上 **grade-4 numbers 80 筆**（2026-08-26 開的第一堂四年級課），全站共 **809 筆**，全部會被抓到。
+
+`grade-4-numbers.js` 是目前唯一會**跨頁讀檔**的設定：三頁都在教「位名從右邊數起」，
+只驗上課頁等於沒在盯速查卡與家長頁。它用 `process.argv[2]` 推出課程資料夾再讀
+`reference.html`／`parents.html`（**不可以用 `__dirname`** —— 那會讀到真的 repo，
+改壞測試複製出來的那一份永遠不會被看到，斷言就變成永遠是綠的）。
+比對前先把 HTML 註解拿掉，並且比「出現幾次」而不是「有沒有出現」：
+中文字串在這些頁面上一定有兩份（markup 的 fallback ＋ 字典），只改其中一份
+必須要被抓到。
 （`numbers` 與 `multiply` 的設定是 2026-08-26 補的：那兩課在設定檔機制出現之前就上線，
 在那之前 `simgen` 對它們會直接報 `no check config`，等於**完全沒有保護**。）
 

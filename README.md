@@ -80,6 +80,12 @@
 | 📋 表格讀心術 | 報讀表格 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/parents.html) |
 
 
+## 四年級（1 個主題）
+
+| 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
+|------|------|:---:|:---:|:---:|:---:|
+| 🏙️ 大數城市 | 大數（萬～億） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/numbers/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/numbers/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/numbers/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/numbers/parents.html) |
+
 ## 五年級（23 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
@@ -125,7 +131,7 @@ docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調�
 grade-1/math/                  # 一年級：單元整理＋ 9 個四頁迷你課程
 grade-2/math/                  # 二年級：單元整理＋ 11 個四頁迷你課程（numbers／add-sub／multiply／time／length／divide／two-step／capacity-weight／shapes／solid／table）
 grade-3/math/                  # 三年級：單元整理＋ 17 個四頁迷你課程
-grade-4/math/                  # 四年級：單元整理（課程準備中）
+grade-4/math/                  # 四年級：單元整理＋ 1 個四頁迷你課程（numbers）
 grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你課程
 │   └── <主題>/                #   每個主題一個資料夾，固定四頁：
 │       ├── index.html         #     上課（互動教學）

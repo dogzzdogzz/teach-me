@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>大數複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.75; font-size:18px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:8px 20px;font-size:16px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:19px;word-break:break-word}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:14px 10px;
+    font-size:18px;cursor:pointer;color:var(--ink);min-height:52px;font-weight:700;word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:14px 20px;font-size:17px;
+  }
+  .result{
+    margin-top:20px;background:var(--card);border:2px solid var(--green);border-radius:16px;
+    padding:18px 22px;font-size:16px;display:none;
+  }
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px}
+  .btn{
+    border:none;border-radius:14px;background:var(--green);color:#fff;font-size:18px;
+    font-weight:700;padding:14px 26px;cursor:pointer;margin-top:16px;min-height:52px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 大數複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己想一次 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：位值、化聚、比大小、數序交錯出現，<strong>每一批的數字都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'大數複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 大數複習挑戰',
+      sub:'不看速查卡、自己想一次 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：位值、化聚、比大小、數序交錯出現，<strong>每一批的數字都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Big Numbers Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Big Numbers Review Challenge',
+      sub:'No peeking at the cheat sheet — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving place value, regrouping, comparing and counting on — <strong>every batch uses fresh numbers</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ place:'位值', regroup:'化聚', compare:'比大小', seq:'數序' },
+      places:['個位','十位','百位','千位','萬位','十萬位','百萬位','千萬位','億位'],
+      units:['一','十','百','千','萬','十萬','百萬','千萬','億'],
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        place:'🏙️ 位值到億位（範例教學 1）',
+        regroup:'🔄 化聚：幾個萬、幾個千（範例教學 3）',
+        compare:'⚖️ 比大小（範例教學 4）'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ place:'Place value', regroup:'Regrouping', compare:'Comparing', seq:'Counting on' },
+      places:['ones','tens','hundreds','thousands','ten-thousands','hundred-thousands','millions','ten-millions','hundred-millions'],
+      units:['ones','tens','hundreds','thousands','ten-thousands','hundred-thousands','millions','ten-millions','hundred-millions'],
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        place:'🏙️ Place value up to hundred-millions (Example 1)',
+        regroup:'🔄 Regrouping into ten-thousands and thousands (Example 3)',
+        compare:'⚖️ Comparing (Example 4)'
+      }
+    }
+  };
+
+  var LINK_HREFS = { place:'index.html#secPlace', regroup:'index.html#secRegroup', compare:'index.html#secCompare' };
+  var GROUP_OF = { place:'place', regroup:'regroup', compare:'compare', seq:'regroup' };
+
+  /* ---------- 工具 ---------- */
+  /* 這一課的數字最多九位數（到 9 億多）—— 任何選項（含保底）都不可以超過。 */
+  var MAXV = 999999999;
+  var POW = [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 值 ＋ 單位的去重鍵（和 tools/sweep.html 的 parseVU 同一套判準）。 */
+  function vkey(s){
+    var t = String(s).replace(/　/g, ' ').replace(/[−–]/g, '-').trim();
+    var m = t.match(/^-?\d+(?:\.\d+)?/);
+    if (!m) return 'raw:' + t.replace(/\s+/g, '');
+    return String(Number(m[0])) + '|' + t.slice(m[0].length).replace(/\s+/g, '');
+  }
+  /* 保證 3 個相異（依值）、都落在範圍內、且不等於正解的錯誤選項。
+     候選不夠時的保底是「長得像答案的數」（正解 ± step × 單位），不是垃圾字串 ——
+     大數的 ±1 看不出差別，所以單位由呼叫端給（位值題就用那一位的位值）。 */
+  function makeWrongs(correct, candidates, lo, hi, unit){
+    var min = (typeof lo === 'number') ? lo : 0;
+    var max = (typeof hi === 'number') ? hi : MAXV;
+    var u = unit || 1;
+    function ok(v){ return v >= min && v <= max; }
+    var out = [];
+    var seen = {}; seen[vkey(correct)] = true;
+    (candidates || []).forEach(function(c){
+      if (out.length >= 3) return;
+      var k = vkey(c);
+      if (ok(c) && !seen[k]){ seen[k] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3 && step < 60){
+      var down = correct - step * u, up = correct + step * u;
+      if (ok(down) && !seen[vkey(down)]){ seen[vkey(down)] = true; out.push(down); }
+      if (out.length < 3 && ok(up) && !seen[vkey(up)]){ seen[vkey(up)] = true; out.push(up); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  function mixOpts(correct, candidates, lo, hi, unit){
+    var wrongs = makeWrongs(correct, candidates, lo, hi, unit);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 四個互不相同的數直接當選項（比大小題）：正解是其中唯一的最大／最小值。 */
+  function pickAmong(nums, correct){
+    var opts = shuffle(nums);
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 某一位的數字是多少（位名一律從右邊數起） */
+    { id:'digitOf', cat:'place',
+      make:function(used){
+        var pos = pickUnused([4,5,6,7], used);
+        var digs = [];
+        for (var i = 0; i < 8; i++) digs.push(rand(10));
+        digs[7] = 1 + rand(9);
+        var n = 0;
+        for (var k = 0; k < 8; k++) n += digs[k] * POW[k];
+        var correct = digs[pos];
+        var others = [];
+        for (var j = 0; j < 8; j++) if (j !== pos && digs[j] !== correct) others.push(digs[j]);
+        var pool = [];
+        for (var v = 0; v < 10; v++) if (v !== correct) pool.push(v);
+        var m = mixOpts(correct, others.concat(shuffle(pool)), 0, 9);
+        return { n:n, digs:digs, pos:pos, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? d.n + ' 的' + t.places[d.pos] + '數字是多少？'
+            : 'What is the ' + t.places[d.pos] + ' digit of ' + d.n + '?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '位名從右邊數起。' + d.n + ' 從右邊數的第 ' + (d.pos + 1) + ' 位是 ' + d.correct + '，所以' + t.places[d.pos] + '是 ' + d.correct + '。'
+            : 'Place names count from the right. Digit number ' + (d.pos + 1) + ' from the right of ' + d.n + ' is ' + d.correct + ', so the ' + t.places[d.pos] + ' digit is ' + d.correct + '.'
+        };
+      } },
+    /* 2. 這個數字表示多少（位值） */
+    { id:'valueOfDigit', cat:'place',
+      make:function(used){
+        /* 八個互不相同的數字 —— 這樣「那個 D」在整個數裡只出現一次，題目才唯一。 */
+        var digs = shuffle([0,1,2,3,4,5,6,7,8,9]).slice(0, 8);
+        if (digs[7] === 0){
+          for (var i = 0; i < 7; i++){
+            if (digs[i] > 0){ digs[7] = digs[i]; digs[i] = 0; break; }
+          }
+        }
+        var n = 0;
+        for (var k = 0; k < 8; k++) n += digs[k] * POW[k];
+        var choices = [3,4,5,6,7].filter(function(p){ return digs[p] >= 1; });
+        var pos = pickUnused(choices, used);
+        var dg = digs[pos];
+        var correct = dg * POW[pos];
+        /* 誘答＝把位值放錯（差一格、少一格）＋「別的位真正代表的值」。
+           dg 本身也是誘答：只看數字、沒看它站在哪一位（設定檔白名單裡的刻意迷思）。 */
+        var cands = [dg, dg * POW[pos - 1], dg * POW[pos + 1]];
+        [3,4,5,6,7].forEach(function(p){
+          if (p !== pos && digs[p] >= 1) cands.push(digs[p] * POW[p]);
+        });
+        cands = cands.filter(function(v){ return v !== correct && v > 0 && v <= MAXV; });
+        var m = mixOpts(correct, shuffle(cands), 1, MAXV, POW[pos]);
+        return { n:n, digs:digs, pos:pos, dg:dg, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? d.n + ' 的 ' + d.dg + ' 表示多少？'
+            : 'In ' + d.n + ', what does the ' + d.dg + ' stand for?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.dg + ' 站在' + t.places[d.pos] + '，表示 ' + d.dg + ' 個' + t.units[d.pos] + '，也就是 ' + d.correct + '。'
+            : 'The ' + d.dg + ' stands in the ' + t.places[d.pos] + ' place — that is ' + d.dg + ' ' + t.units[d.pos] + ', or ' + d.correct + '.'
+        };
+      } },
+    /* 3. 展開式填空（挖掉百萬位那一項） */
+    { id:'expandBlank', cat:'place',
+      make:function(used){
+        var a = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var b = 1 + rand(9);
+        var c = 1 + rand(9);
+        var n = a * POW[7] + b * POW[6] + c * POW[4];
+        var correct = b * POW[6];
+        /* 誘答都是「位值放錯」：只看數字 b、把 b 當成十萬位或千萬位、正負一格。
+           要濾掉剛好等於題幹已經印出來的兩個數 —— 那看起來像把題目抄回來。 */
+        var cands = [b, b * POW[5], b * POW[7], correct + POW[6], correct - POW[6]];
+        cands = cands.filter(function(v){
+          return v !== correct && v > 0 && v <= MAXV && v !== a * POW[7] && v !== c * POW[4];
+        });
+        var m = mixOpts(correct, shuffle(cands), 1, MAXV, POW[6]);
+        return { n:n, a:a, b:b, c:c, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: d.n + ' ＝ ' + (d.a * POW[7]) + ' ＋ ? ＋ ' + (d.c * POW[4]),
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.b + ' 站在百萬位，表示 ' + d.correct + '：' + (d.a * POW[7]) + ' ＋ ' + d.correct + ' ＋ ' + (d.c * POW[4]) + ' ＝ ' + d.n + '。'
+            : 'The ' + d.b + ' sits in the millions place, so it is ' + d.correct + ': ' + (d.a * POW[7]) + ' + ' + d.correct + ' + ' + (d.c * POW[4]) + ' = ' + d.n + '.'
+        };
+      } },
+    /* 4. 裡面有幾個萬（化聚） */
+    { id:'howManyWan', cat:'regroup',
+      make:function(used){
+        var a = pickUnused([12,25,35,48,60,125,340,1250,2450,3500,7008,9999], used);
+        var n = a * 10000;
+        var cands = [a * 10, Math.floor(a / 10), a + 1, a - 1, a + 10];
+        cands = cands.filter(function(v){ return v > 0 && v !== a && v <= 99999; });
+        var m = mixOpts(a, shuffle(cands), 1, 99999);
+        return { a:a, n:n, correct:a, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.n + ' 裡面有幾個萬？' : 'How many ten-thousands are there in ' + d.n + '?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '1 個萬是 10000。' + d.n + ' ÷ 10000 ＝ ' + d.a + '，所以有 ' + d.a + ' 個萬。'
+            : 'One ten-thousand is 10000, and ' + d.n + ' ÷ 10000 = ' + d.a + ', so there are ' + d.a + ' of them.'
+        };
+      } },
+    /* 5. 幾個萬是多少（化聚，反方向） */
+    { id:'wanToNumber', cat:'regroup',
+      make:function(used){
+        var a = pickUnused([12,25,35,48,60,125,340,1250,2450,3500,7008,9999], used);
+        var correct = a * 10000;
+        var cands = [a * 1000, a * 100000, a, correct + 10000, correct - 10000];
+        cands = cands.filter(function(v){ return v > 0 && v !== correct && v <= MAXV; });
+        var m = mixOpts(correct, shuffle(cands), 1, MAXV, 10000);
+        return { a:a, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? d.a + ' 個萬是多少？' : 'How much is ' + d.a + ' ten-thousands?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.a + ' 個萬就是 ' + d.a + ' × 10000 ＝ ' + d.correct + '。'
+            : d.a + ' ten-thousands is ' + d.a + ' × 10000 = ' + d.correct + '.'
+        };
+      } },
+    /* 6. 幾個萬又幾個一，合起來是多少 */
+    { id:'buildFromParts', cat:'regroup',
+      make:function(used){
+        var a = pickUnused([12,25,48,125,340,1250,2450,3500,6000,9999], used);
+        var b = 1 + rand(9999);
+        var correct = a * 10000 + b;
+        var cands = [a * 10000 + b * 10, a * 1000 + b, a + b, correct + 10000, correct - 10000];
+        cands = cands.filter(function(v){ return v > 0 && v !== correct && v <= MAXV; });
+        var m = mixOpts(correct, shuffle(cands), 1, MAXV, 10000);
+        return { a:a, b:b, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? d.a + ' 個萬和 ' + d.b + ' 個一合起來是多少？'
+            : 'What is ' + d.a + ' ten-thousands plus ' + d.b + ' ones?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? d.a + ' 個萬是 ' + (d.a * 10000) + '，再加 ' + d.b + ' 個一，合起來是 ' + d.correct + '。'
+            : d.a + ' ten-thousands is ' + (d.a * 10000) + ', plus ' + d.b + ' ones makes ' + d.correct + '.'
+        };
+      } },
+    /* 7. 換單位：1 個大單位 ＝ 10 個小一格的單位 */
+    { id:'unitSwap', cat:'regroup',
+      make:function(used){
+        var p = pickUnused([5,6,7,8], used);
+        var a = 1 + rand(9);
+        var correct = a * 10;
+        var cands = [a, a * 100, correct + 10, correct - 10, a + 10];
+        cands = cands.filter(function(v){ return v > 0 && v !== correct && v <= 1000; });
+        var m = mixOpts(correct, shuffle(cands), 1, 1000);
+        return { p:p, a:a, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var big = t.units[d.p], small = t.units[d.p - 1];
+        return {
+          stem: lang === 'zh'
+            ? d.a + ' 個' + big + ' 是幾個' + small + '？'
+            : d.a + ' ' + big + ' is how many ' + small + '?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '往右一格，1 個' + big + ' 換成 10 個' + small + '，所以 ' + d.a + ' 個' + big + ' ＝ ' + d.correct + ' 個' + small + '。'
+            : 'One place to the right, 1 ' + big + ' swaps for 10 ' + small + ', so ' + d.a + ' ' + big + ' = ' + d.correct + ' ' + small + '.'
+        };
+      } },
+    /* 8. 哪一個最大（千萬位相同，逼著往右一位一位比） */
+    { id:'biggest', cat:'compare',
+      make:function(used){
+        var h = pickUnused([1,2,3,4,5,6,7,8,9], used);
+        var tails = [];
+        while (tails.length < 4){
+          var v = rand(10000000);
+          if (tails.indexOf(v) < 0) tails.push(v);
+        }
+        var nums = tails.map(function(x){ return h * POW[7] + x; });
+        var correct = Math.max.apply(null, nums);
+        var m = pickAmong(nums, correct);
+        return { h:h, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '下面哪一個數最大？' : 'Which of these is the biggest?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '四個數的千萬位都是 ' + d.h + '，要往右一位一位比下去：' + d.correct + ' 最大。'
+            : 'All four share the ten-millions digit ' + d.h + ', so keep comparing one place to the right: ' + d.correct + ' is the biggest.'
+        };
+      } },
+    /* 9. 哪一個最小（位數不同，先數位數） */
+    { id:'smallest', cat:'compare',
+      make:function(used){
+        var m1 = pickUnused([1,2,3,4,5,6,7,8], used);
+        var m2 = m1 + 1 + rand(9 - m1);
+        var low = [m1 * POW[6] + rand(POW[6]), m2 * POW[6] + rand(POW[6])];
+        var high = [];
+        while (high.length < 2){
+          var v = (1 + rand(9)) * POW[7] + rand(POW[7]);
+          if (high.indexOf(v) < 0) high.push(v);
+        }
+        var nums = low.concat(high);
+        var correct = Math.min.apply(null, nums);
+        var m = pickAmong(nums, correct);
+        return { m1:m1, m2:m2, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '下面哪一個數最小？' : 'Which of these is the smallest?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '先比位數：' + d.correct + ' 是 7 位數，比 8 位數小；兩個 7 位數再從最左邊的百萬位比，' + d.m1 + ' 比 ' + d.m2 + ' 小，所以 ' + d.correct + ' 最小。'
+            : 'Count the digits first: ' + d.correct + ' has 7 digits, fewer than an 8-digit number. Between the two 7-digit numbers, compare the leftmost place (millions): ' + d.m1 + ' is less than ' + d.m2 + ', so ' + d.correct + ' is the smallest.'
+        };
+      } },
+    /* 10. 一萬一萬地數 */
+    { id:'skipWan', cat:'seq',
+      make:function(used){
+        var base = pickUnused([12,25,48,125,340,1250,2450,3500], used);
+        var start = base * 10000 + rand(10000);
+        var correct = start + 30000;
+        var cands = [correct + 10000, correct + 1000, correct + 100000, correct - 1000];
+        cands = cands.filter(function(v){
+          return v > 0 && v !== correct && v <= MAXV &&
+                 v !== start && v !== start + 10000 && v !== start + 20000;
+        });
+        var m = mixOpts(correct, shuffle(cands), 1, MAXV, 10000);
+        return { start:start, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: d.start + '、' + (d.start + 10000) + '、' + (d.start + 20000) + '、?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '每次加 10000：' + (d.start + 20000) + ' ＋ 10000 ＝ ' + d.correct + '。'
+            : 'Add 10000 each time: ' + (d.start + 20000) + ' + 10000 = ' + d.correct + '.'
+        };
+      } },
+    /* 11. 跨過一個萬（一個一個數，滿十進位） */
+    { id:'crossWan', cat:'seq',
+      make:function(used){
+        var k = pickUnused([13,26,49,126,341,1251,2451,3501], used);
+        var n = k * 10000 - 2;
+        var correct = k * 10000;
+        var cands = [correct + 1, correct + 10, correct + 100, correct - 10];
+        cands = cands.filter(function(v){
+          return v > 0 && v !== correct && v <= MAXV && v !== n && v !== n + 1;
+        });
+        var m = mixOpts(correct, shuffle(cands), 1, MAXV);
+        return { k:k, n:n, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: d.n + '、' + (d.n + 1) + '、?',
+          opts: d.opts.map(String), ans: d.ans,
+          why: lang === 'zh'
+            ? '一個一個數：' + (d.n + 1) + ' 再加 1，個位滿十就往前進位，剛好湊成一個新的萬：' + d.correct + '。'
+            : 'Count on by one: ' + (d.n + 1) + ' plus 1 — the nines all roll over and it lands exactly on a fresh ten-thousand: ' + d.correct + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：11 種題型各一題＋核心題型隨機 1 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['digitOf','howManyWan','wanToNumber','biggest','buildFromParts'].indexOf(g.id) >= 0;
+    });
+    slots.push(pick(extraPool));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[GROUP_OF[cat]] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>
