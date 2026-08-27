@@ -80,7 +80,7 @@
 | 📋 表格讀心術 | 報讀表格 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/parents.html) |
 
 
-## 四年級（5 個主題）
+## 四年級（6 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
 |------|------|:---:|:---:|:---:|:---:|
@@ -89,6 +89,7 @@
 | 🧭 角度測量站 | 角度、量角器與旋轉角 | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle/parents.html) |
 | 🧱 面積鋪磚廠 | 面積（平方公分、平方公尺、長方形公式） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/area/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/area/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/area/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/area/parents.html) |
 | 🕓 24 時調度中心 | 時間（24 時制、日時分秒的加減） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/parents.html) |
+| 🍫 分數變身工廠 | 分數（假分數與帶分數） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/fraction/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/fraction/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/fraction/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/fraction/parents.html) |
 
 ## 五年級（23 個主題）
 
@@ -135,7 +136,7 @@ docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調�
 grade-1/math/                  # 一年級：單元整理＋ 9 個四頁迷你課程
 grade-2/math/                  # 二年級：單元整理＋ 11 個四頁迷你課程（numbers／add-sub／multiply／time／length／divide／two-step／capacity-weight／shapes／solid／table）
 grade-3/math/                  # 三年級：單元整理＋ 17 個四頁迷你課程
-grade-4/math/                  # 四年級：單元整理＋ 5 個四頁迷你課程（angle／area／numbers／rounding／time）
+grade-4/math/                  # 四年級：單元整理＋ 6 個四頁迷你課程（angle／area／fraction／numbers／rounding／time）
 grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你課程
 │   └── <主題>/                #   每個主題一個資料夾，固定四頁：
 │       ├── index.html         #     上課（互動教學）

@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分數變身複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.75; font-size:18px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:8px 20px;font-size:16px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:19px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:17px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{display:none;margin-top:20px;background:var(--green-soft);border-radius:16px;padding:18px}
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px;font-size:16px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:18px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 分數變身複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己想一次 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：認名字、假分數與帶分數互換、同分母的加減交錯出現，<strong>每一批的數字都是新出的</strong>。<br>
+    這一課<strong>不做約分</strong>，答案只要還有分數部分，分母就是原來那一個分母。建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'分數變身複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 分數變身複習挑戰',
+      sub:'不看速查卡、自己想一次 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：認名字、假分數與帶分數互換、同分母的加減交錯出現，<strong>每一批的數字都是新出的</strong>。<br>這一課<strong>不做約分</strong>，答案只要還有分數部分，分母就是原來那一個分母。建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Fraction Makeover Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Fraction Makeover Review Challenge',
+      sub:'No peeking at the cheat sheet — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving the three names, converting between improper fractions and mixed numbers, and adding and subtracting with one denominator — <strong>every batch uses fresh numbers</strong>.<br>Nothing is <strong>simplified</strong> in this lesson: whenever an answer still has a fraction part, it keeps the denominator it started with. Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ name:'三個名字', toMixed:'假分數 → 帶分數', toImp:'帶分數 → 假分數', add:'相加', sub:'相減' },
+      kindName:{ proper:'真分數', improper:'假分數', mixed:'帶分數', whole:'整數' },
+      /* 帶分數在中文寫成「1 又 2/5」—— 數字和「又」之間留一個空白。 */
+      frac:function(n, d){ return n + '/' + d; },
+      mixed:function(w, n, d){
+        if (w > 0 && n > 0) return w + ' 又 ' + n + '/' + d;
+        if (w > 0) return String(w);
+        if (n > 0) return n + '/' + d;
+        return '0';
+      },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        name:'🍫 三個名字（範例教學 1）',
+        toMixed:'➗ 假分數變身成帶分數（範例教學 2）',
+        toImp:'✖️ 帶分數變身成假分數（範例教學 3）',
+        add:'➕ 相加：分母不動（範例教學 4）',
+        sub:'➖ 相減：不夠減就借 1（範例教學 5）'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ name:'The three names', toMixed:'Improper to mixed', toImp:'Mixed to improper', add:'Adding', sub:'Subtracting' },
+      kindName:{ proper:'a proper fraction', improper:'an improper fraction', mixed:'a mixed number', whole:'a whole number' },
+      /* In English a mixed number is written with a space: “1 2/5” means 1 + 2/5. */
+      frac:function(n, d){ return n + '/' + d; },
+      mixed:function(w, n, d){
+        if (w > 0 && n > 0) return w + ' ' + n + '/' + d;
+        if (w > 0) return String(w);
+        if (n > 0) return n + '/' + d;
+        return '0';
+      },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        name:'🍫 The three names (Example 1)',
+        toMixed:'➗ Improper fraction into mixed number (Example 2)',
+        toImp:'✖️ Mixed number into improper fraction (Example 3)',
+        add:'➕ Adding: the denominator stays put (Example 4)',
+        sub:'➖ Subtracting: borrow 1 when it is not enough (Example 5)'
+      }
+    }
+  };
+
+  var LINK_HREFS = {
+    name:'index.html#secNames',
+    toMixed:'index.html#secToMixed',
+    toImp:'index.html#secToImp',
+    add:'index.html#secAdd',
+    sub:'index.html#secSub'
+  };
+  var GROUP_OF = { name:'name', toMixed:'toMixed', toImp:'toImp', add:'add', sub:'sub' };
+
+  /* ---------- 工具 ---------- */
+  /* 這一課的範圍：三個名字、假分數與帶分數互換、同分母（含帶分數）的加減。
+     所有分數都是正的、兩個加數（減數）的分母一樣，而且**不做約分** ——
+     答案的分母就是題目給的那一個。平分與同分母真分數的加減是三年級；
+     擴分約分通分與異分母是五年級；分數的乘除也是五年級。 */
+
+  var DEN_MIN = 3;      // 產生器用到的最小分母（2 太小，誘答很容易撞在一起）
+  var DEN_MAX = 8;      // 最大分母
+  var WHOLE_MAX = 4;    // 產生器用到的整數部分上限
+
+  /* 一個選項就是一組「整數 w、分子 n、分母 d」，**照字面印出來**（不會自動整理），
+     這樣「進位了卻沒扣掉分母」那種迷思寫法才顯示得出來。值一律用 (w × d ＋ n) / d 算。 */
+  function opt(kind, w, n, d){ return { kind:kind, w:w, n:n, d:d }; }
+  function fracOpt(n, d){ return opt('frac', 0, n, d); }
+  function mixedOpt(w, n, d){ return opt('mixed', w, n, d); }
+  function nameOpt(key){ return { kind:'name', key:key }; }
+
+  function gcd(a, b){ return b ? gcd(b, a % b) : a; }
+  /* 值的鍵：把 (w × d ＋ n) / d 約到最簡再當字串比 —— 6/4 和 3/2 必須算成同一個值，
+     不然兩個「看起來不一樣、其實一樣大」的選項會同時出現（§六之二）。 */
+  function optKey(o){
+    if (o.kind === 'name') return 'k|' + o.key;
+    var num = o.w * o.d + o.n;
+    var g = gcd(Math.abs(num) || 1, o.d) || 1;
+    return 'v|' + (num / g) + '/' + (o.d / g);
+  }
+  function optText(t, o){
+    if (o.kind === 'name') return t.kindName[o.key];
+    if (o.kind === 'frac') return t.frac(o.n, o.d);
+    return t.mixed(o.w, o.n, o.d);
+  }
+
+  function isProper(n, d){ return n < d; }
+  function kindOf(n, d){ return isProper(n, d) ? 'proper' : 'improper'; }
+  function toMixed(n, d){ return { w:Math.floor(n / d), n:n % d, d:d }; }
+  function toImproper(w, n, d){ return w * d + n; }
+  /* 同分母相加／相減，回傳整理好的寫法（整數是 0 就不寫整數、分子是 0 就不寫分數）。 */
+  function addPair(a, b){
+    return toMixed(toImproper(a.w, a.n, a.d) + toImproper(b.w, b.n, b.d), a.d);
+  }
+  function subPair(a, b){
+    return toMixed(toImproper(a.w, a.n, a.d) - toImproper(b.w, b.n, b.d), a.d);
+  }
+
+  /* 英文把數字接在名詞前面就有單複數問題，而 1 是唯一會出錯的那一個值。
+     放在這裡（不是放在 TXT.en 裡）是因為兩本字典的鍵必須一一對應。 */
+  function plEn(v, name){ return v + ' ' + name + (v === 1 ? '' : 's'); }
+  /* 名詞加了 s，動詞也要跟著 —— 「1 square are left over」是同一個 1 的問題。 */
+  function isAreEn(v){ return (v === 1) ? ' is' : ' are'; }
+
+  function rangeList(lo, hi){
+    var out = [];
+    for (var v = lo; v <= hi; v++) out.push(v);
+    return out;
+  }
+  /* 每一個產生器的參數池。上界與下界只寫在這裡一次，檢查設定照著算選項的合理範圍。 */
+  var DEN_POOL   = rangeList(DEN_MIN, DEN_MAX);   // 分母 3~8
+  var WHOLE_POOL = rangeList(1, 3);               // 帶分數的整數部分 1~3
+  var QUOT_POOL  = rangeList(2, 3);               // 假分數換出來的商 2~3
+  var BIGW_POOL  = rangeList(2, WHOLE_MAX);       // 被減數／整數化聚的整數部分 2~4
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+
+  /* 保證 3 個「依值相異」的錯誤選項。候選不夠時的保底是**長得像答案的分數**
+     （在同一個分母上 ± 幾格），不是垃圾字串。 */
+  function mixBy(correct, cands, fallback){
+    var seen = {}; seen[optKey(correct)] = true;
+    var wrongs = [];
+    (cands || []).forEach(function(c){
+      if (wrongs.length >= 3 || !c) return;
+      var k = optKey(c);
+      if (!seen[k]){ seen[k] = true; wrongs.push(c); }
+    });
+    var step = 1;
+    while (wrongs.length < 3 && step < 200){
+      var extra = fallback(step) || [];
+      for (var i = 0; i < extra.length && wrongs.length < 3; i++){
+        if (!extra[i]) continue;
+        var k2 = optKey(extra[i]);
+        if (!seen[k2]){ seen[k2] = true; wrongs.push(extra[i]); }
+      }
+      step++;
+    }
+    var opts = shuffle([correct].concat(wrongs.slice(0, 3)));
+    var keys = opts.map(optKey);
+    return { opts:opts, ans:keys.indexOf(optKey(correct)) };
+  }
+  /* 保底：在同一個分母上把總格數 ± step，再整理成正解那一種寫法。 */
+  function nearBy(total, d, kind){
+    return function(step){
+      return [total + step, total - step].filter(function(v){ return v >= 1; }).map(function(v){
+        if (kind === 'frac') return fracOpt(v, d);
+        var m = toMixed(v, d);
+        return mixedOpt(m.w, m.n, d);
+      });
+    };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 這樣寫的分數叫什麼？誘答是另外三個名字。
+          ⚠️ 分子剛好等於分母的那一種（5/5）不從這裡出 —— 5/5 也等於整數 1，
+          「整數」那個選項會變成講得通的答案（§六之二）。 */
+    { id:'nameOf', cat:'name',
+      make:function(used){
+        var d = pickUnused(DEN_POOL, used);
+        var wantImproper = (rand(2) === 1);
+        var n = wantImproper ? pick(rangeList(d + 1, 2 * d - 1)) : pick(rangeList(1, d - 1));
+        var kind = kindOf(n, d);
+        var order = shuffle(['proper', 'improper', 'mixed', 'whole']);
+        return { d:d, n:n, kind:kind,
+                 opts:order.map(nameOpt), ans:order.indexOf(kind) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var fracTxt = t.frac(d.n, d.d);
+        return {
+          stem: lang === 'zh'
+            ? fracTxt + ' 這樣寫的分數，叫做什麼？'
+            : 'What is a fraction written as ' + fracTxt + ' called?',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? (d.kind === 'proper'
+                ? '分子 ' + d.n + ' 比分母 ' + d.d + ' 小，所以 ' + fracTxt
+                  + ' 是真分數。帶分數是整數加真分數的寫法，前面要有一個整數才算。'
+                : '分子 ' + d.n + ' 比分母 ' + d.d + ' 大，所以 ' + fracTxt
+                  + ' 是假分數。它可以換成帶分數，但寫成 ' + fracTxt + ' 的時候，名字就叫假分數。')
+            : (d.kind === 'proper'
+                ? 'The numerator ' + d.n + ' is smaller than the denominator ' + d.d + ', so '
+                  + fracTxt + ' is a proper fraction. A mixed number has to be written as '
+                  + 'a whole number plus a proper fraction, with a whole number in front.'
+                : 'The numerator ' + d.n + ' is bigger than the denominator ' + d.d + ', so '
+                  + fracTxt + ' is an improper fraction. It can be turned into a mixed number, but written as '
+                  + fracTxt + ' its name is improper fraction.')
+        };
+      } },
+    /* 2. 四個分數裡挑出假分數。剛好只有一個分子 ≥ 分母（含分子等於分母的那一種）。 */
+    { id:'pickImproper', cat:'name',
+      make:function(used){
+        var d0 = pickUnused(DEN_POOL, used);
+        var n0 = pick(rangeList(d0, 2 * d0 - 1));          // 含 n0 ＝ d0（剛好等於 1）
+        var correct = fracOpt(n0, d0);
+        var cands = [];
+        for (var i = 0; i < 12; i++){
+          var d1 = pick(DEN_POOL);
+          var n1 = pick(rangeList(1, d1 - 1));             // 一定是真分數
+          cands.push(fracOpt(n1, d1));
+        }
+        var mx = mixBy(correct, cands, function(step){
+          var dd = DEN_POOL[step % DEN_POOL.length];
+          var nn = 1 + (step % Math.max(1, dd - 1));
+          return [fracOpt(nn, dd)];
+        });
+        return { d0:d0, n0:n0, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var ansTxt = t.frac(d.n0, d.d0);
+        return {
+          stem: lang === 'zh'
+            ? '下面哪一個是假分數？'
+            : 'Which one of these is an improper fraction?',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '假分數的分子和分母一樣大，或是分子比分母大：' + d.n0 + ' 沒有比 ' + d.d0
+              + ' 小，所以 ' + ansTxt + ' 是假分數。其他三個的分子都比分母小，都是真分數。'
+            : 'An improper fraction has a numerator equal to its denominator, or bigger: '
+              + d.n0 + ' is not smaller than ' + d.d0 + ', so ' + ansTxt
+              + ' is improper. The other three all have the smaller numerator, so they are proper.'
+        };
+      } },
+    /* 3. 假分數 → 帶分數（除不盡）。誘答包含「商和餘數放反」與「分子沒換成餘數」。 */
+    { id:'toMixed', cat:'toMixed',
+      make:function(used){
+        var d = 0, q = 0, r = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          d = pickUnused(DEN_POOL, used);
+          q = pick(QUOT_POOL);
+          r = pick(rangeList(1, d - 1));
+          /* q === r 時「商和餘數放反」就等於正解，那個誘答會被去重掉，
+             這一支就沒有在考它了。 */
+          ok = (q < d) && (q !== r);
+        }
+        if (!ok){ d = 5; q = 2; r = 3; }
+        var n = q * d + r;
+        var correct = mixedOpt(q, r, d);
+        var cands = [
+          mixedOpt(r, q, d),        // 商和餘數放反
+          mixedOpt(q, n, d),        // 分子沒有換成餘數
+          mixedOpt(q + 1, r, d)     // 商多算了 1
+        ];
+        var mx = mixBy(correct, cands, nearBy(n, d, 'mixed'));
+        return { d:d, q:q, r:r, n:n, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var fracTxt = t.frac(d.n, d.d);
+        var ansTxt = t.mixed(d.q, d.r, d.d);
+        return {
+          stem: lang === 'zh'
+            ? fracTxt + ' 換成帶分數是多少？'
+            : 'What is ' + fracTxt + ' as a mixed number?',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? d.n + ' ÷ ' + d.d + ' ＝ ' + d.q + ' 餘 ' + d.r + '：商 ' + d.q
+              + ' 寫在前面當整數，餘數 ' + d.r + ' 當新的分子，分母還是 ' + d.d
+              + '，所以是 ' + ansTxt + '。'
+            : d.n + ' ÷ ' + d.d + ' = ' + d.q + ' remainder ' + d.r + ': ' + plEn(d.q, 'whole bar')
+              + isAreEn(d.q) + ' filled and ' + plEn(d.r, 'square') + isAreEn(d.r) + ' left over, so the quotient ' + d.q
+              + ' goes in front as the whole number, the remainder ' + d.r
+              + ' becomes the new numerator, and the denominator is still ' + d.d
+              + ', giving ' + ansTxt + '.'
+        };
+      } },
+    /* 4. 假分數 → 整數（整除）。這是「規則不要寫太滿」的那一格：
+          除得剛剛好的時候沒有分數部分，答案不是帶分數。 */
+    { id:'toMixedWhole', cat:'toMixed',
+      make:function(used){
+        var d = pickUnused(DEN_POOL, used);
+        var q = pick(QUOT_POOL);
+        var n = q * d;
+        var correct = mixedOpt(q, 0, d);          // 印出來就是整數 q
+        var cands = [
+          mixedOpt(q, d, d),        // 硬寫成帶分數，把分母當成餘數
+          mixedOpt(q, 1, d),        // 以為一定會有餘數
+          mixedOpt(q - 1, 1, d)     // 商少算了 1
+        ];
+        var mx = mixBy(correct, cands, nearBy(n, d, 'mixed'));
+        return { d:d, q:q, n:n, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var fracTxt = t.frac(d.n, d.d);
+        return {
+          stem: lang === 'zh'
+            ? fracTxt + ' 換出來是多少？（除得剛剛好就寫整數）'
+            : 'What does ' + fracTxt + ' come out as? (if it divides exactly, write a whole number)',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? d.n + ' ÷ ' + d.d + ' ＝ ' + d.q + ' 餘 0：剛好裝滿 ' + d.q
+              + ' 條整條、一格都沒剩，所以答案是整數 ' + d.q
+              + '，後面不寫分數。假分數換出來不一定是帶分數。'
+            : d.n + ' ÷ ' + d.d + ' = ' + d.q + ' remainder 0: exactly ' + plEn(d.q, 'whole bar')
+              + isAreEn(d.q) + ' filled with nothing left over, so the answer is the whole number '
+              + d.q + ' with no fraction after it. An improper fraction does not always become a mixed number.'
+        };
+      } },
+    /* 5. 帶分數 → 假分數。誘答包含「只把兩個數加起來」「整數乘分子」「黏在一起」。 */
+    { id:'toImproper', cat:'toImp',
+      make:function(used){
+        var d = 0, w = 0, n = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          d = pickUnused(DEN_POOL, used);
+          w = pick(WHOLE_POOL);
+          n = pick(rangeList(1, d - 1));
+          /* 「只把兩個數加起來」和「整數乘分子」在 w ＝ n ＝ 2 時是同一個數，
+             其中一個會被去重掉。 */
+          ok = (w + n !== w * n);
+        }
+        if (!ok){ d = 5; w = 2; n = 3; }
+        var total = toImproper(w, n, d);
+        var correct = fracOpt(total, d);
+        var cands = [
+          fracOpt(w + n, d),                            // 只把兩個數加起來
+          fracOpt(w * n, d),                            // 整數乘分子
+          fracOpt(Number(String(w) + String(n)), d)     // 兩個數字黏在一起
+        ];
+        var mx = mixBy(correct, cands, nearBy(total, d, 'frac'));
+        return { d:d, w:w, n:n, total:total, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var mixTxt = t.mixed(d.w, d.n, d.d);
+        var ansTxt = t.frac(d.total, d.d);
+        var prod = d.w * d.d;
+        return {
+          stem: lang === 'zh'
+            ? mixTxt + ' 換成假分數是多少？'
+            : 'What is ' + mixTxt + ' as an improper fraction?',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '整數 × 分母 ＋ 分子：' + d.w + ' × ' + d.d + ' ＝ ' + prod + '，' + prod
+              + ' ＋ ' + d.n + ' ＝ ' + d.total + '，分母還是 ' + d.d + '，所以是 ' + ansTxt
+              + '。「又」是加，不是乘。'
+            : 'Whole number × denominator + numerator: ' + d.w + ' × ' + d.d + ' = ' + prod + ', '
+              + prod + ' + ' + d.n + ' = ' + d.total + ', and the denominator is still ' + d.d
+              + ', giving ' + ansTxt + '. The space means plus, not times.'
+        };
+      } },
+    /* 6. 整數 → 假分數。1 就是「分母分之分母」，和相減借 1 換到的是同一個東西。 */
+    { id:'wholeToImproper', cat:'toImp',
+      make:function(used){
+        var d = 0, w = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          d = pickUnused(DEN_POOL, used);
+          w = pick(BIGW_POOL);
+          /* 「相加而不是相乘」和「少算一整條」在 d ＝ 3、w ＝ 3 時是同一個數。 */
+          ok = (w + d !== w * d - d);
+        }
+        if (!ok){ d = 4; w = 3; }
+        var total = w * d;
+        var correct = fracOpt(total, d);
+        var cands = [
+          fracOpt(w, d),            // 分子沒有乘
+          fracOpt(w + d, d),        // 相加而不是相乘
+          fracOpt(total - d, d)     // 少算了一整條
+        ];
+        var mx = mixBy(correct, cands, nearBy(total, d, 'frac'));
+        return { d:d, w:w, total:total, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var ansTxt = t.frac(d.total, d.d);
+        var oneTxt = t.frac(d.d, d.d);
+        return {
+          stem: lang === 'zh'
+            ? '整數 ' + d.w + ' 要寫成分母是 ' + d.d + ' 的假分數，是多少？'
+            : 'Written as an improper fraction with denominator ' + d.d
+              + ', what is the whole number ' + d.w + '?',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '一整條就是 ' + oneTxt + '，所以 ' + d.w + ' 條整條有 ' + d.w + ' × ' + d.d
+              + ' ＝ ' + d.total + ' 格，寫成 ' + ansTxt
+              + '。相減向整數借 1 的時候，換到的也是這個 ' + oneTxt + '。'
+            : 'One whole bar is ' + oneTxt + ', so ' + plEn(d.w, 'whole bar') + ' hold ' + d.w + ' × ' + d.d
+              + ' = ' + plEn(d.total, 'square') + ', written ' + ansTxt
+              + '. This is the same ' + oneTxt + ' that a borrowed 1 turns into when subtracting.'
+        };
+      } },
+    /* 7. 真分數 ＋ 真分數（分子一定會到分母，所以答案有整數部分）。
+          ⚠️「不進位」那個候選（s/d）和正解**一樣大**，不可以拿來當誘答。 */
+    { id:'addProper', cat:'add',
+      make:function(used){
+        var d = 0, n1 = 0, n2 = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          d = pickUnused(DEN_POOL, used);
+          n1 = pick(rangeList(1, d - 1));
+          n2 = pick(rangeList(1, d - 1));
+          /* 「分母也加起來」(s/2d) 和「算成相減」(|n1-n2|/d) 在 s ＝ 2|n1-n2| 時同值。 */
+          ok = (n1 + n2 >= d) && (n1 + n2 !== 2 * Math.abs(n1 - n2));
+        }
+        if (!ok){ d = 5; n1 = 3; n2 = 4; }
+        var s = n1 + n2;
+        var m = toMixed(s, d);
+        var correct = mixedOpt(m.w, m.n, d);
+        var cands = [
+          fracOpt(s, 2 * d),                     // 分母也加起來
+          mixedOpt(1, s, d),                     // 進位了卻沒把分母扣掉
+          fracOpt(Math.abs(n1 - n2) || 1, d)     // 算成相減
+        ];
+        var mx = mixBy(correct, cands, nearBy(s, d, 'mixed'));
+        return { d:d, n1:n1, n2:n2, s:s, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var m = toMixed(d.s, d.d);
+        var ansTxt = t.mixed(m.w, m.n, d.d);
+        return {
+          stem: lang === 'zh'
+            ? t.frac(d.n1, d.d) + ' ＋ ' + t.frac(d.n2, d.d) + ' 是多少？（分數部分要寫成真分數）'
+            : t.frac(d.n1, d.d) + ' + ' + t.frac(d.n2, d.d)
+              + ' is how much? (write the fraction part as a proper fraction)',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '分母一樣，分母不動，只把分子相加：' + d.n1 + ' ＋ ' + d.n2 + ' ＝ ' + d.s
+              + '。' + d.s + ' 到了分母 ' + d.d + '，進 1 到整數、分子剩下 ' + d.s + ' － '
+              + d.d + ' ＝ ' + m.n + '，所以是 ' + ansTxt + '。'
+            : 'The denominators match, so the denominator does not move and only the numerators add: '
+              + d.n1 + ' + ' + d.n2 + ' = ' + d.s + '. ' + d.s + ' reaches the denominator ' + d.d
+              + ', so carry 1 to the whole number and the numerator is left with ' + d.s + ' − '
+              + d.d + ' = ' + m.n + ', giving ' + ansTxt + '.'
+        };
+      } },
+    /* 8. 帶分數相加，分子一定會進位。
+          ⚠️「整數加好、分子沒扣分母」那一種（w1+w2 又 s/d）和正解一樣大，不可以當誘答。 */
+    { id:'addMixedCarry', cat:'add',
+      make:function(used){
+        var d = 0, w1 = 0, w2 = 0, n1 = 0, n2 = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          d = pickUnused(DEN_POOL, used);
+          w1 = pick(WHOLE_POOL);
+          w2 = pick(WHOLE_POOL);
+          n1 = pick(rangeList(1, d - 1));
+          n2 = pick(rangeList(1, d - 1));
+          ok = (n1 + n2 >= d);
+        }
+        if (!ok){ d = 5; w1 = 1; w2 = 2; n1 = 3; n2 = 4; }
+        var m = addPair({ w:w1, n:n1, d:d }, { w:w2, n:n2, d:d });
+        var s = n1 + n2;
+        var correct = mixedOpt(m.w, m.n, d);
+        var cands = [
+          mixedOpt(w1 + w2, s - d, d),        // 分子扣了分母，整數卻沒進位
+          mixedOpt(w1 + w2 + 1, s, d),        // 進位了卻沒把分母扣掉
+          mixedOpt(w1 + w2, s, 2 * d)         // 分母也加起來
+        ];
+        var mx = mixBy(correct, cands, nearBy(toImproper(m.w, m.n, d), d, 'mixed'));
+        return { d:d, w1:w1, w2:w2, n1:n1, n2:n2, s:s, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var m = addPair({ w:d.w1, n:d.n1, d:d.d }, { w:d.w2, n:d.n2, d:d.d });
+        var ansTxt = t.mixed(m.w, m.n, d.d);
+        return {
+          stem: lang === 'zh'
+            ? t.mixed(d.w1, d.n1, d.d) + ' ＋ ' + t.mixed(d.w2, d.n2, d.d)
+              + ' 是多少？（分數部分要寫成真分數）'
+            : t.mixed(d.w1, d.n1, d.d) + ' + ' + t.mixed(d.w2, d.n2, d.d)
+              + ' is how much? (write the fraction part as a proper fraction)',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '分子：' + d.n1 + ' ＋ ' + d.n2 + ' ＝ ' + d.s + '，到了分母 ' + d.d
+              + ' 就進 1 到整數、剩下 ' + d.s + ' － ' + d.d + ' ＝ ' + m.n + '；整數：'
+              + d.w1 + ' ＋ ' + d.w2 + ' ＋ 進位的 1 ＝ ' + m.w + '。答案是 ' + ansTxt + '。'
+            : 'Numerators: ' + d.n1 + ' + ' + d.n2 + ' = ' + d.s + ', which reaches the denominator '
+              + d.d + ', so carry 1 to the whole number and ' + d.s + ' − ' + d.d + ' = ' + m.n
+              + ' is left. Whole numbers: ' + d.w1 + ' + ' + d.w2 + ' + the 1 carried = ' + m.w
+              + '. The answer is ' + ansTxt + '.'
+        };
+      } },
+    /* 9. 帶分數相加，分子不會進位。 */
+    { id:'addMixedNoCarry', cat:'add',
+      make:function(used){
+        var d = 0, w1 = 0, w2 = 0, n1 = 0, n2 = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          d = pickUnused(DEN_POOL, used);
+          if (d < 4) continue;                 // d ＝ 3 時 n1 ＋ n2 < 3 只有一組解，抽樣太窄
+          w1 = pick(WHOLE_POOL);
+          w2 = pick(WHOLE_POOL);
+          n1 = pick(rangeList(1, d - 2));
+          n2 = pick(rangeList(1, d - 1 - n1));
+          ok = (n1 + n2 < d) && (n1 + n2 !== 2 * Math.abs(n1 - n2));
+        }
+        if (!ok){ d = 6; w1 = 1; w2 = 2; n1 = 2; n2 = 3; }
+        var s = n1 + n2;
+        var correct = mixedOpt(w1 + w2, s, d);
+        var cands = [
+          mixedOpt(w1 + w2, s, 2 * d),                    // 分母也加起來
+          mixedOpt(w1 + w2 + 1, s, d),                    // 多進了一位
+          mixedOpt(w1 + w2, Math.abs(n1 - n2) || 1, d)    // 分子算成相減
+        ];
+        var mx = mixBy(correct, cands, nearBy((w1 + w2) * d + s, d, 'mixed'));
+        return { d:d, w1:w1, w2:w2, n1:n1, n2:n2, s:s, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var ansTxt = t.mixed(d.w1 + d.w2, d.s, d.d);
+        return {
+          stem: lang === 'zh'
+            ? t.mixed(d.w1, d.n1, d.d) + ' ＋ ' + t.mixed(d.w2, d.n2, d.d)
+              + ' 是多少？（分數部分要寫成真分數）'
+            : t.mixed(d.w1, d.n1, d.d) + ' + ' + t.mixed(d.w2, d.n2, d.d)
+              + ' is how much? (write the fraction part as a proper fraction)',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '分子：' + d.n1 + ' ＋ ' + d.n2 + ' ＝ ' + d.s + '，還沒到分母 ' + d.d
+              + '，不用進位；整數：' + d.w1 + ' ＋ ' + d.w2 + ' ＝ ' + (d.w1 + d.w2)
+              + '。分母完全不動，所以是 ' + ansTxt + '。'
+            : 'Numerators: ' + d.n1 + ' + ' + d.n2 + ' = ' + d.s
+              + ', which has not reached the denominator ' + d.d + ', so nothing is carried. Whole numbers: '
+              + d.w1 + ' + ' + d.w2 + ' = ' + (d.w1 + d.w2)
+              + '. The denominator does not move at all, giving ' + ansTxt + '.'
+        };
+      } },
+    /* 10. 帶分數相減，分子一定不夠減（要借 1），而且借完整數還有 ≥ 1。 */
+    { id:'subMixedBorrow', cat:'sub',
+      make:function(used){
+        var d = 0, w1 = 0, w2 = 0, n1 = 0, n2 = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          d = pickUnused(DEN_POOL, used);
+          w1 = pick(rangeList(3, WHOLE_MAX));
+          w2 = pick(rangeList(1, w1 - 2));
+          n1 = pick(rangeList(1, d - 2));
+          n2 = pick(rangeList(n1 + 1, d - 1));
+          /* 「分子反過來減」在 2 × (n2 － n1) ＝ d 時和「借了沒扣整數」／正解同值。 */
+          ok = (n1 < n2) && (w1 - 1 - w2 >= 1) && (2 * (n2 - n1) !== d);
+        }
+        if (!ok){ d = 5; w1 = 3; w2 = 1; n1 = 1; n2 = 3; }
+        var m = subPair({ w:w1, n:n1, d:d }, { w:w2, n:n2, d:d });
+        var correct = mixedOpt(m.w, m.n, d);
+        var cands = [
+          mixedOpt(w1 - w2, n2 - n1, d),          // 分子反過來減，也沒借
+          mixedOpt(w1 - w2, n1 + d - n2, d),      // 借了卻沒把整數扣掉
+          mixedOpt(w1 + w2, n1 + n2, d)           // 算成相加
+        ];
+        var mx = mixBy(correct, cands, nearBy(toImproper(m.w, m.n, d), d, 'mixed'));
+        return { d:d, w1:w1, w2:w2, n1:n1, n2:n2, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var m = subPair({ w:d.w1, n:d.n1, d:d.d }, { w:d.w2, n:d.n2, d:d.d });
+        var top = d.n1 + d.d;
+        var ansTxt = t.mixed(m.w, m.n, d.d);
+        var oneTxt = t.frac(d.d, d.d);
+        return {
+          stem: lang === 'zh'
+            ? t.mixed(d.w1, d.n1, d.d) + ' － ' + t.mixed(d.w2, d.n2, d.d) + ' 是多少？'
+            : t.mixed(d.w1, d.n1, d.d) + ' − ' + t.mixed(d.w2, d.n2, d.d) + ' is how much?',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '分子 ' + d.n1 + ' 減不掉 ' + d.n2 + '，向整數借 1，換成 ' + oneTxt + '：'
+              + d.n1 + ' ＋ ' + d.d + ' ＝ ' + top + '，' + top + ' － ' + d.n2 + ' ＝ ' + m.n
+              + '；整數被借走 1，所以 ' + d.w1 + ' － 1 － ' + d.w2 + ' ＝ ' + m.w
+              + '。答案是 ' + ansTxt + '。'
+            : 'The numerator ' + d.n1 + ' is not enough to take ' + d.n2
+              + ' from, so borrow 1 from the whole number as ' + oneTxt + ': ' + d.n1 + ' + ' + d.d
+              + ' = ' + top + ' and ' + top + ' − ' + d.n2 + ' = ' + m.n
+              + '. The whole number lost that 1, so ' + d.w1 + ' − 1 − ' + d.w2 + ' = ' + m.w
+              + '. The answer is ' + ansTxt + '.'
+        };
+      } },
+    /* 11. 帶分數相減，分子夠減（不用借），而且分子相減不會變成 0。
+           ⚠️「白借一次」那一種（整數 −1、分子 +d）和正解一樣大，不可以當誘答。 */
+    { id:'subMixedNoBorrow', cat:'sub',
+      make:function(used){
+        var d = 0, w1 = 0, w2 = 0, n1 = 0, n2 = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          d = pickUnused(DEN_POOL, used);
+          w1 = pick(rangeList(3, WHOLE_MAX));
+          w2 = pick(rangeList(1, w1 - 1));
+          n2 = pick(rangeList(1, d - 2));
+          n1 = pick(rangeList(n2 + 1, d - 1));
+          ok = (n1 > n2) && (w1 > w2);
+        }
+        if (!ok){ d = 5; w1 = 3; w2 = 1; n1 = 4; n2 = 2; }
+        var correct = mixedOpt(w1 - w2, n1 - n2, d);
+        var cands = [
+          mixedOpt(w1 + w2, n1 - n2, d),          // 整數算成相加
+          mixedOpt(w1 - w2, n1 + n2, d),          // 分子算成相加
+          mixedOpt(w1 - w2, n1 - n2, 2 * d)       // 分母也動了
+        ];
+        var mx = mixBy(correct, cands, nearBy((w1 - w2) * d + (n1 - n2), d, 'mixed'));
+        return { d:d, w1:w1, w2:w2, n1:n1, n2:n2, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var ansTxt = t.mixed(d.w1 - d.w2, d.n1 - d.n2, d.d);
+        return {
+          stem: lang === 'zh'
+            ? t.mixed(d.w1, d.n1, d.d) + ' － ' + t.mixed(d.w2, d.n2, d.d) + ' 是多少？'
+            : t.mixed(d.w1, d.n1, d.d) + ' − ' + t.mixed(d.w2, d.n2, d.d) + ' is how much?',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '分子 ' + d.n1 + ' 減得掉 ' + d.n2 + '，不用借：' + d.n1 + ' － ' + d.n2 + ' ＝ '
+              + (d.n1 - d.n2) + '；整數：' + d.w1 + ' － ' + d.w2 + ' ＝ ' + (d.w1 - d.w2)
+              + '。分母完全不動，所以是 ' + ansTxt + '。'
+            : 'The numerator ' + d.n1 + ' is big enough to take ' + d.n2
+              + ' from, so nothing is borrowed: ' + d.n1 + ' − ' + d.n2 + ' = ' + (d.n1 - d.n2)
+              + '. Whole numbers: ' + d.w1 + ' − ' + d.w2 + ' = ' + (d.w1 - d.w2)
+              + '. The denominator does not move at all, giving ' + ansTxt + '.'
+        };
+      } },
+    /* 12. 帶分數相減，借完整數剛好變成 0 —— 答案是一個真分數，不寫整數。 */
+    { id:'subToProper', cat:'sub',
+      make:function(used){
+        var d = 0, w2 = 0, n1 = 0, n2 = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          d = pickUnused(DEN_POOL, used);
+          w2 = pick(rangeList(1, WHOLE_MAX - 1));
+          n1 = pick(rangeList(1, d - 2));
+          n2 = pick(rangeList(n1 + 1, d - 1));
+          ok = (n1 < n2) && (2 * (n2 - n1) !== d);
+        }
+        if (!ok){ d = 6; w2 = 1; n1 = 1; n2 = 5; }
+        var w1 = w2 + 1;
+        var m = subPair({ w:w1, n:n1, d:d }, { w:w2, n:n2, d:d });
+        var correct = mixedOpt(0, m.n, d);        // 整數是 0，只寫分數部分
+        var cands = [
+          mixedOpt(1, m.n, d),          // 忘了把整數扣掉
+          mixedOpt(0, n2 - n1, d),      // 分子反過來減
+          mixedOpt(w1 + w2, n1 + n2, d) // 算成相加
+        ];
+        var mx = mixBy(correct, cands, nearBy(m.n, d, 'mixed'));
+        return { d:d, w1:w1, w2:w2, n1:n1, n2:n2, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var m = subPair({ w:d.w1, n:d.n1, d:d.d }, { w:d.w2, n:d.n2, d:d.d });
+        var top = d.n1 + d.d;
+        var ansTxt = t.mixed(0, m.n, d.d);
+        var oneTxt = t.frac(d.d, d.d);
+        return {
+          stem: lang === 'zh'
+            ? t.mixed(d.w1, d.n1, d.d) + ' － ' + t.mixed(d.w2, d.n2, d.d) + ' 是多少？'
+            : t.mixed(d.w1, d.n1, d.d) + ' − ' + t.mixed(d.w2, d.n2, d.d) + ' is how much?',
+          opts: d.opts.map(function(o){ return optText(t, o); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '分子 ' + d.n1 + ' 減不掉 ' + d.n2 + '，向整數借 1，換成 ' + oneTxt + '：'
+              + d.n1 + ' ＋ ' + d.d + ' ＝ ' + top + '，' + top + ' － ' + d.n2 + ' ＝ ' + m.n
+              + '；整數被借走 1，所以 ' + d.w1 + ' － 1 － ' + d.w2
+              + ' ＝ 0。整數是 0 就不寫整數，答案是 ' + ansTxt + '。'
+            : 'The numerator ' + d.n1 + ' is not enough to take ' + d.n2
+              + ' from, so borrow 1 from the whole number as ' + oneTxt + ': ' + d.n1 + ' + ' + d.d
+              + ' = ' + top + ' and ' + top + ' − ' + d.n2 + ' = ' + m.n
+              + '. The whole number lost that 1, so ' + d.w1 + ' − 1 − ' + d.w2
+              + ' = 0. A whole number of 0 is not written, so the answer is ' + ansTxt + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    return shuffle(GENS.slice()).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(optTxt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = optTxt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[GROUP_OF[cat]] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

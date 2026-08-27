@@ -8,7 +8,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from jsobj import find_obj, balanced
 
 STRRE = re.compile(r'''(['"])((?:\\.|(?!\1)[^\\])*)\1''')
-NUM = re.compile(r'^([+-−]?)(\d+)\s*又\s*(\d+)\s*/\s*(\d+)|^([+-−]?)(\d+)\s*/\s*(\d+)|^([+-−]?\d+(?:\.\d+)?)')
+# ⚠️ 符號的字元集要寫成 [+\-−]：`[+-−]` 會被當成 '+'(U+002B) 到 '−'(U+2212) 的**範圍**，
+# 那個範圍把 0~9 全部包進去了 —— '13/5' 會被讀成「符號 1、分數 3/5」，
+# 於是 13/5 和 23/5 被判成同一個值（假警報），而真正等值的兩位數選項反而驗不到。
+# 帶分數有兩種寫法：中文「1 又 2/5」、英文「1 2/5」（用空白隔開）。
+# 少了英文那一種，`1 2/4` 和 `1 1/2` 會被當成「整數 1、單位不同」而**驗不出等值**。
+NUM = re.compile(
+    r'^([+\-−]?)(\d+)\s*又\s*(\d+)\s*/\s*(\d+)'          # 1 又 2/5
+    r'|^([+\-−]?)(\d+)[ \u3000]+(\d+)\s*/\s*(\d+)'          # 1 2/5（英文帶分數）
+    r'|^([+\-−]?)(\d+)\s*/\s*(\d+)'                         # 7/5
+    r'|^([+\-−]?\d+(?:\.\d+)?)')                             # 3 / 3.5
 
 def norm(s):
     return s.replace('　',' ').replace('−','-').replace('“','"').replace('”','"').strip()
@@ -19,15 +28,20 @@ def value_unit(s):
     t = re.sub(r'^[約大約]+', '', t)
     m = NUM.match(t)
     if not m: return None
-    if m.group(2):   # mixed number
-        sign = -1 if m.group(1) in '-−' else 1
+    if m.group(2):     # 中文帶分數 1 又 2/5
+        sign = -1 if m.group(1) in ('-', '−') else 1   # 不可以用 in '-−'：'' 也會命中
+        if int(m.group(4)) == 0: return None
         v = sign * (Fraction(int(m.group(2))) + Fraction(int(m.group(3)), int(m.group(4))))
-    elif m.group(6): # fraction
-        sign = -1 if m.group(5) in '-−' else 1
-        if int(m.group(7)) == 0: return None
-        v = sign * Fraction(int(m.group(6)), int(m.group(7)))
+    elif m.group(6):   # 英文帶分數 1 2/5
+        sign = -1 if m.group(5) in ('-', '−') else 1
+        if int(m.group(8)) == 0: return None
+        v = sign * (Fraction(int(m.group(6))) + Fraction(int(m.group(7)), int(m.group(8))))
+    elif m.group(10):  # 分數 7/5
+        sign = -1 if m.group(9) in ('-', '−') else 1
+        if int(m.group(11)) == 0: return None
+        v = sign * Fraction(int(m.group(10)), int(m.group(11)))
     else:
-        v = Fraction(m.group(8).replace('−','-'))
+        v = Fraction(m.group(12).replace('−','-'))
     unit = t[m.end():].strip()
     unit = re.sub(r'\s+', '', unit)
     if unit.startswith('%') or unit.startswith('％'):
