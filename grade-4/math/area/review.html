@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>面積複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.75; font-size:18px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:8px 20px;font-size:16px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:19px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:17px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{display:none;margin-top:20px;background:var(--green-soft);border-radius:16px;padding:18px}
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px;font-size:16px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:18px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 面積複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己想一次 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：長方形與正方形的面積、反過來找一邊、周長和面積的分別、挑單位、複合圖形交錯出現，<strong>每一批的數字都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'面積複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 面積複習挑戰',
+      sub:'不看速查卡、自己想一次 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：長方形與正方形的面積、反過來找一邊、周長和面積的分別、挑單位、複合圖形交錯出現，<strong>每一批的數字都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Area Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Area Review Challenge',
+      sub:'No peeking at the cheat sheet — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving rectangle and square areas, working a side back out, telling perimeter from area, picking the unit, and composite shapes — <strong>every batch uses fresh numbers</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ count:'數格子', formula:'面積公式', contrast:'周長還是面積', unit:'挑單位', composite:'複合圖形' },
+      area:function(v, u){ return v + ((u === 'm2') ? ' 平方公尺' : ' 平方公分'); },
+      len:function(v, u){ return v + ((u === 'm') ? ' 公尺' : ' 公分'); },
+      objectNames:{
+        stamp:'一張郵票', coin:'一枚硬幣', bookmark:'一張書籤', notebook:'一本筆記本的封面',
+        towel:'一條手帕', rug:'一塊地毯', classroom:'教室的地板', court:'一個籃球場',
+        playground:'學校的操場', living:'客廳的地板'
+      },
+      rulers:{ cm:'公分尺', m:'公尺捲尺' },
+      unitLabels:{ cm2:'平方公分', m2:'平方公尺', cm:'公分', m:'公尺' },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        count:'🧱 面積是鋪滿幾格（範例教學 1）',
+        formula:'📐 長 × 寬與邊長 × 邊長（範例教學 2）',
+        contrast:'🔀 周長和面積是兩件事（範例教學 3）',
+        unit:'📏 平方公分還是平方公尺（範例教學 4）',
+        composite:'🧩 複合圖形（範例教學 5）'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ count:'Counting squares', formula:'Area formulas', contrast:'Perimeter or area', unit:'Picking the unit', composite:'Composite shapes' },
+      area:function(v, u){ return v + ((u === 'm2') ? ' m²' : ' cm²'); },
+      len:function(v, u){ return v + ((u === 'm') ? ' m' : ' cm'); },
+      objectNames:{
+        stamp:'a stamp', coin:'a coin', bookmark:'a bookmark', notebook:'the cover of a notebook',
+        towel:'a handkerchief', rug:'a rug', classroom:'a classroom floor', court:'a basketball court',
+        playground:'a school playground', living:'a living room floor'
+      },
+      rulers:{ cm:'a centimetre ruler', m:'a metre tape' },
+      unitLabels:{ cm2:'cm²', m2:'m²', cm:'cm', m:'m' },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        count:'🧱 Area is how many squares fill it (Example 1)',
+        formula:'📐 Length × width and side × side (Example 2)',
+        contrast:'🔀 Perimeter and area are two different things (Example 3)',
+        unit:'📏 Square centimetres or square metres (Example 4)',
+        composite:'🧩 Composite shapes (Example 5)'
+      }
+    }
+  };
+
+  var LINK_HREFS = {
+    count:'index.html#secTile',
+    formula:'index.html#secFormula',
+    contrast:'index.html#secPerim',
+    unit:'index.html#secUnit',
+    composite:'index.html#secComposite'
+  };
+  var GROUP_OF = { count:'count', formula:'formula', contrast:'contrast', unit:'unit', composite:'composite' };
+
+  /* ---------- 工具 ---------- */
+  /* 這一課的範圍：面積單位只有平方公分與平方公尺（公畝／公頃／平方公里是五年級）；
+     圖形只有長方形、正方形，以及由長方形拼出來或挖掉一塊的複合圖形
+     （平行四邊形／三角形／梯形是五年級）；邊長一律是整數。 */
+  var CM_PER_M = 100;
+  var CM2_PER_M2 = CM_PER_M * CM_PER_M;   // 1 平方公尺 ＝ 10000 平方公分
+
+  function areaOf(w, h){ return w * h; }
+  function perimeterOf(w, h){ return 2 * (w + h); }
+
+  function rangeList(lo, hi){
+    var out = [];
+    for (var v = lo; v <= hi; v++) out.push(v);
+    return out;
+  }
+  /* 每一個產生器的參數池。上界與下界只寫在這裡一次，設定檔照著算選項的合理範圍。 */
+  var W_POOL = rangeList(3, 12);        // 長（公分或公尺）
+  var H_POOL = rangeList(2, 8);         // 寬
+  /* 正方形邊長刻意跳過 4：邊長 4 的正方形面積 16 ＝ 周長 16，
+     「周長」那個誘答會撞到正解。 */
+  var S_POOL = [2, 3, 5, 6, 7, 8, 9];
+  var CA_A = rangeList(3, 10), CA_B = rangeList(1, 6);   // 拼起來的第一塊
+  var CA_C = rangeList(2, 8),  CA_D = rangeList(1, 5);   // 第二塊
+  var CS_W = rangeList(5, 12), CS_H = rangeList(3, 8);   // 挖掉一塊的大長方形
+  var CS_NW = rangeList(1, 4), CS_NH = rangeList(1, 3);  // 缺口
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  /* 長方形（長 ≠ 寬），而且面積不可以剛好等於周長的數字 ——
+     那時候「周長」這個誘答會撞到正解，孩子選對也會被判錯。 */
+  function rectPair(used){
+    var w = 0, h = 0, ok = false;
+    for (var tries = 0; tries < 80 && !ok; tries++){
+      w = pickUnused(W_POOL, used);
+      h = pick(H_POOL);
+      ok = (w !== h) && (areaOf(w, h) !== perimeterOf(w, h));
+    }
+    /* 80 次都抽不到就用造的一組（7 × 4：面積 28、周長 22）。 */
+    if (!ok){ w = 7; h = 4; }
+    return { w:w, h:h };
+  }
+
+  /* 值 ＋ 單位的去重鍵（和 tools/sweep.html 的 parseVU 同一套判準）。 */
+  function vkey(s){
+    var t = String(s).replace(/　/g, ' ').replace(/[−–]/g, '-').trim();
+    var m = t.match(/^-?\d+(?:\.\d+)?/);
+    if (!m) return 'raw:' + t.replace(/\s+/g, '');
+    return String(Number(m[0])) + '|' + t.slice(m[0].length).replace(/\s+/g, '');
+  }
+  /* 保證 3 個相異（依值）、都落在範圍內、且不等於正解的錯誤選項。
+     候選不夠時的保底是「長得像答案的數」（正解 ± step × unit），不是垃圾字串。 */
+  function makeWrongs(correct, candidates, lo, hi, unit, forbid){
+    var min = (typeof lo === 'number') ? lo : 1;
+    var max = (typeof hi === 'number') ? hi : 999;
+    var u = unit || 1;
+    function ok(v){ return v >= min && v <= max; }
+    var out = [];
+    var seen = {}; seen[vkey(correct)] = true;
+    (forbid || []).forEach(function(v){ seen[vkey(v)] = true; });
+    (candidates || []).forEach(function(c){
+      if (out.length >= 3) return;
+      var k = vkey(c);
+      if (ok(c) && !seen[k]){ seen[k] = true; out.push(c); }
+    });
+    var step = 1;
+    while (out.length < 3 && step < 400){
+      var down = correct - step * u, up = correct + step * u;
+      if (ok(down) && !seen[vkey(down)]){ seen[vkey(down)] = true; out.push(down); }
+      if (out.length < 3 && ok(up) && !seen[vkey(up)]){ seen[vkey(up)] = true; out.push(up); }
+      step++;
+    }
+    return out.slice(0, 3);
+  }
+  function mixOpts(correct, candidates, lo, hi, unit, forbid){
+    var wrongs = makeWrongs(correct, candidates, lo, hi, unit, forbid);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 四個互不相同的項目直接當選項：正解是其中唯一符合條件的那一個。 */
+  function pickAmong(items, correct){
+    var opts = shuffle(items);
+    return { opts: opts, ans: opts.indexOf(correct) };
+  }
+  /* 誘答不可以是題幹印出來的數字（孩子會以為那是抄來的提示）。 */
+  function notInStem(cands, stemNums){
+    return cands.filter(function(v){ return stemNums.indexOf(v) < 0; });
+  }
+  /* 這一課有幾個產生器靠一個**刻意的陷阱選項**在教東西（把周長當面積、
+     忘了把缺口挖掉）。陷阱不可以被洗掉 —— makeWrongs 是照順序取前三個，
+     所以陷阱排最前面，其餘的才打散。 */
+  function candsWithTrap(trap, others, correct, stemNums){
+    var rest = notInStem(others, stemNums).filter(function(v){
+      return v !== correct && v !== trap && v >= 1;
+    });
+    return [trap].concat(shuffle(rest));
+  }
+
+  /* 面積的單位跟著**邊長的單位**走：邊長是幾公分，面積就是幾平方公分。
+     ⚠️ 不可以拿「這個東西該用哪一種尺量」當唯一答案 —— 同一個東西兩種單位都量得出來，
+     那是習慣不是規則，題幹一定要把邊長的單位講出來（2026-08-27 codex 審查）。 */
+  function areaUnitOf(lenUnit){ return (lenUnit === 'm') ? 'm2' : 'cm2'; }
+  /* 這一課會問到的東西，以及題幹會用哪一個單位報出它的邊長。 */
+  var OBJECTS = [
+    { key:'stamp',      len:'cm', a:5,  b:3  },
+    { key:'coin',       len:'cm', a:2,  b:2  },
+    { key:'bookmark',   len:'cm', a:15, b:5  },
+    { key:'notebook',   len:'cm', a:26, b:19 },
+    { key:'towel',      len:'cm', a:30, b:30 },
+    { key:'rug',        len:'m',  a:3,  b:2  },
+    { key:'classroom',  len:'m',  a:9,  b:8  },
+    { key:'court',      len:'m',  a:28, b:15 },
+    { key:'playground', len:'m',  a:60, b:40 },
+    { key:'living',     len:'m',  a:5,  b:4  }
+  ];
+  var UNIT_CHOICES = ['cm2', 'm2', 'cm', 'm'];
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 長方形的面積。誘答一定包含周長 —— 這一課最大的迷思。 */
+    { id:'rectArea', cat:'formula',
+      make:function(used){
+        var p = rectPair(used);
+        var correct = areaOf(p.w, p.h);
+        var per = perimeterOf(p.w, p.h);
+        var cands = candsWithTrap(per, [p.w + p.h, correct + p.w, correct - p.h], correct, [p.w, p.h]);
+        var m = mixOpts(correct, cands, 1, areaOf(12, 8) + 12, 1);
+        return { w:p.w, h:p.h, per:per, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個長方形長 ' + d.w + ' 公分、寬 ' + d.h + ' 公分，面積是多少？'
+            : 'A rectangle is ' + d.w + ' cm long and ' + d.h + ' cm wide. What is its area?',
+          opts: d.opts.map(function(v){ return t.area(v, 'cm2'); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '長 × 寬 ＝ ' + d.w + ' × ' + d.h + ' ＝ ' + d.correct + '，面積是 ' + d.correct + ' 平方公分。'
+              + d.per + ' 是繞一圈的周長，單位是公分，不是面積。'
+            : 'Length × width = ' + d.w + ' × ' + d.h + ' = ' + d.correct + ', so the area is ' + d.correct
+              + ' cm². ' + d.per + ' is the perimeter, measured in cm, not an area.'
+        };
+      } },
+    /* 2. 正方形的面積。誘答包含周長（邊長 × 4）與「邊長加邊長」。 */
+    { id:'squareArea', cat:'formula',
+      make:function(used){
+        var s = pickUnused(S_POOL, used);
+        var correct = areaOf(s, s);
+        var per = perimeterOf(s, s);
+        var cands = candsWithTrap(per, [2 * s, correct + s, correct - s], correct, [s]);
+        var m = mixOpts(correct, cands, 1, areaOf(9, 9) + 9, 1);
+        return { s:s, per:per, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個正方形的邊長是 ' + d.s + ' 公分，面積是多少？'
+            : 'A square has sides of ' + d.s + ' cm. What is its area?',
+          opts: d.opts.map(function(v){ return t.area(v, 'cm2'); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '正方形的長和寬一樣長，邊長 × 邊長 ＝ ' + d.s + ' × ' + d.s + ' ＝ ' + d.correct + ' 平方公分。'
+              + d.per + ' 是它繞一圈的周長（' + d.s + ' × 4），不是面積。'
+            : 'A square has equal length and width, so side × side = ' + d.s + ' × ' + d.s + ' = ' + d.correct
+              + ' cm². ' + d.per + ' is its perimeter (' + d.s + ' × 4), not its area.'
+        };
+      } },
+    /* 3. 反過來找一邊：面積 ÷ 一邊。誘答包含「用減法」。 */
+    { id:'missingSide', cat:'formula',
+      make:function(used){
+        var p = rectPair(used);
+        var area = areaOf(p.w, p.h);
+        var correct = p.h;
+        var cands = notInStem([area - p.w, correct + 1, correct + 2, area + p.w], [p.w, area]);
+        cands = cands.filter(function(v){ return v !== correct && v >= 1; });
+        var m = mixOpts(correct, shuffle(cands), 1, areaOf(12, 8) + 12, 1);
+        return { w:p.w, h:p.h, area:area, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個長方形的面積是 ' + d.area + ' 平方公分，長是 ' + d.w + ' 公分，寬是幾公分？'
+            : 'A rectangle has an area of ' + d.area + ' cm² and is ' + d.w + ' cm long. How wide is it?',
+          opts: d.opts.map(function(v){ return t.len(v, 'cm'); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '面積是長 × 寬，所以反過來用除法：' + d.area + ' ÷ ' + d.w + ' ＝ ' + d.correct
+              + '，寬是 ' + d.correct + ' 公分。邊長的單位是公分，不是平方公分。'
+            : 'Area is length × width, so turn it round and divide: ' + d.area + ' ÷ ' + d.w + ' = ' + d.correct
+              + ', and the width is ' + d.correct + ' cm. A side length is in cm, not cm².'
+        };
+      } },
+    /* 4. 數格子：每一排幾個 × 幾排。 */
+    { id:'countCells', cat:'count',
+      make:function(used){
+        var w = pickUnused(W_POOL, used);
+        var h = pick(H_POOL);
+        var correct = areaOf(w, h);
+        var cands = notInStem([w + h, perimeterOf(w, h), correct + w, correct - h], [w, h, 1]);
+        cands = cands.filter(function(v){ return v !== correct && v >= 1; });
+        var m = mixOpts(correct, shuffle(cands), 1, areaOf(12, 8) + 12, 1);
+        return { w:w, h:h, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個長方形用邊長 1 公分的小方格鋪滿，每一排 ' + d.w + ' 格、一共 ' + d.h + ' 排。它的面積是多少？'
+            : 'A rectangle is filled with squares of side 1 cm: ' + d.w + ' squares in each row and ' + d.h
+              + ' rows altogether. What is its area?',
+          opts: d.opts.map(function(v){ return t.area(v, 'cm2'); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '每一排 ' + d.w + ' 格、一共 ' + d.h + ' 排，就是 ' + d.w + ' × ' + d.h + ' ＝ ' + d.correct
+              + ' 格；一格是 1 平方公分，所以面積是 ' + d.correct + ' 平方公分。'
+            : 'Squares in a row × number of rows = ' + d.w + ' × ' + d.h + ' = ' + d.correct
+              + ' squares, and one square is 1 cm², so the area is ' + d.correct + ' cm².'
+        };
+      } },
+    /* 5. 問的是周長，面積當誘答（反方向練習）。 */
+    { id:'perimeterVsArea', cat:'contrast',
+      make:function(used){
+        var p = rectPair(used);
+        var area = areaOf(p.w, p.h);
+        var correct = perimeterOf(p.w, p.h);
+        var cands = candsWithTrap(area, [p.w + p.h, correct + 2, correct - 2], correct, [p.w, p.h]);
+        var m = mixOpts(correct, cands, 1, areaOf(12, 8) + 12, 1);
+        return { w:p.w, h:p.h, area:area, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個長方形長 ' + d.w + ' 公分、寬 ' + d.h + ' 公分，繞它一圈的周長是多少？'
+            : 'A rectangle is ' + d.w + ' cm long and ' + d.h + ' cm wide. What is its perimeter, once round the outside?',
+          opts: d.opts.map(function(v){ return t.len(v, 'cm'); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '周長是繞一圈的長度：' + d.w + ' ＋ ' + d.h + ' ＝ ' + (d.w + d.h) + '，再 × 2 ＝ ' + d.correct + ' 公分。'
+              + d.area + ' 是它的面積，單位是平方公分 —— 周長和面積是兩件事。'
+            : 'The perimeter is the length once round: ' + d.w + ' + ' + d.h + ' = ' + (d.w + d.h)
+              + ', then × 2 = ' + d.correct + ' cm. ' + d.area
+              + ' is its area, measured in cm² — perimeter and area are two different things.'
+        };
+      } },
+    /* 6. 挑單位。長度單位（公分、公尺）刻意放進選項 —— 那是最常見的錯。 */
+    { id:'unitPick', cat:'unit',
+      make:function(used){
+        var i = pickUnused(rangeList(0, OBJECTS.length - 1), used);
+        var obj = OBJECTS[i];
+        var correct = areaUnitOf(obj.len);
+        var m = pickAmong(UNIT_CHOICES.slice(), correct);
+        return { idx:i, key:obj.key, len:obj.len, a:obj.a, b:obj.b, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var name = t.objectNames[d.key];
+        var sideUnit = t.unitLabels[d.len];
+        return {
+          stem: lang === 'zh'
+            ? name + '量出來是長 ' + t.len(d.a, d.len) + '、寬 ' + t.len(d.b, d.len) + '。它的面積要用哪一個單位？'
+            : name + ' measures ' + t.len(d.a, d.len) + ' by ' + t.len(d.b, d.len)
+              + '. Which unit should its area be given in?',
+          opts: d.opts.map(function(k){ return t.unitLabels[k]; }), ans: d.ans,
+          why: lang === 'zh'
+            ? '邊長是用' + sideUnit + '報出來的，邊長的單位是' + sideUnit + '，面積的單位就是'
+              + t.unitLabels[d.correct] + '。' + t.unitLabels.cm + '和' + t.unitLabels.m
+              + '都是長度的單位，不能用來說面積。'
+            : 'The sides are given in ' + sideUnit + ', so the area is in ' + t.unitLabels[d.correct] + '. Both '
+              + t.unitLabels.cm + ' and ' + t.unitLabels.m + ' are units of length and cannot be used for an area.'
+        };
+      } },
+    /* 7. 平方公尺與平方公分的換算：長和寬都要換，所以乘兩次。
+          ⚠️ 這一課只教「1 平方公尺 ＝ 10000 平方公分」這**一個**換算，兩個方向輪流問。
+          k 不放大：四年級的數字範圍到 10000 為止，10000 本身已經是刻意的例外
+          （2026-08-27 codex 審查：k 到 5 會端出 50000，誘答甚至到 500 萬）。 */
+    { id:'m2Convert', cat:'unit',
+      make:function(used){
+        var dir = pickUnused(['toCm', 'toM2'], used);
+        var toCm = (dir === 'toCm');
+        var unit = toCm ? 'cm2' : 'm2';
+        var correct = toCm ? CM2_PER_M2 : 1;
+        /* 誘答都是「只乘一次／少乘一位」的結果，全部落在 1~10000 裡面。 */
+        var cands = toCm ? [CM_PER_M, 1000, 200] : [CM_PER_M, 10, 2];
+        var m = mixOpts(correct, cands, 1, CM2_PER_M2, 1);
+        return { dir:dir, unit:unit, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var toCm = (d.dir === 'toCm');
+        return {
+          stem: lang === 'zh'
+            ? (toCm ? '1 平方公尺的面積是幾平方公分？' : CM2_PER_M2 + ' 平方公分的面積是幾平方公尺？')
+            : (toCm ? 'An area of 1 m² is how many cm²?' : 'An area of ' + CM2_PER_M2 + ' cm² is how many m²?'),
+          opts: d.opts.map(function(v){ return t.area(v, d.unit); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '1 公尺 ＝ ' + CM_PER_M + ' 公分，長和寬都要換，所以 1 平方公尺 ＝ ' + CM_PER_M + ' × ' + CM_PER_M
+              + ' ＝ ' + CM2_PER_M2 + ' 平方公分。'
+              + (toCm ? '' : '反過來看，' + CM2_PER_M2 + ' 平方公分就是 1 平方公尺。')
+            : '1 m = ' + CM_PER_M + ' cm, and both the length and the width change, so 1 m² = ' + CM_PER_M
+              + ' × ' + CM_PER_M + ' = ' + CM2_PER_M2 + ' cm².'
+              + (toCm ? '' : ' Turned round, ' + CM2_PER_M2 + ' cm² is 1 m².')
+        };
+      } },
+    /* 8. 複合圖形：兩塊拼起來相加。 */
+    { id:'compositeAdd', cat:'composite',
+      make:function(used){
+        var a = 0, b = 0, c = 0, e = 0, ok = false;
+        for (var tries = 0; tries < 80 && !ok; tries++){
+          a = pickUnused(CA_A, used); b = pick(CA_B);
+          c = pick(CA_C); e = pick(CA_D);
+          /* 兩塊面積相同的話，「只算其中一塊」那兩個誘答會變成同一個。 */
+          ok = (areaOf(a, b) !== areaOf(c, e));
+        }
+        if (!ok){ a = 6; b = 2; c = 3; e = 1; }
+        var one = areaOf(a, b), two = areaOf(c, e);
+        var correct = one + two;
+        var cands = notInStem([one, two, areaOf(a + c, b + e), correct + 1], [a, b, c, e]);
+        cands = cands.filter(function(v){ return v !== correct && v >= 1; });
+        var m = mixOpts(correct, shuffle(cands), 1, areaOf(10 + 8, 6 + 5), 1);
+        return { a:a, b:b, c:c, e:e, one:one, two:two, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一塊長 ' + d.a + ' 公分、寬 ' + d.b + ' 公分的長方形，和一塊長 ' + d.c + ' 公分、寬 ' + d.e
+              + ' 公分的長方形，沒有重疊地拼成一個圖形。這個圖形的面積是多少？'
+            : 'A rectangle ' + d.a + ' cm by ' + d.b + ' cm and a rectangle ' + d.c + ' cm by ' + d.e
+              + ' cm are joined into one shape without overlapping. What is the area of that shape?',
+          opts: d.opts.map(function(v){ return t.area(v, 'cm2'); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '沒有重疊地拼起來，面積就是兩塊相加：' + d.a + ' × ' + d.b + ' ＝ ' + d.one + '，'
+              + d.c + ' × ' + d.e + ' ＝ ' + d.two + '，' + d.one + ' ＋ ' + d.two + ' ＝ ' + d.correct + ' 平方公分。'
+            : 'Joined without overlapping, the area is the two added: ' + d.a + ' × ' + d.b + ' = ' + d.one
+              + ', ' + d.c + ' × ' + d.e + ' = ' + d.two + ', and ' + d.one + ' + ' + d.two + ' = '
+              + d.correct + ' cm².'
+        };
+      } },
+    /* 9. 複合圖形：補成一大塊再減掉缺口。 */
+    { id:'compositeSub', cat:'composite',
+      make:function(used){
+        var w = 0, h = 0, nw = 0, nh = 0, ok = false;
+        for (var tries = 0; tries < 80 && !ok; tries++){
+          w = pickUnused(CS_W, used); h = pick(CS_H);
+          nw = pick(CS_NW); nh = pick(CS_NH);
+          /* 缺口的兩個方向都要比原來的長方形小（不然就不是「缺一角」）；
+             剩下的面積不可以剛好等於缺口（兩個誘答會撞在一起）；
+             也不可以剛好等於周長 —— 從角上挖掉一塊長方形不會改變周長，
+             所以那時候「算周長」也會走到正解上（2026-08-27 codex 審查）。 */
+          ok = (nw <= w - 2) && (nh <= h - 1)
+               && (areaOf(w, h) - areaOf(nw, nh) !== areaOf(nw, nh))
+               && (areaOf(w, h) - areaOf(nw, nh) !== perimeterOf(w, h));
+        }
+        if (!ok){ w = 8; h = 5; nw = 3; nh = 2; }
+        var big = areaOf(w, h), hole = areaOf(nw, nh);
+        var correct = big - hole;
+        var cands = candsWithTrap(big, [hole, big + hole, correct + 1], correct, [w, h, nw, nh]);
+        var m = mixOpts(correct, cands, 1, areaOf(12, 8) + areaOf(4, 3), 1);
+        return { w:w, h:h, nw:nw, nh:nh, big:big, hole:hole, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個長 ' + d.w + ' 公分、寬 ' + d.h + ' 公分的長方形，從一個角挖掉一塊長 ' + d.nw
+              + ' 公分、寬 ' + d.nh + ' 公分的小長方形。剩下的面積是多少？'
+            : 'A rectangle ' + d.w + ' cm by ' + d.h + ' cm has a smaller rectangle ' + d.nw + ' cm by '
+              + d.nh + ' cm taken out of one corner. What area is left?',
+          opts: d.opts.map(function(v){ return t.area(v, 'cm2'); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '先當成完整的大長方形：' + d.w + ' × ' + d.h + ' ＝ ' + d.big + '；挖掉的那一塊是 '
+              + d.nw + ' × ' + d.nh + ' ＝ ' + d.hole + '；相減 ' + d.big + ' － ' + d.hole + ' ＝ '
+              + d.correct + ' 平方公分。'
+            : 'Take it as the complete big rectangle first: ' + d.w + ' × ' + d.h + ' = ' + d.big
+              + '. The piece taken out is ' + d.nw + ' × ' + d.nh + ' = ' + d.hole + '. Subtracting, '
+              + d.big + ' − ' + d.hole + ' = ' + d.correct + ' cm².'
+        };
+      } },
+    /* 10. 文字題，單位是平方公尺（提醒面積不是只有平方公分）。 */
+    { id:'gardenM2', cat:'unit',
+      make:function(used){
+        var p = rectPair(used);
+        var correct = areaOf(p.w, p.h);
+        var per = perimeterOf(p.w, p.h);
+        var cands = notInStem([per, p.w + p.h, correct + p.w, correct - p.h], [p.w, p.h]);
+        cands = cands.filter(function(v){ return v !== correct && v >= 1; });
+        var m = mixOpts(correct, shuffle(cands), 1, areaOf(12, 8) + 12, 1);
+        return { w:p.w, h:p.h, per:per, correct:correct, opts:m.opts, ans:m.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一塊長方形的菜園長 ' + d.w + ' 公尺、寬 ' + d.h + ' 公尺，面積是多少？'
+            : 'A rectangular vegetable patch is ' + d.w + ' m long and ' + d.h + ' m wide. What is its area?',
+          opts: d.opts.map(function(v){ return t.area(v, 'm2'); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '長 × 寬 ＝ ' + d.w + ' × ' + d.h + ' ＝ ' + d.correct + '。邊長用公尺量，所以面積是 '
+              + d.correct + ' 平方公尺。' + d.per + ' 是繞一圈的周長，單位是公尺。'
+            : 'Length × width = ' + d.w + ' × ' + d.h + ' = ' + d.correct
+              + '. The sides were measured in metres, so the area is ' + d.correct + ' m². ' + d.per
+              + ' is the perimeter, measured in m.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：10 種題型各一題＋核心題型隨機 2 題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    var slots = GENS.slice();
+    var extraPool = GENS.filter(function(g){
+      return ['rectArea','squareArea','perimeterVsArea','compositeSub','countCells'].indexOf(g.id) >= 0;
+    });
+    slots = slots.concat(shuffle(extraPool).slice(0, 2));
+    return shuffle(slots).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[GROUP_OF[cat]] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

@@ -196,8 +196,8 @@ node tools/breaktest.js grade-2/math/time
 （`SIMGEN_SEED=42 node tools/simgen.js <review.html> 1000` 也可以自己用來重現某一批。）
 目前：add-sub 6、numbers 25、multiply 19、time 27、length 35、divide 62、two-step 109、
 capacity-weight 105、shapes 114、solid 97、table 130 —— **二年級十一課共 729 筆**，
-再加上 **grade-4 numbers 80 筆**、**grade-4 rounding 133 筆**與 **grade-4 angle 110 筆**，
-全站共 **1052 筆**，全部會被抓到。
+再加上 **grade-4 numbers 80 筆**、**grade-4 rounding 133 筆**、**grade-4 angle 110 筆**
+與 **grade-4 area 129 筆**，全站共 **1181 筆**，全部會被抓到。
 
 `grade-4-angle.js` 是第一份要驗「**畫出來的圖真的是幾度**」的設定，做法有三件事別課沒做過：
 
@@ -212,6 +212,25 @@ capacity-weight 105、shapes 114、solid 97、table 130 —— **二年級十一
 - **畫布的四個方向都驗**（上、下、左、右）＋ 五張 `.prot` 與一張 `.turnfig` 的 viewBox
   與 CSS 尺寸。⚠️ 但真正抓到「兩排數字擠在一起、0 與 180 互相疊住」的不是任何一條斷言，
   是把頁面**渲染出來截圖看** —— **幾何對不等於看得懂**，收工前一定要看一眼。
+
+`grade-4-area.js` 是目前守門條件最多的一份，四件事值得別課抄過去：
+
+- **「規則」和「習慣」要分開驗。** 這一課教「面積的單位跟著邊長的單位走」，那是規則；
+  「小東西用公分、大東西用公尺」是習慣。原本兩者混在一起，結果「這個東西該用哪一個單位」
+  這種題目**四個選項都講得通**（codex 第一輪）。現在產生器的題幹一定要把邊長報出來
+  （`unitPick stem does not print the side lengths … so the answer would come down to taste`），
+  而規則的措辭由 `SIBLING_RULES` 在三頁上釘住。
+- **題幹「問的是什麼」要單獨驗一次**（`ASK` 表）。只驗數字的話，把 `rectArea` 的題幹改成
+  問周長、正解卻還是面積，所有數字檢查都還是綠的。每一支產生器記一組
+  「一定要有的字」與「一定不可以有的字」（例：問面積的題幹裡不可以出現「周長」）。
+- **解釋要驗「算式」，不是只驗數字有沒有出現。** 把「長 × 寬」改成「長 ＋ 寬」時，
+  每一個要求的數字都還在。現在 `renderCheck` 要求 `why` 裡出現 `w + ' × ' + h`，
+  題庫則有 `whyExpr`（例如 `'20 － 6'`）把運算釘住。
+- **要有一張「產生器清單」（`GEN_IDS`）。** simgen 只跑「還在的」產生器，所以刪掉一整支，
+  它那一組不變條件、`expectedCorrect` 與 `renderCheck` 會一起靜靜消失 ——
+  `data.check` 現在會去讀 `review.html`，比對十個 id 一個不多一個不少。
+- ⚠️ **`'公分' 是 '平方公分' 的子字串**：拿單位名當斷言永遠是綠的，要比一整句話。
+  同理，`SIBLING_RULES` 的「出現次數」除了總數，還要 markup 那一半與字典那一半各自都有。
 
 `grade-4-rounding.js` 有兩件別課沒做過的事，都是為了「守門員自己會不會 fail-open」：
 

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>面積速查卡</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.6; font-size:16px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 60px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:6px 18px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:24px 0 4px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:6px;font-size:16px}
+  .sheet{
+    background:var(--card);border:2px solid var(--ink);border-radius:20px;
+    padding:26px;margin-top:22px;
+  }
+  .sheet h2{
+    font-size:19px;border-left:6px solid var(--green);padding-left:10px;margin:22px 0 8px;
+  }
+  .sheet h2:first-child{margin-top:0}
+  .scroller{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:15px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:center;vertical-align:middle}
+  th{background:var(--blue-soft);color:var(--blue)}
+  td.left{text-align:left}
+  table.unittable{min-width:480px}
+  table.unittable th{background:var(--green-soft);color:var(--green)}
+  table.vstable{min-width:440px}
+  .bigrule{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:16px;
+    padding:16px 18px;font-size:17px;margin-top:8px;
+  }
+  .bigrule b{color:var(--green)}
+  .eq{font-weight:800;color:var(--green);font-size:17px}
+  ol.steps{padding-left:24px;font-size:15px}
+  ol.steps li{margin-top:4px}
+  .swap{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px}
+  .swapcard{
+    border:2px solid var(--orange);background:var(--orange-soft);border-radius:14px;
+    padding:12px;text-align:center;font-size:15px;font-weight:700;color:var(--orange);
+  }
+  .demo{
+    background:var(--bg);border:2px dashed var(--line);border-radius:14px;padding:14px;
+    text-align:center;font-size:18px;font-weight:700;letter-spacing:1px;margin-top:10px;
+  }
+  .demo .small{display:block;font-size:14px;font-weight:400;letter-spacing:0;color:var(--muted);margin-top:6px}
+  .scopebox{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:14px;
+    padding:14px 18px;margin-top:10px;font-size:15px;
+  }
+  .printbtn{
+    margin-top:18px;border:none;border-radius:12px;background:var(--green);color:#fff;
+    font-size:16px;font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  footer{margin-top:28px;text-align:center;color:var(--muted);font-size:14px}
+  @media print{
+    body{background:#fff}
+    .topbar,.coursenav,.printbtn,footer{display:none}
+    .wrap{padding:0}
+    .sheet{border-color:#000;margin-top:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <span data-i18n="nav2">🗂️ 速查卡（本頁）</span>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🗂️ 面積速查卡</h1>
+    <p data-i18n="sub">兩個公式、兩個單位、周長和面積的分別 —— 印出來貼在書桌前</p>
+  </header>
+
+  <div class="sheet">
+    <h2 data-i18n="s1">一句話規則</h2>
+    <p class="bigrule" data-i18n="rule1">面積是<b>裡面鋪滿幾個單位方格</b>。邊長 1 公分的方格，一格是 <b>1 平方公分</b>；邊長 1 公尺的方格，一格是 <b>1 平方公尺</b>。</p>
+    <p class="bigrule" data-i18n="rule2">長方形的面積 ＝ <b>長 × 寬</b>；正方形的面積 ＝ <b>邊長 × 邊長</b>。<br>反過來，知道面積和一邊，用<b>除法</b>找回另一邊：面積 ÷ 一邊 ＝ 另一邊。</p>
+
+    <h2 data-i18n="s2">為什麼是「長 × 寬」</h2>
+    <ol class="steps">
+      <li data-i18n="m1"><strong>先看每一排幾格</strong>：一排的格子數，就是<strong>長</strong>有幾公分。</li>
+      <li data-i18n="m2"><strong>再看一共幾排</strong>：排數就是<strong>寬</strong>有幾公分。</li>
+      <li data-i18n="m3"><strong>每一排幾格 × 一共幾排</strong> ＝ 鋪滿的總格數 ＝ 面積。所以公式就是「長 × 寬」，不必真的一格一格數。</li>
+    </ol>
+    <div class="demo">
+      7 × 4 ＝ 28
+      <span class="small" data-i18n="mdemo">長 7 公分、寬 4 公分：每一排 7 格、一共 4 排 → 28 格 → 面積 28 平方公分。正方形是長和寬一樣長的長方形，所以邊長 6 公分的正方形是 6 × 6 ＝ 36 平方公分。</span>
+    </div>
+    <div class="demo">
+      45 ÷ 9 ＝ 5
+      <span class="small" data-i18n="bdemo">反過來：面積 45 平方公分、長 9 公分 → 寬是 45 ÷ 9 ＝ 5 公分。<strong>邊長的單位是公分，不是平方公分</strong>。</span>
+    </div>
+
+    <h2 data-i18n="s3">面積的兩個單位</h2>
+    <p data-i18n="p3">挑單位的規則只有一句：<strong>邊長用哪一個單位，面積就用那個單位的「平方」</strong>。邊長是幾公分 → 面積是幾平方公分；邊長是幾公尺 → 面積是幾平方公尺。兩條邊要先用<strong>同一個單位</strong>說（都用公分，或都用公尺），面積才跟著那個單位走。<strong>同一個東西兩種單位都量得出來</strong>（一張大海報可以說 200 公分 × 100 公分，也可以說 2 公尺 × 1 公尺）—— 小東西習慣用公分、大東西習慣用公尺，那是<strong>習慣，不是規則</strong>。</p>
+    <div class="scroller">
+      <table class="unittable">
+        <tr>
+          <th data-i18n="uth0">面積單位</th>
+          <th data-i18n="uth1">一格是</th>
+          <th data-i18n="uth2">邊長的單位</th>
+          <th data-i18n="uth3">習慣上用在</th>
+        </tr>
+        <tr>
+          <td class="eq" data-i18n="u1a">平方公分</td>
+          <td data-i18n="u1b">邊長 1 公分的正方形</td>
+          <td data-i18n="u1c">公分</td>
+          <td data-i18n="u1d">郵票、課本封面、手帕</td>
+        </tr>
+        <tr>
+          <td class="eq" data-i18n="u2a">平方公尺</td>
+          <td data-i18n="u2b">邊長 1 公尺的正方形</td>
+          <td data-i18n="u2c">公尺</td>
+          <td data-i18n="u2d">地毯、教室地板、籃球場</td>
+        </tr>
+      </table>
+    </div>
+    <div class="demo">
+      100 × 100 ＝ 10000
+      <span class="small" data-i18n="udemo">1 公尺 ＝ 100 公分，所以邊長 1 公尺的正方形也是邊長 100 公分的正方形：<strong>1 平方公尺 ＝ 10000 平方公分</strong>。注意<strong>不是 100</strong> —— 長和寬都要換，所以要乘兩次。</span>
+    </div>
+
+    <h2 data-i18n="s4">周長和面積是兩件事</h2>
+    <div class="scroller">
+      <table class="vstable">
+        <tr>
+          <th data-i18n="vth0">比一比</th>
+          <th data-i18n="vth1">周長</th>
+          <th data-i18n="vth2">面積</th>
+        </tr>
+        <tr>
+          <td data-i18n="v1a">量的是什麼</td>
+          <td data-i18n="v1b">繞一圈的長度</td>
+          <td data-i18n="v1c">裡面鋪滿幾格</td>
+        </tr>
+        <tr>
+          <td data-i18n="v2a">長方形怎麼算</td>
+          <td class="eq" data-i18n="v2b">（長 ＋ 寬）× 2</td>
+          <td class="eq" data-i18n="v2c">長 × 寬</td>
+        </tr>
+        <tr>
+          <td data-i18n="v3a">單位</td>
+          <td data-i18n="v3b">公分、公尺</td>
+          <td data-i18n="v3c">平方公分、平方公尺</td>
+        </tr>
+      </table>
+    </div>
+    <div class="swap">
+      <div class="swapcard" data-i18n="sw1">周長一樣，面積也可能不一樣</div>
+      <div class="swapcard" data-i18n="sw2">面積一樣，周長也可能不一樣</div>
+      <div class="swapcard" data-i18n="sw3"><strong>單位裡</strong>看到「平方」兩個字，就是在講面積</div>
+    </div>
+    <div class="demo">
+      11 × 1　10 × 2　8 × 4　6 × 6
+      <span class="small" data-i18n="vdemo">這四個長方形的周長都是 24 公分，面積卻是 11、20、32、36 平方公分。反過來：12 × 1、6 × 2、4 × 3 的面積都是 12 平方公分，周長卻是 26、16、14 公分。所以<strong>只知道周長，還不夠算出面積；只知道面積，也還不夠算出周長</strong>（除非另外知道別的條件，例如「它是正方形」）。</span>
+    </div>
+
+    <h2 data-i18n="s5">複合圖形：兩種做法</h2>
+    <p data-i18n="p5">從長方形挖掉一個<strong>長方形</strong>的角之後，圖形就沒有自己的公式了。把它變回長方形就有辦法，而且有兩條路，答案一定一樣：</p>
+    <ol class="steps">
+      <li data-i18n="c1"><strong>切成兩塊相加</strong>：沿著缺口的邊切一刀，變成兩個長方形，各算一次面積再<strong>相加</strong>。</li>
+      <li data-i18n="c2"><strong>補成一大塊相減</strong>：先當成完整的大長方形算一次，再把缺掉的那一小塊算一次，<strong>相減</strong>。</li>
+    </ol>
+    <div class="demo">
+      5 × 2 ＋ 8 × 3 ＝ 34　／　8 × 5 － 3 × 2 ＝ 34
+      <span class="small" data-i18n="cdemo">一個 8 公分 × 5 公分的長方形，右上角缺了 3 公分 × 2 公分。左邊是切成兩塊（上面 5 × 2、下面 8 × 3）；右邊是補成一大塊再減掉缺口。兩種做法都是 34 平方公分 —— 切法不會改變面積。</span>
+    </div>
+
+    <h2 data-i18n="s6">最容易搞混的三件事</h2>
+    <table>
+      <tr>
+        <th data-i18n="th6">看到這個</th>
+        <th data-i18n="th7">很多人會這樣</th>
+        <th data-i18n="th8">正確的是</th>
+      </tr>
+      <tr>
+        <td data-i18n="x1a">「長 5 公分、寬 3 公分，面積是多少？」</td>
+        <td data-i18n="x1b">算成（5 ＋ 3）× 2 ＝ 16，還寫成 16 公分</td>
+        <td data-i18n="x1c">（長 ＋ 寬）× 2 是<strong>周長</strong>。面積要用<strong>長 × 寬</strong> ＝ 5 × 3 ＝ 15，而且單位是<strong>平方公分</strong>。<strong>單位裡</strong>看到「平方」就知道那是面積。</td>
+      </tr>
+      <tr>
+        <td data-i18n="x2a">「1 平方公尺是幾平方公分？」</td>
+        <td data-i18n="x2b">照長度的倍數答 100</td>
+        <td data-i18n="x2c">面積有<strong>長和寬兩個方向</strong>，兩邊都要從公尺換成公分，所以要乘兩次：100 × 100 ＝ <strong>10000 平方公分</strong>。</td>
+      </tr>
+      <tr>
+        <td data-i18n="x3a">「兩個長方形的面積一樣」</td>
+        <td data-i18n="x3b">推論它們的周長也一樣</td>
+        <td data-i18n="x3c">面積一樣，周長<strong>可能</strong>不一樣（12 × 1 和 4 × 3 的面積都是 12 平方公分，周長是 26 和 14 公分）。反過來也是這樣。<strong>只知道其中一個，還不夠算出另一個</strong> —— 除非另外知道別的條件（例如「它是正方形」，那時候兩個就互相算得出來了）。</td>
+      </tr>
+    </table>
+
+    <h2 data-i18n="s7">這一課的範圍</h2>
+    <p class="scopebox" data-i18n="scope">這一課的面積單位只有<strong>平方公分</strong>和<strong>平方公尺</strong>；<strong>公畝、公頃、平方公里</strong>是五年級的「大地測量隊」。圖形只做<strong>長方形、正方形，以及由長方形拼出來、或從長方形挖掉一塊長方形的複合圖形</strong>；<strong>平行四邊形、三角形、梯形</strong>的面積公式是五年級的「面積魔術師」。這一課的邊長一律是<strong>整數</strong>的公分或公尺，不做小數。三年級的「繞一圈量量看」已經教過周長怎麼算，這一課不重教，只一直把周長和面積放在一起比。</p>
+  </div>
+
+  <button class="printbtn" onclick="window.print()" data-i18n="printBtn">🖨️ 印出速查卡</button>
+
+  <footer data-i18n="foot">看不懂的地方，回到<a class="home" href="index.html">課程</a>再點一次那些格子圖，或問爸媽、問 AI 老師。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'面積速查卡', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（本頁）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🗂️ 面積速查卡', sub:'兩個公式、兩個單位、周長和面積的分別 —— 印出來貼在書桌前',
+      s1:'一句話規則',
+      rule1:'面積是<b>裡面鋪滿幾個單位方格</b>。邊長 1 公分的方格，一格是 <b>1 平方公分</b>；邊長 1 公尺的方格，一格是 <b>1 平方公尺</b>。',
+      rule2:'長方形的面積 ＝ <b>長 × 寬</b>；正方形的面積 ＝ <b>邊長 × 邊長</b>。<br>反過來，知道面積和一邊，用<b>除法</b>找回另一邊：面積 ÷ 一邊 ＝ 另一邊。',
+      s2:'為什麼是「長 × 寬」',
+      m1:'<strong>先看每一排幾格</strong>：一排的格子數，就是<strong>長</strong>有幾公分。',
+      m2:'<strong>再看一共幾排</strong>：排數就是<strong>寬</strong>有幾公分。',
+      m3:'<strong>每一排幾格 × 一共幾排</strong> ＝ 鋪滿的總格數 ＝ 面積。所以公式就是「長 × 寬」，不必真的一格一格數。',
+      mdemo:'長 7 公分、寬 4 公分：每一排 7 格、一共 4 排 → 28 格 → 面積 28 平方公分。正方形是長和寬一樣長的長方形，所以邊長 6 公分的正方形是 6 × 6 ＝ 36 平方公分。',
+      bdemo:'反過來：面積 45 平方公分、長 9 公分 → 寬是 45 ÷ 9 ＝ 5 公分。<strong>邊長的單位是公分，不是平方公分</strong>。',
+      s3:'面積的兩個單位',
+      p3:'挑單位的規則只有一句：<strong>邊長用哪一個單位，面積就用那個單位的「平方」</strong>。邊長是幾公分 → 面積是幾平方公分；邊長是幾公尺 → 面積是幾平方公尺。兩條邊要先用<strong>同一個單位</strong>說（都用公分，或都用公尺），面積才跟著那個單位走。<strong>同一個東西兩種單位都量得出來</strong>（一張大海報可以說 200 公分 × 100 公分，也可以說 2 公尺 × 1 公尺）—— 小東西習慣用公分、大東西習慣用公尺，那是<strong>習慣，不是規則</strong>。',
+      uth0:'面積單位', uth1:'一格是', uth2:'邊長的單位', uth3:'習慣上用在',
+      u1a:'平方公分', u1b:'邊長 1 公分的正方形', u1c:'公分', u1d:'郵票、課本封面、手帕',
+      u2a:'平方公尺', u2b:'邊長 1 公尺的正方形', u2c:'公尺', u2d:'地毯、教室地板、籃球場',
+      udemo:'1 公尺 ＝ 100 公分，所以邊長 1 公尺的正方形也是邊長 100 公分的正方形：<strong>1 平方公尺 ＝ 10000 平方公分</strong>。注意<strong>不是 100</strong> —— 長和寬都要換，所以要乘兩次。',
+      s4:'周長和面積是兩件事',
+      vth0:'比一比', vth1:'周長', vth2:'面積',
+      v1a:'量的是什麼', v1b:'繞一圈的長度', v1c:'裡面鋪滿幾格',
+      v2a:'長方形怎麼算', v2b:'（長 ＋ 寬）× 2', v2c:'長 × 寬',
+      v3a:'單位', v3b:'公分、公尺', v3c:'平方公分、平方公尺',
+      sw1:'周長一樣，面積也可能不一樣',
+      sw2:'面積一樣，周長也可能不一樣',
+      sw3:'<strong>單位裡</strong>看到「平方」兩個字，就是在講面積',
+      vdemo:'這四個長方形的周長都是 24 公分，面積卻是 11、20、32、36 平方公分。反過來：12 × 1、6 × 2、4 × 3 的面積都是 12 平方公分，周長卻是 26、16、14 公分。所以<strong>只知道周長，還不夠算出面積；只知道面積，也還不夠算出周長</strong>（除非另外知道別的條件，例如「它是正方形」）。',
+      s5:'複合圖形：兩種做法',
+      p5:'從長方形挖掉一個<strong>長方形</strong>的角之後，圖形就沒有自己的公式了。把它變回長方形就有辦法，而且有兩條路，答案一定一樣：',
+      c1:'<strong>切成兩塊相加</strong>：沿著缺口的邊切一刀，變成兩個長方形，各算一次面積再<strong>相加</strong>。',
+      c2:'<strong>補成一大塊相減</strong>：先當成完整的大長方形算一次，再把缺掉的那一小塊算一次，<strong>相減</strong>。',
+      cdemo:'一個 8 公分 × 5 公分的長方形，右上角缺了 3 公分 × 2 公分。左邊是切成兩塊（上面 5 × 2、下面 8 × 3）；右邊是補成一大塊再減掉缺口。兩種做法都是 34 平方公分 —— 切法不會改變面積。',
+      s6:'最容易搞混的三件事',
+      th6:'看到這個', th7:'很多人會這樣', th8:'正確的是',
+      x1a:'「長 5 公分、寬 3 公分，面積是多少？」', x1b:'算成（5 ＋ 3）× 2 ＝ 16，還寫成 16 公分',
+      x1c:'（長 ＋ 寬）× 2 是<strong>周長</strong>。面積要用<strong>長 × 寬</strong> ＝ 5 × 3 ＝ 15，而且單位是<strong>平方公分</strong>。<strong>單位裡</strong>看到「平方」就知道那是面積。',
+      x2a:'「1 平方公尺是幾平方公分？」', x2b:'照長度的倍數答 100',
+      x2c:'面積有<strong>長和寬兩個方向</strong>，兩邊都要從公尺換成公分，所以要乘兩次：100 × 100 ＝ <strong>10000 平方公分</strong>。',
+      x3a:'「兩個長方形的面積一樣」', x3b:'推論它們的周長也一樣',
+      x3c:'面積一樣，周長<strong>可能</strong>不一樣（12 × 1 和 4 × 3 的面積都是 12 平方公分，周長是 26 和 14 公分）。反過來也是這樣。<strong>只知道其中一個，還不夠算出另一個</strong> —— 除非另外知道別的條件（例如「它是正方形」，那時候兩個就互相算得出來了）。',
+      s7:'這一課的範圍',
+      scope:'這一課的面積單位只有<strong>平方公分</strong>和<strong>平方公尺</strong>；<strong>公畝、公頃、平方公里</strong>是五年級的「大地測量隊」。圖形只做<strong>長方形、正方形，以及由長方形拼出來、或從長方形挖掉一塊長方形的複合圖形</strong>；<strong>平行四邊形、三角形、梯形</strong>的面積公式是五年級的「面積魔術師」。這一課的邊長一律是<strong>整數</strong>的公分或公尺，不做小數。三年級的「繞一圈量量看」已經教過周長怎麼算，這一課不重教，只一直把周長和面積放在一起比。',
+      printBtn:'🖨️ 印出速查卡',
+      foot:'看不懂的地方，回到<a class="home" href="index.html">課程</a>再點一次那些格子圖，或問爸媽、問 AI 老師。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Area Cheat Sheet', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (this page)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🗂️ Area Cheat Sheet', sub:'Two formulas, two units, and the difference between perimeter and area — print it for your desk',
+      s1:'The Rules in One Line',
+      rule1:'Area is <b>how many unit squares fill the inside</b>. A square with sides of 1 cm counts as <b>1 cm²</b>; a square with sides of 1 m counts as <b>1 m²</b>.',
+      rule2:'Area of a rectangle = <b>length × width</b>; area of a square = <b>side × side</b>.<br>Turn it round: knowing the area and one side, <b>divide</b> to get the other side — area ÷ one side = the other side.',
+      s2:'Why It Is “Length × Width”',
+      m1:'<strong>Count the squares in one row first</strong>: that count is how many centimetres the <strong>length</strong> is.',
+      m2:'<strong>Then count the rows</strong>: the number of rows is how many centimetres the <strong>width</strong> is.',
+      m3:'<strong>Squares in a row × number of rows</strong> = the total squares that fill it = the area. That is exactly “length × width”, so you never have to count one square at a time.',
+      mdemo:'7 cm long and 4 cm wide: 7 squares in a row and 4 rows → 28 squares → an area of 28 cm². A square is a rectangle whose length and width match, so a square with sides of 6 cm is 6 × 6 = 36 cm².',
+      bdemo:'The other way round: an area of 45 cm² with a length of 9 cm → the width is 45 ÷ 9 = 5 cm. <strong>A side length is in cm, not cm²</strong>.',
+      s3:'The Two Units of Area',
+      p3:'Picking the unit takes one sentence: <strong>whichever unit the sides are given in, the area uses that unit “squared”</strong>. Sides in centimetres → an area in cm²; sides in metres → an area in m². Both sides have to be given in <strong>the same unit</strong> first (both in centimetres, or both in metres) before the area can follow it. <strong>The same object can be measured either way</strong> (a big poster is 200 cm by 100 cm, and also 2 m by 1 m) — small things are usually measured in centimetres and big things in metres, but that is a <strong>habit, not a rule</strong>.',
+      uth0:'Area unit', uth1:'One of them is', uth2:'Unit of the sides', uth3:'Usually used for',
+      u1a:'square centimetre (cm²)', u1b:'a square with sides of 1 cm', u1c:'centimetres', u1d:'a stamp, a book cover, a handkerchief',
+      u2a:'square metre (m²)', u2b:'a square with sides of 1 m', u2c:'metres', u2d:'a rug, a classroom floor, a basketball court',
+      udemo:'1 m = 100 cm, so a square with sides of 1 m is also a square with sides of 100 cm: <strong>1 m² = 10000 cm²</strong>. Note that it is <strong>not 100</strong> — both the length and the width change, so you multiply twice.',
+      s4:'Perimeter and Area Are Two Different Things',
+      vth0:'Side by side', vth1:'Perimeter', vth2:'Area',
+      v1a:'What it measures', v1b:'the length once round the outside', v1c:'how many squares fill the inside',
+      v2a:'For a rectangle', v2b:'(length + width) × 2', v2c:'length × width',
+      v3a:'Units', v3b:'cm, m', v3c:'cm², m²',
+      sw1:'equal perimeters can still have different areas',
+      sw2:'equal areas can still have different perimeters',
+      sw3:'the word “square” in the unit means it is an area',
+      vdemo:'These four rectangles all have a perimeter of 24 cm, yet their areas are 11, 20, 32 and 36 cm². The other way round: 12 × 1, 6 × 2 and 4 × 3 all have an area of 12 cm², yet their perimeters are 26, 16 and 14 cm. So <strong>a perimeter on its own is not enough to work out the area, and an area on its own is not enough to work out the perimeter</strong> (unless you know something else as well, such as “it is a square”).',
+      s5:'Composite Shapes: Two Routes',
+      p5:'Once a <strong>rectangular</strong> corner is taken out of a rectangle, the shape has no formula of its own. Turn it back into rectangles and it does — and there are two routes, which always agree:',
+      c1:'<strong>Cut it into two and add</strong>: cut along an edge of the missing corner to get two rectangles, work out each area and <strong>add</strong> them.',
+      c2:'<strong>Fill it in and subtract</strong>: work out the complete big rectangle first, then the missing piece, and <strong>subtract</strong>.',
+      cdemo:'A rectangle 8 cm by 5 cm is missing 3 cm by 2 cm from its top right corner. On the left it is cut into two (5 × 2 on top, 8 × 3 below); on the right it is filled in and the missing piece taken off. Both routes give 34 cm² — how you cut it up never changes the area.',
+      s6:'The Three Easiest Things to Mix Up',
+      th6:'When you see', th7:'Many people do this', th8:'It should be',
+      x1a:'“5 cm long and 3 cm wide — what is the area?”', x1b:'work out (5 + 3) × 2 = 16 and write 16 cm',
+      x1c:'(length + width) × 2 is the <strong>perimeter</strong>. Area needs <strong>length × width</strong> = 5 × 3 = 15, and the unit is <strong>cm²</strong>. The word “square” in the unit is the giveaway that it is an area.',
+      x2a:'“How many cm² are in 1 m²?”', x2b:'answer 100, copying the length conversion',
+      x2c:'An area has <strong>two directions, length and width</strong>, and both change from metres to centimetres, so you multiply twice: 100 × 100 = <strong>10000 cm²</strong>.',
+      x3a:'“two rectangles have the same area”', x3b:'conclude their perimeters match too',
+      x3c:'Equal areas <strong>can</strong> have different perimeters (12 × 1 and 4 × 3 both have an area of 12 cm², with perimeters of 26 cm and 14 cm). The same goes the other way round. <strong>One of them on its own is not enough to work out the other</strong> — unless you know something else as well (for a square, say, either one does give you the other).',
+      s7:'What This Lesson Covers',
+      scope:'The only area units here are <strong>square centimetres</strong> and <strong>square metres</strong>; <strong>ares, hectares and square kilometres</strong> belong to the grade-5 lesson “The Land Survey Team”. The only shapes are <strong>rectangles, squares, and composite shapes built from rectangles or with a rectangle taken out</strong>; the area formulas for <strong>parallelograms, triangles and trapeziums</strong> belong to the grade-5 lesson “The Area Magician”. Every side length here is a <strong>whole number</strong> of centimetres or metres — no decimals. The grade-3 lesson “Once Round the Outside” already covered how to work out a perimeter, so this lesson does not re-teach it; it only keeps holding perimeter and area up against each other.',
+      printBtn:'🖨️ Print this card',
+      foot:'Anything unclear? Go back to the <a class="home" href="index.html">lesson</a> and tap through those grid pictures again, or ask your parents / AI teacher.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+  });
+
+  applyStatic();
+})();
+</script>
+</body>
+</html>
