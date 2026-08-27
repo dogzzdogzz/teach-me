@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>24 時制複習挑戰</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.75; font-size:18px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:8px 20px;font-size:16px;font-weight:700;cursor:pointer;
+  }
+  .coursenav{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  a.home{color:var(--blue);font-size:15px}
+  header{text-align:center;padding:30px 0 6px}
+  header h1{font-size:clamp(28px,5vw,40px);letter-spacing:2px}
+  header p{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--blue-soft);border:2px solid var(--blue);border-radius:20px;
+    padding:16px 22px;margin:24px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .cat{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:12px;
+    font-weight:700;border-radius:999px;padding:1px 10px;margin-left:6px;
+  }
+  .stem{margin:8px 0 12px;font-size:19px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:17px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .result{display:none;margin-top:20px;background:var(--green-soft);border-radius:16px;padding:18px}
+  .result ul{list-style:none;margin-top:8px;display:grid;gap:6px;font-size:16px}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:18px;
+  }
+  footer{
+    margin-top:56px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:20px;font-size:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 24 時制複習挑戰</h1>
+    <p data-i18n="sub">不看速查卡、自己想一次 —— 想起來的那一刻，記憶才會變牢</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    12 題<strong>混合題</strong>：12 時制與 24 時制互換、日時分秒的化聚、複名數的加減、跨過午夜的時刻交錯出現，<strong>每一批的數字都是新出的</strong>。<br>
+    建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b></span>
+  </div>
+
+  <div class="result" id="result">
+    <p id="resultLine" style="font-weight:700"></p>
+    <ul id="resultLinks"></ul>
+  </div>
+  <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🆕 換一批新題目</button>
+
+  <footer data-i18n="foot">
+    複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'24 時制複習挑戰', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 24 時制複習挑戰',
+      sub:'不看速查卡、自己想一次 —— 想起來的那一刻，記憶才會變牢',
+      intro:'12 題<strong>混合題</strong>：12 時制與 24 時制互換、日時分秒的化聚、複名數的加減、跨過午夜的時刻交錯出現，<strong>每一批的數字都是新出的</strong>。<br>建議<strong>隔一天來一次</strong>，連續三天全對就是真的會了。',
+      qDoneLabel:'已作答', qRightLabel:'答對',
+      retryBtn:'🆕 換一批新題目',
+      foot:'複習的黃金時間：<strong>今天 → 明天 → 三天後 → 一星期後</strong>。每次全對，間隔就拉長一點。'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'24-Hour Clock Review Challenge', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 24-Hour Clock Review Challenge',
+      sub:'No peeking at the cheat sheet — the moment you recall it is the moment it sticks',
+      intro:'12 <strong>mixed questions</strong> interleaving 12-hour and 24-hour times, converting between days, hours, minutes and seconds, adding and subtracting compound amounts, and times that run past midnight — <strong>every batch uses fresh numbers</strong>.<br>Come back <strong>a day later</strong> — three perfect days in a row means you truly know it.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:',
+      retryBtn:'🆕 New batch of questions',
+      foot:'The golden review schedule: <strong>today → tomorrow → 3 days → a week</strong>. Every perfect run, stretch the gap.'
+    }
+  };
+
+  var TXT = {
+    zh: {
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      cats:{ clock:'12 時制與 24 時制', convert:'化聚', add:'相加', sub:'相減', cross:'時刻與時間量' },
+      unitName:{ day:'日', hour:'小時', min:'分', sec:'秒' },
+      periodName:{ midnight:'半夜', am:'上午', noon:'中午', pm:'下午' },
+      dayTag:['今天', '隔天'],
+      clock24:function(h, m){ return h + ' 時 ' + m + ' 分'; },
+      clock12:function(period, h12, m){ return this.periodName[period] + ' ' + h12 + ' 點 ' + m + ' 分'; },
+      clockDay:function(day, h, m){ return this.dayTag[day] + ' ' + this.clock24(h, m); },
+      dur:function(units, vals){
+        var self = this;
+        return keepLevels(units, vals).map(function(i){
+          return vals[i] + ' ' + self.unitName[units[i]];
+        }).join(' ');
+      },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
+      resAll:function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
+      resSome:function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
+      groupNames:{
+        clock:'🕓 一天有 24 個小時（範例教學 1）',
+        convert:'🪜 日、時、分、秒的階梯（範例教學 2）',
+        add:'➕ 相加：滿了就進位（範例教學 3）',
+        sub:'➖ 相減：不夠減就借 1（範例教學 4）',
+        cross:'🌙 時刻 ＋ 時間量（範例教學 5）'
+      }
+    },
+    en: {
+      qn:function(i){ return 'Question ' + i; },
+      cats:{ clock:'12-hour and 24-hour', convert:'Converting units', add:'Adding', sub:'Subtracting', cross:'Times and amounts' },
+      unitName:{ day:'day', hour:'hour', min:'minute', sec:'second' },
+      /* 英文把數字接在單位前面就一定要處理單複數（1 hour ／ 2 hours）。
+         凡是把變數插進英文句子的地方都走這一個函式。 */
+      plu:function(v, unit){ return v + ' ' + this.unitName[unit] + (v === 1 ? '' : 's'); },
+      isAre:function(v){ return (v === 1) ? ' is' : ' are'; },
+      periodName:{ midnight:'a.m.', am:'a.m.', noon:'p.m.', pm:'p.m.' },
+      dayTag:['today', 'the next day'],
+      clock24:function(h, m){ return pad2(h) + ':' + pad2(m); },
+      clock12:function(period, h12, m){ return h12 + ':' + pad2(m) + ' ' + this.periodName[period]; },
+      clockDay:function(day, h, m){ return this.clock24(h, m) + ' ' + this.dayTag[day]; },
+      dur:function(units, vals){
+        var self = this;
+        return keepLevels(units, vals).map(function(i){
+          return vals[i] + ' ' + self.unitName[units[i]] + (vals[i] === 1 ? '' : 's');
+        }).join(' ');
+      },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
+      resAll:function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
+      resSome:function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
+      groupNames:{
+        clock:'🕓 A day has 24 hours (Example 1)',
+        convert:'🪜 The ladder of days, hours, minutes and seconds (Example 2)',
+        add:'➕ Adding: carry when it fills up (Example 3)',
+        sub:'➖ Subtracting: borrow 1 when it is not enough (Example 4)',
+        cross:'🌙 A time plus an amount of time (Example 5)'
+      }
+    }
+  };
+
+  var LINK_HREFS = {
+    clock:'index.html#secDay',
+    convert:'index.html#secLadder',
+    add:'index.html#secAdd',
+    sub:'index.html#secSub',
+    cross:'index.html#secCross'
+  };
+  var GROUP_OF = { clock:'clock', convert:'convert', add:'add', sub:'sub', cross:'cross' };
+
+  /* ---------- 工具 ---------- */
+  /* 這一課的範圍：24 時制的時刻，以及日、時、分、秒的複名數加減。
+     時間量一律是整數；時刻的「分」一律 1~59。看鐘面是二年級，時間量的乘除是五年級。 */
+  var SEC_PER_MIN = 60;
+  var MIN_PER_HOUR = 60;
+  var HOUR_PER_DAY = 24;
+  var MIN_PER_DAY = MIN_PER_HOUR * HOUR_PER_DAY;   // 1440
+  var NOON_SHIFT = 12;
+
+  /* 單位階梯：每一級都有**自己的滿數**。「一律滿 60」是錯的，時滿 24 才進成日。 */
+  var STEPS = [
+    { small:'hour', big:'day',  full:HOUR_PER_DAY },
+    { small:'min',  big:'hour', full:MIN_PER_HOUR },
+    { small:'sec',  big:'min',  full:SEC_PER_MIN }
+  ];
+  function fullOf(small){
+    for (var i = 0; i < STEPS.length; i++) if (STEPS[i].small === small) return STEPS[i].full;
+    return null;
+  }
+  function toSmallest(units, vals){
+    var t = vals[0];
+    for (var i = 1; i < units.length; i++) t = t * fullOf(units[i]) + vals[i];
+    return t;
+  }
+  function fromSmallest(units, total){
+    var out = new Array(units.length);
+    var rest = total;
+    for (var i = units.length - 1; i >= 1; i--){
+      var f = fullOf(units[i]);
+      out[i] = rest % f;
+      rest = Math.floor(rest / f);
+    }
+    out[0] = rest;
+    return out;
+  }
+  /* 哪一級是 0 就不印那一級（沒有人說「3 日 0 小時」）；兩級都是 0 就只印最小的那一級。 */
+  function keepLevels(units, vals){
+    var keep = [];
+    for (var i = 0; i < units.length; i++) if (vals[i] !== 0) keep.push(i);
+    if (!keep.length) keep = [units.length - 1];
+    return keep;
+  }
+  function addSteps(units, a, b){
+    var carry = 0, rows = [];
+    for (var i = units.length - 1; i >= 0; i--){
+      var f = (i === 0) ? null : fullOf(units[i]);
+      var raw = a[i] + b[i] + carry;
+      var out = (f === null) ? raw : raw % f;
+      var up = (f === null) ? 0 : Math.floor(raw / f);
+      rows.unshift({ unit:units[i], a:a[i], b:b[i], carryIn:carry, raw:raw, full:f, out:out, carryOut:up });
+      carry = up;
+    }
+    return rows;
+  }
+  function subSteps(units, a, b){
+    var borrow = 0, rows = [];
+    for (var i = units.length - 1; i >= 0; i--){
+      var f = (i === 0) ? null : fullOf(units[i]);
+      var top = a[i] - borrow;
+      var need = (top < b[i]) && (f !== null);
+      var val = need ? top + f : top;
+      rows.unshift({ unit:units[i], a:a[i], b:b[i], borrowIn:borrow, borrowed:need ? 1 : 0,
+                     full:f, val:val, out:val - b[i] });
+      borrow = need ? 1 : 0;
+    }
+    return rows;
+  }
+  function stepVals(rows){ return rows.map(function(r){ return r.out; }); }
+
+  /* 12 時制 ↔ 24 時制。規則釘在**鐘面上的數字**：1 點到 11 點，上午不用改、下午加 12；
+     鐘面上的 12 點永遠不加 12（中午 12 點加 12 會變成 24 時）。 */
+  function to24(period, h12){
+    if (period === 'midnight') return 0;
+    if (period === 'am') return h12;
+    if (period === 'noon') return NOON_SHIFT;
+    if (period === 'pm') return h12 + NOON_SHIFT;
+    return null;
+  }
+  function read12(h24){
+    if (h24 === 0) return { period:'midnight', h12:12 };
+    if (h24 < NOON_SHIFT) return { period:'am', h12:h24 };
+    if (h24 === NOON_SHIFT) return { period:'noon', h12:12 };
+    return { period:'pm', h12:h24 - NOON_SHIFT };
+  }
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+
+  function rangeList(lo, hi){
+    var out = [];
+    for (var v = lo; v <= hi; v++) out.push(v);
+    return out;
+  }
+  /* 每一個產生器的參數池。上界與下界只寫在這裡一次，設定檔照著算選項的合理範圍。 */
+  var H12_POOL  = rangeList(1, 11);     // 鐘面上的鐘點
+  var MIN_POOL  = rangeList(1, 59);     // 時刻的分（不出現 0 分）
+  var H24_PM_POOL = rangeList(13, 23);  // 中午過後的 24 時制鐘點
+  var DH_D_POOL = rangeList(2, 6);      // 化聚：日
+  var DH_H_POOL = rangeList(1, 23);     // 化聚：剩下的小時
+  var HM_H_POOL = rangeList(1, 5);      // 化聚：小時
+  var HM_M_POOL = rangeList(1, 59);     // 化聚：剩下的分
+  var MS_M_POOL = rangeList(1, 5);      // 化聚：分
+  var MS_S_POOL = rangeList(1, 59);     // 化聚：剩下的秒
+  var ADD_BIG_POOL = rangeList(2, 5);   // 相加：被加數的大單位
+  var SUB_BIG_POOL = rangeList(3, 6);   // 相減：被減數的大單位
+  var CLOCK_H_POOL = rangeList(6, 23);  // 時刻＋時間量：起點的時
+  var CLOCK_ADD_H  = rangeList(1, 4);   // 時刻＋時間量：加幾小時
+  var DIFF_FROM_H  = rangeList(6, 11);  // 兩個時刻之間：起點的時
+  var DIFF_TO_H    = rangeList(13, 22); // 兩個時刻之間：終點的時
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(x){ return used.indexOf(String(x)) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(String(v));
+    return v;
+  }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = rand(j + 1);
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+
+  /* 這一課的選項不是「一個數字」，而是一組數字（幾時幾分／幾日幾小時），
+     所以去重一定要比**換算成最小單位之後的總量** —— 「3 小時 75 分」和「4 小時 15 分」
+     字串不同、長度卻一樣，不可以同時出現在選項裡。 */
+  function keyComp(units){
+    return function(vals){ return 'c|' + units.join('/') + '|' + toSmallest(units, vals); };
+  }
+  function keyRead(o){ return 'r|' + (to24(o.period, o.h12) * MIN_PER_HOUR + o.m); }
+  function keyStamp(o){ return 's|' + (o.day * MIN_PER_DAY + o.h * MIN_PER_HOUR + o.m); }
+
+  /* 保證 3 個「依值相異」的錯誤選項。候選不夠時的保底是**長得像答案的時間**
+     （在最小單位上 ± 一個滿數或 ± 1 再換算回來），不是垃圾字串。 */
+  function mixBy(correct, cands, keyOf, fallback){
+    var seen = {}; seen[keyOf(correct)] = true;
+    var wrongs = [];
+    (cands || []).forEach(function(c){
+      if (wrongs.length >= 3 || !c) return;
+      var k = keyOf(c);
+      if (!seen[k]){ seen[k] = true; wrongs.push(c); }
+    });
+    var step = 1;
+    while (wrongs.length < 3 && step < 200){
+      var extra = fallback(step) || [];
+      for (var i = 0; i < extra.length && wrongs.length < 3; i++){
+        if (!extra[i]) continue;
+        var k2 = keyOf(extra[i]);
+        if (!seen[k2]){ seen[k2] = true; wrongs.push(extra[i]); }
+      }
+      step++;
+    }
+    var opts = shuffle([correct].concat(wrongs.slice(0, 3)));
+    var keys = opts.map(keyOf);
+    return { opts:opts, ans:keys.indexOf(keyOf(correct)) };
+  }
+
+  /* 保底的候選不可以剛好是題幹印出來的數字 —— 那看起來像抄來的提示。
+     單名數的化聚題（幾小時／幾分／幾秒）最容易踩到：總量減掉一個滿數，
+     剛好就等於題幹裡剩下的那幾分。 */
+  function notEcho(list, banned){
+    return list.filter(function(v){ return banned.indexOf(v[0]) < 0; });
+  }
+
+  /* 相加的參數：小單位一定會進位（兩個小單位加起來 滿數+2 ~ 滿數+58），
+     而且「相減」那個誘答不可以撞到正解或另外兩個誘答。 */
+  function pickAddPair(units, used){
+    var full = fullOf(units[1]);
+    var ab = 0, bb = 0, as = 0, bs = 0, ok = false;
+    for (var tries = 0; tries < 200 && !ok; tries++){
+      ab = pickUnused(ADD_BIG_POOL, used);
+      bb = pick(rangeList(1, ab - 1));
+      as = pick(rangeList(31, 59));
+      bs = pick(rangeList(2, as - 1));
+      var raw = as + bs;
+      if (raw < full + 2 || raw > full + 58) continue;
+      var C = (ab + bb) * full + raw;
+      var S = (ab - bb) * full + (as - bs);
+      ok = (S !== C) && (S !== C - full) && (S !== C + full);
+    }
+    if (!ok){ ab = 3; bb = 1; as = 45; bs = 30; }
+    return { a:[ab, as], b:[bb, bs] };
+  }
+  /* 相減的參數：小單位一定不夠減（要借位），而且借完之後大單位還是 ≥ 1，
+     四個誘答彼此與正解都不同值。 */
+  function pickSubPair(units, used){
+    var full = fullOf(units[1]);
+    var ab = 0, bb = 0, as = 0, bs = 0, ok = false;
+    for (var tries = 0; tries < 200 && !ok; tries++){
+      ab = pickUnused(SUB_BIG_POOL, used);
+      bb = pick(rangeList(1, ab - 2));
+      as = pick(rangeList(1, Math.floor(full / 2)));
+      bs = pick(rangeList(as + 1, full - 1));
+      var C  = (ab - 1 - bb) * full + (as + full - bs);
+      var NP = (ab - bb) * full + (as + full - bs);
+      var RV = (ab - bb) * full + (bs - as);
+      var AD = (ab + bb) * full + (as + bs);
+      var B60 = (ab - 1 - bb) * full + (as + MIN_PER_HOUR - bs);
+      /* 「借了 60」只有在滿數**不是** 60 的那一級才是錯的（日時）。時分的滿數本來就是
+         60，B60 會等於正解，所以那一支不把它算進「四個誘答必須互不相同」裡。 */
+      var all = (full === MIN_PER_HOUR) ? [C, NP, RV, AD] : [C, NP, RV, AD, B60];
+      var uniq = {};
+      all.forEach(function(v){ uniq[v] = true; });
+      ok = (C >= full) && (Object.keys(uniq).length === all.length);
+    }
+    /* 保底也要合法：小單位的上界是**那一級自己的滿數**，不是一律 60
+       （4 日 10 小時 － 1 日 40 小時 會算出負數）。 */
+    if (!ok){ ab = 4; bb = 1; as = Math.floor(full / 6); bs = Math.floor(full / 6) + Math.floor(full / 2); }
+    return { a:[ab, as], b:[bb, bs] };
+  }
+
+  function stampOf(total){
+    return { day:Math.floor(total / MIN_PER_DAY),
+             h:Math.floor((total % MIN_PER_DAY) / MIN_PER_HOUR),
+             m:total % MIN_PER_HOUR };
+  }
+
+  /* 相減的資料由這裡產生，兩支產生器（時分／日時）共用。
+     ⚠️ 借過來的 1 要換成**這一級自己的滿數**，所以「借了 60」那個誘答在日時那一支
+     才是錯的；時分那一支的滿數本來就是 60，那個候選會因為等值而被去重掉。 */
+  function makeSub(units, used){
+    var p = pickSubPair(units, used);
+    var rows = subSteps(units, p.a, p.b);
+    var correct = stepVals(rows);
+    var full = fullOf(units[1]);
+    var K = keyComp(units);
+    var cands = [
+      [p.a[0] - 1 - p.b[0], p.a[1] + MIN_PER_HOUR - p.b[1]],      // 借了 60（日時才是錯的）
+      [p.a[0] - p.b[0], p.a[1] + full - p.b[1]],                  // 借了卻沒把上一級扣掉
+      [p.a[0] - p.b[0], p.b[1] - p.a[1]],                         // 小單位反過來減
+      [p.a[0] + p.b[0], p.a[1] + p.b[1]]                          // 相加而不是相減
+    ];
+    var mx = mixBy(correct, cands, K, function(step){
+      return [fromSmallest(units, toSmallest(units, correct) + step),
+              fromSmallest(units, toSmallest(units, correct) - step)]
+        .filter(function(v){ return v[0] >= 0 && toSmallest(units, v) >= 1; });
+    });
+    return { units:units, a:p.a, b:p.b, full:full, correct:correct, opts:mx.opts, ans:mx.ans };
+  }
+
+  function fmtAdd(d, lang){
+    var t = TXT[lang];
+    var units = d.units;
+    var small = units[1], big = units[0];
+    var full = fullOf(small);
+    var aTxt = t.dur(units, d.a), bTxt = t.dur(units, d.b), ansTxt = t.dur(units, d.correct);
+    var sName = t.unitName[small], bName = t.unitName[big];
+    return {
+      stem: lang === 'zh'
+        ? aTxt + ' ＋ ' + bTxt + ' 是多久？（答案的' + sName + '要寫在 0 到 ' + (full - 1) + ' 之間）'
+        : aTxt + ' + ' + bTxt + ' is how long? (write the ' + sName + 's between 0 and ' + (full - 1) + ')',
+      opts: d.opts.map(function(v){ return t.dur(units, v); }), ans: d.ans,
+      why: lang === 'zh'
+        ? sName + '先加：' + d.a[1] + ' ＋ ' + d.b[1] + ' ＝ ' + d.raw + '，到了 ' + full
+          + ' 就進 1 到' + bName + '、剩下 ' + d.correct[1] + ' ' + sName + '；' + bName + '再加：'
+          + d.a[0] + ' ＋ ' + d.b[0] + ' ＋ 進位的 1 ＝ ' + d.correct[0] + '。答案是 ' + ansTxt + '。'
+        : 'Add the ' + sName + 's first: ' + d.a[1] + ' + ' + d.b[1] + ' = ' + d.raw + ', which reaches '
+          + full + ', so carry 1 to the ' + bName + 's and ' + t.plu(d.correct[1], small)
+          + t.isAre(d.correct[1]) + ' left. Then the ' + bName + 's: ' + d.a[0] + ' + ' + d.b[0] + ' + the 1 carried = '
+          + d.correct[0] + '. The answer is ' + ansTxt + '.'
+    };
+  }
+
+  function fmtSub(d, lang){
+    var t = TXT[lang];
+    var units = d.units;
+    var small = units[1], big = units[0];
+    var full = d.full;
+    var aTxt = t.dur(units, d.a), bTxt = t.dur(units, d.b), ansTxt = t.dur(units, d.correct);
+    var sName = t.unitName[small], bName = t.unitName[big];
+    var borrowed = d.a[1] + full;
+    return {
+      stem: lang === 'zh'
+        ? aTxt + ' － ' + bTxt + ' 是多久？（答案的' + sName + '要寫在 0 到 ' + (full - 1) + ' 之間）'
+        : aTxt + ' − ' + bTxt + ' is how long? (write the ' + sName + 's between 0 and ' + (full - 1) + ')',
+      opts: d.opts.map(function(v){ return t.dur(units, v); }), ans: d.ans,
+      why: lang === 'zh'
+        ? sName + '不夠減，向' + bName + '借 1。借過來的 1 ' + bName + ' 換成 ' + full + ' ' + sName
+          + '：' + d.a[1] + ' ＋ ' + full + ' ＝ ' + borrowed + '，' + borrowed + ' － ' + d.b[1] + ' ＝ '
+          + d.correct[1] + ' ' + sName + '；' + bName + '被借走 1，所以 ' + d.a[0] + ' － 1 － ' + d.b[0]
+          + ' ＝ ' + d.correct[0] + '。答案是 ' + ansTxt + '。'
+        : 'The ' + sName + 's are not enough, so borrow 1 ' + bName + '. That 1 ' + bName + ' turns into '
+          + full + ' ' + sName + 's: ' + d.a[1] + ' + ' + full + ' = ' + borrowed + ', and ' + borrowed
+          + ' − ' + d.b[1] + ' = ' + t.plu(d.correct[1], small) + '. The ' + bName + 's lost that 1, so '
+          + d.a[0] + ' − 1 − ' + d.b[0] + ' = ' + d.correct[0] + '. The answer is ' + ansTxt + '.'
+    };
+  }
+
+  /* ---------- 題目產生器：每次 make() 都用新數字，正解由程式算出來 ---------- */
+  var GENS = [
+    /* 1. 12 時制 → 24 時制。誘答一定包含「忘了（或多）加 12」的那一個。 */
+    { id:'to24', cat:'clock',
+      make:function(used){
+        var period = pickUnused(['am', 'pm'], used);
+        var h12 = pick(H12_POOL), m = pick(MIN_POOL);
+        var h = to24(period, h12);
+        var noShift = (period === 'pm') ? h12 : h12 + NOON_SHIFT;
+        var K = keyComp(['hour', 'min']);
+        var mx = mixBy([h, m], [[noShift, m]], K, function(step){
+          return [[h - step, m], [h + step, m]].filter(function(v){
+            return v[0] >= 0 && v[0] <= HOUR_PER_DAY - 1;
+          });
+        });
+        return { period:period, h12:h12, m:m, h:h, noShift:noShift,
+                 correct:[h, m], opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var readTxt = t.clock12(d.period, d.h12, d.m);
+        var ansTxt = t.clock24(d.h, d.m);
+        return {
+          stem: lang === 'zh'
+            ? readTxt + ' 用 24 時制怎麼寫？'
+            : 'How is ' + readTxt + ' written on the 24-hour clock?',
+          opts: d.opts.map(function(v){ return t.clock24(v[0], v[1]); }), ans: d.ans,
+          why: lang === 'zh'
+            ? (d.period === 'pm'
+                ? '下午 1 點到 11 點，鐘面上的數字要加 12：' + d.h12 + ' ＋ 12 ＝ ' + d.h + '，所以是 ' + ansTxt + '，分不用動。'
+                : '上午 1 點到 11 點，鐘面上的數字就是 24 時制的數，不用加 12，所以是 ' + ansTxt + '，分不用動。')
+            : (d.period === 'pm'
+                ? 'For 1 to 11 p.m., add 12 to the clock-face number: ' + d.h12 + ' + 12 = ' + d.h
+                  + ', so it is ' + ansTxt + ', and the minutes do not change.'
+                : 'For 1 to 11 a.m., the clock-face number is already the 24-hour number, so it is '
+                  + ansTxt + ', and the minutes do not change.')
+        };
+      } },
+    /* 2. 24 時制 → 12 時制。誘答包含「時段說錯」與「忘了減 12」。 */
+    { id:'to12', cat:'clock',
+      make:function(used){
+        var h24 = pickUnused(H24_PM_POOL, used), m = pick(MIN_POOL);
+        var rd = read12(h24);
+        var correct = { period:rd.period, h12:rd.h12, m:m };
+        var cands = [
+          { period:'am', h12:rd.h12, m:m },
+          { period:'pm', h12:h24, m:m }
+        ];
+        var mx = mixBy(correct, cands, keyRead, function(step){
+          return [{ period:'pm', h12:rd.h12 - step, m:m }, { period:'pm', h12:rd.h12 + step, m:m }]
+            .filter(function(o){ return o.h12 >= 1 && o.h12 <= 11; });
+        });
+        return { h24:h24, m:m, h12:rd.h12, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var clockTxt = t.clock24(d.h24, d.m);
+        var ansTxt = t.clock12('pm', d.h12, d.m);
+        return {
+          stem: lang === 'zh'
+            ? clockTxt + ' 用 12 時制怎麼說？'
+            : 'How is ' + clockTxt + ' said on a 12-hour clock?',
+          opts: d.opts.map(function(o){ return t.clock12(o.period, o.h12, o.m); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '13 時到 23 時是中午過後，減掉 12 就回到鐘面上的數字：' + d.h24 + ' － 12 ＝ ' + d.h12
+              + '，所以是 ' + ansTxt + '。'
+            : '13 to 23 are after noon, so take 12 off to get back to the clock-face number: '
+              + d.h24 + ' − 12 = ' + d.h12 + ', so it is ' + ansTxt + ' on a 12-hour clock.'
+        };
+      } },
+    /* 3. 幾日幾小時 → 幾小時。誘答包含「用 60 去乘」—— 這一課最大的迷思。 */
+    { id:'dayToHour', cat:'convert',
+      make:function(used){
+        var d0 = pickUnused(DH_D_POOL, used);
+        var r = pick(DH_H_POOL);
+        var total = d0 * HOUR_PER_DAY + r;
+        var wrong60 = d0 * MIN_PER_HOUR + r;
+        var K = keyComp(['hour']);
+        var mx = mixBy([total], [[wrong60], [d0 * HOUR_PER_DAY], [total + HOUR_PER_DAY]], K, function(step){
+          return notEcho([[total - step * HOUR_PER_DAY], [total + step * HOUR_PER_DAY],
+                          [total - step], [total + step]], [d0, r])
+                 .filter(function(v){ return v[0] >= 1; });
+        });
+        return { d0:d0, r:r, total:total, wrong60:wrong60, correct:[total], opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var srcTxt = t.dur(['day', 'hour'], [d.d0, d.r]);
+        return {
+          stem: lang === 'zh'
+            ? srcTxt + ' 是幾小時？'
+            : 'How many hours are ' + srcTxt + '?',
+          opts: d.opts.map(function(v){ return t.dur(['hour'], v); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '1 日 ＝ 24 小時，所以 ' + d.d0 + ' 日 ＝ ' + d.d0 + ' × 24 ＝ ' + (d.d0 * HOUR_PER_DAY)
+              + ' 小時，再加上剩下的 ' + d.r + ' 小時：' + (d.d0 * HOUR_PER_DAY) + ' ＋ ' + d.r + ' ＝ '
+              + d.total + ' 小時。' + d.wrong60 + ' 是用 60 去乘的，日和小時之間的滿數是 24，不是 60。'
+            : '1 day = 24 hours, so ' + d.d0 + ' days = ' + d.d0 + ' × 24 = ' + (d.d0 * HOUR_PER_DAY)
+              + ' hours, plus the ' + t.plu(d.r, 'hour') + ' left over: ' + (d.d0 * HOUR_PER_DAY) + ' + ' + d.r
+              + ' = ' + d.total + ' hours. ' + d.wrong60
+              + ' multiplies by 60, but days and hours meet at 24, not 60.'
+        };
+      } },
+    /* 4. 幾小時 → 幾日幾小時。誘答包含「用 60 去除」。 */
+    { id:'hourToDay', cat:'convert',
+      make:function(used){
+        var d0 = 0, r = 0, total = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          d0 = pickUnused(DH_D_POOL, used);
+          r = pick(DH_H_POOL);
+          total = d0 * HOUR_PER_DAY + r;
+          ok = (total >= MIN_PER_HOUR) && (total % MIN_PER_HOUR !== 0);
+        }
+        if (!ok){ d0 = 3; r = 5; total = 77; }
+        var units = ['day', 'hour'];
+        var K = keyComp(units);
+        var wrong60 = [Math.floor(total / MIN_PER_HOUR), total % MIN_PER_HOUR];
+        var near = (r + 2 <= 23) ? [d0, r + 2] : [d0, r - 2];
+        var mx = mixBy([d0, r], [wrong60, [d0 + 1, r], near], K, function(step){
+          return [fromSmallest(units, total + step * HOUR_PER_DAY),
+                  fromSmallest(units, total - step * HOUR_PER_DAY),
+                  fromSmallest(units, total + step),
+                  fromSmallest(units, total - step)].filter(function(v){
+            return v[0] >= 0 && toSmallest(units, v) >= 1;
+          });
+        });
+        return { d0:d0, r:r, total:total, wrong60:wrong60, correct:[d0, r], opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var srcTxt = t.dur(['hour'], [d.total]);
+        var ansTxt = t.dur(['day', 'hour'], [d.d0, d.r]);
+        return {
+          stem: lang === 'zh'
+            ? srcTxt + ' 是幾日幾小時？'
+            : srcTxt + ' is how many days and hours?',
+          opts: d.opts.map(function(v){ return t.dur(['day', 'hour'], v); }), ans: d.ans,
+          why: lang === 'zh'
+            ? d.total + ' ÷ 24 ＝ ' + d.d0 + ' 餘 ' + d.r + '：商 ' + d.d0 + ' 是日，餘數 ' + d.r
+              + ' 就是剩下的小時，所以是 ' + ansTxt + '。除的時候要用 24，不是 60。'
+            : d.total + ' ÷ 24 = ' + d.d0 + ' remainder ' + d.r + ': the quotient ' + d.d0
+              + ' counts the days and the remainder ' + d.r + ' is the hours left over, giving ' + ansTxt
+              + '. You divide by 24 here, not by 60.'
+        };
+      } },
+    /* 5. 幾小時幾分 → 幾分。誘答包含「用 24 去乘」。 */
+    { id:'hourToMin', cat:'convert',
+      make:function(used){
+        var h = pickUnused(HM_H_POOL, used);
+        var m = pick(HM_M_POOL);
+        var total = h * MIN_PER_HOUR + m;
+        var wrong24 = h * HOUR_PER_DAY + m;
+        var K = keyComp(['min']);
+        var mx = mixBy([total], [[wrong24], [h * MIN_PER_HOUR], [total + MIN_PER_HOUR]], K, function(step){
+          return notEcho([[total - step * MIN_PER_HOUR], [total + step * MIN_PER_HOUR],
+                          [total - step], [total + step]], [h, m])
+                 .filter(function(v){ return v[0] >= 1; });
+        });
+        return { h:h, m:m, total:total, wrong24:wrong24, correct:[total], opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var srcTxt = t.dur(['hour', 'min'], [d.h, d.m]);
+        return {
+          stem: lang === 'zh'
+            ? srcTxt + ' 是幾分？'
+            : 'How many minutes are ' + srcTxt + '?',
+          opts: d.opts.map(function(v){ return t.dur(['min'], v); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '1 小時 ＝ 60 分，所以 ' + d.h + ' 小時 ＝ ' + d.h + ' × 60 ＝ ' + (d.h * MIN_PER_HOUR)
+              + ' 分，再加 ' + d.m + ' 分：' + (d.h * MIN_PER_HOUR) + ' ＋ ' + d.m + ' ＝ ' + d.total + ' 分。'
+              + d.wrong24 + ' 是用 24 去乘的，小時和分之間的滿數是 60。'
+            : '1 hour = 60 minutes, so ' + t.plu(d.h, 'hour') + ' = ' + d.h + ' × 60 = ' + (d.h * MIN_PER_HOUR)
+              + ' minutes, plus ' + d.m + ': ' + (d.h * MIN_PER_HOUR) + ' + ' + d.m + ' = ' + d.total
+              + ' minutes. ' + d.wrong24 + ' multiplies by 24, but hours and minutes meet at 60.'
+        };
+      } },
+    /* 6. 幾分幾秒 → 幾秒。誘答包含「用 24 去乘」。 */
+    { id:'minToSec', cat:'convert',
+      make:function(used){
+        var m = pickUnused(MS_M_POOL, used);
+        var s = pick(MS_S_POOL);
+        var total = m * SEC_PER_MIN + s;
+        var wrong24 = m * HOUR_PER_DAY + s;
+        var K = keyComp(['sec']);
+        var mx = mixBy([total], [[wrong24], [m * SEC_PER_MIN], [total + SEC_PER_MIN]], K, function(step){
+          return notEcho([[total - step * SEC_PER_MIN], [total + step * SEC_PER_MIN],
+                          [total - step], [total + step]], [m, s])
+                 .filter(function(v){ return v[0] >= 1; });
+        });
+        return { m:m, s:s, total:total, wrong24:wrong24, correct:[total], opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var srcTxt = t.dur(['min', 'sec'], [d.m, d.s]);
+        return {
+          stem: lang === 'zh'
+            ? srcTxt + ' 是幾秒？'
+            : 'How many seconds are ' + srcTxt + '?',
+          opts: d.opts.map(function(v){ return t.dur(['sec'], v); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '1 分 ＝ 60 秒，所以 ' + d.m + ' 分 ＝ ' + d.m + ' × 60 ＝ ' + (d.m * SEC_PER_MIN)
+              + ' 秒，再加 ' + d.s + ' 秒：' + (d.m * SEC_PER_MIN) + ' ＋ ' + d.s + ' ＝ ' + d.total + ' 秒。'
+              + d.wrong24 + ' 是用 24 去乘的，分和秒之間的滿數是 60。'
+            : '1 minute = 60 seconds, so ' + t.plu(d.m, 'min') + ' = ' + d.m + ' × 60 = ' + (d.m * SEC_PER_MIN)
+              + ' seconds, plus ' + d.s + ': ' + (d.m * SEC_PER_MIN) + ' + ' + d.s + ' = ' + d.total
+              + ' seconds. ' + d.wrong24 + ' multiplies by 24, but minutes and seconds meet at 60.'
+        };
+      } },
+    /* 7. 時分相加（分一定會進位）。誘答包含「忘了進位的那 1 小時」與「忘了扣掉 60」。 */
+    { id:'addHM', cat:'add',
+      make:function(used){
+        var units = ['hour', 'min'];
+        var p = pickAddPair(units, used);
+        var rows = addSteps(units, p.a, p.b);
+        var correct = stepVals(rows);
+        var raw = p.a[1] + p.b[1];
+        var K = keyComp(units);
+        var cands = [
+          [p.a[0] + p.b[0], raw - MIN_PER_HOUR],
+          [p.a[0] + p.b[0] + 1, raw],
+          [p.a[0] - p.b[0], p.a[1] - p.b[1]]
+        ];
+        var mx = mixBy(correct, cands, K, function(step){
+          return [fromSmallest(units, toSmallest(units, correct) + step),
+                  fromSmallest(units, toSmallest(units, correct) - step)]
+            .filter(function(v){ return v[0] >= 0 && toSmallest(units, v) >= 1; });
+        });
+        return { units:units, a:p.a, b:p.b, raw:raw, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){ return fmtAdd(d, lang); } },
+    /* 8. 分秒相加（秒一定會進位）。 */
+    { id:'addMS', cat:'add',
+      make:function(used){
+        var units = ['min', 'sec'];
+        var p = pickAddPair(units, used);
+        var rows = addSteps(units, p.a, p.b);
+        var correct = stepVals(rows);
+        var raw = p.a[1] + p.b[1];
+        var K = keyComp(units);
+        var cands = [
+          [p.a[0] + p.b[0], raw - SEC_PER_MIN],
+          [p.a[0] + p.b[0] + 1, raw],
+          [p.a[0] - p.b[0], p.a[1] - p.b[1]]
+        ];
+        var mx = mixBy(correct, cands, K, function(step){
+          return [fromSmallest(units, toSmallest(units, correct) + step),
+                  fromSmallest(units, toSmallest(units, correct) - step)]
+            .filter(function(v){ return v[0] >= 0 && toSmallest(units, v) >= 1; });
+        });
+        return { units:units, a:p.a, b:p.b, raw:raw, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){ return fmtAdd(d, lang); } },
+    /* 9. 時分相減（分一定不夠減，要向小時借 60）。 */
+    { id:'subHM', cat:'sub',
+      make:function(used){ return makeSub(['hour', 'min'], used); },
+      fmt:function(d, lang){ return fmtSub(d, lang); } },
+    /* 10. 日時相減（小時一定不夠減，要向日借 **24**）。
+           誘答一定包含「借了 60」—— 這一課最貴的迷思。 */
+    { id:'subDH', cat:'sub',
+      make:function(used){ return makeSub(['day', 'hour'], used); },
+      fmt:function(d, lang){ return fmtSub(d, lang); } },
+    /* 11. 時刻 ＋ 時間量（可能跨過午夜）。誘答一定包含「今天／隔天說錯」。 */
+    { id:'clockAdd', cat:'cross',
+      make:function(used){
+        var sh = 0, sm = 0, dh = 0, dm = 0, total = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          sh = pickUnused(CLOCK_H_POOL, used);
+          sm = pick(MIN_POOL);
+          dh = pick(CLOCK_ADD_H);
+          dm = pick(MIN_POOL);
+          total = sh * MIN_PER_HOUR + sm + dh * MIN_PER_HOUR + dm;
+          ok = (total % MIN_PER_HOUR !== 0) && (total < 2 * MIN_PER_DAY) && (total >= 2 * MIN_PER_HOUR);
+        }
+        if (!ok){ sh = 22; sm = 40; dh = 1; dm = 50; total = 22 * 60 + 40 + 110; }
+        var correct = stampOf(total);
+        var cands = [
+          { day:1 - correct.day, h:correct.h, m:correct.m },
+          stampOf(total - MIN_PER_HOUR),
+          stampOf(sh * MIN_PER_HOUR + sm + dm)
+        ];
+        var mx = mixBy(correct, cands, keyStamp, function(step){
+          return [stampOf(total + step * MIN_PER_HOUR), stampOf(total - step * MIN_PER_HOUR)]
+            .filter(function(o){ return o.day >= 0 && o.day <= 1; });
+        });
+        return { sh:sh, sm:sm, dh:dh, dm:dm, total:total, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var startTxt = t.clock24(d.sh, d.sm);
+        var addTxt = t.dur(['hour', 'min'], [d.dh, d.dm]);
+        var raw = d.sm + d.dm;
+        var hSum = d.sh + d.dh + Math.floor(raw / MIN_PER_HOUR);
+        var ansTxt = t.clockDay(d.correct.day, d.correct.h, d.correct.m);
+        var wrapZh = d.correct.day
+          ? hSum + ' 到了 24，所以 ' + hSum + ' － 24 ＝ ' + d.correct.h + '，而且要說那是隔天。'
+          : hSum + ' 還沒到 24，所以還是今天。';
+        var wrapEn = d.correct.day
+          ? hSum + ' has reached 24, so ' + hSum + ' − 24 = ' + d.correct.h + ', and it is the next day.'
+          : hSum + ' has not reached 24, so it is still today.';
+        return {
+          stem: lang === 'zh'
+            ? startTxt + ' 再過 ' + addTxt + ' 是幾時幾分？（時刻要寫在 0 時到 23 時之間，跨過午夜就要說是隔天）'
+            : 'It is ' + startTxt + ' and ' + addTxt
+              + ' go by. What time is it then? (write the time between 00:00 and 23:59, and say “the next day” if it goes past midnight)',
+          opts: d.opts.map(function(o){ return t.clockDay(o.day, o.h, o.m); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '分先加：' + d.sm + ' ＋ ' + d.dm + ' ＝ ' + raw
+              + (raw >= MIN_PER_HOUR ? '，到了 60 就進 1 到時、剩下 ' + (raw % MIN_PER_HOUR) + ' 分' : '，還沒到 60')
+              + '；時加起來是 ' + hSum + '。' + wrapZh + '答案是 ' + ansTxt + '。'
+            : 'Add the minutes first: ' + d.sm + ' + ' + d.dm + ' = ' + raw
+              + (raw >= MIN_PER_HOUR ? ', which reaches 60, so carry 1 to the hours and ' + t.plu(raw % MIN_PER_HOUR, 'min') + t.isAre(raw % MIN_PER_HOUR) + ' left' : ', not yet 60')
+              + '; the hours add up to ' + hSum + '. ' + wrapEn + ' The answer is ' + ansTxt + '.'
+        };
+      } },
+    /* 12. 兩個時刻之間經過多久（分一定不夠減）。誘答包含「分反過來減」。 */
+    { id:'clockDiff', cat:'cross',
+      make:function(used){
+        var fh = 0, fm = 0, th = 0, tm = 0, diff = 0, ok = false;
+        for (var tries = 0; tries < 200 && !ok; tries++){
+          fh = pickUnused(DIFF_FROM_H, used);
+          fm = pick(rangeList(20, 59));
+          th = pick(DIFF_TO_H);
+          tm = pick(rangeList(1, fm - 1));
+          diff = (th * MIN_PER_HOUR + tm) - (fh * MIN_PER_HOUR + fm);
+          ok = (diff - MIN_PER_HOUR >= 1) && (fm - tm !== 30);
+        }
+        if (!ok){ fh = 9; fm = 40; th = 14; tm = 25; diff = 285; }
+        var units = ['hour', 'min'];
+        var K = keyComp(units);
+        var correct = fromSmallest(units, diff);
+        var cands = [
+          [th - fh, fm - tm],
+          fromSmallest(units, diff + MIN_PER_HOUR),
+          fromSmallest(units, diff - MIN_PER_HOUR)
+        ];
+        var mx = mixBy(correct, cands, K, function(step){
+          return [fromSmallest(units, diff + step), fromSmallest(units, diff - step)]
+            .filter(function(v){ return v[0] >= 0 && toSmallest(units, v) >= 1; });
+        });
+        return { fh:fh, fm:fm, th:th, tm:tm, diff:diff, correct:correct, opts:mx.opts, ans:mx.ans };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var fromTxt = t.clock24(d.fh, d.fm), toTxt = t.clock24(d.th, d.tm);
+        var ansTxt = t.dur(['hour', 'min'], d.correct);
+        var borrowed = d.tm + MIN_PER_HOUR;
+        return {
+          stem: lang === 'zh'
+            ? '從 ' + fromTxt + ' 到 ' + toTxt + '，一共經過多久？'
+            : 'From ' + fromTxt + ' to ' + toTxt + ', how long is that altogether?',
+          opts: d.opts.map(function(v){ return t.dur(['hour', 'min'], v); }), ans: d.ans,
+          why: lang === 'zh'
+            ? '分不夠減，向小時借 1，換成 60 分：' + d.tm + ' ＋ 60 ＝ ' + borrowed + '，'
+              + borrowed + ' － ' + d.fm + ' ＝ ' + d.correct[1] + ' 分；小時被借走 1，所以 '
+              + d.th + ' － 1 － ' + d.fh + ' ＝ ' + d.correct[0] + '。答案是 ' + ansTxt + '。'
+            : 'The minutes are not enough, so borrow 1 hour as 60 minutes: ' + d.tm + ' + 60 = '
+              + borrowed + ', and ' + borrowed + ' − ' + d.fm + ' = ' + t.plu(d.correct[1], 'min')
+              + '. The hours lost that 1, so ' + d.th + ' − 1 − ' + d.fh + ' = '
+              + d.correct[0] + '. The answer is ' + ansTxt + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  function makePlan(){
+    var usedByGen = {};
+    GENS.forEach(function(g){ usedByGen[g.id] = []; });
+    return shuffle(GENS.slice()).map(function(g){
+      return { gen: g, data: g.make(usedByGen[g.id]) };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = I18N[lang];
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var ai = 0; ai < arias.length; ai++){
+      var akey = arias[ai].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[ai].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var plan = makePlan();
+  var done = 0, right = 0, wrongGroups = {};
+
+  function buildQuiz(){
+    var t = TXT[lang];
+    quizEl.textContent = '';
+    resultEl.style.display = 'none';
+    resultLinks.textContent = '';
+    done = 0; right = 0; wrongGroups = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = plan.length;
+    plan.forEach(function(item, pos){
+      var q = item.gen.fmt(item.data, lang);
+      var cat = item.gen.cat;
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(pos + 1);
+      var c = document.createElement('span');
+      c.className = 'cat'; c.textContent = t.cats[cat];
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){ b.classList.add('wrong'); wrongGroups[GROUP_OF[cat]] = true; }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === plan.length) showResult();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(c); box.appendChild(stem);
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function showResult(){
+    var t = TXT[lang];
+    resultEl.style.display = 'block';
+    var groups = [];
+    for (var g in wrongGroups) if (wrongGroups[g]) groups.push(g);
+    if (groups.length === 0){
+      resultLine.textContent = t.resAll(plan.length);
+    } else {
+      resultLine.textContent = t.resSome(right, plan.length);
+      groups.forEach(function(g){
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'home'; a.href = LINK_HREFS[g]; a.textContent = t.groupNames[g];
+        li.appendChild(a);
+        resultLinks.appendChild(li);
+      });
+    }
+  }
+
+  retryBtn.addEventListener('click', function(){
+    plan = makePlan();
+    buildQuiz();
+  });
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    buildQuiz();
+  });
+
+  applyStatic();
+  buildQuiz();
+})();
+</script>
+</body>
+</html>

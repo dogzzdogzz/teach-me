@@ -80,7 +80,7 @@
 | 📋 表格讀心術 | 報讀表格 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/parents.html) |
 
 
-## 四年級（4 個主題）
+## 四年級（5 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
 |------|------|:---:|:---:|:---:|:---:|
@@ -88,6 +88,7 @@
 | 🚏 概數車站 | 概數與四捨五入 | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/rounding/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/rounding/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/rounding/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/rounding/parents.html) |
 | 🧭 角度測量站 | 角度、量角器與旋轉角 | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle/parents.html) |
 | 🧱 面積鋪磚廠 | 面積（平方公分、平方公尺、長方形公式） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/area/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/area/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/area/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/area/parents.html) |
+| 🕓 24 時調度中心 | 時間（24 時制、日時分秒的加減） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/parents.html) |
 
 ## 五年級（23 個主題）
 
@@ -134,7 +135,7 @@ docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調�
 grade-1/math/                  # 一年級：單元整理＋ 9 個四頁迷你課程
 grade-2/math/                  # 二年級：單元整理＋ 11 個四頁迷你課程（numbers／add-sub／multiply／time／length／divide／two-step／capacity-weight／shapes／solid／table）
 grade-3/math/                  # 三年級：單元整理＋ 17 個四頁迷你課程
-grade-4/math/                  # 四年級：單元整理＋ 4 個四頁迷你課程（angle／area／numbers／rounding）
+grade-4/math/                  # 四年級：單元整理＋ 5 個四頁迷你課程（angle／area／numbers／rounding／time）
 grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你課程
 │   └── <主題>/                #   每個主題一個資料夾，固定四頁：
 │       ├── index.html         #     上課（互動教學）
@@ -154,7 +155,7 @@ grade-6/math/                  # 六年級：單元整理（課程準備中）
 | 一年級 | 100 以內的數、加減法、形狀、時鐘整點半點 | [grade-1/math](grade-1/math/README.md) |
 | 二年級 | 1000 以內的數、直式加減、九九乘法、幾點幾分與日期、公分與公尺、分裝與平分、兩步驟問題、容量與重量、平面圖形、立體形體、統計表 | [grade-2/math](grade-2/math/README.md) |
 | 三年級 | 萬以內的數、乘除直式、分數與小數入門、周長、圓 | [grade-3/math](grade-3/math/README.md) |
-| 四年級 | 大數與概數、四則混合、帶分數、角度、面積公式 | [grade-4/math](grade-4/math/README.md) |
+| 四年級 | 大數與概數、四則混合、帶分數、角度、面積公式、24 時制 | [grade-4/math](grade-4/math/README.md) |
 | 五年級 | **因數與倍數**、通分與異分母加減、分數小數乘除、體積 | [grade-5/math](grade-5/math/README.md) |
 | 六年級 | 質數與質因數分解、分數小數除法、比與比值、圓面積、速率 | [grade-6/math](grade-6/math/README.md) |
 
