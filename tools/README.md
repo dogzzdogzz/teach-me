@@ -345,6 +345,43 @@ SVG 的寬度要蓋住它自己畫出去的最大 x（一開始那一排散落�
 （§3e）跑，清單進版控。**沒響也要追原因**：add-sub 那一輪有一條沒響，
 追下去才發現那個保底路徑實際上到不了。
 
+## 3f. 共用 Python 檢查的改壞測試（2026-08-28 起）
+
+```bash
+python3 tools/breaktest_checks.py            # 六支全跑
+python3 tools/breaktest_checks.py check_i18n # 只跑一支
+```
+
+§3e 的 `breaktest.js` 只跑得到 `simgen.js` 與 `verify_lesson_data.js`，也就是
+**每一課自己的設定檔**。上面那六支 Python 檢查把關全站 272 頁，在這之前
+**沒有任何已進版控的證據證明它們的斷言真的會響**。
+
+這不是理論風險。2026-08-28 才發現 `check_quiz.py` 的等值檢查壞了很久：
+`13/5` 被讀成「符號 1、分數 3/5」，於是 13/5 和 23/5 被判成同一個值；
+而 `'' in '-−'` 是 True，沒有符號時一律當成負數。**每一次執行都是綠的。**
+（把舊解析器重建出來跑一次可以看到：`13/5` 和 `23/5` 都是 `3/5`、`3/4` 是 `-3/4`。）
+
+每一支的改壞清單住在 `tools/checks/py-<checker>.py`，欄位和 §3e 一樣
+（`file` / `find` / `replace` / `expect`），另外多一個 `negative=True`：
+**改完之後必須「不」噴那一句**。沒有反向的那一半，「把檢查寫得越來越嚴」
+會安靜地開始誤報真實頁面 —— 例如 `parents.html` 是全站唯一可以放站外連結的頁，
+把 `[EXTERNAL]` 寫太嚴就等於擋掉延伸資源。
+
+紀律和 §3e 一致：先跑原檔（`BASELINE-FAIL`／`NO PROOF`）、`find` 必須剛好出現一次
+（`SETUP-FAIL`）、比對只認輸出裡真的出現那一句話。
+
+三種沙箱模式：`files`（只複製 fixture，路徑當參數）、`rootfiles`（只複製 fixture，
+根目錄當參數）、`root`（整個 repo 複製一份 —— `check_links` 與 `check_lessons`
+要走訪整棵樹才判得出連結與堂數）。
+
+目前 **42 筆全部照預期**：check_i18n 11（含 3 筆反向）、check_quiz 8（含 3 筆反向，
+釘住 2026-08-28 修掉的三個解析 bug）、check_parents 9（含 1 筆反向）、
+check_links 7（含 2 筆反向）、check_lessons 4、check_syntax 3（含 1 筆反向）。
+
+⚠️ 寫這一份的時候自己踩到一次：`check_parents` 的日期是從**字典**讀的，不是從 markup，
+所以第一版那筆「拿掉日期」改到 markup、完全不會響。
+**每寫一筆 break 就跑一次，看它到底有沒有響**（§3e 的同一條教訓）。
+
 ## 4. 站內連結
 
 ```bash
