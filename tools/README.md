@@ -374,13 +374,41 @@ python3 tools/breaktest_checks.py check_i18n # 只跑一支
 根目錄當參數）、`root`（整個 repo 複製一份 —— `check_links` 與 `check_lessons`
 要走訪整棵樹才判得出連結與堂數）。
 
-目前 **42 筆全部照預期**：check_i18n 11（含 3 筆反向）、check_quiz 8（含 3 筆反向，
-釘住 2026-08-28 修掉的三個解析 bug）、check_parents 9（含 1 筆反向）、
-check_links 7（含 2 筆反向）、check_lessons 4、check_syntax 3（含 1 筆反向）。
+目前 **39 筆全部照預期**：check_i18n 9（含 1 筆反向）、check_quiz 6（含 1 筆反向）、
+check_parents 10（含 1 筆反向）、check_links 7（含 2 筆反向）、check_lessons 4、
+check_syntax 3（含 1 筆反向）。
 
-⚠️ 寫這一份的時候自己踩到一次：`check_parents` 的日期是從**字典**讀的，不是從 markup，
-所以第一版那筆「拿掉日期」改到 markup、完全不會響。
-**每寫一筆 break 就跑一次，看它到底有沒有響**（§3e 的同一條教訓）。
+harness 自己會分辨四種結果，不可以混在一起：
+
+| 結果 | 意思 |
+|------|------|
+| `caught (exit N)` | 檢查印出了那一句話**而且**回傳非 0 |
+| `SILENT PASS` | 印出來了卻回傳 0 —— 腳本呼叫端偵測不到，等於沒擋住 |
+| `CHECKER-CRASH` | 檢查**當掉**了。當掉不算抓到，也不算「正確地保持安靜」 |
+| `NOT CAUGHT` | 檢查整個沒反應 |
+
+⚠️ **當掉和「安靜」長得一模一樣**，是這一支最容易 fail-open 的地方：一支只在
+某種輸入下當掉的檢查，會讓每一筆反向改壞都看起來像通過。所以 `run_checker()`
+一定要回傳（輸出, 離開碼, 有沒有 traceback）三件事，缺一不可。
+
+三件寫這一份時自己踩到、值得記下來的事：
+
+1. **`check_parents` 的日期是從字典讀的，不是從 markup** —— 第一版那筆「拿掉日期」
+   改到 markup，完全不會響。**每寫一筆 break 就跑一次，看它到底有沒有響。**
+2. **空斷言比沒有斷言更糟**（codex 2026-08-28 抓到 4 筆）：`en.btn:'中'` 那一筆的
+   find/replace 根本沒動到 `btn`；`<title>` 中文那一筆 baseline 本來就證明了。
+   還有兩筆（13/5 vs 23/5、英文帶分數）其實是被 **baseline 本身**釘住的 ——
+   fixture 裡就含有那一組值，舊解析器會讓**原檔**直接 BASELINE-FAIL，比反向改壞更強。
+   **判準：問「這一筆如果拿掉，還有什麼會壞？」答不出來就是空的。**
+3. **這一支第一次跑硬化版就抓到 `check_links.py` 的真缺陷**：站內連結那一段的略過清單
+   是手打的（`mailto:`／`data:`／`javascript:`），漏了 `tel:`／`blob:`／`about:`，
+   於是一個合法的 `tel:` 連結會被誤報成「指不到檔案」。現在改成共用 `LOCAL_SCHEMES`。
+
+⚠️ 順帶修掉的另一件事：**六支裡原本有四支印出問題卻回傳 0**
+（check_quiz／check_parents／check_links／check_syntax），腳本呼叫端根本偵測不到失敗。
+六支現在都 `sys.exit(1 if 有問題 else 0)`。**注意全站跑的時候 i18n 40／題庫 16／
+家長頁 29 都是已知的合法例外，所以那三支在真實 repo 上本來就會回傳 1** ——
+要看的是行數有沒有偏離基準線，不是離開碼。
 
 ## 4. 站內連結
 

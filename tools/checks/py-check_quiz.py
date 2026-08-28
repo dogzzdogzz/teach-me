@@ -37,19 +37,16 @@ BREAKS = [
          find="opts:['6/5','13/5','7/5','23/5'], ans:1,\n          why:'帶分數的「又」",
          replace="opts:['6/5','13/5','7/5'], ans:1,\n          why:'帶分數的「又」"),
 
-    # ---- 反向：這三條釘住 2026-08-28 修掉的三個解析 bug，不可以回來 ----
-    dict(file=F, expect='[EQVAL]', negative=True,
-         why="two-digit numerators must stay distinct — the old [+-−] character RANGE "
-             "swallowed the leading digit, so 13/5 and 23/5 both parsed as 3/5",
-         find="2 又 3/5 換成假分數應該是多少？',\n          opts:['6/5','13/5','7/5','23/5'], ans:1,",
-         replace="2 又 3/5 換成假分數應該是多少？',\n          opts:['13/5','23/5','43/5','53/5'], ans:1,"),
+    # ---- 反向：必須不要噴 ----
+    # ⚠️ 兩條 2026-08-28 的解析 bug 其實是被 **baseline 本身**釘住的，不是被改壞測試：
+    # 這個 fixture 的 qsBoost[1] 就含有 13/5 和 23/5，舊解析器會把兩個都讀成 3/5，
+    # 於是原檔就會噴 EQVAL、整份設定直接 BASELINE-FAIL。那比一筆反向改壞更強，
+    # 所以這裡**不再重複**寫那兩筆（寫了也是永遠不會失敗的空斷言）。
+    # 同理，英文帶分數的解析由上面第 3 筆**正向**改壞證明。
     dict(file=F, expect='[EQVAL]', negative=True,
          why="a negative and a positive fraction are different values — the old "
-             "`'' in '-−'` test made every unsigned value negative",
+             "`'' in '-−'` test made every unsigned value negative too "
+             "(the baseline has no negative options, so this one is not covered by it)",
          find="下面哪一個是<strong>真分數</strong>？', opts:['5/5','3/8','9/4','4/3'], ans:1,",
          replace="下面哪一個是<strong>真分數</strong>？', opts:['-3/4','3/4','9/4','4/3'], ans:1,"),
-    dict(file=F, expect='[EQVAL]', negative=True,
-         why='English mixed numbers that really differ must not be flagged',
-         find="opts:['2 1/4 metres','1 2/4 metres','4 1/4 metres','2 metres'], ans:0,",
-         replace="opts:['2 1/4 metres','1 2/4 metres','4 1/4 metres','3 3/4 metres'], ans:0,"),
 ]

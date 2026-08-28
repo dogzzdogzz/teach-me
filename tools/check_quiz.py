@@ -135,3 +135,4 @@ if __name__ == '__main__':
             if key in seen: continue
             seen.add(key); print(f'[{kind}] {msg}'); tot += 1
     print(f'--- {tot} problem(s)')
+    sys.exit(1 if tot else 0)

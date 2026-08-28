@@ -54,12 +54,8 @@ BREAKS = [
          why='Chinese nested inside a data-i18n element (<strong>) is legitimate',
          find='<p class="lead" data-i18n="s1lead">一條巧克力',
          replace='<p class="lead" data-i18n="s1lead"><strong>巢狀的中文</strong>一條巧克力'),
-    dict(file=F, expect='[LEAK]', negative=True,
-         why='<title> is set by JS, so its Chinese is an intentional exception',
-         find='<title>教我分數 — 分數變身工廠</title>',
-         replace='<title>教我分數 — 另一個中文標題</title>'),
-    dict(file=F, expect='[EN-CJK]', negative=True,
-         why="en.btn's '中' is the language-toggle label, whitelisted on every page",
-         find="htmlLang:'en', title:'Teach Me Fractions — The Fraction Makeover Workshop', btn:'中',",
-         replace="htmlLang:'en', title:'Teach Me Fractions — The Makeover Workshop', btn:'中',"),
+    # ⚠️ 拿掉了兩筆空斷言（2026-08-28 codex 審查）：
+    #   - `<title>` 的中文：baseline 本來就證明它不噴，改成另一個中文標題沒有新增條件。
+    #   - `en.btn:'中'`：原本那一筆的 find/replace 根本沒有動到 btn，只換了英文標題。
+    #     這個白名單是由「baseline 不噴」＋「上面第 8 筆把中文放進 eb1 會噴」**成對**證明的。
 ]

@@ -48,6 +48,12 @@ BREAKS = [
          find='"r1t": "Junyi Academy · grade 4 maths (in Chinese)"',
          replace='"r1t": "均一教育平台 · grade 4 maths"'),
 
+    # 剛好要有一個容器 —— 多一個也要報錯，不然「註解裡的假區塊不算」那一條
+    # 可以被「根本沒在數容器」滿足（codex 2026-08-28）
+    dict(file=F, expect='expected exactly one <div class="resblock">',
+         find='    <div class="resblock">',
+         replace='    <div class="resblock"></div>\n    <div class="resblock">'),
+
     # ---- 反向：必須不要噴 ----
     dict(file=F, expect='延伸資源', negative=True,
          why='a fake resources block hidden in an HTML comment must not count as the real one',

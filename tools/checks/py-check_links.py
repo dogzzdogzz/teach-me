@@ -45,7 +45,9 @@ BREAKS = [
          find='    <p class="resnote" data-i18n="s6note">',
          replace='    <p><a href="https://example.org/extra" target="_blank" rel="noopener noreferrer">x</a></p>\n    <p class="resnote" data-i18n="s6note">'),
     dict(file=IDX, expect='[EXTERNAL]', negative=True,
-         why='mailto:/tel:/data: never leave this origin, so they stay allowed',
+         why='mailto:, tel: and data: never leave this origin, so all three stay allowed',
          find='  <footer data-i18n="footer">',
-         replace='  <p><a href="mailto:someone@example.com">x</a></p>\n  <footer data-i18n="footer">'),
+         replace='  <p><a href="mailto:someone@example.com">a</a>'
+                 '<a href="tel:+886212345678">b</a>'
+                 '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></p>\n  <footer data-i18n="footer">'),
 ]

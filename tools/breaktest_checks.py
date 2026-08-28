@@ -55,7 +55,10 @@ def build_sandbox(cfg, tmp):
             src = os.path.join(ROOT, entry)
             dst = os.path.join(tmp, entry)
             if os.path.isdir(src):
-                shutil.copytree(src, dst,
+                # symlinks=True：預設會把 symlink 解參考成一般檔案，那會改變
+                # check_links／check_lessons 對同一棵樹的判斷（目前 repo 沒有
+                # symlink，但這條不該靠「剛好沒有」成立）。
+                shutil.copytree(src, dst, symlinks=True,
                                 ignore=shutil.ignore_patterns(*SKIP_DIRS))
             else:
                 shutil.copy2(src, dst)
@@ -70,15 +73,31 @@ def build_sandbox(cfg, tmp):
     return copied if mode == 'files' else [tmp]
 
 
-def run_checker(cfg, args):
+def run_checker(cfg, args, cwd):
+    """回傳 (輸出, 離開碼, 有沒有 traceback)。
+
+    ⚠️ 三件事都要回傳，缺一不可：
+    - **離開碼**：檢查可以把訊息印出來卻回傳 0，那樣腳本呼叫端根本偵測不到失敗
+      （2026-08-28 發現六支裡有四支就是這樣）。
+    - **traceback**：檢查**當掉**的時候什麼都不會印，於是「反向改壞」會看起來
+      像「正確地保持安靜」—— 一支只在某種輸入下當掉的檢查可以拿到滿分。
+    - `cwd` 指到沙箱，不是真的 repo：用相對路徑的檢查才不會摸到真檔案。"""
     r = subprocess.run([sys.executable, os.path.join(ROOT, cfg.CHECKER)] + args,
-                       capture_output=True, text=True, cwd=ROOT)
-    return r.stdout + r.stderr
+                       capture_output=True, text=True, cwd=cwd)
+    out = r.stdout + r.stderr
+    crashed = ('Traceback (most recent call last)' in out)
+    return out, r.returncode, crashed
 
 
 def apply_break(tmp, brk):
     """回傳 None 表示成功，否則回傳 SETUP-FAIL 的理由。"""
-    target = os.path.join(tmp, brk['file'])
+    # 沙箱圍堵：絕對路徑或 ../ 會改到**真的 repo**。
+    rel = brk['file']
+    if os.path.isabs(rel) or os.path.normpath(rel).startswith('..'):
+        return 'break path %r escapes the sandbox' % rel
+    target = os.path.realpath(os.path.join(tmp, rel))
+    if os.path.commonpath([os.path.realpath(tmp), target]) != os.path.realpath(tmp):
+        return 'break path %r resolves outside the sandbox' % rel
     if not os.path.isfile(target):
         return 'fixture %s is not in the sandbox' % brk['file']
     src = open(target, encoding='utf-8').read()
@@ -96,14 +115,25 @@ def run_config(name, cfg):
     tmp = tempfile.mkdtemp(prefix='btpy_base_')
     try:
         args = build_sandbox(cfg, tmp)
-        baseline = run_checker(cfg, args)
+        baseline, base_rc, base_crash = run_checker(cfg, args, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-    if cfg.BASELINE_CLEAN and not re.search(cfg.BASELINE_CLEAN, baseline):
+    if base_crash:
+        print('  [CHECKER-CRASH] the unmodified files make the checker throw:')
+        for line in baseline.strip().split('\n')[-6:]:
+            print('      ' + line)
+        return 0, len(cfg.BREAKS)
+    # 錨在整行上：`--- 0 problem(s)` 出現在某一行、後面再接一個 traceback，
+    # 用沒有錨點的 search 會當成乾淨。
+    if cfg.BASELINE_CLEAN and not any(re.match(cfg.BASELINE_CLEAN, ln.strip())
+                                      for ln in baseline.split('\n')):
         print('  [BASELINE-FAIL] the unmodified files do not come back clean:')
         for line in baseline.strip().split('\n')[-6:]:
             print('      ' + line)
+        return 0, len(cfg.BREAKS)
+    if base_rc != 0:
+        print('  [BASELINE-FAIL] the unmodified files exit %d; a clean run must exit 0' % base_rc)
         return 0, len(cfg.BREAKS)
 
     ok = bad = 0
@@ -125,12 +155,24 @@ def run_config(name, cfg):
                 print('  [SETUP-FAIL] break %d: %s — %s' % (i, why, label))
                 bad += 1
                 continue
-            out = run_checker(cfg, args)
+            out, rc, crashed = run_checker(cfg, args, tmp)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+        # 當掉不算「抓到」，也不算「正確地保持安靜」—— 它自成一類。
+        if crashed:
+            print('  [CHECKER-CRASH] break %d: the checker threw instead of reporting — %s' % (i, label))
+            print('      ' + next((l for l in out.split('\n') if 'Error' in l or 'error' in l), '')[:160])
+            bad += 1
+            continue
+
         hit = want in out
         if negative:
+            if rc != 0:
+                print('  [FALSE ALARM] break %d: checker exited %d on content it should accept — %s'
+                      % (i, rc, label))
+                bad += 1
+                continue
             if hit:
                 print('  [FALSE ALARM] break %d: %s — the checker reported it on legitimate content' % (i, label))
                 print('      ' + next((l for l in out.split('\n') if want in l), '')[:160])
@@ -139,8 +181,13 @@ def run_config(name, cfg):
                 print('  [ok] break %d: correctly stayed quiet — %s' % (i, brk.get('why', want)))
                 ok += 1
         else:
-            if hit:
-                print('  [ok] break %d: caught — %s' % (i, want))
+            if hit and rc == 0:
+                # 訊息印出來了卻回傳 0：腳本呼叫端偵測不到，等於沒擋住。
+                print('  [SILENT PASS] break %d: reported %r but exited 0 — a scripted caller '
+                      'cannot tell this run failed' % (i, want))
+                bad += 1
+            elif hit:
+                print('  [ok] break %d: caught (exit %d) — %s' % (i, rc, want))
                 ok += 1
             else:
                 print('  [NOT CAUGHT] break %d: expected %r — the checker stayed green' % (i, want))

@@ -22,3 +22,4 @@ for dirpath, dirs, files in os.walk(ROOT):
                 print(f'[SYNTAX] {os.path.relpath(p,ROOT)} script#{i} (html line offset {offset})')
                 print('\n'.join(r.stderr.splitlines()[:6])); bad += 1
 print(f'--- {bad} script(s) with syntax errors, {n} inline scripts checked')
+sys.exit(1 if bad else 0)

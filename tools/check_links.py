@@ -26,7 +26,10 @@ for dirpath, dirs, files in os.walk(ROOT):
         src = open(p, encoding='utf-8').read()
         for m in re.finditer(r'''(?:href|src)\s*=\s*["\']([^"\']+)["\']''', src):
             u = m.group(1)
-            if u.startswith(('http://','https://','#','mailto:','data:','javascript:')): continue
+            # ⚠️ 這裡要用同一份 LOCAL_SCHEMES，不可以再寫一份手打的清單：
+            # 原本漏了 tel:／blob:／about:，於是一個合法的 tel: 連結會被當成
+            # 「指不到檔案的站內連結」而誤報（2026-08-28 由改壞測試抓到）。
+            if u.startswith(('http://','https://','#') + LOCAL_SCHEMES): continue
             path = unquote(urlparse(u).path)
             if not path: continue
             tgt = os.path.normpath(os.path.join(dirpath, path))
@@ -51,3 +54,4 @@ for dirpath, dirs, files in os.walk(ROOT):
             if not (os.path.isfile(tgt) or (os.path.isdir(tgt) and os.path.isfile(os.path.join(tgt,'index.html')))):
                 print(f'[META] {os.path.relpath(p,ROOT)} -> {u}'); bad += 1
 print(f'--- {bad} broken link(s)')
+sys.exit(1 if bad else 0)

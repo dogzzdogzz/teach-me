@@ -311,3 +311,4 @@ if __name__ == '__main__':
         for msg in check(p):
             print(f'[PARENTS] {p}: {msg}'); tot += 1
     print(f'--- {tot} problem(s) in {len(sys.argv)-1} page(s)')
+    sys.exit(1 if tot else 0)
