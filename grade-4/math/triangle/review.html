@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 三角形家族</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .figwrap{margin:0 0 12px;text-align:center;overflow-x:auto}
+  .shapefig{width:100%;max-width:360px;height:170px;display:block;margin:0 auto}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;position:sticky;bottom:8px;
+  }
+  .result{
+    margin-top:22px;background:var(--card);border:2px solid var(--green);border-radius:18px;
+    padding:20px;display:none;
+  }
+  .result.on{display:block}
+  .result .line{font-size:20px;font-weight:700;color:var(--green)}
+  .result .links{margin-top:10px;font-size:16px}
+  .result .links a{color:var(--blue)}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:14px;
+  }
+  footer{
+    margin-top:48px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：三角形家族</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>隔一天再來一次，還答得出來，才是真的記住了。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。
+     圖形只回傳「三個邊長平方 ＋ 轉幾度」，真正畫圖的程式在 GENS 後面。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function rangeList(a, b){
+    var out = [];
+    for (var i = a; i <= b; i++) out.push(i);
+    return out;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+
+  /* --- 分類核心。和課程頁同一套規則：三角形用**三個邊長的平方**表示，
+         全部是整數，所以兩件事都判得完全精確：
+           哪幾邊一樣長 ⟺ 平方相等；
+           最大的角是銳角／直角／鈍角 ⟺ 兩個小的平方和 － 最大的平方 的正負號。
+         （正三角形和等腰直角三角形的邊長都帶根號，所以不能用整數座標當標準寫法。） --- */
+  function sortSq(t){ return t.slice().sort(function(a, b){ return a - b; }); }
+  function triValid(t){
+    if (!t || t.length !== 3) return false;
+    for (var i = 0; i < 3; i++) if (!(t[i] > 0) || !isFinite(t[i])) return false;
+    var p = t[0], q = t[1], r = t[2];
+    return 2 * (p * q + q * r + r * p) - (p * p + q * q + r * r) > 0;
+  }
+  function sideClass(t){
+    var s = sortSq(t);
+    if (s[0] === s[1] && s[1] === s[2]) return 'equi';
+    if (s[0] === s[1] || s[1] === s[2]) return 'iso';
+    return 'scalene';
+  }
+  function angleClass(t){
+    var s = sortSq(t), d = s[0] + s[1] - s[2];
+    return d > 0 ? 'acute' : (d === 0 ? 'right' : 'obtuse');
+  }
+  /* 依邊的家族：正三角形也是等腰三角形。反過來不成立。
+     bothNames 靠它把「依邊換成比較鬆的名字」那一格擋在誘答之外 —— 那一格也是對的。 */
+  var SIDE_PARENTS = { equi:['iso'], iso:[], scalene:[] };
+  function sideAlso(k){ return (SIDE_PARENTS[k] || []).slice(); }
+  /* 一個三角形裡有幾個銳角：直角和鈍角合起來最多只有一個。 */
+  function acuteCount(t){ return angleClass(t) === 'acute' ? 3 : 2; }
+  /* 幾條邊一樣長（0 表示三條都不一樣）。 */
+  function equalSides(t){
+    var s = sortSq(t);
+    if (s[0] === s[1] && s[1] === s[2]) return 3;
+    if (s[0] === s[1] || s[1] === s[2]) return 2;
+    return 0;
+  }
+  /* 邊長（公分）轉成平方。給「題幹報邊長」的那幾支產生器用。 */
+  function sqOf(cm){ return cm.map(function(v){ return v * v; }); }
+
+  /* 九宮格：哪些「依角 × 依邊」組合畫得出來。
+     兩個畫不出來的都在正三角形那一欄，理由同一個：
+     正三角形三個角一樣大，而直角和鈍角合起來最多只有一個。 */
+  var ANGLE_KEYS = ['acute', 'right', 'obtuse'];
+  var SIDE_KEYS = ['scalene', 'iso', 'equi'];
+  function cellPossible(ak, sk){ return !(sk === 'equi' && ak !== 'acute'); }
+  var CELLS_OK = [], CELLS_NO = [];
+  ANGLE_KEYS.forEach(function(ak){
+    SIDE_KEYS.forEach(function(sk){
+      (cellPossible(ak, sk) ? CELLS_OK : CELLS_NO).push(ak + '-' + sk);
+    });
+  });
+
+  /* --- 排版：純資料，所以放在 GENS 前面 —— simgen 切得到，檢查才驗得到
+         「頁面真的畫成什麼」，而不是「設定檔自己會畫成什麼」。
+         pts[2] 永遠是最大角所在的頂點；邊的順序是 pts0→pts1 最長、
+         pts1→pts2 最短、pts2→pts0 中間。 --- */
+  var FW = 360, FH = 170, FPAD = 20, MK = 11, TK = 8, ARC = 24, T_TICK = 0.5;
+  function layout(sq, rot){
+    var s = sortSq(sq), p = s[0], q = s[1], r = s[2];
+    var c = Math.sqrt(r);
+    var x = (q + r - p) / (2 * c);
+    /* y 取負號，頂點朝上（和課程頁同一套）。 */
+    var y = Math.sqrt(Math.max(q - x * x, 0));
+    var pts = [[0, 0], [c, 0], [x, -y]];
+    var gx = (pts[0][0] + pts[1][0] + pts[2][0]) / 3;
+    var gy = (pts[0][1] + pts[1][1] + pts[2][1]) / 3;
+    var a = (rot || 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+    pts = pts.map(function(v){
+      var dx = v[0] - gx, dy = v[1] - gy;
+      return [dx * ca - dy * sa, dx * sa + dy * ca];
+    });
+    var xs = pts.map(function(v){ return v[0]; }), ys = pts.map(function(v){ return v[1]; });
+    var bw = Math.max.apply(null, xs) - Math.min.apply(null, xs);
+    var bh = Math.max.apply(null, ys) - Math.min.apply(null, ys);
+    var k = Math.min((FW - 2 * FPAD) / bw, (FH - 2 * FPAD) / bh);
+    pts = pts.map(function(v){ return [v[0] * k, v[1] * k]; });
+    xs = pts.map(function(v){ return v[0]; }); ys = pts.map(function(v){ return v[1]; });
+    var ox = (FW - (Math.max.apply(null, xs) - Math.min.apply(null, xs))) / 2 - Math.min.apply(null, xs);
+    var oy = (FH - (Math.max.apply(null, ys) - Math.min.apply(null, ys))) / 2 - Math.min.apply(null, ys);
+    return pts.map(function(v){ return [v[0] + ox, v[1] + oy]; });
+  }
+  function tickPlan(sq){
+    var s = sortSq(sq);
+    var edgeSq = [s[2], s[0], s[1]];
+    var groups = [], out = [0, 0, 0];
+    edgeSq.forEach(function(v){ if (groups.indexOf(v) < 0) groups.push(v); });
+    groups.sort(function(a, b){ return a - b; });
+    groups.forEach(function(v, gi){
+      if (edgeSq.filter(function(e){ return e === v; }).length < 2) return;
+      edgeSq.forEach(function(e, ei){ if (e === v) out[ei] = gi + 1; });
+    });
+    return out;
+  }
+  /* 產生器一律用這一支把圖的資料包好 —— 座標是**頁面算的**，
+     檢查設定會拿它和獨立重寫的排版比對。 */
+  function figOf(sq, rot){
+    return { sq:sq, rot:rot, pts:layout(sq, rot), ticks:tickPlan(sq) };
+  }
+
+  /* --- 圖形樣本：七種組合各一個代表（和課程頁同一份）。 --- */
+  var FIG_SQ = {
+    'acute-scalene':  [16, 25, 36],
+    'acute-iso':      [25, 25, 36],
+    'acute-equi':     [36, 36, 36],
+    'right-scalene':  [9, 16, 25],
+    'right-iso':      [16, 16, 32],
+    'obtuse-scalene': [16, 25, 64],
+    'obtuse-iso':     [25, 25, 64]
+  };
+  var ROTS = [0, 12, 25, 38, 52, 67, 84, 100, 130, 165, 205, 250, 295, 330];
+
+  /* --- 度數樣本。三個角都是整數，而且加起來 180 —— 可是這一課
+         **不教**「加起來 180」，只拿它們來比誰最大。 --- */
+  function makeAngles(kind){
+    var a, b, c;
+    if (kind === 'right'){
+      a = pick(rangeList(20, 70));
+      return [90, a, 90 - a];
+    }
+    if (kind === 'obtuse'){
+      a = pick([95, 100, 105, 110, 115, 120, 125, 130, 135, 140]);
+      b = pick(rangeList(15, 180 - a - 15));
+      return [a, b, 180 - a - b];
+    }
+    /* 銳角：三個角都要嚴格小於 90，而且不小於 45 才好讀。 */
+    a = pick(rangeList(45, 85));
+    b = pick(rangeList(Math.max(45, 95 - a), Math.min(85, 135 - a)));
+    c = 180 - a - b;
+    return [a, b, c];
+  }
+  function angleClassOfDegs(d){
+    var mx = Math.max(d[0], d[1], d[2]);
+    return mx > 90 ? 'obtuse' : (mx === 90 ? 'right' : 'acute');
+  }
+
+  /* --- 邊長樣本（整公分）。要圍得成三角形，而且**不可以是直角**——
+         因為「直角三角形」是這幾支的固定誘答，它必須真的是錯的。 --- */
+  function makeCm(kind){
+    var a, b, c, t;
+    for (var i = 0; i < 200; i++){
+      if (kind === 'equi'){
+        a = pick(rangeList(4, 14));
+        t = [a, a, a];
+      } else if (kind === 'iso'){
+        a = pick(rangeList(4, 14));
+        b = pick(rangeList(2, Math.min(15, 2 * a - 2)));
+        if (b === a) continue;
+        t = [a, a, b];
+      } else {
+        a = pick(rangeList(3, 12));
+        b = pick(rangeList(a + 1, 15));
+        c = pick(rangeList(b + 1, Math.min(16, a + b - 1)));
+        if (c <= b) continue;
+        t = [a, b, c];
+      }
+      var sq = sqOf(t);
+      if (!triValid(sq)) continue;
+      if (sideClass(sq) !== kind) continue;
+      if (angleClass(sq) === 'right') continue;   // 誘答「直角三角形」必須是錯的
+      return t;
+    }
+    return null;
+  }
+
+  /* ---------- 文字 ---------- */
+  var TXT = {
+    zh: {
+      ang:{ acute:'銳角三角形', right:'直角三角形', obtuse:'鈍角三角形' },
+      side:{ equi:'正三角形', iso:'等腰三角形', scalene:'不等邊三角形' },
+      angWord:{ acute:'銳角', right:'直角', obtuse:'鈍角' },
+      noIdea:'沒辦法判斷，要知道邊長才行',
+      deg: function(n){ return n + ' 度'; },
+      degList: function(l){ return l.map(function(n){ return n + ' 度'; }).join('、'); },
+      cmList: function(l){ return l.map(function(n){ return n + ' 公分'; }).join('、'); },
+      pair: function(a, s){ return '依角是' + a + '，依邊是' + s; },
+      cell: function(a, s){ return a.replace('三角形', '') + '的' + s; },
+      sure:'一定是', maybe:'不一定', never:'一定不是', nosuch:'沒有這種三角形',
+      still: function(n){ return '還是' + n; },
+      changed:'不是了，角的大小變了',
+      dependsTurn:'要看轉幾度',
+      onlyRight:'只有轉 90 度的倍數才還是',
+      cnt: function(n){ return n + ' 個'; }
+    },
+    en: {
+      ang:{ acute:'an acute triangle', right:'a right triangle', obtuse:'an obtuse triangle' },
+      side:{ equi:'an equilateral triangle', iso:'an isosceles triangle', scalene:'a scalene triangle' },
+      angWord:{ acute:'acute', right:'a right angle', obtuse:'obtuse' },
+      noIdea:'No way to tell — you would need the side lengths',
+      deg: function(n){ return n + ' degrees'; },
+      degList: function(l){ return l.join(' degrees, ') + ' degrees'; },
+      cmList: function(l){ return l.join(' cm, ') + ' cm'; },
+      pair: function(a, s){ return 'by angles ' + a + ', by sides ' + s; },
+      cell: function(a, s){ return a.replace(/^an? /, '') + ' and ' + s.replace(/^an? /, ''); },
+      sure:'Yes, always', maybe:'Not necessarily', never:'No, never', nosuch:'There is no such triangle',
+      still: function(n){ return 'Yes, still ' + n; },
+      changed:'No — the angles changed size',
+      dependsTurn:'It depends how far you turn it',
+      onlyRight:'Only if you turn it by a multiple of 90 degrees',
+      cnt: function(n){ return String(n); }
+    }
+  };
+  /* 句首大寫：只把第一個字母變大寫，不可以把 'an acute' 整個換成 'A acute'。 */
+  function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  var GENS = [
+    /* 1. 給三個角的度數，依角分類。誘答「沒辦法判斷」永遠是錯的 —— 角決定了名字。 */
+    { id:'byDegrees', cat:'angle',
+      make:function(used){
+        var kind = pickUnused(ANGLE_KEYS.slice(), used);
+        var degs = makeAngles(kind);
+        if (!degs || angleClassOfDegs(degs) !== kind) return null;
+        for (var i = 0; i < 3; i++) if (!(degs[i] > 0)) return null;
+        var order = shuffle(['acute', 'right', 'obtuse', 'noIdea']);
+        return { degs:degs, key:kind, opts:order, ans:order.indexOf(kind) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var mx = Math.max(d.degs[0], d.degs[1], d.degs[2]);
+        return {
+          stem: lang === 'zh'
+            ? '一個三角形的三個角是 ' + t.degList(d.degs) + '。<strong>依角</strong>分類，它叫什麼？'
+            : 'A triangle’s three angles are ' + t.degList(d.degs) + '. <strong>By angles</strong>, what is it called?',
+          opts: d.opts.map(function(k){ return k === 'noIdea' ? t.noIdea : cap(t.ang[k]); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '名字只看<strong>最大的那一個角</strong>：這裡最大的是 ' + mx + ' 度，' +
+              (d.key === 'acute' ? '比直角小，而且三個角都比直角小，所以是銳角三角形。'
+               : d.key === 'right' ? '剛好是直角，所以是直角三角形。'
+               : '比直角大，所以是鈍角三角形。') +
+              '這一題把三個角都給你了，所以不必再看邊長。'
+            : 'The name depends only on <strong>the biggest angle</strong>: here it is ' + mx + ' degrees, ' +
+              (d.key === 'acute' ? 'smaller than a right angle — and so are the other two, so it is an acute triangle. '
+               : d.key === 'right' ? 'exactly a right angle, so it is a right triangle. '
+               : 'bigger than a right angle, so it is an obtuse triangle. ') +
+              'This question already gives you all three angles, so there is no need to look at the sides.'
+        };
+      } },
+
+    /* 2. 只給最大的角，一樣分得出來。 */
+    { id:'biggestOnly', cat:'angle',
+      make:function(){
+        var kind = pick(ANGLE_KEYS);
+        var deg = kind === 'right' ? 90
+                : kind === 'acute' ? pick(rangeList(62, 89))
+                : pick(rangeList(91, 155));
+        var order = shuffle(['acute', 'right', 'obtuse', 'noIdea']);
+        return { deg:deg, key:kind, opts:order, ans:order.indexOf(kind) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個三角形<strong>最大的角</strong>是 ' + t.deg(d.deg) + '。<strong>依角</strong>分類，它叫什麼？'
+            : 'The <strong>biggest angle</strong> of a triangle is ' + t.deg(d.deg) + '. <strong>By angles</strong>, what is it called?',
+          opts: d.opts.map(function(k){ return k === 'noIdea' ? t.noIdea : cap(t.ang[k]); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? d.deg + ' 度' + (d.key === 'acute' ? '比 90 度小 —— 最大的角都比直角小了，另外兩個當然也是，三個角都是銳角。'
+                              : d.key === 'right' ? '剛好是直角。'
+                              : '比 90 度大，是鈍角。') +
+              '所以它是' + t.ang[d.key] + '。只要知道<strong>最大的那一個角</strong>，就分得出來了。'
+            : d.deg + ' degrees is ' + (d.key === 'acute' ? 'smaller than 90 — if even the biggest angle is smaller than a right angle, the other two certainly are, so all three are acute. '
+                              : d.key === 'right' ? 'exactly a right angle. '
+                              : 'bigger than 90, so it is obtuse. ') +
+              'That makes it ' + t.ang[d.key] + '. Knowing <strong>the biggest angle</strong> alone is enough.'
+        };
+      } },
+
+    /* 3. 給三條邊長，依邊分類。誘答「直角三角形」是**依角**的名字，
+          而且 make() 保證抽到的三角形不是直角，所以它一定是錯的。 */
+    { id:'sidesName', cat:'side',
+      make:function(used){
+        var kind = pickUnused(SIDE_KEYS.slice(), used);
+        var cm = makeCm(kind);
+        if (!cm) return null;
+        var order = shuffle(['equi', 'iso', 'scalene', 'rightName']);
+        return { cm:cm, key:kind, opts:order, ans:order.indexOf(kind) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var n = equalSides(sqOf(d.cm));
+        return {
+          stem: lang === 'zh'
+            ? '一個三角形的三條邊是 ' + t.cmList(d.cm) + '。<strong>依邊</strong>分類，<strong>最精確</strong>的名字是什麼？'
+            : 'A triangle’s three sides are ' + t.cmList(d.cm) + '. <strong>By sides</strong>, what is its <strong>most specific</strong> name?',
+          opts: d.opts.map(function(k){ return k === 'rightName' ? cap(t.ang.right) : cap(t.side[k]); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '一樣長的邊有 ' + n + ' 條' +
+              (d.key === 'equi' ? '（三條都一樣），所以最精確的名字是正三角形 —— 它同時也是等腰三角形，可是正三角形講得更精確。'
+               : d.key === 'iso' ? '，剛好兩條，所以是等腰三角形。三條沒有都一樣長，所以不是正三角形。'
+               : '，三條都不一樣長，所以是不等邊三角形。') +
+              '<strong>直角三角形</strong>是<strong>依角</strong>的名字，這一題問的是依邊。'
+            : 'The number of equal sides is ' + n +
+              (d.key === 'equi' ? ' (all three), so the most specific name is equilateral — it is isosceles as well, but equilateral says more. '
+               : d.key === 'iso' ? ', exactly two, so it is isosceles. Not all three are equal, so it is not equilateral. '
+               : ', no two equal, so it is scalene. ') +
+              '<strong>Right triangle</strong> is an <strong>angle</strong> name, and this question asks by sides.'
+        };
+      } },
+
+    /* 4. 看圖，依角分類。 */
+    { id:'figAngle', cat:'angle',
+      make:function(){
+        var cell = pick(CELLS_OK);
+        var sq = FIG_SQ[cell];
+        if (!sq) return null;
+        var kind = angleClass(sq);
+        var order = shuffle(['acute', 'right', 'obtuse', 'noIdea']);
+        return { cell:cell, sq:sq, rot:pick(ROTS), key:kind, opts:order, ans:order.indexOf(kind) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '看圖上的三角形（橘色的弧標的是最大的那個角，小方框表示剛好是直角）。<strong>依角</strong>分類，它叫什麼？'
+            : 'Look at the triangle in the figure (the orange arc marks the biggest angle; a small square means it is exactly a right angle). <strong>By angles</strong>, what is it called?',
+          opts: d.opts.map(function(k){ return k === 'noIdea' ? t.noIdea : cap(t.ang[k]); }),
+          ans: d.ans,
+          fig: figOf(d.sq, d.rot),
+          why: lang === 'zh'
+            ? '被標起來的是<strong>最大的那個角</strong>，它是' + t.angWord[d.key] + '，所以這是' + t.ang[d.key] +
+              '。圖有沒有轉過角度沒有關係 —— 三個角本身的大小不會因為轉而改變。'
+            : 'The marked angle is <strong>the biggest one</strong>, and it is ' + t.angWord[d.key] + ', so this is ' + t.ang[d.key] +
+              '. It makes no difference that the figure is turned — turning never changes the angles themselves.'
+        };
+      } },
+
+    /* 5. 看圖，依邊分類。誘答「直角三角形」必須是錯的，所以只抽非直角的圖。 */
+    { id:'figSide', cat:'side',
+      make:function(){
+        var ok = CELLS_OK.filter(function(c){ return angleClass(FIG_SQ[c]) !== 'right'; });
+        var cell = pick(ok);
+        var sq = FIG_SQ[cell];
+        if (!sq) return null;
+        var kind = sideClass(sq);
+        var order = shuffle(['equi', 'iso', 'scalene', 'rightName']);
+        return { cell:cell, sq:sq, rot:pick(ROTS), key:kind, opts:order, ans:order.indexOf(kind) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var n = equalSides(d.sq);
+        return {
+          stem: lang === 'zh'
+            ? '看圖上的三角形（短撇表示那幾條邊一樣長）。<strong>依邊</strong>分類，<strong>最精確</strong>的名字是什麼？'
+            : 'Look at the triangle in the figure (tick marks show which sides are equal). <strong>By sides</strong>, what is its <strong>most specific</strong> name?',
+          opts: d.opts.map(function(k){ return k === 'rightName' ? cap(t.ang.right) : cap(t.side[k]); }),
+          ans: d.ans,
+          fig: figOf(d.sq, d.rot),
+          why: lang === 'zh'
+            ? '有短撇的邊就是一樣長的邊，這裡一樣長的有 ' + n + ' 條，所以最精確的名字是' + t.side[d.key] +
+              '。<strong>直角三角形</strong>是依角的名字，而且這一個最大的角是' + t.angWord[angleClass(d.sq)] + '，不是直角。'
+            : 'Sides carrying ticks are the equal ones — here the number of equal sides is ' + n + ', so the most specific name is ' + t.side[d.key] +
+              '. <strong>Right triangle</strong> is an angle name, and this one’s biggest angle is ' + t.angWord[angleClass(d.sq)] + ', not a right angle.'
+        };
+      } },
+
+    /* 6. 哪一種組合畫不出來。正解永遠是正三角形那一欄的兩格之一。 */
+    { id:'impossible', cat:'family',
+      make:function(){
+        var bad = pick(CELLS_NO);
+        var good = shuffle(CELLS_OK).slice(0, 3);
+        if (good.length !== 3) return null;
+        var order = shuffle([bad].concat(good));
+        return { bad:bad, good:good, opts:order, ans:order.indexOf(bad) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        function label(c){ var p = c.split('-'); return t.cell(t.ang[p[0]], t.side[p[1]]); }
+        var badAng = d.bad.split('-')[0];
+        return {
+          stem: lang === 'zh'
+            ? '下面哪一種三角形<strong>畫不出來</strong>？'
+            : 'Which kind of triangle <strong>cannot be drawn</strong>?',
+          opts: d.opts.map(label), ans:d.ans,
+          why: lang === 'zh'
+            ? '<strong>正三角形的三條邊都一樣長，三個角也就一樣大</strong>。三個角如果都是' + t.angWord[badAng] +
+              '，那就有三個 —— 可是一個三角形裡<strong>直角和鈍角合起來最多只有一個</strong>。所以<strong>正三角形一定是銳角三角形</strong>，' +
+              label(d.bad) + '不存在。另外三個都畫得出來。'
+            : '<strong>An equilateral triangle has three equal sides, so its three angles are equal too.</strong> If all three were ' +
+              t.angWord[badAng] + ', there would be three of them — but inside one triangle <strong>there is at most one right or obtuse angle between them</strong>. ' +
+              'So <strong>an equilateral triangle is always an acute triangle</strong>, and ' + label(d.bad) + ' does not exist. The other three can all be drawn.'
+        };
+      } },
+
+    /* 7. 正三角形依角是什麼。這一課的核心結論，單獨考一次。 */
+    { id:'equiAngle', cat:'family',
+      make:function(){
+        var order = shuffle(['acute', 'right', 'obtuse', 'noIdea']);
+        return { key:'acute', opts:order, ans:order.indexOf('acute') };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個<strong>正三角形</strong>，<strong>依角</strong>分類是什麼？'
+            : 'Sorted <strong>by angles</strong>, what is an <strong>equilateral triangle</strong>?',
+          opts: d.opts.map(function(k){ return k === 'noIdea' ? t.noIdea : cap(t.ang[k]); }),
+          ans: d.ans,
+          why: lang === 'zh'
+            ? '正三角形三條邊都一樣長，三個角也就一樣大。如果那個角是直角或鈍角，三個角就都是了 —— 可是<strong>直角和鈍角合起來最多只有一個</strong>。所以<strong>正三角形一定是銳角三角形</strong>，畫多大都一樣。'
+            : 'An equilateral triangle has three equal sides, so its three angles are equal too. If that angle were right or obtuse, all three would be — but <strong>there is at most one right or obtuse angle between them</strong>. So <strong>an equilateral triangle is always an acute triangle</strong>, whatever size you draw it.'
+        };
+      } },
+
+    /* 8. 家族：哪一句話是對的。四個選項都是句子，只有一句成立。
+          ⚠️ 誘答不可以放「它也是銳角三角形」—— 對正三角形來說那是**真的**。 */
+    { id:'alsoIs', cat:'family',
+      make:function(){
+        var kind = pick(['equi', 'iso']);
+        var keys = kind === 'equi'
+          ? ['equiIso', 'equiScalene', 'equiRight', 'equiObtuse']
+          : ['isoMaybe', 'isoAlways', 'isoRight', 'isoScalene'];
+        var right = kind === 'equi' ? 'equiIso' : 'isoMaybe';
+        var order = shuffle(keys);
+        return { kind:kind, right:right, opts:order, ans:order.indexOf(right) };
+      },
+      fmt:function(d, lang){
+        var S = {
+          zh:{
+            equiIso:'它也是等腰三角形', equiScalene:'它也是不等邊三角形',
+            equiRight:'它是直角三角形', equiObtuse:'它是鈍角三角形',
+            isoMaybe:'它不一定是正三角形', isoAlways:'它一定是正三角形',
+            isoRight:'它一定是直角三角形', isoScalene:'它也是不等邊三角形'
+          },
+          en:{
+            equiIso:'It is an isosceles triangle too', equiScalene:'It is a scalene triangle too',
+            equiRight:'It is a right triangle', equiObtuse:'It is an obtuse triangle',
+            isoMaybe:'It need not be an equilateral triangle', isoAlways:'It must be an equilateral triangle',
+            isoRight:'It must be a right triangle', isoScalene:'It is a scalene triangle too'
+          }
+        }[lang];
+        var head = lang === 'zh'
+          ? '一個<strong>' + (d.kind === 'equi' ? '正三角形' : '等腰三角形') + '</strong>，下面哪一句話是對的？'
+          : 'Which sentence about <strong>' + (d.kind === 'equi' ? 'an equilateral triangle' : 'an isosceles triangle') + '</strong> is correct?';
+        return {
+          stem: head,
+          opts: d.opts.map(function(k){ return S[k]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.kind === 'equi'
+                ? '三條邊都一樣長，當然也符合<strong>至少兩條</strong>邊一樣長，所以<strong>正三角形也是等腰三角形</strong>。它三條邊都一樣，不可能是不等邊三角形；而且正三角形一定是銳角三角形，所以既不是直角三角形也不是鈍角三角形。'
+                : '等腰三角形只要求<strong>至少兩條</strong>邊一樣長，第三條可以不一樣，所以<strong>不一定</strong>是正三角形。它可能是銳角、直角或鈍角三角形，也不會是不等邊三角形（不等邊是三條都不一樣長）。')
+            : (d.kind === 'equi'
+                ? 'Three equal sides certainly satisfies <strong>at least two</strong> sides equal, so <strong>an equilateral triangle is an isosceles triangle too</strong>. With all three sides equal it cannot be scalene, and an equilateral triangle is always acute, so it is neither a right triangle nor an obtuse one.'
+                : 'Isosceles only requires <strong>at least two</strong> equal sides, and the third may differ, so it <strong>need not</strong> be equilateral. It could be acute, right or obtuse, and it is never scalene (scalene means no two sides equal).')
+        };
+      } },
+
+    /* 9. 「一定嗎」——答案永遠是「不一定」。每一組都各有一個正例和一個反例，
+          兩個例子都是九宮格裡真的畫得出來的格子。 */
+    { id:'notAlways', cat:'family',
+      make:function(used){
+        var PAIRS = [
+          { from:'iso',     to:'equi',   yes:'acute-equi',     no:'acute-iso'      },
+          { from:'acute',   to:'equi',   yes:'acute-equi',     no:'acute-scalene'  },
+          { from:'acute',   to:'iso',    yes:'acute-iso',      no:'acute-scalene'  },
+          { from:'scalene', to:'right',  yes:'right-scalene',  no:'acute-scalene'  },
+          { from:'iso',     to:'right',  yes:'right-iso',      no:'acute-iso'      },
+          { from:'iso',     to:'acute',  yes:'acute-iso',      no:'obtuse-iso'     },
+          { from:'scalene', to:'obtuse', yes:'obtuse-scalene', no:'acute-scalene'  }
+        ];
+        var idx = pickUnused(PAIRS.map(function(x, i){ return i; }), used);
+        var pr = PAIRS[idx];
+        var order = shuffle(['maybe', 'sure', 'never', 'nosuch']);
+        return { from:pr.from, to:pr.to, yes:pr.yes, no:pr.no, opts:order, ans:order.indexOf('maybe') };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        function nm(k){ return t.ang[k] || t.side[k]; }
+        function cellName(c){ var p = c.split('-'); return t.cell(t.ang[p[0]], t.side[p[1]]); }
+        return {
+          stem: lang === 'zh'
+            ? '一個' + nm(d.from) + '，<strong>一定</strong>是' + nm(d.to) + '嗎？'
+            : 'Is ' + nm(d.from) + ' <strong>always</strong> ' + nm(d.to) + '?',
+          opts: d.opts.map(function(k){ return t[k]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '兩邊都找得到例子，所以<strong>不一定</strong>：' + cellName(d.yes) + '是' + nm(d.from) + '也是' + nm(d.to) +
+              '，可是' + cellName(d.no) + '是' + nm(d.from) + '卻不是' + nm(d.to) + '。只要有一個反例，「一定」就不成立。'
+            : 'There is an example each way, so it is <strong>not necessarily</strong> true: ' + cellName(d.yes) + ' is ' + nm(d.from) + ' and also ' + nm(d.to) +
+              ', while ' + cellName(d.no) + ' is ' + nm(d.from) + ' but not ' + nm(d.to) + '. One counter-example is enough to kill an “always”.'
+        };
+      } },
+
+    /* 10. 數銳角。三種都至少兩個，所以這一題就是那個迷思本身。 */
+    { id:'countAcute', cat:'angle',
+      make:function(used){
+        var kind = pickUnused(ANGLE_KEYS.slice(), used);
+        var sq = FIG_SQ[kind + '-scalene'];
+        if (!sq) return null;
+        var n = acuteCount(sq);
+        var order = shuffle([0, 1, 2, 3]);
+        return { key:kind, sq:sq, n:n, opts:order, ans:order.indexOf(n) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個<strong>' + t.ang[d.key] + '</strong>裡面，有幾個<strong>銳角</strong>？'
+            : 'How many <strong>acute angles</strong> are inside <strong>' + t.ang[d.key] + '</strong>?',
+          opts: d.opts.map(function(n){ return t.cnt(n); }), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.key === 'acute'
+                ? '銳角三角形的定義就是<strong>三個角都是</strong>銳角，所以是 3 個。'
+                : t.ang[d.key] + '有一個' + t.angWord[d.key] + '，而<strong>直角和鈍角合起來最多只有一個</strong>，所以另外兩個角一定都是銳角 —— 剛好 2 個。') +
+              '⚠️ 直角三角形和鈍角三角形<strong>都是 2 個</strong>，所以數到 2 的時候分不出是哪一種，要看<strong>最大的那一個角</strong>；數到 3 就一定是銳角三角形。'
+            : (d.key === 'acute'
+                ? 'An acute triangle is defined by <strong>all three angles being</strong> acute, so the answer is 3. '
+                : cap(t.ang[d.key]) + ' has one angle that is ' + t.angWord[d.key] + ', and <strong>there is at most one right or obtuse angle between them</strong>, so the other two must both be acute — exactly 2. ') +
+              '⚠️ A right triangle and an obtuse triangle <strong>both have 2</strong>, so a count of 2 cannot tell them apart — you have to look at <strong>the biggest angle</strong>. A count of 3 does mean an acute triangle.'
+        };
+      } },
+
+    /* 11. 整個轉過去，名字不變。「直角三角形要有一條邊水平」的迷思。 */
+    { id:'turned', cat:'angle',
+      make:function(used){
+        var kind = pickUnused(ANGLE_KEYS.slice(), used);
+        var deg = pick([15, 20, 30, 40, 45, 55, 60, 70, 75]);
+        var order = shuffle(['still', 'changed', 'dependsTurn', 'onlyRight']);
+        return { key:kind, deg:deg, opts:order, ans:order.indexOf('still') };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '把一個<strong>' + t.ang[d.key] + '</strong>整個轉 ' + t.deg(d.deg) + '。轉完之後它還是' + t.ang[d.key] + '嗎？'
+            : 'Turn <strong>' + t.ang[d.key] + '</strong> ' + t.deg(d.deg) + ' as a whole. Is it still ' + t.ang[d.key] + ' afterwards?',
+          opts: d.opts.map(function(k){ return k === 'still' ? t.still(t.ang[d.key]) : t[k]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '整個一起轉，三個角<strong>本身</strong>的大小完全沒變，最大的那個角還是' + t.angWord[d.key] +
+              '，所以名字也不會變。名字看的是角的大小，和它擺得正不正、轉了幾度都沒有關係。'
+            : 'Turning the whole thing leaves the three angles <strong>themselves</strong> exactly as they were: the biggest one is still ' + t.angWord[d.key] +
+              ', so the name does not change either. The name is about angle sizes, not about how the triangle is placed or how far it was turned.'
+        };
+      } },
+
+    /* 12. 兩個名字一起講。選項是「依角＋依邊」的配對，只有一組對得上。 */
+    { id:'bothNames', cat:'both',
+      make:function(){
+        var cell = pick(CELLS_OK);
+        var sq = FIG_SQ[cell];
+        if (!sq) return null;
+        /* ⚠️ 依角一樣、依邊換成「比較鬆的上層」的那一格**也是對的**
+           （正三角形也是等腰三角形），所以它不可以當誘答。 */
+        var q0 = cell.split('-');
+        var others = shuffle(CELLS_OK.filter(function(c){
+          if (c === cell) return false;
+          var p0 = c.split('-');
+          if (p0[0] === q0[0] && sideAlso(q0[1]).indexOf(p0[1]) >= 0) return false;
+          return true;
+        })).slice(0, 3);
+        if (others.length !== 3) return null;
+        var order = shuffle([cell].concat(others));
+        return { cell:cell, sq:sq, rot:pick(ROTS), opts:order, ans:order.indexOf(cell) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var ac = angleClass(d.sq), sc = sideClass(d.sq), n = equalSides(d.sq);
+        function label(c){ var p = c.split('-'); return t.pair(t.ang[p[0]], t.side[p[1]]); }
+        return {
+          stem: lang === 'zh'
+            ? '看圖上的三角形（橘色標的是最大的那個角，短撇表示那幾條邊一樣長）。<strong>兩種分法</strong>各分一次，哪一組是對的？'
+            : 'Look at the triangle in the figure (orange marks the biggest angle; ticks show which sides are equal). Run <strong>both sortings</strong> once each — which pair is correct?',
+          opts: d.opts.map(label), ans:d.ans,
+          fig: figOf(d.sq, d.rot),
+          why: lang === 'zh'
+            ? '<strong>依角</strong>：最大的那個角是' + t.angWord[ac] + '，所以是' + t.ang[ac] +
+              '。<strong>依邊</strong>：一樣長的邊有 ' + n + ' 條，所以是' + t.side[sc] +
+              '。兩種分法各講各的，合起來才是最完整的名字。'
+            : '<strong>By angles</strong>: the biggest angle is ' + t.angWord[ac] + ', so it is ' + t.ang[ac] +
+              '. <strong>By sides</strong>: the number of equal sides is ' + n + ', so it is ' + t.side[sc] +
+              '. Each sorting says its own thing, and together they give the fullest name.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 三角形家族', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：三角形家族',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>隔一天再來一次，還答得出來，才是真的記住了。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Triangle Family', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Triangle Family',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>Come back a day later and still get them — that is real remembering.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  /* --- 畫圖：只有這一段碰 DOM，GENS 只回傳「三個平方邊長 ＋ 轉幾度」 --- */
+  var NS = 'http://www.w3.org/2000/svg';
+  var C_FILL = '#E3F4EB', C_EDGE = '#2F9E69', C_MARK = '#E8871E';
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function unit(u){
+    var n = Math.sqrt(u[0] * u[0] + u[1] * u[1]);
+    return n === 0 ? [0, 0] : [u[0] / n, u[1] / n];
+  }
+  /* ⚠️ 座標和短撇都直接用 fig 裡**產生器算好的**那一份 —— 不在這裡重算，
+     不然畫出來的和檢查驗過的會是兩回事。 */
+  function drawFig(svg, fig){
+    svg.textContent = '';
+    var pts = fig.pts;
+    svg.appendChild(svgEl('polygon', {
+      points:pts.map(function(p){ return p[0] + ',' + p[1]; }).join(' '),
+      fill:C_FILL, stroke:C_EDGE, 'stroke-width':3, 'stroke-linejoin':'round'
+    }));
+    fig.ticks.forEach(function(g, ei){
+      if (!g) return;
+      var a = pts[ei], b = pts[(ei + 1) % 3];
+      var ux = b[0] - a[0], uy = b[1] - a[1], u = unit([ux, uy]);
+      var cx = a[0] + ux * T_TICK, cy = a[1] + uy * T_TICK;
+      var px = -u[1] * (TK / 2), py = u[0] * (TK / 2);
+      for (var i = 0; i < g; i++){
+        var off = (i - (g - 1) / 2) * 5;
+        svg.appendChild(svgEl('line', {
+          x1:cx + u[0] * off - px, y1:cy + u[1] * off - py,
+          x2:cx + u[0] * off + px, y2:cy + u[1] * off + py,
+          stroke:C_MARK, 'stroke-width':2
+        }));
+      }
+    });
+    var v = pts[2];
+    var a1 = unit([pts[0][0] - v[0], pts[0][1] - v[1]]);
+    var a2 = unit([pts[1][0] - v[0], pts[1][1] - v[1]]);
+    if (angleClass(fig.sq) === 'right'){
+      svg.appendChild(svgEl('path', {
+        d:'M ' + (v[0] + a1[0] * MK) + ' ' + (v[1] + a1[1] * MK) +
+          ' L ' + (v[0] + a1[0] * MK + a2[0] * MK) + ' ' + (v[1] + a1[1] * MK + a2[1] * MK) +
+          ' L ' + (v[0] + a2[0] * MK) + ' ' + (v[1] + a2[1] * MK),
+        fill:'none', stroke:C_MARK, 'stroke-width':2.5
+      }));
+    } else {
+      var cr = a1[0] * a2[1] - a1[1] * a2[0];
+      svg.appendChild(svgEl('path', {
+        d:'M ' + (v[0] + a1[0] * ARC) + ' ' + (v[1] + a1[1] * ARC) +
+          ' A ' + ARC + ' ' + ARC + ' 0 0 ' + (cr > 0 ? 1 : 0) + ' ' +
+          (v[0] + a2[0] * ARC) + ' ' + (v[1] + a2[1] * ARC),
+        fill:'none', stroke:C_MARK, 'stroke-width':2.5
+      }));
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 40; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      if (q.fig){
+        var fw = document.createElement('div');
+        fw.className = 'figwrap';
+        var svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('class', 'shapefig');
+        svg.setAttribute('viewBox', '0 0 360 170');
+        drawFig(svg, q.fig);
+        fw.appendChild(svg);
+        box.appendChild(fw);
+      }
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length) finish();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function finish(){
+    var t = L();
+    resultLine.textContent = (right === batch.length) ? t.resAll(batch.length)
+      : (right >= Math.ceil(batch.length * 2 / 3)) ? t.resGood(right, batch.length)
+      : t.resTry(right, batch.length);
+    resultLinks.innerHTML = t.links;
+    resultEl.classList.add('on');
+    resultEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  function newRound(){ batch = buildBatch(); render(); }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    newRound();
+  });
+  retryBtn.addEventListener('click', newRound);
+
+  applyStatic();
+  newRound();
+})();
+</script>
+</body>
+</html>

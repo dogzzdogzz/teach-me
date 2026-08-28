@@ -91,6 +91,7 @@
 | 🕓 24 時調度中心 | 時間（24 時制、日時分秒的加減） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/time/parents.html) |
 | 🍫 分數變身工廠 | 分數（假分數與帶分數） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/fraction/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/fraction/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/fraction/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/fraction/parents.html) |
 | 📐 四邊形家族 | 垂直與平行、平行四邊形／梯形／菱形 | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/quadrilateral/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/quadrilateral/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/quadrilateral/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/quadrilateral/parents.html) |
+| 🔺 三角形家族 | 依角分類與依邊分類 | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/triangle/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/triangle/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/triangle/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/triangle/parents.html) |
 
 ## 五年級（23 個主題）
 
@@ -137,7 +138,7 @@ docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調�
 grade-1/math/                  # 一年級：單元整理＋ 9 個四頁迷你課程
 grade-2/math/                  # 二年級：單元整理＋ 11 個四頁迷你課程（numbers／add-sub／multiply／time／length／divide／two-step／capacity-weight／shapes／solid／table）
 grade-3/math/                  # 三年級：單元整理＋ 17 個四頁迷你課程
-grade-4/math/                  # 四年級：單元整理＋ 7 個四頁迷你課程（angle／area／fraction／numbers／quadrilateral／rounding／time）
+grade-4/math/                  # 四年級：單元整理＋ 8 個四頁迷你課程（angle／area／fraction／numbers／quadrilateral／rounding／time／triangle）
 grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你課程
 │   └── <主題>/                #   每個主題一個資料夾，固定四頁：
 │       ├── index.html         #     上課（互動教學）
