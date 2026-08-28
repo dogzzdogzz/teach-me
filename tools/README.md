@@ -209,9 +209,24 @@ node tools/breaktest.js grade-2/math/time
 （`SIMGEN_SEED=42 node tools/simgen.js <review.html> 1000` 也可以自己用來重現某一批。）
 目前：add-sub 6、numbers 25、multiply 19、time 27、length 35、divide 62、two-step 109、
 capacity-weight 105、shapes 114、solid 97、table 130 —— **二年級十一課共 729 筆**，
-再加上 **grade-4 numbers 80 筆**、**grade-4 rounding 133 筆**、**grade-4 angle 110 筆**、
-**grade-4 area 135 筆**、**grade-4 time 146 筆**與 **grade-4 fraction 132 筆**，
-全站共 **1455 筆**，全部會被抓到。
+再加上 **grade-4 numbers 80**、**rounding 133**、**angle 110**、**area 135**、
+**time 146**、**fraction 132**、**quadrilateral 24**、**triangle 53**，
+全站共 **1535 筆**（2026-08-29 逐一實測），全部會被抓到。
+
+`grade-4-triangle.js` 有三件事值得別課抄過去，都是「守門員自己會不會 fail-open」：
+
+- **座標不一定是最好的標準寫法。** 正三角形與等腰直角三角形都放不進整數座標，
+  所以這一課用**三個邊長的平方**（全整數）當標準寫法，兩種分類都還是精確的整數運算。
+  **抄上一課的做法之前，先問「這一課的極端案例放得進這個表示法嗎」。**
+- **第二套實作要走不同的路，不能是同一條公式再寫一次。** 這一課的第二套「依角分類」
+  把三角形真的排到平面上、用 `atan2` 量角，和整數公式在 174,605 個三元組上逐一比對。
+- ⚠️ **產生器的排版函式一定要放在 GENS 之前**（simgen 只切得到那一段），
+  而且讓 `make()`／`fmt()` 把**算好的座標**放進 `fig` 回傳。放在 GENS 後面的話，
+  檢查驗的是「設定檔自己會畫成什麼」，不是「頁面真的畫成什麼」——
+  頁面的排版整個壞掉也是全綠的（2026-08-29 codex 第三輪抓到的 critical）。
+- ⚠️ **改壞測試的 `via` 跟著「斷言住在哪一支腳本」走，不是跟著「改哪個檔案」走。**
+  斷言在 `data.check` 裡的話，即使改的是 `review.html`，`via` 也要寫 `index`——
+  寫 `review` 會交給 simgen，而 simgen 不跑 `data.check`（這一輪踩到三次）。
 
 `grade-4-angle.js` 是第一份要驗「**畫出來的圖真的是幾度**」的設定，做法有三件事別課沒做過：
 
