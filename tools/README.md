@@ -178,7 +178,10 @@ key（`grade-2/math/time/review.html` → `tools/checks/grade-2-time.js`），**
 - `sim.stemEchoOk`：哪些「把題幹的數字放進選項」是刻意的迷思誘答。值可以是布林，
   但**建議寫成謂詞** `function(d, opt, lang, idx)`，只放行那一個值 ——
   整個產生器全開的話，不小心抄回別的數字也會被一起蓋掉。
-- `data.check(data, I18N, fail)`：那一課自己的範例資料與遊戲關卡。
+- `data.check(data, I18N, fail, src)`：那一課自己的範例資料與遊戲關卡。
+  第四個參數 `src` 是**整份 index.html 原始碼**，給那種只有在原始碼層才驗得到的
+  不變式用（例如「這句旁白必須是從座標算出來的，不可以寫死成某一筆的索引」）。
+  舊設定檔只宣告三個參數，多傳一個不影響它們。
 - `breaks`：刻意改壞的清單，見下。
 
 通用的那幾條留在 `simgen.js` 裡，所有課共用：選項數、`opts[ans]` 等於獨立算出來的正解、
@@ -433,6 +436,38 @@ CSS 的 `@import`／`url()` 指向站外也擋；`mailto:`／`data:`／`tel:` �
 靜態檢查全綠不代表頁面是對的。上一輪有一個 bug 讓 135 頁的修正完全失效，
 只有瀏覽器抓得到；這一輪瀏覽器又抓到 3 個靜態檢查看不到的產生器缺陷
 （`polygon` 的「60·2°」保底選項、`fraction`／`percent` 兩個等值誘答）。
+
+`tools/paths.json` 是**全站每一頁**的清單（新增一課就要更新）。它由整棵樹掃出來，
+但**排除 meta-refresh 轉址頁**（例如 `/grade-5/math/index.html`）—— 那種頁沒有內容可掃，
+掃它只會把 sweeper 帶到別頁去。重建：
+
+```bash
+python3 - <<'PY'
+import json, os, re
+skip={'.git','tools','teaching-workspace','node_modules','.claude'}
+out=[]
+for root,dirs,files in os.walk('.'):
+    dirs[:]=[d for d in dirs if d not in skip and not d.startswith('.')]
+    for f in sorted(files):
+        if not f.endswith('.html'): continue
+        rel='/'+os.path.relpath(os.path.join(root,f),'.').replace(os.sep,'/')
+        if not re.search(r'<meta[^>]+http-equiv=[\"\']?refresh', open(os.path.join(root,f),encoding='utf-8').read(2000), re.I):
+            out.append(rel)
+json.dump(sorted(out), open('tools/paths.json','w'), ensure_ascii=False, indent=0)
+PY
+```
+
+掃描的程式在 `tools/sweep-lib.js`（`sweep.html` 只是載入它的殼）。
+**不開瀏覽器也可以跑**——`tools/sweep-run.html` 這個 driver 會自己跑完兩種語言再把結果印進 DOM：
+
+```bash
+python3 -m http.server 8765 >/dev/null 2>&1 &
+'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless --disable-gpu \
+  --virtual-time-budget=900000 --dump-dom http://localhost:8765/tools/sweep-run.html > /tmp/sweep.html
+# 只掃一課： …/tools/sweep-run.html?only=grade-4/math/quadrilateral
+```
+
+結果在 `<pre id="out">` 裡（`DONE` 之後三行：zh／en／options，都要是 `clean`）。
 
 開 `http://localhost:8765/tools/sweep.html`，在 console 裡跑：
 

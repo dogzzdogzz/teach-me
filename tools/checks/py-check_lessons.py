@@ -12,12 +12,15 @@ BASELINE_CLEAN = r'--- 0 problem\(s\)'
 
 BREAKS = [
     # 磁碟上有、lessons.js 沒登記（＝新課忘了登記，這一輪差點就發生）
+    # ⚠️ 這兩筆把 lessons.js 的四年級那一行整行寫死。**每次新增四年級的課都要更新**——
+    #    不更新的話會噴 SETUP-FAIL（find 找不到），這是刻意的：
+    #    斷言失去保護對象的時候要大聲壞掉，不可以安靜地變成永遠通過。
     dict(file='lessons.js', expect='[UNREGISTERED]',
-         find="  4: ['angle', 'area', 'fraction', 'numbers', 'rounding', 'time'],",
+         find="  4: ['angle', 'area', 'fraction', 'numbers', 'quadrilateral', 'rounding', 'time'],",
          replace="  4: ['angle', 'area', 'numbers', 'rounding', 'time'],"),
     # lessons.js 登記了、磁碟上沒有
     dict(file='lessons.js', expect='[GHOST]',
-         find="  4: ['angle', 'area', 'fraction', 'numbers', 'rounding', 'time'],",
+         find="  4: ['angle', 'area', 'fraction', 'numbers', 'quadrilateral', 'rounding', 'time'],",
          replace="  4: ['angle', 'area', 'fraction', 'ghost-lesson', 'numbers', 'rounding', 'time'],"),
     # 年級頁的課程卡數對不上實際堂數
     dict(file='grade-4/index.html', expect='[CARDS]',

@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 四邊形家族</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .figwrap{margin:0 0 12px;text-align:center;overflow-x:auto}
+  .shapefig{width:100%;max-width:360px;height:170px;display:block;margin:0 auto}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;position:sticky;bottom:8px;
+  }
+  .result{
+    margin-top:22px;background:var(--card);border:2px solid var(--green);border-radius:18px;
+    padding:20px;display:none;
+  }
+  .result.on{display:block}
+  .result .line{font-size:20px;font-weight:700;color:var(--green)}
+  .result .links{margin-top:10px;font-size:16px}
+  .result .links a{color:var(--blue)}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:14px;
+  }
+  footer{
+    margin-top:48px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：四邊形家族</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>隔一天再來一次，還答得出來，才是真的記住了。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。
+     圖形只回傳「座標」，真正畫圖的程式在 GENS 後面。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function rangeList(a, b){
+    var out = [];
+    for (var i = a; i <= b; i++) out.push(i);
+    return out;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+
+  /* --- 幾何核心。整數座標，所以判定完全精確（和課程頁同一套規則）：
+         平行 ⟺ 外積 ＝ 0；垂直 ⟺ 內積 ＝ 0；等長 ⟺ 長度平方相等。
+         零向量對任何向量的內積外積都是 0，所以先確認每條邊都不是一個點。 --- */
+  function vsub(a, b){ return [b[0] - a[0], b[1] - a[1]]; }
+  function dot(u, v){ return u[0] * v[0] + u[1] * v[1]; }
+  function cross(u, v){ return u[0] * v[1] - u[1] * v[0]; }
+  function len2(u){ return dot(u, u); }
+  function isSeg(u){ return u[0] !== 0 || u[1] !== 0; }
+  function isPerp(u, v){ return isSeg(u) && isSeg(v) && dot(u, v) === 0; }
+  function isPara(u, v){ return isSeg(u) && isSeg(v) && cross(u, v) === 0; }
+  function sidesOf(pts){
+    var s = [];
+    for (var i = 0; i < 4; i++) s.push(vsub(pts[i], pts[(i + 1) % 4]));
+    return s;
+  }
+  function paraPairs(pts){
+    var s = sidesOf(pts);
+    return (isPara(s[0], s[2]) ? 1 : 0) + (isPara(s[1], s[3]) ? 1 : 0);
+  }
+  function rightCount(pts){
+    var s = sidesOf(pts), n = 0;
+    for (var i = 0; i < 4; i++) if (isPerp(s[i], s[(i + 1) % 4])) n++;
+    return n;
+  }
+  function allSidesEqual(pts){
+    var s = sidesOf(pts);
+    return len2(s[0]) === len2(s[1]) && len2(s[1]) === len2(s[2]) && len2(s[2]) === len2(s[3]);
+  }
+  /* 梯形採「只有一組對邊平行」的定義 —— 平行四邊形不算梯形。 */
+  function classify(pts){
+    var pairs = paraPairs(pts);
+    if (pairs === 2){
+      var r = rightCount(pts) === 4, e = allSidesEqual(pts);
+      return (r && e) ? 'square' : r ? 'rect' : e ? 'rhom' : 'para';
+    }
+    if (pairs === 1){
+      var s = sidesOf(pts);
+      return (len2(s[0]) === len2(s[2]) || len2(s[1]) === len2(s[3])) ? 'isotrap' : 'trap';
+    }
+    return 'quad';
+  }
+  /* 家族：往上一層一層收集。正方形有兩個上層（長方形和菱形）。 */
+  var PARENTS = { para:[], rect:['para'], rhom:['para'], square:['rect', 'rhom'],
+                  trap:[], isotrap:['trap'] };
+  function ancestors(key){
+    var out = [], seen = {};
+    (function walk(k){
+      (PARENTS[k] || []).forEach(function(p){
+        if (!seen[p]){ seen[p] = true; out.push(p); walk(p); }
+      });
+    })(key);
+    return out;
+  }
+  function isAlso(a, b){ return a === b || ancestors(a).indexOf(b) >= 0; }
+
+  /* --- 隨機造形狀，然後用 classify() 驗證它真的是要的那一種。
+         畫得出來不算數，**分類函式說它是**才算數 —— 這樣座標寫錯會被自己抓到。 --- */
+  function draftShape(kind){
+    var h, w, sx, tw, bw, p, q, s;
+    if (kind === 'para'){
+      sx = pick(rangeList(40, 85)); w = pick(rangeList(140, 200)); h = pick(rangeList(70, 100));
+      return [[50, 30 + h], [50 + sx, 30], [50 + sx + w, 30], [50 + w, 30 + h]];
+    }
+    if (kind === 'rect'){
+      w = pick(rangeList(150, 230)); h = pick(rangeList(70, 110));
+      return [[60, 30], [60 + w, 30], [60 + w, 30 + h], [60, 30 + h]];
+    }
+    if (kind === 'rhom'){
+      p = pick(rangeList(70, 110)); q = pick(rangeList(40, 65));
+      return [[180, 90 - q], [180 + p, 90], [180, 90 + q], [180 - p, 90]];
+    }
+    if (kind === 'square'){
+      s = pick(rangeList(90, 130));
+      return [[180 - s / 2, 90 - s / 2], [180 + s / 2, 90 - s / 2],
+              [180 + s / 2, 90 + s / 2], [180 - s / 2, 90 + s / 2]];
+    }
+    if (kind === 'trap'){
+      sx = pick(rangeList(30, 70)); tw = pick(rangeList(90, 140));
+      bw = sx + tw + pick(rangeList(30, 70)); h = pick(rangeList(70, 100));
+      return [[50, 30 + h], [50 + sx, 30], [50 + sx + tw, 30], [50 + bw, 30 + h]];
+    }
+    /* isotrap：左右各外擴一樣多，兩腰自然等長 */
+    sx = pick(rangeList(35, 70)); tw = pick(rangeList(90, 140)); h = pick(rangeList(70, 100));
+    return [[50, 30 + h], [50 + sx, 30], [50 + sx + tw, 30], [50 + sx + tw + sx, 30 + h]];
+  }
+  function makeShape(kind){
+    for (var i = 0; i < 300; i++){
+      var pts = draftShape(kind);
+      if (pts && classify(pts) === kind) return pts;
+    }
+    return null;   // 造不出來就讓呼叫端顯式失敗，不要偷偷回一個錯的形狀
+  }
+
+  var SHAPES = ['para', 'rect', 'rhom', 'square', 'trap', 'isotrap'];
+  var PARA_FAM = ['para', 'rect', 'rhom', 'square'];
+
+  /* --- 整數方向向量：互相垂直（內積 0）與互相平行（外積 0）的成對樣本 --- */
+  var PERP_PAIRS = [[[1,0],[0,1]], [[4,3],[-3,4]], [[1,1],[1,-1]], [[5,2],[-2,5]],
+                    [[3,4],[-4,3]], [[2,1],[-1,2]], [[5,-12],[12,5]], [[8,15],[-15,8]]];
+  var SKEW_PAIRS = [[[1,0],[2,1]], [[3,1],[1,2]], [[4,3],[1,1]], [[2,1],[3,4]],
+                    [[1,2],[2,1]], [[5,1],[1,3]]];
+
+  /* ---------- 文字 ---------- */
+  var TXT = {
+    zh: {
+      shape:{ para:'平行四邊形', rect:'長方形', rhom:'菱形', square:'正方形',
+              trap:'梯形', isotrap:'等腰梯形', quad:'一般四邊形' },
+      rel:{ perp:'互相垂直', para:'互相平行', neither:'既不垂直也不平行', sameLen:'兩條一定一樣長' },
+      yes:'會', no:'不會', yes2:'是', no2:'不是', dunno:'不一定',
+      pairs:function(n){ return ['一組都沒有', '只有一組', '兩組', '三組'][n]; },
+      cm:function(n){ return n + ' 公分'; }
+    },
+    en: {
+      shape:{ para:'a parallelogram', rect:'a rectangle', rhom:'a rhombus', square:'a square',
+              trap:'a trapezium', isotrap:'an isosceles trapezium', quad:'an ordinary quadrilateral' },
+      rel:{ perp:'perpendicular', para:'parallel', neither:'neither perpendicular nor parallel', sameLen:'the two must be the same length' },
+      yes:'Yes', no:'No', yes2:'Yes', no2:'No', dunno:'There is no way to tell',
+      pairs:function(n){ return ['none', 'exactly one pair', 'two pairs', 'three pairs'][n]; },
+      cm:function(n){ return n + ' cm'; }
+    }
+  };
+  /* 形狀名稱在句子開頭時，英文要去掉冠詞前的空白問題；中文不受影響。 */
+  function bareName(t, k){ return t.shape[k].replace(/^an? /, ''); }
+  /* 句首大寫：只把冠詞的第一個字母變大寫，不可以把 'an ' 整個換成 'A ' ——
+     那會把 'an isosceles trapezium' 變成 'A isosceles trapezium'。 */
+  function capName(t, k){ var s = t.shape[k]; return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  var GENS = [
+    /* 1. 兩條線的關係。三個選項互斥，答案由內積／外積算出來。 */
+    { id:'relation', cat:'line',
+      make:function(){
+        var perp = (rand(2) === 1);
+        var pr = perp ? pick(PERP_PAIRS) : pick(SKEW_PAIRS);
+        var u = pr[0], v = pr[1];
+        var key = isPerp(u, v) ? 'perp' : (isPara(u, v) ? 'para' : 'neither');
+        var order = shuffle(['perp', 'para', 'neither', 'sameLen']);
+        return { u:u, v:v, key:key, dp:dot(u, v), cp:cross(u, v),
+                 opts:order, ans:order.indexOf(key) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var desc = lang === 'zh'
+          ? '兩條直線交叉，交叉的地方' + (d.key === 'perp' ? '<strong>剛好是直角</strong>' : '<strong>不是直角</strong>') + '。'
+          : 'Two straight lines cross, and the crossing ' + (d.key === 'perp' ? '<strong>is exactly a right angle</strong>' : '<strong>is not a right angle</strong>') + '.';
+        return {
+          stem: desc + (lang === 'zh' ? '這兩條線是什麼關係？' : ' How are the two lines related?'),
+          opts: d.opts.map(function(k){ return t.rel[k]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.key === 'perp'
+                ? '交叉的地方是直角，就叫互相垂直。它們有交點，所以不可能平行 —— 平行的兩條線永遠不相交。'
+                : '交叉的地方不是直角，所以不是垂直；它們已經交叉了，所以也不是平行。兩個都不是。')
+            : (d.key === 'perp'
+                ? 'Crossing at a right angle is exactly what perpendicular means. They do cross, so they cannot be parallel — parallel lines never meet.'
+                : 'The crossing is not a right angle, so they are not perpendicular; and they have already crossed, so they are not parallel either. Neither one.')
+        };
+      } },
+
+    /* 2. 整組轉過角度，還是不是垂直？「垂直＝一橫一直」的迷思。 */
+    { id:'perpTurned', cat:'line',
+      make:function(){
+        var deg = pick([15, 30, 45, 60, 75]);
+        var order = shuffle(['still', 'no', 'depends', 'becomesPara']);
+        return { deg:deg, opts:order, ans:order.indexOf('still') };
+      },
+      fmt:function(d, lang){
+        var opt = { zh:{ still:'還是垂直', no:'不是垂直了', depends:'要看轉幾度', becomesPara:'變成互相平行了' },
+                    en:{ still:'Still perpendicular', no:'No longer perpendicular', depends:'It depends how far you turn it', becomesPara:'They become parallel instead' } }[lang];
+        return {
+          stem: lang === 'zh'
+            ? '兩條互相垂直的直線，<strong>整組一起轉 ' + d.deg + ' 度</strong>。轉完之後它們還垂直嗎？'
+            : 'Two perpendicular straight lines are turned <strong>' + d.deg + ' degrees as a whole</strong>. Are they still perpendicular afterwards?',
+          opts: d.opts.map(function(k){ return opt[k]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '整組一起轉，兩條線<strong>之間</strong>的夾角不會變，還是直角，所以還是垂直。垂直看的是那個夾角，和它擺得正不正、轉了幾度都沒有關係。'
+            : 'Turning the whole pair together never changes the angle <strong>between</strong> them: it is still a right angle, so they are still perpendicular. Perpendicular is about that angle, not about how the pair is placed or how far it was turned.'
+        };
+      } },
+
+    /* 3. 長短不同也可以平行。 */
+    { id:'paraLength', cat:'line',
+      make:function(used){
+        var a = pickUnused(rangeList(8, 15), used);
+        var b = pick(rangeList(2, 5));
+        var order = shuffle(['yes', 'no', 'need', 'dunno']);
+        return { a:a, b:b, opts:order, ans:order.indexOf('yes') };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var opt = { zh:{ yes:'平行', no:'不平行，長度不一樣', need:'一樣長才算平行', dunno:'不一定，要看它們有沒有相交' },
+                    en:{ yes:'They are parallel', no:'Not parallel — the lengths differ', need:'They must be equal in length to be parallel', dunno:'No way to tell without seeing them cross' } }[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一條 ' + t.cm(d.a) + ' 的線段和一條 ' + t.cm(d.b) + ' 的線段，量三個地方，中間的寬度都一樣。它們平行嗎？'
+            : 'A ' + t.cm(d.a) + ' segment and a ' + t.cm(d.b) + ' segment: measured in three places, the width between them is the same every time. Are they parallel?',
+          opts: d.opts.map(function(k){ return opt[k]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '平行看的是延長下去會不會相交，也就是寬度處處一不一樣。三個地方都一樣就是平行，<strong>和 ' + d.a + ' 公分、' + d.b + ' 公分差多少完全無關</strong>。'
+            : 'Parallel is about whether the lines would ever meet — that is, whether the width stays the same. Three equal widths means parallel, and the gap between ' + d.a + ' cm and ' + d.b + ' cm <strong>has nothing to do with it</strong>.'
+        };
+      } },
+
+    /* 4. 數平行的對邊有幾組。答案由 paraPairs() 算出來。 */
+    { id:'countPairs', cat:'shape',
+      make:function(used){
+        var kind = pickUnused(SHAPES, used);
+        var pts = makeShape(kind);
+        if (!pts) return null;
+        var n = paraPairs(pts);
+        var order = shuffle([0, 1, 2, 3]);   // 3 組對邊是四邊形不可能有的，當誘答
+        return { kind:kind, pts:pts, n:n, opts:order, ans:order.indexOf(n) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh' ? '圖上這個四邊形，有幾組對邊互相平行？'
+                              : 'How many pairs of opposite sides of this quadrilateral are parallel?',
+          opts: d.opts.map(function(n){ return t.pairs(n); }), ans:d.ans, fig:d.pts,
+          why: lang === 'zh'
+            ? '它是' + t.shape[d.kind] + '，' + (d.n === 2 ? '兩組對邊都平行。' : '只有一組對邊平行，另外一組延長下去會相交。')
+              + (d.n === 2 ? '兩組都平行，就是平行四邊形家族。' : '只有一組，就是梯形。')
+            : 'It is ' + t.shape[d.kind] + ', so ' + (d.n === 2 ? 'both pairs of opposite sides are parallel.' : 'only one pair is parallel — extend the other pair and they meet.')
+              + (d.n === 2 ? ' Both pairs parallel means the parallelogram family.' : ' Exactly one pair means a trapezium.')
+        };
+      } },
+
+    /* 5. 由條件推名字。四個選項是四個不同的名字。
+          ⚠️ 條件必須**剛好**指向一個名字，不能少寫一個條件讓別的名字也講得通。 */
+    { id:'nameByRule', cat:'shape',
+      make:function(used){
+        var kind = pickUnused(['para', 'rect', 'rhom', 'square', 'trap'], used);
+        var wrongs = shuffle(SHAPES.filter(function(k){ return k !== kind; })).slice(0, 3);
+        var order = shuffle([kind].concat(wrongs));
+        return { kind:kind, opts:order, ans:order.indexOf(kind) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var rule = {
+          zh:{ para:'兩組對邊都平行，但四個角都不是直角，四邊也沒有都一樣長',
+               rect:'兩組對邊都平行，四個角都是直角，但相鄰兩邊不一樣長',
+               rhom:'兩組對邊都平行，四邊都一樣長，但四個角都不是直角',
+               square:'兩組對邊都平行，四個角都是直角，四邊也都一樣長',
+               trap:'只有一組對邊平行，而且兩腰不一樣長' },
+          en:{ para:'both pairs of opposite sides parallel, but no right angles and not all four sides equal',
+               rect:'both pairs of opposite sides parallel and four right angles, but neighbouring sides are different lengths',
+               rhom:'both pairs of opposite sides parallel and all four sides equal, but no right angles',
+               square:'both pairs of opposite sides parallel, four right angles, and all four sides equal',
+               trap:'exactly one pair of opposite sides parallel, and the two legs are different lengths' }
+        }[lang][d.kind];
+        var why = {
+          zh:{ para:'兩組平行就是平行四邊形；沒有直角所以不是長方形，四邊沒有都等長所以不是菱形。',
+               rect:'兩組平行＋四個直角就是長方形；相鄰兩邊不一樣長，所以還不是正方形。',
+               rhom:'兩組平行＋四邊等長就是菱形；沒有直角，所以不是正方形。',
+               square:'四個直角讓它是長方形，四邊等長讓它是菱形 —— 兩個都有的那一個就叫正方形。',
+               trap:'只有一組對邊平行就是梯形；兩腰不一樣長，所以不是等腰梯形。' },
+          en:{ para:'Both pairs parallel makes it a parallelogram; no right angles rules out a rectangle, and sides not all equal rules out a rhombus.',
+               rect:'Both pairs parallel plus four right angles makes a rectangle; neighbouring sides differ, so it is not yet a square.',
+               rhom:'Both pairs parallel plus four equal sides makes a rhombus; without right angles it is not a square.',
+               square:'Four right angles make it a rectangle and four equal sides make it a rhombus — the shape that is both is called a square.',
+               trap:'Exactly one parallel pair makes it a trapezium; the legs differ, so it is not an isosceles one.' }
+        }[lang][d.kind];
+        return {
+          stem: lang === 'zh' ? '一個四邊形' + rule + '。它<strong>最精確</strong>的名字是什麼？'
+                              : 'A quadrilateral has ' + rule + '. What is its <strong>most specific</strong> name?',
+          opts: d.opts.map(function(k){ return t.shape[k]; }), ans:d.ans, why:why
+        };
+      } },
+
+    /* 6. 看圖說名字。 */
+    { id:'nameShape', cat:'shape',
+      make:function(used){
+        var kind = pickUnused(SHAPES, used);
+        var pts = makeShape(kind);
+        if (!pts) return null;
+        var wrongs = shuffle(SHAPES.filter(function(k){ return k !== kind; })).slice(0, 3);
+        var order = shuffle([kind].concat(wrongs));
+        return { kind:kind, pts:pts, pairs:paraPairs(pts), right:rightCount(pts),
+                 eq4:allSidesEqual(pts), opts:order, ans:order.indexOf(kind) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var facts = lang === 'zh'
+          ? '它有' + t.pairs(d.pairs) + '對邊平行、'
+            + (d.eq4 ? '四邊都一樣長' : '四邊沒有都一樣長') + '、'
+            + (d.right === 4 ? '四個角都是直角' : '角不是直角') + '。'
+          : 'It has ' + t.pairs(d.pairs) + ' of parallel opposite sides, '
+            + (d.eq4 ? 'all four sides equal' : 'sides that are not all equal') + ', and '
+            + (d.right === 4 ? 'four right angles' : 'angles that are not right angles') + '.';
+        return {
+          /* ⚠️ 一定要問「最精確」的名字：正方形同時也是長方形、菱形、平行四邊形，
+             只問「叫什麼」的話，好幾個選項都答得通。 */
+          stem: lang === 'zh' ? '圖上這個四邊形，<strong>最精確</strong>的名字是什麼？（箭頭＝平行，短撇＝等長，小方框＝直角）'
+                              : 'What is the <strong>most specific</strong> name for this quadrilateral? (arrows = parallel, ticks = equal, small square = right angle)',
+          opts: d.opts.map(function(k){ return t.shape[k]; }), ans:d.ans, fig:d.pts,
+          why: facts + (lang === 'zh' ? '所以它是' + t.shape[d.kind] + '。'
+                                      : ' So it is ' + t.shape[d.kind] + '.')
+        };
+      } },
+
+    /* 7. 家族：它「也是」什麼。答案由 ancestors() 算出來。 */
+    { id:'alsoIs', cat:'family',
+      make:function(used){
+        /* ⚠️ 這裡不放 square：它的上層有三個（長方形、菱形、平行四邊形），
+             扣掉之後只剩兩個形狀能當誘答，湊不出四個「只有一個對」的選項。
+             正方形的家族關係由 notAlways、oddOneOut 和課程頁的第 6 題負責。 */
+        var kind = pickUnused(['rect', 'rhom', 'isotrap'], used);
+        var ups = ancestors(kind);
+        var right = pick(ups);
+        var wrongs = shuffle(SHAPES.filter(function(k){
+          return k !== kind && ups.indexOf(k) < 0;      // 只有「不是它上層」的才能當誘答
+        })).slice(0, 3);
+        var order = shuffle([right].concat(wrongs));
+        return { kind:kind, right:right, ups:ups, opts:order, ans:order.indexOf(right) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var why = {
+          zh:{ para:'因為它兩組對邊都平行，符合平行四邊形的條件。',
+               rect:'因為它四個角都是直角，又是平行四邊形，符合長方形的條件。',
+               rhom:'因為它四邊都一樣長，又是平行四邊形，符合菱形的條件。',
+               trap:'因為它只有一組對邊平行，符合梯形的條件。' },
+          en:{ para:'because both pairs of its opposite sides are parallel, which is exactly the parallelogram condition.',
+               rect:'because it has four right angles and is a parallelogram, which is exactly the rectangle condition.',
+               rhom:'because all four of its sides are equal and it is a parallelogram, which is exactly the rhombus condition.',
+               trap:'because it has exactly one pair of parallel opposite sides, which is exactly the trapezium condition.' }
+        }[lang][d.right];
+        return {
+          stem: lang === 'zh' ? bareName(t, d.kind) + '除了自己，還是下面哪一種？'
+                              : 'Besides being ' + t.shape[d.kind] + ', which of these is it also?',
+          opts: d.opts.map(function(k){ return t.shape[k]; }), ans:d.ans,
+          why: (lang === 'zh' ? bareName(t, d.kind) + '也是' + bareName(t, d.right) + '，' + why
+                              : capName(t, d.kind) + ' is also ' + t.shape[d.right] + ', ' + why)
+              + (lang === 'zh' ? '加了條件的，還是原來那一種。' : ' Adding a condition never stops a shape being what it already was.')
+        };
+      } },
+
+    /* 8. 反方向：上層不一定是下層。⚠️ 這一題的答案是「不一定」。 */
+    { id:'notAlways', cat:'family',
+      make:function(used){
+        var pairs = [['rect', 'square'], ['para', 'rect'], ['para', 'rhom'],
+                     ['rhom', 'square'], ['trap', 'isotrap']];
+        var pr = pickUnused(pairs.map(function(p){ return p.join('>'); }), used).split('>');
+        var order = shuffle(['always', 'never', 'maybe', 'same']);
+        return { a:pr[0], b:pr[1], opts:order, ans:order.indexOf('maybe') };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var opt = { zh:{ always:'一定是', never:'一定不是', maybe:'不一定', same:'這兩個名字是同一件事' },
+                    en:{ always:'Always', never:'Never', maybe:'Not necessarily', same:'They are two names for the same thing' } }[lang];
+        return {
+          stem: lang === 'zh' ? bareName(t, d.a) + '一定是' + bareName(t, d.b) + '嗎？'
+                              : 'Is ' + t.shape[d.a] + ' always ' + t.shape[d.b] + '?',
+          opts: d.opts.map(function(k){ return opt[k]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? bareName(t, d.b) + '是' + bareName(t, d.a) + '<strong>再加一個條件</strong>才成立的，所以'
+              + bareName(t, d.a) + '裡面只有一部分是' + bareName(t, d.b) + '。'
+              + '加條件只能往下走，<strong>不能往回推</strong>。'
+            : capName(t, d.b) + ' is ' + t.shape[d.a] + ' <strong>plus one more condition</strong>, so only some of them qualify. Conditions take you down the family tree, <strong>never back up</strong>.'
+        };
+      } },
+
+    /* 9. 梯形的上底下底一定不一樣長 —— 一樣長的話另一組也會平行。 */
+    { id:'trapBases', cat:'trap',
+      make:function(used){
+        var top = pickUnused(rangeList(4, 9), used);
+        var bot = top + pick(rangeList(2, 6));
+        var order = shuffle(['no', 'yes', 'dunno', 'isoOnly']);
+        return { top:top, bot:bot, opts:order, ans:order.indexOf('no') };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var opt = { zh:{ no:'不可能，一定不一樣長', yes:'可以，一樣長也是梯形', dunno:'看兩腰才知道', isoOnly:'只有等腰梯形可以' },
+                    en:{ no:'Impossible — they are never equal', yes:'Yes, equal bases are fine for a trapezium', dunno:'It depends on the legs', isoOnly:'Only an isosceles trapezium could' } }[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個梯形的上底是 ' + t.cm(d.top) + '。它的下底有沒有可能也是 ' + t.cm(d.top) + '？'
+            : 'A trapezium has a top base of ' + t.cm(d.top) + '. Could its bottom base also be ' + t.cm(d.top) + '?',
+          opts: d.opts.map(function(k){ return opt[k]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '如果上底和下底<strong>一樣長又平行</strong>，那另外兩邊就會跟著變成平行 —— 兩組都平行，它就升級成<strong>平行四邊形</strong>，不再算梯形了。所以梯形的上底和下底一定不一樣長，下底不可能也是 ' + d.top + ' 公分。'
+            : 'If the two bases were <strong>equal and parallel</strong>, the other two sides would end up parallel as well — with both pairs parallel it is promoted to a <strong>parallelogram</strong> and stops being a trapezium. So a trapezium’s bases always differ — the bottom one cannot also be ' + d.top + ' cm.'
+        };
+      } },
+
+    /* 10. 等腰梯形：看兩腰等不等長。 */
+    { id:'isoTrap', cat:'trap',
+      make:function(used){
+        /* ⚠️ 邊長要真的畫得出來。把一支腰平移到另一支旁邊，會得到一個三角形，
+           三邊是「腰1、腰2、下底−上底」，所以必須滿足三角不等式：
+             |腰1 − 腰2| < 下底 − 上底 < 腰1 + 腰2
+           不檢查的話會出現「上底 5、下底 8、兩腰 4 和 8」這種畫不出來的梯形。 */
+        var iso = (rand(2) === 1);
+        var leg = pickUnused(rangeList(4, 9), used);
+        for (var i = 0; i < 60; i++){
+          var leg2 = iso ? leg : leg + pick(rangeList(1, 4));
+          var top = pick(rangeList(5, 8));
+          var bot = top + pick(rangeList(3, 7));
+          var diff = bot - top;
+          if (Math.abs(leg - leg2) < diff && diff < leg + leg2){
+            var order = shuffle(['iso', 'plain', 'paraq', 'rhom']);
+            return { iso:iso, leg:leg, leg2:leg2, top:top, bot:bot,
+                     opts:order, ans:order.indexOf(iso ? 'iso' : 'plain') };
+          }
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var opt = { zh:{ iso:'等腰梯形', plain:'一般的梯形（不是等腰）', paraq:'平行四邊形', rhom:'菱形' },
+                    en:{ iso:'An isosceles trapezium', plain:'An ordinary trapezium (not isosceles)', paraq:'A parallelogram', rhom:'A rhombus' } }[lang];
+        return {
+          stem: lang === 'zh'
+            ? '一個梯形的上底 ' + t.cm(d.top) + '、下底 ' + t.cm(d.bot) + '，兩腰分別是 ' + t.cm(d.leg) + ' 和 ' + t.cm(d.leg2) + '。它是什麼？'
+            : 'A trapezium has bases of ' + t.cm(d.top) + ' and ' + t.cm(d.bot) + ', and legs of ' + t.cm(d.leg) + ' and ' + t.cm(d.leg2) + '. What is it?',
+          opts: d.opts.map(function(k){ return opt[k]; }), ans:d.ans,
+          why: (d.iso
+            ? (lang === 'zh' ? '兩腰都是 ' + d.leg + ' 公分，一樣長，所以是等腰梯形。'
+                             : 'Both legs are ' + d.leg + ' cm, so it is an isosceles trapezium.')
+            : (lang === 'zh' ? '兩腰是 ' + d.leg + ' 公分和 ' + d.leg2 + ' 公分，不一樣長，所以是一般的梯形，不是等腰梯形。'
+                             : 'The legs are ' + d.leg + ' cm and ' + d.leg2 + ' cm — different, so it is an ordinary trapezium, not an isosceles one.'))
+            + (lang === 'zh' ? '它只有一組對邊平行，所以不管兩腰如何，都不會是平行四邊形。'
+                             : ' It has only one parallel pair, so whatever the legs do, it is never a parallelogram.')
+        };
+      } },
+
+    /* 11. 這個名字保證了什麼。誘答都是「這個形狀不保證」的性質。 */
+    { id:'guaranteed', cat:'family',
+      make:function(used){
+        var kind = pickUnused(['para', 'rect', 'rhom'], used);
+        var facts = { para:'oppSide', rect:'right4', rhom:'side4' };
+        var notGuaranteed = { para:['right4', 'side4', 'onePair'],
+                              rect:['side4', 'onePair', 'noPara'],
+                              rhom:['right4', 'onePair', 'noPara'] };
+        var right = facts[kind];
+        var order = shuffle([right].concat(notGuaranteed[kind]));
+        return { kind:kind, right:right, opts:order, ans:order.indexOf(right) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var opt = {
+          zh:{ oppSide:'對邊一樣長', right4:'四個角都是直角', side4:'四邊都一樣長',
+               onePair:'只有一組對邊平行', noPara:'沒有對邊平行' },
+          en:{ oppSide:'opposite sides are equal', right4:'all four angles are right angles',
+               side4:'all four sides are equal', onePair:'exactly one pair of opposite sides is parallel',
+               noPara:'no opposite sides are parallel' }
+        }[lang];
+        var why = {
+          zh:{ oppSide:'兩組對邊平行會帶出對邊一樣長，這是平行四邊形一定有的。至於直角和四邊等長，那是長方形和菱形才加的條件。',
+               right4:'長方形的定義就是平行四邊形＋四個直角。四邊等長是菱形的條件，長方形不保證。',
+               side4:'菱形的定義就是平行四邊形＋四邊等長。直角是長方形的條件，菱形不保證。' },
+          en:{ oppSide:'Both pairs being parallel forces the opposite sides to be equal, and every parallelogram has that. Right angles and four equal sides are the extra conditions that make a rectangle or a rhombus.',
+               right4:'A rectangle is by definition a parallelogram plus four right angles. Four equal sides is the rhombus condition, which a rectangle does not guarantee.',
+               side4:'A rhombus is by definition a parallelogram plus four equal sides. Right angles are the rectangle condition, which a rhombus does not guarantee.' }
+        }[lang][d.right];
+        return {
+          stem: lang === 'zh' ? '知道一個四邊形是' + bareName(t, d.kind) + '，下面哪一件事<strong>一定</strong>成立？'
+                              : 'Knowing a quadrilateral is ' + t.shape[d.kind] + ', which of these is <strong>guaranteed</strong>?',
+          opts: d.opts.map(function(k){ return opt[k]; }), ans:d.ans, why:why
+        };
+      } },
+
+    /* 12. 挑出不是平行四邊形的那一個。三個誘答都是平行四邊形家族。 */
+    { id:'oddOneOut', cat:'family',
+      make:function(){
+        var odd = pick(['trap', 'isotrap']);
+        var fam = shuffle(PARA_FAM).slice(0, 3);
+        var order = shuffle([odd].concat(fam));
+        return { odd:odd, fam:fam, opts:order, ans:order.indexOf(odd) };
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        return {
+          stem: lang === 'zh' ? '下面哪一個<strong>不是</strong>平行四邊形？'
+                              : 'Which of these is <strong>not</strong> a parallelogram?',
+          opts: d.opts.map(function(k){ return t.shape[k]; }), ans:d.ans,
+          /* 說明要從 d.fam 生出來 —— 寫死「長方形、菱形、正方形」的話，
+             隨機抽到別的三個時，說明會提到畫面上沒有的形狀。 */
+          why: lang === 'zh'
+            ? bareName(t, d.odd) + '只有<strong>一組</strong>對邊平行，所以不是平行四邊形。其他三個（'
+              + d.fam.map(function(k){ return bareName(t, k); }).join('、')
+              + '）都有<strong>兩組</strong>對邊平行，都在平行四邊形家族裡。'
+            : capName(t, d.odd) + ' has <strong>only one</strong> pair of parallel opposite sides, so it is not a parallelogram. The other three ('
+              + d.fam.map(function(k){ return bareName(t, k); }).join(', ')
+              + ') all have <strong>both pairs</strong> parallel, so they are all in the parallelogram family.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批題目 ---------- */
+  var QCOUNT = 12;
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 四邊形家族', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：四邊形家族',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>隔一天再來一次，還答得出來，才是真的記住了。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Quadrilateral Family', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Quadrilateral Family',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>Come back a day later and still get them — that is real remembering.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  /* --- 畫圖：只有這一段碰 DOM，GENS 只回傳座標 --- */
+  var NS = 'http://www.w3.org/2000/svg';
+  var C_FILL = '#E3F4EB', C_EDGE = '#2F9E69', C_MARK = '#E8871E';
+  var T_ARROW = 0.50, T_TICK = 0.28, MK = 11, TK = 8, AR = 7;
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function markAt(a, b, t){
+    var u = vsub(a, b), n = Math.sqrt(len2(u));
+    return { cx:a[0] + u[0] * t, cy:a[1] + u[1] * t, ux:u[0] / n, uy:u[1] / n };
+  }
+  function drawFig(svg, pts){
+    svg.textContent = '';
+    var s = sidesOf(pts), i;
+    svg.appendChild(svgEl('polygon', {
+      points:pts.map(function(p){ return p[0] + ',' + p[1]; }).join(' '),
+      fill:C_FILL, stroke:C_EDGE, 'stroke-width':3, 'stroke-linejoin':'round'
+    }));
+    /* 平行箭頭 */
+    var groups = [];
+    if (isPara(s[0], s[2])) groups.push([0, 2]);
+    if (isPara(s[1], s[3])) groups.push([1, 3]);
+    groups.forEach(function(g, gi){
+      g.forEach(function(si){
+        var m = markAt(pts[si], pts[(si + 1) % 4], T_ARROW);
+        var px = -m.uy, py = m.ux;
+        for (var k = 0; k <= gi; k++){
+          var off = (k - gi / 2) * 6;
+          var cx = m.cx + m.ux * off, cy = m.cy + m.uy * off;
+          svg.appendChild(svgEl('path', {
+            d:'M ' + (cx - m.ux * AR + px * AR * 0.7) + ' ' + (cy - m.uy * AR + py * AR * 0.7) +
+              ' L ' + cx + ' ' + cy +
+              ' L ' + (cx - m.ux * AR - px * AR * 0.7) + ' ' + (cy - m.uy * AR - py * AR * 0.7),
+            fill:'none', stroke:C_EDGE, 'stroke-width':2
+          }));
+        }
+      });
+    });
+    /* 等長短撇：四邊等長併成一組；否則對邊各一組；梯形只標「真的等長」的兩腰 */
+    var eq = [];
+    if (allSidesEqual(pts)) eq = [[0, 1, 2, 3]];
+    else if (groups.length === 2){
+      if (len2(s[0]) === len2(s[2])) eq.push([0, 2]);
+      if (len2(s[1]) === len2(s[3])) eq.push([1, 3]);
+    } else if (groups.length === 1){
+      var legs = [0, 1, 2, 3].filter(function(i2){ return groups[0].indexOf(i2) < 0; });
+      if (len2(s[legs[0]]) === len2(s[legs[1]])) eq.push(legs);
+    }
+    eq.forEach(function(g, gi){
+      g.forEach(function(si){
+        var m = markAt(pts[si], pts[(si + 1) % 4], T_TICK);
+        var px = -m.uy * (TK / 2), py = m.ux * (TK / 2);
+        for (var k = 0; k <= gi; k++){
+          var off = (k - gi / 2) * 5;
+          var cx = m.cx + m.ux * off, cy = m.cy + m.uy * off;
+          svg.appendChild(svgEl('line', {
+            x1:cx - px, y1:cy - py, x2:cx + px, y2:cy + py, stroke:C_MARK, 'stroke-width':2
+          }));
+        }
+      });
+    });
+    /* 直角小方框 */
+    for (i = 0; i < 4; i++){
+      if (!isPerp(s[i], s[(i + 1) % 4])) continue;
+      var v = (i + 1) % 4;
+      var u1 = vsub(pts[v], pts[(v + 1) % 4]), u2 = vsub(pts[v], pts[(v + 3) % 4]);
+      var n1 = Math.sqrt(len2(u1)), n2 = Math.sqrt(len2(u2));
+      var ax = u1[0] / n1 * MK, ay = u1[1] / n1 * MK, bx = u2[0] / n2 * MK, by = u2[1] / n2 * MK;
+      svg.appendChild(svgEl('path', {
+        d:'M ' + (pts[v][0] + ax) + ' ' + (pts[v][1] + ay) +
+          ' L ' + (pts[v][0] + ax + bx) + ' ' + (pts[v][1] + ay + by) +
+          ' L ' + (pts[v][0] + bx) + ' ' + (pts[v][1] + by),
+        fill:'none', stroke:C_MARK, 'stroke-width':2
+      }));
+    }
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 40; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      if (q.fig){
+        var fw = document.createElement('div');
+        fw.className = 'figwrap';
+        var svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('class', 'shapefig');
+        svg.setAttribute('viewBox', '0 0 360 170');
+        drawFig(svg, q.fig);
+        fw.appendChild(svg);
+        box.appendChild(fw);
+      }
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length) finish();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function finish(){
+    var t = L();
+    resultLine.textContent = (right === batch.length) ? t.resAll(batch.length)
+      : (right >= Math.ceil(batch.length * 2 / 3)) ? t.resGood(right, batch.length)
+      : t.resTry(right, batch.length);
+    resultLinks.innerHTML = t.links;
+    resultEl.classList.add('on');
+    resultEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  function newRound(){ batch = buildBatch(); render(); }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    newRound();
+  });
+  retryBtn.addEventListener('click', newRound);
+
+  applyStatic();
+  newRound();
+})();
+</script>
+</body>
+</html>

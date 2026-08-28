@@ -81,8 +81,11 @@ const spread = {};
 console.log('answer-index spread:', JSON.stringify(spread));
 if (Object.keys(spread).length < 3) fail('answer index is not spread across options');
 
-/* --- 4. 這一課自己的範例與遊戲關卡 --- */
-CFG.check(data, I18N, fail);
+/* --- 4. 這一課自己的範例與遊戲關卡 ---
+   第四個參數是**整份原始碼**：有些不變式只有在原始碼層才驗得到
+   （例如「這句旁白必須是算出來的，不可以寫死成某一筆的索引」）。
+   舊的設定檔只宣告三個參數，多傳一個不會影響它們。 */
+CFG.check(data, I18N, fail, src);
 
 console.log('problems:', problems.length);
 problems.forEach(p => console.log('  [FAIL]', p));
