@@ -152,9 +152,25 @@
   }
   /* 這個標籤離「自己標的那條邊」是不是比離任何別條邊都近？
      不是的話，孩子會把數字看成在標另一條邊 —— 那就得拉一條引線。 */
+  /* 這個字有沒有滑出自己那條邊的**兩端之外**？有的話，超出去幾個 px。
+     用 px 而不是用「幾成邊長」：短邊只有 18px，字本身就有 41px 寬，
+     一個貼在短邊旁邊的字必然會超出兩端，用比例會把它誤判成跑掉了。 */
+  function segOverhang(px, py, p1, p2){
+    var dx = p2.x - p1.x, dy = p2.y - p1.y, L = Math.sqrt(dx * dx + dy * dy);
+    if (!L) return 0;
+    var t = ((px - p1.x) * dx + (py - p1.y) * dy) / (L * L);
+    return t < 0 ? -t * L : (t > 1 ? (t - 1) * L : 0);
+  }
   function nearestIsOwn(shape, sp, bx, side){
     var cx = (bx.x0 + bx.x1) / 2, cy = (bx.y0 + bx.y1) / 2;
-    var mine = segDist(cx, cy, sp[side.from], sp[side.to]);
+    var p1 = sp[side.from], p2 = sp[side.to];
+    var mine = segDist(cx, cy, p1, p2);
+    /* ⚠️ 光比距離會漏掉最要命的那一種：字一旦滑到自己那條邊的**外面**，
+       它離自己這條邊最近的點、和離隔壁那條邊最近的點，會變成兩條邊**共用的那個角**，
+       距離完全相等，於是「沒有別條邊更近」永遠成立 —— 字可以一路飄到天邊還被判合格。
+       兩次線上災情都是這樣來的（2 公分和 1 公分顛倒、1 公分跑太上面）。
+       所以先要求它得待在自己那條邊的旁邊（投影落在 -0.5～1.5 之間）。 */
+    if (segOverhang(cx, cy, p1, p2) > 3 * (side.fs || LABEL_FS)) return false;
     for (var i = 0; i < shape.sides.length; i++){
       var o = shape.sides[i];
       if (o === side) continue;
@@ -204,11 +220,12 @@
       var p1 = sp[s.from], p2 = sp[s.to];
       var mx = (p1.x + p2.x) / 2 + (s.offset ? s.offset.dx : 0);
       var my = (p1.y + p2.y) / 2 + (s.offset ? s.offset.dy : 0);
-      var w = estTextW(s.label, fs);
+      var sfs = s.fs || fs;
+      var w = estTextW(s.label, sfs);
       var a = s.anchor || 'middle';
       var x0 = (a === 'end') ? mx - w : ((a === 'start') ? mx : mx - w / 2);
       boxes.push({ side:s, x:mx, y:my, anchor:a,
-                   x0:x0, x1:x0 + w, y0:my - fs * 1.05, y1:my + fs * 0.34 });
+                   fs:sfs, x0:x0, x1:x0 + w, y0:my - sfs * 1.05, y1:my + sfs * 0.34 });
     });
     /* 重疊就把後面那一個挪開。要同時滿足兩件事，缺一不可：
        ① 挪完不再和任何先前的標籤重疊；
@@ -241,13 +258,22 @@
       var on = Math.sqrt(od.dx * od.dx + od.dy * od.dy) || 1;
       var ox = od.dx / on, oy = od.dy / on;                 /* 往外離開那條邊 */
       var dirs = [[ax, ay], [-ax, -ay], [ox, oy], [-ay, ax], [ay, -ax]];
-      var step = fs * 0.5, placed = false, fallback = null;
-      for (r = 1; r <= 40 && !placed; r++){
+      var bfs = b.fs || fs;
+      var step = bfs * 0.5, placed = false, fallback = null, fbD = Infinity;
+      /* ⚠️ 挪動要有上限。沒有上限的話，標籤可以沿著自己那條邊一路滑到圖形外面 ——
+         而且還會通過「離自己那條邊最近」這一關：滑出去以後，自己那條邊和隔壁那條邊
+         最近的點都變成它們**共用的那個角**，兩邊距離完全相等，於是永遠判定合格。
+         結果就是字飄到很上面、看不出在標哪一條邊
+         （2026-08-29 Tony 從線上截圖抓到「1 公分跑太上面了」）。 */
+      var MAXR = Math.max(1, Math.floor(MAXPUSH / step));
+      for (r = 1; r <= MAXR && !placed; r++){
         for (k = 0; k < dirs.length && !placed; k++){
           var dx2 = dirs[k][0] * step * r, dy2 = dirs[k][1] * step * r;
           var t2 = { x0:b.x0 + dx2, x1:b.x1 + dx2, y0:b.y0 + dy2, y1:b.y1 + dy2 };
           if (clashes(t2, i)) continue;
-          if (!fallback) fallback = { d:[dx2, dy2], t:t2 };   /* 至少不重疊的第一個 */
+          /* 退而求其次的時候，挑**離自己那條邊最近**的那一個，不是碰到的第一個。 */
+          var od2 = segDist((t2.x0 + t2.x1) / 2, (t2.y0 + t2.y1) / 2, s1, s2p);
+          if (od2 < fbD){ fbD = od2; fallback = { d:[dx2, dy2], t:t2 }; }
           if (!ownIsNearest(t2, b.side)) continue;
           b.x += dx2; b.y += dy2;
           b.x0 = t2.x0; b.x1 = t2.x1; b.y0 = t2.y0; b.y1 = t2.y1;
@@ -319,6 +345,10 @@
   }
 
   var LABEL_FS = 14;
+  /* 缺角的兩個標籤要擠進一條只有 q 公分高的窄帶，字小一點才排得開。 */
+  var NOTCH_FS = 12;
+  /* 一個標籤最多只能被推開這麼遠，再遠就看不出它在標哪一條邊了。 */
+  var MAXPUSH = 34;
 
   function renderShape(shape){
     var maxX = 0, maxY = 0, i;
@@ -335,7 +365,7 @@
     svg += '<path d="' + d + '" fill="#FDF0E0" stroke="#E8871E" stroke-width="3" stroke-linejoin="round"/>';
     svg += leaderLines(shape, sp, labels);
     labels.forEach(function(b){
-      svg += '<text x="' + b.x.toFixed(1) + '" y="' + b.y.toFixed(1) + '" font-size="' + LABEL_FS + '" font-weight="700" fill="#2B2A33" paint-order="stroke" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round" text-anchor="' + b.anchor + '">' + b.side.label + '</text>';
+      svg += '<text x="' + b.x.toFixed(1) + '" y="' + b.y.toFixed(1) + '" font-size="' + (b.side.fs || LABEL_FS) + '" font-weight="700" fill="#2B2A33" paint-order="stroke" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round" text-anchor="' + b.anchor + '">' + b.side.label + '</text>';
     });
     svg += '</svg>';
     return svg;
@@ -360,8 +390,8 @@
     return { points: lPts(W, H, p, q), sides: [
       { from:0, to:1, label:labels[0], offset:{dx:0,dy:20}, anchor:'middle' },
       { from:1, to:2, label:labels[1], offset:{dx:16,dy:5}, anchor:'start' },
-      { from:2, to:3, label:labels[2], offset:{dx:0,dy:-14}, anchor:'middle' },
-      { from:3, to:4, label:labels[3], offset:{dx:16,dy:5}, anchor:'start' },
+      { from:2, to:3, label:labels[2], offset:{dx:(p/2)*PXCM+8,dy:-12}, anchor:'start', fs:NOTCH_FS },
+      { from:3, to:4, label:labels[3], offset:{dx:5,dy:5}, anchor:'start', fs:NOTCH_FS },
       { from:4, to:5, label:labels[4], offset:{dx:0,dy:-14}, anchor:'middle' },
       { from:5, to:0, label:labels[5], offset:{dx:-14,dy:5}, anchor:'end' }
     ]};
