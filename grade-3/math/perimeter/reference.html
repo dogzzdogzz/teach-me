@@ -163,6 +163,52 @@
     return w * fs * 1.06;
   }
 
+  /* 點到線段的距離。 */
+  function segDist(px, py, p1, p2){
+    var dx = p2.x - p1.x, dy = p2.y - p1.y, L = dx * dx + dy * dy;
+    var t = L ? ((px - p1.x) * dx + (py - p1.y) * dy) / L : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.sqrt(Math.pow(px - (p1.x + t * dx), 2) + Math.pow(py - (p1.y + t * dy), 2));
+  }
+  /* 這個標籤離「自己標的那條邊」是不是比離任何別條邊都近？
+     不是的話，孩子會把數字看成在標另一條邊 —— 那就得拉一條引線。 */
+  function nearestIsOwn(shape, sp, bx, side){
+    var cx = (bx.x0 + bx.x1) / 2, cy = (bx.y0 + bx.y1) / 2;
+    var mine = segDist(cx, cy, sp[side.from], sp[side.to]);
+    for (var i = 0; i < shape.sides.length; i++){
+      var o = shape.sides[i];
+      if (o === side) continue;
+      if (segDist(cx, cy, sp[o.from], sp[o.to]) < mine - 0.01) return false;
+    }
+    return true;
+  }
+
+  /* 缺角很小的時候（p 或 q 只有 1 公分 ＝ 16px），42px 寬的標籤不可能比
+     隔壁那條邊更靠近自己那條 16px 的短邊 —— 位置怎麼挪都沒用。
+     這時候拉一條細引線，把字和它標的那條邊接起來，誰標誰就沒有歧義了。
+     （2026-08-29 Tony 從線上截圖抓到「2 公分和 1 公分顛倒」，就是這種情形。） */
+  function leaderLines(shape, sp, labels){
+    var out = '';
+    labels.forEach(function(b){
+      if (nearestIsOwn(shape, sp, b, b.side)) return;
+      var p1 = sp[b.side.from], p2 = sp[b.side.to];
+      var tx = (p1.x + p2.x) / 2, ty = (p1.y + p2.y) / 2;
+      var cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+      var dx = tx - cx, dy = ty - cy, L = Math.sqrt(dx * dx + dy * dy);
+      if (!(L > 1)) return;
+      var ux = dx / L, uy = dy / L;
+      /* 從方框邊緣起筆，不要從字的正中間穿出來 */
+      var hx = (b.x1 - b.x0) / 2, hy = (b.y1 - b.y0) / 2;
+      var t = Math.min(hx / Math.max(Math.abs(ux), 1e-6), hy / Math.max(Math.abs(uy), 1e-6));
+      var sx = cx + ux * (t + 2), sy = cy + uy * (t + 2);
+      if (Math.sqrt(Math.pow(tx - sx, 2) + Math.pow(ty - sy, 2)) < 2) return;
+      out += '<line x1="' + sx.toFixed(1) + '" y1="' + sy.toFixed(1) +
+             '" x2="' + tx.toFixed(1) + '" y2="' + ty.toFixed(1) +
+             '" stroke="#6B6875" stroke-width="1" stroke-dasharray="3 2"/>';
+    });
+    return out;
+  }
+
   /* 算出每一個標籤的方框，順便處理兩件畫布看不見的事：
      ① **兩個標籤疊在一起**時把後面那一個推開。L 形的缺角很小時，
         「缺角底」和「缺角右」兩個標籤會擠進同一個角落，疊成一團看不懂的字。
@@ -184,41 +230,55 @@
       boxes.push({ side:s, x:mx, y:my, anchor:a,
                    x0:x0, x1:x0 + w, y0:my - fs * 1.05, y1:my + fs * 0.34 });
     });
-    /* 重疊就把後面那一個往外挪。
-       ⚠️ 不可以用「沿著重疊比較小的方向推一次」那種貪心法：推完可能撞上另一個，
-       兩個方向來回震盪，次數用完仍然疊著（實測 1770 組可抽到的 L 形裡有 26 組
-       就是這樣殘留下來的，而瀏覽器連抽 40 批剛好都沒抽到）。
-       這裡改成沿著**固定方向**一格一格往外挪：方向是這個標籤自己的偏移方向
-       （也就是離它所標的那條邊更遠），必要時再試左右兩側。
-       固定方向是單調的，挪得夠遠一定脫離所有先前的框，所以保證收斂。 */
-    var i, j, k, r, a, b;
-    var clashes = function(b2, upto){
+    /* 重疊就把後面那一個挪開。要同時滿足兩件事，缺一不可：
+       ① 挪完不再和任何先前的標籤重疊；
+       ② 挪完之後，這個標籤**離自己那條邊還是最近的**。
+       ⚠️ ② 不是可有可無的講究，是正確性：只顧著「不要疊住」的話，標籤會被推到
+       別條邊旁邊，孩子就把數字看成在標另一條邊。實際發生過 —— L 形缺角的
+       「1 公分」被往右推了 74px，結果離右邊那條 3 公分的邊最近，
+       畫面上看起來就是「2 公分」和「1 公分」標反了（2026-08-29 Tony 從線上截圖抓到）。
+       所以候選方向**先試沿著自己那條邊滑動**（滑多遠都還是貼著它），
+       再試往外，最後才試垂直方向。 */
+    var i, j, k, r, b;
+    var clashes = function(bx, upto){
       for (var j2 = 0; j2 < upto; j2++){
         var a2 = boxes[j2];
-        var ix = Math.min(a2.x1, b2.x1) - Math.max(a2.x0, b2.x0);
-        var iy = Math.min(a2.y1, b2.y1) - Math.max(a2.y0, b2.y0);
+        var ix = Math.min(a2.x1, bx.x1) - Math.max(a2.x0, bx.x0);
+        var iy = Math.min(a2.y1, bx.y1) - Math.max(a2.y0, bx.y0);
         if (ix > 0 && iy > 0) return true;
       }
       return false;
     };
+    var ownIsNearest = function(bx, side){ return nearestIsOwn(shape, sp, bx, side); };
     for (i = 1; i < boxes.length; i++){
       b = boxes[i];
-      if (!clashes(b, i)) continue;
+      if (!clashes(b, i) && ownIsNearest(b, b.side)) continue;
+      var s1 = sp[b.side.from], s2p = sp[b.side.to];
+      var ax = s2p.x - s1.x, ay = s2p.y - s1.y;
+      var an = Math.sqrt(ax * ax + ay * ay) || 1;
+      ax /= an; ay /= an;                                  /* 沿著自己那條邊 */
       var od = b.side.offset || { dx:0, dy:-1 };
-      var n = Math.sqrt(od.dx * od.dx + od.dy * od.dy) || 1;
-      var ux = od.dx / n, uy = od.dy / n;
-      /* 先試「更往外」，再試沿著邊的兩側 —— 都不行就繼續往外推得更遠 */
-      var dirs = [[ux, uy], [-uy, ux], [uy, -ux]];
-      var step = fs * 0.55, placed = false;
+      var on = Math.sqrt(od.dx * od.dx + od.dy * od.dy) || 1;
+      var ox = od.dx / on, oy = od.dy / on;                 /* 往外離開那條邊 */
+      var dirs = [[ax, ay], [-ax, -ay], [ox, oy], [-ay, ax], [ay, -ax]];
+      var step = fs * 0.5, placed = false, fallback = null;
       for (r = 1; r <= 40 && !placed; r++){
         for (k = 0; k < dirs.length && !placed; k++){
-          var dx = dirs[k][0] * step * r, dy = dirs[k][1] * step * r;
-          var t = { x0:b.x0 + dx, x1:b.x1 + dx, y0:b.y0 + dy, y1:b.y1 + dy };
-          if (clashes(t, i)) continue;
-          b.x += dx; b.y += dy;
-          b.x0 = t.x0; b.x1 = t.x1; b.y0 = t.y0; b.y1 = t.y1;
+          var dx2 = dirs[k][0] * step * r, dy2 = dirs[k][1] * step * r;
+          var t2 = { x0:b.x0 + dx2, x1:b.x1 + dx2, y0:b.y0 + dy2, y1:b.y1 + dy2 };
+          if (clashes(t2, i)) continue;
+          if (!fallback) fallback = { d:[dx2, dy2], t:t2 };   /* 至少不重疊的第一個 */
+          if (!ownIsNearest(t2, b.side)) continue;
+          b.x += dx2; b.y += dy2;
+          b.x0 = t2.x0; b.x1 = t2.x1; b.y0 = t2.y0; b.y1 = t2.y1;
           placed = true;
         }
+      }
+      /* 兩個條件湊不齊的話，寧可保「不重疊」—— 疊在一起完全讀不到，
+         比讀得到但靠得近更糟。 */
+      if (!placed && fallback){
+        b.x += fallback.d[0]; b.y += fallback.d[1];
+        b.x0 = fallback.t.x0; b.x1 = fallback.t.x1; b.y0 = fallback.t.y0; b.y1 = fallback.t.y1;
       }
     }
     return boxes;
@@ -293,6 +353,7 @@
     var box = fitBox(labels, vbW, vbH);
     var svg = '<svg class="scene" viewBox="' + box.x + ' ' + box.y + ' ' + box.w + ' ' + box.h + '" role="img">';
     svg += '<path d="' + d + '" fill="#FDF0E0" stroke="#2B2A33" stroke-width="3" stroke-linejoin="round"/>';
+    svg += leaderLines(shape, sp, labels);
     labels.forEach(function(b){
       svg += '<text x="' + b.x.toFixed(1) + '" y="' + b.y.toFixed(1) + '" font-size="' + LABEL_FS + '" font-weight="700" fill="#2B2A33" paint-order="stroke" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round" text-anchor="' + b.anchor + '">' + b.side.label + '</text>';
     });
