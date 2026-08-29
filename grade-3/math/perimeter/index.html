@@ -307,6 +307,144 @@
     return { x: PAD + x * PXCM, y: PAD + (maxY - y) * PXCM };
   }
 
+  /* 標籤字寬的估計值。SVG 是用字串拼出來的，拼的當下沒辦法量字，
+     所以照字元類別估：中日韓一個字約一個字級寬，數字和英文字母窄一些。
+     估寬只用來「留位置」，所以刻意乘 1.12 高估 —— 高估只是留白多一點，
+     低估會把字裁掉。 */
+  function estTextW(s, fs){
+    var w = 0, i, c;
+    s = String(s);
+    for (i = 0; i < s.length; i++){
+      c = s.charCodeAt(i);
+      if (c >= 0x2E80 && c <= 0xFFEF) w += 1.0;        /* 中日韓 */
+      else if (c === 32) w += 0.34;                     /* 空白 */
+      else if (c >= 48 && c <= 57) w += 0.62;           /* 數字 */
+      else if (c >= 65 && c <= 90) w += 0.98;           /* 大寫（最寬的 W 實測 0.953） */
+      else w += 0.90;                                   /* 小寫（最寬的 m 實測 0.884） */
+    }
+    /* 每一個常數都取該類別**最寬**的那個字，再多留 6%：
+       估寬只用來決定「要不要挪開」，高估只是多留白，低估會讓兩個標籤真的疊住
+       （後面用 getBBox 的那一關只會把畫布撐大，不會再把標籤挪開）。 */
+    return w * fs * 1.06;
+  }
+
+  /* 算出每一個標籤的方框，順便處理兩件畫布看不見的事：
+     ① **兩個標籤疊在一起**時把後面那一個推開。L 形的缺角很小時，
+        「缺角底」和「缺角右」兩個標籤會擠進同一個角落，疊成一團看不懂的字。
+     ② 回報標籤真正佔到的範圍，讓畫布容得下它們。
+     ⚠️ 原本畫布左右只留固定的 PAD，可是標籤是畫在圖形**外面**的，
+     所以「寬 4 公分」這種比較長的標籤會被畫布直接裁掉，畫面上只剩「公分」
+     （2026-08-29 Tony 從線上截圖抓到；當時所有檢查都是綠的，
+     因為沒有任何一條在問「這個字有沒有落在畫布裡面」）。 */
+  function layoutLabels(shape, sp, fs){
+    var boxes = [];
+    (shape.sides || []).forEach(function(s){
+      if (s.label === null || s.label === undefined || s.label === '') return;
+      var p1 = sp[s.from], p2 = sp[s.to];
+      var mx = (p1.x + p2.x) / 2 + (s.offset ? s.offset.dx : 0);
+      var my = (p1.y + p2.y) / 2 + (s.offset ? s.offset.dy : 0);
+      var w = estTextW(s.label, fs);
+      var a = s.anchor || 'middle';
+      var x0 = (a === 'end') ? mx - w : ((a === 'start') ? mx : mx - w / 2);
+      boxes.push({ side:s, x:mx, y:my, anchor:a,
+                   x0:x0, x1:x0 + w, y0:my - fs * 1.05, y1:my + fs * 0.34 });
+    });
+    /* 重疊就把後面那一個往外挪。
+       ⚠️ 不可以用「沿著重疊比較小的方向推一次」那種貪心法：推完可能撞上另一個，
+       兩個方向來回震盪，次數用完仍然疊著（實測 1770 組可抽到的 L 形裡有 26 組
+       就是這樣殘留下來的，而瀏覽器連抽 40 批剛好都沒抽到）。
+       這裡改成沿著**固定方向**一格一格往外挪：方向是這個標籤自己的偏移方向
+       （也就是離它所標的那條邊更遠），必要時再試左右兩側。
+       固定方向是單調的，挪得夠遠一定脫離所有先前的框，所以保證收斂。 */
+    var i, j, k, r, a, b;
+    var clashes = function(b2, upto){
+      for (var j2 = 0; j2 < upto; j2++){
+        var a2 = boxes[j2];
+        var ix = Math.min(a2.x1, b2.x1) - Math.max(a2.x0, b2.x0);
+        var iy = Math.min(a2.y1, b2.y1) - Math.max(a2.y0, b2.y0);
+        if (ix > 0 && iy > 0) return true;
+      }
+      return false;
+    };
+    for (i = 1; i < boxes.length; i++){
+      b = boxes[i];
+      if (!clashes(b, i)) continue;
+      var od = b.side.offset || { dx:0, dy:-1 };
+      var n = Math.sqrt(od.dx * od.dx + od.dy * od.dy) || 1;
+      var ux = od.dx / n, uy = od.dy / n;
+      /* 先試「更往外」，再試沿著邊的兩側 —— 都不行就繼續往外推得更遠 */
+      var dirs = [[ux, uy], [-uy, ux], [uy, -ux]];
+      var step = fs * 0.55, placed = false;
+      for (r = 1; r <= 40 && !placed; r++){
+        for (k = 0; k < dirs.length && !placed; k++){
+          var dx = dirs[k][0] * step * r, dy = dirs[k][1] * step * r;
+          var t = { x0:b.x0 + dx, x1:b.x1 + dx, y0:b.y0 + dy, y1:b.y1 + dy };
+          if (clashes(t, i)) continue;
+          b.x += dx; b.y += dy;
+          b.x0 = t.x0; b.x1 = t.x1; b.y0 = t.y0; b.y1 = t.y1;
+          placed = true;
+        }
+      }
+    }
+    return boxes;
+  }
+
+
+  /* ⚠️ 上面的估寬只是「拼字串當下的近似值」，字型換了就不準。
+     真正保證不會被裁掉的是這一段：圖插進畫面之後，用瀏覽器**量到的**實際範圍
+     把 viewBox 撐大。只會變大、不會變小，所以原本的留白都還在。
+     用 MutationObserver 是為了不必在每一個插入點各記一次 ——
+     漏記一個，就會再出現一次「寬 4 公分只剩公分」那種缺陷。 */
+  function fitSceneSVG(svg){
+    var bb;
+    try { bb = svg.getBBox(); } catch(e){ return; }
+    if (!bb || !isFinite(bb.width) || bb.width <= 0 || bb.height <= 0) return;
+    var vb = (svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
+    if (vb.length !== 4) return;
+    for (var k = 0; k < 4; k++) if (!isFinite(vb[k])) return;
+    var m = 3;
+    var x0 = Math.min(vb[0], bb.x - m), y0 = Math.min(vb[1], bb.y - m);
+    var x1 = Math.max(vb[0] + vb[2], bb.x + bb.width + m);
+    var y1 = Math.max(vb[1] + vb[3], bb.y + bb.height + m);
+    if (x0 === vb[0] && y0 === vb[1] && x1 === vb[0] + vb[2] && y1 === vb[1] + vb[3]) return;
+    svg.setAttribute('viewBox', x0.toFixed(1) + ' ' + y0.toFixed(1) + ' ' +
+                                (x1 - x0).toFixed(1) + ' ' + (y1 - y0).toFixed(1));
+  }
+  /* ⚠️ 只處理 renderShape 畫出來的圖（class="scene"）。
+     不可以對頁面上每一個 <svg> 都做 —— 有些圖是**故意**讓內容超出 viewBox 來裁切的，
+     把它的畫布撐大會把本來看不到的部分露出來，等於改掉那張圖。 */
+  function fitScenesIn(root){
+    if (!root || root.nodeType !== 1) return;
+    if (root.tagName && String(root.tagName).toLowerCase() === 'svg' &&
+        root.classList && root.classList.contains('scene')) fitSceneSVG(root);
+    var list = root.querySelectorAll ? root.querySelectorAll('svg.scene') : [];
+    for (var i = 0; i < list.length; i++) fitSceneSVG(list[i]);
+  }
+  function watchScenes(){
+    fitScenesIn(document.body);
+    if (typeof MutationObserver !== 'function') return;
+    /* 只看 childList：改 viewBox 是屬性變動，不會再觸發自己。 */
+    new MutationObserver(function(muts){
+      for (var i = 0; i < muts.length; i++)
+        for (var j = 0; j < muts[i].addedNodes.length; j++) fitScenesIn(muts[i].addedNodes[j]);
+    }).observe(document.body, { childList:true, subtree:true });
+  }
+  /* 畫布 = 圖形的框 ∪ 每一個標籤的框。viewBox 的原點可以是負的，
+     所以不必動圖形本身的座標。 */
+  function fitBox(labels, vbW, vbH){
+    var minX = 0, minY = 0, maxX = vbW, maxY = vbH;
+    labels.forEach(function(b){
+      if (b.x0 - 4 < minX) minX = b.x0 - 4;
+      if (b.x1 + 4 > maxX) maxX = b.x1 + 4;
+      if (b.y0 - 2 < minY) minY = b.y0 - 2;
+      if (b.y1 + 2 > maxY) maxY = b.y1 + 2;
+    });
+    return { x:minX.toFixed(0), y:minY.toFixed(0),
+             w:(maxX - minX).toFixed(0), h:(maxY - minY).toFixed(0) };
+  }
+
+  var LABEL_FS = 15;
+
   function renderShape(shape, opts){
     opts = opts || {};
     var maxX = 0, maxY = 0, i;
@@ -318,21 +456,20 @@
     var vbH = maxY * PXCM + PAD * 2;
     var sp = shape.points.map(function(p){ return cmPoint(p.x, p.y, maxY); });
     var d = sp.map(function(p, idx){ return (idx === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ') + ' Z';
-    var svg = '<svg class="scene shapeSvg" viewBox="0 0 ' + vbW.toFixed(0) + ' ' + vbH.toFixed(0) + '" role="img"' +
+    var labels = layoutLabels(shape, sp, LABEL_FS);
+    var box = fitBox(labels, vbW, vbH);
+    var svg = '<svg class="scene shapeSvg" viewBox="' + box.x + ' ' + box.y + ' ' + box.w + ' ' + box.h + '" role="img"' +
       (opts.aria ? ' aria-label="' + opts.aria + '"' : '') + '>';
     svg += '<path d="' + d + '" fill="' + (opts.fill || '#FDF0E0') + '" stroke="' + (opts.stroke || '#E8871E') + '" stroke-width="3" stroke-linejoin="round"/>';
     (shape.sides || []).forEach(function(s){
+      if (!s.highlight) return;
       var p1 = sp[s.from], p2 = sp[s.to];
-      if (s.highlight){
-        svg += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) +
-          '" stroke="#2F9E69" stroke-width="6" stroke-linecap="round"/>';
-      }
-      if (s.label){
-        var mx = (p1.x + p2.x) / 2 + (s.offset ? s.offset.dx : 0);
-        var my = (p1.y + p2.y) / 2 + (s.offset ? s.offset.dy : 0);
-        svg += '<text x="' + mx.toFixed(1) + '" y="' + my.toFixed(1) + '" font-size="15" font-weight="700" fill="' +
-          (s.color || '#2B2A33') + '" text-anchor="' + (s.anchor || 'middle') + '">' + s.label + '</text>';
-      }
+      svg += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) +
+        '" stroke="#2F9E69" stroke-width="6" stroke-linecap="round"/>';
+    });
+    labels.forEach(function(b){
+      svg += '<text x="' + b.x.toFixed(1) + '" y="' + b.y.toFixed(1) + '" font-size="' + LABEL_FS + '" font-weight="700" fill="' +
+        (b.side.color || '#2B2A33') + '" paint-order="stroke" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round" text-anchor="' + b.anchor + '">' + b.side.label + '</text>';
     });
     svg += '</svg>';
     return svg;
@@ -1126,6 +1263,7 @@
   });
 
   renderAll();
+  watchScenes();
   try {
     localStorage.setItem('teachme-last', JSON.stringify({
       p:'grade-3/math/perimeter/', zh:'繞一圈量量看 — 周界與周長', en:'Once Around the Edge', icon:'📏'

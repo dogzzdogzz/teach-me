@@ -20,6 +20,55 @@ function textProblems(doc){
   return bad;
 }
 
+/* SVG 裡的字有沒有被自己的畫布裁掉、有沒有兩個疊在一起。
+   ⚠️ 這一類缺陷在 2026-08-29 之前**全站沒有任何檢查在盯**：
+   grade-3/perimeter 的「寬 4 公分」在線上被裁成只剩「公分」，L 形的兩個標籤疊成
+   「3 公分公分」，而語法、i18n、題庫、連結、sweep 全都是綠的 ——
+   因為沒有任何一條在問「這個字有沒有落在它自己的畫布裡面」。
+   （是 Tony 從線上截圖抓到的，和 2026-08-26 的正字畫記同一種：
+   所有檢查都在數東西，沒有一條在看畫出來長什麼樣。） */
+function svgTextProblems(doc){
+  var bad = {}, svgs = doc.querySelectorAll('svg'), s, i, j;
+  for (s = 0; s < svgs.length; s++){
+    var svg = svgs[s];
+    if (!svg.getAttribute('viewBox')) continue;
+    /* ⚠️ 一定要用 getBoundingClientRect（螢幕座標），不可以用 getBBox ——
+       getBBox 回的是元素**自己**的座標系，完全不算祖先的 transform，
+       所以放在 <g transform> 裡的字（時鐘的數字就是）會被誤判成互相重疊。 */
+    var sr = svg.getBoundingClientRect();
+    /* ⚠️ 量不到的（display:none、還沒插進畫面）只能跳過 —— 那是**沒檢查**，不是通過。
+       所以 sweep 會把每一頁的模式卡、選項、按鈕都點過一次，讓圖真的顯示出來再量。 */
+    if (!sr || sr.width <= 0 || sr.height <= 0) continue;
+    var ts = svg.querySelectorAll('text'), boxes = [];
+    for (i = 0; i < ts.length; i++){
+      var r = ts[i].getBoundingClientRect();
+      if (!r || r.width <= 0 || r.height <= 0) continue;
+      var txt = (ts[i].textContent || '').trim();
+      if (!txt) continue;
+      /* svg 的預設 overflow 是 hidden，所以超出 viewport 的字真的看不到。
+         留 1px 容差給次像素捨入。 */
+      var over = Math.max(sr.left - r.left, r.right - sr.right,
+                          sr.top - r.top, r.bottom - sr.bottom);
+      if (over > 1)
+        bad['SVG text clipped by its viewBox by ' + Math.round(over) + 'px: "' + txt + '"'] = 1;
+      boxes.push({ t: txt, r: r });
+    }
+    for (i = 0; i < boxes.length; i++)
+      for (j = i + 1; j < boxes.length; j++){
+        var A = boxes[i].r, B = boxes[j].r;
+        var ix = Math.min(A.right, B.right) - Math.max(A.left, B.left);
+        var iy = Math.min(A.bottom, B.bottom) - Math.max(A.top, B.top);
+        /* 要真的疊到才算：兩個方向都至少 2px，而且面積佔小的那一個 15% 以上 */
+        if (ix > 2 && iy > 2){
+          var small = Math.min(A.width * A.height, B.width * B.height);
+          if (small > 0 && (ix * iy) / small > 0.15)
+            bad['SVG labels overlap: "' + boxes[i].t + '" x "' + boxes[j].t + '"'] = 1;
+        }
+      }
+  }
+  return Object.keys(bad);
+}
+
 /* value-aware option key: '1/4' and '2/8' are the SAME option to a child */
 window.parseVU = function(sRaw){
   var t = String(sRaw).replace(/　/g,' ').replace(/[−–]/g,'-').trim();
@@ -80,11 +129,13 @@ async function exercise(path, lang){
     if (el && el.children.length === 0) errs.push(sel + ' rendered empty');
   });
   textProblems(doc).forEach(function(p){ errs.push(p); });
+  svgTextProblems(doc).forEach(function(p){ errs.push(p); });
 
   try {
     doc.getElementById('langBtn').click();
     if (doc.documentElement.getAttribute('lang') === htmlLang) errs.push('lang toggle did not change html lang');
     textProblems(doc).forEach(function(p){ errs.push('after toggle: ' + p); });
+    svgTextProblems(doc).forEach(function(p){ errs.push('after toggle: ' + p); });
     doc.getElementById('langBtn').click();
   } catch(e){ errs.push('lang toggle threw: ' + e.message); }
 
