@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 小數放大鏡</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .figwrap{margin:10px 0 14px;text-align:center;overflow-x:auto}
+  .scene{width:100%;max-width:360px;height:130px;display:block;margin:0 auto}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;position:sticky;bottom:8px;
+  }
+  .result{
+    margin-top:22px;background:var(--card);border:2px solid var(--green);border-radius:18px;
+    padding:20px;display:none;
+  }
+  .result.on{display:block}
+  .result .line{font-size:19px;font-weight:700;color:var(--green)}
+  .result .links{margin-top:10px;font-size:16px}
+  .result .links a{color:var(--blue)}
+  .retry{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:14px;
+  }
+  footer{
+    margin-top:48px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：小數放大鏡</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>隔一天再來一次，還答得出來，才是真的記住了。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="retry" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是純資料 ＋ 純函式，不碰 DOM ——
+     tools/simgen.js 會把它切出來在 Node 裡跑幾萬批。
+     ⚠️ 圖形只回傳「算好的座標」（fig），真正畫圖的程式在 GENS 後面，
+     所以檢查驗到的就是頁面真的會畫出來的東西。
+
+     ⚠️ 不可以用浮點數算小數（0.1 + 0.2 !== 0.3）。
+     這一頁和課程頁同一套標準寫法：小數 ＝「有幾個千分之一」的整數（milli）。
+     設定檔的第二套實作走另一條路（把小數字串拆成一位一位的數字再加減），
+     兩條路必須逐題同意。 */
+
+  function rnd(n){ return Math.floor(Math.random() * n); }
+  function pick(a){ return a[rnd(a.length)]; }
+  function shuffle(a){
+    var b = a.slice();
+    for (var i = b.length - 1; i > 0; i--){
+      var j = rnd(i + 1), t = b[i]; b[i] = b[j]; b[j] = t;
+    }
+    return b;
+  }
+  /* 從候選裡挑一個「這一批還沒用過」的，用完就記下來 ——
+     一批 12 題不要三題都在問同一個位。 */
+  function pickUnused(list, used){
+    var free = list.filter(function(x){ return used.indexOf(x) < 0; });
+    var got = pick(free.length ? free : list);
+    used.push(got);
+    return got;
+  }
+  function rangeList(a, b){
+    var out = [];
+    for (var i = a; i <= b; i++) out.push(i);
+    return out;
+  }
+
+  var MIL = 1000;
+  var MIL_MAX = 100000;      // 這一頁的每一個數都小於 100
+  function placeUnit(k){ return Math.pow(10, 3 - k); }
+  function digitAt(m, k){ return Math.floor(m / placeUnit(k)) % 10; }
+  function places(m){
+    if (m % 10 !== 0) return 3;
+    if (m % 100 !== 0) return 2;
+    if (m % MIL !== 0) return 1;
+    return 0;
+  }
+  /* 只往後補零，絕不截斷（和課程頁、速查卡同一個約定）。 */
+  function fmtPad(m, p){
+    var pp = Math.max(p | 0, places(m));
+    var w = Math.floor(m / MIL);
+    if (pp <= 0) return String(w);
+    return w + '.' + String(MIL + (m % MIL)).slice(1).slice(0, pp);
+  }
+  function fmtNat(m){ return fmtPad(m, 0); }
+
+  var PLACE_KEYS = ['ones', 'tenth', 'hundredth', 'thousandth'];
+
+  /* 比大小：先比整數部分，再一位一位往右。回傳「分出大小的是哪一步」。 */
+  function decidedBy(a, b){
+    var pad = Math.max(places(a), places(b));
+    if (Math.floor(a / MIL) !== Math.floor(b / MIL)) return { kind:'whole' };
+    for (var k = 1; k <= pad; k++){
+      if (digitAt(a, k) !== digitAt(b, k)) return { kind:'place', k:k };
+    }
+    return { kind:'same' };
+  }
+
+  /* 直式：四欄（十位、個位、十分位、百分位），一欄一欄算。
+     ⚠️ 只用在二位小數的加減上（這一課的加減不做千分位）。 */
+  var VF_POS = [-1, 0, 1, 2];
+  function colPlan(a, b, op){
+    var A = VF_POS.map(function(k){ return digitAt(a, k); });
+    var B = VF_POS.map(function(k){ return digitAt(b, k); });
+    var R = [0, 0, 0, 0], carry = [0, 0, 0, 0], borrow = [0, 0, 0, 0], i, c = 0;
+    for (i = VF_POS.length - 1; i >= 0; i--){
+      if (op === '+'){
+        var s = A[i] + B[i] + c;
+        R[i] = s % 10; c = s >= 10 ? 1 : 0; carry[i] = c;
+      } else {
+        var t = A[i] - B[i] - c;
+        if (t < 0){ t += 10; c = 1; } else { c = 0; }
+        R[i] = t; borrow[i] = c;
+      }
+    }
+    return { A:A, B:B, R:R, carry:carry, borrow:borrow, over:c,
+             res: op === '+' ? a + b : a - b, op:op };
+  }
+  /* 這一題的加法有沒有進位、減法有沒有退位（解釋會講，所以資料必須真的是那樣）。 */
+  function hasCarry(a, b){ return colPlan(a, b, '+').carry.indexOf(1) >= 0; }
+  function hasBorrow(a, b){ return colPlan(a, b, '-').borrow.indexOf(1) >= 0; }
+
+  /* --- 數線的版面：純資料，放在 GENS 前面，所以 make() 可以把算好的座標
+         放進 fig，畫圖的程式直接照著畫（不重算）。 --- */
+  var LF_W = 360, LF_H = 130;
+  var LF_X0 = 40, LF_X1 = 320, LF_Y = 56;
+  var LF_TICK = 6, LF_BIGTICK = 12;
+  var LF_FONT = 13;
+  var LF_END_DY = 26;      // 兩端的數字：線的下面
+  var LF_MARK_DY = -22;    // 問號：線的上面（箭頭再上面一點）
+  var LF_ARROW = 9;
+
+  function lfX(m, lo, hi){
+    return LF_X0 + (m - lo) / (hi - lo) * (LF_X1 - LF_X0);
+  }
+  /* 一條有 10 格的數線，第 j 格（1 ≤ j ≤ 9）上有一個箭頭。
+     兩端標數字（線下面），箭頭標問號（線上面）—— 三個標籤永遠不會疊到，
+     因為問號在上面那一排，而兩端的數字在下面那一排。 */
+  function lineFig(lo, st, j){
+    var hi = lo + 10 * st, ticks = [], i;
+    for (i = 0; i <= 10; i++){
+      ticks.push({ x:lfX(lo + st * i, lo, hi), big:(i === 0 || i === 10) });
+    }
+    var mx = lfX(lo + st * j, lo, hi);
+    return {
+      w:LF_W, h:LF_H, x0:LF_X0, x1:LF_X1, y:LF_Y,
+      lo:lo, hi:hi, st:st, j:j, ticks:ticks,
+      mark:{ x:mx, value:lo + st * j },
+      labels:[
+        { x:LF_X0, y:LF_Y + LF_END_DY, text:fmtNat(lo), kind:'end' },
+        { x:LF_X1, y:LF_Y + LF_END_DY, text:fmtNat(hi), kind:'end' },
+        { x:mx,    y:LF_Y + LF_MARK_DY - LF_ARROW, text:'?', kind:'mark' }
+      ]
+    };
+  }
+
+  /* --- 誘答工具 ---
+     去重一律比「值」：0.5 和 0.50 是同一個答案，字串比對抓不到。
+     ⚠️ 保底不可以是垃圾字串，也不可以等於正解 —— 一律生一個長得像答案的小數。 */
+  function milKey(m){ return 'v' + m; }
+  /* 從候選 milli 清單裡挑出 3 個和正解不同值、彼此也不同值的誘答；
+     不夠的話往正解的鄰居找（±1 個 step，再 ±2、±3 …）。 */
+  /* okFn 是「這個誘答像不像一個答案」的守門條件（可選）。
+     ⚠️ 沒有它的時候，「每一位各自算、完全不進位」那個誘答會在
+     0.93 ＋ 0.17 上算出 0 —— 兩個正數相加的答案是 0，孩子一眼就排除，
+     那個選項等於不存在，他其實只有三個選項。 */
+  function pickDistractors(correct, cands, minP, okFn, okFillFn){
+    var ok = okFn || function(){ return true; };
+    /* 保底（往正解的鄰居找）可以再嚴一點：那些不是設計出來的迷思，只是填空，
+       所以印出來剛好等於題幹某一段數字的就跳過 —— 看起來像抄題幹。 */
+    var okFill = okFillFn || ok;
+    var seen = {}, out = [];
+    seen[milKey(correct)] = 1;
+    cands.forEach(function(m){
+      if (out.length >= 3) return;
+      if (!(m >= 0 && m < MIL_MAX)) return;
+      if (seen[milKey(m)]) return;
+      if (!ok(m)) return;
+      seen[milKey(m)] = 1;
+      out.push(m);
+    });
+    var step = placeUnit(Math.min(Math.max(minP || 1, 1), 3));
+    for (var mul = 1; out.length < 3 && mul <= 60; mul++){
+      [correct + step * mul, correct - step * mul].forEach(function(m){
+        if (out.length >= 3) return;
+        if (!(m >= 0 && m < MIL_MAX)) return;
+        if (seen[milKey(m)]) return;
+        if (!okFill(m)) return;
+        seen[milKey(m)] = 1;
+        out.push(m);
+      });
+    }
+    return out.slice(0, 3);
+  }
+  /* 把正解和三個誘答洗牌，回傳 { mil（milli 陣列）, ans } */
+  function mixMil(correct, distractors){
+    var all = shuffle([correct].concat(distractors));
+    return { mil:all, ans:all.indexOf(correct) };
+  }
+
+  /* 隨機挑一個 milli：整數部分 0~wMax，小數剛好 p 位（最後一位不是 0）。 */
+  function randMil(wMax, p){
+    var w = rnd(wMax + 1), unit = placeUnit(p);
+    var last = 1 + rnd(9);                       // 最後一位不可以是 0，不然位數就不是 p
+    var mid = (p >= 2) ? rnd(Math.pow(10, p - 1)) : 0;
+    return w * MIL + (mid * 10 + last) * unit;
+  }
+
+  /* --- 英文的單複數：只有「1」會錯，所以只擋那一個 ---
+     ⚠️ 這兩個函式放在語言無關的區塊，不可以塞進 en 字典裡
+     （字典要保持兩語 key 一一對應）。
+     「1 lots of 0.1」「1 places right of the point」都是真的會上線的錯，
+     而所有數值檢查都不會響 —— 設定檔另外有一條掃描把它們擋住。 */
+  function lotsEn(n, unit){ return n + (n === 1 ? ' lot of ' : ' lots of ') + unit; }
+  function placesEn(n){ return n + (n === 1 ? ' place' : ' places'); }
+
+  /* ---------- 文字 ---------- */
+  var TXT = {
+    zh: {
+      place:{ ones:'個位', tenth:'十分位', hundredth:'百分位', thousandth:'千分位' },
+      same:'一樣大', cannotTell:'沒辦法比較', allSame:'都一樣大',
+      cnt: function(n){ return n + ' 個'; },
+      part: function(n, unit){ return n + ' 個 ' + unit; },
+      listJoin:'、'
+    },
+    en: {
+      place:{ ones:'the ones place', tenth:'the tenths place', hundredth:'the hundredths place', thousandth:'the thousandths place' },
+      same:'They are the same', cannotTell:'There is no way to tell', allSame:'They are all the same',
+      cnt: function(n){ return String(n); },
+      part: function(n, unit){ return lotsEn(n, unit); },
+      listJoin:', '
+    }
+  };
+
+  /* 加減三支產生器共用的排版。放在 GENS 前面，simgen 才切得到。 */
+  function fmtAddSub(d, lang, op){
+    var plan = colPlan(d.a, d.b, op);
+    var correct = plan.res;
+    var pad = Math.max(places(d.a), places(d.b), 1);
+    var xa = fmtNat(d.a), xb = fmtNat(d.b);
+    var sign = (op === '+') ? (lang === 'zh' ? '＋' : '+') : (lang === 'zh' ? '－' : '-');
+    /* 誘答一律是「真的會犯的錯」：
+       ① 對齊最右邊（把短的那個數的小數當成更小的位）；
+       ② 每一位各自算、忘記進位／退位；
+       ③ 位差一格。 */
+    var shift = Math.pow(10, pad - places(d.b));
+    var rightAligned = (op === '+') ? d.a + d.b * shift : Math.abs(d.a - d.b * shift);
+    var noCarryRes = 0;
+    VF_POS.forEach(function(k, i){
+      var v = (op === '+') ? (plan.A[i] + plan.B[i]) % 10 : ((plan.A[i] - plan.B[i]) + 10) % 10;
+      noCarryRes += v * placeUnit(k);
+    });
+    /* 誘答要「像個答案」：正數、不可以把題目的兩個數原封不動端回來
+       （2 － 0.01 曾經把 2 端出去當誘答），而且要落在正解附近 ——
+       離太遠的選項等於沒有選項。 */
+    var okDis = function(v){
+      return v > 0 && v !== d.a && v !== d.b && Math.abs(v - correct) <= Math.max(correct, 100);
+    };
+    /* 題幹印出來會被切成哪幾段數字（'1.46 ＋ 0.64' → 1、46、0、64）。
+       只有「設計出來的兩個迷思」可以撞到那些數字（設定檔的白名單只放它們）；
+       純粹填空用的誘答不可以，不然看起來就是把題幹的數字抄回來。 */
+    var stemTokens = (xa + ' ' + xb).match(/\d+/g) || [];
+    var okFill = function(v){
+      return okDis(v) && stemTokens.indexOf(fmtNat(v)) < 0;
+    };
+    var cands = [rightAligned, noCarryRes]
+      .concat([correct + placeUnit(pad) * 10, correct - placeUnit(pad) * 10].filter(okFill));
+    var mix = mixMil(correct, pickDistractors(correct, cands, pad, okDis, okFill));
+    var padList = [];
+    if (places(d.a) < pad) padList.push(fmtNat(d.a) + ' → ' + fmtPad(d.a, pad));
+    if (places(d.b) < pad) padList.push(fmtNat(d.b) + ' → ' + fmtPad(d.b, pad));
+    var padTxt = padList.length
+      ? (lang === 'zh' ? '先補零：' + padList.join('、') + '（0 補在最後面不會改變大小）。'
+                       : 'Pad first: ' + padList.join(', ') + ' (0s on the end change nothing). ')
+      : (lang === 'zh' ? '兩個數的位數一樣，不用補零。'
+                       : 'Both numbers already have the same number of places, so there is nothing to pad. ');
+    var stepTxt = (op === '+')
+      ? (lang === 'zh'
+          ? '對齊小數點之後，從最右邊那一位開始加' +
+            (plan.carry.indexOf(1) >= 0 ? '，有一位滿 10，要向左邊進 1' : '') + '。'
+          : 'Line up the decimal points and add from the right-hand place' +
+            (plan.carry.indexOf(1) >= 0 ? ', carrying 1 to the left where a column reaches 10' : '') + '. ')
+      : (lang === 'zh'
+          ? '對齊小數點之後，從最右邊那一位開始減' +
+            (plan.borrow.indexOf(1) >= 0 ? '，有一位不夠減，要向左邊借 1' : '') + '。'
+          : 'Line up the decimal points and subtract from the right-hand place' +
+            (plan.borrow.indexOf(1) >= 0 ? ', borrowing 1 from the left where a column will not go' : '') + '. ');
+    return {
+      stem: (lang === 'zh')
+        ? xa + ' ' + sign + ' ' + xb + ' ＝ ？'
+        : xa + ' ' + sign + ' ' + xb + ' = ?',
+      opts: mix.mil.map(function(m){ return fmtNat(m); }),
+      ans: mix.ans,
+      why: (lang === 'zh')
+        ? padTxt + stepTxt + xa + ' ' + sign + ' ' + xb + ' ＝ ' + fmtNat(correct) +
+          '。<strong>對齊的是小數點，不是最右邊的數字。</strong>'
+        : padTxt + stepTxt + xa + ' ' + sign + ' ' + xb + ' = ' + fmtNat(correct) +
+          '. <strong>What you line up is the decimal point, not the right-hand edge.</strong>'
+    };
+  }
+
+  var GENS = [
+    /* 1. 位名：這個數字在哪一位？
+          ⚠️ 被問的那個數字必須在整個數裡「只出現一次」，
+          不然「哪一位」會有兩個正確答案（§六之二）。 */
+    { id:'placeName', cat:'place',
+      make:function(used){
+        for (var t = 0; t < 80; t++){
+          var p = pick([2, 3, 3]);                        // 主要問百分位與千分位
+          var m = randMil(9, p);
+          var ks = rangeList(0, p);                       // 個位 ~ 第 p 位
+          var digs = ks.map(function(k){ return digitAt(m, k); });
+          var k = pick(ks);
+          var dig = digitAt(m, k);
+          /* 這個數字在這個數裡只能出現一次 */
+          if (digs.filter(function(x){ return x === dig; }).length !== 1) continue;
+          if (used.indexOf('pn' + k) >= 0 && t < 50) continue;
+          used.push('pn' + k);
+          return { m:m, p:p, k:k, dig:dig };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang], num = fmtPad(d.m, d.p);
+        var order = shuffle(['ones', 'tenth', 'hundredth', 'thousandth']);
+        var key = PLACE_KEYS[d.k];
+        var where = (d.k === 0)
+          ? (lang === 'zh' ? '在小數點的左邊' : 'on the left of the decimal point')
+          : (lang === 'zh' ? '在小數點右邊第 ' + d.k + ' 位' : placesEn(d.k) + ' right of the point');
+        return {
+          stem: lang === 'zh'
+            ? num + ' 裡面的 ' + d.dig + ' 在哪一位？'
+            : 'In ' + num + ', which place is the ' + d.dig + ' in?',
+          opts: order.map(function(x){ return t.place[x]; }),
+          ans: order.indexOf(key),
+          why: lang === 'zh'
+            ? '從小數點往右數：第一位是十分位、第二位是百分位、第三位是千分位。' +
+              num + ' 的 ' + d.dig + ' ' + where + '，所以它在' + t.place[key] + '。'
+            : 'Count right from the decimal point: the tenths, then the hundredths, then the thousandths. In ' +
+              num + ' the ' + d.dig + ' is ' + where + ', so it sits in ' + t.place[key] + '.'
+        };
+      } },
+
+    /* 2. 位值：那個數字表示多少？ */
+    { id:'placeValue', cat:'place',
+      make:function(used){
+        for (var t = 0; t < 80; t++){
+          var p = pickUnused([1, 2, 3], used);
+          var m = randMil(9, p);
+          var k = 1 + rnd(p);
+          var dig = digitAt(m, k);
+          if (dig === 0) continue;                 // 0 個不好問「表示多少」
+          return { m:m, p:p, k:k, dig:dig };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang], num = fmtPad(d.m, d.p), key = PLACE_KEYS[d.k];
+        var correct = d.dig * placeUnit(d.k);
+        /* 誘答：同一個數字放在別的位（位值錯位是這一課最典型的錯） */
+        var cands = [1, 2, 3].filter(function(k2){ return k2 !== d.k; })
+                             .map(function(k2){ return d.dig * placeUnit(k2); })
+                             .concat([d.dig * MIL]);
+        var mix = mixMil(correct, pickDistractors(correct, cands, 3));
+        return {
+          stem: lang === 'zh'
+            ? num + ' 的' + t.place[key] + '是 ' + d.dig + '，這個 ' + d.dig + ' 表示多少？'
+            : num + ' has ' + d.dig + ' in ' + t.place[key] + '. What is that ' + d.dig + ' worth?',
+          opts: mix.mil.map(function(m){ return fmtNat(m); }),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? t.place[key] + '的一個是 ' + fmtNat(placeUnit(d.k)) + '，這裡有 ' + d.dig +
+              ' 個，所以是 ' + fmtNat(correct) + '。數字告訴你幾個，位告訴你一個是多少。'
+            /* ⚠️ 'One of the tenths place is 0.1' 是壞掉的英文（codex 抓到的）。
+               改成 'Each unit in the tenths place is worth 0.1'。 */
+            : 'Each unit in ' + t.place[key] + ' is worth ' + fmtNat(placeUnit(d.k)) +
+              (d.dig === 1 ? ', and there is 1 of them' : ', and there are ' + d.dig + ' of them') +
+              ', so it is worth ' + fmtNat(correct) +
+              '. The digit says how many; the place says how much one is worth.'
+        };
+      } },
+
+    /* 3. 一個小數是幾個 0.1 / 0.01 / 0.001？（化聚） */
+    { id:'countUnits', cat:'place',
+      make:function(used){
+        for (var t = 0; t < 80; t++){
+          var k = pickUnused([1, 2, 3], used);
+          var m = randMil(2, k);
+          var n = m / placeUnit(k);
+          /* n 必須 >= 2：n === 1 會問出「0.1 是幾個 0.1？」這種廢題。 */
+          if (!(n >= 2 && n <= 9999 && n === Math.round(n))) continue;
+          return { m:m, k:k, n:n };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang], num = fmtNat(d.m), unit = fmtNat(placeUnit(d.k));
+        var cut = MIL / placeUnit(d.k);
+        /* 誘答：位算錯一位（×10、÷10）與只看數字 */
+        var cands = [d.n * 10, Math.floor(d.n / 10), d.n * 100, d.n + 1, Math.max(1, d.n - 1)];
+        var seen = {}, ds = [];
+        seen[d.n] = 1;
+        cands.forEach(function(x){
+          if (ds.length >= 3) return;
+          if (!(x > 0 && x <= 999999) || seen[x]) return;
+          seen[x] = 1; ds.push(x);
+        });
+        var all = shuffle([d.n].concat(ds));
+        return {
+          stem: lang === 'zh'
+            ? num + ' 是幾個 ' + unit + '？'
+            : 'How many lots of ' + unit + ' make ' + num + '?',
+          opts: all.map(function(x){ return t.cnt(x); }),
+          ans: all.indexOf(d.n),
+          why: lang === 'zh'
+            ? '一個 ' + unit + ' 是把 1 平分成 ' + cut + ' 份的一份，而 ' + num + ' 裡面有 ' +
+              d.n + ' 個 ' + unit + '。一位一位數，不要多算或少算一個 0。'
+            : 'One ' + unit + ' is one part when 1 is cut into ' + cut + ', and ' + num + ' holds ' +
+              d.n + ' of them. Count the places one at a time so you do not gain or lose a 0.'
+        };
+      } },
+
+    /* 4. 幾個 0.1、幾個 0.01、幾個 0.001 合起來是多少？ */
+    { id:'buildFromParts', cat:'place',
+      make:function(){
+        for (var t = 0; t < 80; t++){
+          var w = rnd(4);
+          var d1 = rnd(10), d2 = rnd(10), d3 = 1 + rnd(9);   // 最後一位不是 0，位數才是 3
+          var nz = [d1, d2, d3].filter(function(x){ return x > 0; }).length;
+          if (nz < 2) continue;                              // 至少兩個小數位有東西
+          if (d1 > 0 && d2 > 0 && d3 > 0) continue;          // 一定要有一個位是 0（那才是重點）
+          var m = w * MIL + d1 * 100 + d2 * 10 + d3;
+          if (!(m > 0 && m < MIL_MAX)) continue;
+          return { m:m, w:w, d:[d1, d2, d3] };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var parts = [];
+        if (d.w > 0) parts.push(t.part(d.w, '1'));
+        [1, 2, 3].forEach(function(k){
+          if (d.d[k - 1] > 0) parts.push(t.part(d.d[k - 1], fmtNat(placeUnit(k))));
+        });
+        var num = fmtPad(d.m, 3);
+        /* 誘答：把 0 的那一位漏掉（最典型的錯）、小數點擺錯一位、數字倒著寫 */
+        var kept = [d.d[0], d.d[1], d.d[2]].filter(function(x){ return x > 0; });
+        var squashed = d.w * MIL + Number((kept.join('') + '000').slice(0, 3));
+        var cands = [squashed, Math.floor(d.m / 10),
+                     d.w * MIL + d.d[2] * 100 + d.d[1] * 10 + d.d[0]];
+        var mix = mixMil(d.m, pickDistractors(d.m, cands, 3));
+        return {
+          stem: lang === 'zh'
+            ? parts.join(t.listJoin) + ' 合起來是多少？'
+            : parts.join(t.listJoin) + ' — what do they make altogether?',
+          opts: mix.mil.map(function(m){ return fmtPad(m, 3); }),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? '一個位放一個數字：十分位 ' + d.d[0] + '、百分位 ' + d.d[1] + '、千分位 ' + d.d[2] +
+              '，整數部分 ' + d.w + '，寫起來就是 ' + num +
+              '。<strong>一個都沒有的那一位也要寫 0</strong>，不可以把數字擠在一起。'
+            : 'One digit per place: ' + d.d[0] + ' in the tenths, ' + d.d[1] + ' in the hundredths, ' +
+              d.d[2] + ' in the thousandths, and ' + d.w + ' in front, which is ' + num +
+              '. <strong>An empty place still needs its 0</strong> — you cannot squash the digits together.'
+        };
+      } },
+
+    /* 5. 比大小（位數不同）。⚠️ 兩個數一定不同值，
+          所以「一樣大」與「沒辦法比較」在這一支永遠是錯的誘答。 */
+    { id:'compareTwo', cat:'compare',
+      make:function(used){
+        for (var t = 0; t < 120; t++){
+          var pa = pick([1, 2, 3]), pb = pick([1, 2, 3]);
+          if (pa === pb) continue;                       // 位數不同才是這一課的重點
+          var a = randMil(2, pa), b = randMil(2, pb);
+          if (a === b) continue;
+          var dec = decidedBy(a, b);
+          if (dec.kind === 'same') continue;
+          /* 這一批不要一直用同一種「分出大小的位」 */
+          var key = dec.kind === 'whole' ? 'cw' : ('cp' + dec.k);
+          if (used.indexOf(key) >= 0 && t < 80) continue;
+          used.push(key);
+          return { a:a, pa:pa, b:b, pb:pb, dec:dec };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var xa = fmtPad(d.a, d.pa), xb = fmtPad(d.b, d.pb);
+        var big = d.a > d.b ? xa : xb, small = d.a > d.b ? xb : xa;
+        var order = shuffle(['a', 'b', 'same', 'cannot']);
+        var pad = Math.max(places(d.a), places(d.b));
+        var reason = (d.dec.kind === 'whole')
+          ? (lang === 'zh'
+              ? '整數部分是 ' + Math.floor(d.a / MIL) + ' 和 ' + Math.floor(d.b / MIL) +
+                '，先比整數部分就分出來了。'
+              : 'The whole-number parts are ' + Math.floor(d.a / MIL) + ' and ' + Math.floor(d.b / MIL) +
+                ', so comparing those settles it straight away. ')
+          : (lang === 'zh'
+              ? '整數部分一樣，往右比到' + t.place[PLACE_KEYS[d.dec.k]] + '：' +
+                digitAt(d.a, d.dec.k) + ' 和 ' + digitAt(d.b, d.dec.k) + ' 不一樣，就在這裡分出大小。'
+              : 'The whole-number parts match, so go right to ' + t.place[PLACE_KEYS[d.dec.k]] + ': ' +
+                digitAt(d.a, d.dec.k) + ' against ' + digitAt(d.b, d.dec.k) + ', which is where it is settled. ');
+        return {
+          stem: lang === 'zh'
+            ? xa + ' 和 ' + xb + '，哪一個比較大？'
+            : 'Which is bigger, ' + xa + ' or ' + xb + '?',
+          opts: order.map(function(k){
+            return k === 'a' ? xa : (k === 'b' ? xb : (k === 'same' ? t.same : t.cannotTell));
+          }),
+          ans: order.indexOf(d.a > d.b ? 'a' : 'b'),
+          why: lang === 'zh'
+            ? '先補零補到一樣長：' + fmtPad(d.a, pad) + ' 和 ' + fmtPad(d.b, pad) +
+              '（0 補在最後面不會改變大小）。' + reason + '所以 ' + big + ' 比 ' + small +
+              ' 大。<strong>位數多少不能用來判斷大小。</strong>'
+            : 'Pad them to the same length first: ' + fmtPad(d.a, pad) + ' and ' + fmtPad(d.b, pad) +
+              ' (0s on the end change nothing). ' + reason + 'So ' + big + ' is bigger than ' + small +
+              '. <strong>The number of decimal places cannot be used to judge size.</strong>'
+        };
+      } },
+
+    /* 6. 哪一個和它一樣大？（0 補在最後面 vs 插在小數點右邊） */
+    { id:'sameValue', cat:'compare',
+      make:function(){
+        for (var t = 0; t < 80; t++){
+          var p = pick([1, 2]);
+          var m = randMil(0, p);                 // 0 點多，最看得出「推到右邊」的差別
+          var extra = pick([1, 2]);              // 補幾個 0
+          if (p + extra > 3) continue;
+          if (m * 10 >= MIL_MAX) continue;
+          if (Math.floor(m / 10) <= 0) continue; // 插 0 之後不可以變成 0
+          return { m:m, p:p, extra:extra };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var num = fmtPad(d.m, d.p);
+        var correct = fmtPad(d.m, d.p + d.extra);          // 同一個值，多寫幾個 0
+        /* 誘答：把 0 插在小數點右邊（值變成十分之一）、乘十、多一個最小位 */
+        var cands = [Math.floor(d.m / 10), d.m * 10, d.m + placeUnit(d.p)];
+        var ds = pickDistractors(d.m, cands, d.p);
+        var order = shuffle([{ k:'ok', s:correct }].concat(ds.map(function(m){
+          return { k:'no', s:fmtNat(m) };
+        })));
+        return {
+          stem: lang === 'zh'
+            ? '下面哪一個和 ' + num + ' 一樣大？'
+            : 'Which one of these is the same size as ' + num + '?',
+          opts: order.map(function(o){ return o.s; }),
+          ans: order.map(function(o){ return o.k; }).indexOf('ok'),
+          why: lang === 'zh'
+            ? '0 補在小數的<strong>最後面</strong>，每一個數字都還留在原來的位，所以大小不變：' +
+              num + ' ＝ ' + correct + '。0 如果插在<strong>小數點右邊</strong>，' +
+              '後面的數字會整批往右推一位，值就變了。'
+            : 'A 0 added <strong>on the end</strong> leaves every digit in its own place, so the size holds: ' +
+              num + ' = ' + correct + '. A 0 <strong>inserted right after the decimal point</strong> shoves every following digit one place right, and the value changes.'
+        };
+      } },
+
+    /* 7. 三個數裡哪一個最大（或最小）。⚠️ 三個值都不同，極值唯一。 */
+    { id:'orderThree', cat:'compare',
+      make:function(){
+        for (var t = 0; t < 120; t++){
+          var w = rnd(3);
+          var ps = [1, 2, 3];
+          var ms = ps.map(function(p){ return w * MIL + (randMil(0, p) % MIL); });
+          var sorted = ms.slice().sort(function(x, y){ return x - y; });
+          if (sorted[0] === sorted[1] || sorted[1] === sorted[2]) continue;   // 三個值都不同
+          return { ms:ms, ps:ps, wantBig:(rnd(2) === 0) };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var strs = d.ms.map(function(m, i){ return fmtPad(m, d.ps[i]); });
+        var target = d.wantBig ? Math.max.apply(null, d.ms) : Math.min.apply(null, d.ms);
+        var idx = d.ms.indexOf(target);
+        var order = shuffle([0, 1, 2, 'all']);
+        return {
+          stem: lang === 'zh'
+            ? strs.join(t.listJoin) + ' 三個數裡面，哪一個' + (d.wantBig ? '最大' : '最小') + '？'
+            : 'Which of ' + strs.join(t.listJoin) + ' is the ' + (d.wantBig ? 'biggest' : 'smallest') + '?',
+          opts: order.map(function(k){ return k === 'all' ? t.allSame : strs[k]; }),
+          ans: order.indexOf(idx),
+          why: lang === 'zh'
+            ? '先全部補零補到三位：' + d.ms.map(function(m){ return fmtPad(m, 3); }).join(t.listJoin) +
+              '，再從整數部分開始一位一位比。' + (d.wantBig ? '最大' : '最小') + '的是 ' + strs[idx] +
+              '。<strong>位數多少不能用來判斷大小</strong> —— 要看每一位的數字。'
+            : 'Pad them all to three places first: ' + d.ms.map(function(m){ return fmtPad(m, 3); }).join(t.listJoin) +
+              ', then go place by place from the whole-number part. The ' + (d.wantBig ? 'biggest' : 'smallest') +
+              ' is ' + strs[idx] +
+              '. <strong>The number of decimal places cannot be used to judge size</strong> — look at the digit in each place.'
+        };
+      } },
+
+    /* 8. 二位小數相加（位數相同，保證有進位）。 */
+    { id:'addTwo', cat:'calc',
+      make:function(){
+        for (var t = 0; t < 120; t++){
+          var a = randMil(2, 2), b = randMil(2, 2);
+          if (a + b >= MIL_MAX) continue;
+          if (!hasCarry(a, b)) continue;
+          return { a:a, b:b, op:'+' };
+        }
+        return null;
+      },
+      fmt:function(d, lang){ return fmtAddSub(d, lang, '+'); } },
+
+    /* 9. 二位小數相減（位數相同，保證有退位）。 */
+    { id:'subTwo', cat:'calc',
+      make:function(){
+        for (var t = 0; t < 120; t++){
+          var a = randMil(2, 2), b = randMil(2, 2);
+          if (a <= b) continue;
+          if (!hasBorrow(a, b)) continue;
+          return { a:a, b:b, op:'-' };
+        }
+        return null;
+      },
+      fmt:function(d, lang){ return fmtAddSub(d, lang, '-'); } },
+
+    /* 10. 位數不同的加減 —— 一定要先補零。 */
+    { id:'padAddSub', cat:'calc',
+      make:function(){
+        for (var t = 0; t < 120; t++){
+          var op = pick(['+', '-']);
+          var pa = pick([1, 2]);
+          var a = randMil(2, pa);
+          var b = randMil(2, pa === 1 ? 2 : 1);
+          if (places(a) === places(b)) continue;        // 位數一定要不同
+          if (op === '+' && a + b >= MIL_MAX) continue;
+          if (op === '-' && a <= b) continue;
+          return { a:a, b:b, op:op };
+        }
+        return null;
+      },
+      fmt:function(d, lang){ return fmtAddSub(d, lang, d.op); } },
+
+    /* 11. 整數減小數 —— 整數要補兩個 0，而且一定會退位。 */
+    { id:'wholeMinus', cat:'calc',
+      make:function(){
+        for (var t = 0; t < 120; t++){
+          var w = 1 + rnd(8);
+          var a = w * MIL;
+          var b = randMil(Math.max(0, w - 1), 2);
+          if (a <= b) continue;
+          if (!hasBorrow(a, b)) continue;
+          return { a:a, b:b, op:'-' };
+        }
+        return null;
+      },
+      fmt:function(d, lang){ return fmtAddSub(d, lang, '-'); } },
+
+    /* 12. 數線上的箭頭是多少？（有圖） */
+    { id:'numberLine', cat:'compare',
+      make:function(){
+        for (var t = 0; t < 80; t++){
+          var st = pick([10, 100]);                       // 一格 0.01 或 0.1
+          var lo = rnd(9) * st * 10;                      // 兩端都是整格的好看數字
+          if (lo + 10 * st >= MIL_MAX) continue;
+          var j = 1 + rnd(9);                             // 箭頭不放在兩端
+          var v = lo + st * j;
+          if (!(v > 0 && v < MIL_MAX)) continue;
+          return { lo:lo, st:st, j:j, v:v, fig:lineFig(lo, st, j) };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        /* 誘答：數錯一格、把刻度看成大十倍或小十倍 */
+        var cands = [d.v + d.st, d.v - d.st, d.v * 10, Math.floor(d.v / 10)];
+        var mix = mixMil(d.v, pickDistractors(d.v, cands, places(d.st)));
+        var pShow = Math.max(places(d.v), places(d.st));
+        return {
+          stem: lang === 'zh'
+            ? '數線上的箭頭指的是多少？（兩端的數字都寫在圖上）'
+            : 'What number is the arrow pointing at? (Both end values are written on the picture.)',
+          fig: d.fig,
+          opts: mix.mil.map(function(m){ return fmtNat(m); }),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? '從 ' + fmtNat(d.lo) + ' 到 ' + fmtNat(d.lo + 10 * d.st) +
+              ' 中間平分成 10 格，所以一格是 ' + fmtNat(d.st) + '。箭頭在第 ' + d.j + ' 格，' +
+              fmtNat(d.lo) + ' 再加 ' + d.j + ' 個 ' + fmtNat(d.st) + ' ＝ ' + fmtPad(d.v, pShow) + '。'
+            : 'From ' + fmtNat(d.lo) + ' to ' + fmtNat(d.lo + 10 * d.st) +
+              ' is cut into 10 equal steps, so one step is ' + fmtNat(d.st) + '. The arrow is on step ' +
+              d.j + ', so ' + fmtNat(d.lo) + ' plus ' + lotsEn(d.j, fmtNat(d.st)) + ' = ' +
+              fmtPad(d.v, pShow) + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 小數放大鏡', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：小數放大鏡',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>隔一天再來一次，還答得出來，才是真的記住了。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      linkHead:'👉 建議回去看：',
+      linkRef:'<a href="reference.html">速查卡</a>',
+      linkIndex:'<a href="index.html">回課程重看範例</a>',
+      linkPlace:'<a href="index.html">範例教學 1、2（位值）</a>',
+      linkCompare:'<a href="../../../grade-3/math/decimal/index.html">三年級「小數的世界」（一位小數的基礎）</a>',
+      linkCalc:'<a href="index.html">範例教學 4（直式加減）</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Decimal Zoom', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Decimal Zoom',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>Come back a day later and still get them — that is real remembering.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      linkHead:'👉 Worth another look:',
+      linkRef:'<a href="reference.html">the cheat sheet</a>',
+      linkIndex:'<a href="index.html">the lesson examples</a>',
+      linkPlace:'<a href="index.html">Examples 1 and 2 (place value)</a>',
+      linkCompare:'<a href="../../../grade-3/math/decimal/index.html">grade 3 “The World of Decimals” (one-place basics)</a>',
+      linkCalc:'<a href="index.html">Example 4 (column form)</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  /* --- 畫數線：只有這一段碰 DOM。
+     ⚠️ 座標直接用 fig 裡產生器算好的那一份，不在這裡重算，
+     不然畫出來的和檢查驗過的會是兩回事。 --- */
+  var NS = 'http://www.w3.org/2000/svg';
+  var C_LINE = '#2B2A33', C_GRID = '#C9C4B8', C_MARK = '#E8871E', C_MUTED = '#6B6875';
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function drawFig(svg, fig){
+    svg.textContent = '';
+    svg.setAttribute('viewBox', '0 0 ' + fig.w + ' ' + fig.h);
+    svg.appendChild(svgEl('line', {
+      x1:fig.x0, y1:fig.y, x2:fig.x1, y2:fig.y, stroke:C_LINE, 'stroke-width':2.5
+    }));
+    fig.ticks.forEach(function(tk){
+      var h = tk.big ? LF_BIGTICK : LF_TICK;
+      svg.appendChild(svgEl('line', {
+        x1:tk.x, y1:fig.y - h, x2:tk.x, y2:fig.y + h,
+        stroke:tk.big ? C_LINE : C_GRID, 'stroke-width':tk.big ? 2.5 : 1.5
+      }));
+    });
+    /* 箭頭：從上面指下來，尖端落在線上 */
+    svg.appendChild(svgEl('path', {
+      d:'M ' + fig.mark.x + ' ' + (fig.y - 2) +
+        ' L ' + (fig.mark.x - LF_ARROW / 2) + ' ' + (fig.y - 2 - LF_ARROW) +
+        ' L ' + (fig.mark.x + LF_ARROW / 2) + ' ' + (fig.y - 2 - LF_ARROW) + ' Z',
+      fill:C_MARK
+    }));
+    fig.labels.forEach(function(lb){
+      var t = svgEl('text', {
+        x:lb.x, y:lb.y, 'text-anchor':'middle',
+        'font-size':LF_FONT, fill:(lb.kind === 'mark') ? C_MARK : C_MUTED,
+        'font-weight':(lb.kind === 'mark') ? '700' : '400'
+      });
+      t.textContent = lb.text;
+      svg.appendChild(t);
+    });
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [], missedCats = {};
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0; missedCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      if (q.fig){
+        var fw = document.createElement('div');
+        fw.className = 'figwrap';
+        var svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('class', 'scene');
+        drawFig(svg, q.fig);
+        fw.appendChild(svg);
+        box.appendChild(fw);
+      }
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){
+            b.classList.add('wrong');
+            missedCats[item.g.cat] = (missedCats[item.g.cat] || 0) + 1;
+          }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length) finish();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function finish(){
+    var t = L();
+    resultLine.textContent = (right === batch.length) ? t.resAll(batch.length)
+      : (right >= Math.ceil(batch.length * 2 / 3)) ? t.resGood(right, batch.length)
+      : t.resTry(right, batch.length);
+    /* 依「錯的是哪一類」給回去複習哪一課；全對的話只放速查卡與課程頁。 */
+    var links = [];
+    if (missedCats.place) links.push(t.linkPlace);
+    if (missedCats.compare) links.push(t.linkCompare);
+    if (missedCats.calc) links.push(t.linkCalc);
+    if (!links.length) links.push(t.linkRef, t.linkIndex);
+    resultLinks.innerHTML = t.linkHead + ' ' + links.join('　·　');
+    resultEl.classList.add('on');
+    resultEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  function newRound(){ batch = buildBatch(); render(); }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    newRound();
+  });
+  retryBtn.addEventListener('click', newRound);
+
+  applyStatic();
+  newRound();
+})();
+</script>
+</body>
+</html>

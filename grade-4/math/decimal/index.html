@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我小數 — 小數放大鏡</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 18px;font-size:16px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px;min-height:20px}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px;text-align:center;cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .mode .mbig{font-size:26px}
+  .mode h3{font-size:17px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:16px;display:grid;gap:10px}
+
+  /* --- 小數課專用 --- */
+  .figwrap{margin-top:16px;text-align:center;overflow-x:auto}
+  .scene{width:100%;max-width:520px;display:block;margin:0 auto}
+  .scene.gridfig{height:230px}
+  .scene.linefig{height:160px}
+  .scene.triofig{height:210px}
+  .narr{margin-top:14px;font-size:17px;text-align:center;min-height:58px}
+  .resultline{
+    margin-top:14px;background:var(--green-soft);border-radius:14px;padding:12px 18px;
+    font-size:20px;font-weight:700;text-align:center;color:var(--green);min-height:30px;
+  }
+  .notebox{
+    margin-top:12px;background:var(--orange-soft);border:2px solid var(--orange);border-radius:14px;
+    padding:10px 16px;font-size:15px;text-align:center;color:var(--orange);
+  }
+  .scroller{overflow-x:auto}
+  table.pv{border-collapse:collapse;margin:14px auto 0;font-size:16px}
+  table.pv th,table.pv td{border:1px solid var(--line);text-align:center;padding:0}
+  table.pv th{background:var(--blue-soft);color:var(--blue);padding:8px 12px;font-size:14px;white-space:nowrap}
+  table.pv th.dot,table.pv td.dot{border:none;background:transparent;width:22px}
+  table.pv td button{
+    width:100%;min-width:64px;border:none;background:transparent;font-size:26px;font-weight:700;
+    padding:12px 8px;cursor:pointer;color:var(--ink);font-family:inherit;
+  }
+  table.pv td.on button{background:var(--green-soft);color:var(--green)}
+  table.pv td.empty button{color:#C9C4B8;cursor:default}
+  table.pv td.dot span{font-size:26px;font-weight:700;color:var(--orange)}
+  .readline{margin-top:14px;text-align:center;font-size:17px}
+  .readline b{color:var(--blue)}
+  table.vf{border-collapse:collapse;margin:14px auto 0;font-size:24px;font-weight:700}
+  table.vf td{
+    border:none;text-align:center;width:46px;height:40px;padding:0;
+    font-variant-numeric:tabular-nums;
+  }
+  table.vf td.dotcol{width:20px;color:var(--orange)}
+  table.vf td.op{width:38px;color:var(--green);font-size:22px}
+  table.vf tr.mark td{height:24px;font-size:14px;font-weight:700;color:var(--red);vertical-align:bottom}
+  table.vf tr.rule td{height:0;border-top:3px solid var(--ink);padding:0}
+  table.vf td.pad{color:var(--orange)}
+  ol.steps{margin:16px 0 0 22px;font-size:16px;display:grid;gap:6px}
+  .cmpsteps{display:grid;gap:8px;margin-top:14px}
+  .cmprow{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:8px 14px;font-size:16px}
+  .cmprow.on{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .cmprow .tag{font-size:13px;font-weight:700;color:var(--muted);display:block}
+  .cmprow.on .tag{color:var(--green)}
+  .triobox{display:grid;gap:10px;margin-top:14px}
+  .triorow{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 14px;font-size:16px}
+  .triorow.same{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .triorow.diff{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .degrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
+  .degbtn{
+    border:2px solid var(--line);background:var(--card);border-radius:14px;padding:14px 10px;
+    font-size:19px;font-weight:700;cursor:pointer;color:var(--ink);text-align:center;min-height:56px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .degbtn.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .degbtn.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .degbtn:disabled{cursor:default;opacity:.85}
+  .gprompt{text-align:center;font-size:20px;margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:14px;word-break:break-word}
+  .gprompt b{color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔍 小數放大鏡</h1>
+    <p class="sub" data-i18n="sub">十分位再往右切，會切出百分位和千分位</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    三年級的小數只切到<strong>十分位</strong>（0.1）。<br>
+    這一課把放大鏡再轉兩圈：<strong>百分位</strong>（0.01）和<strong>千分位</strong>（0.001）。
+  </div>
+
+  <p class="notebox" data-i18n="scopeNote">這一課做<strong>三件事</strong>：認識百分位與千分位、<strong>位數不同</strong>的小數怎麼比大小、以及<strong>二位小數的直式加減</strong>（進位與退位現在也可能發生在百分位）。三年級的「小數的世界」只做一位小數，進位退位只跨到十分位。<strong>小數的乘法和除法、分數與小數互換是五年級</strong>的「小數乘除」；<strong>四捨五入到小數第幾位是五年級</strong>的「概數」。這一課<strong>不乘、不除、不做四捨五入</strong>；<strong>加減只做二位小數</strong>，千分位只出現在「認識」和「比大小」。</p>
+
+  <!-- 模式選擇 -->
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
+  </div>
+
+  <!-- 範例1：一格再切成十格 -->
+  <section id="secZoom">
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">一格再切成十格</h2>
+    <p class="lead" data-i18n="s1lead">整個大正方形是 <strong>1</strong>。把它平分成 10 條，一條是 <strong>0.1</strong>；把一條再平分成 10 格，一格是 <strong>0.01</strong>；把一格再平分成 10 小條，一小條是 <strong>0.001</strong>。點下面三顆按鈕，看放大鏡轉一圈會發生什麼事。</p>
+    <div class="card">
+      <div class="chips" id="s1chips"></div>
+      <div class="figwrap">
+        <svg class="scene gridfig" id="s1fig" viewBox="0 0 520 230" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="narr" id="s1narr"></p>
+      <p class="resultline" id="s1result"></p>
+      <p class="notebox" data-i18n="s1note">💬 規則只有一句：<strong>往右走一位，一份就再平分成 10 份，變成前一位的十分之一</strong>。所以 1 個 0.1 ＝ 10 個 0.01 ＝ 100 個 0.001。</p>
+    </div>
+  </section>
+
+  <!-- 範例2：位值表 -->
+  <section id="secPlace">
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">每一位只放一個數字</h2>
+    <p class="lead" data-i18n="s2lead">小數點右邊<strong>第一位是十分位、第二位是百分位、第三位是千分位</strong>。點表格裡的任何一個數字，看它代表多少。</p>
+    <div class="card">
+      <div class="chips" id="s2chips"></div>
+      <div class="scroller">
+        <table class="pv">
+          <thead>
+            <tr id="pvHead"></tr>
+          </thead>
+          <tbody>
+            <tr id="pvBody"></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="narr" id="s2narr"></p>
+      <p class="readline" id="s2read"></p>
+      <p class="notebox" data-i18n="s2note">💬 讀小數的時候，<strong>小數點後面的數字要一個一個唸</strong>：0.468 唸成「零點四六八」，不是「零點四百六十八」。因為每一位只放一個數字，它們不像整數那樣合起來讀。</p>
+    </div>
+  </section>
+
+  <!-- 範例3：補零再比大小 -->
+  <section id="secCompare">
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">比大小：先補零，再一位一位比</h2>
+    <p class="lead" data-i18n="s3lead">位數不一樣的時候，先在<strong>比較短的那個數的最後面補 0</strong>，補到兩個一樣長（補在最後面不會改變大小）。然後<strong>先比整數部分</strong>，一樣就比十分位，再比百分位、千分位 —— <strong>第一個不一樣的位就分出大小</strong>。點下面的按鈕試試看。</p>
+    <div class="card">
+      <div class="chips" id="s3chips"></div>
+      <div class="figwrap">
+        <svg class="scene linefig" id="s3fig" viewBox="0 0 520 160" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="cmpsteps" id="s3steps"></div>
+      <p class="resultline" id="s3result"></p>
+      <p class="notebox" data-i18n="s3note">💬 <strong>位數多少不能用來判斷大小</strong>。0.48 有兩位、0.5 只有一位，可是 0.5 比較大。一定要一位一位比。</p>
+    </div>
+  </section>
+
+  <!-- 範例4：直式加減 -->
+  <section id="secColumn">
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">直式加減：對齊小數點</h2>
+    <p class="lead" data-i18n="s4lead">寫直式要<strong>對齊小數點</strong>：個位對個位、十分位對十分位、百分位對百分位。位數不夠的<strong>在最後面補 0</strong>（橘色的那些 0），然後照整數加減的方法算，最後把小數點<strong>照原來的位置</strong>寫下來。點下面四題看每一欄怎麼算。</p>
+    <div class="card">
+      <div class="chips" id="s4chips"></div>
+      <div class="scroller">
+        <table class="vf" id="vfTable"></table>
+      </div>
+      <ol class="steps" id="s4steps"></ol>
+      <p class="resultline" id="s4result"></p>
+      <p class="notebox" data-i18n="s4note">💬 <strong>不可以對齊最右邊的數字</strong>。0.7 ＋ 0.25 如果把 7 對到 5，就把 7 個 0.1 當成 7 個 0.01 了，答案會變成 0.32 —— 差很多。對齊的是<strong>小數點</strong>，不是右邊。</p>
+    </div>
+  </section>
+
+  <!-- 範例5：0 放哪裡差很多 -->
+  <section id="secZeros">
+    <span class="eyebrow" data-i18n="eb5">範例教學 5</span>
+    <h2 data-i18n="s5h2">0 放在最後面，和放在前面差很多</h2>
+    <p class="lead" data-i18n="s5lead">同樣是多寫一個 0，放的位置不一樣，結果完全不一樣。三張圖都是 100 格，看看各塗了幾格。</p>
+    <div class="card">
+      <div class="figwrap">
+        <svg class="scene triofig" id="s5fig" viewBox="0 0 520 210" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="triobox" id="s5box"></div>
+      <p class="notebox" data-i18n="s5note">💬 <strong>加在最後面</strong>的 0，每一個數字都還留在原來的位，所以大小不變：0.5 ＝ 0.50 ＝ 0.500。<strong>插在小數點右邊</strong>的 0，會把後面的數字整批往右推一位（5 從十分位掉到百分位），值就不一樣了。</p>
+    </div>
+  </section>
+
+  <!-- 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">試題</span>
+    <h2 data-i18n="s6h2">檢查一下</h2>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 小遊戲 -->
+  <section class="game">
+    <span class="eyebrow" data-i18n="eb7">小遊戲</span>
+    <h2 data-i18n="s7h2">小數放大鏡挑戰</h2>
+    <p class="lead" data-i18n="s7lead">五關：認位名、算位值、比大小、加、減。答錯只扣一點分，可以再試。</p>
+    <div class="card">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
+      </div>
+      <p class="hint" id="gHint" style="text-align:center"></p>
+      <p class="gprompt" id="gPrompt"></p>
+      <div class="degrid" id="gAnswers"></div>
+      <p id="gMsg" class="gamemsg" style="text-align:center"></p>
+      <div class="btnrow" style="justify-content:center">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的三個動作</h2>
+    <div class="card">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。</li>
+        <li data-i18n="next3">❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>小數點右邊第一位十分位、第二位百分位、第三位千分位；比大小和算加減之前，都先在最後面補 0 補成一樣長 —— 然後<strong>比大小</strong>從整數部分往右比，<strong>直式加減</strong>從最右邊那一位往左算。</strong>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 語言無關的資料 ---------- */
+  /* 這一課教二、三位小數：位值（十分位／百分位／千分位）、位數不同的小數比大小、
+     以及二位小數的直式加減。
+
+     範圍（四頁對讀者也是這樣講的）：
+     - 三年級的「小數的世界」只做**一位小數**：認識 0.1、數線、比大小、直式加減。
+       它的進位與退位只發生在「個位和十分位之間」（0.8 ＋ 0.5、1.3 － 0.7）。
+       這一課把位數推到百分位與千分位，進位退位因此會發生在百分位。
+     - 五年級的「小數乘除」教小數乘以整數、除以整數、分數與小數互換，
+       而且最深只用到百分位（元角分）；它完全沒有加減那一段。
+     - 五年級的「概數」教四捨五入到小數第幾位 —— 這一課不做四捨五入。
+     - 所以這一課只做三件事：認識百分位與千分位、位數不同的小數比大小（補零）、
+       二位小數的直式加減。加減只做二位小數；千分位只出現在「認識」與「比大小」。
+
+     ⚠️ 不可以用 JS 的浮點數算小數：0.1 + 0.2 !== 0.3，
+     而這一課從頭到尾都在判斷小數的相等與大小。所以整份課程的標準寫法是
+     「有幾個千分之一」的整數（下面叫 milli）：0.468 → 468、3.5 → 3500、5 → 5000。
+       比大小   ⟺ 整數比大小
+       加減     ⟺ 整數加減
+       「一樣大」⟺ 整數相等
+     全部精確，不需要容差。小數點只在「印出來」的那一刻才出現。 */
+
+  var MIL = 1000;          // 1 裡面有幾個千分之一
+  var MIL_MAX = 100000;    // 這一課的每一個數都小於 100
+
+  /* milli 的合法範圍：非負整數、小於 100。 */
+  function isMil(m){
+    return typeof m === 'number' && isFinite(m) && m === Math.round(m) && m >= 0 && m < MIL_MAX;
+  }
+  /* 位置編號：-1 十位、0 個位、1 十分位、2 百分位、3 千分位。
+     「一個」是多少 milli：十位 10000、個位 1000、十分位 100、百分位 10、千分位 1。 */
+  function placeUnit(k){ return Math.pow(10, 3 - k); }
+  function digitAt(m, k){ return Math.floor(m / placeUnit(k)) % 10; }
+  /* 這個數「自然」需要幾位小數（末尾的 0 不算）。 */
+  function places(m){
+    if (m % 10 !== 0) return 3;
+    if (m % 100 !== 0) return 2;
+    if (m % MIL !== 0) return 1;
+    return 0;
+  }
+  /* 印成「至少」p 位小數。
+     ⚠️ 只往後補零，絕不截斷 —— p 比實際需要的位數小的時候會被拉回來。
+     截斷會改變值，補零不會，所以「解析回來再比」永遠等於原本的 milli。 */
+  function fmtPad(m, p){
+    var pp = Math.max(p | 0, places(m));
+    var w = Math.floor(m / MIL);
+    if (pp <= 0) return String(w);
+    var frac = String(MIL + (m % MIL)).slice(1);   // '000' ~ '999'
+    return w + '.' + frac.slice(0, pp);
+  }
+  /* 最自然的寫法（末尾不留多餘的 0）。 */
+  function fmtNat(m){ return fmtPad(m, 0); }
+  /* 一個位上的數字代表多少：digitAt × placeUnit。 */
+  function placeValue(m, k){ return digitAt(m, k) * placeUnit(k); }
+
+  var PLACE_KEYS = ['ones', 'tenth', 'hundredth', 'thousandth'];   // 索引就是 k（0~3）
+
+  /* --- 比大小的完整步驟（課程教的規則，逐步照做一次） ---
+     先比整數部分；一樣就往右一位一位比，第一個不一樣的位就分出大小。
+     ⚠️ 不可以「從最左邊的字元開始比」：12.3 和 9.87 的第一個字元是 1 和 9，
+     那樣會得到錯的結論。整數部分要整個當一個數比。
+     steps 的最後一筆就是分出大小的那一筆（或者全部都相同）。 */
+  /* pa／pb 是「題目原本寫成幾位」。⚠️ 一定要把它們算進補零的長度：
+     只用 places() 的話，0.5 和 0.500 會被補成「0.5 和 0.5」——
+     那是把 0.500 縮短，正好和這一組要教的事情相反。 */
+  function cmpPlan(a, b, pa, pb){
+    var pad = Math.max(places(a), places(b), pa | 0, pb | 0);
+    var wa = Math.floor(a / MIL), wb = Math.floor(b / MIL);
+    var steps = [{ kind:'whole', a:wa, b:wb, cmp: wa === wb ? 0 : (wa > wb ? 1 : -1) }];
+    for (var k = 1; k <= pad && steps[steps.length - 1].cmp === 0; k++){
+      var da = digitAt(a, k), db = digitAt(b, k);
+      steps.push({ kind:'place', k:k, a:da, b:db, cmp: da === db ? 0 : (da > db ? 1 : -1) });
+    }
+    return { pad:pad, steps:steps, cmp: a === b ? 0 : (a > b ? 1 : -1) };
+  }
+
+  /* --- 直式的欄位 ---
+     四個數字欄：十位、個位、十分位、百分位（小數點插在個位和十分位之間）。
+     ⚠️ 這一課的加減只做二位小數，所以千分位不進直式。
+     colPlan 用「一欄一欄的數字加減」算 —— 和 milli 整數加減是兩條不同的路，
+     設定檔會拿 milli 那一條來對答案。 */
+  var VF_POS = [-1, 0, 1, 2];
+  function colPlan(a, b, op){
+    var A = VF_POS.map(function(k){ return digitAt(a, k); });
+    var B = VF_POS.map(function(k){ return digitAt(b, k); });
+    var R = [0, 0, 0, 0], carry = [0, 0, 0, 0], borrow = [0, 0, 0, 0];
+    var i, c = 0;
+    if (op === '+'){
+      for (i = VF_POS.length - 1; i >= 0; i--){
+        var s = A[i] + B[i] + c;
+        R[i] = s % 10;
+        c = s >= 10 ? 1 : 0;
+        carry[i] = c;            // 這一欄往左邊進的 1
+      }
+    } else {
+      for (i = VF_POS.length - 1; i >= 0; i--){
+        var t = A[i] - B[i] - c;
+        if (t < 0){ t += 10; c = 1; } else { c = 0; }
+        R[i] = t;
+        borrow[i] = c;           // 這一欄向左邊借的 1
+      }
+    }
+    /* over 是最左邊還沒處理完的進位／借位。這一課保證 a ＋ b < 100 且 a ≥ b，
+       所以它必須是 0 —— 不是 0 就代表那一題超出這一課的範圍。 */
+    return {
+      A:A, B:B, R:R, carry:carry, borrow:borrow, over:c, op:op,
+      res: op === '+' ? a + b : a - b,
+      /* 哪幾格是「補上去的 0」（原本的數沒有那一位）：只有小數的兩位會被補。 */
+      padA: VF_POS.map(function(k){ return k >= 1 && places(a) < k; }),
+      padB: VF_POS.map(function(k){ return k >= 1 && places(b) < k; })
+    };
+  }
+
+  /* 直式減法每一欄的三個數：被右邊借走之後還剩多少（t0，0 被借走就是 -1）、
+     真正拿來減的那個數（top），以及這一欄有沒有被右邊借走（lent）。
+     ⚠️ 這一段一定要放在**資料區**，不可以留在 renderS4 裡面 —— 放在碰 DOM 的
+     那一段的話，設定檔只驗得到它自己重算的版本，頁面真正用的算法壞掉也不會響。
+     （這正是 triangle 那一課第三輪 codex 抓到的 critical，同一個形狀。） */
+  /* 這一位的 0 是「末尾的 0」嗎？（末尾 ＝ 從這一位往右到最後都是 0）
+     末尾的 0 可以不寫（0.90 ＝ 0.9），中間的 0 不可以（3.05 → 3.5 是另一個數）。
+     ⚠️ 放在資料區，設定檔才能呼叫**頁面自己的**判斷，而不是重寫一份。 */
+  function isTrailingZero(m, k){ return m % placeUnit(k - 1) === 0; }
+
+  /* 直式算出來的樣子和答案的自然寫法不一樣嗎（1.10 vs 1.1）？
+     不一樣的時候才要多講一句解釋。同樣放在資料區，讓設定檔驗得到
+     「頁面到底什麼時候會講那句話」。 */
+  function needsDropZero(res){ return fmtPad(res, 2) !== fmtNat(res); }
+
+  /* 直式加法每一欄的兩個數：有沒有從右邊進位進來（carryIn），
+     以及這一欄加起來是多少（sum，可能是 10~19）。
+     ⚠️ 和 subStep 一樣，一定要放在資料區 —— 留在 renderS4 裡面的話，
+     設定檔只驗得到自己重算的版本。 */
+  function addStep(plan, i){
+    var carryIn = (i < VF_POS.length - 1) && plan.carry[i + 1] === 1;
+    return { carryIn:carryIn, sum:plan.A[i] + plan.B[i] + (carryIn ? 1 : 0) };
+  }
+  function subStep(plan, i){
+    var lent = (i < VF_POS.length - 1) && plan.borrow[i + 1] === 1;
+    var t0 = plan.A[i] - (lent ? 1 : 0);
+    var top = (plan.borrow[i] === 1) ? t0 + 10 : t0;
+    return { lent:lent, t0:t0, top:top };
+  }
+
+  /* ===================== 版面常數 ===================== */
+  /* 全部從這裡匯出，渲染函式直接拿它們畫，設定檔驗上下左右四個方向。
+     教訓來自 grade-4/rounding（只驗左右等於沒驗）與 grade-3/perimeter
+     （標籤畫在圖外面，畫布卻只留固定留白，字被裁掉）。 */
+
+  /* 範例 1：大格子圖 ＋ 放大鏡面板 */
+  var G_W = 520, G_H = 230;
+  var G_X = 44, G_Y = 42, G_SIDE = 150;      // 左邊的大正方形（＝ 1）
+  var G_ZX = 326, G_ZY = 42, G_ZSIDE = 150;  // 右邊的放大鏡面板
+  /* 圖說的基線 ＝ 正方形下緣 ＋ G_CAP_DY。42 ＋ 150 ＋ 26 ＝ 218，
+     字的下緣約 222，畫布 230 —— 留 8px。原本 G_Y 46／DY 30 會算到 226，
+     下緣剛好貼齊 230，那就是 grade-3/perimeter 那種「字被裁掉」。 */
+  var G_CAP_DY = 26;
+  var G_TITLE_DY = -14;                       // 標題在正方形上緣往上多遠（基線）
+  var G_FONT = 15;
+
+  /* 範例 3：數線 */
+  var NL_W = 520, NL_H = 160;
+  var NL_X0 = 56, NL_X1 = 464, NL_Y = 74;
+  var NL_TICK = 7, NL_BIGTICK = 13;
+  var NL_FONT = 14;
+  var NL_TOP_DY = -22;      // A 的標籤：線的上面
+  var NL_END_DY = 30;       // 兩端的標籤：線的下面第一排
+  var NL_BOT_DY = 56;       // B 的標籤：線的下面第二排
+  var NL_DOT = 5.5;
+
+  /* 範例 5：三張 100 格的小圖 */
+  var T_W = 520, T_H = 210;
+  /* 46 ＋ 124 ＋ 24 ＝ 194 是圖說的基線，字的下緣約 198，畫布 210 —— 留 12px。
+     原本 54／128／28 會算到 210，剛好等於畫布高度，圖說整排會被裁掉。 */
+  var T_Y = 46, T_SIDE = 124;
+  var T_XS = [28, 196, 364];       // 三張圖的左緣
+  var T_TITLE_DY = -16;            // 標題在上緣往上多遠（基線）
+  var T_CAP_DY = 24;               // 格數在下緣往下多遠（基線）
+  var T_FONT = 15;
+
+  /* --- 範例 1 的圖：純資料，畫圖的程式直接照著畫 ---
+     key 決定放大鏡轉到第幾圈：
+       'tenth'      左圖切成 10 條，塗 1 條；沒有放大鏡面板。
+       'hundredth'  左圖切成 10 × 10 格，塗 1 格；放大鏡把「一條」放大成 10 格。
+       'thousandth' 左圖切成 10 × 10 格，塗 1 格；放大鏡把「一格」放大成 10 小條。
+     回傳的每一個 rect 都是最後畫上去的座標，設定檔逐一驗它們在畫布裡面。 */
+  function zoomPlan(key){
+    var cell = G_SIDE / 10;
+    var main = { x:G_X, y:G_Y, side:G_SIDE, cols:10, rows:(key === 'tenth' ? 1 : 10) };
+    var shade = [];
+    if (key === 'tenth'){
+      shade.push({ x:G_X, y:G_Y, w:cell, h:G_SIDE });                  // 最左邊那一條
+    } else {
+      shade.push({ x:G_X, y:G_Y, w:cell, h:cell });                    // 左上角那一格
+    }
+    var zoom = null, links = [];
+    if (key !== 'tenth'){
+      /* 放大鏡面板：把左圖的一小塊放大成整個面板。
+         'hundredth' 放大的是「一條」（直的，10 格）；
+         'thousandth' 放大的是「一格」（10 小條）。 */
+      var srcW = cell;
+      var srcH = (key === 'hundredth') ? G_SIDE : cell;
+      zoom = {
+        x:G_ZX, y:G_ZY, side:G_ZSIDE, cols:1, rows:10,
+        shade:{ x:G_ZX, y:G_ZY, w:G_ZSIDE, h:G_ZSIDE / 10 },
+        src:{ x:G_X, y:G_Y, w:srcW, h:srcH }
+      };
+      /* 兩條連接線：從左圖那一小塊的右上角與右下角，連到面板的左上角與左下角。 */
+      links.push({ x1:G_X + srcW, y1:G_Y, x2:G_ZX, y2:G_ZY });
+      links.push({ x1:G_X + srcW, y1:G_Y + srcH, x2:G_ZX, y2:G_ZY + G_ZSIDE });
+    }
+    return { key:key, main:main, shade:shade, zoom:zoom, links:links, cell:cell };
+  }
+
+  /* --- 範例 3 的數線：純資料 ---
+     挑一個「一格」st（1、10、100 或 1000 個 milli），讓兩個數都落在數線中間，
+     兩端都是整格的好看數字。
+     st 一開始取「兩個數裡最細的那一位」的單位；如果兩數相差太遠放不進 10 格，
+     就把 st 放大十倍再試。
+     ⚠️ 放大的上限要用 MIL_MAX，不可以用 MIL：只到 MIL（一格 ＝ 1）的話，
+     相差超過 7 的兩個數會放不進 10 格，其中一個點就跑到數線外面去了 ——
+     而畫面上看起來只是「點貼在最右邊」，不會有人發現。
+     每一次呼叫都保證 d < MIL_MAX，所以 st 最多長到 MIL_MAX 就一定停。 */
+  function nlPlan(a, b){
+    var lo0 = Math.min(a, b), hi0 = Math.max(a, b), d = hi0 - lo0;
+    var fin = Math.max(places(a), places(b), 1);
+    var st = placeUnit(fin);
+    while (d > 7 * st && st <= MIL_MAX) st *= 10;
+    var lo = st * Math.floor(lo0 / st) - st;
+    if (lo < 0) lo = 0;
+    return { lo:lo, hi:lo + 10 * st, st:st, n:10 };
+  }
+  function nlX(m, plan){
+    return NL_X0 + (m - plan.lo) / (plan.hi - plan.lo) * (NL_X1 - NL_X0);
+  }
+
+  /* --- 範例 5 的三張小圖：純資料。
+     每一張都是 10 × 10 ＝ 100 格，塗 cells 格（從左上角開始，一列一列塗）。 */
+  function trioPlan(list){
+    var cell = T_SIDE / 10;
+    return list.map(function(item, i){
+      var x = T_XS[i], y = T_Y;
+      var rects = [];
+      for (var n = 0; n < item.cells; n++){
+        /* ⚠️ 一條一條（column-major）塗，不是一排一排 —— 這樣 0.5 塗出來就是
+           **5 整條**，直接接上範例教學 1 的「一條是 0.1」；一排一排塗的話
+           50 格會變成 5 排，孩子看不出它和 5 個 0.1 是同一件事。 */
+        var c = Math.floor(n / 10), r = n % 10;
+        rects.push({ x:x + c * cell, y:y + r * cell, w:cell, h:cell });
+      }
+      return { x:x, y:y, side:T_SIDE, cell:cell, cells:item.cells, mil:item.mil, p:item.p, rects:rects };
+    });
+  }
+
+  /* ===================== 範例與遊戲的資料 ===================== */
+
+  /* 範例 1 的三圈放大鏡。mil 是「一份」有幾個千分之一，cut 是切成幾份。 */
+  var ZOOM_CASES = [
+    { key:'tenth',      mil:100, cut:10 },
+    { key:'hundredth',  mil:10,  cut:100 },
+    { key:'thousandth', mil:1,   cut:1000 }
+  ];
+
+  /* 範例 2 的位值表樣本。
+     ⚠️ 整數部分一律 ≤ 9 —— 讀法（「三點零五」／“three point zero five”）
+     只支援一位整數，多一位就會讀錯。設定檔會擋。
+     p 是要印幾位小數（可以比自然位數多，用來展示末尾的 0）。 */
+  var PV_CASES = [
+    { mil:468,  p:3 },   // 0.468
+    { mil:3050, p:2 },   // 3.05   十分位是 0
+    { mil:2007, p:3 },   // 2.007  十分位、百分位都是 0
+    { mil:900,  p:2 }    // 0.90   末尾的 0
+  ];
+
+  /* 範例 3 的比大小案例。pa／pb 是「題目原本寫成幾位」——
+     0.5 和 0.500 是同一個數的兩種寫法，最後那一組刻意放進來。 */
+  var CMP_CASES = [
+    { a:500,  pa:1, b:480,  pb:2 },   // 0.5 / 0.48    十分位分出來（位數多的比較小）
+    { a:1200, pa:1, b:980,  pb:2 },   // 1.2 / 0.98    整數部分就分出來
+    { a:400,  pa:1, b:450,  pb:2 },   // 0.4 / 0.45    要比到百分位（這次位數多的比較大）
+    { a:462,  pa:3, b:460,  pb:2 },   // 0.462 / 0.46  要一路比到千分位
+    { a:500,  pa:1, b:500,  pb:3 }    // 0.5 / 0.500   一樣大
+  ];
+
+  /* 範例 4 的四題直式。
+     ⚠️ 加法要 a ＋ b < 100，減法要 a ≥ b，而且兩邊都只到百分位（places ≤ 2）。 */
+  var VF_CASES = [
+    { a:700,  b:250,  op:'+' },   // 0.7 + 0.25   要補零，都不進位
+    { a:650,  b:450,  op:'+' },   // 0.65 + 0.45  百分位進位，十分位也進位
+    { a:1200, b:850,  op:'-' },   // 1.2 - 0.85   要補零，連續退位
+    { a:5000, b:2340, op:'-' }    // 5 - 2.34     整數要補兩個 0，連續退位
+  ];
+
+  /* 範例 5 的三個數：0.5、0.50、0.05。cells 是 100 格裡塗幾格。
+     ⚠️ cells 必須等於 mil / 10（一格是 0.01 ＝ 10 個 milli），設定檔會驗。 */
+  var TRIO_CASES = [
+    { mil:500, p:1, cells:50 },
+    { mil:500, p:2, cells:50 },
+    { mil:50,  p:2, cells:5 }
+  ];
+
+  /* 小遊戲五關。答案由 roundAnswer() 算出來，設定檔會驗 opts[ans] 真的等於它。 */
+  var ROUNDS = [
+    { kind:'place',   mil:3468, p:3, k:2,
+      opts:['ones', 'tenth', 'hundredth', 'thousandth'], ans:2 },
+    { kind:'value',   mil:2075, p:3, k:3,
+      opts:['0.005', '0.05', '0.5', '5'], ans:0 },
+    { kind:'compare', a:640, pa:2, b:700, pb:1,
+      opts:['A', 'B', 'same', 'cannot'], ans:1 },
+    { kind:'sum',     a:750, b:1600,
+      opts:['2.35', '0.91', '2.3', '1.35'], ans:0 },
+    { kind:'diff',    a:3000, b:1250,
+      opts:['2.75', '1.85', '2.25', '1.75'], ans:3 }
+  ];
+  /* 每一關的正解。'place' 與 'compare' 回傳的是鍵（文字在字典裡），
+     其餘回傳的是小數字串。 */
+  function roundAnswer(r){
+    if (r.kind === 'place')   return PLACE_KEYS[r.k];
+    if (r.kind === 'value')   return fmtNat(placeValue(r.mil, r.k));
+    if (r.kind === 'compare') return r.a === r.b ? 'same' : (r.a > r.b ? 'A' : 'B');
+    if (r.kind === 'sum')     return fmtNat(r.a + r.b);
+    if (r.kind === 'diff')    return fmtNat(r.a - r.b);
+    return null;
+  }
+
+  /* 句首大寫：英文的位名是 'the tenths place'，放在句子開頭要大寫第一個字母。
+     ⚠️ 只動第一個字母，不可以整串 toUpperCase；也不可以放進 en 字典裡
+     （字典要維持 zh/en key 一一對應）。 */
+  function capFirst(str){ return str.charAt(0).toUpperCase() + str.slice(1); }
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'教我小數 — 小數放大鏡', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（本頁）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔍 小數放大鏡',
+      sub:'十分位再往右切，會切出百分位和千分位',
+      intro:'三年級的小數只切到<strong>十分位</strong>（0.1）。<br>這一課把放大鏡再轉兩圈：<strong>百分位</strong>（0.01）和<strong>千分位</strong>（0.001）。',
+      scopeNote:'這一課做<strong>三件事</strong>：認識百分位與千分位、<strong>位數不同</strong>的小數怎麼比大小、以及<strong>二位小數的直式加減</strong>（進位與退位現在也可能發生在百分位）。三年級的「小數的世界」只做一位小數，進位退位只跨到十分位。<strong>小數的乘法和除法、分數與小數互換是五年級</strong>的「小數乘除」；<strong>四捨五入到小數第幾位是五年級</strong>的「概數」。這一課<strong>不乘、不除、不做四捨五入</strong>；<strong>加減只做二位小數</strong>，千分位只出現在「認識」和「比大小」。',
+      modeTitle:'今天想怎麼學？（隨時可以換）',
+      modes:{
+        ahead:  { icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：範例慢慢看，試題只出 6 題基礎題，遊戲會自動給提示。' },
+        school: { icon:'🏫', h:'跟上進度', p:'學校正在教，完整練習', banner:'跟上模式：完整 10 題，包含 4 題課本型文字題。' },
+        boost:  { icon:'💪', h:'補強練習', p:'學過但還不穩，加強', banner:'補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。' }
+      },
+      eb1:'範例教學 1', eb2:'範例教學 2', eb3:'範例教學 3', eb4:'範例教學 4', eb5:'範例教學 5', eb6:'試題', eb7:'小遊戲',
+      placeName:{ ones:'個位', tenth:'十分位', hundredth:'百分位', thousandth:'千分位' },
+      tensName:'十位',
+      digits:['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'],
+      s1h2:'一格再切成十格',
+      s1lead:'整個大正方形是 <strong>1</strong>。把它平分成 10 條，一條是 <strong>0.1</strong>；把一條再平分成 10 格，一格是 <strong>0.01</strong>；把一格再平分成 10 小條，一小條是 <strong>0.001</strong>。點下面三顆按鈕，看放大鏡轉一圈會發生什麼事。',
+      s1chip:{ tenth:'切成 10 條 → 0.1', hundredth:'再切一次 → 0.01', thousandth:'再切一次 → 0.001' },
+      s1title:{ main:'整個是 1', zoomH:'把一條放大', zoomT:'把一格放大' },
+      s1cap:{
+        tenth:'10 條，塗 1 條',
+        hundredth:'100 格，塗 1 格',
+        thousandth:'100 格，塗 1 格'
+      },
+      s1zoomCap:{ hundredth:'一條再分成 10 格', thousandth:'一格再分成 10 小條' },
+      s1narr:{
+        tenth:'把 <strong>1</strong> 平分成 <strong>10</strong> 份，一份就是 <strong>0.1</strong>（十分之一）。0.1 的 1 寫在<strong>十分位</strong>。',
+        hundredth:'把那一條再平分成 <strong>10</strong> 份，整個 1 就變成 <strong>100</strong> 格，一格是 <strong>0.01</strong>（百分之一）。所以 <strong>1 個 0.1 ＝ 10 個 0.01</strong>。',
+        thousandth:'把那一格再平分成 <strong>10</strong> 份，整個 1 就變成 <strong>1000</strong> 份，一份是 <strong>0.001</strong>（千分之一）。所以 <strong>1 個 0.01 ＝ 10 個 0.001</strong>，也就是 <strong>1 個 0.1 ＝ 100 個 0.001</strong>。'
+      },
+      s1result: function(one, cut){ return '一份是 ' + one + '，也就是 ' + cut + ' 份之一'; },
+      s1note:'💬 規則只有一句：<strong>往右走一位，一份就再平分成 10 份，變成前一位的十分之一</strong>。所以 1 個 0.1 ＝ 10 個 0.01 ＝ 100 個 0.001。',
+      s2h2:'每一位只放一個數字',
+      s2lead:'小數點右邊<strong>第一位是十分位、第二位是百分位、第三位是千分位</strong>。點表格裡的任何一個數字，看它代表多少。',
+      s2hint:'👆 點表格裡的一個數字看看。',
+      s2narr: function(dig, place, unit, val){
+        return '這個 <strong>' + dig + '</strong> 在<strong>' + place + '</strong>，表示 <strong>' + dig + ' 個 ' + unit + '</strong>，也就是 <strong>' + val + '</strong>。';
+      },
+      /* ⚠️ 分兩種 0：中間的 0 在幫後面的數字守位子，不可以不寫；
+         **末尾**的 0 後面沒有數字要守，它是可以不寫的（0.90 ＝ 0.9）。
+         兩種混成一句話會和範例教學 5 自相矛盾。 */
+      s2narrZero: function(place, trailing, natural, shown){
+        return '這一位是 <strong>0</strong>，表示<strong>' + place + '</strong>一個都沒有。' +
+          (trailing
+            ? '它在<strong>最後面</strong>，後面沒有數字要守位子，所以<strong>可以不寫</strong> —— ' +
+              shown + ' 和 ' + natural + ' 一樣大。寫出來只是為了看清楚位數。'
+            : '這個 0 <strong>不可以不寫</strong> —— 它在幫<strong>後面</strong>的數字守住位子，拿掉就變成另一個數了。');
+      },
+      s2narrOnes: function(dig){
+        return '這個 <strong>' + dig + '</strong> 在<strong>個位</strong>，就是整整 <strong>' + dig + '</strong> 個 1，在小數點的<strong>左邊</strong>。';
+      },
+      s2read: function(num, words){ return '<b>' + num + '</b> 讀作「' + words + '」。'; },
+      s2readDot:'點',
+      s2sum: function(num, parts){ return '<b>' + num + '</b> ＝ ' + parts.join(' ＋ '); },
+      s2part: function(n, unit){ return n + ' 個 ' + unit; },
+      s2note:'💬 讀小數的時候，<strong>小數點後面的數字要一個一個唸</strong>：0.468 唸成「零點四六八」，不是「零點四百六十八」。因為每一位只放一個數字，它們不像整數那樣合起來讀。',
+      s3h2:'比大小：先補零，再一位一位比',
+      s3lead:'位數不一樣的時候，先在<strong>比較短的那個數的最後面補 0</strong>，補到兩個一樣長（補在最後面不會改變大小）。然後<strong>先比整數部分</strong>，一樣就比十分位，再比百分位、千分位 —— <strong>第一個不一樣的位就分出大小</strong>。點下面的按鈕試試看。',
+      s3chip: function(x, y){ return x + ' 和 ' + y; },
+      s3tagPad:'第一步：補零補到一樣長',
+      s3pad: function(x, y, xp, yp){
+        return (x === xp && y === yp)
+          ? '兩個數本來就一樣長，不用補零：<strong>' + xp + '</strong> 和 <strong>' + yp + '</strong>。'
+          : '補到一樣長：<strong>' + xp + '</strong> 和 <strong>' + yp + '</strong>。（0 補在最後面，大小沒有改變。）';
+      },
+      s3tagWhole:'接著比整數部分',
+      s3tagPlace: function(place){ return '接著比' + place; },
+      s3whole: function(a, b, cmp){
+        return '整數部分是 ' + a + ' 和 ' + b + '：' +
+          (cmp === 0 ? '一樣，要繼續往右比。'
+           : (cmp > 0 ? a + ' 比 ' + b + ' 大 —— 到這裡就分出來了，後面不用再比。'
+                      : a + ' 比 ' + b + ' 小 —— 到這裡就分出來了，後面不用再比。'));
+      },
+      s3place: function(place, a, b, cmp){
+        return place + '是 ' + a + ' 和 ' + b + '：' +
+          (cmp === 0 ? '一樣，再往右一位。'
+           : (cmp > 0 ? a + ' 比 ' + b + ' 大 —— 分出來了。'
+                      : a + ' 比 ' + b + ' 小 —— 分出來了。'));
+      },
+      s3resultBig: function(big, small){ return big + ' 比 ' + small + ' 大'; },
+      s3resultSame: function(x, y){ return x + ' 和 ' + y + ' 一樣大'; },
+      s3note:'💬 <strong>位數多少不能用來判斷大小</strong>。0.48 有兩位、0.5 只有一位，可是 0.5 比較大。一定要一位一位比。',
+      s4h2:'直式加減：對齊小數點',
+      s4lead:'寫直式要<strong>對齊小數點</strong>：個位對個位、十分位對十分位、百分位對百分位。位數不夠的<strong>在最後面補 0</strong>（橘色的那些 0），然後照整數加減的方法算，最後把小數點<strong>照原來的位置</strong>寫下來。點下面四題看每一欄怎麼算。',
+      s4chip: function(x, y, op){ return x + ' ' + op + ' ' + y; },
+      s4padNote: function(list){ return '先補零：' + list.join('、') + '。0 補在最後面，大小沒有改變。'; },
+      s4padNone:'兩個數的位數本來就一樣，不用補零。',
+      s4stepAdd: function(place, a, b, carryIn, sum, digit, carryOut){
+        var head = place + '：' + a + ' ＋ ' + b + (carryIn ? ' ＋ 進位的 1' : '') + ' ＝ ' + sum;
+        return head + (carryOut
+          ? '，滿 10 了，這一位寫 <strong>' + digit + '</strong>，向左邊進 <strong>1</strong>。'
+          : '，這一位寫 <strong>' + digit + '</strong>。');
+      },
+      /* ⚠️ 三種情況要分開講，不可以用一條算式硬套：
+         ① 這一位是 0 而且已經被右邊借走 1 —— 它自己也不夠，得**再往左借**。
+            原本的寫法會印出「剩下 -1」，那是真的會上線的錯字。
+         ② 被借走之後還夠不夠減。  ③ 什麼都沒發生。
+         lent ＝ 有沒有被右邊借走，t0 ＝ 被借走之後剩下多少（可能是負的），
+         top ＝ 真正拿來減的那個數。旁白自己不做算術，只負責講出來。 */
+      s4stepSub: function(place, b, lent, t0, top, borrowOut, digit, leftUnit, rawA){
+        if (t0 < 0){
+          return place + '：這一位是 <strong>0</strong>，可是右邊已經向它借走 1 —— 它自己也不夠，' +
+            '所以要<strong>再向左邊借 1</strong>。借來的一個 ' + leftUnit + ' 換成 10 個這一位的，' +
+            '先還掉右邊借走的那 1 個，剩下 ' + top + ' 個，' + top + ' － ' + b +
+            ' ＝ <strong>' + digit + '</strong>。';
+        }
+        var head = place + '：' + rawA + (lent ? ' 先被右邊借走 1，剩下 ' + t0 : '');
+        return borrowOut
+          ? head + '，' + t0 + ' － ' + b + ' 不夠減，向左邊借 1（一個 ' + leftUnit +
+            ' 換成 10 個這一位的），' + top + ' － ' + b + ' ＝ <strong>' + digit + '</strong>。'
+          : head + '，' + top + ' － ' + b + ' ＝ <strong>' + digit + '</strong>。';
+      },
+      s4leftUnit:{ hundredth:'0.1', tenth:'1', ones:'10' },
+      s4dropZero: function(padded, natural){ return '直式算出來是 <strong>' + padded + '</strong>。末尾的 0 可以不寫（大小一樣），所以答案寫成 <strong>' + natural + '</strong>。'; },
+      s4resultAdd: function(x, y, r){ return x + ' ＋ ' + y + ' ＝ ' + r; },
+      s4resultSub: function(x, y, r){ return x + ' － ' + y + ' ＝ ' + r; },
+      s4note:'💬 <strong>不可以對齊最右邊的數字</strong>。0.7 ＋ 0.25 如果把 7 對到 5，就把 7 個 0.1 當成 7 個 0.01 了，答案會變成 0.32 —— 差很多。對齊的是<strong>小數點</strong>，不是右邊。',
+      s5h2:'0 放在最後面，和放在前面差很多',
+      s5lead:'同樣是多寫一個 0，放的位置不一樣，結果完全不一樣。三張圖都是 100 格，看看各塗了幾格。',
+      s5cap: function(n){ return '塗了 ' + n + ' 格'; },
+      s5rowSame: function(x, y){ return '<strong>' + x + '</strong> 和 <strong>' + y + '</strong> 塗的格子一樣多 —— 它們<strong>一樣大</strong>。0 加在<strong>最後面</strong>，5 還留在十分位。'; },
+      s5rowDiff: function(x, y, nx, ny){ return '<strong>' + x + '</strong> 塗 ' + nx + ' 格，<strong>' + y + '</strong> 只塗 ' + ny + ' 格 —— 差很多。0 插在<strong>小數點右邊</strong>，把 5 從十分位推到了百分位。'; },
+      s5note:'💬 <strong>加在最後面</strong>的 0，每一個數字都還留在原來的位，所以大小不變：0.5 ＝ 0.50 ＝ 0.500。<strong>插在小數點右邊</strong>的 0，會把後面的數字整批往右推一位（5 從十分位掉到百分位），值就不一樣了。',
+      s6h2:'檢查一下',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn: function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong: function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      cAll:'全部答對，太厲害了 🏆', cGood:'不錯！錯的那幾題看一下說明。', cTry:'再回上面的範例看一次，然後重新整理再做一次。',
+      qs: [
+        { stem:'0.468 裡面，「6」在哪一位？',
+          opts:['十分位', '百分位', '千分位', '個位'], ans:1,
+          why:'小數點右邊第一位是十分位（這裡是 4），第二位是百分位（6），第三位是千分位（8）。所以 6 在<strong>百分位</strong>，表示 6 個 0.01。' },
+        { stem:'3 個 0.01 合起來是多少？',
+          opts:['0.3', '0.003', '0.13', '0.03'], ans:3,
+          why:'一個 0.01 是把 1 平分成 100 份的一份，3 個就是 <strong>0.03</strong> —— 3 要寫在<strong>百分位</strong>。0.3 是 3 個 0.1，0.003 是 3 個 0.001，0.13 是把 0.1 和 3 硬湊在一起。' },
+        { stem:'0.5 和 0.48，哪一個比較大？',
+          opts:['0.5', '0.48', '一樣大', '沒辦法比較'], ans:0,
+          why:'兩個的整數部分都是 0，接著比十分位：0.5 的十分位是 5，0.48 的十分位是 4，5 比 4 大，所以 <strong>0.5 比較大</strong>。把 0.5 補成 0.50 再比更清楚。<strong>位數多不代表比較大</strong>。' },
+        { stem:'0.7 ＋ 0.25 ＝ ？',
+          opts:['0.32', '0.9', '0.95', '1.95'], ans:2,
+          why:'先把 0.7 補成 0.70，再對齊小數點：百分位 0 ＋ 5 ＝ 5，十分位 7 ＋ 2 ＝ 9，個位 0 ＋ 0 ＝ 0，答案是 <strong>0.95</strong>。0.32 是把最右邊對齊（7 對到 5）算出來的 —— 那樣就把 7 個 0.1 當成 7 個 0.01 了。' },
+        { stem:'1.2 － 0.85 ＝ ？',
+          opts:['0.45', '1.15', '0.37', '0.35'], ans:3,
+          why:'先把 1.2 補成 1.20 再對齊小數點。百分位 0 － 5 不夠減，向十分位借 1（一個 0.1 換成 10 個 0.01）：10 － 5 ＝ 5。十分位被借走 1 只剩 1，1 － 8 又不夠減，向個位借 1（一個 1 換成 10 個 0.1）：11 － 8 ＝ 3。個位 1 被借走 1 剩 0，0 － 0 ＝ 0。答案是 <strong>0.35</strong>。' },
+        { stem:'下面哪一個和 0.6 一樣大？',
+          opts:['0.60', '0.06', '0.66', '6.0'], ans:0,
+          why:'在小數的<strong>最後面</strong>加 0，每一個數字都還留在原來的位，大小不會變：0.6 ＝ <strong>0.60</strong> ＝ 0.600。0.06 的 6 在百分位（6 個 0.01），比 0.6 小很多；0.66 多了 6 個 0.01；6.0 是 6，不是 0.6。' }
+      ],
+      qsAdv: [
+        { stem:'文字題：小安早上跑了 0.85 公里，下午跑了 1.4 公里。這一天一共跑了多少公里？',
+          opts:['0.99', '1.25', '2.25', '2.2'], ans:2,
+          why:'把 1.4 補成 1.40 再對齊小數點：百分位 5 ＋ 0 ＝ 5；十分位 8 ＋ 4 ＝ 12，滿 10 了，這一位寫 2，向個位進 1；個位 0 ＋ 1 ＋ 進位的 1 ＝ 2。一共 <strong>2.25</strong> 公里。' },
+        { stem:'文字題：一瓶果汁有 5 公升，倒出 2.34 公升，還剩多少公升？',
+          opts:['3.66', '2.66', '2.76', '3.74'], ans:1,
+          why:'先把 5 補成 5.00（0 補在最後面，大小不變），再對齊小數點。百分位 0 － 4 不夠減，要向十分位借，可是十分位也是 0，所以十分位先向個位借 1：個位 5 剩 4、十分位變成 10；十分位再借 1 給百分位，十分位剩 9、百分位變成 10。這樣 10 － 4 ＝ 6、9 － 3 ＝ 6、4 － 2 ＝ 2，還剩 <strong>2.66</strong> 公升。' },
+        { stem:'文字題：三個人的跳遠成績是 1.4 公尺、1.38 公尺、1.405 公尺。哪一個成績最好？',
+          opts:['1.38', '1.4', '都一樣', '1.405'], ans:3,
+          why:'整數部分都是 1。比十分位：1.38 是 3，另外兩個是 4，所以 <strong>1.38 最小</strong>。剩下 1.4 和 1.405：把 1.4 補成 1.400，百分位都是 0，再比千分位 —— 0 和 5，5 比較大，所以 <strong>1.405 最好</strong>。<strong>位數最多的不一定最大</strong>：1.38 有兩位，卻是最小的。' },
+        /* ⚠️ 原本用「繩子剪掉再接上」，可是打結會吃掉長度，2.05 那個選項就變成
+           「可以由正確推理走到」的答案（§六之二）。換成倒水：倒掉和加入都沒有損耗。 */
+        { stem:'文字題：水桶裡有 2.5 公升的水，先倒掉 0.75 公升，再加入 0.4 公升。現在桶子裡有多少公升？',
+          opts:['2.15', '2.85', '1.35', '2.05'], ans:0,
+          why:'兩步都要先對齊小數點。先減：2.5 補成 2.50，2.50 － 0.75 ＝ 1.75（百分位 0 － 5 不夠減，向十分位借）。再加：1.75 ＋ 0.40 ＝ <strong>2.15</strong> 公升。' }
+      ],
+      qsBoost: [
+        { stem:'迷思檢查：小明說「0.48 比 0.5 大，因為 0.48 有兩位數字，0.5 只有一位」。哪裡不對？',
+          opts:['沒有不對，位數多的小數就比較大',
+                '位數多少不能用來判斷大小 —— 要從整數部分開始一位一位比：十分位 5 比 4 大，所以 0.5 比較大',
+                '應該說 0.48 和 0.5 一樣大',
+                '應該先把 0.5 改寫成 0.05 再比'], ans:1,
+          why:'位數多少<strong>不能</strong>用來判斷大小。把 0.5 補成 0.50 再比就很清楚：整數部分都是 0，十分位 5 比 4 大，所以 <strong>0.5 比較大</strong>。（0 補在最後面不會改變大小；把 0.5 寫成 0.05 卻會 —— 那是把 5 推到百分位去了。）' },
+        { stem:'迷思檢查：小華說「0.5 ＝ 0.05，多寫一個 0 沒差」。哪裡不對？',
+          opts:['沒有不對，小數點後面的 0 想加幾個都可以',
+                '不對，因為 0.05 比 0.5 大',
+                '補在最後面的 0 才不影響大小（0.5 ＝ 0.50）；這個 0 插在小數點右邊，把 5 從十分位推到百分位，5 個 0.1 變成 5 個 0.01',
+                '不對，因為小數點後面不可以出現 0'], ans:2,
+          why:'用格子圖看最清楚：0.5 塗 50 格，0.05 只塗 5 格。<strong>加在最後面</strong>的 0（0.5 → 0.50）每一位的數字都沒有動，所以大小不變；<strong>插在小數點右邊</strong>的 0（0.5 → 0.05）把後面的數字整批往右推一位，值就變了。（0.05、3.05 都有 0，小數點後面當然可以有 0。）' }
+      ],
+      s7h2:'小數放大鏡挑戰',
+      s7lead:'五關：認位名、算位值、比大小、加、減。答錯只扣一點分，可以再試。',
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
+      gHintBtn:'💡 提示',
+      gPrompt:{
+        place: function(num, dig){ return '<b>' + num + '</b> 裡面的「' + dig + '」在哪一位？'; },
+        value: function(num, dig, place){ return '<b>' + num + '</b> 的' + place + '是 ' + dig + '，這個 ' + dig + ' 表示多少？'; },
+        compare: function(x, y){ return '<b>' + x + '</b> 和 <b>' + y + '</b>，哪一個比較大？'; },
+        sum: function(x, y){ return '<b>' + x + ' ＋ ' + y + '</b> ＝ ？'; },
+        diff: function(x, y){ return '<b>' + x + ' － ' + y + '</b> ＝ ？'; }
+      },
+      gOpt:{ same:'一樣大', cannot:'沒辦法比較' },
+      gHint1:{
+        place:'提示 1：從小數點往右數 —— 第一位、第二位、第三位。',
+        value:'提示 1：那一位的「一個」是多少？十分位一個是 0.1、百分位一個是 0.01、千分位一個是 0.001。',
+        compare:'提示 1：先補零補到一樣長，再從整數部分開始一位一位比。',
+        sum:'提示 1：先補零，對齊小數點，從最右邊那一位開始加。',
+        diff:'提示 1：先補零，對齊小數點，從最右邊那一位開始減；不夠減就向左邊借。'
+      },
+      gHint2:{
+        place: function(n){ return '提示 2：從小數點往右數到第 ' + n + ' 個位置。'; },
+        value: function(unit){ return '提示 2：那一位的一個是 ' + unit + '，有幾個就是幾倍。'; },
+        compare: function(place){ return '提示 2：分出大小的是' + place + '。'; },
+        sum: function(carry){ return carry ? '提示 2：有一位會滿 10，記得向左邊進 1。' : '提示 2：這一題每一位加起來都不滿 10，不用進位。'; },
+        diff: function(borrow){ return borrow ? '提示 2：有一位不夠減，記得向左邊借 1。' : '提示 2：這一題每一位都夠減，不用借位。'; }
+      },
+      gCorrectFirst:'一次就對，＋20 分！', gCorrectRetry:'這次對了，＋10 分。',
+      gWrong:'再看一次，答錯扣 5 分。', gClear:'過關 🎉',
+      gWin: function(s){ return '五關全部過關！總分 ' + s + ' 分 🏆'; },
+      gNextBtn:'下一關', gRestartBtn:'重新開始',
+      ebNext:'學完之後', nextH2:'把它記牢的三個動作',
+      next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
+      next3:'❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
+      footer:'把整頁縮成一句：<strong>小數點右邊第一位十分位、第二位百分位、第三位千分位；比大小和算加減之前，都先在最後面補 0 補成一樣長 —— 然後<strong>比大小</strong>從整數部分往右比，<strong>直式加減</strong>從最右邊那一位往左算。</strong>'
+    },
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Teach Me Decimals — The Decimal Zoom', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (this page)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔍 The Decimal Zoom',
+      sub:'Keep cutting to the right of the tenths and you get hundredths and thousandths',
+      intro:'In grade 3, decimals were only cut as far as the <strong>tenths</strong> (0.1).<br>This lesson turns the zoom two more clicks: <strong>hundredths</strong> (0.01) and <strong>thousandths</strong> (0.001).',
+      scopeNote:'This lesson does <strong>three things</strong>: getting to know hundredths and thousandths, comparing decimals that have <strong>different numbers of decimal places</strong>, and <strong>adding and subtracting two-place decimals in column form</strong> (so carrying and borrowing can now happen in the hundredths too). The grade-3 decimals lesson used one decimal place only, so its carrying and borrowing never went past the tenths. <strong>Multiplying and dividing decimals, and swapping between fractions and decimals, are grade 5</strong> (Multiplying and Dividing Decimals); <strong>rounding to a decimal place is grade 5</strong> (Rounding). This lesson does <strong>no multiplying, no dividing and no rounding</strong>; <strong>addition and subtraction stay at two decimal places</strong>, and thousandths appear only in the getting-to-know and comparing parts.',
+      modeTitle:'How do you want to learn today? (You can switch any time.)',
+      modes:{
+        ahead:  { icon:'🚀', h:'Running ahead', p:'Not taught yet — a first look', banner:'Ahead mode: take the examples slowly, 6 basic questions only, and the game gives you the first hint automatically.' },
+        school: { icon:'🏫', h:'Keeping up', p:'Being taught now — full practice', banner:'Keeping-up mode: all 10 questions, including 4 textbook-style word problems.' },
+        boost:  { icon:'💪', h:'Extra practice', p:'Taught, but still shaky', banner:'Boost mode: 2 misconception checks first, 12 questions in total. Afterwards, go and try the review challenge.' }
+      },
+      eb1:'Example 1', eb2:'Example 2', eb3:'Example 3', eb4:'Example 4', eb5:'Example 5', eb6:'Questions', eb7:'Game',
+      placeName:{ ones:'the ones place', tenth:'the tenths place', hundredth:'the hundredths place', thousandth:'the thousandths place' },
+      tensName:'the tens place',
+      digits:['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'],
+      s1h2:'Cut one part into ten again',
+      s1lead:'The whole big square is <strong>1</strong>. Cut it into 10 equal strips and one strip is <strong>0.1</strong>; cut one strip into 10 and one square is <strong>0.01</strong>; cut one of those into 10 and one sliver is <strong>0.001</strong>. Tap the three buttons below to turn the zoom.',
+      s1chip:{ tenth:'Cut into 10 strips → 0.1', hundredth:'Cut again → 0.01', thousandth:'Cut again → 0.001' },
+      s1title:{ main:'The whole thing is 1', zoomH:'One strip, magnified', zoomT:'One square, magnified' },
+      s1cap:{
+        tenth:'10 strips, 1 shaded',
+        hundredth:'100 squares, 1 shaded',
+        thousandth:'100 squares, 1 shaded'
+      },
+      s1zoomCap:{ hundredth:'one strip cut into 10', thousandth:'one square cut into 10' },
+      s1narr:{
+        tenth:'Cut <strong>1</strong> into <strong>10</strong> equal parts and one part is <strong>0.1</strong> (one tenth). The 1 of 0.1 is written in <strong>the tenths place</strong>.',
+        hundredth:'Cut that strip into <strong>10</strong> again and the whole 1 becomes <strong>100</strong> squares, so one square is <strong>0.01</strong> (one hundredth). That means <strong>one 0.1 = ten 0.01s</strong>.',
+        thousandth:'Cut that square into <strong>10</strong> again and the whole 1 becomes <strong>1000</strong> parts, so one part is <strong>0.001</strong> (one thousandth). That means <strong>one 0.01 = ten 0.001s</strong>, and so <strong>one 0.1 = a hundred 0.001s</strong>.'
+      },
+      s1result: function(one, cut){ return 'One part is ' + one + ', which is one part in ' + cut; },
+      s1note:'💬 There is only one rule: <strong>move one place to the right and each part is cut into 10 again, so it becomes one tenth of the place before it</strong>. That is why one 0.1 = ten 0.01s = a hundred 0.001s.',
+      s2h2:'One digit per place, and only one',
+      s2lead:'To the right of the decimal point, <strong>the first place is the tenths, the second is the hundredths, the third is the thousandths</strong>. Tap any digit in the table to see what it is worth.',
+      s2hint:'👆 Tap one of the digits in the table.',
+      s2narr: function(dig, place, unit, val){
+        return 'This <strong>' + dig + '</strong> sits in <strong>' + place + '</strong>, so it means <strong>' + dig + ' lots of ' + unit + '</strong>, which is <strong>' + val + '</strong>.';
+      },
+      s2narrZero: function(place, trailing, natural, shown){
+        return 'This place holds a <strong>0</strong>, so there is nothing at all in <strong>' + place + '</strong>. ' +
+          (trailing
+            ? 'It is <strong>on the end</strong>, with no digit after it to hold a seat for, so it <strong>can</strong> be left out — ' +
+              shown + ' and ' + natural + ' are the same size. It is written here only to make the number of places clear.'
+            : 'This 0 <strong>cannot be left out</strong> — it is holding the seat for the digits <strong>after</strong> it, and dropping it makes a different number.');
+      },
+      s2narrOnes: function(dig){
+        return 'This <strong>' + dig + '</strong> sits in <strong>the ones place</strong>, so it is a whole <strong>' + dig + '</strong>, on the <strong>left</strong> of the decimal point.';
+      },
+      s2read: function(num, words){ return '<b>' + num + '</b> is read as “' + words + '”.'; },
+      s2readDot:'point',
+      s2sum: function(num, parts){ return '<b>' + num + '</b> = ' + parts.join(' + '); },
+      s2part: function(n, unit){ return n + ' lots of ' + unit; },
+      s2note:'💬 When you read a decimal out loud, <strong>say the digits after the point one at a time</strong>: 0.468 is “zero point four six eight”, not “zero point four hundred and sixty-eight”. Each place holds a single digit, so they are not read together the way whole numbers are.',
+      s3h2:'Comparing: pad with zeros, then go place by place',
+      s3lead:'When the two numbers have different numbers of decimal places, first <strong>write extra 0s on the end of the shorter one</strong> until they are the same length (adding 0s on the end does not change the size). Then <strong>compare the whole-number parts first</strong>; if they match, compare the tenths, then the hundredths, then the thousandths — <strong>the first place where they differ decides it</strong>. Tap the buttons below to try.',
+      s3chip: function(x, y){ return x + ' and ' + y; },
+      s3tagPad:'Step 1: pad to the same length',
+      s3pad: function(x, y, xp, yp){
+        return (x === xp && y === yp)
+          ? 'These two are already the same length, so there is nothing to pad: <strong>' + xp + '</strong> and <strong>' + yp + '</strong>.'
+          : 'Pad to the same length: <strong>' + xp + '</strong> and <strong>' + yp + '</strong>. (The 0s go on the end, so nothing changed size.)';
+      },
+      s3tagWhole:'Next, compare the whole-number parts',
+      s3tagPlace: function(place){ return 'Next, compare ' + place; },
+      s3whole: function(a, b, cmp){
+        return 'The whole-number parts are ' + a + ' and ' + b + ': ' +
+          (cmp === 0 ? 'the same, so keep going to the right.'
+           : (cmp > 0 ? a + ' is bigger than ' + b + ' — that settles it, and the rest does not matter.'
+                      : a + ' is smaller than ' + b + ' — that settles it, and the rest does not matter.'));
+      },
+      s3place: function(place, a, b, cmp){
+        return capFirst(place) + ' holds ' + a + ' and ' + b + ': ' +
+          (cmp === 0 ? 'the same, so move one more place right.'
+           : (cmp > 0 ? a + ' is bigger than ' + b + ' — settled.'
+                      : a + ' is smaller than ' + b + ' — settled.'));
+      },
+      s3resultBig: function(big, small){ return big + ' is bigger than ' + small; },
+      s3resultSame: function(x, y){ return x + ' and ' + y + ' are the same size'; },
+      s3note:'💬 <strong>The number of decimal places tells you nothing about the size.</strong> 0.48 has two places and 0.5 has one, yet 0.5 is the bigger one. You have to go place by place.',
+      s4h2:'Column form: line up the decimal points',
+      s4lead:'In column form you <strong>line up the decimal points</strong>: ones under ones, tenths under tenths, hundredths under hundredths. Whichever number is short gets <strong>extra 0s on the end</strong> (the orange ones), then you add or subtract exactly as you would with whole numbers, and finally write the decimal point <strong>straight down in the same column</strong>. Tap the four problems below to see each column.',
+      s4chip: function(x, y, op){ return x + ' ' + op + ' ' + y; },
+      s4padNote: function(list){ return 'Pad first: ' + list.join(', ') + '. The 0s go on the end, so nothing changed size.'; },
+      s4padNone:'Both numbers already have the same number of places, so there is nothing to pad.',
+      s4stepAdd: function(place, a, b, carryIn, sum, digit, carryOut){
+        var head = capFirst(place) + ': ' + a + ' + ' + b + (carryIn ? ' + the 1 carried in' : '') + ' = ' + sum;
+        return head + (carryOut
+          ? ', which reaches 10, so write <strong>' + digit + '</strong> here and carry <strong>1</strong> to the left.'
+          : ', so write <strong>' + digit + '</strong> here.');
+      },
+      s4stepSub: function(place, b, lent, t0, top, borrowOut, digit, leftUnit, rawA){
+        if (t0 < 0){
+          return capFirst(place) + ': this place holds a <strong>0</strong>, and the right has already borrowed 1 from it — ' +
+            'it has nothing to give, so it must <strong>borrow 1 from the left in turn</strong>. That one ' + leftUnit +
+            ' becomes ten of these; pay back the 1 the right took and ' + top + ' are left, so ' + top + ' - ' + b +
+            ' = <strong>' + digit + '</strong>.';
+        }
+        var head = capFirst(place) + ': ' + rawA + (lent ? ' had 1 borrowed away by the right, leaving ' + t0 : '');
+        return borrowOut
+          ? head + ', and ' + t0 + ' - ' + b + ' will not go, so borrow 1 from the left (one ' + leftUnit +
+            ' becomes ten of these), and ' + top + ' - ' + b + ' = <strong>' + digit + '</strong>.'
+          : head + ', and ' + top + ' - ' + b + ' = <strong>' + digit + '</strong>.';
+      },
+      s4leftUnit:{ hundredth:'0.1', tenth:'1', ones:'10' },
+      s4dropZero: function(padded, natural){ return 'The column form gives <strong>' + padded + '</strong>. A 0 on the end can be left off without changing the size, so the answer is written <strong>' + natural + '</strong>.'; },
+      s4resultAdd: function(x, y, r){ return x + ' + ' + y + ' = ' + r; },
+      s4resultSub: function(x, y, r){ return x + ' - ' + y + ' = ' + r; },
+      s4note:'💬 <strong>Do not line the numbers up on the right.</strong> If you add 0.7 + 0.25 by putting the 7 under the 5, you have treated seven 0.1s as seven 0.01s and you get 0.32 — nowhere near. What you line up is the <strong>decimal point</strong>, not the right-hand edge.',
+      s5h2:'A 0 on the end and a 0 at the front are very different',
+      s5lead:'Writing one extra 0 does completely different things depending on where you put it. All three pictures hold 100 squares — count how many are shaded in each.',
+      s5cap: function(n){ return n + ' shaded'; },
+      s5rowSame: function(x, y){ return '<strong>' + x + '</strong> and <strong>' + y + '</strong> shade the same number of squares — they are <strong>the same size</strong>. The 0 went <strong>on the end</strong>, so the 5 stayed in the tenths place.'; },
+      s5rowDiff: function(x, y, nx, ny){ return '<strong>' + x + '</strong> shades ' + nx + ' squares and <strong>' + y + '</strong> shades only ' + ny + ' — a huge difference. That 0 was inserted <strong>right after the decimal point</strong>, which pushed the 5 from the tenths place into the hundredths place.'; },
+      s5note:'💬 A 0 <strong>added on the end</strong> leaves every digit in the place it was already in, so the size does not change: 0.5 = 0.50 = 0.500. A 0 <strong>inserted right after the decimal point</strong> shoves all the digits one place further right (the 5 drops from the tenths to the hundredths), and the value really does change.',
+      s6h2:'Check yourself',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn: function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong: function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      cAll:'Every one correct — brilliant 🏆', cGood:'Nice work! Read the explanations for the ones you missed.', cTry:'Go back through the examples above, then reload and try again.',
+      qs: [
+        { stem:'In 0.468, which place is the “6” in?',
+          opts:['The tenths place', 'The hundredths place', 'The thousandths place', 'The ones place'], ans:1,
+          why:'The first place right of the point is the tenths (a 4 here), the second is the hundredths (6), the third is the thousandths (8). So the 6 is in <strong>the hundredths place</strong> and means six 0.01s.' },
+        { stem:'What do 3 lots of 0.01 make altogether?',
+          opts:['0.3', '0.003', '0.13', '0.03'], ans:3,
+          why:'One 0.01 is one part when 1 is cut into 100, so 3 of them make <strong>0.03</strong> — the 3 goes in <strong>the hundredths place</strong>. 0.3 would be three 0.1s, 0.003 would be three 0.001s, and 0.13 just jams 0.1 and 3 together.' },
+        { stem:'Which is bigger, 0.5 or 0.48?',
+          opts:['0.5', '0.48', 'They are the same', 'There is no way to tell'], ans:0,
+          why:'Both whole-number parts are 0, so compare the tenths: 0.5 has 5 tenths and 0.48 has 4, and 5 beats 4, so <strong>0.5 is bigger</strong>. Padding 0.5 into 0.50 makes it clearer. <strong>More decimal places does not mean bigger.</strong>' },
+        { stem:'0.7 + 0.25 = ?',
+          opts:['0.32', '0.9', '0.95', '1.95'], ans:2,
+          why:'Pad 0.7 into 0.70, then line up the points: hundredths 0 + 5 = 5, tenths 7 + 2 = 9, ones 0 + 0 = 0, so the answer is <strong>0.95</strong>. You only get 0.32 by lining the numbers up on the right (7 under 5), which turns seven 0.1s into seven 0.01s.' },
+        { stem:'1.2 - 0.85 = ?',
+          opts:['0.45', '1.15', '0.37', '0.35'], ans:3,
+          why:'Pad 1.2 into 1.20 and line up the points. Hundredths: 0 - 5 will not go, so borrow 1 from the tenths (one 0.1 becomes ten 0.01s): 10 - 5 = 5. The tenths lost 1 and are down to 1, and 1 - 8 will not go either, so borrow 1 from the ones (one 1 becomes ten 0.1s): 11 - 8 = 3. The ones lost 1 and are down to 0, and 0 - 0 = 0. The answer is <strong>0.35</strong>.' },
+        { stem:'Which one of these is the same size as 0.6?',
+          opts:['0.60', '0.06', '0.66', '6.0'], ans:0,
+          why:'A 0 added <strong>on the end</strong> leaves every digit in its own place, so the size does not change: 0.6 = <strong>0.60</strong> = 0.600. In 0.06 the 6 sits in the hundredths (six 0.01s), far smaller than 0.6; 0.66 has six extra 0.01s; and 6.0 is 6, not 0.6.' }
+      ],
+      qsAdv: [
+        { stem:'Word problem: Ann ran 0.85 kilometres in the morning and 1.4 kilometres in the afternoon. How far did she run that day altogether?',
+          opts:['0.99', '1.25', '2.25', '2.2'], ans:2,
+          why:'Pad 1.4 into 1.40 and line up the points: hundredths 5 + 0 = 5; tenths 8 + 4 = 12, which reaches 10, so write 2 and carry 1 to the ones; ones 0 + 1 + the carried 1 = 2. That is <strong>2.25</strong> kilometres in total.' },
+        { stem:'Word problem: a bottle holds 5 litres of juice. After 2.34 litres are poured out, how much is left?',
+          opts:['3.66', '2.66', '2.76', '3.74'], ans:1,
+          why:'Pad 5 into 5.00 first (0s on the end change nothing), then line up the points. Hundredths: 0 - 4 will not go, so borrow from the tenths — but the tenths are 0 too, so the tenths borrow 1 from the ones first: the ones drop to 4 and the tenths become 10; the tenths then lend 1 to the hundredths, leaving 9 in the tenths and 10 in the hundredths. Now 10 - 4 = 6, 9 - 3 = 6 and 4 - 2 = 2, so <strong>2.66</strong> litres are left.' },
+        { stem:'Word problem: three long-jump results are 1.4 metres, 1.38 metres and 1.405 metres. Which result is the best?',
+          opts:['1.38', '1.4', 'They are all equal', '1.405'], ans:3,
+          why:'All three whole-number parts are 1. Compare the tenths: 1.38 has 3 and the other two have 4, so <strong>1.38 is the smallest</strong>. That leaves 1.4 and 1.405: pad 1.4 into 1.400, the hundredths are both 0, so compare the thousandths — 0 against 5, and 5 wins, so <strong>1.405 is the best</strong>. <strong>Having the most decimal places does not make a number the biggest</strong>: 1.38 has two places and is the smallest of the three.' },
+        { stem:'Word problem: a bucket holds 2.5 litres of water. First 0.75 litres is poured away, then 0.4 litres is poured in. How many litres are in the bucket now?',
+          opts:['2.15', '2.85', '1.35', '2.05'], ans:0,
+          why:'Line up the points in both steps. Subtract first: pad 2.5 into 2.50, and 2.50 - 0.75 = 1.75 (hundredths 0 - 5 will not go, so borrow from the tenths). Then add: 1.75 + 0.40 = <strong>2.15</strong> litres.' }
+      ],
+      qsBoost: [
+        { stem:'Misconception check: Ming says “0.48 is bigger than 0.5, because 0.48 has two digits after the point and 0.5 only has one.” What is wrong with that?',
+          opts:['Nothing is wrong — more decimal places means a bigger number',
+                'The number of decimal places cannot be used to judge size — you go place by place from the whole-number part: 5 tenths beats 4 tenths, so 0.5 is bigger',
+                'He should have said 0.48 and 0.5 are the same size',
+                'He should rewrite 0.5 as 0.05 first, and then compare'], ans:1,
+          why:'The number of decimal places <strong>cannot</strong> be used to judge size. Pad 0.5 into 0.50 and it is obvious: both whole-number parts are 0, and 5 tenths beats 4 tenths, so <strong>0.5 is bigger</strong>. (A 0 on the end changes nothing; rewriting 0.5 as 0.05 changes plenty, because it pushes the 5 into the hundredths.)' },
+        { stem:'Misconception check: Hua says “0.5 = 0.05, one extra 0 makes no difference.” What is wrong with that?',
+          opts:['Nothing is wrong — you can add as many 0s after the point as you like',
+                'It is wrong because 0.05 is bigger than 0.5',
+                'A 0 added on the end is the harmless one (0.5 = 0.50); this 0 was inserted right after the point, which pushed the 5 from the tenths into the hundredths, so five 0.1s became five 0.01s',
+                'It is wrong because a 0 is never allowed after the decimal point'], ans:2,
+          why:'The squares show it best: 0.5 shades 50 of them and 0.05 shades only 5. A 0 <strong>added on the end</strong> (0.5 → 0.50) moves no digit at all, so the size holds; a 0 <strong>inserted right after the point</strong> (0.5 → 0.05) shoves every following digit one place right, and the value changes. (0.05 and 3.05 both contain a 0, so of course 0s are allowed after the point.)' }
+      ],
+      s7h2:'The Decimal Zoom Challenge',
+      s7lead:'Five rounds: name the place, work out what a digit is worth, compare, add, subtract. A wrong answer costs only a little, and you can try again.',
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
+      gHintBtn:'💡 Hint',
+      gPrompt:{
+        place: function(num, dig){ return 'In <b>' + num + '</b>, which place is the “' + dig + '” in?'; },
+        value: function(num, dig, place){ return '<b>' + num + '</b> has ' + dig + ' in ' + place + '. What is that ' + dig + ' worth?'; },
+        compare: function(x, y){ return 'Which is bigger, <b>' + x + '</b> or <b>' + y + '</b>?'; },
+        sum: function(x, y){ return '<b>' + x + ' + ' + y + '</b> = ?'; },
+        diff: function(x, y){ return '<b>' + x + ' - ' + y + '</b> = ?'; }
+      },
+      gOpt:{ same:'They are the same', cannot:'There is no way to tell' },
+      gHint1:{
+        place:'Hint 1: count to the right from the decimal point — first place, second place, third place.',
+        value:'Hint 1: what is one of that place worth? One tenth is 0.1, one hundredth is 0.01, one thousandth is 0.001.',
+        compare:'Hint 1: pad both to the same length first, then go place by place starting from the whole-number part.',
+        sum:'Hint 1: pad, line up the decimal points, and start adding from the right-hand place.',
+        diff:'Hint 1: pad, line up the decimal points, and start subtracting from the right-hand place; borrow from the left if a place will not go.'
+      },
+      gHint2:{
+        place: function(n){ return 'Hint 2: count ' + n + ' places to the right of the decimal point.'; },
+        value: function(unit){ return 'Hint 2: one of that place is ' + unit + ', so count how many of them there are.'; },
+        compare: function(place){ return 'Hint 2: the place that settles it is ' + place + '.'; },
+        sum: function(carry){ return carry ? 'Hint 2: one of the places reaches 10, so remember to carry 1 to the left.' : 'Hint 2: no place reaches 10 in this one, so there is nothing to carry.'; },
+        diff: function(borrow){ return borrow ? 'Hint 2: one of the places will not go, so remember to borrow 1 from the left.' : 'Hint 2: every place goes in this one, so there is nothing to borrow.'; }
+      },
+      gCorrectFirst:'First try — +20 points!', gCorrectRetry:'Got it that time, +10 points.',
+      gWrong:'Look again — a wrong answer costs 5 points.', gClear:'Round cleared 🎉',
+      gWin: function(s){ return 'All five rounds cleared! Total score ' + s + ' 🏆'; },
+      gNextBtn:'Next round', gRestartBtn:'Start again',
+      ebNext:'After the lesson', nextH2:'Three things that make it stick',
+      next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it out for your desk.',
+      next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering it a day later is what counts.',
+      next3:'❓ Anything you did not follow, ask a grown-up or an AI teacher until it makes sense — the people who ask questions learn fastest.',
+      footer:'The whole page in one line: <strong>right of the decimal point it is tenths, then hundredths, then thousandths; before you compare or add or subtract, pad with 0s on the end until both numbers are the same length — then <strong>comparing</strong> works from the whole-number part rightwards, while <strong>column addition and subtraction</strong> work from the right-hand place leftwards.</strong>'
+    }
+  };
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
+  var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+  var NS = 'http://www.w3.org/2000/svg';
+
+  var C_LINE = '#2B2A33', C_FILL = '#E3F4EB', C_EDGE = '#2F9E69';
+  var C_MARK = '#E8871E', C_GRID = '#C9C4B8', C_BLUE = '#3B7DD8', C_MUTED = '#6B6875';
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function svgText(x, y, txt, attrs){
+    var t = svgEl('text', attrs || {});
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    if (!t.getAttribute('text-anchor')) t.setAttribute('text-anchor', 'middle');
+    if (!t.getAttribute('font-size')) t.setAttribute('font-size', G_FONT);
+    if (!t.getAttribute('fill')) t.setAttribute('fill', C_LINE);
+    t.textContent = txt;
+    return t;
+  }
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+  function buildChips(host, items, labelOf, onPick, curIdx){
+    host.textContent = '';
+    items.forEach(function(it, i){
+      var b = makeChip(labelOf(it, i), i === curIdx);
+      b.addEventListener('click', function(){ onPick(i); });
+      host.appendChild(b);
+    });
+  }
+
+  function buildModeCards(){
+    var d = L();
+    modeCards.textContent = '';
+    ['ahead','school','boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  /* ===================== 範例 1：放大鏡 ===================== */
+  var s1idx = 0;
+  var s1chips = document.getElementById('s1chips');
+  var s1fig = document.getElementById('s1fig');
+  var s1narr = document.getElementById('s1narr');
+  var s1result = document.getElementById('s1result');
+
+  /* 畫一個 cols × rows 的格子方框。 */
+  function drawGridBox(svg, box){
+    var i;
+    svg.appendChild(svgEl('rect', {
+      x:box.x, y:box.y, width:box.side, height:box.side,
+      fill:'none', stroke:C_LINE, 'stroke-width':2.5
+    }));
+    for (i = 1; i < box.cols; i++){
+      var gx = box.x + box.side / box.cols * i;
+      svg.appendChild(svgEl('line', { x1:gx, y1:box.y, x2:gx, y2:box.y + box.side, stroke:C_GRID, 'stroke-width':1 }));
+    }
+    for (i = 1; i < box.rows; i++){
+      var gy = box.y + box.side / box.rows * i;
+      svg.appendChild(svgEl('line', { x1:box.x, y1:gy, x2:box.x + box.side, y2:gy, stroke:C_GRID, 'stroke-width':1 }));
+    }
+  }
+  function renderS1(){
+    var d = L(), c = ZOOM_CASES[s1idx], plan = zoomPlan(c.key);
+    s1fig.textContent = '';
+    plan.shade.forEach(function(r){
+      s1fig.appendChild(svgEl('rect', { x:r.x, y:r.y, width:r.w, height:r.h, fill:C_FILL, stroke:C_EDGE, 'stroke-width':2 }));
+    });
+    drawGridBox(s1fig, plan.main);
+    if (plan.zoom){
+      plan.links.forEach(function(l){
+        s1fig.appendChild(svgEl('line', {
+          x1:l.x1, y1:l.y1, x2:l.x2, y2:l.y2,
+          stroke:C_MARK, 'stroke-width':1.5, 'stroke-dasharray':'5 4'
+        }));
+      });
+      /* 被放大的那一小塊要框起來，不然看不出放大鏡對著哪裡 */
+      s1fig.appendChild(svgEl('rect', {
+        x:plan.zoom.src.x, y:plan.zoom.src.y, width:plan.zoom.src.w, height:plan.zoom.src.h,
+        fill:'none', stroke:C_MARK, 'stroke-width':2
+      }));
+      var z = plan.zoom.shade;
+      s1fig.appendChild(svgEl('rect', { x:z.x, y:z.y, width:z.w, height:z.h, fill:C_FILL, stroke:C_EDGE, 'stroke-width':2 }));
+      drawGridBox(s1fig, plan.zoom);
+      s1fig.appendChild(svgText(plan.zoom.x + plan.zoom.side / 2, plan.zoom.y + G_TITLE_DY,
+        c.key === 'hundredth' ? d.s1title.zoomH : d.s1title.zoomT, { fill:C_MARK }));
+      s1fig.appendChild(svgText(plan.zoom.x + plan.zoom.side / 2, plan.zoom.y + plan.zoom.side + G_CAP_DY,
+        d.s1zoomCap[c.key], { fill:C_MARK }));
+    }
+    s1fig.appendChild(svgText(plan.main.x + plan.main.side / 2, plan.main.y + G_TITLE_DY, d.s1title.main, { fill:C_BLUE }));
+    s1fig.appendChild(svgText(plan.main.x + plan.main.side / 2, plan.main.y + plan.main.side + G_CAP_DY, d.s1cap[c.key]));
+    s1narr.innerHTML = d.s1narr[c.key];
+    s1result.textContent = d.s1result(fmtNat(c.mil), c.cut);
+  }
+  function buildS1Chips(){
+    var d = L();
+    buildChips(s1chips, ZOOM_CASES, function(c){ return d.s1chip[c.key]; }, function(i){ s1idx = i; renderS1(); }, s1idx);
+  }
+
+  /* ===================== 範例 2：位值表 ===================== */
+  var s2idx = 0, s2pick = -9;
+  var s2chips = document.getElementById('s2chips');
+  var pvHead = document.getElementById('pvHead');
+  var pvBody = document.getElementById('pvBody');
+  var s2narr = document.getElementById('s2narr');
+  var s2read = document.getElementById('s2read');
+
+  /* 讀法：整數部分一位，小數部分一位一位唸。 */
+  function readWords(mil, p, d){
+    var w = Math.floor(mil / MIL);
+    var out = [d.digits[w], d.s2readDot];
+    for (var k = 1; k <= p; k++) out.push(d.digits[digitAt(mil, k)]);
+    return lang === 'zh' ? out.join('') : out.join(' ');
+  }
+  function renderS2(){
+    var d = L(), c = PV_CASES[s2idx];
+    pvHead.textContent = ''; pvBody.textContent = '';
+    [0, 'dot', 1, 2, 3].forEach(function(k){
+      var th = document.createElement('th');
+      if (k === 'dot'){ th.className = 'dot'; th.textContent = ''; }
+      else th.textContent = d.placeName[PLACE_KEYS[k]];
+      pvHead.appendChild(th);
+      var td = document.createElement('td');
+      if (k === 'dot'){
+        td.className = 'dot';
+        var sp = document.createElement('span');
+        sp.textContent = '.';
+        td.appendChild(sp);
+        pvBody.appendChild(td);
+        return;
+      }
+      var shown = (k === 0) || (k <= c.p);
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = shown ? String(digitAt(c.mil, k)) : '—';
+      if (!shown){ td.className = 'empty'; b.disabled = true; }
+      else {
+        if (s2pick === k) td.className = 'on';
+        b.addEventListener('click', function(){ s2pick = k; renderS2(); });
+      }
+      td.appendChild(b);
+      pvBody.appendChild(td);
+    });
+
+    var num = fmtPad(c.mil, c.p);
+    if (s2pick === 0 || (s2pick >= 1 && s2pick <= c.p)){
+      var dig = digitAt(c.mil, s2pick);
+      if (s2pick === 0) s2narr.innerHTML = d.s2narrOnes(dig);
+      else if (dig === 0){
+        var trailing = isTrailingZero(c.mil, s2pick);
+        s2narr.innerHTML = d.s2narrZero(d.placeName[PLACE_KEYS[s2pick]], trailing,
+          fmtNat(c.mil), fmtPad(c.mil, c.p));
+      }
+      else s2narr.innerHTML = d.s2narr(dig, d.placeName[PLACE_KEYS[s2pick]],
+        fmtNat(placeUnit(s2pick)), fmtNat(placeValue(c.mil, s2pick)));
+    } else {
+      s2narr.textContent = d.s2hint;
+    }
+    /* 讀法 ＋ 拆成幾個 1、幾個 0.1、幾個 0.01、幾個 0.001 */
+    var parts = [];
+    if (Math.floor(c.mil / MIL) > 0) parts.push(d.s2part(Math.floor(c.mil / MIL), '1'));
+    for (var k2 = 1; k2 <= c.p; k2++){
+      if (digitAt(c.mil, k2) > 0) parts.push(d.s2part(digitAt(c.mil, k2), fmtNat(placeUnit(k2))));
+    }
+    s2read.innerHTML = d.s2read(num, readWords(c.mil, c.p, d)) +
+      (parts.length ? '<br>' + d.s2sum(num, parts) : '');
+  }
+  function buildS2Chips(){
+    var d = L();
+    buildChips(s2chips, PV_CASES, function(c){ return fmtPad(c.mil, c.p); },
+      function(i){ s2idx = i; s2pick = -9; renderS2(); }, s2idx);
+  }
+
+  /* ===================== 範例 3：比大小 ===================== */
+  var s3idx = 0;
+  var s3chips = document.getElementById('s3chips');
+  var s3fig = document.getElementById('s3fig');
+  var s3steps = document.getElementById('s3steps');
+  var s3result = document.getElementById('s3result');
+
+  function renderS3(){
+    var d = L(), c = CMP_CASES[s3idx];
+    var plan = cmpPlan(c.a, c.b, c.pa, c.pb), nl = nlPlan(c.a, c.b);
+    var xa = fmtPad(c.a, c.pa), xb = fmtPad(c.b, c.pb);
+    var pa = fmtPad(c.a, plan.pad), pb = fmtPad(c.b, plan.pad);
+
+    /* --- 數線 --- */
+    s3fig.textContent = '';
+    s3fig.appendChild(svgEl('line', {
+      x1:NL_X0, y1:NL_Y, x2:NL_X1, y2:NL_Y, stroke:C_LINE, 'stroke-width':2.5
+    }));
+    for (var i = 0; i <= nl.n; i++){
+      var x = nlX(nl.lo + nl.st * i, nl);
+      var big = (i === 0 || i === nl.n);
+      var h = big ? NL_BIGTICK : NL_TICK;
+      s3fig.appendChild(svgEl('line', {
+        x1:x, y1:NL_Y - h, x2:x, y2:NL_Y + h,
+        stroke:big ? C_LINE : C_GRID, 'stroke-width':big ? 2.5 : 1.5
+      }));
+    }
+    /* 兩端的標籤（線的下面第一排） */
+    s3fig.appendChild(svgText(NL_X0, NL_Y + NL_END_DY, fmtNat(nl.lo), { 'font-size':NL_FONT, fill:C_MUTED }));
+    s3fig.appendChild(svgText(NL_X1, NL_Y + NL_END_DY, fmtNat(nl.hi), { 'font-size':NL_FONT, fill:C_MUTED }));
+    /* A 在線的上面、B 在線的下面第二排 —— 兩個永遠不會疊到，
+       就算兩個數只差一小格（0.457 和 0.46）也一樣，
+       而 B 那一排也不會撞到兩端的標籤（不同排）。 */
+    var ax = nlX(c.a, nl), bx = nlX(c.b, nl);
+    s3fig.appendChild(svgEl('line', {
+      x1:bx, y1:NL_Y + NL_TICK, x2:bx, y2:NL_Y + NL_BOT_DY - 12,
+      stroke:C_MARK, 'stroke-width':1.5, 'stroke-dasharray':'4 3'
+    }));
+    s3fig.appendChild(svgEl('circle', { cx:ax, cy:NL_Y, r:NL_DOT, fill:C_EDGE }));
+    s3fig.appendChild(svgEl('circle', { cx:bx, cy:NL_Y, r:NL_DOT, fill:C_MARK }));
+    s3fig.appendChild(svgText(ax, NL_Y + NL_TOP_DY, xa, { 'font-size':NL_FONT, fill:C_EDGE, 'font-weight':'700' }));
+    s3fig.appendChild(svgText(bx, NL_Y + NL_BOT_DY, xb, { 'font-size':NL_FONT, fill:C_MARK, 'font-weight':'700' }));
+
+    /* --- 步驟 --- */
+    s3steps.textContent = '';
+    var padRow = document.createElement('div');
+    padRow.className = 'cmprow';
+    padRow.innerHTML = '<span class="tag">' + d.s3tagPad + '</span>' + d.s3pad(xa, xb, pa, pb);
+    s3steps.appendChild(padRow);
+    plan.steps.forEach(function(st){
+      var row = document.createElement('div');
+      row.className = 'cmprow' + (st.cmp !== 0 ? ' on' : '');
+      var tag = (st.kind === 'whole') ? d.s3tagWhole : d.s3tagPlace(d.placeName[PLACE_KEYS[st.k]]);
+      var body = (st.kind === 'whole')
+        ? d.s3whole(st.a, st.b, st.cmp)
+        : d.s3place(d.placeName[PLACE_KEYS[st.k]], st.a, st.b, st.cmp);
+      row.innerHTML = '<span class="tag">' + tag + '</span>' + body;
+      s3steps.appendChild(row);
+    });
+    s3result.textContent = plan.cmp === 0
+      ? d.s3resultSame(xa, xb)
+      : (plan.cmp > 0 ? d.s3resultBig(xa, xb) : d.s3resultBig(xb, xa));
+  }
+  function buildS3Chips(){
+    var d = L();
+    buildChips(s3chips, CMP_CASES,
+      function(c){ return d.s3chip(fmtPad(c.a, c.pa), fmtPad(c.b, c.pb)); },
+      function(i){ s3idx = i; renderS3(); }, s3idx);
+  }
+
+  /* ===================== 範例 4：直式 ===================== */
+  var s4idx = 0;
+  var s4chips = document.getElementById('s4chips');
+  var vfTable = document.getElementById('vfTable');
+  var s4steps = document.getElementById('s4steps');
+  var s4result = document.getElementById('s4result');
+
+  /* 一列直式：opText 是最左邊那一格，digits 是四個數字欄的字，
+     padFlag 標哪幾格是補上去的 0。 */
+  function vfRow(opText, digits, padFlag, cls, withDot){
+    var tr = document.createElement('tr');
+    if (cls) tr.className = cls;
+    var td0 = document.createElement('td');
+    td0.className = 'op'; td0.textContent = opText || '';
+    tr.appendChild(td0);
+    [0, 1].forEach(function(i){
+      var td = document.createElement('td');
+      td.textContent = digits[i];
+      if (padFlag && padFlag[i]) td.className = 'pad';
+      tr.appendChild(td);
+    });
+    var dot = document.createElement('td');
+    dot.className = 'dotcol';
+    dot.textContent = withDot ? '.' : '';
+    tr.appendChild(dot);
+    [2, 3].forEach(function(i){
+      var td = document.createElement('td');
+      td.textContent = digits[i];
+      if (padFlag && padFlag[i]) td.className = 'pad';
+      tr.appendChild(td);
+    });
+    return tr;
+  }
+  /* 數字欄的字：十位是 0 就留白（不寫沒有意義的 0），其餘一律寫出來。 */
+  function vfDigits(arr){
+    return VF_POS.map(function(k, i){
+      if (k === -1 && arr[i] === 0) return '';
+      return String(arr[i]);
+    });
+  }
+  function renderS4(){
+    var d = L(), c = VF_CASES[s4idx], plan = colPlan(c.a, c.b, c.op);
+    var opSign = (c.op === '+') ? (lang === 'zh' ? '＋' : '+') : (lang === 'zh' ? '－' : '-');
+    vfTable.textContent = '';
+
+    /* 進位／借位的標記。carry[i] / borrow[i] 是「第 i 欄往左邊進（借）的 1」，
+       所以標記要畫在左邊那一欄（i − 1）的頭上。 */
+    var markCells = ['', '', '', ''];
+    for (var i = 1; i < VF_POS.length; i++){
+      var v = (c.op === '+') ? plan.carry[i] : plan.borrow[i];
+      if (v) markCells[i - 1] = (c.op === '+') ? '+1' : '-1';
+    }
+    vfTable.appendChild(vfRow('', markCells, null, 'mark', false));
+    vfTable.appendChild(vfRow('', vfDigits(plan.A), plan.padA, null, true));
+    vfTable.appendChild(vfRow(opSign, vfDigits(plan.B), plan.padB, null, true));
+    var rule = document.createElement('tr');
+    rule.className = 'rule';
+    for (var j = 0; j < 6; j++) rule.appendChild(document.createElement('td'));
+    vfTable.appendChild(rule);
+    vfTable.appendChild(vfRow('', vfDigits(plan.R), null, null, true));
+
+    /* 補零說明 */
+    s4steps.textContent = '';
+    var padList = [];
+    if (places(c.a) < 2) padList.push(fmtNat(c.a) + ' → ' + fmtPad(c.a, 2));
+    if (places(c.b) < 2) padList.push(fmtNat(c.b) + ' → ' + fmtPad(c.b, 2));
+    var li0 = document.createElement('li');
+    li0.innerHTML = padList.length ? d.s4padNote(padList) : d.s4padNone;
+    s4steps.appendChild(li0);
+
+    /* 一欄一欄的說明：從最右邊（百分位）往左走到個位。
+       十位那一欄如果三列都是 0，就不用講。 */
+    for (var i2 = VF_POS.length - 1; i2 >= 0; i2--){
+      var k = VF_POS[i2];
+      if (k === -1 && plan.A[0] === 0 && plan.B[0] === 0 && plan.R[0] === 0) continue;
+      var place = (k === -1) ? d.tensName : d.placeName[PLACE_KEYS[k]];
+      var li = document.createElement('li');
+      if (c.op === '+'){
+        var at4 = addStep(plan, i2);
+        li.innerHTML = d.s4stepAdd(place, plan.A[i2], plan.B[i2], at4.carryIn, at4.sum, plan.R[i2], plan.carry[i2] === 1);
+      } else {
+        var st4 = subStep(plan, i2);
+        /* 向左邊借的時候，左邊那一位的「一個」換成 10 個這一位的：
+           百分位向十分位借 → 一個 0.1；十分位向個位借 → 一個 1；個位向十位借 → 一個 10。 */
+        var leftUnit = (k === 2) ? d.s4leftUnit.hundredth
+                     : (k === 1) ? d.s4leftUnit.tenth : d.s4leftUnit.ones;
+        li.innerHTML = d.s4stepSub(place, plan.B[i2], st4.lent, st4.t0, st4.top,
+          plan.borrow[i2] === 1, plan.R[i2], leftUnit, plan.A[i2]);
+      }
+      s4steps.appendChild(li);
+    }
+
+    /* ⚠️ 直式算出來的是「補齊兩位」的樣子（0.65 ＋ 0.45 → 1.10），可是答案寫成 1.1。
+       畫面上兩個數字不一樣，一定要說一句話，不然孩子會以為其中一個寫錯了。
+       （這是把圖排成接觸表截圖才看到的，沒有任何檢查會響。） */
+    if (needsDropZero(plan.res)){
+      var liz = document.createElement('li');
+      liz.innerHTML = d.s4dropZero(fmtPad(plan.res, 2), fmtNat(plan.res));
+      s4steps.appendChild(liz);
+    }
+
+    s4result.textContent = (c.op === '+')
+      ? d.s4resultAdd(fmtNat(c.a), fmtNat(c.b), fmtNat(plan.res))
+      : d.s4resultSub(fmtNat(c.a), fmtNat(c.b), fmtNat(plan.res));
+  }
+  function buildS4Chips(){
+    var d = L();
+    buildChips(s4chips, VF_CASES,
+      function(c){
+        return d.s4chip(fmtNat(c.a), fmtNat(c.b),
+          (c.op === '+') ? (lang === 'zh' ? '＋' : '+') : (lang === 'zh' ? '－' : '-'));
+      },
+      function(i){ s4idx = i; renderS4(); }, s4idx);
+  }
+
+  /* ===================== 範例 5：0 放哪裡 ===================== */
+  var s5fig = document.getElementById('s5fig');
+  var s5box = document.getElementById('s5box');
+
+  function renderS5(){
+    var d = L(), plans = trioPlan(TRIO_CASES);
+    s5fig.textContent = '';
+    plans.forEach(function(p){
+      p.rects.forEach(function(r){
+        s5fig.appendChild(svgEl('rect', { x:r.x, y:r.y, width:r.w, height:r.h, fill:C_FILL, stroke:'none' }));
+      });
+      drawGridBox(s5fig, { x:p.x, y:p.y, side:p.side, cols:10, rows:10 });
+      s5fig.appendChild(svgText(p.x + p.side / 2, p.y + T_TITLE_DY, fmtPad(p.mil, p.p),
+        { 'font-size':20, fill:C_BLUE, 'font-weight':'700' }));
+      s5fig.appendChild(svgText(p.x + p.side / 2, p.y + p.side + T_CAP_DY, d.s5cap(p.cells), { 'font-size':T_FONT }));
+    });
+    s5box.textContent = '';
+    var a = plans[0], b = plans[1], c = plans[2];
+    var r1 = document.createElement('div');
+    r1.className = 'triorow same';
+    r1.innerHTML = d.s5rowSame(fmtPad(a.mil, a.p), fmtPad(b.mil, b.p));
+    s5box.appendChild(r1);
+    var r2 = document.createElement('div');
+    r2.className = 'triorow diff';
+    r2.innerHTML = d.s5rowDiff(fmtPad(a.mil, a.p), fmtPad(c.mil, c.p), a.cells, c.cells);
+    s5box.appendChild(r2);
+  }
+
+  /* ===================== 試題 ===================== */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
+  function buildQuiz(){
+    var d = L();
+    var list = quizSet();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    qTotal.textContent = list.length;
+    list.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(n); box.appendChild(stem); box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ===================== 小遊戲 ===================== */
+  var gRound = 0, gScore = 0, gMistake = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gPromptEl = document.getElementById('gPrompt');
+  var gAnswers = document.getElementById('gAnswers');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+  var hintLevel = 0;
+
+  function roundOptText(d, r, key){
+    if (r.kind === 'compare'){
+      if (key === 'A') return fmtPad(r.a, r.pa);
+      if (key === 'B') return fmtPad(r.b, r.pb);
+      return d.gOpt[key];
+    }
+    if (r.kind === 'place') return d.placeName[key];
+    return key;
+  }
+  function roundPrompt(d, r){
+    if (r.kind === 'place')   return d.gPrompt.place(fmtPad(r.mil, r.p), digitAt(r.mil, r.k));
+    if (r.kind === 'value')   return d.gPrompt.value(fmtPad(r.mil, r.p), digitAt(r.mil, r.k), d.placeName[PLACE_KEYS[r.k]]);
+    if (r.kind === 'compare') return d.gPrompt.compare(fmtPad(r.a, r.pa), fmtPad(r.b, r.pb));
+    if (r.kind === 'sum')     return d.gPrompt.sum(fmtNat(r.a), fmtNat(r.b));
+    return d.gPrompt.diff(fmtNat(r.a), fmtNat(r.b));
+  }
+  function roundHint2(d, r){
+    if (r.kind === 'place') return d.gHint2.place(r.k);
+    if (r.kind === 'value') return d.gHint2.value(fmtNat(placeUnit(r.k)));
+    if (r.kind === 'compare'){
+      var plan = cmpPlan(r.a, r.b), last = plan.steps[plan.steps.length - 1];
+      return d.gHint2.compare(last.kind === 'whole' ? d.placeName.ones : d.placeName[PLACE_KEYS[last.k]]);
+    }
+    if (r.kind === 'sum') return d.gHint2.sum(colPlan(r.a, r.b, '+').carry.indexOf(1) >= 0);
+    return d.gHint2.diff(colPlan(r.a, r.b, '-').borrow.indexOf(1) >= 0);
+  }
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRound];
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+
+    hintLevel = (mode === 'ahead') ? 1 : 0;
+    gHintBtn.disabled = false;
+    elHint.textContent = (mode === 'ahead') ? d.gHint1[round.kind] : '';
+
+    gPromptEl.innerHTML = '<b>' + roundPrompt(d, round) + '</b>';
+
+    gAnswers.textContent = '';
+    round.opts.forEach(function(key, oi){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'degbtn';
+      b.textContent = roundOptText(d, round, key);
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        if (oi === round.ans){
+          var all = gAnswers.querySelectorAll('.degbtn');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          b.classList.add('right');
+          if (gMistake){
+            gScore += 10;
+            gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry + '</span>';
+          } else {
+            gScore += 20;
+            gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst + '</span>';
+          }
+          if (gRound === ROUNDS.length - 1){
+            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
+          } else {
+            gMsg.innerHTML += ' ' + d.gClear;
+            gNext.disabled = false;
+          }
+        } else {
+          gMistake = true;
+          b.disabled = true;
+          b.classList.add('wrong');
+          gScore = Math.max(0, gScore - 5);
+          gMsg.innerHTML = '<span class="no">' + d.gWrong + '</span>';
+        }
+        elScore.textContent = gScore;
+      });
+      gAnswers.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+  gHintBtn.addEventListener('click', function(){
+    var d = L(), round = ROUNDS[gRound];
+    hintLevel++;
+    if (hintLevel === 1){
+      elHint.textContent = d.gHint1[round.kind];
+    } else {
+      elHint.textContent = roundHint2(d, round);
+      gHintBtn.disabled = true;
+    }
+  });
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildModeCards();
+    buildS1Chips(); renderS1();
+    buildS2Chips(); renderS2();
+    buildS3Chips(); renderS3();
+    buildS4Chips(); renderS4();
+    renderS5();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+  /* 記錄最後上的課，供首頁「繼續上次」使用 */
+  try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-4/math/decimal/', zh:'小數放大鏡 — 百分位、千分位與小數加減', en:'The Decimal Zoom', icon:'🔍'})); } catch(e){}
+
+})();
+</script>
+</body>
+</html>
