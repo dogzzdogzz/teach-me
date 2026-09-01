@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 乘除升級站</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .figwrap{margin:10px 0 14px;text-align:center;overflow-x:auto}
+  .scene{width:100%;max-width:360px;height:130px;display:block;margin:0 auto}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;position:sticky;bottom:8px;
+  }
+  .result{
+    margin-top:22px;background:var(--card);border:2px solid var(--green);border-radius:18px;
+    padding:20px;display:none;
+  }
+  .result.on{display:block}
+  .result .line{font-size:19px;font-weight:700;color:var(--green)}
+  .result .links{margin-top:10px;font-size:16px}
+  .result .links a{color:var(--blue)}
+  .retry{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:14px;
+  }
+  footer{
+    margin-top:48px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：乘除升級站</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>隔一天再來一次，還答得出來，才是真的記住了。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="retry" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是純資料 ＋ 純函式，不碰 DOM ——
+     tools/simgen.js 會把它切出來在 Node 裡跑幾萬批。
+     ⚠️ 圖形只回傳「算好的座標」（fig），真正畫圖的程式在 GENS 後面，
+     所以檢查驗到的就是頁面真的會畫出來的東西
+     （grade-4/triangle 第三輪那個 critical 就是排版函式放在 GENS 後面）。
+
+     ⚠️ 全部都是整數運算，所以精確。真正的風險是**演算法的中間狀態**
+     （試了哪些商、為什麼太大／太小、哪一位帶下來）—— 那些就是解釋要講的話，
+     所以一律算在這一段裡，`fmt()` 只負責把它們拼成句子。 */
+
+  function rnd(n){ return Math.floor(Math.random() * n); }
+  function pick(a){ return a[rnd(a.length)]; }
+  function shuffle(a){
+    var b = a.slice();
+    for (var i = b.length - 1; i > 0; i--){
+      var j = rnd(i + 1), t = b[i]; b[i] = b[j]; b[j] = t;
+    }
+    return b;
+  }
+  /* 從候選裡挑一個「這一批還沒用過」的，用完就記下來 ——
+     一批 12 題不要三題都在問同一件事。 */
+  function pickUnused(list, used){
+    var free = list.filter(function(x){ return used.indexOf(x) < 0; });
+    var got = pick(free.length ? free : list);
+    used.push(got);
+    return got;
+  }
+
+  var Q_MAX = 9;
+  var MUL_A_MIN = 100, MUL_A_MAX = 999;
+  var MUL_B_MIN = 10,  MUL_B_MAX = 99;
+  var DIV_N_MIN = 100, DIV_N_MAX = 999;
+  var DIV_D_MIN = 11,  DIV_D_MAX = 99;
+  var VAL_MAX = 100000;      /* 這一頁的每一個答案都小於這個數（999 × 99 ＝ 98901） */
+
+  function digitsOf(n){
+    var out = [], s = String(n), i;
+    for (i = 0; i < s.length; i++) out.push(Number(s.charAt(i)));
+    return out;
+  }
+  /* 四捨五入到十位（整數算法，和課程頁、速查卡一致）。 */
+  function roundTen(n){ return Math.floor((n + 5) / 10) * 10; }
+
+  function mulPlan(a, b){
+    var ones = b % 10, tens = Math.floor(b / 10);
+    var r1 = a * ones, r2 = a * tens, total = a * b;
+    var width = Math.max(String(a).length, String(b).length,
+                         String(r1).length, String(r2).length + 1, String(total).length);
+    return { a:a, b:b, ones:ones, tens:tens, r1:r1, r2:r2, r2value:r2 * 10, total:total, width:width };
+  }
+  function startPlan(N, d){
+    var ds = digitsOf(N), rows = [], cur = 0, startCol = -1, i, ok;
+    for (i = 0; i < ds.length; i++){
+      cur = cur * 10 + ds[i];
+      ok = cur >= d;
+      rows.push({ col:i, take:i + 1, cur:cur, ok:ok, cmp:(cur === d) ? 0 : (cur > d ? 1 : -1) });
+      if (ok){ startCol = i; break; }
+    }
+    return { N:N, d:d, ds:ds, rows:rows, startCol:startCol, qLen:ds.length - startCol };
+  }
+  /* 試商 ＋ 調商。⚠️ 'big' 那一步的餘數是負的，rem 一律 null，
+     解釋絕對不可以印它。 */
+  function tryPlan(cur, d){
+    var rt = roundTen(d);
+    var guessRaw = Math.floor(cur / rt);
+    var guess = Math.min(Q_MAX, guessRaw);
+    var tries = [], t = guess, g, prod, rem, q = null;
+    for (g = 0; g < 12; g++){
+      prod = t * d;
+      if (prod > cur){ tries.push({ q:t, prod:prod, rem:null, verdict:'big' }); t--; continue; }
+      rem = cur - prod;
+      if (rem >= d){ tries.push({ q:t, prod:prod, rem:rem, verdict:'small' }); t++; continue; }
+      tries.push({ q:t, prod:prod, rem:rem, verdict:'ok' });
+      q = t;
+      break;
+    }
+    return { cur:cur, d:d, rt:rt, guessRaw:guessRaw, guess:guess,
+             clamped:guessRaw > Q_MAX, tries:tries, q:q,
+             prod:q === null ? null : q * d, rem:q === null ? null : cur - q * d,
+             adjust:q === null ? null : q - guess };
+  }
+  /* 任何一個候選商的判斷（和 tryPlan 同一條規則）。 */
+  function judge(t, cur, d){
+    var prod = t * d;
+    if (prod > cur) return { q:t, prod:prod, rem:null, verdict:'big' };
+    var rem = cur - prod;
+    if (rem >= d) return { q:t, prod:prod, rem:rem, verdict:'small' };
+    return { q:t, prod:prod, rem:rem, verdict:'ok' };
+  }
+  function ldPlan(N, d){
+    var ds = digitsOf(N), steps = [], qDigits = [], cur = 0, started = false, i, tp;
+    for (i = 0; i < ds.length; i++){
+      cur = cur * 10 + ds[i];
+      if (!started && cur < d) continue;
+      started = true;
+      tp = tryPlan(cur, d);
+      steps.push({ col:i, cur:cur, tp:tp, q:tp.q, prod:tp.prod, rem:tp.rem,
+                   bring:(i + 1 < ds.length) ? ds[i + 1] : null,
+                   next:(i + 1 < ds.length) ? tp.rem * 10 + ds[i + 1] : null });
+      qDigits.push(tp.q);
+      cur = tp.rem;
+    }
+    return { N:N, d:d, ds:ds, steps:steps, qDigits:qDigits,
+             q:Number(qDigits.join('')), rem:cur,
+             startCol:steps.length ? steps[0].col : -1,
+             backCheck:d * Number(qDigits.join('')) + cur };
+  }
+
+  /* --- 長條圖的版面：純資料，放在 GENS 前面，所以 make() 可以把算好的座標
+         放進 fig，畫圖的程式直接照著畫（不重算）。 --- */
+  var BF_W = 360, BF_H = 130;
+  var BF_X0 = 30, BF_X1 = 330;
+  var BF_Y = 44, BF_BARH = 34;          /* 長條下緣 78 */
+  var BF_FONT = 13;
+  var BF_TITLE_DY = -14;                /* 標題基線 ＝ 30 */
+  var BF_LAB_DY = 26;                   /* 「?」基線 ＝ 78 + 26 ＝ 104（畫布 130） */
+
+  /* cur 切成 q 份 d，剩下 rem。
+     ⚠️ cur < 10 × d 保證成立，所以每一份至少 (330 − 30) / 10 ＝ 30px，分界線看得清楚。
+     ⚠️ **不畫份數編號** —— 那會直接把答案印在圖上（設定檔會驗這件事）。 */
+  function barFig(cur, d, q, rem){
+    var unit = (BF_X1 - BF_X0) / cur;
+    var cuts = [], i;
+    for (i = 1; i <= q; i++) cuts.push(BF_X0 + unit * d * i);
+    var edge = BF_X0 + unit * d * q;
+    return {
+      w:BF_W, h:BF_H, x0:BF_X0, x1:BF_X1, y:BF_Y, barh:BF_BARH,
+      cur:cur, d:d, q:q, rem:rem, unit:unit,
+      cuts:cuts, edge:edge, remW:(rem === 0 ? 0 : (BF_X1 - edge)),
+      labels:[
+        { x:(BF_X0 + BF_X1) / 2, y:BF_Y + BF_TITLE_DY, kind:'title' },
+        { x:BF_X0 + (edge - BF_X0) / 2, y:BF_Y + BF_BARH + BF_LAB_DY, text:'?', kind:'mark' }
+      ]
+    };
+  }
+
+  /* --- 誘答工具 ---
+     去重比「值」。整數的選項字串就是值；複合的「商 q 餘 r」用 (q, r) 組鍵，
+     光比字串抓不到兩個寫法不同、意思一樣的選項。
+     ⚠️ 保底不可以是垃圾字串，也不可以等於正解 —— 一律生一個長得像答案的數。 */
+  function keyOf(x){
+    if (x && typeof x === 'object') return 'q' + x.q + 'r' + x.rem;
+    return 'v' + x;
+  }
+  /* 從候選裡挑 3 個和正解不同值、彼此也不同值的誘答；
+     不夠的話往正解的鄰居找（step、2×step、3×step …）。
+     okFn 是「這個誘答像不像一個答案」的守門條件；
+     okFillFn 給保底路徑用（可以更嚴，例如不准撞到題幹的數字）。 */
+  function pickDistractors(correct, cands, step, okFn, okFillFn){
+    var ok = okFn || function(){ return true; };
+    var okFill = okFillFn || ok;
+    var seen = {}, out = [];
+    seen[keyOf(correct)] = 1;
+    cands.forEach(function(v){
+      if (out.length >= 3) return;
+      if (seen[keyOf(v)]) return;
+      if (!ok(v)) return;
+      seen[keyOf(v)] = 1;
+      out.push(v);
+    });
+    var st = step > 0 ? step : 1;
+    for (var mul = 1; out.length < 3 && mul <= 200; mul++){
+      [correct + st * mul, correct - st * mul].forEach(function(v){
+        if (out.length >= 3) return;
+        if (seen[keyOf(v)]) return;
+        if (!okFill(v)) return;
+        seen[keyOf(v)] = 1;
+        out.push(v);
+      });
+    }
+    return out.slice(0, 3);
+  }
+  /* 把正解和三個誘答洗牌，回傳 { list, ans } */
+  function mixAll(correct, distractors){
+    var all = shuffle([correct].concat(distractors));
+    var ans = -1, i;
+    for (i = 0; i < all.length; i++) if (keyOf(all[i]) === keyOf(correct)) ans = i;
+    return { list:all, ans:ans };
+  }
+  /* 一個整數的誘答「像不像答案」：正整數、在這一課的範圍裡。 */
+  function inRange(v){
+    return typeof v === 'number' && isFinite(v) && v > 0 && v < VAL_MAX && v === Math.round(v);
+  }
+  /* 0~9 的候選商。 */
+  function inDigit(v){
+    return typeof v === 'number' && isFinite(v) && v >= 0 && v <= Q_MAX && v === Math.round(v);
+  }
+
+  /* 隨機挑一個三位數 × 二位數。⚠️ 乘數的個位不可以是 0（四頁都對讀者講明了）。 */
+  function randMul(){
+    return { a:MUL_A_MIN + rnd(MUL_A_MAX - MUL_A_MIN + 1),
+             b:(1 + rnd(9)) * 10 + (1 + rnd(9)) };
+  }
+  /* 隨機挑一個三位數 ÷ 二位數。 */
+  function randDiv(){
+    return { N:DIV_N_MIN + rnd(DIV_N_MAX - DIV_N_MIN + 1),
+             d:DIV_D_MIN + rnd(DIV_D_MAX - DIV_D_MIN + 1) };
+  }
+  /* 隨機挑一輪「要分的數 ÷ 除數」，保證 d ≤ cur < 10d（一位的商一定落在 0~9）。 */
+  function randRound(){
+    var d = DIV_D_MIN + rnd(DIV_D_MAX - DIV_D_MIN + 1);
+    return { cur:d + rnd(9 * d), d:d };
+  }
+
+  /* --- 英文的單複數：只有「1」會錯，所以只擋那一個 ---
+     ⚠️ 這幾個函式放在語言無關的區塊，不可以塞進 en 字典裡
+     （字典要保持兩語 key 一一對應）。 */
+  function lotsEn(n, unit){ return n + (n === 1 ? ' lot of ' : ' lots of ') + unit; }
+  function digitsEn(n){ return n + (n === 1 ? ' digit' : ' digits'); }
+  function timesEn(n){ return n + (n === 1 ? ' time' : ' times'); }
+  function itemsEn(n, one, many){ return n + ' ' + (n === 1 ? one : many); }
+  /* 動詞也要成對：名詞改對了，動詞還是可能印出 "1 bag are filled"。 */
+  function isAreEn(n){ return n === 1 ? 'is' : 'are'; }
+
+  /* ---------- 文字 ---------- */
+  var TXT = {
+    zh: {
+      verdict:{ big:'太大，要減 1', small:'太小，要加 1', ok:'剛好' },
+      cannotTell:'沒辦法判斷',
+      unknown:'沒辦法知道',
+      len: function(n){ return n + ' 位'; },
+      qr: function(q, rem){ return '商 ' + q + '，餘 ' + rem; },
+      each: function(d){ return '每一份 ' + d; },
+      shops:[
+        { thing:'餅乾', unit:'盒', money:'元' },
+        { thing:'鉛筆', unit:'盒', money:'元' },
+        { thing:'果汁', unit:'瓶', money:'元' }
+      ],
+      packs:[
+        { thing:'糖果', item:'顆', pack:'袋' },
+        { thing:'貼紙', item:'張', pack:'包' },
+        { thing:'雞蛋', item:'顆', pack:'盒' }
+      ],
+      rides:[
+        { who:'學生', car:'輛車' },
+        { who:'客人', car:'艘船' },
+        { who:'小朋友', car:'台纜車' }
+      ]
+    },
+    en: {
+      verdict:{ big:'Too big — take 1 off', small:'Too small — add 1', ok:'Just right' },
+      cannotTell:'There is no way to judge it',
+      unknown:'There is no way to tell',
+      len: function(n){ return digitsEn(n); },
+      qr: function(q, rem){ return q + ' remainder ' + rem; },
+      each: function(d){ return 'each share ' + d; },
+      shops:[
+        { thing:'biscuits', unit:'box', unitP:'boxes', money:'dollars' },
+        { thing:'pencils', unit:'box', unitP:'boxes', money:'dollars' },
+        { thing:'juice', unit:'bottle', unitP:'bottles', money:'dollars' }
+      ],
+      packs:[
+        { thing:'sweets', item:'sweet', itemP:'sweets', pack:'bag', packP:'bags' },
+        { thing:'stickers', item:'sticker', itemP:'stickers', pack:'packet', packP:'packets' },
+        { thing:'eggs', item:'egg', itemP:'eggs', pack:'box', packP:'boxes' }
+      ],
+      rides:[
+        { who:'students', one:'student', car:'coach', carP:'coaches' },
+        { who:'passengers', one:'passenger', car:'boat', carP:'boats' },
+        { who:'children', one:'child', car:'cable car', carP:'cable cars' }
+      ]
+    }
+  };
+
+  /* 乘法四支共用的誘答。放在 GENS 前面，simgen 才切得到。
+     ⚠️ 每一個誘答都是「真的會犯的錯」：
+       ① 忘記把第二排往左移（r1 ＋ r2）；
+       ② 只寫了一排（r1 或 r2value）；
+       ③ 進位差一個位值（±100）。 */
+  function mulWrongs(mp, correct, taboo){
+    /* ⚠️ 誘答不可以剛好等於題幹印出來的數字 —— 那看起來就是把題幹抄回來。
+       這一條要套在**候選**和**保底**兩條路上：乘數的個位是 1 的時候
+       第一排剛好等於被乘數（324 × 51 的第一排就是 324），如果只擋保底，
+       那個「抄題幹」的選項就從候選那條路溜出去了。 */
+    var okDis = function(v){
+      return inRange(v) && v !== correct &&
+             Math.abs(v - correct) <= Math.max(correct, 1000) &&
+             (taboo || []).indexOf(v) < 0;
+    };
+    var cands = [mp.r1 + mp.r2, mp.r1, mp.r2value, correct + 100, correct - 100].filter(okDis);
+    return pickDistractors(correct, cands, 10, okDis, okDis);
+  }
+
+  var GENS = [
+    /* 1. 三位數 × 二位數 ＝ ？ */
+    { id:'mulProduct', cat:'mul',
+      make:function(){
+        for (var t = 0; t < 80; t++){
+          var m = randMul();
+          var mp = mulPlan(m.a, m.b);
+          if (mp.ones === 0) continue;              /* 乘數個位不可以是 0 */
+          if (mp.total >= VAL_MAX) continue;
+          return { a:m.a, b:m.b };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var mp = mulPlan(d.a, d.b);
+        var mix = mixAll(mp.total, mulWrongs(mp, mp.total, [d.a, d.b]));
+        return {
+          stem: lang === 'zh'
+            ? d.a + ' × ' + d.b + ' ＝ ？'
+            : d.a + ' × ' + d.b + ' = ?',
+          opts: mix.list.map(String),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? '第一排 ' + d.a + ' × ' + mp.ones + ' ＝ ' + mp.r1 + '；第二排 ' + d.a + ' × ' +
+              mp.tens + ' ＝ ' + mp.r2 + '，往左移一格代表 ' + mp.r2value + '。' +
+              mp.r1 + ' ＋ ' + mp.r2value + ' ＝ ' + mp.total +
+              '。<strong>第二排一定要往左移一格。</strong>'
+            : 'First row ' + d.a + ' × ' + mp.ones + ' = ' + mp.r1 + '; second row ' + d.a + ' × ' +
+              mp.tens + ' = ' + mp.r2 + ', shifted one column left to mean ' + mp.r2value + '. ' +
+              mp.r1 + ' + ' + mp.r2value + ' = ' + mp.total +
+              '. <strong>The second row must shift one column left.</strong>'
+        };
+      } },
+
+    /* 2. 第一排（× 個位）是多少？ */
+    { id:'mulRow1', cat:'mul',
+      make:function(){
+        for (var t = 0; t < 80; t++){
+          var m = randMul();
+          var mp = mulPlan(m.a, m.b);
+          if (mp.ones === 0) continue;
+          if (mp.r1 === mp.r2value) continue;       /* 兩個選項不可以撞在一起 */
+          return { a:m.a, b:m.b };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var mp = mulPlan(d.a, d.b);
+        var correct = mp.r1;
+        /* ⚠️ 同 mulWord：只有設計出來的迷思（第二排、第二排代表的值、乘積）
+           可以撞到題幹印出的被乘數與乘數，填空用的不行。 */
+        var designed = [mp.r2, mp.r2value, mp.total];
+        var stemNums = [d.a, d.b];
+        var okDis = function(v){
+          return inRange(v) && v !== correct &&
+                 (designed.indexOf(v) >= 0 || stemNums.indexOf(v) < 0);
+        };
+        var cands = [mp.r2, mp.r2value, mp.total, mp.r1 + mp.r2].filter(okDis);
+        var mix = mixAll(correct, pickDistractors(correct, cands, 10, okDis));
+        return {
+          stem: lang === 'zh'
+            ? d.a + ' × ' + d.b + ' 的直式，<strong>第一排</strong>（用乘數的個位去乘）是多少？'
+            : 'In the column form for ' + d.a + ' × ' + d.b +
+              ', what is the <strong>first row</strong> (multiplying by the ones digit of the multiplier)?',
+          opts: mix.list.map(String),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? '乘數 ' + d.b + ' 的<strong>個位</strong>是 ' + mp.ones + '，所以第一排是 ' +
+              d.a + ' × ' + mp.ones + ' ＝ ' + mp.r1 +
+              '。（第二排是用<strong>十位</strong> ' + mp.tens + ' 乘的，代表 ' + mp.r2value + '。）'
+            : 'The <strong>ones</strong> digit of the multiplier ' + d.b + ' is ' + mp.ones +
+              ', so the first row is ' + d.a + ' × ' + mp.ones + ' = ' + mp.r1 +
+              '. (The second row comes from the <strong>tens</strong> digit ' + mp.tens +
+              ' and stands for ' + mp.r2value + '.)'
+        };
+      } },
+
+    /* 3. 第二排「代表的值」是多少？（這一課最典型的迷思）
+          ⚠️ 題幹一定要寫「代表的值」—— 只問「第二排是多少」的話，
+          「寫下來的那個數」（r2）也是一條正確的答案，兩個選項都對（§六之二）。 */
+    { id:'mulRow2', cat:'mul',
+      make:function(){
+        for (var t = 0; t < 80; t++){
+          var m = randMul();
+          var mp = mulPlan(m.a, m.b);
+          if (mp.ones === 0) continue;
+          if (mp.r2value >= VAL_MAX) continue;
+          return { a:m.a, b:m.b };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var mp = mulPlan(d.a, d.b);
+        var correct = mp.r2value;
+        /* ⚠️ 同上：只有設計出來的迷思（寫下來的那一排、第一排、乘積）可以撞到題幹的數字。
+           「寫下來的那一排」剛好等於被乘數正是這一題的重點迷思（乘數的十位是 1 的時候）。 */
+        var designed = [mp.r2, mp.r1, mp.total];
+        var stemNums = [d.a, d.b];
+        var okDis = function(v){
+          return inRange(v) && v !== correct &&
+                 (designed.indexOf(v) >= 0 || stemNums.indexOf(v) < 0);
+        };
+        var cands = [mp.r2, mp.r1, mp.total, mp.r1 + mp.r2].filter(okDis);
+        var mix = mixAll(correct, pickDistractors(correct, cands, 10, okDis));
+        return {
+          stem: lang === 'zh'
+            ? d.a + ' × ' + d.b + ' 的直式，<strong>第二排代表的值</strong>是多少？'
+            : 'In the column form for ' + d.a + ' × ' + d.b +
+              ', what <strong>value</strong> does the <strong>second row</strong> stand for?',
+          opts: mix.list.map(String),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? '乘數 ' + d.b + ' 的十位是 ' + mp.tens + '，它代表 ' + (mp.tens * 10) +
+              '，所以第二排是 ' + d.a + ' × ' + (mp.tens * 10) + ' ＝ ' + mp.r2value +
+              '。寫直式的時候只寫 ' + mp.r2 + ' 並<strong>往左移一格</strong>，' +
+              '空出來的那一格就是在說這一排大十倍。'
+            : 'The tens digit of the multiplier ' + d.b + ' is ' + mp.tens + ', which stands for ' +
+              (mp.tens * 10) + ', so the second row is ' + d.a + ' × ' + (mp.tens * 10) + ' = ' +
+              mp.r2value + '. In column form you write only ' + mp.r2 +
+              ' and <strong>shift it one column left</strong>; that empty column is what says it is ten times as much.'
+        };
+      } },
+
+    /* 4. 乘法文字題（兩步：算總價，再算找回多少）。 */
+    { id:'mulWord', cat:'mul',
+      make:function(used){
+        for (var t = 0; t < 120; t++){
+          var m = randMul();
+          var mp = mulPlan(m.a, m.b);
+          if (mp.ones === 0) continue;
+          /* 付的錢是「總價往上取到整千再加一千」，所以找回的錢一定是正的。 */
+          var paid = (Math.floor(mp.total / 1000) + 1) * 1000;
+          var change = paid - mp.total;
+          if (!(change > 0)) continue;
+          if (change === mp.total) continue;         /* 兩個選項不可以撞在一起 */
+          if (paid >= VAL_MAX) continue;
+          var s = pickUnused(['w0', 'w1', 'w2'], used);
+          return { a:m.a, b:m.b, paid:paid, change:change, s:Number(s.slice(1)) };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang], mp = mulPlan(d.a, d.b);
+        var sh = t.shops[d.s];
+        var correct = d.change;
+        /* ⚠️ 題幹印出了單價、數量與付的錢 —— 保底路徑很容易剛好落在其中一個上面，
+           看起來就是把題幹抄回來。這一支唯一設計出來的迷思是「把總價當成找回的錢」，
+           而總價不在題幹裡，所以三個數字全部排除即可。 */
+        var stemNums = [d.a, d.b, d.paid];
+        var okDis = function(v){
+          return inRange(v) && v <= d.paid && v !== correct && stemNums.indexOf(v) < 0;
+        };
+        /* 誘答：把總價當答案（最典型）、忘記移一格算出來的「找回」、付的錢 */
+        /* ⚠️ 不可以把 d.paid 當誘答：那個數字題幹剛印過（看起來像把題幹抄回來），
+           而且「付了多少」不是任何一種真實的算錯。留下的兩個都是真的會犯的錯：
+           把總價當成找回的錢、以及忘記把第二排往左移之後再找錢。 */
+        var cands = [mp.total, d.paid - (mp.r1 + mp.r2)].filter(okDis);
+        var mix = mixAll(correct, pickDistractors(correct, cands, 10, okDis));
+        return {
+          stem: lang === 'zh'
+            ? '一' + sh.unit + sh.thing + ' ' + d.a + ' ' + sh.money + '，買了 ' + d.b + ' ' +
+              sh.unit + '，付了 ' + d.paid + ' ' + sh.money + '。可以找回多少' + sh.money + '？'
+            : 'One ' + sh.unit + ' of ' + sh.thing + ' costs ' + d.a + ' ' + sh.money +
+              '. Buying ' + itemsEn(d.b, sh.unit, sh.unitP) + ' and handing over ' + d.paid + ' ' +
+              sh.money + ', how much change comes back?',
+          opts: mix.list.map(String),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? '兩步。先算總價：第一排 ' + d.a + ' × ' + mp.ones + ' ＝ ' + mp.r1 + '，第二排 ' +
+              d.a + ' × ' + mp.tens + ' ＝ ' + mp.r2 + ' 往左移一格代表 ' + mp.r2value + '，' +
+              mp.r1 + ' ＋ ' + mp.r2value + ' ＝ ' + mp.total + '。再算找回：' + d.paid +
+              ' － ' + mp.total + ' ＝ ' + correct + '。<strong>問的是找回多少，不是總價。</strong>'
+            : 'Two steps. First the total: first row ' + d.a + ' × ' + mp.ones + ' = ' + mp.r1 +
+              ', second row ' + d.a + ' × ' + mp.tens + ' = ' + mp.r2 +
+              ' shifted one column left to mean ' + mp.r2value + ', and ' + mp.r1 + ' + ' +
+              mp.r2value + ' = ' + mp.total + '. Then the change: ' + d.paid + ' - ' + mp.total +
+              ' = ' + correct + '. <strong>The question asks for the change, not the total.</strong>'
+        };
+      } },
+
+    /* 5. 商是幾位數？（不用算出商） */
+    { id:'qLen', cat:'div',
+      make:function(used){
+        for (var t = 0; t < 120; t++){
+          var m = randDiv();
+          var sp = startPlan(m.N, m.d);
+          if (sp.rows.length < 2) continue;          /* 除數兩位 ⇒ 一定至少看兩位 */
+          if (used.indexOf('ql' + sp.qLen) >= 0 && t < 80) continue;
+          used.push('ql' + sp.qLen);
+          return { N:m.N, d:m.d };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang], sp = startPlan(d.N, d.d);
+        var order = shuffle(['1', '2', '3', 'unknown']);
+        var two = sp.rows[1];
+        return {
+          stem: lang === 'zh'
+            ? d.N + ' ÷ ' + d.d + ' 的商是幾位數？（先不要算出商）'
+            : 'How many digits does the quotient of ' + d.N + ' ÷ ' + d.d +
+              ' have? (Do not work out the quotient yet.)',
+          opts: order.map(function(k){ return k === 'unknown' ? t.unknown : t.len(Number(k)); }),
+          ans: order.indexOf(String(sp.qLen)),
+          why: lang === 'zh'
+            ? '從最左邊看：前 1 位是 ' + sp.rows[0].cur + '，比 ' + d.d + ' 小，不夠除。前 2 位是 ' +
+              two.cur + '，' + (two.ok ? '夠除' : '還是不夠除') + ' —— ' +
+              (two.ok
+                ? '所以商從第 2 位開始寫，被除數有 3 位，商就有 2 位。'
+                : '要看到前 3 位（' + sp.rows[2].cur + '）才夠除，所以商只有 1 位。') +
+              '<strong>商從第一次夠除的那一位開始寫。</strong>'
+            : 'Work from the left: the first digit is ' + sp.rows[0].cur + ', smaller than ' + d.d +
+              ', so it will not go. The first two digits make ' + two.cur + ', which ' +
+              (two.ok ? 'will go' : 'still will not go') + ' — ' +
+              (two.ok
+                ? 'so the quotient starts at the 2nd place, and with a 3-digit dividend that makes 2 digits. '
+                : 'it takes all three digits (' + sp.rows[2].cur + ') before it will go, so the quotient has 1 digit. ') +
+              '<strong>The quotient starts at the first place where it will go.</strong>'
+        };
+      } },
+
+    /* 6. 試商：第一次會試哪一個數字？
+          ⚠️ 題幹一定要寫「第一次」—— 不然正確的商也是一條合理的答案（§六之二）。
+          而且 make() 只挑「猜的和正解不一樣」的參數，那個區別才有意義。 */
+    { id:'tryFirst', cat:'div',
+      make:function(){
+        for (var t = 0; t < 160; t++){
+          var r = randRound();
+          var tp = tryPlan(r.cur, r.d);
+          if (tp.guess === tp.q) continue;
+          return { cur:r.cur, d:r.d };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var tp = tryPlan(d.cur, d.d);
+        var correct = tp.guess;
+        var okDis = function(v){ return inDigit(v) && v !== correct; };
+        var cands = [tp.q, correct + 1, correct - 1].filter(okDis);
+        var mix = mixAll(correct, pickDistractors(correct, cands, 1, okDis));
+        return {
+          stem: lang === 'zh'
+            /* 「這一輪」點明了 cur 是直式走到一半的那個數，不是一整題的被除數 —— 
+               不然 11 ÷ 11 這種讀起來像被除數只有兩位，和課程宣告的範圍打架。 */
+            ? '直式除法的這一輪要分 ' + d.cur + '，除數是 ' + d.d +
+              '：把除數四捨五入到十位來試商，<strong>第一次</strong>會試哪一個數字？'
+            : 'In this round of a column division, ' + d.cur + ' is being shared out and the divisor is ' +
+              d.d + ': rounding the divisor to the nearest ten to guess, which digit do you try <strong>first</strong>?',
+          opts: mix.list.map(String),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? '除數 ' + d.d + ' 四捨五入到十位是 ' + tp.rt + '，' + d.cur + ' ÷ ' + tp.rt +
+              ' 猜出來是 ' + tp.guessRaw + '，所以第一次試 ' + correct + '。' +
+              (tp.clamped ? '（' + tp.guessRaw + ' 比 9 大，一位的商最大只能是 9，所以先試 9。）' : '') +
+              '正確的商其實是 ' + tp.q + ' —— 那是<strong>調商之後</strong>的結果。'
+            : 'The divisor ' + d.d + ' rounded to the nearest ten is ' + tp.rt + ', and ' + d.cur +
+              ' ÷ ' + tp.rt + ' guesses ' + tp.guessRaw + ', so ' + correct +
+              ' is what you try first. ' +
+              (tp.clamped ? '(' + tp.guessRaw + ' is bigger than 9, and one quotient digit can never be more than 9, so you try 9 first.) ' : '') +
+              'The correct quotient digit is actually ' + tp.q + ' — that comes <strong>after adjusting</strong>.'
+        };
+      } },
+
+    /* 7. 判斷一個候選商是太大、太小還是剛好。 */
+    { id:'tryVerdict', cat:'div',
+      make:function(used){
+        for (var t = 0; t < 200; t++){
+          var r = randRound();
+          var want = pickUnused(['big', 'small', 'ok'], used);
+          var cand = null, k;
+          for (k = 0; k <= Q_MAX; k++){
+            if (judge(k, r.cur, r.d).verdict === want){ cand = k; break; }
+          }
+          if (cand === null) continue;
+          return { cur:r.cur, d:r.d, cand:cand, want:want };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var j = judge(d.cand, d.cur, d.d);
+        var order = shuffle(['big', 'small', 'ok', 'cannot']);
+        /* ⚠️ 'big' 的餘數是負的，所以題幹與解釋在那個情形完全不提餘數。 */
+        var shown = (j.verdict === 'big')
+          ? (lang === 'zh'
+              ? d.cand + ' × ' + d.d + ' ＝ ' + j.prod
+              : d.cand + ' × ' + d.d + ' = ' + j.prod)
+          : (lang === 'zh'
+              ? d.cand + ' × ' + d.d + ' ＝ ' + j.prod + '，' + d.cur + ' － ' + j.prod + ' ＝ ' + j.rem
+              : d.cand + ' × ' + d.d + ' = ' + j.prod + ' and ' + d.cur + ' - ' + j.prod + ' = ' + j.rem);
+        var reason = (j.verdict === 'big')
+          ? (lang === 'zh'
+              ? j.prod + ' 比 ' + d.cur + ' 大，乘不下去，所以商<strong>太大</strong>，要減 1。'
+              : j.prod + ' is bigger than ' + d.cur +
+                ' and will not go, so the guess is <strong>too big</strong> and needs 1 taken off.')
+          : (j.verdict === 'small'
+              ? (lang === 'zh'
+                  ? '餘數 ' + j.rem + ' <strong>不小於</strong>除數 ' + d.d +
+                    '，還可以再分一份，所以商<strong>太小</strong>，要加 1。'
+                  : 'The remainder ' + j.rem + ' is <strong>not smaller than</strong> the divisor ' +
+                    d.d + ', so another share still fits and the guess is <strong>too small</strong>, needing 1 added.')
+              : (lang === 'zh'
+                  ? j.prod + ' 沒有超過 ' + d.cur + '，而餘數 ' + j.rem + ' 比除數 ' + d.d +
+                    ' 小 —— 兩件事都成立，所以<strong>剛好</strong>。'
+                  : j.prod + ' does not go over ' + d.cur + ' and the remainder ' + j.rem +
+                    ' is smaller than the divisor ' + d.d +
+                    ' — both checks hold, so it is <strong>just right</strong>.'));
+        return {
+          stem: lang === 'zh'
+            ? d.cur + ' ÷ ' + d.d + ' 這一輪，商試 <strong>' + d.cand + '</strong>：' + shown +
+              '。這個商怎麼樣？'
+            : 'In this round of ' + d.cur + ' ÷ ' + d.d + ', the quotient digit <strong>' + d.cand +
+              '</strong> is tried: ' + shown + '. What about that digit?',
+          opts: order.map(function(k){ return k === 'cannot' ? t.cannotTell : t.verdict[k]; }),
+          ans: order.indexOf(d.want),
+          why: (lang === 'zh'
+            ? '檢查<strong>兩件事</strong>：① 商 × 除數不可以超過 ' + d.cur + '；② 餘數要比除數 ' +
+              d.d + ' 小。'
+            : 'Check <strong>two things</strong>: (1) the digit × the divisor must not go over ' +
+              d.cur + '; (2) the remainder must be smaller than the divisor ' + d.d + '. ') + reason
+        };
+      } },
+
+    /* 8. 看長條圖回答「可以分出幾份」（有圖）。 */
+    { id:'quotDigit', cat:'div',
+      make:function(){
+        for (var t = 0; t < 200; t++){
+          var r = randRound();
+          var tp = tryPlan(r.cur, r.d);
+          if (tp.q < 1) continue;                   /* 圖上至少要有一份 */
+          return { cur:r.cur, d:r.d, fig:barFig(r.cur, r.d, tp.q, tp.rem) };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var tp = tryPlan(d.cur, d.d);
+        var correct = tp.q;
+        var okDis = function(v){ return inDigit(v) && v !== correct; };
+        var cands = [correct + 1, correct - 1, tp.guess].filter(okDis);
+        var mix = mixAll(correct, pickDistractors(correct, cands, 1, okDis));
+        return {
+          stem: lang === 'zh'
+            ? '長條總共是 <strong>' + d.cur + '</strong>，每一份 <strong>' + d.d +
+              '</strong>。可以分出幾份？（橘色的是分不完剩下的）'
+            : 'The whole bar is <strong>' + d.cur + '</strong> and each share is <strong>' + d.d +
+              '</strong>. How many shares come out? (The orange part is what is left over.)',
+          fig: d.fig,
+          opts: mix.list.map(String),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? '圖上切出了 ' + correct + ' 份：' + correct + ' × ' + d.d + ' ＝ ' + tp.prod + '，' +
+              d.cur + ' － ' + tp.prod + ' ＝ ' + tp.rem + '，而 ' + tp.rem + ' 比 ' + d.d +
+              ' 小，所以剩下的不夠再分一份。' +
+              (tp.adjust !== 0
+                ? '（用四捨五入到十位的 ' + tp.rt + ' 去猜會猜成 ' + tp.guess + '，要調 ' +
+                  Math.abs(tp.adjust) + ' 次才會變成 ' + correct + '。）'
+                : '（除數 ' + d.d + ' 四捨五入到十位是 ' + tp.rt + '，這一題猜一次就對了。）')
+            : 'The picture cuts off ' + itemsEn(correct, 'share', 'shares') + ': ' + correct + ' × ' + d.d + ' = ' +
+              tp.prod + ', and ' + d.cur + ' - ' + tp.prod + ' = ' + tp.rem +
+              ', which is smaller than ' + d.d + ', so what is left will not make another share. ' +
+              (tp.adjust !== 0
+                ? '(Guessing with ' + tp.rt + ', the divisor rounded to the nearest ten, gives ' +
+                  tp.guess + ', which takes ' + timesEn(Math.abs(tp.adjust)) + ' of adjusting to reach ' +
+                  correct + '.)'
+                : '(The divisor ' + d.d + ' rounded to the nearest ten is ' + tp.rt +
+                  ', and this one guesses right first time.)')
+        };
+      } },
+
+    /* 9. 完整的商與餘數。 */
+    { id:'divFull', cat:'div',
+      make:function(){
+        for (var t = 0; t < 120; t++){
+          var m = randDiv();
+          var p = ldPlan(m.N, m.d);
+          if (p.q < 1) continue;
+          return { N:m.N, d:m.d };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang], p = ldPlan(d.N, d.d);
+        var correct = { q:p.q, rem:p.rem };
+        var okDis = function(v){
+          return v && typeof v.q === 'number' && typeof v.rem === 'number' &&
+                 isFinite(v.q) && isFinite(v.rem) &&
+                 v.q === Math.round(v.q) && v.rem === Math.round(v.rem) &&
+                 v.q >= 1 && v.q < VAL_MAX && v.rem >= 0 && v.rem < VAL_MAX &&
+                 !(v.q === correct.q && v.rem === correct.rem);
+        };
+        /* 誘答都是真的會犯的錯：
+           ① 商 ＋ 1（餘數重算，仍然合法）；
+           ② 商 － 1，餘數 ＋ 除數（違反「餘數比除數小」—— 刻意留著，
+              因為孩子真的會這樣寫，而且可以用規則一眼排除）；
+           ③ 商的最後一位被跳過（商少一位，也就是「商的 0 沒寫」那個迷思）。 */
+        var cands = [];
+        if (d.N - (p.q + 1) * d.d >= 0) cands.push({ q:p.q + 1, rem:d.N - (p.q + 1) * d.d });
+        if (p.q - 1 >= 1) cands.push({ q:p.q - 1, rem:p.rem + d.d });
+        if (String(p.q).length > 1) cands.push({ q:Number(String(p.q).slice(0, -1)), rem:p.rem });
+        var seen = {}, out = [], i;
+        seen['q' + correct.q + 'r' + correct.rem] = 1;
+        cands.forEach(function(v){
+          if (out.length >= 3 || !okDis(v)) return;
+          var k = 'q' + v.q + 'r' + v.rem;
+          if (seen[k]) return;
+          seen[k] = 1;
+          out.push(v);
+        });
+        /* 保底：商 ± k，餘數重算成合法的（永遠比除數小）。 */
+        for (i = 2; out.length < 3 && i <= 60; i++){
+          [p.q + i, p.q - i].forEach(function(qq){
+            if (out.length >= 3 || qq < 1) return;
+            var v = { q:qq, rem:((d.N - qq * d.d) % d.d + d.d) % d.d };
+            var k = 'q' + v.q + 'r' + v.rem;
+            if (seen[k] || !okDis(v)) return;
+            seen[k] = 1;
+            out.push(v);
+          });
+        }
+        var all = shuffle([correct].concat(out.slice(0, 3)));
+        var ans = -1;
+        for (i = 0; i < all.length; i++){
+          if (all[i].q === correct.q && all[i].rem === correct.rem) ans = i;
+        }
+        var rounds = p.steps.map(function(st, k){
+          return (lang === 'zh')
+            ? (st.q === 0
+                ? '第 ' + (k + 1) + ' 輪：' + st.cur + ' 比 ' + d.d + ' 小，不夠除，商這一位寫 0'
+                : '第 ' + (k + 1) + ' 輪：' + st.cur + ' ÷ ' + d.d + ' 商 ' + st.q + '（' + st.q +
+                  ' × ' + d.d + ' ＝ ' + st.prod + '，剩 ' + st.rem + '）')
+            : (st.q === 0
+                ? 'Round ' + (k + 1) + ': ' + st.cur + ' is smaller than ' + d.d +
+                  ' and will not go, so that quotient place gets a 0'
+                : 'Round ' + (k + 1) + ': ' + st.cur + ' ÷ ' + d.d + ' gives ' + st.q + ' (' + st.q +
+                  ' × ' + d.d + ' = ' + st.prod + ', leaving ' + st.rem + ')');
+        });
+        return {
+          stem: lang === 'zh'
+            ? d.N + ' ÷ ' + d.d + ' ＝ ？'
+            : d.N + ' ÷ ' + d.d + ' = ?',
+          opts: all.map(function(v){ return t.qr(v.q, v.rem); }),
+          ans: ans,
+          why: (lang === 'zh'
+            ? rounds.join('；') + '。所以 ' + d.N + ' ÷ ' + d.d + ' ＝ ' + p.q + ' 餘 ' + p.rem +
+              '。驗算：' + d.d + ' × ' + p.q + ' ＋ ' + p.rem + ' ＝ ' + p.backCheck +
+              '，和被除數一樣 ✓ <strong>餘數一定比除數小。</strong>'
+            : rounds.join('; ') + '. So ' + d.N + ' ÷ ' + d.d + ' = ' + p.q + ' remainder ' + p.rem +
+              '. Check: ' + d.d + ' × ' + p.q + ' + ' + p.rem + ' = ' + p.backCheck +
+              ', the same as the dividend ✓ <strong>The remainder is always smaller than the divisor.</strong>')
+        };
+      } },
+
+    /* 10. 除法文字題（包含除：裝滿幾包，餘數不算一包）。 */
+    { id:'divWord', cat:'div',
+      make:function(used){
+        for (var t = 0; t < 200; t++){
+          var m = randDiv();
+          var p = ldPlan(m.N, m.d);
+          if (p.q < 1) continue;
+          if (p.rem === 0) continue;               /* 有餘數才問得出「還剩多少」 */
+          if (p.rem === p.q) continue;             /* 「把餘數當答案」那個誘答不可以等於正解 */
+          var s = pickUnused(['p0', 'p1', 'p2'], used);
+          return { N:m.N, d:m.d, s:Number(s.slice(1)) };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang], p = ldPlan(d.N, d.d);
+        var pk = t.packs[d.s];
+        var correct = p.q;
+        /* ⚠️ 誘答不可以剛好等於題幹印出來的數字（N 或 d），除非它就是那個
+           **設計出來的迷思**（這一支是「把餘數當答案」）。純粹填空用的誘答
+           撞到題幹的數字，看起來就是把題幹抄回來。 */
+        var stemNums = [d.N, d.d];
+        var ok = function(v){
+          return inRange(v) && v !== correct && (v === p.rem || stemNums.indexOf(v) < 0);
+        };
+        /* 誘答：把餘數當答案、商 ＋ 1（有剩就多一包 —— 這一題問「裝滿」，所以是錯的）、商少一位 */
+        var cands = [p.rem, correct + 1, correct - 1].filter(ok);
+        if (String(correct).length > 1){
+          var chopped = Number(String(correct).slice(0, -1));
+          if (ok(chopped)) cands.push(chopped);
+        }
+        var mix = mixAll(correct, pickDistractors(correct, cands, 1, ok));
+        return {
+          stem: lang === 'zh'
+            ? d.N + ' ' + pk.item + pk.thing + '，每 ' + pk.pack + '裝 ' + d.d + ' ' + pk.item +
+              '。可以<strong>裝滿</strong>幾' + pk.pack + '？'
+            /* ⚠️ 不可以寫 'N sweets of sweets' —— item 和 thing 在英文是同一個字。 */
+            : 'There are ' + itemsEn(d.N, pk.item, pk.itemP) + ', and each ' +
+              pk.pack + ' holds ' + itemsEn(d.d, pk.item, pk.itemP) + '. How many ' + pk.packP +
+              ' can be <strong>filled</strong>?',
+          opts: mix.list.map(String),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? d.N + ' ÷ ' + d.d + ' ＝ ' + p.q + ' 餘 ' + p.rem + '，所以裝滿 <strong>' + p.q +
+              ' ' + pk.pack + '</strong>，還剩 ' + p.rem + ' ' + pk.item + '（不夠再裝滿一' +
+              pk.pack + '）。<strong>問的是裝滿幾' + pk.pack + ' 的時候，餘數不算一' + pk.pack + '。</strong>'
+            /* ⚠️ 動詞也要跟著單複數走：p.q 是 1 的時候是 "1 bag is filled"。
+               101 ÷ 99 ＝ 1 餘 2 真的抽得到（codex 第一輪）。 */
+            : d.N + ' ÷ ' + d.d + ' = ' + p.q + ' remainder ' + p.rem + ', so <strong>' +
+              itemsEn(p.q, pk.pack, pk.packP) + '</strong> ' + isAreEn(p.q) + ' filled, with ' +
+              itemsEn(p.rem, pk.item, pk.itemP) + ' left over (not enough to fill another ' +
+              pk.pack + '). <strong>When the question asks how many are filled, the remainder does not count as one.</strong>'
+        };
+      } },
+
+    /* 11. 「有剩就要多一輛」：問的是至少要幾輛，答案是商 ＋ 1。
+          ⚠️ 這一支和 divWord 是同一個算式、相反的取捨 —— 兩題都在同一批裡，
+          就是要讓孩子讀清楚問的是什麼。 */
+    { id:'needOneMore', cat:'div',
+      make:function(used){
+        for (var t = 0; t < 200; t++){
+          var m = randDiv();
+          var p = ldPlan(m.N, m.d);
+          if (p.q < 1) continue;
+          if (p.rem === 0) continue;               /* 沒有餘數就不用多一輛，題目沒意義 */
+          if (p.rem === p.q + 1) continue;         /* 「把餘數當答案」那個誘答不可以等於正解 */
+          var s = pickUnused(['r0', 'r1', 'r2'], used);
+          return { N:m.N, d:m.d, s:Number(s.slice(1)) };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang], p = ldPlan(d.N, d.d);
+        var rd = t.rides[d.s];
+        var correct = p.q + 1;
+        /* ⚠️ 同 divWord：只有設計出來的兩個迷思（直接用商、把餘數當答案）
+           可以撞到題幹的數字，填空用的不行。 */
+        var stemNums = [d.N, d.d];
+        var ok = function(v){
+          return inRange(v) && v !== correct &&
+                 (v === p.q || v === p.rem || stemNums.indexOf(v) < 0);
+        };
+        /* 誘答：直接用商（忘記多一輛，最典型）、把餘數當答案、多算一輛 */
+        var cands = [p.q, p.rem, correct + 1].filter(ok);
+        var mix = mixAll(correct, pickDistractors(correct, cands, 1, ok));
+        return {
+          stem: lang === 'zh'
+            ? d.N + ' 個' + rd.who + '要搭車，一' + rd.car + '最多坐 ' + d.d +
+              ' 個人。<strong>至少</strong>要幾' + rd.car + '？'
+            : d.N + ' ' + rd.who + ' need transport, and one ' + rd.car + ' seats at most ' + d.d +
+              '. How many ' + rd.carP + ' are needed <strong>at least</strong>?',
+          opts: mix.list.map(String),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? d.N + ' ÷ ' + d.d + ' ＝ ' + p.q + ' 餘 ' + p.rem + '。可是剩下的 ' + p.rem + ' 個' +
+              rd.who + '<strong>也要搭車</strong>，所以要<strong>商 ＋ 1 ＝ ' + correct +
+              '</strong> ' + rd.car + '。（' + p.q + ' ' + rd.car + '只坐得下 ' + p.q + ' × ' +
+              d.d + ' ＝ ' + (p.q * d.d) + ' 個人。）'
+            /* ⚠️ 餘數是 1 的時候「the 1 students」是壞英文，而 100 ÷ 33 ＝ 3 餘 1 真的抽得到。 */
+            : d.N + ' ÷ ' + d.d + ' = ' + p.q + ' remainder ' + p.rem + '. But the ' +
+              itemsEn(p.rem, rd.one, rd.who) + ' left over <strong>still need' + (p.rem === 1 ? 's' : '') + ' a seat</strong>, so it takes the <strong>quotient + 1 = ' +
+              correct + '</strong> ' + rd.carP + '. (' + itemsEn(p.q, rd.car, rd.carP) +
+              (p.q === 1 ? ' only seats ' : ' only seat ') + p.q + ' × ' + d.d + ' = ' +
+              (p.q * d.d) + ' people.)'
+        };
+      } },
+
+    /* 12. 驗算：知道除數、商、餘數，被除數是多少？ */
+    { id:'verifyBack', cat:'div',
+      make:function(){
+        for (var t = 0; t < 120; t++){
+          var m = randDiv();
+          var p = ldPlan(m.N, m.d);
+          if (p.q < 1) continue;
+          if (p.rem === 0) continue;               /* 有餘數才驗得到「別忘了加餘數」 */
+          return { N:m.N, d:m.d, q:p.q, rem:p.rem };
+        }
+        return null;
+      },
+      fmt:function(d, lang){
+        var correct = d.N;
+        /* ⚠️ 題幹印出了除數、商與餘數，保底路徑很容易剛好落在其中一個上面。
+           唯一設計出來的迷思是「忘記加餘數」（＝ 除數 × 商），它可以撞；其餘不行。 */
+        var stemNums = [d.d, d.q, d.rem];
+        var forgot = d.d * d.q;
+        var ok = function(v){
+          return inRange(v) && v !== correct && (v === forgot || stemNums.indexOf(v) < 0);
+        };
+        /* 誘答：忘記加餘數（最典型）、把餘數乘進去、減掉餘數 */
+        var cands = [forgot, forgot * d.rem, forgot - d.rem].filter(ok);
+        var mix = mixAll(correct, pickDistractors(correct, cands, 1, ok));
+        return {
+          stem: lang === 'zh'
+            ? '一道除法的<strong>除數是 ' + d.d + '、商是 ' + d.q + '、餘數是 ' + d.rem +
+              '</strong>。被除數是多少？'
+            : 'A division has <strong>divisor ' + d.d + ', quotient ' + d.q + ' and remainder ' +
+              d.rem + '</strong>. What was the dividend?',
+          opts: mix.list.map(String),
+          ans: mix.ans,
+          why: lang === 'zh'
+            ? '驗算公式：<strong>被除數 ＝ 除數 × 商 ＋ 餘數</strong>。' + d.d + ' × ' + d.q +
+              ' ＋ ' + d.rem + ' ＝ ' + (d.d * d.q) + ' ＋ ' + d.rem + ' ＝ ' + correct +
+              '。<strong>別忘了加餘數</strong> —— 只算 ' + d.d + ' × ' + d.q + ' ＝ ' +
+              (d.d * d.q) + ' 就停下來是最常見的錯。'
+            : 'The check is <strong>dividend = divisor × quotient + remainder</strong>. ' + d.d +
+              ' × ' + d.q + ' + ' + d.rem + ' = ' + (d.d * d.q) + ' + ' + d.rem + ' = ' + correct +
+              '. <strong>Do not forget to add the remainder</strong> — stopping at ' + d.d + ' × ' +
+              d.q + ' = ' + (d.d * d.q) + ' is the most common slip.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 乘除升級站', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：乘除升級站',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>隔一天再來一次，還答得出來，才是真的記住了。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      linkHead:'👉 建議回去看：',
+      linkRef:'<a href="reference.html">速查卡</a>',
+      linkIndex:'<a href="index.html">回課程重看範例</a>',
+      linkMul:'<a href="index.html">範例教學 1、2（兩排與往左移一格）</a>',
+      linkDiv:'<a href="index.html">範例教學 4、5、6（試商、調商、整個直式）</a>',
+      linkG3Mul:'<a href="../../../grade-3/math/multiply/index.html">三年級「直式乘法工廠」（兩排的基礎）</a>',
+      linkG3Div:'<a href="../../../grade-3/math/divide/index.html">三年級「分東西大隊」（餘數與驗算的基礎）</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Upgrade Station', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Upgrade Station',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>Come back a day later and still get them — that is real remembering.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      linkHead:'👉 Worth another look:',
+      linkRef:'<a href="reference.html">the cheat sheet</a>',
+      linkIndex:'<a href="index.html">the lesson examples</a>',
+      linkMul:'<a href="index.html">Examples 1 and 2 (the two rows and the shift)</a>',
+      linkDiv:'<a href="index.html">Examples 4, 5 and 6 (guessing, adjusting, the whole column form)</a>',
+      linkG3Mul:'<a href="../../../grade-3/math/multiply/index.html">grade 3 “The Column Multiplication Factory” (where the two rows started)</a>',
+      linkG3Div:'<a href="../../../grade-3/math/divide/index.html">grade 3 “The Sharing-Out Squad” (remainders and checking)</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  /* --- 畫長條圖：只有這一段碰 DOM。
+     ⚠️ 座標直接用 fig 裡產生器算好的那一份，不在這裡重算，
+     不然畫出來的和檢查驗過的會是兩回事。 --- */
+  var NS = 'http://www.w3.org/2000/svg';
+  var C_LINE = '#2B2A33', C_FILL = '#E3F4EB', C_EDGE = '#2F9E69';
+  var C_MARK = '#E8871E', C_REMFILL = '#FDF0E0', C_BLUE = '#3B7DD8';
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function drawFig(svg, fig, titleText){
+    svg.textContent = '';
+    svg.setAttribute('viewBox', '0 0 ' + fig.w + ' ' + fig.h);
+    /* 分完的那一段（綠）＋ 剩下的那一段（橘） */
+    svg.appendChild(svgEl('rect', {
+      x:fig.x0, y:fig.y, width:fig.edge - fig.x0, height:fig.barh,
+      fill:C_FILL, stroke:'none'
+    }));
+    if (fig.remW > 0){
+      svg.appendChild(svgEl('rect', {
+        x:fig.edge, y:fig.y, width:fig.remW, height:fig.barh,
+        fill:C_REMFILL, stroke:'none'
+      }));
+    }
+    /* 每一份的分界線（⚠️ 不畫份數編號 —— 那會把答案印在圖上） */
+    fig.cuts.forEach(function(x){
+      svg.appendChild(svgEl('line', {
+        x1:x, y1:fig.y, x2:x, y2:fig.y + fig.barh,
+        stroke:C_EDGE, 'stroke-width':1.5
+      }));
+    });
+    if (fig.remW > 0){
+      svg.appendChild(svgEl('line', {
+        x1:fig.edge, y1:fig.y - 4, x2:fig.edge, y2:fig.y + fig.barh + 4,
+        stroke:C_MARK, 'stroke-width':2
+      }));
+    }
+    svg.appendChild(svgEl('rect', {
+      x:fig.x0, y:fig.y, width:fig.x1 - fig.x0, height:fig.barh,
+      fill:'none', stroke:C_LINE, 'stroke-width':2
+    }));
+    fig.labels.forEach(function(lb){
+      var t = svgEl('text', {
+        x:lb.x, y:lb.y, 'text-anchor':'middle', 'font-size':BF_FONT,
+        fill:(lb.kind === 'mark') ? C_EDGE : C_BLUE, 'font-weight':'700'
+      });
+      t.textContent = (lb.kind === 'title') ? titleText : lb.text;
+      svg.appendChild(t);
+    });
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [], missedCats = {};
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0; missedCats = {};
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      if (q.fig){
+        var fw = document.createElement('div');
+        fw.className = 'figwrap';
+        var svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('class', 'scene');
+        /* 圖上的標題只寫「每一份多少」—— 那是題幹已經講過的資訊，不是答案。 */
+        drawFig(svg, q.fig, t.each ? t.each(q.fig.d) : String(q.fig.d));
+        fw.appendChild(svg);
+        box.appendChild(fw);
+      }
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good){
+            b.classList.add('wrong');
+            missedCats[item.g.cat] = (missedCats[item.g.cat] || 0) + 1;
+          }
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length) finish();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function finish(){
+    var t = L();
+    resultLine.textContent = (right === batch.length) ? t.resAll(batch.length)
+      : (right >= Math.ceil(batch.length * 2 / 3)) ? t.resGood(right, batch.length)
+      : t.resTry(right, batch.length);
+    /* 依「錯的是哪一類」給回去複習哪一課；全對的話只放速查卡與課程頁。 */
+    var links = [];
+    if (missedCats.mul) links.push(t.linkMul, t.linkG3Mul);
+    if (missedCats.div) links.push(t.linkDiv, t.linkG3Div);
+    if (!links.length) links.push(t.linkRef, t.linkIndex);
+    resultLinks.innerHTML = t.linkHead + ' ' + links.join('　·　');
+    resultEl.classList.add('on');
+    resultEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  function newRound(){ batch = buildBatch(); render(); }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    newRound();
+  });
+  retryBtn.addEventListener('click', newRound);
+
+  applyStatic();
+  newRound();
+})();
+</script>
+</body>
+</html>
