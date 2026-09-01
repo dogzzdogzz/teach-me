@@ -252,5 +252,95 @@
   applyStatic();
 })();
 </script>
+<script>
+/* ---------- 讓 SVG 的畫布容得下自己的標籤 ----------
+   ⚠️ 這段是**修補**，不是裝飾。SVG 的 viewBox 是寫死的；只要有一個文字標籤
+   （單位、座標數字、圖說）伸出 viewBox 之外，瀏覽器就會**直接把它切掉**，
+   而且不會報任何錯 —— 中文版剛好排得下、切換成英文就被切掉半個字，
+   是這個站最常見的情況。做法：量出實際內容的邊界（getBBox），
+   再把 viewBox **往外撐**到容得下。
+   ⚠️ 只**放大**、永遠不縮小，所以原本排得下的圖一個像素都不會動。
+   ⚠️ 切換語言時改的是 <text> 裡的**文字節點**，不是元素；只看 addedNodes
+      而且只認 nodeType === 1 的話，整個英文版都不會被重新量到 ——
+      所以這裡任何變動都重量一次全頁。
+   ⚠️ 改 viewBox 自己也是一次變動，會再觸發這個 observer；靠 busy 旗標擋掉
+      重入，第二輪因為已經容得下、不會再改，就自然停住。
+   ⚠️ 一定要**同步**做完（不能用 setTimeout 排隊）——
+      檢查工具切完語言可能馬上就量，排隊的修補會來不及。 */
+(function(){
+  "use strict";
+  function fitSVG(svg){
+    var bb;
+    try { bb = svg.getBBox(); } catch(e){ return; }
+    if (!bb || !isFinite(bb.width) || bb.width <= 0 || bb.height <= 0) return;
+    var vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+    if (vb.length !== 4) return;
+    for (var k = 0; k < 4; k++) if (!isFinite(vb[k])) return;
+    var m = 3;
+    var x0 = Math.min(vb[0], bb.x - m), y0 = Math.min(vb[1], bb.y - m);
+    var x1 = Math.max(vb[0] + vb[2], bb.x + bb.width + m);
+    var y1 = Math.max(vb[1] + vb[3], bb.y + bb.height + m);
+    /* ⚠️ 這裡一定要留容差。寫回去的 viewBox 經過 toFixed(1) 四捨五入，
+       下一輪再比就會發現「還差 0.04」而再寫一次 —— 一路寫到瀏覽器卡死。
+       只有真的多出 0.2 以上才動它。 */
+    if (vb[0] - x0 < 0.2 && vb[1] - y0 < 0.2 &&
+        x1 - (vb[0] + vb[2]) < 0.2 && y1 - (vb[1] + vb[3]) < 0.2) return;
+    svg.setAttribute('viewBox', x0.toFixed(1) + ' ' + y0.toFixed(1) + ' ' +
+                                (x1 - x0).toFixed(1) + ' ' + (y1 - y0).toFixed(1));
+  }
+  var busy = false;
+  /* 只重量「被動到的那一塊」。動到的是 <text> 裡的字（切語言就是這樣）時，
+     往上找到它自己那張圖就好。 */
+  function fitIn(node){
+    if (!node) return;
+    var el = node.nodeType === 1 ? node : node.parentElement;
+    if (!el) return;
+    var own = el.closest ? el.closest('svg[viewBox]') : null;
+    if (own){ fitSVG(own); return; }
+    if (String(el.tagName).toLowerCase() === 'svg' && el.hasAttribute('viewBox')) fitSVG(el);
+    var list = el.querySelectorAll ? el.querySelectorAll('svg[viewBox]') : [];
+    for (var i = 0; i < list.length; i++) fitSVG(list[i]);
+  }
+  function fitAll(){
+    if (busy) return;
+    busy = true;
+    try {
+      var list = document.querySelectorAll('svg[viewBox]');
+      for (var i = 0; i < list.length; i++) fitSVG(list[i]);
+    } finally { busy = false; }
+  }
+  fitAll();
+  window.addEventListener('load', fitAll);
+  /* ⚠️ MutationObserver 的回呼是 microtask —— 要等**目前這一輪程式全部跑完**
+     才輪到它。任何「按一下、馬上量」的程式（檢查工具就是這樣）都會量在它前面，
+     量到還沒撐開的舊框。所以事件冒泡到 window 的時候（那時畫面已經重畫完，
+     但還在同一輪裡）就**同步**把整頁重量一次。 */
+  ['click', 'change', 'input'].forEach(function(ev){
+    window.addEventListener(ev, fitAll);
+  });
+  if (typeof MutationObserver === 'function'){
+    /* observer 負責的是**不是點出來的**重畫（計時器動畫之類）。
+       ⚠️ 這裡只重量被動到的那一塊，不重量全頁：圓規的自動播放每 60ms 重畫一次，
+       整頁重量會變成一次動畫幾百次 getBBox（每一次都強制重排），畫面會卡。 */
+    new MutationObserver(function(muts){
+      if (busy) return;
+      busy = true;
+      try {
+        for (var i = 0; i < muts.length; i++){
+          var mu = muts[i];
+          if (mu.type === 'attributes' && mu.attributeName === 'viewBox') continue;
+          if (mu.type === 'childList'){
+            for (var j = 0; j < mu.addedNodes.length; j++) fitIn(mu.addedNodes[j]);
+            if (!mu.addedNodes.length) fitIn(mu.target);
+          } else {
+            fitIn(mu.target);
+          }
+        }
+      } finally { busy = false; }
+    }).observe(document.body,
+      { childList:true, subtree:true, characterData:true, attributes:true });
+  }
+})();
+</script>
 </body>
 </html>

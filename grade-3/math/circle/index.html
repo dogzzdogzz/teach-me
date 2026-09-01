@@ -317,6 +317,63 @@
 
   /* cfg: { circles:[{r,color,fill,dash,width,opacity}], segs:[{r,a1,a2,color,dash,width,label,dx,dy}],
            points:[{r,a,label,color,dx,dy}], showCenter, centerLabel, aria } */
+  /* 估一段字有多寬（只用來決定「要不要挪開」）。每一類都取該類最寬的字再多留 6%：
+     高估只是多留白，低估會讓兩個標籤真的疊在一起。 */
+  function estTextW(str, fs){
+    var w = 0, i, c;
+    str = String(str);
+    for (i = 0; i < str.length; i++){
+      c = str.charCodeAt(i);
+      if (c >= 0x2E80 && c <= 0xFFEF) w += 1.0;        /* 中日韓、全形 */
+      else if (c === 32) w += 0.34;                    /* 空白 */
+      else if (c >= 48 && c <= 57) w += 0.62;          /* 數字 */
+      else if (c >= 65 && c <= 90) w += 0.98;          /* 大寫 */
+      else w += 0.90;                                  /* 小寫 */
+    }
+    return w * fs * 1.06;
+  }
+
+  /* 標籤疊在一起就把後面那一個推開。
+     ⚠️ 每個標籤只沿著**自己那一個固定方向**推（半徑的字往圓外推、圓心的 O 往空的
+     那一邊推），所以推一次就一定離原位更遠、不會來回震盪。曾經有過「往重疊比較少的
+     那一軸推」的版本，兩個標籤會互相把對方推回來，永遠收斂不了。
+     ⚠️ 推的距離要有上限：字被推到離自己那條半徑太遠，孩子就看不出它在標哪一條線，
+     那比稍微擠一點更糟。 */
+  function placeLabels(labels){
+    var i, r, step, boxes = [];
+    labels.forEach(function(L){
+      var w = estTextW(L.text, L.fs);
+      var x0 = (L.anchor === 'end') ? L.x - w : ((L.anchor === 'start') ? L.x : L.x - w / 2);
+      boxes.push({ L:L, x0:x0, x1:x0 + w, y0:L.y - L.fs * 1.02, y1:L.y + L.fs * 0.32 });
+    });
+    var hits = function(b, upto){
+      for (var j = 0; j < upto; j++){
+        var a = boxes[j];
+        var ix = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+        var iy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+        /* 和 sweep 的判定對齊：兩個方向都要真的疊到才算，不然一個像素的擦邊
+           也會被當成重疊，把字推得到處都是。留 1px 餘裕。 */
+        if (ix > 1 && iy > 1) return true;
+      }
+      return false;
+    };
+    for (i = 1; i < boxes.length; i++){
+      var b = boxes[i];
+      if (!hits(b, i)) continue;
+      step = b.L.fs * 0.55;
+      var MAXR = 6;
+      for (r = 1; r <= MAXR; r++){
+        var dx = b.L.px * step * r, dy = b.L.py * step * r;
+        var t = { x0:b.x0 + dx, x1:b.x1 + dx, y0:b.y0 + dy, y1:b.y1 + dy };
+        if (hits(t, i)) continue;
+        b.L.x += dx; b.L.y += dy;
+        b.x0 = t.x0; b.x1 = t.x1; b.y0 = t.y0; b.y1 = t.y1;
+        break;
+      }
+    }
+    return labels;
+  }
+
   function circleFig(cfg){
     var maxR = 0, i;
     for (i = 0; i < cfg.circles.length; i++) if (cfg.circles[i].r > maxR) maxR = cfg.circles[i].r;
@@ -325,12 +382,21 @@
     var cx = size / 2, cy = size / 2;
     var svg = '<svg class="scene" viewBox="0 0 ' + size.toFixed(0) + ' ' + size.toFixed(0) + '" role="img"' +
       (cfg.aria ? (' aria-label="' + cfg.aria + '"') : '') + '>';
+    /* 圖形先畫、標籤最後畫：標籤要先全部排好位置，才知道有沒有互相疊到。 */
+    var labels = [], centreLabel = null;
+    /* 從圓心指向 (x, y) 的單位向量；就在圓心的話給一個預設方向。 */
+    function outward(x, y){
+      var vx = x - cx, vy = y - cy, n = Math.sqrt(vx * vx + vy * vy);
+      if (n < 0.001) return { x:0, y:-1 };
+      return { x:vx / n, y:vy / n };
+    }
     cfg.circles.forEach(function(c){
       var rp = c.r * PXCM;
       svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + rp.toFixed(1) +
         '" fill="' + (c.fill || 'none') + '" stroke="' + (c.color || '#E8871E') + '" stroke-width="' + (c.width || 3) + '"' +
         (c.dash ? ' stroke-dasharray="6,5"' : '') + (c.opacity != null ? (' opacity="' + c.opacity + '"') : '') + '/>';
     });
+    var segAngles = [];
     (cfg.segs || []).forEach(function(s){
       var rp = (s.r != null ? s.r : maxR) * PXCM;
       var p1 = polar(cx, cy, rp, s.a1);
@@ -338,24 +404,84 @@
       svg += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) +
         '" stroke="' + (s.color || '#2F9E69') + '" stroke-width="' + (s.width || 4) + '"' +
         (s.dash ? ' stroke-dasharray="6,5"' : '') + ' stroke-linecap="round"/>';
+      segAngles.push(s.a1);
+      if (s.a2 != null) segAngles.push(s.a2);
       if (s.label){
-        var mx = (p1.x + p2.x) / 2 + (s.dx || 0), my = (p1.y + p2.y) / 2 + (s.dy != null ? s.dy : -8);
-        svg += '<text x="' + mx.toFixed(1) + '" y="' + my.toFixed(1) + '" font-size="14" font-weight="700" fill="' +
-          (s.color || '#2F9E69') + '" text-anchor="middle">' + s.label + '</text>';
+        /* labelT：標籤放在這一段的哪裡。0 ＝ 靠 p2（半徑的話就是圓心）、
+           1 ＝ 靠 p1（外端）、0.5 ＝ 中點（預設）。
+           ⚠️ 五條半徑那張圖一定要用 —— 五個「4 公分」全擠在半個半徑的地方，
+           圓裡面根本排不下，得推到圓周外面才讀得到。 */
+        var tt = (s.labelT != null) ? s.labelT : 0.5;
+        var mx = p2.x + (p1.x - p2.x) * tt, my = p2.y + (p1.y - p2.y) * tt;
+        /* ⚠️ 標籤的預設位置不可以只是「中點往上 8」—— 半徑的中點離圓心只有半個半徑，
+           往上 8 剛好落在圓心的 O 上面（線上就是這樣疊住的）。改成沿著**這一段自己的
+           法線**往圓外挪：不管這條線指哪個方向，字都會落在線的旁邊而不是圓心上。 */
+        var ux = p2.x - p1.x, uy = p2.y - p1.y;
+        var un = Math.sqrt(ux * ux + uy * uy) || 1;
+        var nx = -uy / un, ny = ux / un;
+        if ((mx + nx - cx) * (mx - cx) + (my + ny - cy) * (my - cy) < (mx - cx) * (mx - cx) + (my - cy) * (my - cy)){
+          nx = -nx; ny = -ny;
+        }
+        /* labelOut：改成沿著「圓心 → 這個位置」的方向往外擺（放在圓周外面用）。 */
+        if (s.labelOut){
+          var od = outward(mx, my);
+          nx = od.x; ny = od.y;
+        }
+        var off = s.labelOut ? 16 : 13;
+        var lx = (s.dx != null) ? mx + s.dx : mx + nx * off;
+        var ly = (s.dy != null) ? my + s.dy : my + ny * off + 4;
+        labels.push({ text:s.label, x:lx, y:ly, fs:14, weight:700,
+                      fill:(s.color || '#2F9E69'), anchor:'middle', px:nx, py:ny });
       }
     });
     if (cfg.showCenter){
       svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + (cfg.centerR || 4) + '" fill="#2B2A33"/>';
-      if (cfg.centerLabel) svg += '<text x="' + (cx + 8).toFixed(1) + '" y="' + (cy - 8).toFixed(1) +
-        '" font-size="13" fill="#2B2A33">' + cfg.centerLabel + '</text>';
+      if (cfg.centerLabel){
+        /* ⚠️ 圓心的字固定放右上角是不行的：只要有一條線往右上走，兩個就疊住。
+           從八個方向裡挑一個**離所有線都最遠**的來放。 */
+        var best = null, bestGap = -1;
+        for (var k = 0; k < 8; k++){
+          var ang = k * 45;
+          var gap = 360;
+          for (var m = 0; m < segAngles.length; m++){
+            /* 兩個角之間的實際夾角，0（完全同方向）到 180（正對面）。
+               ⚠️ 要的是**離線最遠**的那個方向，所以取夾角最小值再挑最大的那個；
+               寫反了就會剛好把 O 放到線上面。 */
+            var diff = Math.abs((((ang - segAngles[m]) % 360) + 540) % 360 - 180);
+            if (diff < gap) gap = diff;
+          }
+          if (gap > bestGap){ bestGap = gap; best = ang; }
+        }
+        var cp = polar(cx, cy, 14, best == null ? 45 : best);
+        var cdir = outward(cp.x, cp.y);
+        /* ⚠️ 圓心的字**絕對不可以被推開**。placeLabels 只推「後面」的標籤，所以把它
+           排到最前面 —— 推的是那條長標籤，不是 O。反過來的話，「張開 4 公分」會把
+           O 往旁邊擠（英文更長，實測會擠到離圓心 42 單位遠），畫面上就變成
+           O 在標一塊空白，而真正的圓心那個點沒有名字 —— 比原本疊在一起更糟。 */
+        centreLabel = { text:cfg.centerLabel, x:cp.x, y:cp.y + 4, fs:13, weight:400,
+                        fill:'#2B2A33', anchor:'middle', px:cdir.x, py:cdir.y };
+      }
     }
     (cfg.points || []).forEach(function(pt){
       var rp = (pt.r != null ? pt.r : maxR) * PXCM;
       var p = polar(cx, cy, rp, pt.a);
       svg += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4" fill="' + (pt.color || '#3B7DD8') + '"/>';
-      if (pt.label) svg += '<text x="' + (p.x + (pt.dx != null ? pt.dx : 8)).toFixed(1) + '" y="' +
-        (p.y + (pt.dy != null ? pt.dy : -8)).toFixed(1) + '" font-size="13" font-weight="700" fill="' +
-        (pt.color || '#3B7DD8') + '">' + pt.label + '</text>';
+      if (pt.label){
+        var pd = outward(p.x, p.y);
+        var px2 = (pt.dx != null) ? p.x + pt.dx : p.x + pd.x * 12;
+        var py2 = (pt.dy != null) ? p.y + pt.dy : p.y + pd.y * 12 + 4;
+        /* 原本沒寫 text-anchor（＝start），所以有明確 dx 的呼叫端是照「從這裡開始寫」
+           調出來的；改成置中會整個往左跑到點上面，那幾個要維持 start。 */
+        labels.push({ text:pt.label, x:px2, y:py2, fs:13, weight:700,
+                      fill:(pt.color || '#3B7DD8'),
+                      anchor:(pt.dx != null ? 'start' : 'middle'), px:pd.x, py:pd.y });
+      }
+    });
+    if (centreLabel) labels.unshift(centreLabel);
+    placeLabels(labels).forEach(function(L){
+      svg += '<text x="' + L.x.toFixed(1) + '" y="' + L.y.toFixed(1) + '" font-size="' + L.fs +
+        '"' + (L.weight === 700 ? ' font-weight="700"' : '') + ' fill="' + L.fill +
+        '" text-anchor="' + L.anchor + '">' + L.text + '</text>';
     });
     svg += '</svg>';
     return svg;
@@ -818,7 +944,10 @@
   function renderS3Spokes(){
     var d = L();
     var segs = S3_SPOKE_ANGLES.map(function(a){
-      return { a1: a, a2: null, r: S3_R, color: '#2F9E69', width: 3, label: d.unit(S3_R), dy: -12 };
+      /* 標籤放在半徑的外端、再往圓外推 —— 五個標籤沿著圓周散開才讀得到，
+         擠在中點會全部疊成一團。 */
+      return { a1: a, a2: null, r: S3_R, color: '#2F9E69', width: 3,
+               label: d.unit(S3_R), labelT: 1, labelOut: true };
     });
     s3SpokesWrap.innerHTML = circleFig({
       circles: [{ r: S3_R, color: '#E8871E', width: 2 }],
@@ -831,8 +960,10 @@
     s3CheckWrap.innerHTML = circleFig({
       circles: [{ r: S3_CHECK_R, color: '#E8871E', width: 2 }],
       segs: [
-        { a1: S3_A_DIAM[0], a2: S3_A_DIAM[1], r: S3_CHECK_R, color: '#3B7DD8', width: 4, label: 'AB', dy: -10 },
-        { a1: S3_A_CHORD[0], a2: S3_A_CHORD[1], r: S3_CHECK_R, color: '#E8871E', width: 4, label: 'CD', dy: -10 }
+        /* 直徑的中點就是圓心，標在中點會壓到 O，所以往一邊挪。 */
+        { a1: S3_A_DIAM[0], a2: S3_A_DIAM[1], r: S3_CHECK_R, color: '#3B7DD8', width: 4, label: 'AB', labelT: 0.75 },
+        /* 弦的中點就在圓周附近，往上 10 剛好壓在圓弧上；改成沿半徑方向往圓外推。 */
+        { a1: S3_A_CHORD[0], a2: S3_A_CHORD[1], r: S3_CHECK_R, color: '#E8871E', width: 4, label: 'CD', labelOut: true }
       ],
       showCenter: true, centerLabel: 'O'
     });
@@ -886,7 +1017,9 @@
     });
     s4SvgWrap.innerHTML = circleFig({
       circles: [{ r: S4_R, color: '#E8871E', width: 2, dash: true }],
-      segs: [{ a1: -20, a2: null, r: S4_R, color: '#2F9E69', width: 4, label: d.s4svgLabel(S4_R), dy: -10 }],
+      /* ⚠️ 這裡原本寫死 dy: -10 —— 半徑的中點只離圓心半個半徑，往上 10 就壓在 O 上面
+         （「張開 4 公分」整串蓋住圓心）。拿掉之後改用法線自動往圓外擺。 */
+      segs: [{ a1: -20, a2: null, r: S4_R, color: '#2F9E69', width: 4, label: d.s4svgLabel(S4_R) }],
       showCenter: true, centerLabel: 'O', aria: d.s4svgAria
     });
     s4CheckQ.textContent = d.s4checkQ(S4_CHECK_D);
@@ -1265,6 +1398,96 @@
   /* 記錄最後上的課，供首頁「繼續上次」使用 */
   try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-3/math/circle/', zh:'圓規畫圓趣 — 圓心、半徑、直徑', en:'Drawing Circles', icon:'⭕'})); } catch(e){}
 
+})();
+</script>
+<script>
+/* ---------- 讓 SVG 的畫布容得下自己的標籤 ----------
+   ⚠️ 這段是**修補**，不是裝飾。SVG 的 viewBox 是寫死的；只要有一個文字標籤
+   （單位、座標數字、圖說）伸出 viewBox 之外，瀏覽器就會**直接把它切掉**，
+   而且不會報任何錯 —— 中文版剛好排得下、切換成英文就被切掉半個字，
+   是這個站最常見的情況。做法：量出實際內容的邊界（getBBox），
+   再把 viewBox **往外撐**到容得下。
+   ⚠️ 只**放大**、永遠不縮小，所以原本排得下的圖一個像素都不會動。
+   ⚠️ 切換語言時改的是 <text> 裡的**文字節點**，不是元素；只看 addedNodes
+      而且只認 nodeType === 1 的話，整個英文版都不會被重新量到 ——
+      所以這裡任何變動都重量一次全頁。
+   ⚠️ 改 viewBox 自己也是一次變動，會再觸發這個 observer；靠 busy 旗標擋掉
+      重入，第二輪因為已經容得下、不會再改，就自然停住。
+   ⚠️ 一定要**同步**做完（不能用 setTimeout 排隊）——
+      檢查工具切完語言可能馬上就量，排隊的修補會來不及。 */
+(function(){
+  "use strict";
+  function fitSVG(svg){
+    var bb;
+    try { bb = svg.getBBox(); } catch(e){ return; }
+    if (!bb || !isFinite(bb.width) || bb.width <= 0 || bb.height <= 0) return;
+    var vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+    if (vb.length !== 4) return;
+    for (var k = 0; k < 4; k++) if (!isFinite(vb[k])) return;
+    var m = 3;
+    var x0 = Math.min(vb[0], bb.x - m), y0 = Math.min(vb[1], bb.y - m);
+    var x1 = Math.max(vb[0] + vb[2], bb.x + bb.width + m);
+    var y1 = Math.max(vb[1] + vb[3], bb.y + bb.height + m);
+    /* ⚠️ 這裡一定要留容差。寫回去的 viewBox 經過 toFixed(1) 四捨五入，
+       下一輪再比就會發現「還差 0.04」而再寫一次 —— 一路寫到瀏覽器卡死。
+       只有真的多出 0.2 以上才動它。 */
+    if (vb[0] - x0 < 0.2 && vb[1] - y0 < 0.2 &&
+        x1 - (vb[0] + vb[2]) < 0.2 && y1 - (vb[1] + vb[3]) < 0.2) return;
+    svg.setAttribute('viewBox', x0.toFixed(1) + ' ' + y0.toFixed(1) + ' ' +
+                                (x1 - x0).toFixed(1) + ' ' + (y1 - y0).toFixed(1));
+  }
+  var busy = false;
+  /* 只重量「被動到的那一塊」。動到的是 <text> 裡的字（切語言就是這樣）時，
+     往上找到它自己那張圖就好。 */
+  function fitIn(node){
+    if (!node) return;
+    var el = node.nodeType === 1 ? node : node.parentElement;
+    if (!el) return;
+    var own = el.closest ? el.closest('svg[viewBox]') : null;
+    if (own){ fitSVG(own); return; }
+    if (String(el.tagName).toLowerCase() === 'svg' && el.hasAttribute('viewBox')) fitSVG(el);
+    var list = el.querySelectorAll ? el.querySelectorAll('svg[viewBox]') : [];
+    for (var i = 0; i < list.length; i++) fitSVG(list[i]);
+  }
+  function fitAll(){
+    if (busy) return;
+    busy = true;
+    try {
+      var list = document.querySelectorAll('svg[viewBox]');
+      for (var i = 0; i < list.length; i++) fitSVG(list[i]);
+    } finally { busy = false; }
+  }
+  fitAll();
+  window.addEventListener('load', fitAll);
+  /* ⚠️ MutationObserver 的回呼是 microtask —— 要等**目前這一輪程式全部跑完**
+     才輪到它。任何「按一下、馬上量」的程式（檢查工具就是這樣）都會量在它前面，
+     量到還沒撐開的舊框。所以事件冒泡到 window 的時候（那時畫面已經重畫完，
+     但還在同一輪裡）就**同步**把整頁重量一次。 */
+  ['click', 'change', 'input'].forEach(function(ev){
+    window.addEventListener(ev, fitAll);
+  });
+  if (typeof MutationObserver === 'function'){
+    /* observer 負責的是**不是點出來的**重畫（計時器動畫之類）。
+       ⚠️ 這裡只重量被動到的那一塊，不重量全頁：圓規的自動播放每 60ms 重畫一次，
+       整頁重量會變成一次動畫幾百次 getBBox（每一次都強制重排），畫面會卡。 */
+    new MutationObserver(function(muts){
+      if (busy) return;
+      busy = true;
+      try {
+        for (var i = 0; i < muts.length; i++){
+          var mu = muts[i];
+          if (mu.type === 'attributes' && mu.attributeName === 'viewBox') continue;
+          if (mu.type === 'childList'){
+            for (var j = 0; j < mu.addedNodes.length; j++) fitIn(mu.addedNodes[j]);
+            if (!mu.addedNodes.length) fitIn(mu.target);
+          } else {
+            fitIn(mu.target);
+          }
+        }
+      } finally { busy = false; }
+    }).observe(document.body,
+      { childList:true, subtree:true, characterData:true, attributes:true });
+  }
 })();
 </script>
 </body>
