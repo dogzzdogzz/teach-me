@@ -287,6 +287,22 @@ const UNIT_REF = {
   zh:{ fruit:'個', pet:'隻', book:'本', drink:'杯', craft:'張', sport:'人', week:'本', month:'次' },
   en:{ fruit:'piece', pet:'pet', book:'book', drink:'cup', craft:'sheet', sport:'child', week:'book', month:'visit' }
 };
+/* 情境名的真值表。圖說要逐字重建，就得連情境名一起釘 ——
+   拿頁面的字典比頁面的字典等於自己比自己。 */
+const SCENE_REF = {
+  zh:{
+    fruit:'水果店今天賣出的水果', pet:'班上同學養的寵物',
+    book:'圖書館今天借出的書', drink:'福利社今天賣出的飲料',
+    craft:'美勞課用掉的色紙', sport:'班上同學最喜歡的運動',
+    week:'圖書館這一週每天借出的書', month:'小安每個月去圖書館的次數'
+  },
+  en:{
+    fruit:'Fruit sold at the shop today', pet:'Pets our class keeps',
+    book:'Books borrowed from the library today', drink:'Drinks sold at the tuck shop today',
+    craft:'Craft paper used in art class', sport:'Favourite sports in our class',
+    week:'Books borrowed each day this week', month:'Library visits each month'
+  }
+};
 /* 課程頁只用到六個情境（沒有 sport／month，那兩個只出現在複習頁）。 */
 const INDEX_UNIT_KEYS = ['fruit', 'pet', 'book', 'drink', 'craft', 'week'];
 
@@ -1063,7 +1079,7 @@ module.exports = {
       find:"  function figOf(kind, vals, names){\n    var plan = (kind === 'line') ? linePlan(vals, gridRows(vals)) : chartPlan(vals, gridRows(vals));",
       replace:"  function figOf(kind, vals, names){\n    vals = vals.map(function(v, i){ return i === 0 ? Math.max(0, v - 1) : v; });\n    var plan = (kind === 'line') ? linePlan(vals, gridRows(vals)) : chartPlan(vals, gridRows(vals));",
       why:"the first bar would be drawn one cell shorter than the number being scored" },
-    { file:"review", via:"review", expect:"the caption must say what one cell means",
+    { file:"review", via:"review", expect:"the caption does not match the pinned wording word for word",
       find:"      cap:function(name, unit){ return '📊 ' + name + '　一格代表 1 ' + unit; },\n      capLine:function(name, unit){ return '📈 ' + name + '　一格代表 1 ' + unit; },\n      listOf:function(a){ return a.join('、'); },",
       replace:"      cap:function(name, unit){ return '📊 ' + name + '　' + unit; },\n      capLine:function(name, unit){ return '📈 ' + name + '　' + unit; },\n      listOf:function(a){ return a.join('、'); },",
       why:"the chart would stop telling the reader what one cell represents" },
@@ -1083,7 +1099,7 @@ module.exports = {
       find:"        run:'跑步', jump:'跳繩', swim:'游泳', ball:'球類',",
       replace:"        run:'慢跑', jump:'跳繩', swim:'游泳', ball:'球類',",
       why:"a generated item name would drift away from the one the checker pins" },
-    { file:"review", via:"review", expect:"the caption does not end with what one cell means in the right unit",
+    { file:"review", via:"review", expect:"the rendered stem does not match the pinned wording word for word",
       find:"        craft:'張', sport:'人', week:'本', month:'次'",
       replace:"        craft:'張', sport:'位', week:'本', month:'次'",
       why:"a generated unit word would drift away from the one the checker pins" },
@@ -1160,7 +1176,7 @@ module.exports = {
       find:"          forgot:name + '一定是忘了畫，應該把它補上去',",
       replace:"          forgot:name + '一定是忘了畫，長條的高度就是 0 格',",
       why:"two options would both be right, and only a keyword pinned to the answer can tell" },
-    { file:"review", via:"review", expect:"the caption does not end with what one cell means in the right unit",
+    { file:"review", via:"review", expect:"the caption does not match the pinned wording word for word",
       find:"      cap:function(name, unit){ return '📊 ' + name + '　一格代表 1 ' + unit; },\n      capLine:function(name, unit){ return '📈 ' + name + '　一格代表 1 ' + unit; },\n      listOf:function(a){ return a.join('、'); },",
       replace:"      cap:function(name, unit){ return '📊 ' + unit + ' ' + name + '　一格代表 1 格'; },\n      capLine:function(name, unit){ return '📈 ' + unit + ' ' + name + '　一格代表 1 格'; },\n      listOf:function(a){ return a.join('、'); },",
       why:"the unit would appear in the title while the scale line names something else" },
@@ -1212,11 +1228,19 @@ module.exports = {
       find:"            ? '看這張長條圖：<strong>哪一項最多</strong>？'",
       replace:"            ? '看這張長條圖：<strong>哪一項最多</strong>？（其實要看總數）'",
       why:"a clause appended after the pinned question would reverse what is being asked while every substring assertion stayed green" },
-    { file:"review", via:"review", expect:"states the scale",
+    { file:"review", via:"review", expect:"the caption does not match the pinned wording word for word",
+      find:"        craft:'美勞課用掉的色紙', sport:'班上同學最喜歡的運動',",
+      replace:"        craft:'美勞課用掉的色紙', sport:'班上同學最愛的運動',",
+      why:"a scenario name would drift away from the one the checker pins, and only a word-for-word caption catches it" },
+    { file:"review", via:"review", expect:"the caption does not match the pinned wording word for word",
+      find:"      cap:function(name, unit){ return '📊 ' + name + '　一格代表 1 ' + unit; },",
+      replace:"      cap:function(name, unit){ return '📊 ' + name + '　一格代表 2 ' + unit + '　一格代表 1 ' + unit; },",
+      why:"a second, contradictory scale in front of the canonical one satisfied every substring and counting check" },
+    { file:"review", via:"review", expect:"the caption does not match the pinned wording word for word",
       find:"      capLine:function(name, unit){ return '📈 ' + name + '　一格代表 1 ' + unit; },",
       replace:"      capLine:function(name, unit){ return '📈 ' + name + '　一格代表 1 格　一格代表 1 ' + unit; },",
       why:"two scale statements in one caption would contradict each other while the ending still matched" },
-    { file:"review", via:"review", expect:"does not end with what one cell means in the right unit",
+    { file:"review", via:"review", expect:"the caption does not match the pinned wording word for word",
       find:"      cap:function(name, unit){ return '📊 ' + name + '　One cell means 1 ' + unit; },",
       replace:"      cap:function(name, unit){ return '📊 ' + name + '　One cell means 1 ' + unit + 'case'; },",
       why:"a longer word starting with the unit would satisfy a prefix match but names something else" },
@@ -1635,23 +1659,24 @@ module.exports = {
           ? checkLine(q.fig, d.vals, rows, R, names, genId + ' fig')
           : checkPlan(q.fig, d.vals, rows, R, names, genId + ' fig');
         if (bad.length) out.push(bad[0]);
-        /* 圖說一定要講「一格代表 1」——沒有它，這張圖就讀不出數字。 */
+        /* ⚠️ 圖說和題幹同一個道理：子字串釘不死它。
+           「有講一格代表 1」→ 被 `1 bookcase` 滿足（前綴）；改成比結尾 → 前面再加一句
+           「Each cell means 2 books.」照樣過；改成數「一格代表 1」出現幾次 → 換個說法
+           寫第二個刻度又躲掉了。同一個洞被抓到三次（第四、五、六輪各一次形狀不同）。
+           唯一釘得死的還是**整句重建一次** —— 圖示、情境名、單位，一個字都不能差。 */
         if (!q.cap) out.push('the chart has no caption');
-        else if (lang === 'zh' && q.cap.indexOf('一格代表 1 ') < 0)
-          out.push('the caption must say what one cell means: ' + q.cap);
-        else if (lang === 'en' && q.cap.indexOf('One cell means 1 ') < 0)
-          out.push('the caption must say what one cell means: ' + q.cap);
-        /* ⚠️ 單位只要「出現在圖說某處」是不夠的：情境標題本身就可能含有那個字，
-           而「一格代表 1」後面卻寫了別的名詞。要驗它緊接在那一句後面。 */
-        const CAP_LEAD = lang === 'zh' ? '一格代表 1 ' : 'One cell means 1 ';
-        /* ⚠️ 前綴比對會被 `1 bookcase` 滿足（它含有 `1 book`）。單位就在圖說的結尾，
-           所以直接比結尾，一個字都不能多（codex 第四輪抓到）。 */
-        if (q.cap && (q.cap.split(CAP_LEAD).length - 1) !== 1)
-          out.push('the caption states the scale ' + (q.cap.split(CAP_LEAD).length - 1) +
-                   ' times, so it can contradict itself: ' + q.cap);
-        if (q.cap && !q.cap.endsWith(CAP_LEAD + unit))
-          out.push('the caption does not end with what one cell means in the right unit — expected it to end "' +
-                   CAP_LEAD + unit + '", got "' + q.cap + '"');
+        else {
+          const sceneName = SCENE_REF[lang][d.sceneId];
+          if (!sceneName) out.push('the checker has no pinned name for scenario ' + d.sceneId);
+          else {
+            const icon = (kind === 'line') ? '📈' : '📊';
+            const lead = lang === 'zh' ? '　一格代表 1 ' : '　One cell means 1 ';
+            const wantCap = icon + ' ' + sceneName + lead + unit;
+            if (q.cap !== wantCap)
+              out.push('the caption does not match the pinned wording word for word:\n    got  ' +
+                       q.cap + '\n    want ' + wantCap);
+          }
+        }
         /* 圖上讀得回來的高度必須就是被計分的那個答案（幾何 → 數字的反向驗證）。 */
         if (genId === 'readBar' || genId === 'linePoint'){
           const bar = q.fig.bars[d.at];
