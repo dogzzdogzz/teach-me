@@ -15,6 +15,15 @@ const MAX = 1000;                     // 課名就是 1000 以內
    digitOf 問的是「某一位的數字」，答案與誘答都只能是一個數字。 */
 const RANGE = { digitOf: [0, 9] };
 
+/* 解釋裡的算式逐條驗算 —— 實作在 tools/checks/lib/arith.js（全站唯一一份）。
+   2026-09-02 補上（issue #2）：這個設定檔**從來沒有讀過 q.why**，所以解釋裡
+   寫錯的算式一路綠燈。量詞由這一課自己給 —— 共用清單漏掉某一課的量詞時，
+   那一課的算式會多出一個假的運算元，而且是靜靜地多出來。 */
+const arithNumbers = require('./lib/arith.js').makeArith({
+  units: ["個", "十", "百", "顆", "元", "張"],
+  unitsEn: ["tens?", "hundreds?", "ones?", "items?", "coins?"]
+});
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-2/math/numbers */
   breaks: [
@@ -99,7 +108,13 @@ module.exports = {
       replace:'    { a:307, b:470 },\n    { a:485, b:258 },' },
     { file:'index', expect:'walks past 1000',
       find:'  var START_NUMS = [8, 97, 195];\n  var MAX_STEPS = 12;',
-      replace:'  var START_NUMS = [8, 97, 995];\n  var MAX_STEPS = 12;' }
+      replace:'  var START_NUMS = [8, 97, 995];\n  var MAX_STEPS = 12;' },
+    { file:'index', expect:"arithmetic is wrong",
+      find:"why:'300 + 50 + 2 = 352。'",
+      replace:"why:'300 + 50 + 2 = 353。'" },
+    { file:'index', expect:"arithmetic coverage changed",
+      find:"why:'300 + 50 + 2 = 352.'",
+      replace:"why:'Three hundred fifty two.'" }
   ],
 
   sim: {
@@ -356,6 +371,49 @@ module.exports = {
         fail('ROUNDS never exercises a 0 placeholder');
       if (data.ROUNDS.map(r => r.opts.indexOf(r.ans)).every(x => x === 0))
         fail('every game round has the answer first');
+
+          /* --- 三層題庫的題幹與解釋：算式逐條驗算（issue #2） ---
+             ⚠️ 光是「跑過沒報錯」不算數：一個壞掉的正規化會讓每一條算式都
+             靜靜地讀不到，那樣也是零錯誤。所以**驗過幾條要對得上數字** ——
+             少掉就表示有宣稱沒被驗到。 */
+          {
+            let vSum = 0, qSum = 0;
+            ['qs','qsAdv','qsBoost'].forEach(bank => {
+              ['zh','en'].forEach(L => {
+                (I18N[L][bank] || []).forEach((q, i) => {
+                  [['stem', q && q.stem], ['why', q && q.why]].forEach(([field, text]) => {
+                    if (typeof text !== 'string') return;
+                    const r = arithNumbers(text);
+                    vSum += r.verified; qSum += r.questions;
+                    r.problems.forEach(p => fail(`${bank}[${i}] ${L}.${field}: ${p}`));
+                  });
+                });
+              });
+            });
+            if (vSum !== 2) fail(`arithmetic coverage changed: verified ${vSum} equations, expected 2`);
+            if (qSum !== 2) fail(`question-shaped equations changed: found ${qSum}, expected 2`);
+            /* 宣告過卻沒對上的「刻意寫錯」是一個永遠擋著的洞。 */
+            arithNumbers.unmatched().forEach(w => fail(`wrongOnPurpose "${w}" never matched — stale, and it would silently excuse that equation`));
+            /* ⚠️ 「刻意寫錯」是整課通用的放行。同一條錯式子跑到別的地方去也會
+               被一起放行 —— 所以連「放行了幾次」都要釘住。 */
+            {
+              const want = {};
+              const got = arithNumbers.excuseCounts();
+              Object.keys(want).forEach(k => {
+                if (got[k] !== want[k]) fail(`wrongOnPurpose "${k}" was excused ${got[k]} time(s), expected ${want[k]}`);
+              });
+            }
+            /* ⚠️ 只釘「驗過幾條」擋不住「拿掉一條、再補一條」：數字一樣，
+               驗的卻是別的宣稱。所以把**驗過的每一條算式本身**排序後做指紋。 */
+            {
+              const list = arithNumbers.verifiedAll();
+              const digest = require('crypto').createHash('sha1').update(list.join(' | ')).digest('hex').slice(0, 12);
+              if (digest !== '1c13a95d070c'){
+                fail(`the set of verified equations changed (digest ${digest}, expected 1c13a95d070c)\n      now: ${list.join(' | ')}`);
+              }
+            }
+          }
+
     }
   }
 };

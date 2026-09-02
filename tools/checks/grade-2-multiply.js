@@ -12,6 +12,15 @@ const MAXP = MAXF * MAXF;  // 積上限 81
 /* 選項是「算式字串」而不是數字的兩個產生器。 */
 const EXPR_GENS = { repeatedAdd: true, sameTotal: true };
 
+/* 解釋裡的算式逐條驗算 —— 實作在 tools/checks/lib/arith.js（全站唯一一份）。
+   2026-09-02 補上（issue #2）：這個設定檔**從來沒有讀過 q.why**，所以解釋裡
+   寫錯的算式一路綠燈。量詞由這一課自己給 —— 共用清單漏掉某一課的量詞時，
+   那一課的算式會多出一個假的運算元，而且是靜靜地多出來。 */
+const arithMultiply = require('./lib/arith.js').makeArith({
+  units: ["個", "顆", "排", "盒", "包", "隻", "張", "人", "組", "倍"],
+  unitsEn: ["groups?", "rows?", "boxes", "box", "items?", "pieces?", "times", "people", "person", "legs?"]
+});
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-2/math/multiply */
   breaks: [
@@ -75,7 +84,16 @@ module.exports = {
     /* 正解全押第一個 —— 這一課的遊戲原本真的是這樣（2026-08-26 修）。 */
     { file:'index', expect:'every game round has the answer first',
       find:'    { a:3, b:2, ans:6,  opts:[5, 6, 9] },\n    { a:5, b:3, ans:15, opts:[8, 10, 15] },\n    { a:4, b:4, ans:16, opts:[16, 12, 20] },\n    { a:6, b:3, ans:18, opts:[9, 24, 18] },\n    { a:7, b:4, ans:28, opts:[21, 28, 32] }',
-      replace:'    { a:3, b:2, ans:6,  opts:[6, 5, 9] },\n    { a:5, b:3, ans:15, opts:[15, 8, 10] },\n    { a:4, b:4, ans:16, opts:[16, 12, 20] },\n    { a:6, b:3, ans:18, opts:[18, 9, 24] },\n    { a:7, b:4, ans:28, opts:[28, 21, 32] }' }
+      replace:'    { a:3, b:2, ans:6,  opts:[6, 5, 9] },\n    { a:5, b:3, ans:15, opts:[15, 8, 10] },\n    { a:4, b:4, ans:16, opts:[16, 12, 20] },\n    { a:6, b:3, ans:18, opts:[18, 9, 24] },\n    { a:7, b:4, ans:28, opts:[28, 21, 32] }' },
+    { file:'index', expect:"arithmetic is wrong",
+      find:"why:'3 + 3 = 6，所以 3 × 2 = 6。'",
+      replace:"why:'3 + 3 = 7，所以 3 × 2 = 6。'" },
+    { file:'index', expect:"arithmetic coverage changed",
+      find:"why:'7 + 7 = 14，所以 7 × 2 = 14。'",
+      replace:"why:'七加七是十四，所以七乘二是十四。'" },
+    { file:'index', expect:"set of verified equations changed",
+      find:"why:'3 + 3 = 6，所以 3 × 2 = 6。'",
+      replace:"why:'3 + 3 = 6，所以 2 + 4 = 6。'" }
   ],
 
   sim: {
@@ -345,6 +363,49 @@ module.exports = {
       const prods = data.ROUNDS.map(r => r.ans);
       if (prods[prods.length - 1] <= prods[0])
         fail('the last round is not harder than the first');
+
+          /* --- 三層題庫的題幹與解釋：算式逐條驗算（issue #2） ---
+             ⚠️ 光是「跑過沒報錯」不算數：一個壞掉的正規化會讓每一條算式都
+             靜靜地讀不到，那樣也是零錯誤。所以**驗過幾條要對得上數字** ——
+             少掉就表示有宣稱沒被驗到。 */
+          {
+            let vSum = 0, qSum = 0;
+            ['qs','qsAdv','qsBoost'].forEach(bank => {
+              ['zh','en'].forEach(L => {
+                (I18N[L][bank] || []).forEach((q, i) => {
+                  [['stem', q && q.stem], ['why', q && q.why]].forEach(([field, text]) => {
+                    if (typeof text !== 'string') return;
+                    const r = arithMultiply(text);
+                    vSum += r.verified; qSum += r.questions;
+                    r.problems.forEach(p => fail(`${bank}[${i}] ${L}.${field}: ${p}`));
+                  });
+                });
+              });
+            });
+            if (vSum !== 20) fail(`arithmetic coverage changed: verified ${vSum} equations, expected 20`);
+            if (qSum !== 12) fail(`question-shaped equations changed: found ${qSum}, expected 12`);
+            /* 宣告過卻沒對上的「刻意寫錯」是一個永遠擋著的洞。 */
+            arithMultiply.unmatched().forEach(w => fail(`wrongOnPurpose "${w}" never matched — stale, and it would silently excuse that equation`));
+            /* ⚠️ 「刻意寫錯」是整課通用的放行。同一條錯式子跑到別的地方去也會
+               被一起放行 —— 所以連「放行了幾次」都要釘住。 */
+            {
+              const want = {};
+              const got = arithMultiply.excuseCounts();
+              Object.keys(want).forEach(k => {
+                if (got[k] !== want[k]) fail(`wrongOnPurpose "${k}" was excused ${got[k]} time(s), expected ${want[k]}`);
+              });
+            }
+            /* ⚠️ 只釘「驗過幾條」擋不住「拿掉一條、再補一條」：數字一樣，
+               驗的卻是別的宣稱。所以把**驗過的每一條算式本身**排序後做指紋。 */
+            {
+              const list = arithMultiply.verifiedAll();
+              const digest = require('crypto').createHash('sha1').update(list.join(' | ')).digest('hex').slice(0, 12);
+              if (digest !== '1a160a0440fe'){
+                fail(`the set of verified equations changed (digest ${digest}, expected 1a160a0440fe)\n      now: ${list.join(' | ')}`);
+              }
+            }
+          }
+
     }
   }
 };

@@ -161,6 +161,17 @@ const SHAPES = {
   }
 };
 
+/* 解釋裡的算式逐條驗算 —— 實作在 tools/checks/lib/arith.js（全站唯一一份）。
+   2026-09-02 補上（issue #2）：這個設定檔**從來沒有讀過 q.why**，所以解釋裡
+   寫錯的算式一路綠燈。量詞由這一課自己給 —— 共用清單漏掉某一課的量詞時，
+   那一課的算式會多出一個假的運算元，而且是靜靜地多出來。 */
+const arithDivide = require('./lib/arith.js').makeArith({
+  units: ["顆", "包", "盒", "個", "人", "份", "排", "袋", "塊", "張"],
+  unitsEn: ["sweets?", "bags?", "boxes", "box", "pieces?", "people", "person", "plates?", "rows?", "packs?", "items?"]
+});
+
+const { canvasProblems } = require('./lib/canvas.js');
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-2/math/divide */
   breaks: [
@@ -350,10 +361,10 @@ module.exports = {
       find:"          opts:['3 包','4 包','9 包','12 包'], ans:1,",
       replace:"          opts:['3 包','4 包','banana','12 包'], ans:1," },
     /* 圖的寬度只算袋子／盤子的話，一開始那一排散落的東西會被整段切掉。 */
-    { file:'index', expect:'px wide but draws out to x=',
+    { file:'index', expect:'px wide but the text',
       find:'    var w = Math.max(cols * (bagW + gap) + 10, looseW);',
       replace:'    var w = cols * (bagW + gap) + 10;' },
-    { file:'index', expect:'px wide but draws out to x=',
+    { file:'index', expect:'px wide but the text',
       find:'    var w = Math.max(n * (plateW + gap) + 10, looseW);',
       replace:'    var w = n * (plateW + gap) + 10;' },
     /* --- 第二輪審查（審「修正本身」）抓到的那幾筆 --- */
@@ -381,7 +392,16 @@ module.exports = {
       replace:"           '\" font-size=\"13\" text-anchor=\"middle\" fill=\"#3B7DD8\" font-weight=\"800\">' + String(rounds).repeat(30) + '</text>';" },
     { file:'index', expect:'expected answers recorded',
       find:"        { stem:'🍪 15 片餅乾平分給 3 個小朋友。<br>哪一種分法才是平分？',\n          opts:['4、5、6','5、5、5','3、5、7','6、6、3'], ans:1,\n          why:'平分就是每個人一樣多：5、5、5，加起來剛好 15 片。' }",
-      replace:"        { stem:'🍪 15 片餅乾平分給 3 個小朋友。<br>哪一種分法才是平分？',\n          opts:['4、5、6','5、5、5','3、5、7','6、6、3'], ans:1,\n          why:'平分就是每個人一樣多：5、5、5，加起來剛好 15 片。' },\n        { stem:'🍬 4 顆糖果平分給 2 個小朋友。<br>每人幾顆？',\n          opts:['2 顆','1 顆','3 顆','4 顆'], ans:0, why:'2 × 2 ＝ 4，每人 2 顆。' }" }
+      replace:"        { stem:'🍪 15 片餅乾平分給 3 個小朋友。<br>哪一種分法才是平分？',\n          opts:['4、5、6','5、5、5','3、5、7','6、6、3'], ans:1,\n          why:'平分就是每個人一樣多：5、5、5，加起來剛好 15 片。' },\n        { stem:'🍬 4 顆糖果平分給 2 個小朋友。<br>每人幾顆？',\n          opts:['2 顆','1 顆','3 顆','4 顆'], ans:0, why:'2 × 2 ＝ 4，每人 2 顆。' }" },
+    { file:'index', expect:"arithmetic is wrong",
+      find:"why:'一包一包裝：3、6、9、12 —— 裝了 4 包。3 × 4 ＝ 12。'",
+      replace:"why:'一包一包裝：3、6、9、12 —— 裝了 4 包。3 × 4 ＝ 13。'" },
+    { file:'index', expect:"arithmetic coverage changed",
+      find:"why:'一個一個輪流發，發 4 輪剛好發完，每人 4 個。4 × 3 ＝ 12。'",
+      replace:"why:'一個一個輪流發，發四輪剛好發完，每人四個。'" },
+    { file:'index', expect:"px tall but",
+      find:"    var w = cols * size + 14, h = rows * size + 12;",
+      replace:"    var w = cols * size + 14, h = 1;" }
   ],
 
   sim: {
@@ -591,32 +611,13 @@ module.exports = {
       /* --- 圖的寬度：一開始（0 袋／0 輪）幾乎所有東西都還散在下面，
          只按袋子／盤子算寬度的話那一排會被整段切掉，孩子數到的總數就是錯的。
          這裡讀 SVG 真正吐出來的座標，不看樣式。 --- */
+      /* 圖畫不畫得下 —— 實作在 tools/checks/lib/canvas.js（全站唯一一份）。
+         ⚠️ 2026-09-02 之前這裡只驗**寬度**（當初那個事故是寬度的問題），
+         所以一個 height="1" 的畫布可以通過所有幾何斷言（issue #2）。
+         共用版本四個邊都驗，而且讀不到幾何、或碰到讀不懂的標籤都會回報 ——
+         讀不到是「沒檢查」，不是「通過」。 */
       const widthOk = (label, svg) => {
-        const w = Number((svg.match(/width="(\d+)"/) || [])[1]);
-        const edges = [];
-        /* 只讀 x 的話，一個 <rect x="5" width="200"> 在 100px 的畫布裡也會過關 ——
-           元素的「起點」在畫布內不代表它畫得下。所以要算右緣。 */
-        let m;
-        const reRect = /<rect[^>]*?\sx="(\d+)"[^>]*?\swidth="(\d+)"/g;
-        while ((m = reRect.exec(svg)) !== null) edges.push(Number(m[1]) + Number(m[2]));
-        /* 屬性要「不管順序」各自抓一次。原本寫成一條含選擇性群組的正規式時，
-           x 後面接的是 y，選擇性的 font-size 群組永遠抓不到，每個字都被當成 20px。
-           而且 x ＋ 字級並不是文字的右緣 —— 還要看有幾個字、以及 text-anchor
-           把字擺在 x 的哪一邊。一個字最寬就算 1.2 個字級（emoji 比一個全形字略寬）。 */
-        const reText = /<text([^>]*)>([^<]*)<\/text>/g;
-        while ((m = reText.exec(svg)) !== null){
-          const attrs = m[1], body = m[2];
-          const xm = attrs.match(/\bx="(-?\d+(?:\.\d+)?)"/);
-          if (!xm) continue;
-          const x = Number(xm[1]);
-          const fs = Number((attrs.match(/\bfont-size="(\d+)"/) || [])[1] || 20);
-          const anchor = (attrs.match(/\btext-anchor="([a-z]+)"/) || [])[1] || 'start';
-          const wide = Math.ceil(([...body].length || 1) * fs * 1.2);
-          edges.push(anchor === 'middle' ? x + wide / 2 : (anchor === 'end' ? x : x + wide));
-        }
-        if (!Number.isFinite(w) || !edges.length){ fail(`${label}: cannot read the drawing geometry`); return; }
-        const right = Math.max.apply(null, edges);
-        if (!(w >= right + 2)) fail(`${label} is ${w}px wide but draws out to x=${right}`);
+        canvasProblems(svg).forEach(m => fail(`${label}: ${m}`));
       };
       /* 每一個孩子按得到的畫面都要驗，不只頭尾 —— 中間那幾格被切掉一樣是缺陷。 */
       for (let b = 0; b <= pg; b++) widthOk(`packSVG(${b} bags)`, data.packSVG(P.total, P.per, b, '🍬'));
@@ -872,6 +873,49 @@ module.exports = {
           });
         });
       });
+
+          /* --- 三層題庫的題幹與解釋：算式逐條驗算（issue #2） ---
+             ⚠️ 光是「跑過沒報錯」不算數：一個壞掉的正規化會讓每一條算式都
+             靜靜地讀不到，那樣也是零錯誤。所以**驗過幾條要對得上數字** ——
+             少掉就表示有宣稱沒被驗到。 */
+          {
+            let vSum = 0, qSum = 0;
+            ['qs','qsAdv','qsBoost'].forEach(bank => {
+              ['zh','en'].forEach(L => {
+                (I18N[L][bank] || []).forEach((q, i) => {
+                  [['stem', q && q.stem], ['why', q && q.why]].forEach(([field, text]) => {
+                    if (typeof text !== 'string') return;
+                    const r = arithDivide(text);
+                    vSum += r.verified; qSum += r.questions;
+                    r.problems.forEach(p => fail(`${bank}[${i}] ${L}.${field}: ${p}`));
+                  });
+                });
+              });
+            });
+            if (vSum !== 20) fail(`arithmetic coverage changed: verified ${vSum} equations, expected 20`);
+            if (qSum !== 4) fail(`question-shaped equations changed: found ${qSum}, expected 4`);
+            /* 宣告過卻沒對上的「刻意寫錯」是一個永遠擋著的洞。 */
+            arithDivide.unmatched().forEach(w => fail(`wrongOnPurpose "${w}" never matched — stale, and it would silently excuse that equation`));
+            /* ⚠️ 「刻意寫錯」是整課通用的放行。同一條錯式子跑到別的地方去也會
+               被一起放行 —— 所以連「放行了幾次」都要釘住。 */
+            {
+              const want = {};
+              const got = arithDivide.excuseCounts();
+              Object.keys(want).forEach(k => {
+                if (got[k] !== want[k]) fail(`wrongOnPurpose "${k}" was excused ${got[k]} time(s), expected ${want[k]}`);
+              });
+            }
+            /* ⚠️ 只釘「驗過幾條」擋不住「拿掉一條、再補一條」：數字一樣，
+               驗的卻是別的宣稱。所以把**驗過的每一條算式本身**排序後做指紋。 */
+            {
+              const list = arithDivide.verifiedAll();
+              const digest = require('crypto').createHash('sha1').update(list.join(' | ')).digest('hex').slice(0, 12);
+              if (digest !== 'a3c2f6a74ecf'){
+                fail(`the set of verified equations changed (digest ${digest}, expected a3c2f6a74ecf)\n      now: ${list.join(' | ')}`);
+              }
+            }
+          }
+
     }
   }
 };

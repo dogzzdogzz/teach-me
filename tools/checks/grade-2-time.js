@@ -84,6 +84,17 @@ function checkShape(shape, s, lang, isCorrect, genId){
   }
 }
 
+/* 解釋裡的算式逐條驗算 —— 實作在 tools/checks/lib/arith.js（全站唯一一份）。
+   2026-09-02 補上（issue #2）：這個設定檔**從來沒有讀過 q.why**，所以解釋裡
+   寫錯的算式一路綠燈。量詞由這一課自己給 —— 共用清單漏掉某一課的量詞時，
+   那一課的算式會多出一個假的運算元，而且是靜靜地多出來。 */
+const arithTime = require('./lib/arith.js').makeArith({
+  units: ["點", "分", "時", "秒", "個", "次"],
+  unitsEn: ["minutes?", "mins?", "hours?", "seconds?", "times?", "oclock"]
+});
+
+const { canvasProblems } = require('./lib/canvas.js');
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-2/math/time
      每一筆都是「這條斷言真的會響嗎」的證據。改課程檔時如果 find 字串對不上，
@@ -169,7 +180,16 @@ module.exports = {
       replace:"          opts:['2 點 15 分','2 點 3 分','3 點 15 分','2 點 45 分'], ans:1," },
     { file:'index', expect:'duplicate option strings',
       find:"          opts:['5 天','7 天','12 天','30 天'], ans:1,",
-      replace:"          opts:['7 天','7 天','12 天','30 天'], ans:1," }
+      replace:"          opts:['7 天','7 天','12 天','30 天'], ans:1," },
+    { file:'index', expect:"arithmetic is wrong",
+      find:"why:'長針每指過一個數字就是 5 分：指著 8 就是 8 個 5 分，8 × 5 = 40 分。'",
+      replace:"why:'長針每指過一個數字就是 5 分：指著 8 就是 8 個 5 分，8 × 5 = 45 分。'" },
+    { file:'index', expect:"arithmetic coverage changed",
+      find:"why:'兩個星期是 7 + 7 = 14 天。3 + 14 = 17 → 6 月 17 日。'",
+      replace:"why:'兩個星期是十四天。三加十四是十七 → 6 月 17 日。'" },
+    { file:'index', expect:"aspect ratios differ",
+      find:"    var s = '<svg class=\"clock\" width=\"' + size + '\" height=\"' + size + '\" viewBox=\"0 0 ' + size + ' ' + size +",
+      replace:"    var s = '<svg class=\"clock\" width=\"' + size + '\" height=\"1\" viewBox=\"0 0 ' + size + ' ' + size +" }
   ],
 
   sim: {
@@ -393,6 +413,67 @@ module.exports = {
         });
       });
       if (Object.keys(seen).length < 2) fail('every game round puts the answer in the same position');
+
+          /* --- 三層題庫的題幹與解釋：算式逐條驗算（issue #2） ---
+             ⚠️ 光是「跑過沒報錯」不算數：一個壞掉的正規化會讓每一條算式都
+             靜靜地讀不到，那樣也是零錯誤。所以**驗過幾條要對得上數字** ——
+             少掉就表示有宣稱沒被驗到。 */
+          {
+            let vSum = 0, qSum = 0;
+            ['qs','qsAdv','qsBoost'].forEach(bank => {
+              ['zh','en'].forEach(L => {
+                (I18N[L][bank] || []).forEach((q, i) => {
+                  [['stem', q && q.stem], ['why', q && q.why]].forEach(([field, text]) => {
+                    if (typeof text !== 'string') return;
+                    const r = arithTime(text);
+                    vSum += r.verified; qSum += r.questions;
+                    r.problems.forEach(p => fail(`${bank}[${i}] ${L}.${field}: ${p}`));
+                  });
+                });
+              });
+            });
+            if (vSum !== 8) fail(`arithmetic coverage changed: verified ${vSum} equations, expected 8`);
+            if (qSum !== 0) fail(`question-shaped equations changed: found ${qSum}, expected 0`);
+            /* 宣告過卻沒對上的「刻意寫錯」是一個永遠擋著的洞。 */
+            arithTime.unmatched().forEach(w => fail(`wrongOnPurpose "${w}" never matched — stale, and it would silently excuse that equation`));
+            /* ⚠️ 「刻意寫錯」是整課通用的放行。同一條錯式子跑到別的地方去也會
+               被一起放行 —— 所以連「放行了幾次」都要釘住。 */
+            {
+              const want = {};
+              const got = arithTime.excuseCounts();
+              Object.keys(want).forEach(k => {
+                if (got[k] !== want[k]) fail(`wrongOnPurpose "${k}" was excused ${got[k]} time(s), expected ${want[k]}`);
+              });
+            }
+            /* ⚠️ 只釘「驗過幾條」擋不住「拿掉一條、再補一條」：數字一樣，
+               驗的卻是別的宣稱。所以把**驗過的每一條算式本身**排序後做指紋。 */
+            {
+              const list = arithTime.verifiedAll();
+              const digest = require('crypto').createHash('sha1').update(list.join(' | ')).digest('hex').slice(0, 12);
+              if (digest !== 'd82cd4471c8d'){
+                fail(`the set of verified equations changed (digest ${digest}, expected d82cd4471c8d)\n      now: ${list.join(' | ')}`);
+              }
+            }
+          }
+
+
+          /* --- 圖畫不畫得下（issue #2：這一課本來完全沒有幾何檢查） ---
+             實作在 tools/checks/lib/canvas.js（全站唯一一份），四個邊都驗。
+             鐘面是圓的，12 個鐘點都要各驗一次 —— 只驗一個角度的話，
+             指針往別的方向畫出界完全看不到。 */
+          {
+            let shots = 0;
+            for (let hh = 1; hh <= 12; hh++){
+              /* 每 5 分一格，12 個位置都要走過 —— 只驗整點的話，指針指向別的方向
+                 時畫出界完全看不到。 */
+              for (let mm = 0; mm < 60; mm += 5){
+                shots++;
+                canvasProblems(data.clockSVG(hh, mm)).forEach(m => fail(`clockSVG(${hh}:${mm}): ${m}`));
+              }
+            }
+            if (shots !== 144) fail(`clockSVG canvas check covered ${shots} clock faces, expected 144`);
+          }
+
     }
   }
 };

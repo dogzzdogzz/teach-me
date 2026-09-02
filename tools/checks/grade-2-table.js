@@ -999,7 +999,7 @@ module.exports = {
       };
       const widthOk = (label, svg) => {
         const w = Number((svg.match(/(?:^|\s)width="(\d+)"/) || [])[1]);
-        const h = Number((svg.match(/\bheight="(\d+)"/) || [])[1]);
+        const h = Number((svg.match(/(?:^|\s)height="(\d+)"/) || [])[1]);
         const vb = (svg.match(/viewBox="0 0 (\d+) (\d+)"/) || []);
         const e = edgesOf(svg);
         if (!Number.isFinite(w) || !Number.isFinite(h) || !e.xs.length){

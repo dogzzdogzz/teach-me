@@ -345,7 +345,7 @@ function polyProblem(pts){
 function drawingOk(d, wantSides){
   const svg = String(d.svg || '');
   const w = Number((svg.match(/(?:^|\s)width="(\d+)"/) || [])[1]);
-  const h = Number((svg.match(/\bheight="(\d+)"/) || [])[1]);
+  const h = Number((svg.match(/(?:^|\s)height="(\d+)"/) || [])[1]);
   const pm = svg.match(/\bpoints="([^"]+)"/);
   if (!Number.isFinite(w) || !Number.isFinite(h) || !pm) return 'the question has no drawable shape';
   const pairs = pm[1].trim().split(/\s+/).map(s => s.split(',').map(Number));
@@ -1238,7 +1238,7 @@ module.exports = {
       };
       const canvasOk = (label, svg) => {
         const w = Number((svg.match(/(?:^|\s)width="(\d+)"/) || [])[1]);
-        const h = Number((svg.match(/\bheight="(\d+)"/) || [])[1]);
+        const h = Number((svg.match(/(?:^|\s)height="(\d+)"/) || [])[1]);
         const vb = (svg.match(/viewBox="0 0 (\d+) (\d+)"/) || []);
         const e = edgesOf(svg);
         if (!Number.isFinite(w) || !Number.isFinite(h) || !e.xs.length){

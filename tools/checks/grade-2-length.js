@@ -125,6 +125,18 @@ const BANK_EXPECTED = {
   qsBoost: [8, 105]
 };
 
+/* 解釋裡的算式逐條驗算 —— 實作在 tools/checks/lib/arith.js（全站唯一一份）。
+   2026-09-02 補上（issue #2）：這個設定檔**從來沒有讀過 q.why**，所以解釋裡
+   寫錯的算式一路綠燈。量詞由這一課自己給 —— 共用清單漏掉某一課的量詞時，
+   那一課的算式會多出一個假的運算元，而且是靜靜地多出來。 */
+const arithLength = require('./lib/arith.js').makeArith({
+  units: ["公分", "公尺", "個", "條", "枝", "根"],
+  unitsEn: ["cm", "centimetres?", "centimeters?", "metres?", "meters?", "strings?", "sticks?"],
+  conversions: {"公尺": 100, "公分": 1, "metre": 100, "metres": 100, "meter": 100, "meters": 100, "m": 100, "cm": 1, "centimetre": 1, "centimetres": 1}
+});
+
+const { canvasProblems } = require('./lib/canvas.js');
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-2/math/length */
   breaks: [
@@ -241,7 +253,19 @@ module.exports = {
       replace:"        { stem:'1 公尺是幾公分？' + rulerSVG({ from:0, to:5 })," },
     { file:'index', expect:'gHints2',
       find:"        '提示：左邊對著 4、右邊對著 13，要用減的。',",
-      replace:"        '提示：左邊對著 4、右邊對著 12，要用減的。'," }
+      replace:"        '提示：左邊對著 4、右邊對著 12，要用減的。'," },
+    { file:'index', expect:"arithmetic is wrong",
+      find:"why:'接起來要用加的：8 ＋ 5 ＝ 13 公分。'",
+      replace:"why:'接起來要用加的：8 ＋ 5 ＝ 14 公分。'" },
+    { file:'index', expect:"arithmetic is wrong",
+      find:"why:'1 公尺是 100 公分，100 ＋ 5 ＝ 105 公分，不是 15 公分。'",
+      replace:"why:'1 公尺是 100 公分，100 ＋ 5 ＝ 106 公分，不是 15 公分。'" },
+    { file:'index', expect:"px tall but",
+      find:"    var h = rTop + rH + 4;",
+      replace:"    var h = 1;" },
+    { file:'index', expect:"px wide but",
+      find:"    var w = padL + max * unit + padR;",
+      replace:"    var w = padL + max * unit;" }
   ],
 
   sim: {
@@ -602,6 +626,69 @@ module.exports = {
           });
         });
       });
+
+          /* --- 三層題庫的題幹與解釋：算式逐條驗算（issue #2） ---
+             ⚠️ 光是「跑過沒報錯」不算數：一個壞掉的正規化會讓每一條算式都
+             靜靜地讀不到，那樣也是零錯誤。所以**驗過幾條要對得上數字** ——
+             少掉就表示有宣稱沒被驗到。 */
+          {
+            let vSum = 0, qSum = 0;
+            ['qs','qsAdv','qsBoost'].forEach(bank => {
+              ['zh','en'].forEach(L => {
+                (I18N[L][bank] || []).forEach((q, i) => {
+                  [['stem', q && q.stem], ['why', q && q.why]].forEach(([field, text]) => {
+                    if (typeof text !== 'string') return;
+                    const r = arithLength(text);
+                    vSum += r.verified; qSum += r.questions;
+                    r.problems.forEach(p => fail(`${bank}[${i}] ${L}.${field}: ${p}`));
+                  });
+                });
+              });
+            });
+            if (vSum !== 13) fail(`arithmetic coverage changed: verified ${vSum} equations, expected 13`);
+            if (qSum !== 0) fail(`question-shaped equations changed: found ${qSum}, expected 0`);
+            /* 宣告過卻沒對上的「刻意寫錯」是一個永遠擋著的洞。 */
+            arithLength.unmatched().forEach(w => fail(`wrongOnPurpose "${w}" never matched — stale, and it would silently excuse that equation`));
+            /* ⚠️ 「刻意寫錯」是整課通用的放行。同一條錯式子跑到別的地方去也會
+               被一起放行 —— 所以連「放行了幾次」都要釘住。 */
+            {
+              const want = {};
+              const got = arithLength.excuseCounts();
+              Object.keys(want).forEach(k => {
+                if (got[k] !== want[k]) fail(`wrongOnPurpose "${k}" was excused ${got[k]} time(s), expected ${want[k]}`);
+              });
+            }
+            /* ⚠️ 只釘「驗過幾條」擋不住「拿掉一條、再補一條」：數字一樣，
+               驗的卻是別的宣稱。所以把**驗過的每一條算式本身**排序後做指紋。 */
+            {
+              const list = arithLength.verifiedAll();
+              const digest = require('crypto').createHash('sha1').update(list.join(' | ')).digest('hex').slice(0, 12);
+              if (digest !== 'b044e4cc2a53'){
+                fail(`the set of verified equations changed (digest ${digest}, expected b044e4cc2a53)\n      now: ${list.join(' | ')}`);
+              }
+            }
+          }
+
+
+          /* --- 圖畫不畫得下（issue #2：這一課本來完全沒有幾何檢查） ---
+             實作在 tools/checks/lib/canvas.js（全站唯一一份），四個邊都驗。 */
+          /* ⚠️ rulerSVG 收的是**選項物件**，不是數字。傳數字進去的話 `o.max`
+             永遠是 undefined，每一次都畫出同一張圖 —— 看起來跑了十幾次，
+             其實只驗過一種輸入。要照頁面真正的用法涵蓋整個範圍。 */
+          {
+            const shots = [];
+            for (let to = 0; to <= data.RULER_MAX; to++){
+              shots.push([`from0-to${to}`, { from:0, to:to, icon:'✏️', mark0:true }]);
+              for (let from = 0; from < to; from++) shots.push([`from${from}-to${to}`, { from:from, to:to, icon:'🖍️' }]);
+            }
+            shots.push(['max8-unit34', { max:8, unit:34 }]);
+            data.ROUNDS.forEach((r, i) => shots.push([`round${i+1}`, { from:r.from, to:r.to, icon:r.icon, mark0:true }]));
+            shots.forEach(([label, o]) => {
+              canvasProblems(data.rulerSVG(o)).forEach(m => fail(`rulerSVG(${label}): ${m}`));
+            });
+            if (shots.length < data.RULER_MAX) fail(`rulerSVG canvas check only covered ${shots.length} drawings`);
+          }
+
     }
   }
 };

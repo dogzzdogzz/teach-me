@@ -7,6 +7,16 @@ function needsBorrow(a, b){ const A = digits(a), B = digits(b); return A.some((d
 /* 這一課是「二、三位數的加減」：選項一律 0~999，問個位數字的那一題 0~9。 */
 const RANGE = { onesDigit: [0, 9] };
 
+/* 解釋裡的算式逐條驗算 —— 實作在 tools/checks/lib/arith.js（全站唯一一份）。
+   2026-09-02 補上（issue #2）：這個設定檔**從來沒有讀過 q.why**，所以解釋裡
+   寫錯的算式一路綠燈。量詞由這一課自己給 —— 共用清單漏掉某一課的量詞時，
+   那一課的算式會多出一個假的運算元，而且是靜靜地多出來。 */
+const arithAddSub = require('./lib/arith.js').makeArith({
+  units: ["個", "顆", "元", "張", "本", "枝", "人", "題"],
+  unitsEn: ["stickers?", "marbles?", "books?", "pens?", "cards?", "coins?", "people", "person", "items?"],
+  wrongOnPurpose: ["71 - 28 = 57"]
+});
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-2/math/add-sub */
   breaks: [
@@ -27,7 +37,19 @@ module.exports = {
       replace:"    { a:27,  b:18,  op:'+', res:45,  row:'a',   p:0, ans:3, opts:[7, 3, 5] }," },
     { file:'index', expect:'CHECK_CASES should contain exactly one wrong answer',
       find:"    { a:45,  b:38,  op:'+', given:73 },",
-      replace:"    { a:45,  b:38,  op:'+', given:83 }," }
+      replace:"    { a:45,  b:38,  op:'+', given:83 }," },
+    { file:'index', expect:"arithmetic is wrong",
+      find:"why:'個位 5 + 4 = 9，十位 2 + 3 = 5，沒有滿十，不用進位 → 59。'",
+      replace:"why:'個位 5 + 4 = 8，十位 2 + 3 = 5，沒有滿十，不用進位 → 59。'" },
+    { file:'index', expect:"arithmetic coverage changed",
+      find:"why:'個位 8 + 6 = 14，寫 4、進位 1；十位 4 + 2 + 1 = 7 → 74。'",
+      replace:"why:'個位八加六，寫 4、進位 1；十位四加二加一 → 74。'" },
+    { file:'index', expect:"set of verified equations changed",
+      find:"why:'個位 5 + 4 = 9，十位 2 + 3 = 5，沒有滿十，不用進位 → 59。'",
+      replace:"why:'個位 5 + 4 = 9，十位 2 + 3 = 5，另外 1 + 1 = 2 → 59。'" },
+    { file:'index', expect:"was excused 3 time(s)",
+      find:"why:'用加法檢查：57 + 28 = 85，不是 71，所以算錯了。正確是 71 − 28 = 43。'",
+      replace:"why:'用加法檢查：57 + 28 = 85，不是 71，所以算錯了。旁邊那本也寫 71 − 28 = 57。正確是 71 − 28 = 43。'" }
   ],
 
   sim: {
@@ -181,6 +203,49 @@ module.exports = {
       });
       if (data.ROUNDS.map(r => r.opts.indexOf(r.ans)).every(x => x === 0))
         fail('every game round has the answer first');
+
+          /* --- 三層題庫的題幹與解釋：算式逐條驗算（issue #2） ---
+             ⚠️ 光是「跑過沒報錯」不算數：一個壞掉的正規化會讓每一條算式都
+             靜靜地讀不到，那樣也是零錯誤。所以**驗過幾條要對得上數字** ——
+             少掉就表示有宣稱沒被驗到。 */
+          {
+            let vSum = 0, qSum = 0;
+            ['qs','qsAdv','qsBoost'].forEach(bank => {
+              ['zh','en'].forEach(L => {
+                (I18N[L][bank] || []).forEach((q, i) => {
+                  [['stem', q && q.stem], ['why', q && q.why]].forEach(([field, text]) => {
+                    if (typeof text !== 'string') return;
+                    const r = arithAddSub(text);
+                    vSum += r.verified; qSum += r.questions;
+                    r.problems.forEach(p => fail(`${bank}[${i}] ${L}.${field}: ${p}`));
+                  });
+                });
+              });
+            });
+            if (vSum !== 48) fail(`arithmetic coverage changed: verified ${vSum} equations, expected 48`);
+            if (qSum !== 8) fail(`question-shaped equations changed: found ${qSum}, expected 8`);
+            /* 宣告過卻沒對上的「刻意寫錯」是一個永遠擋著的洞。 */
+            arithAddSub.unmatched().forEach(w => fail(`wrongOnPurpose "${w}" never matched — stale, and it would silently excuse that equation`));
+            /* ⚠️ 「刻意寫錯」是整課通用的放行。同一條錯式子跑到別的地方去也會
+               被一起放行 —— 所以連「放行了幾次」都要釘住。 */
+            {
+              const want = {"71 - 28 = 57": 2};
+              const got = arithAddSub.excuseCounts();
+              Object.keys(want).forEach(k => {
+                if (got[k] !== want[k]) fail(`wrongOnPurpose "${k}" was excused ${got[k]} time(s), expected ${want[k]}`);
+              });
+            }
+            /* ⚠️ 只釘「驗過幾條」擋不住「拿掉一條、再補一條」：數字一樣，
+               驗的卻是別的宣稱。所以把**驗過的每一條算式本身**排序後做指紋。 */
+            {
+              const list = arithAddSub.verifiedAll();
+              const digest = require('crypto').createHash('sha1').update(list.join(' | ')).digest('hex').slice(0, 12);
+              if (digest !== '0f97340e061f'){
+                fail(`the set of verified equations changed (digest ${digest}, expected 0f97340e061f)\n      now: ${list.join(' | ')}`);
+              }
+            }
+          }
+
     }
   }
 };
