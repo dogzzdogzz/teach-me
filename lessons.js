@@ -5,7 +5,7 @@ window.TEACHME_LESSONS = {
   1: ['add-sub', 'clock', 'length', 'money', 'number-bonds', 'numbers', 'pattern', 'shapes', 'two-digit'],
   2: ['add-sub', 'capacity-weight', 'divide', 'length', 'multiply', 'numbers', 'shapes', 'solid', 'table', 'time', 'two-step'],
   3: ['add-sub', 'angle', 'capacity', 'circle', 'decimal', 'divide', 'equation', 'fraction', 'length', 'multiply', 'numbers', 'perimeter', 'rectangle', 'table', 'time', 'two-step', 'weight'],
-  4: ['angle', 'area', 'chart', 'decimal', 'figurate', 'fraction', 'multiply-divide', 'numbers', 'pattern', 'quadrilateral', 'rounding', 'time', 'triangle'],
+  4: ['angle', 'angle-shape', 'area', 'chart', 'decimal', 'figurate', 'fraction', 'multiply-divide', 'numbers', 'pattern', 'quadrilateral', 'rounding', 'time', 'triangle'],
   5: ['angle-sum', 'area', 'average', 'big-units', 'common-factor', 'decimal', 'factor', 'fraction-add', 'fraction-divide', 'fraction-multiply', 'multiple', 'operations', 'percent', 'polygon', 'prisms', 'rounding', 'solid', 'statistics', 'symbol', 'symmetry', 'time', 'volume', 'weight'],
   6: []
 };
