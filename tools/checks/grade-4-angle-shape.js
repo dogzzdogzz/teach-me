@@ -152,12 +152,25 @@ function normSpanRef(d1, d2){
   if (diff > 180) diff = 360 - diff;
   return diff;
 }
+/* 一段弧的 large-arc／sweep flag 對不對。⚠️ 兩個 flag 決定瀏覽器畫**小弧還是大弧**，
+   而張角是從兩個端點算的 —— flag 反了的話畫面上是大弧，張角檢查卻完全綠燈
+   （codex 第三輪抓到）。這一課每一段弧都不超過平角，所以 large 一律是 0，
+   sweep 由方向決定（θ 變大在畫布上是逆時針＝0）。 */
+function arcFlagProblem(parsed, fromDeg, toDeg, label){
+  if (parsed.large !== 0)
+    return label + ': the arc is drawn with large-arc-flag 1, so the browser draws the major arc';
+  const wantSweep = (toDeg > fromDeg) ? 0 : 1;
+  if (parsed.sweep !== wantSweep)
+    return label + ': the arc sweep flag is ' + parsed.sweep + ' but the direction needs ' + wantSweep;
+  return null;
+}
 /* 一段弧掃過的範圍（含中間的極值點），再加上線寬的一半。
    ⚠️ 只看兩個端點是不夠的：一段弧可以在**中間**凸出畫布，兩個端點卻都在裡面。 */
 function arcBoxRef(cx, cy, fromDeg, toDeg, r, halfStroke){
   /* ⚠️ 讀不懂就回 null 由呼叫端報錯：NaN 算出來的 box 每一個比較都是 false（全通過）。 */
-  if (![cx, cy, fromDeg, toDeg, r, halfStroke || 0].every(Number.isFinite)) return null;
-  if (!(r > 0)) return null;
+  const hh = (halfStroke === undefined) ? 0 : halfStroke;
+  if (![cx, cy, fromDeg, toDeg, r, hh].every(Number.isFinite)) return null;
+  if (!(r > 0) || hh < 0) return null;
   const lo = Math.min(fromDeg, toDeg), hi = Math.max(fromDeg, toDeg);
   const xs = [], ys = [];
   [fromDeg, toDeg].forEach(function(d){
@@ -165,13 +178,14 @@ function arcBoxRef(cx, cy, fromDeg, toDeg, r, halfStroke){
     ys.push(cy - r * Math.sin(d * Math.PI / 180));
   });
   /* 每一個「正東／正北／正西／正南」只要落在掃過的範圍裡，就是一個極值點。 */
-  for (let k = -720; k <= 720; k += 90){
+  const first = Math.ceil(lo / 90) * 90;
+  for (let k = first; k <= hi; k += 90){
     if (k >= lo && k <= hi){
       xs.push(cx + r * Math.cos(k * Math.PI / 180));
       ys.push(cy - r * Math.sin(k * Math.PI / 180));
     }
   }
-  const h = halfStroke || 0;
+  const h = hh;
   return { minX:Math.min.apply(null, xs) - h, maxX:Math.max.apply(null, xs) + h,
            minY:Math.min.apply(null, ys) - h, maxY:Math.max.apply(null, ys) + h };
 }
@@ -185,7 +199,7 @@ function parseWedgeRef(dStr){
   const rStart = distRef({ x:cx, y:cy }, { x:x1, y:y1 });
   const rEnd = distRef({ x:cx, y:cy }, { x:x2, y:y2 });
   if (Math.abs(rStart - r1) > 1e-3 || Math.abs(rEnd - r1) > 1e-3) return null;
-  return { cx:cx, cy:cy, r:r1,
+  return { cx:cx, cy:cy, r:r1, large:0, sweep:Number(m[7]),
            span:normSpanRef(degFromPoint(cx, cy, x1, y1), degFromPoint(cx, cy, x2, y2)),
            pts:[{ x:cx, y:cy }, { x:x1, y:y1 }, { x:x2, y:y2 }] };
 }
@@ -198,7 +212,7 @@ function parseArcRef(dStr, cx, cy){
   const rStart = distRef({ x:cx, y:cy }, { x:x1, y:y1 });
   const rEnd = distRef({ x:cx, y:cy }, { x:x2, y:y2 });
   if (Math.abs(rStart - r1) > 1e-3 || Math.abs(rEnd - r1) > 1e-3) return null;
-  return { r:r1,
+  return { r:r1, large:Number(m[5]), sweep:Number(m[6]),
            span:normSpanRef(degFromPoint(cx, cy, x1, y1), degFromPoint(cx, cy, x2, y2)),
            pts:[{ x:x1, y:y1 }, { x:x2, y:y2 }] };
 }
@@ -302,14 +316,27 @@ const KEY_RULES = [
   { file:'reference', key:'f3', must:['兩塊加起來'] },
   { file:'parents', key:'s1p2', must:['正方形和長方形四個角都是 90°', '對角', '兩塊加起來還是原來那個角'] }
 ];
+function zhRegion(clean){
+  const a = clean.indexOf('zh: {');
+  const b = clean.indexOf('en: {', a < 0 ? 0 : a);
+  if (a < 0 || b < 0 || b <= a) return null;
+  return clean.slice(a, b);
+}
+/* ⚠️ 只在**中文字典那一段**裡找，而且必須剛好一個 ——
+   「拿第一個匹配當中文」在字典順序被調換之後會靜靜地去檢查英文，
+   而重複的鍵在 JS 裡是後面那個生效、這裡卻讀前面那個（codex 第三輪抓到）。
+   讀不懂 zh 區塊就回 null，由呼叫端 fail-closed。 */
 function keyValues(clean, key){
-  /* key:'…'（單引號，允許 \' 轉義）。中英兩本字典都會抓到，所以回傳一個陣列。 */
-  const re = new RegExp('(?:^|[\\s{,])' + key + "\\s*:\\s*'((?:[^'\\\\]|\\\\.)*)'", 'g');
+  const region = zhRegion(clean);
+  if (region === null) return null;
+  const safeKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('(?:^|[\\s{,])' + safeKey + "\\s*:\\s*'((?:[^'\\\\]|\\\\.)*)'", 'g');
   const out = [];
   let m;
-  while ((m = re.exec(clean)) !== null) out.push(m[1]);
+  while ((m = re.exec(region)) !== null) out.push(m[1]);
   return out;
 }
+
 
 /* 成對出現：左邊那句話**只要出現**，右邊那句話就必須在同一頁出現。
    （規則寫太滿是這個專案的頭號缺陷類別 —— 逆命題不成立那一句一定要跟著。） */
@@ -368,8 +395,24 @@ function stripJsComments(code){
 }
 function stripComments(s){
   const src = String(s === null || s === undefined ? '' : s).replace(/<!--[\s\S]*?-->/g, '\n');
-  /* markup 裡的 `//`（網址）不可以碰，所以只在 <script> 區塊裡掃。 */
-  return src.replace(/<script[\s\S]*?<\/script>/gi, function(block){ return stripJsComments(block); });
+  /* markup 裡的 `//`（網址）不可以碰，所以只在 <script> 區塊裡掃。
+     ⚠️ `<script\b` 而不是 `<script` —— 少了字界的話 `<scripture>` 也會被當成 script
+     而去動到 markup（codex 第三輪抓到）。 */
+  return src.replace(/<script\b[\s\S]*?<\/script>/gi, function(block){ return stripJsComments(block); });
+}
+/* ⚠️ 掃描器不是 JS 詞法分析器：**正規式字面量**裡的引號和**樣板字串的 ${}**
+   會讓它失去同步（註解逃得掉，或真的字串被砍掉）。這個專案不裝相依套件，
+   所以改成 fail-closed：課程頁的 script 裡**不可以出現**那兩種語法；
+   哪一天真的要用，就得先把這個檢查換成真的 parser。（codex 第三輪抓到。） */
+function scannerSafe(src){
+  const out = [];
+  const blocks = String(src).match(/<script\b[\s\S]*?<\/script>/gi) || [];
+  blocks.forEach(function(block){
+    const code = stripJsComments(block);
+    if (/`/.test(code)) out.push('a template literal (the comment scanner cannot follow ${} interpolation)');
+    if (/[=(,:[]\s*\/(?![*/])/.test(code)) out.push('what looks like a regex literal (the comment scanner cannot follow quotes inside one)');
+  });
+  return out;
 }
 function countOf(hay, needle){
   let n = 0, i = 0;
@@ -495,6 +538,23 @@ module.exports = {
       find:"    var p = PIECES[pieceIdx], lx = PIECE_LX[sizeIdx];",
       replace:"    var p = { id:PIECES[pieceIdx].id, base:(sizeIdx ? RIGHT_DEG - PIECES[pieceIdx].base : PIECES[pieceIdx].base) }, lx = PIECE_LX[sizeIdx];",
       why:"the large size would be drawn flipped, so the two sizes stop reading as one piece — every angle is still a real set-square angle, so only the same-piece assertion sees it" },
+
+    { file:"index", via:"index", expect:"must cover the fattest thing drawn",
+      find:"  var DOT_R = 3.5;               // 頂點上的小圓點",
+      replace:"  var DOT_R = 9;                 // 頂點上的小圓點",
+      why:"a dot fatter than the margin can cross the canvas edge while its centre — the only thing the bounds check sees — stays inside" },
+    { file:"index", via:"index", expect:"the comment scanner cannot be trusted on it",
+      find:"  var C_LINE = '#2B2A33', C_A = '#E8871E', C_B = '#3B7DD8',",
+      replace:"  var C_TPL = `x`;\n  var C_LINE = '#2B2A33', C_A = '#E8871E', C_B = '#3B7DD8',",
+      why:"a template literal is exactly what the comment scanner cannot follow, so the wording checks would stop being trustworthy — it must fail closed, not carry on" },
+    { file:"index", via:"index", expect:"large-arc-flag 1",
+      find:"    var large = (Math.abs(toDeg - fromDeg) > 180) ? 1 : 0;",
+      replace:"    var large = 1;",
+      why:"the browser would draw the MAJOR arc while the span check, which reads the two endpoints, stays green — only the flag assertion can see it" },
+    { file:"index", via:"index", expect:"sweep flag",
+      find:"    var sweep = (toDeg > fromDeg) ? 0 : 1;",
+      replace:"    var sweep = (toDeg > fromDeg) ? 1 : 0;",
+      why:"the arc would be drawn the other way round the circle, again with an unchanged span" },
 
     /* --- 切成兩塊 --- */
     { file:"index", via:"index", expect:"the two pieces must add to a right angle",
@@ -1098,6 +1158,15 @@ module.exports = {
       /* ---------- 2) 圖形 ---------- */
       if (data.FIG_W !== CANVAS_W_REF || data.FIG_H !== CANVAS_H_REF)
         fail('the canvas is ' + CANVAS_W_REF + '×' + CANVAS_H_REF);
+      /* ⚠️ checkFigure() 量的是**中心點**：線的粗細與圓點的半徑要小於留白，
+         留白才蓋得住它們 —— 不然粗線可以跨出畫布而中心還在裡面（codex 第三輪抓到）。 */
+      const strokes = (src.match(/'stroke-width':\s*([\d.]+)/g) || [])
+        .map(function(m){ return Number(m.split(':')[1]); });
+      const widest = strokes.length ? Math.max.apply(null, strokes) : 0;
+      if (!strokes.length) fail('cannot read any stroke width — unchecked, not passing');
+      if (data.DOT_R + widest / 2 >= MARGIN_REF)
+        fail('the margin (' + MARGIN_REF + 'px) must cover the fattest thing drawn (dot r=' +
+             data.DOT_R + ' + half of stroke ' + widest + ')');
       const vbCount = countOf(src, 'viewBox="0 0 ' + CANVAS_W_REF + ' ' + CANVAS_H_REF + '"');
       if (vbCount !== 6)
         fail('expected 6 figure canvases on the lesson page (five examples + the game), found ' + vbCount);
@@ -1258,6 +1327,8 @@ module.exports = {
         const arc = parseArcRef(plan.totalArc.d, plan.cx, plan.cy);
         if (!arc) fail(label + ': the total arc is unreadable');
         else {
+          const flagBad = arcFlagProblem(arc, plan.totalArc.from, plan.totalArc.to, label);
+          if (flagBad) fail(flagBad);
           if (Math.abs(arc.span - plan.total) > 1e-3)
             fail(label + ': the total arc spans ' + arc.span.toFixed(3) + '° but the total is ' + plan.total + '°');
           if (!(arc.r > plan.wedges[0].r))
@@ -1298,8 +1369,16 @@ module.exports = {
         });
         const arc = parseArcRef(plan.totalArc.d, plan.cx, plan.cy);
         if (!arc) fail(label + ': the original-angle arc is unreadable');
-        else if (Math.abs(arc.span - c.big) > 1e-3)
-          fail(label + ': the outer arc must span the original ' + c.big + '°');
+        else {
+          const flagBad = arcFlagProblem(arc, plan.totalArc.from, plan.totalArc.to, label);
+          if (flagBad) fail(flagBad);
+          if (Math.abs(arc.span - c.big) > 1e-3)
+            fail(label + ': the outer arc must span the original ' + c.big + '°');
+          const box = arcBoxRef(plan.cx, plan.cy, plan.totalArc.from, plan.totalArc.to, arc.r, 1);
+          if (!box) fail(label + ': the outer arc has unreadable geometry — unchecked, not passing');
+          else if (box.minX < 0 || box.minY < 0 || box.maxX > CANVAS_W_REF || box.maxY > CANVAS_H_REF)
+            fail(label + ': the outer arc leaves the canvas between its endpoints');
+        }
         checkFigure(label, { edges:[], corners:[] },
           plan.arms.map(function(a2){ return { x:a2.x2, y:a2.y2 }; })
             .concat([{ x:plan.cx, y:plan.cy }]).concat(arc ? arc.pts : []));
@@ -1627,11 +1706,15 @@ module.exports = {
       KEY_RULES.forEach(function(rule){
         if (clean[rule.file] === undefined) return;
         const vals = keyValues(clean[rule.file], rule.key);
-        if (!vals.length){
-          fail('KEY: ' + rule.file + '.html has no ' + rule.key + " value to pin the rule to");
+        if (vals === null){
+          fail('KEY: cannot find the zh dictionary in ' + rule.file + '.html — unchecked, not passing');
           return;
         }
-        /* 中文那一本一定要有；英文那一本用 SIBLING_RULES_EN 顧。 */
+        if (vals.length !== 1){
+          fail('KEY: ' + rule.file + '.html has ' + vals.length + ' zh values for ' + rule.key +
+               ' — exactly one is required to pin the rule to');
+          return;
+        }
         const zhVal = vals[0];
         rule.must.forEach(function(phrase){
           if (zhVal.indexOf(phrase) < 0)
@@ -1653,7 +1736,12 @@ module.exports = {
           for (;;){
             const k = hay.indexOf(h.word, i);
             if (k < 0) break;
-            const win = hay.slice(Math.max(0, k - h.span), k + h.word.length + h.span);
+            /* ⚠️ 用**同一個句子**當範圍，不是固定的字元窗 —— 固定窗裡剛好有一個
+               不相干的「五年級」就會替一句真的越界的話背書（codex 第三輪抓到）。 */
+            const from = Math.max(hay.lastIndexOf('。', k), hay.lastIndexOf('>', k), 0);
+            let to = hay.indexOf('。', k);
+            if (to < 0) to = Math.min(hay.length, k + h.span);
+            const win = hay.slice(from, to + 1);
             if (!h.near.some(function(w){ return win.indexOf(w) >= 0; }))
               fail('HANDOFF: ' + name + '.html mentions "' + h.word + '" without "' + h.near.join('/') +
                    '" nearby — this lesson only ever hands that topic on');
@@ -1680,6 +1768,17 @@ module.exports = {
             fail(name + '.html creates an SVG <' + t + '>, which this lesson does not use');
         });
         if (!tags.length) fail(name + '.html draws nothing through svgEl() — has the drawing moved elsewhere?');
+        /* ⚠️ 每一次呼叫的 tag 都要是**字面量**：svgEl('te' + 'xt') 這種算出來的名字
+           會讓上面那一條靜靜放過（codex 第三輪抓到）。 */
+        /* 宣告那一行（function svgEl(...)）不算呼叫。 */
+        const calls = (clean[name].match(/(?<!function\s)svgEl\s*\(/g) || []).length;
+        if (calls !== tags.length)
+          fail(name + '.html has ' + calls + ' svgEl() calls but only ' + tags.length +
+               ' literal tag names — a computed tag would bypass the allow-list');
+        /* 掃描器讀不懂的語法一律 fail-closed。 */
+        scannerSafe(sib[name]).forEach(function(w){
+          fail(name + '.html contains ' + w + ' — the comment scanner cannot be trusted on it');
+        });
         const direct = [...clean[name].matchAll(/createElementNS\s*\(\s*[^,]+,\s*['"]([a-zA-Z]+)['"]/g)]
           .map(function(m){ return m[1].toLowerCase(); });
         [...new Set(direct)].forEach(function(t){

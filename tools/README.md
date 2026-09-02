@@ -274,8 +274,8 @@ node tools/breaktest.js grade-2/math/time
 capacity-weight 105、shapes 114、solid 97、table 130 —— **二年級十一課共 748 筆**，
 再加上 **grade-4 numbers 80**、**rounding 133**、**angle 110**、**area 135**、
 **time 146**、**fraction 132**、**quadrilateral 24**、**triangle 53**、**decimal 82**、
-**multiply-divide 66**、**pattern 98**、**chart 135**、**figurate 73**、**angle-shape 53**，
-**25 份設定檔全站共 2068 筆**（2026-09-02 用 `node -e` 逐檔讀 `breaks.length` 重新數過，
+**multiply-divide 66**、**pattern 98**、**chart 135**、**figurate 73**、**angle-shape 59**，
+**25 份設定檔全站共 2074 筆**（2026-09-02 用 `node -e` 逐檔讀 `breaks.length` 重新數過，
 不是把上一次的數字加上去）。
 ⚠️ 這一行的數字**每一次都要重新數，不要用加的**：先前寫 1535、又寫 1616，
 兩次都是加總漏掉（decimal 實際是 82，不是 78）。
