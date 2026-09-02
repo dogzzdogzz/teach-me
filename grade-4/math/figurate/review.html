@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 圖形數實驗室</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .figwrap{margin:0 0 4px;text-align:center;overflow-x:auto}
+  .dotfig{width:100%;max-width:340px;height:210px;display:block;margin:0 auto}
+  .figcap{margin:0 0 12px;font-size:13px;color:var(--muted);text-align:center}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;position:sticky;bottom:8px;
+  }
+  .result{
+    margin-top:22px;background:var(--card);border:2px solid var(--green);border-radius:18px;
+    padding:20px;display:none;
+  }
+  .result.on{display:block}
+  .result .line{font-size:20px;font-weight:700;color:var(--green)}
+  .result .links{margin-top:10px;font-size:16px}
+  .result .links a{color:var(--blue)}
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;margin-top:14px;
+  }
+  footer{
+    margin-top:48px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：圖形數實驗室</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>隔一天再來一次，還答得出來，才是真的記住了。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。
+     圖的座標也在這裡定案（figOf），由 fmt() 放進 fig 回傳，
+     這樣檢查驗到的就是「頁面真的畫成什麼」，不是設定檔自己會畫成什麼。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  /* ⚠️ make() 一律不可以回 null。`tools/simgen.js` 每一批只呼叫 make() 一次、
+     **不重試**，所以回 null 就等於「這一支產生器壞了」——拒絕取樣的重試必須
+     放在 make() 裡面。300 次都湊不出來才真的算壞掉。 */
+  function retry(fn){
+    for (var i = 0; i < 300; i++){
+      var d = fn();
+      if (d) return d;
+    }
+    return null;
+  }
+
+  /* --- 這一課的數值範圍。第幾個最多到第 12 個（正方形數 144、三角形數 78），
+         選項一律是 1 ~ 200 之間的整數。有圖的題目另外壓在第 6 個以內，
+         因為畫得下才看得懂。 --- */
+  var N_MAX = 12;
+  var N_FIG = 6;
+  var OPT_MAX = 200;
+  function inRange(v){
+    return typeof v === 'number' && isFinite(v) && v === Math.round(v) && v >= 1 && v <= OPT_MAX;
+  }
+
+  /* --- 兩種圖形數。定義和上課頁完全一致。 --- */
+  function sqNum(n){ return n * n; }
+  function triNum(n){ return n * (n + 1) / 2; }
+  function sqGapOf(n){ return 2 * n + 1; }
+  function triGapOf(n){ return n + 1; }
+  function gnomonSize(k){ return k + k - 1; }
+  function rectDots(n){ return n * (n + 1); }
+  function oddList(n){
+    var out = [];
+    for (var k = 1; k <= n; k++) out.push(gnomonSize(k));
+    return out;
+  }
+  function oddSumOf(n){
+    var s = 0;
+    for (var k = 1; k <= n; k++) s += gnomonSize(k);
+    return s;
+  }
+  var WHICH_MAX = 200;
+  function whichSq(v){
+    for (var n = 1; n <= WHICH_MAX; n++){
+      if (sqNum(n) === v) return n;
+      if (sqNum(n) > v) break;
+    }
+    return -1;
+  }
+  function whichTri(v){
+    for (var n = 1; n <= WHICH_MAX; n++){
+      if (triNum(n) === v) return n;
+      if (triNum(n) > v) break;
+    }
+    return -1;
+  }
+  function isSq(v){ return whichSq(v) > 0; }
+  function isTri(v){ return whichTri(v) > 0; }
+
+  function gapsOf(vals){
+    var out = [];
+    for (var i = 0; i + 1 < vals.length; i++) out.push(vals[i + 1] - vals[i]);
+    return out;
+  }
+  function allSame(list){
+    for (var i = 1; i < list.length; i++) if (list[i] !== list[0]) return false;
+    return list.length > 0;
+  }
+  function isRunOf(vals, f, which){
+    var n = which(vals[0]);
+    if (n < 0) return false;
+    for (var i = 0; i < vals.length; i++) if (f(n + i) !== vals[i]) return false;
+    return true;
+  }
+  function kindOf(vals){
+    if (vals.length < 3) return 'short';
+    if (isRunOf(vals, triNum, whichTri)) return 'tri';
+    if (isRunOf(vals, sqNum, whichSq)) return 'sq';
+    if (allSame(gapsOf(vals))) return 'arith';
+    return 'other';
+  }
+  /* 從第 s 個開始的連續 len 項。 */
+  function runOf(kind, s, len){
+    var out = [];
+    for (var i = 0; i < len; i++) out.push(kind === 'tri' ? triNum(s + i) : sqNum(s + i));
+    return out;
+  }
+
+  /* --- 英文的單複數與序數。只有 1 會出錯。 --- */
+  function plEn(n, w){ return n === 1 ? w : w + 's'; }
+  function ordEn(n){
+    var s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  /* --- 版面常數。和課程頁同一套規格，只是畫布小一點。
+         圖上只有 <circle>，一個字都沒有。 --- */
+  var FIG_W = 340, FIG_H = 210;
+  var FIG_PAD = 16, STEP_MAX = 30, DOT_RATIO = 0.3;
+
+  function gridPlan(cols, rows){
+    var step = Math.min(STEP_MAX, (FIG_W - 2 * FIG_PAD) / cols, (FIG_H - 2 * FIG_PAD) / rows);
+    var w = cols * step, h = rows * step;
+    return { cols:cols, rows:rows, step:step, r:step * DOT_RATIO,
+             x0:(FIG_W - w) / 2, y0:(FIG_H - h) / 2, w:w, h:h };
+  }
+  function cellsOf(kind, n){
+    var out = [], row, col;
+    if (kind === 'sq'){
+      for (row = 0; row < n; row++)
+        for (col = 0; col < n; col++)
+          out.push({ row:row, col:col, k:Math.max(row, col) + 1, side:'a' });
+    } else if (kind === 'tri'){
+      for (row = 0; row < n; row++)
+        for (col = 0; col <= row; col++)
+          out.push({ row:row, col:col, k:row + 1, side:'a' });
+    } else {
+      for (row = 0; row < n; row++)
+        for (col = 0; col <= n; col++)
+          out.push({ row:row, col:col, k:row + 1, side:(col <= row ? 'a' : 'b') });
+    }
+    return out;
+  }
+  function dotPlan(kind, n){
+    var cols = (kind === 'rect') ? n + 1 : n;
+    var g = gridPlan(cols, n);
+    var dots = cellsOf(kind, n).map(function(c){
+      return { row:c.row, col:c.col, k:c.k, side:c.side,
+               cx:g.x0 + (c.col + 0.5) * g.step,
+               cy:g.y0 + (c.row + 0.5) * g.step, r:g.r };
+    });
+    return { kind:kind, n:n, cols:cols, rows:n, step:g.step, r:g.r,
+             x0:g.x0, y0:g.y0, w:g.w, h:g.h, dots:dots };
+  }
+  /* 產生器一律用這一支把圖包好 —— 座標是**頁面算的**，
+     檢查設定會拿它和獨立重寫的排版比對。 */
+  function figOf(kind, n){
+    var plan = dotPlan(kind, n);
+    plan.total = plan.dots.length;
+    return plan;
+  }
+
+  /* --- 數值選項：正解 ＋ 三個誘答。
+         誘答一律「值去重」、必須在範圍內，而且**不可以是題幹印出來的數字**
+         （把題幹抄回去就答對或答錯，兩種都不該發生）。
+         候選不夠時保底往外找一個長得像答案的數，不生垃圾字串。 --- */
+  function numOpts(correct, cands, forbid){
+    if (!inRange(correct)) return null;
+    var out = [correct], seen = {}, bad = {};
+    seen[String(correct)] = 1;
+    (forbid || []).forEach(function(v){ bad[String(v)] = 1; });
+    cands.forEach(function(v){
+      if (out.length >= 4) return;
+      if (!inRange(v) || seen[String(v)] || bad[String(v)]) return;
+      seen[String(v)] = 1;
+      out.push(v);
+    });
+    for (var k = 1; out.length < 4 && k <= 200; k++){
+      [correct + k, correct - k].forEach(function(v){
+        if (out.length >= 4) return;
+        if (!inRange(v) || seen[String(v)] || bad[String(v)]) return;
+        seen[String(v)] = 1;
+        out.push(v);
+      });
+    }
+    return out.length === 4 ? shuffle(out) : null;
+  }
+
+  /* ---------- 文字 ---------- */
+  var TXT = {
+    zh: {
+      kindName:{ tri:'三角形數', sq:'正方形數', arith:'每次加一樣多', other:'以上都不是' },
+      listOf:function(a){ return a.join('、'); },
+      capSq:function(n, v){ return '🔵 第 ' + n + ' 個正方形數：' + n + ' 排，每排 ' + n + ' 個，' + n + ' × ' + n + ' ＝ ' + v + ' 個點'; },
+      capTri:function(n, v){ return '🔵 第 ' + n + ' 個三角形數：一排比一排多 1 個，一共 ' + v + ' 個點'; },
+      capRect:function(n){ return '🔵 兩個一樣的第 ' + n + ' 個三角形拼成的長方形（藍色一個、綠色一個）'; }
+    },
+    en: {
+      kindName:{ tri:'triangular numbers', sq:'square numbers', arith:'the same gap every time', other:'none of these' },
+      listOf:function(a){ return a.join(', '); },
+      capSq:function(n, v){ return '🔵 The ' + ordEn(n) + ' square number: ' + n + ' ' + plEn(n, 'row') + ' of ' + n + ', ' + n + ' × ' + n + ' = ' + v + ' ' + plEn(v, 'dot'); },
+      capTri:function(n, v){ return '🔵 The ' + ordEn(n) + ' triangular number: each row holds one more than the row above, ' + v + ' ' + plEn(v, 'dot') + ' in all'; },
+      capRect:function(n){ return '🔵 Two identical ' + ordEn(n) + ' triangular numbers fitted together into a rectangle (one blue, one green)'; }
+    }
+  };
+
+  var GENS = [
+    /* 1. 第 n 個正方形數是多少。誘答一定要有「n ＋ n」（把乘算成加）。 */
+    { id:'sqNth', cat:'square',
+      make:function(){
+        return retry(function(){
+          var n = 3 + rand(N_MAX - 2);
+          var v = sqNum(n);
+          var opts = numOpts(v, [n + n, sqNum(n - 1), sqNum(n + 1), rectDots(n)], [n]);
+          if (!opts) return null;
+          if (opts.indexOf(n + n) < 0) return null;
+          return { n:n, v:v, opts:opts, ans:opts.indexOf(v) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '第 <strong>' + d.n + '</strong> 個正方形數是多少？'
+            : 'What is the <strong>' + ordEn(d.n) + '</strong> square number?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '正方形數是幾排乘上每排幾個，而且兩個數字一樣：' + d.n + ' × ' + d.n + ' ＝ ' + d.v + '。（答 ' + (d.n + d.n) + ' 是把兩個 ' + d.n + ' 相加，那只排得出兩排。）'
+            : 'A square number is how many rows times how many in each row, and those two numbers are equal: ' + d.n + ' × ' + d.n + ' = ' + d.v + '. (Answering ' + (d.n + d.n) + ' adds the two ' + d.n + 's, which only fills two rows.)'
+        };
+      } },
+
+    /* 2. 第 n 個三角形數是多少。誘答一定要有 n × (n ＋ 1)（忘了除以 2）。 */
+    { id:'triNth', cat:'triangle',
+      make:function(){
+        return retry(function(){
+          var n = 3 + rand(N_MAX - 2);
+          var v = triNum(n);
+          var opts = numOpts(v, [rectDots(n), sqNum(n), triNum(n - 1), triNum(n + 1)], [n]);
+          if (!opts) return null;
+          if (opts.indexOf(rectDots(n)) < 0) return null;
+          return { n:n, v:v, opts:opts, ans:opts.indexOf(v) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '第 <strong>' + d.n + '</strong> 個三角形數是多少？'
+            : 'What is the <strong>' + ordEn(d.n) + '</strong> triangular number?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '兩個第 ' + d.n + ' 個三角形拼成 ' + d.n + ' 排、每排 ' + (d.n + 1) + ' 個的長方形：' + d.n + ' × ' + (d.n + 1) + ' ＝ ' + rectDots(d.n) + '，一個三角形是一半，' + rectDots(d.n) + ' ÷ 2 ＝ ' + d.v + '。（答 ' + rectDots(d.n) + ' 是忘了除以 2。）'
+            : 'Two ' + ordEn(d.n) + ' triangles make a rectangle of ' + d.n + ' rows of ' + (d.n + 1) + ': ' + d.n + ' × ' + (d.n + 1) + ' = ' + rectDots(d.n) + ', and one triangle is half of it, so ' + rectDots(d.n) + ' ÷ 2 = ' + d.v + '. (Answering ' + rectDots(d.n) + ' forgets to halve.)'
+        };
+      } },
+
+    /* 3. 正方形數長大一圈要補幾個點（L 形）。誘答一定要有前一個 L 形。 */
+    { id:'sqGrow', cat:'square',
+      make:function(){
+        return retry(function(){
+          var n = 3 + rand(N_FIG - 2);          // 3~6，圖上畫第 n 個
+          var v = sqGapOf(n);
+          var opts = numOpts(v, [gnomonSize(n), v + 2, v + 1, v - 3], [n, n + 1]);
+          if (!opts) return null;
+          if (opts.indexOf(gnomonSize(n)) < 0) return null;
+          return { n:n, v:v, opts:opts, ans:opts.indexOf(v) };
+        });
+      },
+      fmt:function(d, lang){
+        var k = d.n + 1;
+        return {
+          stem: lang === 'zh'
+            ? '從第 <strong>' + d.n + '</strong> 個正方形數長到第 <strong>' + k + '</strong> 個，要補幾個點？'
+            : 'Growing from the <strong>' + ordEn(d.n) + '</strong> square number to the <strong>' + ordEn(k) + '</strong>, how many dots get added?',
+          fig: figOf('sq', d.n),
+          cap: TXT[lang].capSq(d.n, sqNum(d.n)),
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '補上去的是第 ' + k + ' 個 L 形：橫的一排 ' + k + ' 個、直的一排 ' + k + ' 個，轉角那一個算了兩次，所以是 ' + k + ' ＋ ' + k + ' － 1 ＝ ' + d.v + ' 個點。（驗算：' + k + ' × ' + k + ' － ' + d.n + ' × ' + d.n + ' ＝ ' + sqNum(k) + ' － ' + sqNum(d.n) + ' ＝ ' + d.v + '。答 ' + gnomonSize(d.n) + ' 是上一個 L 形。）'
+            : 'What gets added is L-shape number ' + k + ': ' + k + ' across and ' + k + ' down, with the corner counted twice, so ' + k + ' + ' + k + ' − 1 = ' + d.v + ' dots. (Check: ' + k + ' × ' + k + ' − ' + d.n + ' × ' + d.n + ' = ' + sqNum(k) + ' − ' + sqNum(d.n) + ' = ' + d.v + '. Answering ' + gnomonSize(d.n) + ' is the L-shape before it.)'
+        };
+      } },
+
+    /* 4. 三角形數長大一排要補幾個點。誘答一定要有正方形數的 L 形（拿錯規則）。 */
+    { id:'triGrow', cat:'triangle',
+      make:function(){
+        return retry(function(){
+          var n = 2 + rand(N_FIG - 1);          // 2~6，圖上畫第 n 個
+          var v = triGapOf(n);
+          var opts = numOpts(v, [sqGapOf(n), n + 2, n + 3, n - 1], [n, n + 1]);
+          if (!opts) return null;
+          if (opts.indexOf(sqGapOf(n)) < 0) return null;
+          return { n:n, v:v, opts:opts, ans:opts.indexOf(v) };
+        });
+      },
+      fmt:function(d, lang){
+        var k = d.n + 1;
+        return {
+          stem: lang === 'zh'
+            ? '從第 <strong>' + d.n + '</strong> 個三角形數長到第 <strong>' + k + '</strong> 個，要在下面加一排幾個點？'
+            : 'Growing from the <strong>' + ordEn(d.n) + '</strong> triangular number to the <strong>' + ordEn(k) + '</strong>, how many dots go in the new bottom row?',
+          fig: figOf('tri', d.n),
+          cap: TXT[lang].capTri(d.n, triNum(d.n)),
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '三角形數一排比一排多 1 個，圖上最下面那一排是 ' + d.n + ' 個，所以新的一排是 ' + d.v + ' 個。（驗算：' + triNum(k) + ' － ' + triNum(d.n) + ' ＝ ' + d.v + '。答 ' + sqGapOf(d.n) + ' 是正方形數的 L 形，那是另一種圖形數。）'
+            : 'Each row of a triangular number holds one more than the row above, and the bottom row in the picture holds ' + d.n + ', so the new row holds ' + d.v + '. (Check: ' + triNum(k) + ' − ' + triNum(d.n) + ' = ' + d.v + '. Answering ' + sqGapOf(d.n) + ' uses the square number’s L-shape, which is the other kind of shape number.)'
+        };
+      } },
+
+    /* 5. 連續奇數相加。誘答一定要有「少加一個」。 */
+    { id:'oddSum', cat:'square',
+      make:function(){
+        return retry(function(){
+          var n = 3 + rand(7);                  // 3~9 個奇數
+          var v = oddSumOf(n);
+          var opts = numOpts(v, [sqNum(n - 1), sqNum(n + 1), n * gnomonSize(n), v + gnomonSize(n)], oddList(n));
+          if (!opts) return null;
+          if (opts.indexOf(sqNum(n - 1)) < 0) return null;
+          return { n:n, v:v, opts:opts, ans:opts.indexOf(v) };
+        });
+      },
+      fmt:function(d, lang){
+        var list = oddList(d.n).map(String);
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + list.join(' ＋ ') + '</strong> ＝ ？'
+            : '<strong>' + list.join(' + ') + '</strong> = ?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '從 1 開始的連續奇數，加了幾個就是第幾個正方形數。這裡加了 ' + d.n + ' 個，所以是 ' + d.n + ' × ' + d.n + ' ＝ ' + d.v + '。（答 ' + sqNum(d.n - 1) + ' 是只加了 ' + (d.n - 1) + ' 個。）'
+            : 'Consecutive odd numbers starting from 1 land on the square number whose position is how many you added. Here ' + d.n + ' were added, so it is ' + d.n + ' × ' + d.n + ' = ' + d.v + '. (Answering ' + sqNum(d.n - 1) + ' adds only ' + (d.n - 1) + ' of them.)'
+        };
+      } },
+
+    /* 6. 兩個三角形拼成的長方形有幾個點。誘答一定要有「只算一個三角形」。 */
+    { id:'triRect', cat:'triangle',
+      make:function(){
+        return retry(function(){
+          var n = 2 + rand(N_FIG - 1);          // 2~6
+          var v = rectDots(n);
+          var opts = numOpts(v, [triNum(n), sqNum(n), sqNum(n + 1), n * (n + 2)], [n]);
+          if (!opts) return null;
+          if (opts.indexOf(triNum(n)) < 0) return null;
+          return { n:n, v:v, opts:opts, ans:opts.indexOf(v) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '兩個第 <strong>' + d.n + '</strong> 個三角形數拼成一個長方形。這個長方形一共有幾個點？'
+            : 'Two <strong>' + ordEn(d.n) + '</strong> triangular numbers are fitted together into a rectangle. How many dots does that rectangle hold?',
+          fig: figOf('rect', d.n),
+          cap: TXT[lang].capRect(d.n),
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '長方形是 ' + d.n + ' 排、每排 ' + (d.n + 1) + ' 個（橫的比直的多 1）：' + d.n + ' × ' + (d.n + 1) + ' ＝ ' + d.v + ' 個點。（答 ' + triNum(d.n) + ' 是只算了一個三角形。）'
+            : 'The rectangle is ' + d.n + ' rows of ' + (d.n + 1) + ' (one more across than down): ' + d.n + ' × ' + (d.n + 1) + ' = ' + d.v + ' dots. (Answering ' + triNum(d.n) + ' counts only one triangle.)'
+        };
+      } },
+
+    /* 7. 反過來問：這個正方形數是第幾個。前後各一個誘答都要在。 */
+    { id:'sqWhich', cat:'inverse',
+      make:function(){
+        return retry(function(){
+          var n = 3 + rand(N_MAX - 2);
+          var v = sqNum(n);
+          var opts = numOpts(n, [n - 1, n + 1, n + 2, n - 2], [v]);
+          if (!opts) return null;
+          if (opts.indexOf(n - 1) < 0 || opts.indexOf(n + 1) < 0) return null;
+          return { n:n, v:v, opts:opts, ans:opts.indexOf(n) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.v + '</strong> 是第幾個正方形數？'
+            : 'Which position is <strong>' + d.v + '</strong> in the square numbers?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '從 1 開始一個一個乘乘看，乘出來剛好等於它的那一個就是第幾個：' + d.n + ' × ' + d.n + ' ＝ ' + d.v + '，所以是第 ' + d.n + ' 個。（' + (d.n - 1) + ' × ' + (d.n - 1) + ' ＝ ' + sqNum(d.n - 1) + ' 太小，' + (d.n + 1) + ' × ' + (d.n + 1) + ' ＝ ' + sqNum(d.n + 1) + ' 太大。）'
+            : 'Try the products one at a time from 1, and the one that lands exactly on it is the answer: ' + d.n + ' × ' + d.n + ' = ' + d.v + ', so it is the ' + ordEn(d.n) + ' one. (' + (d.n - 1) + ' × ' + (d.n - 1) + ' = ' + sqNum(d.n - 1) + ' is too small and ' + (d.n + 1) + ' × ' + (d.n + 1) + ' = ' + sqNum(d.n + 1) + ' is too big.)'
+        };
+      } },
+
+    /* 8. 反過來問：這個三角形數是第幾個。 */
+    { id:'triWhich', cat:'inverse',
+      make:function(){
+        return retry(function(){
+          var n = 3 + rand(N_MAX - 2);
+          var v = triNum(n);
+          var opts = numOpts(n, [n - 1, n + 1, n + 2, n - 2], [v]);
+          if (!opts) return null;
+          if (opts.indexOf(n - 1) < 0 || opts.indexOf(n + 1) < 0) return null;
+          return { n:n, v:v, opts:opts, ans:opts.indexOf(n) };
+        });
+      },
+      fmt:function(d, lang){
+        var chain = [];
+        for (var i = 1; i <= d.n; i++) chain.push(String(triNum(i)));
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.v + '</strong> 是第幾個三角形數？'
+            : 'Which position is <strong>' + d.v + '</strong> in the triangular numbers?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '一排一排加上去：' + TXT.zh.listOf(chain) + ' —— 加到第 ' + d.n + ' 個剛好是 ' + d.v + '。（用捷徑驗算：' + d.n + ' × ' + (d.n + 1) + ' ÷ 2 ＝ ' + d.v + '。）'
+            : 'Add the rows one at a time: ' + TXT.en.listOf(chain) + ' — row ' + d.n + ' lands exactly on ' + d.v + '. (Checking with the shortcut: ' + d.n + ' × ' + (d.n + 1) + ' ÷ 2 = ' + d.v + '.)'
+        };
+      } },
+
+    /* 9. 這一串是哪一種。四個模型剛好只有一個套得上（設定檔窮舉證明過）。 */
+    { id:'whichKind', cat:'kind',
+      make:function(){
+        return retry(function(){
+          var want = pick(['tri', 'sq', 'arith', 'other']);
+          var vals;
+          if (want === 'tri' || want === 'sq') vals = runOf(want, 1 + rand(6), 4);
+          else if (want === 'arith'){
+            var a = 2 + rand(8), step = 2 + rand(5);
+            vals = [a, a + step, a + 2 * step, a + 3 * step];
+          } else {
+            vals = runOf('tri', 1 + rand(6), 4).map(function(x){ return x + 1; });
+          }
+          /* 這一條目前恆為假（設定檔的窮舉掃描證明過：這四種構造各自只會落在自己那一類）。
+             留著是防護網 —— 哪天上面的構造改了，它會擋下不符合的那一批。 */
+          if (kindOf(vals) !== want) return null;
+          for (var i = 0; i < vals.length; i++) if (!inRange(vals[i])) return null;
+          var order = shuffle(['tri', 'sq', 'arith', 'other']);
+          return { vals:vals, want:want, opts:order, ans:order.indexOf(want) };
+        });
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang], gaps = gapsOf(d.vals);
+        var tail = lang === 'zh'
+          ? (d.want === 'arith' ? '每一個差都是 ' + gaps[0] + '，所以是每次加一樣多。'
+             : d.want === 'tri' ? '它是第 ' + whichTri(d.vals[0]) + ' 個到第 ' + (whichTri(d.vals[0]) + 3) + ' 個三角形數。'
+             : d.want === 'sq' ? '它是第 ' + whichSq(d.vals[0]) + ' 個到第 ' + (whichSq(d.vals[0]) + 3) + ' 個正方形數。'
+             : '差不一樣，所以不是每次加一樣多；而且 1、3、6、10… 和 1、4、9、16… 裡都找不到連著的這一串，所以兩種圖形數也都不是。')
+          : (d.want === 'arith' ? 'Every gap is ' + gaps[0] + ', so the same amount gets added each time.'
+             : d.want === 'tri' ? 'It runs from the ' + ordEn(whichTri(d.vals[0])) + ' to the ' + ordEn(whichTri(d.vals[0]) + 3) + ' triangular number.'
+             : d.want === 'sq' ? 'It runs from the ' + ordEn(whichSq(d.vals[0])) + ' to the ' + ordEn(whichSq(d.vals[0]) + 3) + ' square number.'
+             : 'The gaps are not equal, so nothing fixed gets added; and this run does not appear as consecutive numbers in 1, 3, 6, 10… or in 1, 4, 9, 16…, so it is neither kind of shape number.');
+        return {
+          stem: lang === 'zh'
+            ? '一串數字是 <strong>' + t.listOf(d.vals.map(String)) + '</strong>。這是哪一種？'
+            : 'A run of numbers goes <strong>' + t.listOf(d.vals.map(String)) + '</strong>. What kind is it?',
+          opts: d.opts.map(function(k){ return t.kindName[k]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '先把每一個差算出來：' + t.listOf(gaps.map(String)) + '。' + tail
+            : 'Work out every gap first: ' + t.listOf(gaps.map(String)) + '. ' + tail
+        };
+      } },
+
+    /* 10. 四個數裡哪一個是某一種圖形數。其餘三個都要**真的不是**。 */
+    { id:'pickFigurate', cat:'kind',
+      make:function(){
+        return retry(function(){
+          var want = pick(['tri', 'sq']);
+          var isWant = (want === 'tri') ? isTri : isSq;
+          var other = (want === 'tri') ? isSq : isTri;
+          var n = 3 + rand(8);                    // 第 3 ~ 10 個
+          var v = (want === 'tri') ? triNum(n) : sqNum(n);
+          /* 兩種都是的數（1 和 36）當正解會讓解釋講不清楚，換一組。 */
+          if (other(v)) return null;
+          if (!inRange(v)) return null;
+          /* ⚠️ 誘答一定要有一個**另一種圖形數**，這一題才真的在問「是哪一種」。
+             把它排在候選的第一位，不然正解附近那四個近似數會先把位子占滿，
+             那個誘答就變成永遠用不到的死程式碼（本輪截圖看出來的）。 */
+          var m = 3 + rand(8);
+          var cross = (want === 'tri') ? sqNum(m) : triNum(m);
+          if (!inRange(cross) || cross === v || isWant(cross)) return null;
+          var pool = [cross, v + 1, v - 1, v + 2, v - 2, v + 3, v - 3, v + 4];
+          var out = [v], seen = {};
+          seen[String(v)] = 1;
+          for (var i = 0; i < pool.length && out.length < 4; i++){
+            var x = pool[i];
+            if (!inRange(x) || seen[String(x)] || isWant(x)) continue;
+            seen[String(x)] = 1;
+            out.push(x);
+          }
+          if (out.length !== 4) return null;
+          if (out.indexOf(cross) < 0) return null;
+          var order = shuffle(out);
+          return { want:want, n:n, m:m, v:v, cross:cross, opts:order, ans:order.indexOf(v) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '下面哪一個數是<strong>' + (d.want === 'tri' ? '三角形數' : '正方形數') + '</strong>？'
+            : 'Which of these is a <strong>' + (d.want === 'tri' ? 'triangular number' : 'square number') + '</strong>?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? (d.want === 'tri'
+               ? '一排一排加上去，加到第 ' + d.n + ' 個剛好是 ' + d.v + '（' + d.n + ' × ' + (d.n + 1) + ' ÷ 2 ＝ ' + d.v + '），所以 ' + d.v + ' 是第 ' + d.n + ' 個三角形數。另外三個數都會被跨過去 —— 其中 ' + d.cross + ' 是第 ' + d.m + ' 個<strong>正方形數</strong>，那是另一種圖形數。'
+               : '從 1 開始一個一個乘乘看，' + d.n + ' × ' + d.n + ' ＝ ' + d.v + '，所以 ' + d.v + ' 是第 ' + d.n + ' 個正方形數。另外三個數都會被跨過去 —— 其中 ' + d.cross + ' 是第 ' + d.m + ' 個<strong>三角形數</strong>，那是另一種圖形數。')
+            : (d.want === 'tri'
+               ? 'Adding the rows one at a time lands exactly on ' + d.v + ', because ' + d.n + ' × ' + (d.n + 1) + ' ÷ 2 = ' + d.v + '. So ' + d.v + ' is the ' + ordEn(d.n) + ' triangular number, and the other three get stepped over — one of them, ' + d.cross + ', is the ' + ordEn(d.m) + ' <strong>square number</strong>, which is the other kind of shape number.'
+               : 'Trying the products from 1, ' + d.n + ' × ' + d.n + ' = ' + d.v + '. So ' + d.v + ' is the ' + ordEn(d.n) + ' square number, and the other three get stepped over — one of them, ' + d.cross + ', is the ' + ordEn(d.m) + ' <strong>triangular number</strong>, which is the other kind of shape number.')
+        };
+      } },
+
+    /* 11. 文字題：罐頭疊成三角形。誘答一定要有「忘了除以 2」。 */
+    { id:'stackWord', cat:'word',
+      make:function(){
+        return retry(function(){
+          var n = 4 + rand(N_MAX - 3);            // 最下面一排 4 ~ 12 罐
+          var v = triNum(n);
+          var opts = numOpts(v, [rectDots(n), sqNum(n), triNum(n - 1), triNum(n + 1)], [n, 1]);
+          if (!opts) return null;
+          if (opts.indexOf(rectDots(n)) < 0) return null;
+          return { n:n, v:v, opts:opts, ans:opts.indexOf(v) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '罐頭疊成一個三角形，最下面一排 <strong>' + d.n + '</strong> 罐，每往上一排少 1 罐，最上面一排 1 罐。一共有幾罐？'
+            : 'Cans are stacked in a triangle with <strong>' + d.n + '</strong> cans along the bottom row, one fewer in each row going up, and 1 can on top. How many cans are there?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '最下面一排 ' + d.n + ' 罐，所以這是第 ' + d.n + ' 個三角形數：' + d.n + ' × ' + (d.n + 1) + ' ÷ 2 ＝ ' + d.v + ' 罐。（答 ' + rectDots(d.n) + ' 是忘了除以 2。）'
+            : 'The bottom row holds ' + d.n + ', so this is the ' + ordEn(d.n) + ' triangular number: ' + d.n + ' × ' + (d.n + 1) + ' ÷ 2 = ' + d.v + ' cans. (Answering ' + rectDots(d.n) + ' forgets to halve.)'
+        };
+      } },
+
+    /* 12. 下一個是多少。誘答一定要有「以為每次加一樣多」算出來的那一個。 */
+    { id:'nextTerm', cat:'gap',
+      make:function(){
+        return retry(function(){
+          var kind = pick(['tri', 'sq']);
+          var s = 1 + rand(5);
+          var vals = runOf(kind, s, 4);
+          var v = (kind === 'tri') ? triNum(s + 4) : sqNum(s + 4);
+          var gaps = gapsOf(vals);
+          var flat = vals[3] + gaps[2];           // 以為每次加一樣多
+          /* 這一條目前恆為假（差每次多 1 或多 2，所以 flat 一定比 v 小）。留著當防護網。 */
+          if (flat === v) return null;
+          var opts = numOpts(v, [flat, vals[3] + gaps[0], v + 1, v - 1], vals);
+          if (!opts) return null;
+          if (opts.indexOf(flat) < 0) return null;
+          return { kind:kind, s:s, vals:vals, v:v, gaps:gaps, flat:flat,
+                   opts:opts, ans:opts.indexOf(v) };
+        });
+      },
+      fmt:function(d, lang){
+        var t = TXT[lang];
+        var nextGap = d.v - d.vals[3];
+        return {
+          stem: lang === 'zh'
+            ? '一串圖形數是 <strong>' + t.listOf(d.vals.map(String)) + '</strong>。下一個是多少？'
+            : 'A run of shape numbers goes <strong>' + t.listOf(d.vals.map(String)) + '</strong>. What comes next?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '每一個差是 ' + t.listOf(d.gaps.map(String)) + '，差一直在長大，所以下一個差是 ' + nextGap + '：' + d.vals[3] + ' ＋ ' + nextGap + ' ＝ ' + d.v + '。（答 ' + d.flat + ' 是以為每次都加 ' + d.gaps[2] + '，那是差都一樣才可以用的想法。）'
+            : 'The gaps are ' + t.listOf(d.gaps.map(String)) + ' and they keep growing, so the next gap is ' + nextGap + ': ' + d.vals[3] + ' + ' + nextGap + ' = ' + d.v + '. (Answering ' + d.flat + ' assumes ' + d.gaps[2] + ' gets added every time, which is only allowed when the gaps are all the same.)'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 圖形數實驗室', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：圖形數實驗室',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>隔一天再來一次，還答得出來，才是真的記住了。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Shape-Number Lab', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Shape-Number Lab',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>Come back a day later and still get them — that is real remembering.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  /* --- 畫圖：只有這一段碰 DOM。座標直接用 fig 裡**產生器算好的**那一份，
+         不在這裡重算，不然畫出來的和檢查驗過的會是兩回事。 --- */
+  var NS = 'http://www.w3.org/2000/svg';
+  var C_DOT = '#3B7DD8', C_B = '#2F9E69';
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function drawFig(svg, fig){
+    svg.textContent = '';
+    fig.dots.forEach(function(p){
+      svg.appendChild(svgEl('circle', {
+        cx:p.cx, cy:p.cy, r:p.r, fill:(p.side === 'b' ? C_B : C_DOT)
+      }));
+    });
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make();
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      if (q.fig){
+        var fw = document.createElement('div');
+        fw.className = 'figwrap';
+        var svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('class', 'dotfig');
+        svg.setAttribute('viewBox', '0 0 340 210');
+        drawFig(svg, q.fig);
+        fw.appendChild(svg);
+        box.appendChild(fw);
+        var cp = document.createElement('p');
+        cp.className = 'figcap';
+        cp.textContent = q.cap;
+        box.appendChild(cp);
+      }
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length) finish();
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function finish(){
+    var t = L();
+    resultLine.textContent = (right === batch.length) ? t.resAll(batch.length)
+      : (right >= Math.ceil(batch.length * 2 / 3)) ? t.resGood(right, batch.length)
+      : t.resTry(right, batch.length);
+    resultLinks.innerHTML = t.links;
+    resultEl.classList.add('on');
+    resultEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  function newRound(){ batch = buildBatch(); render(); }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    newRound();
+  });
+  retryBtn.addEventListener('click', newRound);
+
+  applyStatic();
+  newRound();
+})();
+</script>
+</body>
+</html>

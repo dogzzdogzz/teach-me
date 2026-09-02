@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>速查卡 — 圖形數實驗室</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  section{margin-top:38px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:13px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(20px,3.6vw,26px);margin:8px 0 4px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:20px;margin-top:14px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .formula{
+    background:var(--blue-soft);border-radius:14px;padding:14px 18px;margin-top:12px;
+    font-size:19px;font-weight:700;color:var(--blue);text-align:center;
+  }
+  .formula .cond{display:block;font-size:14px;font-weight:400;color:var(--muted);margin-top:6px}
+  .scroller{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:15px;min-width:520px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:center}
+  th{background:var(--blue-soft);color:var(--blue)}
+  td.name{font-weight:700;color:var(--green)}
+  .miss{display:grid;gap:12px}
+  .missrow{display:grid;gap:4px;border-left:5px solid var(--orange);padding-left:12px}
+  .missrow .bad{color:var(--red)}
+  .missrow .good{color:var(--green)}
+  .steps{list-style:none;display:grid;gap:10px;margin-top:12px}
+  .steps li{padding-left:34px;position:relative;font-size:16px}
+  .steps li .sn{
+    position:absolute;left:0;top:2px;width:24px;height:24px;border-radius:50%;
+    background:var(--green);color:#fff;font-size:13px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .notebox{
+    margin-top:12px;background:var(--orange-soft);border:2px solid var(--orange);border-radius:14px;
+    padding:10px 16px;font-size:15px;color:var(--orange);
+  }
+  .twofig{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px}
+  .figwrap{text-align:center;overflow-x:auto}
+  .dotfig{width:100%;max-width:380px;height:230px;display:block;margin:0 auto}
+  .figcap{margin-top:6px;font-size:14px;color:var(--muted);text-align:center}
+  .printbtn{
+    margin-top:32px;border:none;border-radius:12px;background:var(--green);color:#fff;
+    font-size:16px;font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  footer{
+    margin-top:48px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+  @media print{
+    .topbar,.coursenav,.printbtn,footer{display:none}
+    body{background:#fff;font-size:13px}
+    .card{box-shadow:none}
+    section{margin-top:18px;break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <span data-i18n="nav2">🗂️ 速查卡（本頁）</span>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🗂️ 速查卡：圖形數實驗室</h1>
+    <p class="sub" data-i18n="sub">三角形數與正方形數：兩條捷徑</p>
+  </header>
+
+  <p class="notebox" data-i18n="scopeNote">這張卡只收兩種<strong>圖形數</strong>：正方形數（1、4、9、16…）和三角形數（1、3、6、10…）。四年級的「規律偵探社」只在<strong>每一個差都一樣</strong>的時候才可以用它那兩條公式；這一課的兩種圖形數<strong>差一直在長大</strong>，所以改用圖形自己的捷徑。用 ☐ 或英文字母列式在五年級的「符號偵探社」；交換律、結合律、分配律在五年級的「運算律魔術師」；正方形數也叫<strong>平方數</strong>，五年級的「因數工廠」用它談因數個數。<strong>這一課不用負數，也不做立體的圖形數。</strong></p>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb1">第一部分</span>
+    <h2 data-i18n="s1h2">兩種圖形數，兩種排法</h2>
+    <div class="card">
+      <p data-i18n="p0"><strong>圖形數</strong>就是「把點排成一個圖形，用掉幾個點」。排法決定了它是哪一種，<strong>第幾個</strong>就是那個圖形排到第幾階（正方形是排到第幾個 L 形，三角形是排到第幾排）。</p>
+      <div class="twofig">
+        <div class="figwrap">
+          <svg class="dotfig" id="sqFig" viewBox="0 0 380 230" xmlns="http://www.w3.org/2000/svg"></svg>
+          <p class="figcap" id="sqCap"></p>
+        </div>
+        <div class="figwrap">
+          <svg class="dotfig" id="triFig" viewBox="0 0 380 230" xmlns="http://www.w3.org/2000/svg"></svg>
+          <p class="figcap" id="triCap"></p>
+        </div>
+      </div>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="kth0">第幾個</th>
+              <th data-i18n="kth1">正方形數</th>
+              <th data-i18n="kth2">三角形數</th>
+            </tr>
+          </thead>
+          <tbody id="kbody"></tbody>
+        </table>
+      </div>
+      <p class="notebox" data-i18n="s1note">⚠️ <strong>有的數兩種都是。</strong>1 是第 1 個正方形數，也是第 1 個三角形數；<strong>36</strong> 是第 6 個正方形數，也是第 8 個三角形數。碰到這兩個數的時候只看它一個是分不出來的 —— 問「這是哪一種」的時候，要看題目給的是<strong>哪一串</strong>。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb2">第二部分</span>
+    <h2 data-i18n="s2h2">正方形數：n × n，長大靠 L 形</h2>
+    <div class="card">
+      <p class="formula" data-i18n="f1">第 n 個正方形數 ＝ n × n<span class="cond">幾排和每排幾個是同一個數，因為正方形的橫邊和直邊一樣長</span></p>
+      <div class="figwrap">
+        <svg class="dotfig" id="gnoFig" viewBox="0 0 380 230" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="gnoCap"></p>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="lth0">第幾個 L 形</th>
+              <th data-i18n="lth1">橫的 ＋ 直的 － 轉角</th>
+              <th data-i18n="lth2">補了幾個點</th>
+              <th data-i18n="lth3">補完一共</th>
+            </tr>
+          </thead>
+          <tbody id="lbody"></tbody>
+        </table>
+      </div>
+      <p class="formula" data-i18n="f2">1 ＋ 3 ＋ 5 ＋ 7 ＋ … 加了 n 個 ＝ n × n<span class="cond">要從 1 開始、而且是連續的奇數，兩個條件缺一不可</span></p>
+      <p class="notebox" data-i18n="s2note">💬 每一個 L 形都是<strong>奇數</strong>個點（k ＋ k － 1），因為轉角那一個被算了兩次。所以「<strong>從 1 開始</strong>的連續奇數的和」和「正方形數」其實是同一件事的兩種說法 —— 沒有從 1 開始就不算（3 ＋ 5 ＝ 8 不是正方形數）。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb3">第三部分</span>
+    <h2 data-i18n="s3h2">三角形數：兩個拼成長方形，再除以 2</h2>
+    <div class="card">
+      <ul class="steps">
+        <li><span class="sn">1</span><span data-i18n="d1">三角形數是<strong>一排一排加起來</strong>：1 ＋ 2 ＋ 3 ＋ …，最下面那一排是 n 個。</span></li>
+        <li><span class="sn">2</span><span data-i18n="d2">再拿一個<strong>一樣大</strong>的三角形，<strong>轉半圈</strong>，跟原來那個拼在一起。</span></li>
+        <li><span class="sn">3</span><span data-i18n="d3">拼出來是一個 <strong>n 排、每排 n ＋ 1 個</strong>的長方形（橫的比直的多 1，因為兩個階梯錯開一格）。</span></li>
+        <li><span class="sn">4</span><span data-i18n="d4">長方形是<strong>兩個</strong>三角形，所以要<strong>除以 2</strong>。</span></li>
+      </ul>
+      <div class="figwrap">
+        <svg class="dotfig" id="rectFig" viewBox="0 0 380 230" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="rectCap"></p>
+      <p class="formula" data-i18n="f3">第 n 個三角形數 ＝ n × (n ＋ 1) ÷ 2<span class="cond">n × (n ＋ 1) 是相鄰的兩個數相乘，一定是偶數，所以永遠除得盡</span></p>
+      <p class="notebox" data-i18n="s3note">⚠️ <strong>忘了除以 2</strong> 是這一課最常見的錯：n × (n ＋ 1) 算的是<strong>長方形</strong>，那是兩個三角形。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb4">第四部分</span>
+    <h2 data-i18n="s4h2">反過來問「第幾個」，和上一課的分工</h2>
+    <div class="card">
+      <ul class="steps">
+        <li><span class="sn">1</span><span data-i18n="w1"><strong>正方形數</strong>：從 1 開始試 1 × 1、2 × 2、3 × 3…，<strong>乘出來剛好等於它</strong>的那一個就是第幾個。</span></li>
+        <li><span class="sn">2</span><span data-i18n="w2"><strong>三角形數</strong>：從 1 開始一排一排加 1、3、6、10…，<strong>加到剛好等於它</strong>的那一排就是第幾個。</span></li>
+        <li><span class="sn">3</span><span data-i18n="w3">兩種都<strong>越算越大</strong>，所以<strong>一走過頭就可以停</strong>；停下來還沒對上，就表示那個數不是這一種圖形數。</span></li>
+      </ul>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="cth0">看到一串數字</th>
+              <th data-i18n="cth1">先做什麼</th>
+              <th data-i18n="cth2">用哪一課的辦法</th>
+            </tr>
+          </thead>
+          <tbody id="cbody"></tbody>
+        </table>
+      </div>
+      <p class="notebox" data-i18n="s4note">💬 <strong>先算差，再決定用哪一套。</strong>差都一樣 → 用「規律偵探社」的兩條公式；差一直在長大 → 看看它是不是這一課的兩種圖形數。<strong>不是每一種「差在長大」的規律都有捷徑</strong>，這一課只保證這兩種。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb5">第五部分</span>
+    <h2 data-i18n="s5h2">最容易錯的四個地方</h2>
+    <div class="card">
+      <div class="miss" id="missBox"></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb6">第六部分</span>
+    <h2 data-i18n="s6h2">中英名詞對照</h2>
+    <div class="card">
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="wth0">中文</th><th data-i18n="wth1">English</th></tr>
+          </thead>
+          <tbody id="wbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <button class="printbtn" id="printBtn" type="button" data-i18n="printBtn">🖨️ 印出這一頁</button>
+
+  <footer data-i18n="foot">回到<a class="home" href="index.html">課程</a>或去玩<a class="home" href="review.html">複習挑戰</a>。</footer>
+</div>
+<script>
+(function(){
+  "use strict";
+
+  /* 兩種圖形數的定義和上課頁完全一致 —— 表格與圖都由同一份算出來，
+     才不會有一邊改了、另一邊忘了改。 */
+  function sqNum(n){ return n * n; }
+  function triNum(n){ return n * (n + 1) / 2; }
+  function gnomonSize(k){ return k + k - 1; }
+  function rectDots(n){ return n * (n + 1); }
+  function oddSum(n){
+    var s = 0;
+    for (var k = 1; k <= n; k++) s += gnomonSize(k);
+    return s;
+  }
+  function plEn(n, w){ return n === 1 ? w : w + 's'; }
+  function ordEn(n){
+    var s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  /* 版面：和上課頁同一套規格，只是畫布小一點（速查卡要印得下）。 */
+  var FIG_W = 380, FIG_H = 230;
+  var FIG_PAD = 18, STEP_MAX = 34, DOT_RATIO = 0.3;
+
+  function gridPlan(cols, rows){
+    var step = Math.min(STEP_MAX, (FIG_W - 2 * FIG_PAD) / cols, (FIG_H - 2 * FIG_PAD) / rows);
+    var w = cols * step, h = rows * step;
+    return { cols:cols, rows:rows, step:step, r:step * DOT_RATIO,
+             x0:(FIG_W - w) / 2, y0:(FIG_H - h) / 2, w:w, h:h };
+  }
+  function cellsOf(kind, n){
+    var out = [], row, col;
+    if (kind === 'sq'){
+      for (row = 0; row < n; row++)
+        for (col = 0; col < n; col++)
+          out.push({ row:row, col:col, k:Math.max(row, col) + 1, side:'a' });
+    } else if (kind === 'tri'){
+      for (row = 0; row < n; row++)
+        for (col = 0; col <= row; col++)
+          out.push({ row:row, col:col, k:row + 1, side:'a' });
+    } else {
+      for (row = 0; row < n; row++)
+        for (col = 0; col <= n; col++)
+          out.push({ row:row, col:col, k:row + 1, side:(col <= row ? 'a' : 'b') });
+    }
+    return out;
+  }
+  function dotPlan(kind, n){
+    var cols = (kind === 'rect') ? n + 1 : n;
+    var g = gridPlan(cols, n);
+    var dots = cellsOf(kind, n).map(function(c){
+      return { row:c.row, col:c.col, k:c.k, side:c.side,
+               cx:g.x0 + (c.col + 0.5) * g.step,
+               cy:g.y0 + (c.row + 0.5) * g.step, r:g.r };
+    });
+    return { kind:kind, n:n, cols:cols, rows:n, step:g.step, r:g.r,
+             x0:g.x0, y0:g.y0, w:g.w, h:g.h, dots:dots };
+  }
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var C_DOT = '#3B7DD8', C_NEW = '#E8871E', C_B = '#2F9E69';
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function drawDots(svg, plan, tone){
+    svg.textContent = '';
+    plan.dots.forEach(function(p){
+      svg.appendChild(svgEl('circle', { cx:p.cx, cy:p.cy, r:p.r, fill:(tone ? tone(p) : C_DOT) }));
+    });
+  }
+
+  /* 名詞對照表：中英兩欄本來就是同一份資料，不是互相翻譯的字串，
+     所以放在語言之外（放進 en 字典會變成「英文字典裡有中文」）。 */
+  var WORD_PAIRS = [
+    ['圖形數', 'shape number'], ['正方形數（平方數）', 'square number'],
+    ['三角形數', 'triangular number'], ['第 n 個', 'the nth one'],
+    ['一排', 'a row'], ['點', 'a dot'], ['L 形', 'an L-shape'],
+    ['奇數', 'an odd number'], ['差', 'the gap'], ['差在長大', 'the gaps keep growing'],
+    ['除以 2', 'divide by 2'], ['長方形', 'a rectangle']
+  ];
+
+  var KROWS = [1, 2, 3, 4, 5, 6, 7, 8];   // 對照表要列到第幾個
+  var GNO_N = 5;                           // L 形那一張圖畫到第 5 個正方形數
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'速查卡 — 圖形數實驗室', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡（本頁）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🗂️ 速查卡：圖形數實驗室',
+      sub:'三角形數與正方形數：兩條捷徑',
+      scopeNote:'這張卡只收兩種<strong>圖形數</strong>：正方形數（1、4、9、16…）和三角形數（1、3、6、10…）。四年級的「規律偵探社」只在<strong>每一個差都一樣</strong>的時候才可以用它那兩條公式；這一課的兩種圖形數<strong>差一直在長大</strong>，所以改用圖形自己的捷徑。用 ☐ 或英文字母列式在五年級的「符號偵探社」；交換律、結合律、分配律在五年級的「運算律魔術師」；正方形數也叫<strong>平方數</strong>，五年級的「因數工廠」用它談因數個數。<strong>這一課不用負數，也不做立體的圖形數。</strong>',
+      eb1:'第一部分', eb2:'第二部分', eb3:'第三部分', eb4:'第四部分', eb5:'第五部分', eb6:'第六部分',
+
+      s1h2:'兩種圖形數，兩種排法',
+      p0:'<strong>圖形數</strong>就是「把點排成一個圖形，用掉幾個點」。排法決定了它是哪一種，<strong>第幾個</strong>就是那個圖形排到第幾階（正方形是排到第幾個 L 形，三角形是排到第幾排）。',
+      capSq:function(n, v){ return '🔵 第 ' + n + ' 個正方形數：' + n + ' 排，每排 ' + n + ' 個，' + n + ' × ' + n + ' ＝ ' + v + ' 個點'; },
+      capTri:function(n, v){ return '🔵 第 ' + n + ' 個三角形數：一排比一排多 1 個，一共 ' + v + ' 個點'; },
+      capRect:function(n, v){ return '🔵 兩個第 ' + n + ' 個三角形拼成的長方形：' + n + ' 排，每排 ' + (n + 1) + ' 個，' + n + ' × ' + (n + 1) + ' ＝ ' + v + ' 個點'; },
+      capGno:function(n, v){ return '🔵 第 ' + n + ' 個正方形數是一個 L 形一個 L 形疊出來的，一共 ' + v + ' 個點'; },
+      kth0:'第幾個', kth1:'正方形數', kth2:'三角形數',
+      s1note:'⚠️ <strong>有的數兩種都是。</strong>1 是第 1 個正方形數，也是第 1 個三角形數；<strong>36</strong> 是第 6 個正方形數，也是第 8 個三角形數。碰到這兩個數的時候只看它一個是分不出來的 —— 問「這是哪一種」的時候，要看題目給的是<strong>哪一串</strong>。',
+
+      s2h2:'正方形數：n × n，長大靠 L 形',
+      f1:'第 n 個正方形數 ＝ n × n<span class="cond">幾排和每排幾個是同一個數，因為正方形的橫邊和直邊一樣長</span>',
+      lth0:'第幾個 L 形', lth1:'橫的 ＋ 直的 － 轉角', lth2:'補了幾個點', lth3:'補完一共',
+      lcalc:function(k){ return k + ' ＋ ' + k + ' － 1'; },
+      lgot:function(v){ return v + ' 個'; },
+      ltot:function(k, v){ return v + ' 個（＝ ' + k + ' × ' + k + '）'; },
+      f2:'1 ＋ 3 ＋ 5 ＋ 7 ＋ … 加了 n 個 ＝ n × n<span class="cond">要從 1 開始、而且是連續的奇數，兩個條件缺一不可</span>',
+      s2note:'💬 每一個 L 形都是<strong>奇數</strong>個點（k ＋ k － 1），因為轉角那一個被算了兩次。所以「<strong>從 1 開始</strong>的連續奇數的和」和「正方形數」其實是同一件事的兩種說法 —— 沒有從 1 開始就不算（3 ＋ 5 ＝ 8 不是正方形數）。',
+
+      s3h2:'三角形數：兩個拼成長方形，再除以 2',
+      d1:'三角形數是<strong>一排一排加起來</strong>：1 ＋ 2 ＋ 3 ＋ …，最下面那一排是 n 個。',
+      d2:'再拿一個<strong>一樣大</strong>的三角形，<strong>轉半圈</strong>，跟原來那個拼在一起。',
+      d3:'拼出來是一個 <strong>n 排、每排 n ＋ 1 個</strong>的長方形（橫的比直的多 1，因為兩個階梯錯開一格）。',
+      d4:'長方形是<strong>兩個</strong>三角形，所以要<strong>除以 2</strong>。',
+      f3:'第 n 個三角形數 ＝ n × (n ＋ 1) ÷ 2<span class="cond">n × (n ＋ 1) 是相鄰的兩個數相乘，一定是偶數，所以永遠除得盡</span>',
+      s3note:'⚠️ <strong>忘了除以 2</strong> 是這一課最常見的錯：n × (n ＋ 1) 算的是<strong>長方形</strong>，那是兩個三角形。',
+
+      s4h2:'反過來問「第幾個」，和上一課的分工',
+      w1:'<strong>正方形數</strong>：從 1 開始試 1 × 1、2 × 2、3 × 3…，<strong>乘出來剛好等於它</strong>的那一個就是第幾個。',
+      w2:'<strong>三角形數</strong>：從 1 開始一排一排加 1、3、6、10…，<strong>加到剛好等於它</strong>的那一排就是第幾個。',
+      w3:'兩種都<strong>越算越大</strong>，所以<strong>一走過頭就可以停</strong>；停下來還沒對上，就表示那個數不是這一種圖形數。',
+      cth0:'看到一串數字', cth1:'先做什麼', cth2:'用哪一課的辦法',
+      crows:[
+        { a:'差都一樣（例：3、7、11、15）', b:'把每一個差算出來，確認都一樣', c:'「規律偵探社」的兩條公式' },
+        { a:'差在長大，而且是 1、4、9、16', b:'認出它是正方形數', c:'這一課：n × n' },
+        { a:'差在長大，而且是 1、3、6、10', b:'認出它是三角形數', c:'這一課：n × (n ＋ 1) ÷ 2' },
+        { a:'差在長大，可是兩種都不是', b:'一個一個往下加，不要套公式', c:'兩課都沒有捷徑' }
+      ],
+      s4note:'💬 <strong>先算差，再決定用哪一套。</strong>差都一樣 → 用「規律偵探社」的兩條公式；差一直在長大 → 看看它是不是這一課的兩種圖形數。<strong>不是每一種「差在長大」的規律都有捷徑</strong>，這一課只保證這兩種。',
+
+      s5h2:'最容易錯的四個地方',
+      miss:[
+        { bad:'❌ 三角形數算成 n × (n ＋ 1)：第 6 個算成 42', good:'✅ 那是兩個三角形拼成的長方形，要再除以 2：42 ÷ 2 ＝ 21' },
+        { bad:'❌ 看到 1、3、6、10 就用「每次加 2」往下推', good:'✅ 看得到的差是 2、3、4，一直在長大 —— 差都一樣才可以用上一課的公式' },
+        { bad:'❌ 正方形數算成 n ＋ n：第 5 個算成 10', good:'✅ 是 n × n：5 × 5 ＝ 25。n ＋ n 只排得出兩排' },
+        { bad:'❌ 以為一個數只會是其中一種', good:'✅ 1 和 36 兩種都是 —— 要看題目給的是哪一串' }
+      ],
+
+      s6h2:'中英名詞對照',
+      wth0:'中文', wth1:'English',
+      printBtn:'🖨️ 印出這一頁',
+      foot:'回到<a class="home" href="index.html">課程</a>或去玩<a class="home" href="review.html">複習挑戰</a>。'
+    },
+
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Cheat Sheet — The Shape-Number Lab', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet (this page)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🗂️ Cheat sheet: The Shape-Number Lab',
+      sub:'Triangular and square numbers: two shortcuts',
+      scopeNote:'This card only covers two kinds of <strong>shape number</strong>: square numbers (1, 4, 9, 16…) and triangular numbers (1, 3, 6, 10…). Grade 4’s “The Pattern Detectives” may use its two formulas only when <strong>every gap is the same</strong>; both shape numbers here have <strong>gaps that keep growing</strong>, so they use the shape’s own shortcut instead. Writing an equation with ☐ or a letter belongs to grade 5’s “The Symbol Detectives”; the commutative, associative and distributive laws belong to grade 5’s “The Operation-Law Magician”; square numbers are also called <strong>perfect squares</strong>, and grade 5’s “The Factor Factory” uses them to count factors. <strong>This lesson never uses negative numbers, and never does solid shape numbers.</strong>',
+      eb1:'Part 1', eb2:'Part 2', eb3:'Part 3', eb4:'Part 4', eb5:'Part 5', eb6:'Part 6',
+
+      s1h2:'Two kinds of shape number, two arrangements',
+      p0:'A <strong>shape number</strong> is “how many dots it takes to arrange them into a shape”. The arrangement decides which kind it is, and <strong>which one</strong> it is says which stage the shape has reached — which L-shape for a square, which row for a triangle.',
+      capSq:function(n, v){ return '🔵 The ' + ordEn(n) + ' square number: ' + n + ' ' + plEn(n, 'row') + ' of ' + n + ', ' + n + ' × ' + n + ' = ' + v + ' ' + plEn(v, 'dot'); },
+      capTri:function(n, v){ return '🔵 The ' + ordEn(n) + ' triangular number: each row holds one more than the row above, ' + v + ' ' + plEn(v, 'dot') + ' in all'; },
+      capRect:function(n, v){ return '🔵 Two ' + ordEn(n) + ' triangular numbers fitted together: ' + n + ' ' + plEn(n, 'row') + ' of ' + (n + 1) + ', ' + n + ' × ' + (n + 1) + ' = ' + v + ' ' + plEn(v, 'dot'); },
+      capGno:function(n, v){ return '🔵 The ' + ordEn(n) + ' square number is built one L-shape at a time, ' + v + ' ' + plEn(v, 'dot') + ' in all'; },
+      kth0:'Which one', kth1:'Square number', kth2:'Triangular number',
+      s1note:'⚠️ <strong>Some numbers are both.</strong> 1 is the 1st square number and also the 1st triangular number; <strong>36</strong> is the 6th square number and the 8th triangular number. For those two the number on its own cannot tell you — when a question asks which kind it is, read <strong>which run</strong> it hands you.',
+
+      s2h2:'Square numbers: n × n, growing by L-shapes',
+      f1:'The nth square number = n × n<span class="cond">Rows and per-row are the same number, because a square is as wide as it is tall</span>',
+      lth0:'L-shape number', lth1:'across + down − corner', lth2:'Dots added', lth3:'Dots in all',
+      lcalc:function(k){ return k + ' + ' + k + ' − 1'; },
+      lgot:function(v){ return v + ' ' + plEn(v, 'dot'); },
+      ltot:function(k, v){ return v + ' (= ' + k + ' × ' + k + ')'; },
+      f2:'1 + 3 + 5 + 7 + … with n of them added = n × n<span class="cond">They must start at 1 and be consecutive odd numbers — both conditions are needed</span>',
+      s2note:'💬 Every L-shape takes an <strong>odd</strong> number of dots (k + k − 1), because the corner dot gets counted twice. So “adding consecutive odd numbers <strong>starting from 1</strong>” and “square numbers” are two ways of saying the same thing — without the 1 it does not hold, because 3 + 5 = 8 is not a square number.',
+
+      s3h2:'Triangular numbers: fit two into a rectangle, then halve it',
+      d1:'A triangular number is <strong>the rows added up</strong>: 1 + 2 + 3 + …, with n in the bottom row.',
+      d2:'Take a second triangle of the <strong>same size</strong>, <strong>turn it half way round</strong>, and fit it against the first.',
+      d3:'What comes out is a rectangle of <strong>n rows holding n + 1 each</strong> (one more across than down, because the two staircases sit one step apart).',
+      d4:'The rectangle is <strong>two</strong> triangles, so <strong>divide by 2</strong>.',
+      f3:'The nth triangular number = n × (n + 1) ÷ 2<span class="cond">n × (n + 1) multiplies two neighbouring numbers, so it is always even and always halves exactly</span>',
+      s3note:'⚠️ <strong>Forgetting to divide by 2</strong> is the commonest mistake here: n × (n + 1) counts the <strong>rectangle</strong>, and that is two triangles.',
+
+      s4h2:'Going backwards, and how the work splits with the last lesson',
+      w1:'<strong>Square numbers</strong>: try 1 × 1, 2 × 2, 3 × 3… from the start; the one that <strong>lands exactly on it</strong> is the answer.',
+      w2:'<strong>Triangular numbers</strong>: add the rows from the start — 1, 3, 6, 10… — and the row that <strong>lands exactly on it</strong> is the answer.',
+      w3:'Both runs <strong>keep getting bigger</strong>, so you can <strong>stop as soon as you overshoot</strong>; overshooting without landing on it means the number is not that kind of shape number.',
+      cth0:'What the run looks like', cth1:'What to do first', cth2:'Whose method to use',
+      crows:[
+        { a:'Every gap the same (say 3, 7, 11, 15)', b:'Work out every gap and confirm they match', c:'The two formulas from “The Pattern Detectives”' },
+        { a:'Gaps growing, and the run is 1, 4, 9, 16', b:'Recognise it as square numbers', c:'This lesson: n × n' },
+        { a:'Gaps growing, and the run is 1, 3, 6, 10', b:'Recognise it as triangular numbers', c:'This lesson: n × (n + 1) ÷ 2' },
+        { a:'Gaps growing, but neither of those', b:'Keep adding one step at a time — do not reach for a formula', c:'Neither lesson has a shortcut' }
+      ],
+      s4note:'💬 <strong>Work out the gaps first, then choose.</strong> Gaps all the same → the two formulas from “The Pattern Detectives”. Gaps growing → check whether it is one of this lesson’s two shape numbers. <strong>Not every growing-gap pattern has a shortcut</strong> — this lesson only promises one for these two.',
+
+      s5h2:'The four easiest mistakes',
+      miss:[
+        { bad:'❌ Working out a triangular number as n × (n + 1): calling the 6th one 42', good:'✅ That is the rectangle two triangles make, so halve it: 42 ÷ 2 = 21' },
+        { bad:'❌ Seeing 1, 3, 6, 10 and carrying on by “adding 2 each time”', good:'✅ The gaps you can see are 2, 3, 4 and they keep growing — the last lesson’s formula needs gaps that are all the same' },
+        { bad:'❌ Working out a square number as n + n: calling the 5th one 10', good:'✅ It is n × n: 5 × 5 = 25. n + n only fills two rows' },
+        { bad:'❌ Assuming a number can only be one of the two kinds', good:'✅ 1 and 36 are both — read which run the question hands you' }
+      ],
+
+      s6h2:'Words in Chinese and English',
+      wth0:'Chinese', wth1:'English',
+      printBtn:'🖨️ Print this page',
+      foot:'Back to the <a class="home" href="index.html">lesson</a>, or go play the <a class="home" href="review.html">review challenge</a>.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+  var kbody = document.getElementById('kbody');
+  var lbody = document.getElementById('lbody');
+  var cbody = document.getElementById('cbody');
+  var wbody = document.getElementById('wbody');
+  var missBox = document.getElementById('missBox');
+  var sqFig = document.getElementById('sqFig');
+  var sqCap = document.getElementById('sqCap');
+  var triFig = document.getElementById('triFig');
+  var triCap = document.getElementById('triCap');
+  var gnoFig = document.getElementById('gnoFig');
+  var gnoCap = document.getElementById('gnoCap');
+  var rectFig = document.getElementById('rectFig');
+  var rectCap = document.getElementById('rectCap');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+  function cell(txt, cls){
+    var td = document.createElement('td');
+    if (cls) td.className = cls;
+    td.textContent = txt;
+    return td;
+  }
+
+  function renderTables(){
+    var d = L();
+
+    drawDots(sqFig, dotPlan('sq', 4), null);
+    sqCap.textContent = d.capSq(4, sqNum(4));
+    drawDots(triFig, dotPlan('tri', 4), null);
+    triCap.textContent = d.capTri(4, triNum(4));
+    /* L 形一圈一圈換色：奇數圈藍、偶數圈橘，一眼看得出每一圈是一個 L。 */
+    drawDots(gnoFig, dotPlan('sq', GNO_N), function(p){
+      return (p.k % 2 === 1) ? C_DOT : C_NEW;
+    });
+    gnoCap.textContent = d.capGno(GNO_N, sqNum(GNO_N));
+    drawDots(rectFig, dotPlan('rect', 4), function(p){ return p.side === 'a' ? C_DOT : C_B; });
+    rectCap.textContent = d.capRect(4, rectDots(4));
+
+    kbody.textContent = '';
+    KROWS.forEach(function(n){
+      var tr = document.createElement('tr');
+      tr.appendChild(cell(String(n), 'name'));
+      tr.appendChild(cell(String(sqNum(n))));
+      tr.appendChild(cell(String(triNum(n))));
+      kbody.appendChild(tr);
+    });
+
+    lbody.textContent = '';
+    for (var k = 1; k <= GNO_N; k++){
+      var tr2 = document.createElement('tr');
+      tr2.appendChild(cell(String(k), 'name'));
+      tr2.appendChild(cell(d.lcalc(k)));
+      tr2.appendChild(cell(d.lgot(gnomonSize(k))));
+      tr2.appendChild(cell(d.ltot(k, oddSum(k))));
+      lbody.appendChild(tr2);
+    }
+
+    cbody.textContent = '';
+    d.crows.forEach(function(r){
+      var tr3 = document.createElement('tr');
+      tr3.appendChild(cell(r.a, 'name'));
+      tr3.appendChild(cell(r.b));
+      tr3.appendChild(cell(r.c));
+      cbody.appendChild(tr3);
+    });
+
+    wbody.textContent = '';
+    WORD_PAIRS.forEach(function(pair){
+      var tr4 = document.createElement('tr');
+      pair.forEach(function(txt){ tr4.appendChild(cell(txt)); });
+      wbody.appendChild(tr4);
+    });
+
+    missBox.textContent = '';
+    d.miss.forEach(function(m){
+      var row = document.createElement('div');
+      row.className = 'missrow';
+      row.innerHTML = '<span class="bad">' + m.bad + '</span><span class="good">' + m.good + '</span>';
+      missBox.appendChild(row);
+    });
+  }
+
+  function renderAll(){ applyStatic(); renderTables(); }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+  document.getElementById('printBtn').addEventListener('click', function(){ window.print(); });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
