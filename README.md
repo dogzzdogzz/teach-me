@@ -80,7 +80,7 @@
 | 📋 表格讀心術 | 報讀表格 | [📖](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-3/math/table/parents.html) |
 
 
-## 四年級（15 個主題）
+## 四年級（16 個主題）
 
 | 課程 | 單元 | 上課 | 速查卡 | 複習 | 給家長 |
 |------|------|:---:|:---:|:---:|:---:|
@@ -94,6 +94,7 @@
 | 🔺 三角形家族 | 依角分類與依邊分類 | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/triangle/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/triangle/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/triangle/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/triangle/parents.html) |
 | 📐 拼角工作坊 | 量角與圖形的綜合應用（三角板拼角、圖形裡的角） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle-shape/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle-shape/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle-shape/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/angle-shape/parents.html) |
 | 🚚 全等搬家公司 | 平面圖形的全等（平移、旋轉、翻轉、對應邊與對應角） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/congruent/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/congruent/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/congruent/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/congruent/parents.html) |
+| 🧊 方塊盤點站 | 體積初步（1 立方公分、數方塊、看不到的也要數、比體積） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/cubes/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/cubes/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/cubes/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/cubes/parents.html) |
 | 🔍 小數放大鏡 | 二、三位小數的認識與比大小；二位小數的加減 | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/decimal/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/decimal/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/decimal/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/decimal/parents.html) |
 | 🏗️ 乘除升級站 | 三位數 × 二位數的直式；除數二位數的試商與調商 | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/multiply-divide/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/multiply-divide/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/multiply-divide/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/multiply-divide/parents.html) |
 | 🕵️ 規律偵探社 | 數量模式（找規律、算第幾個、判斷在不在） | [📖](https://dogzzdogzz.github.io/teach-me/grade-4/math/pattern/) | [🗂️](https://dogzzdogzz.github.io/teach-me/grade-4/math/pattern/reference.html) | [🔁](https://dogzzdogzz.github.io/teach-me/grade-4/math/pattern/review.html) | [👨‍👩‍👧](https://dogzzdogzz.github.io/teach-me/grade-4/math/pattern/parents.html) |
@@ -145,7 +146,7 @@ docs/teaching-framework.md     # 教學架構（Khan Academy 式，含年段調�
 grade-1/math/                  # 一年級：單元整理＋ 9 個四頁迷你課程
 grade-2/math/                  # 二年級：單元整理＋ 11 個四頁迷你課程（numbers／add-sub／multiply／time／length／divide／two-step／capacity-weight／shapes／solid／table）
 grade-3/math/                  # 三年級：單元整理＋ 17 個四頁迷你課程
-grade-4/math/                  # 四年級：單元整理＋ 15 個四頁迷你課程（angle／angle-shape／area／chart／congruent／decimal／figurate／fraction／multiply-divide／numbers／pattern／quadrilateral／rounding／time／triangle）
+grade-4/math/                  # 四年級：單元整理＋ 16 個四頁迷你課程（angle／angle-shape／area／chart／congruent／cubes／decimal／figurate／fraction／multiply-divide／numbers／pattern／quadrilateral／rounding／time／triangle）
 grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你課程
 │   └── <主題>/                #   每個主題一個資料夾，固定四頁：
 │       ├── index.html         #     上課（互動教學）

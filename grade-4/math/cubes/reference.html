@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>速查卡 — 方塊盤點站</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  section{margin-top:38px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:13px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(20px,3.6vw,26px);margin:8px 0 4px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:20px;margin-top:14px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .formula{
+    background:var(--blue-soft);border-radius:14px;padding:14px 18px;margin-top:12px;
+    font-size:19px;font-weight:700;color:var(--blue);text-align:center;
+  }
+  .formula .cond{display:block;font-size:14px;font-weight:400;color:var(--muted);margin-top:6px}
+  .scroller{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:15px;min-width:520px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:center}
+  th{background:var(--blue-soft);color:var(--blue)}
+  td.name{font-weight:700;color:var(--green)}
+  td.no{color:var(--red)}
+  td.yes{color:var(--green);font-weight:700}
+  .miss{display:grid;gap:12px}
+  .missrow{display:grid;gap:4px;border-left:5px solid var(--orange);padding-left:12px}
+  .missrow .bad{color:var(--red)}
+  .missrow .good{color:var(--green)}
+  .steps{list-style:none;display:grid;gap:10px;margin-top:12px}
+  .steps li{padding-left:34px;position:relative;font-size:16px}
+  .steps li .sn{
+    position:absolute;left:0;top:2px;width:24px;height:24px;border-radius:50%;
+    background:var(--green);color:#fff;font-size:13px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .notebox{
+    margin-top:12px;background:var(--orange-soft);border:2px solid var(--orange);border-radius:14px;
+    padding:10px 16px;font-size:15px;color:var(--orange);
+  }
+  .hmap{display:inline-grid;gap:3px;vertical-align:middle}
+  .hmap span{
+    display:flex;align-items:center;justify-content:center;width:26px;height:26px;
+    border:1.5px solid var(--line);border-radius:5px;background:var(--bg);font-size:14px;font-weight:700;
+  }
+  .hmap span.on{background:var(--orange-soft);border-color:var(--orange);color:var(--orange)}
+  .printbtn{
+    margin-top:32px;border:none;border-radius:12px;background:var(--green);color:#fff;
+    font-size:16px;font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  footer{
+    margin-top:48px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:22px;font-size:17px;
+  }
+  @media print{
+    .topbar,.coursenav,.printbtn,footer{display:none}
+    body{background:#fff;font-size:13px}
+    .card{box-shadow:none}
+    section{margin-top:18px;break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課</a>
+    <span data-i18n="nav2">🗂️ 速查卡（本頁）</span>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🗂️ 速查卡：方塊盤點站</h1>
+    <p class="sub" data-i18n="sub">體積、1 立方公分、數方塊的三個規則</p>
+  </header>
+
+  <p class="notebox" data-i18n="scopeNote">這張卡只收<strong>體積的初步</strong>：體積是占了多大的空間、<strong>1 立方公分</strong>是邊長 1 公分的正方體、數疊起來的方塊（<strong>看不到的也要數</strong>）、兩種數法（高度圖、分層數）、<strong>比體積就是比塊數</strong>。長方體體積的<strong>公式</strong>與<strong>容積</strong>在五年級的「體積積木塔」；<strong>立方公尺</strong>在五年級的「大地測量隊」；<strong>表面積</strong>是六年級的內容。</p>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb1">第一部分</span>
+    <h2 data-i18n="s1h2">體積是什麼、1 立方公分是什麼</h2>
+    <div class="card">
+      <p data-i18n="p0"><strong>體積</strong>是一個東西<strong>占了多大的空間</strong>。量體積用的單位是一個<strong>邊長 1 公分的正方體</strong>，它的體積叫做 <strong>1 立方公分</strong>。用這種小方塊去數：<strong>有幾塊，體積就是幾立方公分</strong>。</p>
+      <p class="formula" data-i18n="f0">1 立方公分 ＝ 邊長 1 公分的正方體的體積<span class="cond">方塊有幾塊，體積就是幾立方公分</span></p>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="uth0">要量什麼</th>
+              <th data-i18n="uth1">單位</th>
+              <th data-i18n="uth2">單位長什麼樣</th>
+              <th data-i18n="uth3">哪一課</th>
+            </tr>
+          </thead>
+          <tbody id="ubody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb2">第二部分</span>
+    <h2 data-i18n="s2h2">數方塊的三個規則</h2>
+    <div class="card">
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="rth0">規則</th>
+              <th data-i18n="rth1">意思</th>
+              <th data-i18n="rth2">為什麼</th>
+            </tr>
+          </thead>
+          <tbody id="rbody"></tbody>
+        </table>
+      </div>
+      <p class="formula" data-i18n="f1">看不到的方塊也要數<span class="cond">方塊不會浮在空中：上面有方塊的地方，下面每一層都有</span></p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb3">第三部分</span>
+    <h2 data-i18n="s3h2">兩種數法（答案一定一樣）</h2>
+    <div class="card">
+      <ul class="steps">
+        <li><span class="sn">1</span><span data-i18n="d1"><strong>高度圖</strong>：從上面看，每一格寫著疊了幾塊（空格沒有方塊）；把每一格<strong>加起來</strong>。</span></li>
+        <li><span class="sn">2</span><span data-i18n="d2"><strong>分層數</strong>：第 1 層幾塊、第 2 層幾塊……把每一層<strong>加起來</strong>。第 1 層的塊數就是有幾格不是空的。</span></li>
+        <li><span class="sn">3</span><span data-i18n="d3">兩種數法數的是<strong>同一堆</strong>，所以答案一定一樣 —— 不一樣就是有一種數錯了，再數一次。</span></li>
+      </ul>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="cth0">高度圖</th>
+              <th data-i18n="cth1">一格一格加</th>
+              <th data-i18n="cth2">一層一層加</th>
+              <th data-i18n="cth3">體積</th>
+            </tr>
+          </thead>
+          <tbody id="cbody"></tbody>
+        </table>
+      </div>
+      <p class="formula" data-i18n="f2">體積 ＝ 每一格加起來 ＝ 每一層加起來<span class="cond">每一層的塊數不一定一樣多，所以是「加」，不是「乘」</span></p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb4">第四部分</span>
+    <h2 data-i18n="s4h2">比體積：高的不一定大</h2>
+    <div class="card">
+      <p data-i18n="p4">方塊都一樣大的時候，<strong>比體積就是比塊數</strong>。比較高的、占的桌面比較大的，都<strong>不一定</strong>比較大 —— 要數過才知道。把一堆方塊<strong>搬動重新排</strong>，塊數沒變，體積就沒變。</p>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="pth0">甲</th>
+              <th data-i18n="pth1">乙</th>
+              <th data-i18n="pth2">塊數</th>
+              <th data-i18n="pth3">誰的體積大</th>
+            </tr>
+          </thead>
+          <tbody id="pbody"></tbody>
+        </table>
+      </div>
+      <p class="formula" data-i18n="f3">比體積 ＝ 比塊數<span class="cond">光看高不高、占的桌面大不大，判斷不了</span></p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb5">第五部分</span>
+    <h2 data-i18n="s5h2">最容易錯的四件事</h2>
+    <div class="card">
+      <div class="miss">
+        <div class="missrow">
+          <span class="bad" data-i18n="m1b">❌ 我看到 7 塊，所以體積是 7 立方公分。</span>
+          <span class="good" data-i18n="m1g">✅ <strong>看不到的方塊也要數</strong>。上面有方塊的地方，下面每一層都有；用高度圖一格一格加，才不會漏。</span></div>
+        <div class="missrow">
+          <span class="bad" data-i18n="m2b">❌ 甲比較高，所以甲的體積比較大。</span>
+          <span class="good" data-i18n="m2g">✅ <strong>比體積就是比塊數</strong>。一柱 3 塊比一層 4 塊高，可是 3 塊比 4 塊少。</span></div>
+        <div class="missrow">
+          <span class="bad" data-i18n="m3b">❌ 每一層都用第 1 層的塊數乘層數。</span>
+          <span class="good" data-i18n="m3g">✅ 每一層的塊數<strong>不一定一樣多</strong>（越高的層只會一樣或更少）。一層一層<strong>加</strong>起來。</span></div>
+        <div class="missrow">
+          <span class="bad" data-i18n="m4b">❌ 一張正方形的紙，面積 9 立方公分。</span>
+          <span class="good" data-i18n="m4g">✅ 平的東西量的是<strong>面積</strong>，單位是<strong>平方公分</strong>；<strong>立方公分</strong>是體積的單位，給占空間的東西用。</span></div>
+      </div>
+    </div>
+  </section>
+
+  <button class="printbtn" id="printBtn" type="button" data-i18n="printBtn">🖨️ 印出這一頁</button>
+
+  <footer data-i18n="foot">把整張卡縮成一句：<strong>體積是占了多大的空間；1 立方公分是邊長 1 公分的正方體；幾塊就是幾立方公分；看不到的方塊也要數；比體積就是比塊數，高的不一定大，搬動重排體積不變。</strong></footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 語言無關的資料 ---------- */
+  /* 這張速查卡收的東西和上課頁完全一致。表格裡的塊數全部是從高度圖**算出來**的，
+     不是手打的 —— 手打的話上課頁改了範例，這裡會靜靜地留著舊的數字。
+     這一頁**沒有任何 SVG**（高度圖用 HTML 畫），所以碰不到「圖上的字被畫布裁掉」那一類缺陷。 */
+
+  /* 三種單位。 */
+  var UNITS = [
+    { id:'length', lesson:'../../../grade-1/math/length/index.html' },
+    { id:'area',   lesson:'../area/index.html' },
+    { id:'volume', lesson:'index.html' }
+  ];
+  /* 三個規則。 */
+  var RULES = ['count', 'hidden', 'move'];
+  /* 兩種數法的例子（高度圖，最後面那一排寫在最前面；和上課頁範例 3 同一組）。 */
+  var COUNT_EXAMPLES = [
+    [[3, 2], [1, 1]],
+    [[2, 1, 0], [2, 2, 1]],
+    [[2, 3], [1, 1]],
+    [[4, 2], [1, 0]]
+  ];
+  /* 比體積的例子（和上課頁範例 4 同一組）。 */
+  var COMPARE_EXAMPLES = [
+    { id:'tallSame',  A:[[4]],              B:[[1, 1], [1, 1]] },
+    { id:'tallLess',  A:[[3]],              B:[[1, 1], [1, 1]] },
+    { id:'wideLess',  A:[[2, 2], [2, 1]],   B:[[1, 1, 1], [1, 1, 1]] },
+    { id:'rearrange', A:[[2, 1], [1, 0]],   B:[[1, 1, 1, 1]] }
+  ];
+  function volume(H){ var s = 0; H.forEach(function(row){ row.forEach(function(x){ s += x; }); }); return s; }
+  function maxH(H){ var m = 0; H.forEach(function(row){ row.forEach(function(x){ if (x > m) m = x; }); }); return m; }
+  function cellList(H){ var out = []; H.forEach(function(row){ row.forEach(function(x){ if (x > 0) out.push(x); }); }); return out; }
+  function layerCounts(H){
+    var out = [], L, n, m = maxH(H);
+    for (L = 1; L <= m; L++){ n = 0; H.forEach(function(row){ row.forEach(function(x){ if (x >= L) n++; }); }); out.push(n); }
+    return out;
+  }
+  function who(a, b){ return a > b ? 'A' : b > a ? 'B' : 'same'; }
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'速查卡 — 方塊盤點站', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課', nav2:'🗂️ 速查卡（本頁）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🗂️ 速查卡：方塊盤點站',
+      sub:'體積、1 立方公分、數方塊的三個規則',
+      scopeNote:'這張卡只收<strong>體積的初步</strong>：體積是占了多大的空間、<strong>1 立方公分</strong>是邊長 1 公分的正方體、數疊起來的方塊（<strong>看不到的也要數</strong>）、兩種數法（高度圖、分層數）、<strong>比體積就是比塊數</strong>。長方體體積的<strong>公式</strong>與<strong>容積</strong>在五年級的「體積積木塔」；<strong>立方公尺</strong>在五年級的「大地測量隊」；<strong>表面積</strong>是六年級的內容。',
+      eb1:'第一部分', eb2:'第二部分', eb3:'第三部分', eb4:'第四部分', eb5:'第五部分',
+
+      s1h2:'體積是什麼、1 立方公分是什麼',
+      p0:'<strong>體積</strong>是一個東西<strong>占了多大的空間</strong>。量體積用的單位是一個<strong>邊長 1 公分的正方體</strong>，它的體積叫做 <strong>1 立方公分</strong>。用這種小方塊去數：<strong>有幾塊，體積就是幾立方公分</strong>。',
+      f0:'1 立方公分 ＝ 邊長 1 公分的正方體的體積<span class="cond">方塊有幾塊，體積就是幾立方公分</span>',
+      uth0:'要量什麼', uth1:'單位', uth2:'單位長什麼樣', uth3:'哪一課',
+      unitWhat:{ length:'長度（多長）', area:'面積（平面多大）', volume:'體積（占多大的空間）' },
+      unitName:{ length:'1 公分', area:'1 平方公分', volume:'1 立方公分' },
+      unitShape:{ length:'1 公分長的一段', area:'邊長 1 公分的正方形', volume:'邊長 1 公分的正方體' },
+      unitLesson:{ length:'一年級「長度」', area:'四年級「面積鋪磚廠」', volume:'這一課' },
+
+      s2h2:'數方塊的三個規則',
+      rth0:'規則', rth1:'意思', rth2:'為什麼',
+      ruleName:{ count:'幾塊就是幾', hidden:'看不到的也要數', move:'搬動重排不變' },
+      ruleMean:{ count:'方塊有幾塊，體積就是幾立方公分', hidden:'藏在後面、下面的方塊一樣算', move:'重新排過的那一堆，體積和原來一樣' },
+      ruleWhy:{ count:'每一塊都是 1 立方公分', hidden:'方塊不會浮在空中，上面有方塊的地方，下面每一層都有', move:'一塊都沒有多、沒有少，塊數沒變' },
+      f1:'看不到的方塊也要數<span class="cond">方塊不會浮在空中：上面有方塊的地方，下面每一層都有</span>',
+
+      s3h2:'兩種數法（答案一定一樣）',
+      d1:'<strong>高度圖</strong>：從上面看，每一格寫著疊了幾塊（空格沒有方塊）；把每一格<strong>加起來</strong>。',
+      d2:'<strong>分層數</strong>：第 1 層幾塊、第 2 層幾塊……把每一層<strong>加起來</strong>。第 1 層的塊數就是有幾格不是空的。',
+      d3:'兩種數法數的是<strong>同一堆</strong>，所以答案一定一樣 —— 不一樣就是有一種數錯了，再數一次。',
+      cth0:'高度圖', cth1:'一格一格加', cth2:'一層一層加', cth3:'體積',
+      plus:function(list){ return list.join(' ＋ '); },
+      vol:function(n){ return n + ' 立方公分'; },
+      f2:'體積 ＝ 每一格加起來 ＝ 每一層加起來<span class="cond">每一層的塊數不一定一樣多，所以是「加」，不是「乘」</span>',
+
+      s4h2:'比體積：高的不一定大',
+      p4:'方塊都一樣大的時候，<strong>比體積就是比塊數</strong>。比較高的、占的桌面比較大的，都<strong>不一定</strong>比較大 —— 要數過才知道。把一堆方塊<strong>搬動重新排</strong>，塊數沒變，體積就沒變。',
+      pth0:'甲', pth1:'乙', pth2:'塊數', pth3:'誰的體積大',
+      pairDesc:{
+        tallSame:['4 塊疊成一柱', '4 塊平鋪成正方形'],
+        tallLess:['3 塊疊成一柱', '4 塊平鋪成正方形'],
+        wideLess:['占 4 格，最高 2 層', '占 6 格，都是 1 層'],
+        rearrange:['4 塊，2 塊疊著、旁邊各 1 塊', '同樣 4 塊搬成一排']
+      },
+      twoVols:function(a, b){ return '甲 ' + a + '、乙 ' + b; },
+      whoText:{ A:'甲比較大', B:'乙比較大', same:'一樣大' },
+      whoNote:{ tallSame:'（高的不一定大）', tallLess:'（高的反而小）', wideLess:'（地盤大的反而小）', rearrange:'（搬動重排不變）' },
+      f3:'比體積 ＝ 比塊數<span class="cond">光看高不高、占的桌面大不大，判斷不了</span>',
+
+      s5h2:'最容易錯的四件事',
+      m1b:'❌ 我看到 7 塊，所以體積是 7 立方公分。',
+      m1g:'✅ <strong>看不到的方塊也要數</strong>。上面有方塊的地方，下面每一層都有；用高度圖一格一格加，才不會漏。',
+      m2b:'❌ 甲比較高，所以甲的體積比較大。',
+      m2g:'✅ <strong>比體積就是比塊數</strong>。一柱 3 塊比一層 4 塊高，可是 3 塊比 4 塊少。',
+      m3b:'❌ 每一層都用第 1 層的塊數乘層數。',
+      m3g:'✅ 每一層的塊數<strong>不一定一樣多</strong>（越高的層只會一樣或更少）。一層一層<strong>加</strong>起來。',
+      m4b:'❌ 一張正方形的紙，面積 9 立方公分。',
+      m4g:'✅ 平的東西量的是<strong>面積</strong>，單位是<strong>平方公分</strong>；<strong>立方公分</strong>是體積的單位，給占空間的東西用。',
+
+      printBtn:'🖨️ 印出這一頁',
+      foot:'把整張卡縮成一句：<strong>體積是占了多大的空間；1 立方公分是邊長 1 公分的正方體；幾塊就是幾立方公分；看不到的方塊也要數；比體積就是比塊數，高的不一定大，搬動重排體積不變。</strong>'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Cheat Sheet — The Cube Stocktake', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson', nav2:'🗂️ Cheat sheet (this page)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🗂️ Cheat Sheet: The Cube Stocktake',
+      sub:'Volume, 1 cubic centimetre, and the three rules for counting cubes',
+      scopeNote:'This card covers only a <strong>first look at volume</strong>: volume is how much space something takes up, <strong>1 cubic centimetre</strong> is a cube with 1 cm edges, counting stacked cubes (<strong>hidden cubes count too</strong>), the two ways to count (height map, layer by layer), and <strong>comparing volumes means comparing cubes</strong>. The <strong>formula</strong> for a cuboid and <strong>capacity</strong> are grade 5’s “The Block Tower”; the <strong>cubic metre</strong> is grade 5’s “The Land Survey Team”; <strong>surface area</strong> is grade 6 work.',
+      eb1:'Part 1', eb2:'Part 2', eb3:'Part 3', eb4:'Part 4', eb5:'Part 5',
+
+      s1h2:'What volume is, and what 1 cubic centimetre is',
+      p0:'<strong>Volume</strong> is <strong>how much space</strong> something takes up. The unit for measuring it is a <strong>cube with 1 cm edges</strong>, whose volume is called <strong>1 cubic centimetre</strong>. Count in these little cubes: <strong>as many cubes as there are, that many cubic centimetres</strong>.',
+      f0:'1 cubic centimetre = the volume of a cube with 1 cm edges<span class="cond">as many cubes as there are, that many cubic centimetres</span>',
+      uth0:'What is measured', uth1:'Unit', uth2:'What the unit looks like', uth3:'Which lesson',
+      unitWhat:{ length:'Length (how long)', area:'Area (how big a flat surface is)', volume:'Volume (how much space)' },
+      unitName:{ length:'1 cm', area:'1 square centimetre', volume:'1 cubic centimetre' },
+      unitShape:{ length:'a piece 1 cm long', area:'a square with 1 cm sides', volume:'a cube with 1 cm edges' },
+      unitLesson:{ length:'grade 1 “Length”', area:'grade 4 “The Area Tiling Works”', volume:'this lesson' },
+
+      s2h2:'The three rules for counting cubes',
+      rth0:'Rule', rth1:'What it means', rth2:'Why',
+      ruleName:{ count:'As many cubes, that many', hidden:'Hidden cubes count too', move:'Rearranging changes nothing' },
+      ruleMean:{ count:'As many cubes as there are, that many cubic centimetres', hidden:'Cubes tucked behind or underneath count just the same', move:'A rearranged pile has the same volume as before' },
+      ruleWhy:{ count:'Every cube is 1 cubic centimetre', hidden:'Cubes never float: wherever there is a cube on top, every layer below is filled', move:'Not one cube was added or taken away, so the count is unchanged' },
+      f1:'Hidden cubes count too<span class="cond">cubes never float: wherever there is a cube on top, every layer below is filled</span>',
+
+      s3h2:'Two ways to count (the answers always agree)',
+      d1:'<strong>Height map</strong>: seen from above, each square says how many cubes are stacked there (a blank square has none); <strong>add up</strong> the squares.',
+      d2:'<strong>Layer by layer</strong>: how many in layer 1, how many in layer 2, and so on; <strong>add up</strong> the layers. Layer 1 holds as many cubes as there are non-empty squares.',
+      d3:'Both ways count <strong>the same pile</strong>, so the answers always agree — if they differ, one count went wrong; count again.',
+      cth0:'Height map', cth1:'Square by square', cth2:'Layer by layer', cth3:'Volume',
+      plus:function(list){ return list.join(' + '); },
+      vol:function(n){ return n + ' cubic ' + (n === 1 ? 'centimetre' : 'centimetres'); },
+      f2:'Volume = the squares added up = the layers added up<span class="cond">the layers do not all hold the same number, so it is “add”, not “multiply”</span>',
+
+      s4h2:'Comparing volumes: taller is not always bigger',
+      p4:'When the cubes are all the same size, <strong>comparing volumes means comparing the number of cubes</strong>. The taller pile, or the one covering more of the table, is <strong>not necessarily</strong> bigger — you have to count. Move a pile into a new arrangement and the count does not change, so <strong>the volume does not change</strong>.',
+      pth0:'A', pth1:'B', pth2:'Cubes', pth3:'Bigger volume',
+      pairDesc:{
+        tallSame:['4 cubes in a tower', '4 cubes flat in a square'],
+        tallLess:['3 cubes in a tower', '4 cubes flat in a square'],
+        wideLess:['covers 4 squares, up to 2 layers', 'covers 6 squares, all 1 layer'],
+        rearrange:['4 cubes: 2 stacked, 1 on each side', 'the same 4 cubes moved into a row']
+      },
+      twoVols:function(a, b){ return 'A ' + a + ', B ' + b; },
+      whoText:{ A:'A is bigger', B:'B is bigger', same:'The same' },
+      whoNote:{ tallSame:'(taller is not bigger)', tallLess:'(the taller one is smaller)', wideLess:'(the bigger base is smaller)', rearrange:'(rearranging changes nothing)' },
+      f3:'Comparing volumes = comparing cubes<span class="cond">height and base size alone cannot settle it</span>',
+
+      s5h2:'The four easiest mistakes',
+      m1b:'❌ I can see 7 cubes, so the volume is 7 cubic centimetres.',
+      m1g:'✅ <strong>Hidden cubes count too</strong>. Wherever there is a cube on top, every layer below is filled; add up the height map square by square so nothing is missed.',
+      m2b:'❌ A is taller, so A has the bigger volume.',
+      m2g:'✅ <strong>Comparing volumes means comparing the number of cubes</strong>. A tower of 3 is taller than a flat layer of 4, yet 3 cubes are fewer than 4.',
+      m3b:'❌ Multiply the cubes in layer 1 by the number of layers.',
+      m3g:'✅ The layers <strong>do not necessarily all hold the same number</strong> (higher layers hold the same or fewer). <strong>Add</strong> the layers one by one.',
+      m4b:'❌ A square sheet of paper has an area of 9 cubic centimetres.',
+      m4g:'✅ A flat thing is measured by <strong>area</strong>, in <strong>square centimetres</strong>; <strong>cubic centimetres</strong> measure volume, for things that take up space.',
+
+      printBtn:'🖨️ Print this page',
+      foot:'The whole card in one line: <strong>volume is how much space something takes up; 1 cubic centimetre is a cube with 1 cm edges; as many cubes as there are, that many cubic centimetres; hidden cubes count too; comparing volumes means comparing cubes — taller is not always bigger, and rearranging changes nothing.</strong>'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function cell(tr, text, cls){
+    var td = document.createElement('td');
+    if (cls) td.className = cls;
+    td.innerHTML = text;
+    tr.appendChild(td);
+  }
+  /* 高度圖用 HTML 格子畫，一格一個 span。 */
+  function hmapCell(tr, H){
+    var td = document.createElement('td');
+    var grid = document.createElement('div');
+    grid.className = 'hmap';
+    grid.style.gridTemplateColumns = 'repeat(' + H[0].length + ', 26px)';
+    H.forEach(function(row){
+      row.forEach(function(x){
+        var s = document.createElement('span');
+        if (x > 0){ s.className = 'on'; s.textContent = x; }
+        grid.appendChild(s);
+      });
+    });
+    td.appendChild(grid);
+    tr.appendChild(td);
+  }
+
+  function renderTables(){
+    var d = L();
+
+    /* 三種單位 */
+    var ubody = document.getElementById('ubody');
+    ubody.textContent = '';
+    UNITS.forEach(function(u){
+      var tr = document.createElement('tr');
+      cell(tr, d.unitWhat[u.id], 'name');
+      cell(tr, d.unitName[u.id]);
+      cell(tr, d.unitShape[u.id]);
+      cell(tr, '<a href="' + u.lesson + '">' + d.unitLesson[u.id] + '</a>');
+      ubody.appendChild(tr);
+    });
+
+    /* 三個規則 */
+    var rbody = document.getElementById('rbody');
+    rbody.textContent = '';
+    RULES.forEach(function(r){
+      var tr = document.createElement('tr');
+      cell(tr, d.ruleName[r], 'name');
+      cell(tr, d.ruleMean[r]);
+      cell(tr, d.ruleWhy[r]);
+      rbody.appendChild(tr);
+    });
+
+    /* 兩種數法 */
+    var cbody = document.getElementById('cbody');
+    cbody.textContent = '';
+    COUNT_EXAMPLES.forEach(function(H){
+      var tr = document.createElement('tr'), n = volume(H);
+      hmapCell(tr, H);
+      cell(tr, d.plus(cellList(H)) + ' = ' + n);
+      cell(tr, d.plus(layerCounts(H)) + ' = ' + n);
+      cell(tr, d.vol(n), 'yes');
+      cbody.appendChild(tr);
+    });
+
+    /* 比體積 */
+    var pbody = document.getElementById('pbody');
+    pbody.textContent = '';
+    COMPARE_EXAMPLES.forEach(function(pr){
+      var tr = document.createElement('tr'), a = volume(pr.A), b = volume(pr.B), w = who(a, b);
+      cell(tr, d.pairDesc[pr.id][0], 'name');
+      cell(tr, d.pairDesc[pr.id][1], 'name');
+      cell(tr, d.twoVols(a, b));
+      cell(tr, d.whoText[w] + ' ' + d.whoNote[pr.id], w === 'same' ? '' : 'yes');
+      pbody.appendChild(tr);
+    });
+  }
+
+  function renderAll(){ applyStatic(); renderTables(); }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+  document.getElementById('printBtn').addEventListener('click', function(){ window.print(); });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

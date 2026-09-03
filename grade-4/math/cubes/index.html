@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我體積 — 方塊盤點站</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 18px;font-size:16px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px;min-height:20px}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px;text-align:center;cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .mode .mbig{font-size:26px}
+  .mode h3{font-size:17px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:16px;display:grid;gap:10px}
+
+  /* --- 體積課專用 --- */
+  .figwrap{margin-top:16px;text-align:center;overflow-x:auto}
+  .cubefig{width:100%;max-width:460px;height:300px;display:block;margin:0 auto}
+  .figcap{margin-top:8px;font-size:14px;color:var(--muted);text-align:center}
+  .narr{margin-top:14px;font-size:17px;text-align:center;min-height:56px}
+  .calc{
+    margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:12px 16px;
+    font-size:19px;text-align:center;color:var(--blue);font-weight:700;
+  }
+  .resultline{
+    margin-top:14px;background:var(--green-soft);border-radius:14px;padding:12px 18px;
+    font-size:20px;font-weight:700;text-align:center;color:var(--green);min-height:30px;
+  }
+  .notebox{
+    margin-top:12px;background:var(--orange-soft);border:2px solid var(--orange);border-radius:14px;
+    padding:10px 16px;font-size:15px;text-align:center;color:var(--orange);
+  }
+  /* 高度圖：從上面看，每一格寫疊幾塊。用 HTML 畫，不用 SVG 的字。 */
+  .hmapwrap{display:flex;justify-content:center;gap:28px;flex-wrap:wrap;align-items:flex-start;margin-top:12px}
+  .hmapbox{text-align:center}
+  .hmaptitle{font-size:14px;color:var(--muted);margin-bottom:6px}
+  .hmap{display:grid;gap:4px;justify-content:center}
+  .hmap span{
+    display:flex;align-items:center;justify-content:center;width:44px;height:44px;
+    border:2px solid var(--line);border-radius:8px;background:var(--bg);font-size:20px;font-weight:700;
+  }
+  .hmap span.on{background:var(--orange-soft);border-color:var(--orange);color:var(--orange)}
+  .hmap span.on.b{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+  .degrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
+  .degbtn{
+    border:2px solid var(--line);background:var(--card);border-radius:14px;padding:14px 10px;
+    font-size:17px;font-weight:700;cursor:pointer;color:var(--ink);text-align:center;min-height:56px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .degbtn svg{width:108px;height:84px;display:block}
+  .degbtn.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .degbtn.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .degbtn:disabled{cursor:default;opacity:.85}
+  .gprompt{text-align:center;font-size:20px;margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:14px;word-break:break-word}
+  .gprompt b{color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🧊 方塊盤點站</h1>
+    <p class="sub" data-i18n="sub">幾塊就是幾立方公分 —— 看不到的方塊也要數</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    「面積鋪磚廠」教過：<strong>面積</strong>是一塊平面鋪滿了幾個正方形。<br>
+    那一疊積木<strong>占了多大的空間</strong>，要怎麼說？<br>
+    這一課的盤點站告訴你：用一樣大的<strong>小方塊</strong>去數 —— 疊起來有幾塊，<strong>體積</strong>就是幾。
+  </div>
+
+  <p class="notebox" data-i18n="scopeNote">這一課教的是<strong>體積的初步</strong>：體積是一個東西<strong>占了多大的空間</strong>；用<strong>邊長 1 公分的正方體</strong>當單位，它的體積叫 <strong>1 立方公分</strong>，方塊有幾塊體積就是幾立方公分。做三件事：數疊起來的方塊（<strong>看不到的也要數</strong>：這一課的方塊每一塊都放在桌上或另一塊的正上方，不會浮在空中，所以上面有方塊的地方，下面每一層都有）、用<strong>高度圖</strong>（從上面看，每一格疊幾塊）和<strong>分層數</strong>兩種方法算出總塊數、還有<strong>比體積</strong>（比的是塊數：比較高的不一定比較大；把方塊搬動重新排，塊數沒變，體積就沒變）。這一課的方塊都是一樣大的 1 立方公分正方體，一堆最多 40 塊左右；圖裡每一格最上面那一塊都看得到，所以有幾格、每一格疊幾層都看得出來。長方體體積的<strong>公式</strong>與<strong>容積</strong>、毫升在五年級的「體積積木塔」；<strong>立方公尺</strong>在五年級的「大地測量隊」；<strong>表面積</strong>是六年級的內容。</p>
+
+  <!-- 模式選擇 -->
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
+  </div>
+
+  <!-- 範例1：幾塊就是幾立方公分 -->
+  <section id="secUnit">
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">1 立方公分：幾塊就是幾</h2>
+    <p class="lead" data-i18n="s1lead">每一個小方塊都是<strong>邊長 1 公分的正方體</strong>，它的體積叫做 <strong>1 立方公分</strong>。點下面的組合，數一數有幾塊。</p>
+    <div class="card">
+      <div class="chips" id="s1chips"></div>
+      <div class="figwrap">
+        <svg class="cubefig" id="s1fig" viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s1cap"></p>
+      <p class="narr" id="s1narr"></p>
+      <p class="calc" id="s1calc"></p>
+      <p class="resultline" id="s1result"></p>
+      <p class="notebox" data-i18n="s1note">💬 <strong>體積</strong>是一個東西<strong>占了多大的空間</strong>。用一樣大的小方塊去數：方塊<strong>有幾塊，體積就是幾立方公分</strong>。排成一排、疊成一柱、還是排成正方形，只要塊數一樣，體積就一樣。</p>
+    </div>
+  </section>
+
+  <!-- 範例2：看不到的方塊 -->
+  <section id="secHidden">
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">看不到的方塊也要數</h2>
+    <p class="lead" data-i18n="s2lead">有些方塊藏在<strong>後面或下面</strong>，從這個方向看不到。先數數你看得到幾塊，再按「透視」把藏起來的方塊顯示出來。</p>
+    <div class="card">
+      <div class="chips" id="s2chips"></div>
+      <div class="figwrap">
+        <svg class="cubefig" id="s2fig" viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s2cap"></p>
+      <div class="hmapwrap" id="s2maps"></div>
+      <div class="btnrow" style="justify-content:center">
+        <button id="s2toggle" class="btn" type="button"></button>
+      </div>
+      <p class="narr" id="s2narr"></p>
+      <p class="calc" id="s2calc"></p>
+      <p class="resultline" id="s2result"></p>
+      <p class="notebox" data-i18n="s2note">💬 方塊<strong>不會浮在空中</strong>：每一塊都放在桌上或另一塊的正上方。所以<strong>上面有方塊的地方，下面每一層都有方塊</strong> —— 就算被擋住看不到。最保險的數法是看<strong>高度圖</strong>：從上面看，每一格寫著疊了幾塊，把每一格加起來就是全部。</p>
+    </div>
+  </section>
+
+  <!-- 範例3：兩種數法 -->
+  <section id="secCount">
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">兩種數法：高度圖、分層數</h2>
+    <p class="lead" data-i18n="s3lead">同一堆方塊，用兩種方法各數一次。<strong>高度圖</strong>：每一格疊幾塊，加起來。<strong>分層數</strong>：第 1 層幾塊、第 2 層幾塊……加起來。兩種方法答案一定一樣。</p>
+    <div class="card">
+      <div class="chips" id="s3chips"></div>
+      <div class="figwrap">
+        <svg class="cubefig" id="s3fig" viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s3cap"></p>
+      <div class="hmapwrap" id="s3maps"></div>
+      <p class="narr" id="s3narr"></p>
+      <p class="calc" id="s3calc"></p>
+      <p class="resultline" id="s3result"></p>
+      <p class="notebox" data-i18n="s3note">💬 <strong>高度圖</strong>是「一格一格」數，<strong>分層數</strong>是「一層一層」數，數的都是<strong>同一堆方塊</strong>，所以加起來一定一樣多。第 1 層的塊數就是<strong>有幾格不是空的</strong>；越高的層，塊數只會一樣或更少，不會更多。</p>
+    </div>
+  </section>
+
+  <!-- 範例4：比體積 -->
+  <section id="secCompare">
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">比體積：高的不一定大</h2>
+    <p class="lead" data-i18n="s4lead">左邊橘色是甲、右邊藍色是乙。先猜猜誰的體積比較大，再按「數一數」看答案。</p>
+    <div class="card">
+      <div class="chips" id="s4chips"></div>
+      <div class="figwrap">
+        <svg class="cubefig" id="s4fig" viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s4cap"></p>
+      <div class="btnrow" style="justify-content:center">
+        <button id="s4toggle" class="btn" type="button"></button>
+      </div>
+      <p class="narr" id="s4narr"></p>
+      <p class="calc" id="s4calc"></p>
+      <p class="resultline" id="s4result"></p>
+      <p class="notebox" data-i18n="s4note">💬 <strong>比體積就是比塊數</strong>（方塊都一樣大的時候）。<strong>比較高的不一定比較大</strong>，占的桌面比較大的也不一定比較大 —— 要數過才知道。把一堆方塊<strong>搬動重新排</strong>，塊數沒有變，體積就<strong>沒有變</strong>。</p>
+    </div>
+  </section>
+
+  <!-- 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">試題</span>
+    <h2 data-i18n="s6h2">檢查一下</h2>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 小遊戲 -->
+  <section class="game">
+    <span class="eyebrow" data-i18n="eb7">小遊戲</span>
+    <h2 data-i18n="s7h2">盤點站出任務</h2>
+    <p class="lead" data-i18n="s7lead">五張盤點單。每一張先問自己：<strong>要數全部、數看不到的，還是比大小？</strong></p>
+    <div class="card">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
+      </div>
+      <p class="hint" id="gHint" style="text-align:center"></p>
+      <p class="gprompt" id="gPrompt"></p>
+      <div class="figwrap">
+        <svg class="cubefig" id="gFig" viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="gCap"></p>
+      <div class="degrid" id="gAnswers"></div>
+      <p id="gMsg" class="gamemsg" style="text-align:center"></p>
+      <div class="btnrow" style="justify-content:center">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的三個動作</h2>
+    <div class="card">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。</li>
+        <li data-i18n="next3">❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>體積是占了多大的空間</strong>，用 1 立方公分的小方塊去數，<strong>幾塊就是幾立方公分</strong>；<strong>看不到的方塊也要數</strong>（上面有方塊的地方，下面每一層都有）；<strong>比體積就是比塊數</strong>，高的不一定大，搬動重排體積不變。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 語言無關的資料 ---------- */
+  /* 這一課教**體積的初步**（108 課綱 S-4-4）：體積是占了多大的空間；單位是邊長 1 公分的
+     正方體（1 立方公分）；數疊起來的方塊（看不到的也要數）；比體積就是比塊數。
+
+     模型：一堆方塊 ＝ 一張**高度圖** H（二維陣列，H[r][c] ＝ 那一格疊幾塊；
+     r ＝ 0 是**最後面**那一排，最後一排是最前面）。每一塊都放在桌上或另一塊的正上方，
+     所以高度圖就完整描述了整堆方塊，體積 ＝ 所有格子相加，沒有浮在空中的方塊。
+
+     畫法：斜投影。單位方塊 (c, h, b)（c ＝ 由左往右第幾格、h ＝ 第幾層、b ＝ 往後第幾排，
+     b ＝ 0 是最前排）畫在 u ＝ c ＋ DEPTH·b、v ＝ h ＋ DEPTH·b（v 往上）。
+     畫的順序（後排先、低層先、左邊先）是這個投影的正確遮擋順序。
+
+     看得到／看不到：用**取樣點**算。每一個面都是頂點落在 1/2 格點上的平行四邊形，
+     邊只有水平、垂直、斜 45° 三種，所以每一塊看得到的區域最小也含一個直角邊 1/2 的三角形；
+     用每格 4 × 4 個取樣點、而且取樣點刻意不落在任何邊上（u 偏 1/8、v 偏 1/16），
+     就一定取得到 —— 這個算法是**精確**的，不是近似。設定檔用另一種方法（射線）重算一次。
+
+     範圍：一堆方塊最多 4 × 4 格、最高 4 層；一堆不超過 40 塊左右。
+     公式（長 × 寬 × 高）、容積、立方公尺、表面積都不在這一課（見範圍說明）。 */
+
+  var FIG_W = 460, FIG_H = 300;
+  var U = 30;              // 一格幾像素
+  var DEPTH = 0.5;         // 往後一排在畫布上偏多少格（右上方向）
+  var MINI_U = 14, MINI_W = 108, MINI_H = 84;   // 遊戲選項裡的小圖
+  var RASTER = 4;          // 每一格取幾個取樣點（見上面的說明）
+  var MAX_SIDE = 4, MAX_HEIGHT = 4, MAX_CUBES = 40;
+  var PAIR_CX_A = 0.27, PAIR_CX_B = 0.73;      // 兩堆並排時各自的中心（占畫布寬的比例）
+
+  function rows(H){ return H.length; }
+  function cols(H){ return H[0].length; }
+  function maxH(H){
+    var m = 0;
+    H.forEach(function(row){ row.forEach(function(x){ if (x > m) m = x; }); });
+    return m;
+  }
+  function volume(H){
+    var s = 0;
+    H.forEach(function(row){ row.forEach(function(x){ s += x; }); });
+    return s;
+  }
+  /* 高度圖上有方塊的格數（第 1 層的塊數）。 */
+  function footprint(H){
+    var n = 0;
+    H.forEach(function(row){ row.forEach(function(x){ if (x > 0) n++; }); });
+    return n;
+  }
+  /* 每一格的塊數，照讀高度圖的順序（後排先、由左到右），只列不是 0 的。 */
+  function cellList(H){
+    var out = [];
+    H.forEach(function(row){ row.forEach(function(x){ if (x > 0) out.push(x); }); });
+    return out;
+  }
+  /* 第 L 層有幾塊（L ＝ 1 起）：有幾格疊到 L 層以上。 */
+  function layerCounts(H){
+    var out = [], L, n, m = maxH(H);
+    for (L = 1; L <= m; L++){
+      n = 0;
+      H.forEach(function(row){ row.forEach(function(x){ if (x >= L) n++; }); });
+      out.push(n);
+    }
+    return out;
+  }
+  function sum(arr){ var s = 0; arr.forEach(function(x){ s += x; }); return s; }
+  /* 所有方塊：c ＝ 第幾格（左起）、h ＝ 第幾層（0 起）、b ＝ 往後第幾排（0 ＝ 最前排）。 */
+  function cubesOf(H){
+    var out = [], R = rows(H);
+    H.forEach(function(row, r){
+      row.forEach(function(x, c){
+        for (var h = 0; h < x; h++) out.push({ c:c, h:h, b:R - 1 - r, key:c + ',' + h + ',' + (R - 1 - r) });
+      });
+    });
+    return out;
+  }
+  /* 畫的順序：後排先、低層先、左邊先。 */
+  function drawOrder(cubes){
+    return cubes.slice().sort(function(p, q){
+      if (p.b !== q.b) return q.b - p.b;
+      if (p.h !== q.h) return p.h - q.h;
+      return p.c - q.c;
+    });
+  }
+  /* 單位座標（格）：u 往右、v 往上。 */
+  function unitPt(x, y, b){ return { u:x + DEPTH * b, v:y + DEPTH * b }; }
+  /* 一塊方塊看得到的三個面（單位座標的平行四邊形，逆時針）。 */
+  function facesOf(k){
+    var c = k.c, h = k.h, b = k.b;
+    return {
+      top:   [unitPt(c, h + 1, b), unitPt(c + 1, h + 1, b), unitPt(c + 1, h + 1, b + 1), unitPt(c, h + 1, b + 1)],
+      front: [unitPt(c, h, b), unitPt(c + 1, h, b), unitPt(c + 1, h + 1, b), unitPt(c, h + 1, b)],
+      right: [unitPt(c + 1, h, b), unitPt(c + 1, h, b + 1), unitPt(c + 1, h + 1, b + 1), unitPt(c + 1, h + 1, b)]
+    };
+  }
+  /* 點在凸多邊形裡（嚴格：取樣點不會落在邊上）。 */
+  function inConvex(p, poly){
+    var n = poly.length, sign = 0;
+    for (var i = 0; i < n; i++){
+      var a = poly[i], q = poly[(i + 1) % n];
+      var cr = (q.u - a.u) * (p.v - a.v) - (q.v - a.v) * (p.u - a.u);
+      if (cr === 0) return false;
+      var s = cr > 0 ? 1 : -1;
+      if (sign === 0) sign = s;
+      else if (s !== sign) return false;
+    }
+    return true;
+  }
+  /* 整堆的投影範圍（格）：寬 ＝ 格數 ＋ 排數 × DEPTH，高 ＝ 最高層數 ＋ 排數 × DEPTH。 */
+  function extent(H){ return { w:cols(H) + DEPTH * rows(H), h:maxH(H) + DEPTH * rows(H) }; }
+  /* 看得到／看不到：用取樣點照畫的順序蓋過去，最後留在每一點上的那一塊才看得到。 */
+  function visibility(H){
+    var cubes = drawOrder(cubesOf(H)), ex = extent(H);
+    var nu = Math.ceil(ex.w * RASTER), nv = Math.ceil(ex.h * RASTER);
+    var owner = new Array(nu * nv);
+    var i, j, idx;
+    cubes.forEach(function(k, ki){
+      var f = facesOf(k);
+      [f.top, f.front, f.right].forEach(function(poly){
+        var minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+        poly.forEach(function(p){
+          if (p.u < minU) minU = p.u; if (p.u > maxU) maxU = p.u;
+          if (p.v < minV) minV = p.v; if (p.v > maxV) maxV = p.v;
+        });
+        for (i = Math.max(0, Math.floor(minU * RASTER)); i < Math.min(nu, Math.ceil(maxU * RASTER)); i++){
+          for (j = Math.max(0, Math.floor(minV * RASTER)); j < Math.min(nv, Math.ceil(maxV * RASTER)); j++){
+            var p = { u:(i + 0.5) / RASTER, v:(j + 0.25) / RASTER };
+            if (inConvex(p, poly)) owner[j * nu + i] = ki;
+          }
+        }
+      });
+    });
+    var seen = {};
+    for (idx = 0; idx < owner.length; idx++) if (owner[idx] !== undefined) seen[cubes[owner[idx]].key] = true;
+    var visible = 0;
+    cubes.forEach(function(k){ k.visible = !!seen[k.key]; if (k.visible) visible++; });
+    return { cubes:cubes, visible:visible, hidden:cubes.length - visible, total:cubes.length };
+  }
+  /* 每一格最上面那一塊都看得到嗎？圖裡的每一堆都要滿足這一條，孩子才有辦法從圖上看出
+     有幾格、每一格疊幾層（一整格藏在後面的話，就算知道方塊不會浮在空中也數不出來）。 */
+  function allTopsVisible(H){
+    var vis = visibility(H), byKey = {};
+    vis.cubes.forEach(function(k){ byKey[k.key] = k.visible; });
+    var R = rows(H), ok = true;
+    H.forEach(function(row, r){ row.forEach(function(x, c){ if (x > 0 && !byKey[c + ',' + (x - 1) + ',' + (R - 1 - r)]) ok = false; }); });
+    return ok;
+  }
+  /* 高度圖是不是合法：長方形、整數、在範圍裡、至少 1 塊。 */
+  function validStack(H){
+    if (!Array.isArray(H) || !H.length || H.length > MAX_SIDE) return false;
+    var C = H[0].length;
+    if (!C || C > MAX_SIDE) return false;
+    for (var r = 0; r < H.length; r++){
+      if (H[r].length !== C) return false;
+      for (var c = 0; c < C; c++){
+        var x = H[r][c];
+        if (typeof x !== 'number' || x !== Math.floor(x) || x < 0 || x > MAX_HEIGHT) return false;
+      }
+    }
+    return volume(H) >= 1 && volume(H) <= MAX_CUBES;
+  }
+
+  /* --- 畫布座標。一堆方塊的左下前角在 (X0, Y0)，一格 unit 像素。 --- */
+  function toPx(p, X0, Y0, unit){ return { x:X0 + p.u * unit, y:Y0 - p.v * unit }; }
+  function stackPlan(H, X0, Y0, unit){
+    var vis = visibility(H);
+    var cubes = vis.cubes.map(function(k){
+      var f = facesOf(k);
+      function px(poly){ return poly.map(function(p){ return toPx(p, X0, Y0, unit); }); }
+      return { c:k.c, h:k.h, b:k.b, key:k.key, visible:k.visible, top:px(f.top), front:px(f.front), right:px(f.right) };
+    });
+    var ex = extent(H);
+    return { cubes:cubes, visible:vis.visible, hidden:vis.hidden, total:vis.total,
+             box:{ x:X0, y:Y0 - ex.h * unit, w:ex.w * unit, h:ex.h * unit } };
+  }
+  /* 一堆放在大畫布正中間。 */
+  function singlePlan(H){
+    var ex = extent(H);
+    var X0 = (FIG_W - ex.w * U) / 2, Y0 = (FIG_H + ex.h * U) / 2;
+    return stackPlan(H, X0, Y0, U);
+  }
+  /* 兩堆並排：甲在左邊、乙在右邊，底線一樣高。 */
+  function pairPlan(HA, HB){
+    var ea = extent(HA), eb = extent(HB);
+    var tall = Math.max(ea.h, eb.h);
+    var Y0 = (FIG_H + tall * U) / 2;
+    var A = stackPlan(HA, FIG_W * PAIR_CX_A - ea.w * U / 2, Y0, U);
+    var B = stackPlan(HB, FIG_W * PAIR_CX_B - eb.w * U / 2, Y0, U);
+    return { A:A, B:B, gap:B.box.x - (A.box.x + A.box.w) };
+  }
+  /* 小圖（遊戲選項）。 */
+  function miniPlan(H){
+    var ex = extent(H);
+    var X0 = (MINI_W - ex.w * MINI_U) / 2, Y0 = (MINI_H + ex.h * MINI_U) / 2;
+    var plan = stackPlan(H, X0, Y0, MINI_U);
+    plan.w = MINI_W; plan.h = MINI_H;
+    plan.fits = ex.w * MINI_U <= MINI_W && ex.h * MINI_U <= MINI_H;
+    return plan;
+  }
+
+  /* --- 方塊庫（高度圖，最後面那一排寫在最前面）。 --- */
+  var STACKS = {
+    one:    [[1]],
+    row3:   [[1, 1, 1]],
+    tower3: [[3]],
+    sq4:    [[1, 1], [1, 1]],
+    L4:     [[2, 1], [1, 0]],
+    box8:   [[2, 2], [2, 2]],
+    hill7:  [[3, 2], [1, 1]],
+    ridge10:[[2, 3, 2], [1, 1, 1]],
+    cube12: [[3, 3], [3, 3]],
+    step8:  [[2, 1, 0], [2, 2, 1]],
+    twist7: [[2, 3], [1, 1]],
+    peak7:  [[4, 2], [1, 0]],
+    tower4: [[4]],
+    flat6:  [[1, 1, 1], [1, 1, 1]],
+    block7: [[2, 2], [2, 1]],
+    row4:   [[1, 1, 1, 1]],
+    game8:  [[3, 2], [2, 1]],
+    stair6: [[3, 2, 1]],
+    five5:  [[1, 1, 1], [1, 1, 0]],
+    eight8: [[3, 1], [2, 2]],
+    seven7: [[2, 2, 1], [1, 1, 0]],
+    bar7:   [[3, 2, 2]]
+  };
+  function stack(id){ return STACKS[id]; }
+
+  /* --- 範例 1：幾塊就是幾立方公分。 --- */
+  var S1_CASES = ['one', 'row3', 'tower3', 'sq4', 'L4'];
+  /* --- 範例 2：看不到的方塊（每一組都至少藏一塊；設定檔會驗）。 --- */
+  var S2_CASES = ['box8', 'hill7', 'ridge10', 'cube12'];
+  /* --- 範例 3：兩種數法。 --- */
+  var S3_CASES = ['hill7', 'step8', 'twist7', 'peak7'];
+  /* --- 範例 4：比體積。旁白照 comparePlan 算出來的結果挑句子。 --- */
+  var S4_CASES = [
+    { id:'tallSame',  A:'tower4', B:'sq4' },
+    { id:'tallLess',  A:'tower3', B:'sq4' },
+    { id:'wideLess',  A:'block7', B:'flat6' },
+    { id:'rearrange', A:'L4',     B:'row4' }
+  ];
+  /* 比較的結果全部算出來：who ＝ 'A'／'B'／'same'。 */
+  function comparePlan(HA, HB){
+    var a = volume(HA), b = volume(HB);
+    return {
+      volA:a, volB:b, who:a > b ? 'A' : b > a ? 'B' : 'same',
+      tallA:maxH(HA), tallB:maxH(HB), footA:footprint(HA), footB:footprint(HB),
+      tallerIsBigger:(maxH(HA) !== maxH(HB)) && ((maxH(HA) > maxH(HB)) === (a > b)) && a !== b,
+      widerIsBigger:(footprint(HA) !== footprint(HB)) && ((footprint(HA) > footprint(HB)) === (a > b)) && a !== b
+    };
+  }
+
+  /* --- 試題裡有圖的兩題。 --- */
+  var QUIZ_FIGS = { q3:'hill7', q4:'box8' };
+
+  /* --- 英文的單複數。**只有 1 會錯**，所以助手住在「語言無關」這一區。 --- */
+  function plEn(n, w){ return n === 1 ? w : w + 's'; }
+
+  /* --- 遊戲：五張盤點單。每一關的答案都由 roundAnswer() 從資料重算。 --- */
+  var COMPARE_KEYS = ['aBigger', 'bBigger', 'same', 'measure'];
+  var ROUNDS = [
+    { kind:'count',   stack:'game8' },
+    { kind:'hidden',  stack:'cube12' },
+    { kind:'compare', A:'tower4', B:'block7' },
+    { kind:'which',   target:6, cands:['stair6', 'block7', 'five5', 'eight8'] },
+    { kind:'move',    A:'seven7', B:'bar7' }
+  ];
+  /* 整數選項：正解 ＋ 指定的誘答，去重、範圍 1~MAX_CUBES，不夠就 ±1、±2…補。 */
+  function numOpts(correct, cands, lo, hi){
+    var out = [correct], seen = {};
+    seen[correct] = true;
+    function add(v){
+      if (out.length >= 4 || seen[v] || typeof v !== 'number' || v !== Math.floor(v) || v < lo || v > hi) return;
+      seen[v] = true; out.push(v);
+    }
+    cands.forEach(add);
+    for (var k = 1; out.length < 4 && k <= 20; k++){ add(correct + k); add(correct - k); }
+    return out;
+  }
+  function roundOptions(r){
+    var vis;
+    if (r.kind === 'count'){
+      vis = visibility(stack(r.stack));
+      return numOpts(vis.total, [vis.visible, footprint(stack(r.stack)), vis.total + 1], 1, MAX_CUBES);
+    }
+    if (r.kind === 'hidden'){
+      vis = visibility(stack(r.stack));
+      return numOpts(vis.hidden, [0, vis.total, vis.visible], 0, MAX_CUBES);
+    }
+    if (r.kind === 'compare') return COMPARE_KEYS;
+    if (r.kind === 'which') return r.cands;
+    var v = volume(stack(r.A));
+    return numOpts(v, [v + 1, v - 1, maxH(stack(r.B))], 1, MAX_CUBES);
+  }
+  /* 正解的索引。找不到唯一的答案就回 －1（設定檔會抓）。 */
+  function roundAnswer(r){
+    var opts = roundOptions(r);
+    if (r.kind === 'count') return opts.indexOf(visibility(stack(r.stack)).total);
+    if (r.kind === 'hidden') return opts.indexOf(visibility(stack(r.stack)).hidden);
+    if (r.kind === 'compare'){
+      var cp = comparePlan(stack(r.A), stack(r.B));
+      return opts.indexOf(cp.who === 'A' ? 'aBigger' : cp.who === 'B' ? 'bBigger' : 'same');
+    }
+    if (r.kind === 'which'){
+      var hits = [];
+      opts.forEach(function(id, i){ if (volume(stack(id)) === r.target) hits.push(i); });
+      return hits.length === 1 ? hits[0] : -1;
+    }
+    /* move：搬完之後塊數不變，答案是搬前的體積（設定檔會驗兩堆真的一樣多）。 */
+    return volume(stack(r.B)) === volume(stack(r.A)) ? opts.indexOf(volume(stack(r.A))) : -1;
+  }
+
+  /* 問「幾塊」的關卡選項用「塊」，問「幾立方公分」的用「立方公分」——單位要跟著題目問的東西走。
+     d 是當下語言的字典；這裡只組字串，不碰 DOM。 */
+  function roundOptText(d, r, key){
+    if (r.kind === 'compare') return d.compareOpt[key];
+    if (r.kind === 'count' || r.kind === 'hidden') return d.cubesText(key);
+    return d.volText(key);
+  }
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      langAria:'切換語言',
+      htmlLang:'zh-Hant', title:'教我體積 — 方塊盤點站', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（本頁）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🧊 方塊盤點站',
+      sub:'幾塊就是幾立方公分 —— 看不到的方塊也要數',
+      intro:'「面積鋪磚廠」教過：<strong>面積</strong>是一塊平面鋪滿了幾個正方形。<br>那一疊積木<strong>占了多大的空間</strong>，要怎麼說？<br>這一課的盤點站告訴你：用一樣大的<strong>小方塊</strong>去數 —— 疊起來有幾塊，<strong>體積</strong>就是幾。',
+      scopeNote:'這一課教的是<strong>體積的初步</strong>：體積是一個東西<strong>占了多大的空間</strong>；用<strong>邊長 1 公分的正方體</strong>當單位，它的體積叫 <strong>1 立方公分</strong>，方塊有幾塊體積就是幾立方公分。做三件事：數疊起來的方塊（<strong>看不到的也要數</strong>：這一課的方塊每一塊都放在桌上或另一塊的正上方，不會浮在空中，所以上面有方塊的地方，下面每一層都有）、用<strong>高度圖</strong>（從上面看，每一格疊幾塊）和<strong>分層數</strong>兩種方法算出總塊數、還有<strong>比體積</strong>（比的是塊數：比較高的不一定比較大；把方塊搬動重新排，塊數沒變，體積就沒變）。這一課的方塊都是一樣大的 1 立方公分正方體，一堆最多 40 塊左右；圖裡每一格最上面那一塊都看得到，所以有幾格、每一格疊幾層都看得出來。長方體體積的<strong>公式</strong>與<strong>容積</strong>、毫升在五年級的「體積積木塔」；<strong>立方公尺</strong>在五年級的「大地測量隊」；<strong>表面積</strong>是六年級的內容。',
+      modeTitle:'今天想怎麼學？（隨時可以換）',
+      modes:{
+        ahead:  { icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：範例慢慢玩，試題只出 6 題基礎題，遊戲會自動給提示。' },
+        school: { icon:'🏫', h:'跟上進度', p:'學校正在教，完整練習', banner:'跟上模式：完整 10 題，包含 4 題課本型文字題。' },
+        boost:  { icon:'💪', h:'補強練習', p:'學過但還不穩，加強', banner:'補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。' }
+      },
+      eb1:'範例教學 1', eb2:'範例教學 2', eb3:'範例教學 3', eb4:'範例教學 4', eb6:'試題', eb7:'小遊戲',
+      ebNext:'學完之後',
+
+      caseName:function(i){ return '第 ' + i + ' 組'; },
+      cubesText:function(n){ return n + ' 塊'; },
+      volText:function(n){ return n + ' 立方公分'; },
+      hmapTitle:'高度圖：從上面看，每一格疊幾塊（空格沒有方塊）',
+      hmapTitleA:'甲的高度圖', hmapTitleB:'乙的高度圖',
+
+      s1h2:'1 立方公分：幾塊就是幾',
+      s1lead:'每一個小方塊都是<strong>邊長 1 公分的正方體</strong>，它的體積叫做 <strong>1 立方公分</strong>。點下面的組合，數一數有幾塊。',
+      s1cap:'📦 每一塊都是邊長 1 公分的正方體，體積 1 立方公分',
+      s1narr:function(n, id){
+        if (n === 1) return '這就是 <strong>1 立方公分</strong>：一個<strong>邊長 1 公分的正方體</strong>。它是量體積用的單位，像量長度用的 1 公分、量面積用的 1 平方公分。';
+        if (id === 'row3') return '3 塊排成一排。一塊是 1 立方公分，3 塊就是 <strong>3 立方公分</strong>。';
+        if (id === 'tower3') return '同樣 3 塊，這次疊成一柱。<strong>塊數一樣，體積就一樣</strong>：還是 3 立方公分，跟排成一排的那一堆一樣大。';
+        if (id === 'sq4') return '4 塊排成一個正方形，一層。數一數：4 塊，體積 <strong>4 立方公分</strong>。';
+        return '這一堆有 2 塊疊在一起、旁邊各有 1 塊。一共 ' + n + ' 塊 —— 體積 <strong>' + n + ' 立方公分</strong>，和 4 塊排成正方形的那一堆一樣大。';
+      },
+      s1calc:function(n){ return n + ' 塊，體積 ' + n + ' 立方公分'; },
+      s1note:'💬 <strong>體積</strong>是一個東西<strong>占了多大的空間</strong>。用一樣大的小方塊去數：方塊<strong>有幾塊，體積就是幾立方公分</strong>。排成一排、疊成一柱、還是排成正方形，只要塊數一樣，體積就一樣。',
+
+      s2h2:'看不到的方塊也要數',
+      s2lead:'有些方塊藏在<strong>後面或下面</strong>，從這個方向看不到。先數數你看得到幾塊，再按「透視」把藏起來的方塊顯示出來。',
+      s2toggleOn:'🔍 透視', s2toggleOff:'↩ 收回',
+      s2capPlain:'📦 從前面偏右上方看這一堆方塊',
+      s2capXray:'📦 透視：紅色虛線是原本看不到的方塊',
+      s2narrGuess:function(v){ return '從這個方向<strong>看得到 ' + v + ' 塊</strong>。全部有幾塊？先猜一猜，再按「透視」。'; },
+      s2narr:function(v, hid, n){
+        return '看得到 ' + v + ' 塊，還有 <strong>' + hid + ' 塊藏在後面或下面</strong>。方塊不會浮在空中，上面有方塊的地方，下面每一層都有 —— 所以一共 <strong>' + n + ' 塊</strong>，體積 ' + n + ' 立方公分。高度圖每一格加起來也是 ' + n + '。';
+      },
+      s2calc:function(v, hid, n){ return '看得到 ＋ 看不到：' + v + ' ＋ ' + hid + ' ＝ ' + n + ' 塊'; },
+      s2result:function(n){ return '體積 ' + n + ' 立方公分'; },
+      s2note:'💬 方塊<strong>不會浮在空中</strong>：每一塊都放在桌上或另一塊的正上方。所以<strong>上面有方塊的地方，下面每一層都有方塊</strong> —— 就算被擋住看不到。最保險的數法是看<strong>高度圖</strong>：從上面看，每一格寫著疊了幾塊，把每一格加起來就是全部。',
+
+      s3h2:'兩種數法：高度圖、分層數',
+      s3lead:'同一堆方塊，用兩種方法各數一次。<strong>高度圖</strong>：每一格疊幾塊，加起來。<strong>分層數</strong>：第 1 層幾塊、第 2 層幾塊……加起來。兩種方法答案一定一樣。',
+      s3cap:'📦 同一堆方塊；高度圖在圖的下面',
+      layerText:function(L, n){ return '第 ' + L + ' 層 ' + n + ' 塊'; },
+      s3narr:function(cells, layers, n){
+        var ls = layers.map(function(x, i){ return this.layerText(i + 1, x); }, this).join('、');
+        return '<strong>高度圖</strong>：' + cells.join('、') + '，加起來 ' + n + ' 塊。<strong>分層數</strong>：' + ls + '，加起來也是 ' + n + ' 塊。兩種數法數的是同一堆，答案一樣。';
+      },
+      s3calc:function(cells, layers, n){ return '高度圖：' + cells.join(' ＋ ') + ' ＝ ' + n + '　·　分層：' + layers.join(' ＋ ') + ' ＝ ' + n; },
+      s3result:function(n){ return '體積 ' + n + ' 立方公分'; },
+      s3note:'💬 <strong>高度圖</strong>是「一格一格」數，<strong>分層數</strong>是「一層一層」數，數的都是<strong>同一堆方塊</strong>，所以加起來一定一樣多。第 1 層的塊數就是<strong>有幾格不是空的</strong>；越高的層，塊數只會一樣或更少，不會更多。',
+
+      s4h2:'比體積：高的不一定大',
+      s4lead:'左邊橘色是甲、右邊藍色是乙。先猜猜誰的體積比較大，再按「數一數」看答案。',
+      s4toggleOn:'🔢 數一數', s4toggleOff:'↩ 先猜',
+      s4cap:'📦 左邊橘色是甲，右邊藍色是乙',
+      s4chip:{ tallSame:'高柱和平鋪', tallLess:'高柱和正方形', wideLess:'小地盤和大地盤', rearrange:'搬動重排' },
+      s4narrGuess:function(cp){
+        return '甲高 ' + cp.tallA + ' 層、乙高 ' + cp.tallB + ' 層；甲占 ' + cp.footA + ' 格、乙占 ' + cp.footB + ' 格。<strong>誰的體積比較大？</strong>先猜，再按「數一數」。';
+      },
+      s4narr:function(cp, id){
+        var s = '甲 ' + cp.volA + ' 塊、乙 ' + cp.volB + ' 塊 —— ';
+        if (cp.who === 'same') s += '<strong>一樣大</strong>。塊數一樣，體積就一樣，排法不一樣不算。';
+        else s += (cp.who === 'A' ? '<strong>甲的體積比較大</strong>。' : '<strong>乙的體積比較大</strong>。');
+        if (cp.tallA !== cp.tallB && !cp.tallerIsBigger) s += '比較高的那一堆<strong>沒有</strong>比較大 —— 高的不一定大。';
+        if (cp.footA !== cp.footB && !cp.widerIsBigger) s += '占的桌面比較大的那一堆<strong>沒有</strong>比較大 —— 地盤大不一定大。';
+        if (id === 'rearrange') s += '乙就是甲搬動重新排的：<strong>塊數沒變，體積就沒變</strong>。';
+        return s;
+      },
+      s4calc:function(cp){ return '甲 ' + cp.volA + ' 立方公分　·　乙 ' + cp.volB + ' 立方公分'; },
+      s4result:function(cp){ return cp.who === 'A' ? '甲 ＞ 乙' : cp.who === 'B' ? '甲 ＜ 乙' : '甲 ＝ 乙'; },
+      unknown:'？',
+      s4note:'💬 <strong>比體積就是比塊數</strong>（方塊都一樣大的時候）。<strong>比較高的不一定比較大</strong>，占的桌面比較大的也不一定比較大 —— 要數過才知道。把一堆方塊<strong>搬動重新排</strong>，塊數沒有變，體積就<strong>沒有變</strong>。',
+
+      s6h2:'檢查一下',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      cAll:'全部答對 🏆', cGood:'很不錯，錯的看一下說明。', cTry:'回到上面的範例再玩一次吧。',
+      quizCap:'📦 每一塊都是 1 立方公分；看不到的方塊也在',
+
+      s7h2:'盤點站出任務',
+      s7lead:'五張盤點單。每一張先問自己：<strong>要數全部、數看不到的，還是比大小？</strong>',
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
+      compareOpt:{ aBigger:'甲的體積比較大', bBigger:'乙的體積比較大', same:'一樣大', measure:'比不出來，要用尺量' },
+      gPrompt:{
+        count:'客人送來一堆方塊，每一塊都是 1 立方公分。<strong>一共有幾塊</strong>（看不到的也要數）？',
+        hidden:'這一堆方塊，從這個方向看，<strong>有幾塊是看不到的</strong>？',
+        compare:'左邊橘色是甲、右邊藍色是乙。<strong>誰的體積比較大？</strong>',
+        which:function(n){ return '客人要體積剛好 <strong>' + n + ' 立方公分</strong>的那一堆。下面四堆，哪一堆是？'; },
+        move:'左邊橘色是原來的一堆，每一塊都是 1 立方公分，客人把它<strong>全部搬動重新排</strong>成右邊藍色的樣子。搬完之後，體積是幾立方公分？'
+      },
+      gHint1:{
+        count:'先看高度圖的想法：每一格疊幾塊，一格一格加起來。',
+        hidden:'先數看得到的，再想：上面有方塊的地方，下面每一層都有。',
+        compare:'不要看誰比較高，數塊數。',
+        which:'每一堆各數一次塊數，看不到的也要數。',
+        move:'搬動重排的時候，有沒有多一塊或少一塊？'
+      },
+      gHint2:{
+        count:function(v, n){ return '看得到 ' + v + ' 塊，可是藏在後面和下面的也要算。全部加起來比 ' + v + ' 多。'; },
+        hidden:function(v, n){ return '一共 ' + n + ' 塊，看得到 ' + v + ' 塊 —— 相減就是看不到的。'; },
+        compare:function(a, b){ return '甲 ' + a + ' 塊、乙 ' + b + ' 塊，比塊數就對了。'; },
+        which:function(n){ return '只有一堆剛好 ' + n + ' 塊，其他的都多一塊或少一塊以上。'; },
+        move:function(n){ return '一塊都沒有多、也沒有少，還是 ' + n + ' 塊。'; }
+      },
+      gCapSingle:'📦 每一塊都是 1 立方公分',
+      gCapPair:'📦 左邊橘色是甲，右邊藍色是乙',
+      gCapMove:'📦 左邊是搬之前，右邊是搬之後',
+      gCorrectFirst:'一次就對，＋20 分！',
+      gCorrectRetry:'修好了，＋10 分。',
+      gWrong:function(lost){ return lost > 0 ? '再看一次題目和提示，扣 ' + lost + ' 分。' : '再看一次題目和提示。'; },
+      gClear:'可以接下一張盤點單了。',
+      gWin:function(s){ return '五張盤點單全部完成！總分 ' + s + ' 分 🏆'; },
+
+      nextH2:'把它記牢的三個動作',
+      next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
+      next3:'❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
+      footer:'把整頁縮成一句：<strong>體積是占了多大的空間</strong>，用 1 立方公分的小方塊去數，<strong>幾塊就是幾立方公分</strong>；<strong>看不到的方塊也要數</strong>（上面有方塊的地方，下面每一層都有）；<strong>比體積就是比塊數</strong>，高的不一定大，搬動重排體積不變。',
+
+      qs: [
+        { stem:'<strong>體積</strong>是什麼？',
+          opts:['一個東西占了多大的空間','一個東西有多高','一個東西的表面有多大','一個東西有多重'], ans:0,
+          why:'<strong>體積</strong>是一個東西<strong>占了多大的空間</strong>。多高只是一個方向；表面多大是面積的事；多重是重量的事。' },
+        { stem:'<strong>1 立方公分</strong>是什麼的體積？',
+          opts:['邊長 1 公分的正方形','1 公分長的一條線','邊長 1 公分的正方體','邊長 10 公分的正方體'], ans:2,
+          why:'<strong>1 立方公分</strong>是<strong>邊長 1 公分的正方體</strong>的體積。正方形是平的，它的大小是面積（1 平方公分）；一條線只有長度。' },
+        { stem:'這一堆方塊的體積是幾立方公分？（看不到的方塊也要數）', fig:'q3',
+          opts:['4 立方公分','6 立方公分','7 立方公分','8 立方公分'], ans:2,
+          why:'從上面看，四格分別疊了 3、2、1、1 塊：3 ＋ 2 ＋ 1 ＋ 1 ＝ 7，體積 <strong>7 立方公分</strong>。從前面只看得到 6 塊，可是最高那一柱的最下面一塊藏在後面，也要數。' },
+        { stem:'這一堆方塊一共 8 塊。從這個方向看，<strong>有幾塊看不到</strong>？', fig:'q4',
+          opts:['0 塊','1 塊','2 塊','4 塊'], ans:1,
+          why:'兩排兩列各疊 2 塊。看得到的有 7 塊：<strong>後面那一排左邊最下面的那一塊</strong>被前面、右邊和上面的方塊擋住了，8 － 7 ＝ 1，看不到的有 <strong>1 塊</strong>。' },
+        { stem:'甲是 3 塊排成一排，乙是 3 塊疊成一柱，每一塊都是 1 立方公分。誰的體積比較大？',
+          opts:['甲比較大，因為比較長','乙比較大，因為比較高','一樣大','要量過才知道'], ans:2,
+          why:'體積看的是<strong>塊數</strong>：兩堆都是 3 塊，所以<strong>一樣大</strong>，都是 3 立方公分。比較長或比較高都不算。' },
+        { stem:'一堆 12 塊的方塊，每一塊都是 1 立方公分，被<strong>搬動重新排</strong>成另一個形狀（一塊都沒有多、沒有少）。搬完之後體積是多少？',
+          opts:['變大了','變小了','12 立方公分，沒有變','要看排成什麼形狀'], ans:2,
+          why:'搬動重排，<strong>塊數沒有變</strong>，體積就沒有變：還是 <strong>12 立方公分</strong>。排成什麼形狀不重要。' }
+      ],
+      qsAdv: [
+        { stem:'文字題：一堆方塊的體積是 <strong>15 立方公分</strong>。再在上面放 <strong>6 塊</strong> 1 立方公分的方塊，現在的體積是多少？',
+          opts:['9 立方公分','15 立方公分','21 立方公分','90 立方公分'], ans:2,
+          why:'每一塊是 1 立方公分，多 6 塊就多 6 立方公分：15 ＋ 6 ＝ <strong>21</strong> 立方公分。' },
+        { stem:'文字題：一堆 1 立方公分的方塊，從上面看，四個格子分別疊了 <strong>4、2、2、1</strong> 塊。這一堆的體積是多少？',
+          opts:['4 立方公分','9 立方公分','8 立方公分','16 立方公分'], ans:1,
+          why:'高度圖每一格加起來：4 ＋ 2 ＋ 2 ＋ 1 ＝ <strong>9</strong>，體積 9 立方公分。不是只看最高的那一格，也不是把格數乘起來。' },
+        { stem:'文字題：甲是 <strong>4 塊疊成一柱</strong>，乙是 <strong>2 × 2 排成正方形再疊 2 層</strong>。誰的體積比較大？',
+          opts:['甲，因為比較高','乙，乙有 8 塊，甲只有 4 塊','一樣大','要量過才知道'], ans:1,
+          why:'乙一層 4 塊、疊 2 層：4 ＋ 4 ＝ 8 塊，甲只有 4 塊。<strong>乙比較大</strong>。甲比較高，可是高的不一定大。' },
+        { stem:'文字題：一堆 1 立方公分的方塊，第 1 層有 <strong>5 塊</strong>、第 2 層有 <strong>3 塊</strong>、第 3 層有 <strong>1 塊</strong>。這一堆的體積是多少？',
+          opts:['3 立方公分','5 立方公分','9 立方公分','15 立方公分'], ans:2,
+          why:'分層數，一層一層加起來：5 ＋ 3 ＋ 1 ＝ <strong>9</strong>，體積 9 立方公分。不是 5 × 3。' }
+      ],
+      qsBoost: [
+        { stem:'迷思檢查：小安看著一堆 1 立方公分的方塊說「我看到 7 塊，所以體積是 7 立方公分。」可是這一堆有兩塊藏在後面看不到。他錯在哪裡？',
+          opts:['他沒有錯，看不到的不用數','看不到的方塊也要數：上面有方塊的地方，下面每一層都有，一共是 9 塊','體積要用尺量，不能數','看不到的方塊要算一半'], ans:1,
+          why:'方塊不會浮在空中，<strong>看不到的也要數</strong>。看得到 7 塊、藏起來 2 塊，一共 7 ＋ 2 ＝ 9 塊，體積是 9 立方公分。' },
+        { stem:'迷思檢查：小宇說「甲比乙高，所以甲的體積比較大。」他錯在哪裡？',
+          opts:['他沒有錯，高的體積就大','比體積要比塊數，高的不一定塊數多','矮的一定比較大','要比誰占的桌面大'], ans:1,
+          why:'<strong>比體積就是比塊數</strong>。一柱 3 塊比一層 4 塊高，可是 3 塊比 4 塊少。高不高、占的桌面大不大，都要數過才知道。' }
+      ]
+    },
+
+    en: {
+      langAria:'Switch language',
+      htmlLang:'en', title:'Teach Me Volume — The Cube Stocktake', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (this page)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🧊 The Cube Stocktake',
+      sub:'As many cubes as there are, that many cubic centimetres — hidden cubes count too',
+      intro:'“The Area Tiling Works” taught you that <strong>area</strong> is how many squares cover a flat shape.<br>So how do we say <strong>how much space</strong> a pile of blocks takes up?<br>The stocktake crew in this lesson has the answer: count it in identical <strong>little cubes</strong> — however many cubes are stacked up, that is the <strong>volume</strong>.',
+      scopeNote:'This lesson is a <strong>first look at volume</strong>: volume is <strong>how much space</strong> something takes up; the unit is a <strong>cube with 1 cm edges</strong>, whose volume is called <strong>1 cubic centimetre</strong>, so as many cubes as there are, that many cubic centimetres. Three things happen here: counting stacked cubes (<strong>hidden cubes count too</strong>: every cube in this lesson sits on the table or directly on top of another cube, never floating, so wherever there is a cube on top, every layer below it is filled); working out the total two ways, with a <strong>height map</strong> (seen from above, how many cubes in each square) and by <strong>counting layer by layer</strong>; and <strong>comparing volumes</strong> (it is the number of cubes that counts: the taller pile is not necessarily bigger, and moving the cubes into a new arrangement changes neither the count nor the volume). Every cube is the same 1 cubic centimetre cube, a pile has at most about 40 cubes, and in every picture the top cube of each column can be seen, so how many columns there are and how tall each one is can always be read off. The <strong>formula</strong> for a cuboid’s volume, <strong>capacity</strong> and millilitres are grade 5’s “The Block Tower”; the <strong>cubic metre</strong> is grade 5’s “The Land Survey Team”; <strong>surface area</strong> is grade 6 work.',
+      modeTitle:'How do you want to learn today? (change any time)',
+      modes:{
+        ahead:  { icon:'🚀', h:'Get ahead', p:'Brand new to me', banner:'Ahead mode: play with the examples slowly, 6 basic questions, and the game gives a hint automatically.' },
+        school: { icon:'🏫', h:'Keep up', p:'We are doing this at school', banner:'Keep-up mode: the full 10 questions, including 4 textbook word problems.' },
+        boost:  { icon:'💪', h:'Shore it up', p:'Learned it, still wobbly', banner:'Boost mode: 2 misconception checks first, 12 questions in all; then go do the Review Challenge.' }
+      },
+      eb1:'Example 1', eb2:'Example 2', eb3:'Example 3', eb4:'Example 4', eb6:'Questions', eb7:'Game',
+      ebNext:'After the lesson',
+
+      caseName:function(i){ return 'Set ' + i; },
+      cubesText:function(n){ return n + ' ' + plEn(n, 'cube'); },
+      volText:function(n){ return n + ' cubic ' + plEn(n, 'centimetre'); },
+      hmapTitle:'Height map: seen from above, how many cubes in each square (a blank square has none)',
+      hmapTitleA:'Height map of A', hmapTitleB:'Height map of B',
+
+      s1h2:'1 cubic centimetre: as many cubes, that many',
+      s1lead:'Every little cube is a <strong>cube with 1 cm edges</strong>, and its volume is called <strong>1 cubic centimetre</strong>. Click a set below and count the cubes.',
+      s1cap:'📦 Every cube has 1 cm edges and a volume of 1 cubic centimetre',
+      s1narr:function(n, id){
+        if (n === 1) return 'This is <strong>1 cubic centimetre</strong>: one <strong>cube with 1 cm edges</strong>. It is the unit for measuring volume, the way 1 cm measures length and 1 square centimetre measures area.';
+        if (id === 'row3') return '3 cubes in a row. One cube is 1 cubic centimetre, so 3 cubes are <strong>3 cubic centimetres</strong>.';
+        if (id === 'tower3') return 'The same 3 cubes, this time stacked into a tower. <strong>The same number of cubes means the same volume</strong>: still 3 cubic centimetres, exactly as big as the row.';
+        if (id === 'sq4') return '4 cubes arranged in a square, one layer. Count them: 4 cubes, so the volume is <strong>4 cubic centimetres</strong>.';
+        return 'This pile has 2 cubes stacked up with 1 cube on each side. That is ' + n + ' cubes in all — a volume of <strong>' + n + ' cubic centimetres</strong>, the same as the 4 cubes arranged in a square.';
+      },
+      s1calc:function(n){ return n + ' ' + plEn(n, 'cube') + ', volume ' + n + ' cubic ' + plEn(n, 'centimetre'); },
+      s1note:'💬 <strong>Volume</strong> is <strong>how much space</strong> something takes up. Count it in identical little cubes: <strong>as many cubes as there are, that many cubic centimetres</strong>. In a row, in a tower or in a square — the same number of cubes is the same volume.',
+
+      s2h2:'Hidden cubes count too',
+      s2lead:'Some cubes are tucked <strong>behind or underneath</strong> and cannot be seen from this side. Count the ones you can see first, then press “X-ray” to show the hidden ones.',
+      s2toggleOn:'🔍 X-ray', s2toggleOff:'↩ Put it back',
+      s2capPlain:'📦 The pile seen from the front, a little above and to the right',
+      s2capXray:'📦 X-ray: the dashed red cubes were hidden before',
+      s2narrGuess:function(v){ return 'From this side you can <strong>see ' + v + ' ' + plEn(v, 'cube') + '</strong>. How many are there altogether? Guess first, then press “X-ray”.'; },
+      s2narr:function(v, hid, n){
+        return v + ' ' + plEn(v, 'cube') + ' can be seen, and <strong>' + hid + ' more ' + (hid === 1 ? 'is' : 'are') + ' hidden behind or underneath</strong>. Cubes never float: wherever there is a cube on top, every layer below it is filled — so there are <strong>' + n + ' cubes</strong> in all, a volume of ' + n + ' cubic centimetres. The height map adds up to ' + n + ' as well.';
+      },
+      s2calc:function(v, hid, n){ return 'seen + hidden: ' + v + ' + ' + hid + ' = ' + n + ' ' + plEn(n, 'cube'); },
+      s2result:function(n){ return 'Volume ' + n + ' cubic ' + plEn(n, 'centimetre'); },
+      s2note:'💬 Cubes <strong>never float</strong>: every cube sits on the table or directly on top of another cube. So <strong>wherever there is a cube on top, every layer below it is filled</strong> — even when you cannot see it. The safest way to count is the <strong>height map</strong>: seen from above, each square says how many cubes are stacked there, and adding up the squares gives the total.',
+
+      s3h2:'Two ways to count: height map, layer by layer',
+      s3lead:'Count the same pile two ways. <strong>Height map</strong>: how many cubes in each square, added up. <strong>Layer by layer</strong>: how many in layer 1, how many in layer 2, and so on, added up. Both ways always give the same answer.',
+      s3cap:'📦 The same pile; its height map is below the picture',
+      layerText:function(L, n){ return 'layer ' + L + ': ' + n + ' ' + plEn(n, 'cube'); },
+      s3narr:function(cells, layers, n){
+        var ls = layers.map(function(x, i){ return this.layerText(i + 1, x); }, this).join(', ');
+        return '<strong>Height map</strong>: ' + cells.join(', ') + ', which add up to ' + n + ' cubes. <strong>Layer by layer</strong>: ' + ls + ', which also add up to ' + n + '. Both ways count the same pile, so the answers agree.';
+      },
+      s3calc:function(cells, layers, n){ return 'Height map: ' + cells.join(' + ') + ' = ' + n + '　·　Layers: ' + layers.join(' + ') + ' = ' + n; },
+      s3result:function(n){ return 'Volume ' + n + ' cubic ' + plEn(n, 'centimetre'); },
+      s3note:'💬 The <strong>height map</strong> counts square by square and <strong>layer by layer</strong> counts layer by layer, but both count <strong>the same pile</strong>, so the totals always agree. The number of cubes in layer 1 is simply <strong>how many squares are not empty</strong>; each higher layer has the same number or fewer, never more.',
+
+      s4h2:'Comparing volumes: taller is not always bigger',
+      s4lead:'Orange on the left is A, blue on the right is B. Guess first which has the bigger volume, then press “Count” to see.',
+      s4toggleOn:'🔢 Count', s4toggleOff:'↩ Guess again',
+      s4cap:'📦 Orange on the left is A, blue on the right is B',
+      s4chip:{ tallSame:'Tower vs flat', tallLess:'Tower vs square', wideLess:'Small base vs big base', rearrange:'Rearranged' },
+      s4narrGuess:function(cp){
+        return 'A is ' + cp.tallA + ' ' + plEn(cp.tallA, 'layer') + ' tall and B is ' + cp.tallB + ' ' + plEn(cp.tallB, 'layer') + ' tall; A covers ' + cp.footA + ' ' + plEn(cp.footA, 'square') + ' and B covers ' + cp.footB + ' ' + plEn(cp.footB, 'square') + '. <strong>Which has the bigger volume?</strong> Guess, then press “Count”.';
+      },
+      s4narr:function(cp, id){
+        var s = 'A has ' + cp.volA + ' ' + plEn(cp.volA, 'cube') + ' and B has ' + cp.volB + ' ' + plEn(cp.volB, 'cube') + ' — ';
+        if (cp.who === 'same') s += '<strong>the same volume</strong>. The same number of cubes is the same volume; a different arrangement does not matter. ';
+        else s += (cp.who === 'A' ? '<strong>A has the bigger volume</strong>. ' : '<strong>B has the bigger volume</strong>. ');
+        if (cp.tallA !== cp.tallB && !cp.tallerIsBigger) s += 'The taller pile is <strong>not</strong> the bigger one — taller does not mean bigger. ';
+        if (cp.footA !== cp.footB && !cp.widerIsBigger) s += 'The pile covering more of the table is <strong>not</strong> the bigger one — a bigger base does not mean bigger. ';
+        if (id === 'rearrange') s += 'B is just A moved into a new arrangement: <strong>the count did not change, so the volume did not change</strong>.';
+        return s;
+      },
+      s4calc:function(cp){ return 'A ' + cp.volA + ' cubic ' + plEn(cp.volA, 'centimetre') + '　·　B ' + cp.volB + ' cubic ' + plEn(cp.volB, 'centimetre'); },
+      s4result:function(cp){ return cp.who === 'A' ? 'A > B' : cp.who === 'B' ? 'A < B' : 'A = B'; },
+      unknown:'?',
+      s4note:'💬 <strong>Comparing volumes means comparing the number of cubes</strong> (when the cubes are all the same size). <strong>The taller pile is not necessarily bigger</strong>, and neither is the one covering more of the table — you have to count. Move a pile into a new arrangement and <strong>the count does not change, so the volume does not change</strong>.',
+
+      s6h2:'Check yourself',
+      qDoneLabel:'Answered', qRightLabel:'Correct', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct.</b> ',
+      fbWrong:function(a){ return '<b>The right answer is “' + a + '”.</b> '; },
+      cAll:'All correct 🏆', cGood:'Nicely done — read the notes on the ones you missed.', cTry:'Go back up to the examples and play with them again.',
+      quizCap:'📦 Every cube is 1 cubic centimetre; the hidden cubes are there too',
+
+      s7h2:'Jobs for the stocktake crew',
+      s7lead:'Five stocktake sheets. For each one, ask yourself first: <strong>count them all, count the hidden ones, or compare?</strong>',
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
+      gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Start over',
+      compareOpt:{ aBigger:'A has the bigger volume', bBigger:'B has the bigger volume', same:'The same volume', measure:'Cannot tell without a ruler' },
+      gPrompt:{
+        count:'A customer delivers a pile of cubes, each 1 cubic centimetre. <strong>How many cubes are there in all</strong> (hidden ones included)?',
+        hidden:'Looking at this pile from this side, <strong>how many cubes cannot be seen</strong>?',
+        compare:'Orange on the left is A, blue on the right is B. <strong>Which has the bigger volume?</strong>',
+        which:function(n){ return 'A customer wants the pile whose volume is exactly <strong>' + n + ' cubic centimetres</strong>. Which of the four piles below is it?'; },
+        move:'Orange on the left is the original pile, and every cube has a volume of 1 cubic centimetre; the customer <strong>moved every cube</strong> into the blue arrangement on the right. What is the volume after the move?'
+      },
+      gHint1:{
+        count:'Think height map: how many cubes in each square, added square by square.',
+        hidden:'Count the ones you can see, then remember: wherever there is a cube on top, every layer below is filled.',
+        compare:'Do not look at which is taller — count the cubes.',
+        which:'Count each pile, hidden cubes included.',
+        move:'Did any cube get added or taken away in the move?'
+      },
+      gHint2:{
+        count:function(v, n){ return 'You can see ' + v + ' ' + plEn(v, 'cube') + ', but the ones behind and underneath count too. The total is more than ' + v + '.'; },
+        hidden:function(v, n){ return 'There are ' + n + ' cubes in all and ' + v + ' can be seen — subtract to get the hidden ones.'; },
+        compare:function(a, b){ return 'A has ' + a + ' ' + plEn(a, 'cube') + ' and B has ' + b + ' ' + plEn(b, 'cube') + '; compare the counts.'; },
+        which:function(n){ return 'Only one pile has exactly ' + n + ' cubes; every other pile is off by at least one.'; },
+        move:function(n){ return 'Not one cube was added or taken away, so it is still ' + n + ' cubes.'; }
+      },
+      gCapSingle:'📦 Every cube is 1 cubic centimetre',
+      gCapPair:'📦 Orange on the left is A, blue on the right is B',
+      gCapMove:'📦 Before the move on the left, after the move on the right',
+      gCorrectFirst:'Right first time, +20 points!',
+      gCorrectRetry:'Fixed it, +10 points.',
+      gWrong:function(lost){ return lost > 0 ? 'Read the question and the hint again, −' + lost + ' points.' : 'Read the question and the hint again.'; },
+      gClear:'Ready for the next stocktake sheet.',
+      gWin:function(s){ return 'All five sheets done! Final score ' + s + ' 🏆'; },
+
+      nextH2:'Three things that make it stick',
+      next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a>, print it and pin it above your desk.',
+      next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering it a day later is what counts as learned.',
+      next3:'❓ Anything you did not follow, ask a grown-up or an AI teacher until it makes sense — the people who ask questions learn fastest.',
+      footer:'The whole page in one line: <strong>volume is how much space something takes up</strong>; count it in 1 cubic centimetre cubes, and <strong>as many cubes as there are, that many cubic centimetres</strong>; <strong>hidden cubes count too</strong> (wherever there is a cube on top, every layer below is filled); <strong>comparing volumes means comparing the number of cubes</strong> — taller is not always bigger, and rearranging changes nothing.',
+
+      qs: [
+        { stem:'What is <strong>volume</strong>?',
+          opts:['How much space something takes up','How tall something is','How big the surface of something is','How heavy something is'], ans:0,
+          why:'<strong>Volume</strong> is <strong>how much space</strong> something takes up. Height is only one direction; the size of the surface is area; heaviness is weight.' },
+        { stem:'<strong>1 cubic centimetre</strong> is the volume of what?',
+          opts:['A square with 1 cm sides','A line 1 cm long','A cube with 1 cm edges','A cube with 10 cm edges'], ans:2,
+          why:'<strong>1 cubic centimetre</strong> is the volume of <strong>a cube with 1 cm edges</strong>. A square is flat, so its size is an area (1 square centimetre); a line only has length.' },
+        { stem:'What is the volume of this pile of cubes, in cubic centimetres? (Hidden cubes count too.)', fig:'q3',
+          opts:['4 cubic centimetres','6 cubic centimetres','7 cubic centimetres','8 cubic centimetres'], ans:2,
+          why:'Seen from above, the height map reads 3, 2, 1 and 1: 3 + 2 + 1 + 1 = 7, so the volume is <strong>7 cubic centimetres</strong>. Only 6 cubes can be seen from the front, but the bottom cube of the tallest column is hidden at the back and counts too.' },
+        { stem:'This pile has 8 cubes in all. Looking from this side, <strong>how many cubes cannot be seen</strong>?', fig:'q4',
+          opts:['0 cubes','1 cube','2 cubes','4 cubes'], ans:1,
+          why:'Two rows of two, each 2 cubes high. 7 cubes can be seen: <strong>the bottom cube at the back left</strong> is blocked by the cubes in front of it, to its right and on top of it, so 8 − 7 = 1 cube is hidden — <strong>1 cube</strong>.' },
+        { stem:'A is 3 cubes in a row and B is 3 cubes stacked in a tower; every cube is 1 cubic centimetre. Which has the bigger volume?',
+          opts:['A, because it is longer','B, because it is taller','The same volume','You would have to measure them'], ans:2,
+          why:'Volume is about the <strong>number of cubes</strong>: both piles have 3 cubes, so they have <strong>the same volume</strong>, 3 cubic centimetres each. Longer or taller does not count.' },
+        { stem:'A pile of 12 cubes, each 1 cubic centimetre, is <strong>moved into a new arrangement</strong> (not one cube added or taken away). What is the volume afterwards?',
+          opts:['Bigger','Smaller','12 cubic centimetres, unchanged','It depends on the new shape'], ans:2,
+          why:'Rearranging leaves <strong>the number of cubes unchanged</strong>, so the volume is unchanged: still <strong>12 cubic centimetres</strong>. The shape does not matter.' }
+      ],
+      qsAdv: [
+        { stem:'Word problem: a pile of cubes has a volume of <strong>15 cubic centimetres</strong>. <strong>6 more</strong> 1 cubic centimetre cubes are put on top. What is the volume now?',
+          opts:['9 cubic centimetres','15 cubic centimetres','21 cubic centimetres','90 cubic centimetres'], ans:2,
+          why:'Each cube is 1 cubic centimetre, so 6 more cubes are 6 more cubic centimetres: 15 + 6 = <strong>21</strong> cubic centimetres.' },
+        { stem:'Word problem: a pile is made of 1 cubic centimetre cubes; seen from above, its height map reads <strong>4, 2, 2 and 1</strong>. What is the volume of the pile?',
+          opts:['4 cubic centimetres','9 cubic centimetres','8 cubic centimetres','16 cubic centimetres'], ans:1,
+          why:'Add up the height map: 4 + 2 + 2 + 1 = <strong>9</strong>, a volume of 9 cubic centimetres. Not just the tallest square, and not the squares multiplied together.' },
+        { stem:'Word problem: A is <strong>4 cubes stacked in a tower</strong>; B is <strong>a 2 × 2 square of cubes, 2 layers high</strong>. Which has the bigger volume?',
+          opts:['A, because it is taller','B: B has 8 cubes and A has only 4','The same volume','You would have to measure them'], ans:1,
+          why:'B has 4 cubes in each of 2 layers: 4 + 4 = 8 cubes, while A has only 4. <strong>B is bigger</strong>. A is taller, but taller does not mean bigger.' },
+        { stem:'Word problem: a pile of 1 cubic centimetre cubes has <strong>5 cubes</strong> in layer 1, <strong>3 cubes</strong> in layer 2 and <strong>1 cube</strong> in layer 3. What is its volume?',
+          opts:['3 cubic centimetres','5 cubic centimetres','9 cubic centimetres','15 cubic centimetres'], ans:2,
+          why:'Count layer by layer and add: 5 + 3 + 1 = <strong>9</strong>, a volume of 9 cubic centimetres. Not 5 × 3.' }
+      ],
+      qsBoost: [
+        { stem:'Misconception check: Ann looks at a pile of 1 cubic centimetre cubes and says “I can see 7 cubes, so the volume is 7 cubic centimetres.” But two cubes of this pile are hidden at the back. What has she got wrong?',
+          opts:['Nothing: hidden cubes are not counted','Hidden cubes count too: wherever there is a cube on top, every layer below is filled, so there are 9 cubes','Volume has to be measured with a ruler, not counted','Hidden cubes count as half'], ans:1,
+          why:'Cubes never float, so <strong>hidden cubes count too</strong>. 7 can be seen and 2 are hidden: 7 + 2 = 9 cubes, a volume of 9 cubic centimetres.' },
+        { stem:'Misconception check: Yu says “A is taller than B, so A has the bigger volume.” What has he got wrong?',
+          opts:['Nothing: taller means bigger','Comparing volumes means comparing the number of cubes, and the taller pile does not necessarily have more','The shorter pile is always bigger','You have to compare how much table each one covers'], ans:1,
+          why:'<strong>Comparing volumes means comparing the number of cubes</strong>. A tower of 3 is taller than a flat layer of 4, yet 3 cubes are fewer than 4. Height and base size both have to be checked by counting.' }
+      ]
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
+  var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function buildModeCards(){
+    var d = L();
+    modeCards.textContent = '';
+    ['ahead','school','boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+  function buildChips(host, items, cur, labelOf, onPick){
+    host.textContent = '';
+    items.forEach(function(it, i){
+      var b = makeChip(labelOf(it, i), i === cur);
+      b.addEventListener('click', function(){ onPick(i); });
+      host.appendChild(b);
+    });
+  }
+
+  /* --- 畫圖。座標全部來自上面那些**純資料**的函式（stackPlan／pairPlan／miniPlan），
+         這裡一律不重算。圖上只有 path（三個面）和 line，沒有任何文字。 --- */
+  var TONES = {
+    a:{ top:'#F6C58F', front:'#E8871E', right:'#B8681A', edge:'#7A4410' },
+    b:{ top:'#B3CBEF', front:'#3B7DD8', right:'#2A5CA5', edge:'#1E3F70' }
+  };
+  var C_HIDDEN_FILL = 'rgba(214,69,69,.10)', C_HIDDEN_EDGE = '#D64545';
+
+  function facePath(poly){
+    return poly.map(function(q, i){ return (i ? 'L ' : 'M ') + q.x + ' ' + q.y; }).join(' ') + ' Z';
+  }
+  function drawFace(svg, poly, fill, stroke, dashed){
+    var attrs = { d:facePath(poly), fill:fill, stroke:stroke, 'stroke-width':1.5, 'stroke-linejoin':'round' };
+    if (dashed) attrs['stroke-dasharray'] = '4 3';
+    svg.appendChild(svgEl('path', attrs));
+  }
+  function drawCube(svg, k, tone){
+    var t = TONES[tone];
+    drawFace(svg, k.top, t.top, t.edge, false);
+    drawFace(svg, k.front, t.front, t.edge, false);
+    drawFace(svg, k.right, t.right, t.edge, false);
+  }
+  /* 一堆方塊。xray ＝ true 時，看得到的照畫（半透明），看不到的用紅色虛線畫在最上面。 */
+  function drawStack(svg, plan, tone, xray){
+    var g = svgEl('g', xray ? { opacity:'0.45' } : {});
+    plan.cubes.forEach(function(k){ drawCube(g, k, tone); });
+    svg.appendChild(g);
+    if (xray){
+      plan.cubes.forEach(function(k){
+        if (k.visible) return;
+        drawFace(svg, k.top, C_HIDDEN_FILL, C_HIDDEN_EDGE, true);
+        drawFace(svg, k.front, C_HIDDEN_FILL, C_HIDDEN_EDGE, true);
+        drawFace(svg, k.right, C_HIDDEN_FILL, C_HIDDEN_EDGE, true);
+      });
+    }
+  }
+  /* 桌面的一條線，讓方塊看起來有地方站。 */
+  function drawFloor(svg, y){
+    svg.appendChild(svgEl('line', { x1:20, y1:y, x2:FIG_W - 20, y2:y, stroke:'#E8E2D6', 'stroke-width':2 }));
+  }
+  function drawSingle(svg, H, tone, xray){
+    var plan = singlePlan(H);
+    svg.textContent = '';
+    drawFloor(svg, plan.box.y + plan.box.h + 0.5);
+    drawStack(svg, plan, tone, xray);
+    return plan;
+  }
+  function drawPairFig(svg, HA, HB){
+    var pp = pairPlan(HA, HB);
+    svg.textContent = '';
+    drawFloor(svg, pp.A.box.y + pp.A.box.h + 0.5);
+    drawStack(svg, pp.A, 'a', false);
+    drawStack(svg, pp.B, 'b', false);
+    return pp;
+  }
+  /* 高度圖（HTML）。 */
+  function buildHmap(host, H, tone, title){
+    var box = document.createElement('div');
+    box.className = 'hmapbox';
+    var t = document.createElement('div');
+    t.className = 'hmaptitle'; t.textContent = title;
+    box.appendChild(t);
+    var grid = document.createElement('div');
+    grid.className = 'hmap';
+    grid.style.gridTemplateColumns = 'repeat(' + cols(H) + ', 44px)';
+    H.forEach(function(row){
+      row.forEach(function(x){
+        var cell = document.createElement('span');
+        if (x > 0){ cell.className = 'on' + (tone === 'b' ? ' b' : ''); cell.textContent = x; }
+        grid.appendChild(cell);
+      });
+    });
+    box.appendChild(grid);
+    host.appendChild(box);
+  }
+
+  /* ===================== 範例1：幾塊就是幾 ===================== */
+  var s1i = 0;
+  var s1chips = document.getElementById('s1chips');
+  var s1fig = document.getElementById('s1fig');
+  var s1cap = document.getElementById('s1cap');
+  var s1narr = document.getElementById('s1narr');
+  var s1calc = document.getElementById('s1calc');
+  var s1result = document.getElementById('s1result');
+
+  function renderS1(){
+    var d = L(), id = S1_CASES[s1i], H = stack(id), n = volume(H);
+    drawSingle(s1fig, H, 'a', false);
+    s1cap.textContent = d.s1cap;
+    s1narr.innerHTML = d.s1narr(n, id);
+    s1calc.textContent = d.s1calc(n);
+    s1result.textContent = d.volText(n);
+    buildChips(s1chips, S1_CASES, s1i,
+      function(c, i){ return d.caseName(i + 1); },
+      function(i){ s1i = i; renderS1(); });
+  }
+
+  /* ===================== 範例2：看不到的方塊 ===================== */
+  var s2i = 0, s2xray = false;
+  var s2chips = document.getElementById('s2chips');
+  var s2fig = document.getElementById('s2fig');
+  var s2cap = document.getElementById('s2cap');
+  var s2maps = document.getElementById('s2maps');
+  var s2toggle = document.getElementById('s2toggle');
+  var s2narr = document.getElementById('s2narr');
+  var s2calc = document.getElementById('s2calc');
+  var s2result = document.getElementById('s2result');
+
+  function renderS2(){
+    var d = L(), id = S2_CASES[s2i], H = stack(id);
+    var plan = drawSingle(s2fig, H, 'a', s2xray);
+    s2cap.textContent = s2xray ? d.s2capXray : d.s2capPlain;
+    s2maps.textContent = '';
+    if (s2xray) buildHmap(s2maps, H, 'a', d.hmapTitle);
+    s2toggle.textContent = s2xray ? d.s2toggleOff : d.s2toggleOn;
+    s2narr.innerHTML = s2xray ? d.s2narr(plan.visible, plan.hidden, plan.total) : d.s2narrGuess(plan.visible);
+    s2calc.textContent = s2xray ? d.s2calc(plan.visible, plan.hidden, plan.total) : d.cubesText(plan.visible) + ' …';
+    s2result.textContent = s2xray ? d.s2result(plan.total) : d.unknown;
+    buildChips(s2chips, S2_CASES, s2i,
+      function(c, i){ return d.caseName(i + 1); },
+      function(i){ s2i = i; s2xray = false; renderS2(); });
+  }
+  s2toggle.addEventListener('click', function(){ s2xray = !s2xray; renderS2(); });
+
+  /* ===================== 範例3：兩種數法 ===================== */
+  var s3i = 0;
+  var s3chips = document.getElementById('s3chips');
+  var s3fig = document.getElementById('s3fig');
+  var s3cap = document.getElementById('s3cap');
+  var s3maps = document.getElementById('s3maps');
+  var s3narr = document.getElementById('s3narr');
+  var s3calc = document.getElementById('s3calc');
+  var s3result = document.getElementById('s3result');
+
+  function renderS3(){
+    var d = L(), id = S3_CASES[s3i], H = stack(id);
+    var cells = cellList(H), layers = layerCounts(H), n = volume(H);
+    drawSingle(s3fig, H, 'a', false);
+    s3cap.textContent = d.s3cap;
+    s3maps.textContent = '';
+    buildHmap(s3maps, H, 'a', d.hmapTitle);
+    s3narr.innerHTML = d.s3narr(cells, layers, n);
+    s3calc.textContent = d.s3calc(cells, layers, n);
+    s3result.textContent = d.s3result(n);
+    buildChips(s3chips, S3_CASES, s3i,
+      function(c, i){ return d.caseName(i + 1); },
+      function(i){ s3i = i; renderS3(); });
+  }
+
+  /* ===================== 範例4：比體積 ===================== */
+  var s4i = 0, s4count = false;
+  var s4chips = document.getElementById('s4chips');
+  var s4fig = document.getElementById('s4fig');
+  var s4cap = document.getElementById('s4cap');
+  var s4toggle = document.getElementById('s4toggle');
+  var s4narr = document.getElementById('s4narr');
+  var s4calc = document.getElementById('s4calc');
+  var s4result = document.getElementById('s4result');
+
+  function renderS4(){
+    var d = L(), cs = S4_CASES[s4i], HA = stack(cs.A), HB = stack(cs.B);
+    var cp = comparePlan(HA, HB);
+    drawPairFig(s4fig, HA, HB);
+    s4cap.textContent = d.s4cap;
+    s4toggle.textContent = s4count ? d.s4toggleOff : d.s4toggleOn;
+    s4narr.innerHTML = s4count ? d.s4narr(cp, cs.id) : d.s4narrGuess(cp);
+    s4calc.textContent = s4count ? d.s4calc(cp) : d.unknown;
+    s4result.textContent = s4count ? d.s4result(cp) : d.unknown;
+    buildChips(s4chips, S4_CASES, s4i,
+      function(c){ return d.s4chip[c.id]; },
+      function(i){ s4i = i; s4count = false; renderS4(); });
+  }
+  s4toggle.addEventListener('click', function(){ s4count = !s4count; renderS4(); });
+
+  /* ===================== 試題 ===================== */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
+  function buildQuiz(){
+    var d = L();
+    var list = quizSet();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    qTotal.textContent = list.length;
+    list.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+      if (q.fig && QUIZ_FIGS[q.fig]){
+        var fw = document.createElement('div');
+        fw.className = 'figwrap';
+        var svg = svgEl('svg', { 'class':'cubefig', viewBox:'0 0 ' + FIG_W + ' ' + FIG_H });
+        drawSingle(svg, stack(QUIZ_FIGS[q.fig]), 'a', false);
+        fw.appendChild(svg);
+        box.appendChild(fw);
+        var cp = document.createElement('p');
+        cp.className = 'figcap'; cp.textContent = d.quizCap;
+        box.appendChild(cp);
+      }
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ===================== 小遊戲：盤點單 ===================== */
+  var gRound = 0, gScore = 0, gMistake = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gPromptEl = document.getElementById('gPrompt');
+  var gFig = document.getElementById('gFig');
+  var gCap = document.getElementById('gCap');
+  var gAnswers = document.getElementById('gAnswers');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+  var hintLevel = 0;
+
+  function roundPromptText(d, r){
+    if (r.kind === 'which') return d.gPrompt.which(r.target);
+    return d.gPrompt[r.kind];
+  }
+  function roundHint2(d, r){
+    var vis;
+    if (r.kind === 'count'){ vis = visibility(stack(r.stack)); return d.gHint2.count(vis.visible, vis.total); }
+    if (r.kind === 'hidden'){ vis = visibility(stack(r.stack)); return d.gHint2.hidden(vis.visible, vis.total); }
+    if (r.kind === 'compare') return d.gHint2.compare(volume(stack(r.A)), volume(stack(r.B)));
+    if (r.kind === 'which') return d.gHint2.which(r.target);
+    return d.gHint2.move(volume(stack(r.A)));
+  }
+  function drawRoundFig(d, r){
+    gFig.textContent = '';
+    if (r.kind === 'count' || r.kind === 'hidden'){
+      drawSingle(gFig, stack(r.stack), 'a', false);
+      gCap.textContent = d.gCapSingle;
+    } else if (r.kind === 'compare'){
+      drawPairFig(gFig, stack(r.A), stack(r.B));
+      gCap.textContent = d.gCapPair;
+    } else if (r.kind === 'move'){
+      drawPairFig(gFig, stack(r.A), stack(r.B));
+      gCap.textContent = d.gCapMove;
+    } else {
+      /* which：大畫布不畫東西，四堆各畫在自己的選項裡。 */
+      gCap.textContent = d.gCapSingle;
+    }
+  }
+  function drawCandidate(btn, H){
+    var plan = miniPlan(H);
+    var svg = svgEl('svg', { viewBox:'0 0 ' + plan.w + ' ' + plan.h });
+    plan.cubes.forEach(function(k){ drawCube(svg, k, 'a'); });
+    btn.appendChild(svg);
+  }
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRound];
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+
+    hintLevel = (mode === 'ahead') ? 1 : 0;
+    gHintBtn.disabled = false;
+    elHint.textContent = (mode === 'ahead') ? d.gHint1[round.kind] : '';
+
+    gPromptEl.innerHTML = '<b>' + roundPromptText(d, round) + '</b>';
+    drawRoundFig(d, round);
+
+    var opts = roundOptions(round), ans = roundAnswer(round);
+    gAnswers.textContent = '';
+    opts.forEach(function(key, oi){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'degbtn';
+      if (round.kind === 'which') drawCandidate(b, stack(key));
+      else b.textContent = roundOptText(d, round, key);
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        if (oi === ans){
+          var all = gAnswers.querySelectorAll('.degbtn');
+          for (var i = 0; i < all.length; i++) all[i].disabled = true;
+          b.classList.add('right');
+          if (gMistake){
+            gScore += 10;
+            gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry + '</span>';
+          } else {
+            gScore += 20;
+            gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst + '</span>';
+          }
+          if (gRound === ROUNDS.length - 1){
+            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
+          } else {
+            gMsg.innerHTML += ' ' + d.gClear;
+            gNext.disabled = false;
+          }
+        } else {
+          gMistake = true;
+          b.disabled = true;
+          b.classList.add('wrong');
+          /* 分數不會低於 0，所以訊息要說真的扣了幾分；四年級也還沒學負數。 */
+          var lost = Math.min(5, gScore);
+          gScore -= lost;
+          gMsg.innerHTML = '<span class="no">' + d.gWrong(lost) + '</span>';
+        }
+        elScore.textContent = gScore;
+      });
+      gAnswers.appendChild(b);
+    });
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+  gHintBtn.addEventListener('click', function(){
+    var d = L(), round = ROUNDS[gRound];
+    hintLevel++;
+    if (hintLevel === 1){
+      elHint.textContent = d.gHint1[round.kind];
+    } else {
+      elHint.textContent = roundHint2(d, round);
+      gHintBtn.disabled = true;
+    }
+  });
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildModeCards();
+    renderS1();
+    renderS2();
+    renderS3();
+    renderS4();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+  /* 記錄最後上的課，供首頁「繼續上次」使用 */
+  try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-4/math/cubes/', zh:'方塊盤點站 — 體積初步：數方塊、看不到的也要數', en:'The Cube Stocktake', icon:'🧊'})); } catch(e){}
+
+})();
+</script>
+</body>
+</html>
