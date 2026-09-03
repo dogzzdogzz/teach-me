@@ -145,8 +145,6 @@
   .addsteps p:first-child{margin-top:0}
 
   .comparecard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center}
-  .cmpbarwrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:14px}
-  .cmpbarSvg{max-width:100%}
 </style>
 </head>
 <body>
@@ -258,8 +256,7 @@
     <div class="card">
       <p style="font-weight:700" data-i18n="cmpTitle">② 比較</p>
       <div class="chips" id="cmpChips"></div>
-      <div class="cmpbarwrap" id="cmpBars"></div>
-      <p class="hopline" id="cmpLine"></p>
+      <div class="addsteps" id="cmpSteps"></div>
     </div>
   </section>
 
@@ -387,14 +384,33 @@
 
   // 比較：每邊是 {big, small(可省略,公分), unit:'m'|'cm'}
   var CMP_SETS = [
-    { a:{unit:'m', big:3}, b:{unit:'cm', big:280} },              // 3000 vs 2800
-    { a:{unit:'m', big:4, small:5}, b:{unit:'cm', big:450} },     // 4050 vs 4500（陷阱）
-    { a:{unit:'m', big:2, small:80}, b:{unit:'m', big:3} },       // 2800 vs 3000
-    { a:{unit:'cm', big:150}, b:{unit:'m', big:1, small:60} }     // 1500 vs 1600
+    { a:{unit:'m', big:3}, b:{unit:'cm', big:280} },              // 300 vs 280 公分
+    { a:{unit:'m', big:4, small:5}, b:{unit:'cm', big:450} },     // 405 vs 450（陷阱：4公尺5公分不是450）
+    { a:{unit:'m', big:2, small:80}, b:{unit:'m', big:3} },       // 280 vs 300
+    { a:{unit:'cm', big:150}, b:{unit:'m', big:1, small:60} }     // 150 vs 160
   ];
-  function sideMM(side){
-    if (side.unit === 'm') return side.big * 1000 + (side.small || 0) * 10;
-    return side.big * 10;
+  // 比較一律統一成公分（範例、試題、遊戲提示都用公分，不用毫米）
+  function sideCM(side){
+    if (side.unit === 'm') return side.big * 100 + (side.small || 0);
+    return side.big;
+  }
+  // 「3 公尺 ＝ 3×100 ＝ 300 公分」這一句；公尺帶個位數公分時順手點出 405≠450 的陷阱
+  function sideToCm(side, lg){
+    var label = sideLabel(side, lg), cm = sideCM(side);
+    if (side.unit === 'cm'){
+      return lg === 'en' ? (label + ' is already in cm') : (label + '已經是公分，不用換');
+    }
+    var work = side.small
+      ? (lg === 'en' ? (side.big + ' × 100 + ' + side.small) : (side.big + '×100＋' + side.small))
+      : (lg === 'en' ? (side.big + ' × 100') : (side.big + '×100'));
+    var trap = '';
+    if (side.small && side.small < 10){
+      var wrong = side.big * 100 + side.small * 10;
+      trap = lg === 'en' ? ' (not ' + wrong + ' cm!)' : '（小心，不是 ' + wrong + ' 公分！）';
+    }
+    return lg === 'en'
+      ? (label + ' = ' + work + ' = ' + cm + ' cm' + trap)
+      : (label + ' ＝ ' + work + ' ＝ ' + cm + ' 公分' + trap);
   }
   function sideLabel(side, lg){
     var u = UNIT_LABEL[lg];
@@ -433,17 +449,6 @@
     }
     svg += '</svg>';
     return svg;
-  }
-
-  /* ================= 繪圖：比較用長條（依實際公分等比例畫，值大一定畫得長） ================= */
-  var PXCM_BAR = 1.4;
-  function measureBarSVG(cmVal, label){
-    var w = Math.max(1, Math.round(cmVal * PXCM_BAR));
-    var totalW = w + 40, h = 54;
-    return '<svg class="scene cmpbarSvg" viewBox="0 0 ' + totalW + ' ' + h + '" role="img">' +
-      '<rect x="10" y="10" width="' + w + '" height="24" rx="6" fill="#E3F4EB" stroke="#2F9E69" stroke-width="2"/>' +
-      '<text x="' + (10 + w / 2) + '" y="46" font-size="14" text-anchor="middle" fill="#2B2A33">' + label + '</text>' +
-      '</svg>';
   }
 
   /* ================= i18n ================= */
@@ -530,11 +535,12 @@
           '<p>③ 換回來：' + sum + ' ÷ ' + mult + ' ＝ ' + bigBack + ' ' + bu + ' ⋯ 餘 ' + smallBack + '，也就是 <b>' + bigBack + bu + smallBack + su + '</b></p>';
       },
       cmpChipLabel: function(s){ return sideLabel(s.a, 'zh') + ' vs ' + sideLabel(s.b, 'zh'); },
-      cmpLine: function(s, aMM, bMM){
+      cmpSteps: function(s, aCM, bCM){
         var aTxt = sideLabel(s.a, 'zh'), bTxt = sideLabel(s.b, 'zh');
-        if (aMM === bMM) return aTxt + ' ＝ ' + aMM + ' 毫米，' + bTxt + ' ＝ ' + bMM + ' 毫米，兩邊<b>一樣長</b>。';
-        var longer = aMM > bMM ? aTxt : bTxt;
-        return aTxt + ' ＝ ' + aMM + ' 毫米，' + bTxt + ' ＝ ' + bMM + ' 毫米，所以 <b>' + longer + '比較長</b>。';
+        var sign = aCM === bCM ? '＝' : (aCM > bCM ? '＞' : '＜');
+        var verdict = aCM === bCM ? '兩邊<b>一樣長</b>' : '所以 <b>' + (aCM > bCM ? aTxt : bTxt) + '比較長</b>';
+        return '<p>① 統一成公分：' + sideToCm(s.a, 'zh') + '；' + sideToCm(s.b, 'zh') + '</p>' +
+          '<p>② 比大小：' + aCM + ' ' + sign + ' ' + bCM + '，' + verdict + '</p>';
       },
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
@@ -569,10 +575,10 @@
           stem:'一段繩子長 3 公尺 45 公分，等於多少公分？',
           opts:['3045公分','48公分','300公分','345公分'], ans:3,
           why:'3 公尺 ＝ 300 公分，300 ＋ 45 ＝ 345，所以是 345 公分。' },
-        { pic:'bar2', aCM:300, bCM:280,
-          stem:'比一比：3 公尺和 280 公分，哪一個比較長？',
-          opts:['一樣長','280公分比較長','3公尺比較長','單位不同，不能比較'], ans:2,
-          why:'先統一單位：3 公尺 ＝ 300 公分，300 公分 ＞ 280 公分，所以 3 公尺比較長。' }
+        { pic:'icon', icon:'⚖️',
+          stem:'比一比：2 公尺 5 公分和 250 公分，哪一個比較長？',
+          opts:['一樣長','250公分比較長','2公尺5公分比較長','單位不同，不能比較'], ans:1,
+          why:'先統一單位：2 公尺 5 公分 ＝ 2×100＋5 ＝ 205 公分（不是 250 公分！），205 公分 ＜ 250 公分，所以 250 公分比較長。' }
       ],
       qsAdv:[
         { pic:'icon', icon:'📐',
@@ -716,11 +722,12 @@
           '<p>③ Convert back: ' + sum + ' ÷ ' + mult + ' = ' + bigBack + ' ' + bu + ' ⋯ remainder ' + smallBack + ', that is <b>' + bigBack + bu + ' ' + smallBack + su + '</b></p>';
       },
       cmpChipLabel: function(s){ return sideLabel(s.a, 'en') + ' vs ' + sideLabel(s.b, 'en'); },
-      cmpLine: function(s, aMM, bMM){
+      cmpSteps: function(s, aCM, bCM){
         var aTxt = sideLabel(s.a, 'en'), bTxt = sideLabel(s.b, 'en');
-        if (aMM === bMM) return aTxt + ' = ' + aMM + ' mm, ' + bTxt + ' = ' + bMM + ' mm — they are <b>equal</b>.';
-        var longer = aMM > bMM ? aTxt : bTxt;
-        return aTxt + ' = ' + aMM + ' mm, ' + bTxt + ' = ' + bMM + ' mm, so <b>' + longer + ' is longer</b>.';
+        var sign = aCM === bCM ? '=' : (aCM > bCM ? '>' : '<');
+        var verdict = aCM === bCM ? 'they are <b>equal</b>' : 'so <b>' + (aCM > bCM ? aTxt : bTxt) + ' is longer</b>';
+        return '<p>① Convert to cm: ' + sideToCm(s.a, 'en') + '; ' + sideToCm(s.b, 'en') + '</p>' +
+          '<p>② Compare: ' + aCM + ' ' + sign + ' ' + bCM + ', ' + verdict + '.</p>';
       },
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
@@ -755,10 +762,10 @@
           stem:'A rope is 3 m 45 cm long. How many centimeters is that?',
           opts:['3045 cm','48 cm','300 cm','345 cm'], ans:3,
           why:'3 m = 300 cm, and 300 + 45 = 345, so it’s 345 cm.' },
-        { pic:'bar2', aCM:300, bCM:280,
-          stem:'Compare: 3 m and 280 cm — which is longer?',
-          opts:['They are equal','280 cm is longer','3 m is longer','Different units can’t be compared'], ans:2,
-          why:'Unify units first: 3 m = 300 cm, and 300 cm > 280 cm, so 3 m is longer.' }
+        { pic:'icon', icon:'⚖️',
+          stem:'Compare: 2 m 5 cm and 250 cm — which is longer?',
+          opts:['They are equal','250 cm is longer','2 m 5 cm is longer','Different units can’t be compared'], ans:1,
+          why:'Unify units first: 2 m 5 cm = 2 × 100 + 5 = 205 cm (not 250 cm!), and 205 cm < 250 cm, so 250 cm is longer.' }
       ],
       qsAdv:[
         { pic:'icon', icon:'📐',
@@ -1065,8 +1072,7 @@
   /* ========== 5b. 比較 ========== */
   var cmpIdx = 0;
   var cmpChips = document.getElementById('cmpChips');
-  var cmpBars = document.getElementById('cmpBars');
-  var cmpLine = document.getElementById('cmpLine');
+  var cmpSteps = document.getElementById('cmpSteps');
 
   function buildCmpChips(){
     cmpChips.textContent = '';
@@ -1080,16 +1086,13 @@
   function renderCmp(){
     var d = L();
     var s = CMP_SETS[cmpIdx];
-    var aMM = sideMM(s.a), bMM = sideMM(s.b);
-    cmpBars.innerHTML = measureBarSVG(aMM / 10, sideLabel(s.a, lang)) + measureBarSVG(bMM / 10, sideLabel(s.b, lang));
-    cmpLine.innerHTML = d.cmpLine(s, aMM, bMM);
+    var aCM = sideCM(s.a), bCM = sideCM(s.b);
+    cmpSteps.innerHTML = d.cmpSteps(s, aCM, bCM);
   }
 
   /* ========== 圖片小工具（試題／遊戲共用） ========== */
   function renderPic(q){
-    var d = L();
     if (q.pic === 'ruler') return rulerSVG(q.mm, { maxCm:12 });
-    if (q.pic === 'bar2') return '<div class="cmpbarwrap">' + measureBarSVG(q.aCM, q.aCM + d.unitNames.cm) + measureBarSVG(q.bCM, q.bCM + d.unitNames.cm) + '</div>';
     if (q.pic === 'icon') return '<div class="qicon">' + q.icon + '</div>';
     return '';
   }
@@ -1164,7 +1167,7 @@
     { pic:'icon', icon:'📏', opts:['70毫米|70 mm','7毫米|7 mm','700毫米|700 mm','17毫米|17 mm'], ans:0 },
     { pic:'icon', icon:'🚪', opts:['500公分|500 cm','5公分|5 cm','50公分|50 cm','105公分|105 cm'], ans:0 },
     { pic:'icon', icon:'🧵', opts:['255公分|255 cm','156公分|156 cm','165公分|165 cm','265公分|265 cm'], ans:0 },
-    { pic:'bar2', aCM:300, bCM:250, opts:['3公尺比較長|3 m is longer','250公分比較長|250 cm is longer','一樣長|They are equal','單位不同不能比較|Different units can’t be compared'], ans:0 }
+    { pic:'icon', icon:'⚖️', opts:['3公尺比較長|3 m is longer','250公分比較長|250 cm is longer','一樣長|They are equal','單位不同不能比較|Different units can’t be compared'], ans:0 }
   ];
 
   var gRound = 0, gScore = 0, gMistake = false;
