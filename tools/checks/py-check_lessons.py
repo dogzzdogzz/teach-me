@@ -16,12 +16,12 @@ BREAKS = [
     #    不更新的話會噴 SETUP-FAIL（find 找不到），這是刻意的：
     #    斷言失去保護對象的時候要大聲壞掉，不可以安靜地變成永遠通過。
     dict(file='lessons.js', expect='[UNREGISTERED]',
-         find="  4: ['angle', 'angle-shape', 'area', 'chart', 'congruent', 'cubes', 'decimal', 'figurate', 'fraction', 'multiply-divide', 'numbers', 'pattern', 'quadrilateral', 'rounding', 'time', 'triangle'],",
+         find="  4: ['angle', 'angle-shape', 'area', 'chart', 'congruent', 'cubes', 'decimal', 'figurate', 'fraction', 'multiply-divide', 'numbers', 'pattern', 'perpendicular', 'quadrilateral', 'rounding', 'time', 'triangle'],",
          replace="  4: ['angle', 'area', 'numbers', 'rounding', 'time'],"),
     # lessons.js 登記了、磁碟上沒有
     dict(file='lessons.js', expect='[GHOST]',
-         find="  4: ['angle', 'angle-shape', 'area', 'chart', 'congruent', 'cubes', 'decimal', 'figurate', 'fraction', 'multiply-divide', 'numbers', 'pattern', 'quadrilateral', 'rounding', 'time', 'triangle'],",
-         replace="  4: ['angle', 'angle-shape', 'area', 'chart', 'congruent', 'cubes', 'decimal', 'figurate', 'fraction', 'ghost-lesson', 'multiply-divide', 'numbers', 'pattern', 'quadrilateral', 'rounding', 'time', 'triangle'],"),
+         find="  4: ['angle', 'angle-shape', 'area', 'chart', 'congruent', 'cubes', 'decimal', 'figurate', 'fraction', 'multiply-divide', 'numbers', 'pattern', 'perpendicular', 'quadrilateral', 'rounding', 'time', 'triangle'],",
+         replace="  4: ['angle', 'angle-shape', 'area', 'chart', 'congruent', 'cubes', 'decimal', 'figurate', 'fraction', 'ghost-lesson', 'multiply-divide', 'numbers', 'pattern', 'perpendicular', 'quadrilateral', 'rounding', 'time', 'triangle'],"),
     # 年級頁的課程卡數對不上實際堂數
     dict(file='grade-4/index.html', expect='[CARDS]',
          find='      <div class="lesson"><span class="badge">🍫</span>',
