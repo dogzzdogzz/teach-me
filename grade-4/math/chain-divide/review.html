@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 分裝生產線</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .result{margin-top:22px;background:var(--orange-soft);border-radius:18px;padding:18px;display:none}
+  .result.on{display:block}
+  .result .line{font-size:18px;font-weight:700}
+  .result .links{margin-top:10px;font-size:15px}
+  .result .links a{color:var(--blue)}
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：分裝生產線</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾幾題「乘除升級站」和三年級「兩步驟解題王」的題型。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。
+     這一課沒有圖，所有題目都是算式與文字題，所以碰不到「SVG 被裁掉」那一類缺陷。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function rangeList(a, b){
+    var out = [];
+    for (var i = a; i <= b; i++) out.push(i);
+    return out;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+  /* ⚠️ make() 一律不可以回 null（也不可以丟例外）：tools/simgen.js 每一批只呼叫 make()
+     一次、**不重試**，回 null 之後檢查會直接 dereference null 而當掉 —— 當掉不是「抓到」。
+     每一次迴圈都重新抽一組參數，所以連續 400 次全被拒絕的機率極低，可是「極低」不是
+     「不會」，所以每一支都給一組**手算過的**保底參數。 */
+  function retry(fn, fallback){
+    for (var i = 0; i < 400; i++){
+      var d = fn();
+      if (d) return d;
+    }
+    return fallback ? fallback() : null;
+  }
+
+  /* --- 這一課的數字範圍：總數 ≤ 999（四年級的大數在別課），選項一律 0 ~ 10000 的整數。
+         **不用負數、不用小數**，而且每一步除法都要除得剛剛好 —— 有餘數的時候還要處理
+         「剩下的怎麼算」，那不在這一課的範圍。 --- */
+  var VAL_MAX = 10000, TOTAL_MAX = 999;
+  function inRange(v){
+    return typeof v === 'number' && isFinite(v) && v === Math.round(v) && v >= 0 && v <= VAL_MAX;
+  }
+  function exact(x, y){ return y !== 0 && x % y === 0; }
+
+  /* --- 數值選項：正解 ＋ 三個誘答。誘答一律**值去重**、必須在範圍內，而且
+         **不可以是題幹印出來的數字**（那是把題目抄回來，不是誘答）。
+         候選不夠時保底往外找一個長得像答案的數，不生垃圾字串。 --- */
+  function numOpts(correct, cands, forbid){
+    if (!inRange(correct)) return null;
+    var out = [correct], seen = {}, bad = {};
+    seen[String(correct)] = 1;
+    (forbid || []).forEach(function(v){ bad[String(v)] = 1; });
+    cands.forEach(function(v){
+      if (out.length >= 4) return;
+      if (!inRange(v) || seen[String(v)] || bad[String(v)]) return;
+      seen[String(v)] = 1;
+      out.push(v);
+    });
+    for (var k = 1; out.length < 4 && k <= 400; k++){
+      [correct + k, correct - k].forEach(function(v){
+        if (out.length >= 4) return;
+        if (!inRange(v) || seen[String(v)] || bad[String(v)]) return;
+        seen[String(v)] = 1;
+        out.push(v);
+      });
+    }
+    return out.length === 4 ? shuffle(out) : null;
+  }
+  /* --- 算式字串的選項：四個**不同的算式**。去重比的是字串（算式本身就是答案），
+         而且每一個都必須是「數字 ＋ 運算符號 ＋ 括號」組出來的，不生垃圾字串。 --- */
+  function exprOpts(correct, cands){
+    var out = [correct], seen = {};
+    seen[correct] = 1;
+    cands.forEach(function(s){
+      if (out.length >= 4 || !s || seen[s]) return;
+      seen[s] = 1;
+      out.push(s);
+    });
+    return out.length === 4 ? shuffle(out) : null;
+  }
+
+  /* --- 英文的單複數。只有 1 會錯，而且 box／class 這種字尾要加 es 不是 s。 --- */
+  function plEn(n, w){
+    if (n === 1) return n + ' ' + w;
+    return n + ' ' + w + (/(s|x|z|ch|sh)$/.test(w) ? 'es' : 's');
+  }
+
+  /* --- 文字題的情境。每一個情境有**三層**：一件貨、大容器、小容器。
+         這一課的模型是實體的三層（一批貨 → 大箱 → 小袋），情境只換名字，不換結構。 --- */
+  var SCENES = [
+    { id:'egg',   zh:{ unit:'顆', name:'蛋', big:'箱', small:'盒' }, en:{ name:'egg',    big:'crate',  small:'tray'   } },
+    { id:'pen',   zh:{ unit:'支', name:'筆', big:'箱', small:'盒' }, en:{ name:'pen',    big:'carton', small:'box'    } },
+    { id:'candy', zh:{ unit:'顆', name:'糖', big:'袋', small:'包' }, en:{ name:'sweet',  big:'sack',   small:'packet' } },
+    { id:'apple', zh:{ unit:'顆', name:'蘋果', big:'箱', small:'袋' }, en:{ name:'apple', big:'crate',  small:'bag'    } }
+  ];
+
+  /* ---------- 文字 ---------- */
+  var TXT = {
+    zh: {
+      /* 中文的「幾件貨」：量詞和名字一起印，數字和中文之間一定要有空格。 */
+      items:function(n, sc){ return n + ' ' + sc.zh.unit + sc.zh.name; },
+      bigs:function(n, sc){ return n + ' ' + sc.zh.big; },
+      smalls:function(n, sc){ return n + ' ' + sc.zh.small; },
+      perBig:function(sc){ return '每' + sc.zh.big; },
+      perSmall:function(sc){ return '每' + sc.zh.small; },
+      oneSmall:function(sc){ return '一' + sc.zh.small; },
+      oneBig:function(sc){ return '一' + sc.zh.big; }
+    },
+    en: {
+      items:function(n, sc){ return plEn(n, sc.en.name); },
+      bigs:function(n, sc){ return plEn(n, sc.en.big); },
+      smalls:function(n, sc){ return plEn(n, sc.en.small); },
+      perBig:function(sc){ return 'each ' + sc.en.big; },
+      perSmall:function(sc){ return 'each ' + sc.en.small; },
+      oneSmall:function(sc){ return 'one ' + sc.en.small; },
+      oneBig:function(sc){ return 'one ' + sc.en.big; }
+    }
+  };
+  function eq(lang){ return lang === 'zh' ? ' ＝ ' : ' = '; }
+  function plus(lang){ return lang === 'zh' ? ' ＋ ' : ' + '; }
+
+  var GENS = [
+    /* 1. 一共分成幾份：a 個大箱 × 每箱 b 個小袋。頭號迷思是「加起來」。 */
+    { id:'totalParts', cat:'total',
+      make:function(used){
+        return retry(function(){
+          var a = pickUnused(rangeList(2, 9), used);
+          var b = pick(rangeList(2, 8));
+          if (a + b === a * b) return null;      /* 加起來剛好等於乘起來 → 誘答會等於正解 */
+          var opts = numOpts(a * b, [a + b, a * a, b * b, a * b + a, a * b - b], [a, b]);
+          if (!opts) return null;
+          return { a:a, b:b, total:a * b, opts:opts, ans:opts.indexOf(a * b) };
+        }, function(){
+          var opts = numOpts(24, [10, 36, 16, 30, 20], [6, 4]);
+          return { a:6, b:4, total:24, opts:opts, ans:opts.indexOf(24) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一批貨裝成 <strong>' + d.a + ' 個大箱</strong>，每個大箱再分成 <strong>' + d.b + ' 個小袋</strong>。一共有幾個小袋？'
+            : 'A load goes into <strong>' + plEn(d.a, 'big box') + '</strong>, and each big box is split into <strong>' + plEn(d.b, 'small bag') + '</strong>. How many small bags are there altogether?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '每一個大箱都有 ' + d.b + ' 個小袋，' + d.a + ' 個大箱就是 ' + d.a + ' × ' + d.b + ' ＝ ' + d.total + ' 個小袋。袋數是<strong>乘</strong>出來的，不是加出來的（加起來是 ' + d.a + ' ＋ ' + d.b + ' ＝ ' + (d.a + d.b) + '）。'
+            : 'Every big box holds ' + plEn(d.b, 'small bag') + ', so ' + plEn(d.a, 'big box') + ' hold ' + d.a + ' × ' + d.b + ' = ' + d.total + ' small bags. The number of bags is <strong>multiplied</strong>, never added (adding gives ' + d.a + ' + ' + d.b + ' = ' + (d.a + d.b) + ').'
+        };
+      } },
+
+    /* 2. 連除的值：t ÷ a ÷ b。誘答是「只做第一步」「第二個除號看成乘號」「除錯一個數」。 */
+    { id:'chainValue', cat:'chain',
+      make:function(used){
+        return retry(function(){
+          var a = pickUnused(rangeList(2, 9), used);
+          var b = pick(rangeList(2, 9));
+          var c = pick(rangeList(2, 9));
+          var t = a * b * c;
+          if (t > TOTAL_MAX) return null;
+          if (a + b === a * b) return null;
+          var opts = numOpts(c, [b * c, c * b * b, a * c, c * a * a], [t, a, b]);
+          if (!opts) return null;
+          return { t:t, a:a, b:b, c:c, opts:opts, ans:opts.indexOf(c) };
+        }, function(){
+          var opts = numOpts(5, [20, 80, 15, 10], [120, 4, 6]);
+          return { t:120, a:4, b:6, c:5, opts:opts, ans:opts.indexOf(5) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: '<strong>' + d.t + ' ÷ ' + d.a + ' ÷ ' + d.b + '</strong>' + eq(lang) + '?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '從左往右：' + d.t + ' ÷ ' + d.a + ' ＝ ' + (d.t / d.a) + '，' + (d.t / d.a) + ' ÷ ' + d.b + ' ＝ ' + d.c + '。也可以一次算完：除以 ' + d.a + ' × ' + d.b + ' ＝ ' + (d.a * d.b) + '，' + d.t + ' ÷ ' + (d.a * d.b) + ' ＝ ' + d.c + '。'
+            : 'Left to right: ' + d.t + ' ÷ ' + d.a + ' = ' + (d.t / d.a) + ', then ' + (d.t / d.a) + ' ÷ ' + d.b + ' = ' + d.c + '. Or in one go: divide by ' + d.a + ' × ' + d.b + ' = ' + (d.a * d.b) + ', and ' + d.t + ' ÷ ' + (d.a * d.b) + ' = ' + d.c + '.'
+        };
+      } },
+
+    /* 3. 哪一個算式和 t ÷ a ÷ b 一樣。四個選項是四個**不同的算式**。 */
+    { id:'sameExpr', cat:'expr',
+      make:function(used){
+        return retry(function(){
+          var a = pickUnused(rangeList(2, 9), used);
+          var b = pick(rangeList(2, 9));
+          var c = pick(rangeList(2, 9));
+          var t = a * b * c;
+          if (t > TOTAL_MAX) return null;
+          if (a + b === a * b) return null;      /* 「加起來」那個誘答會變成正解 */
+          /* ⚠️ 誘答**印出來的每一個除法也要除得剛剛好**：這一課明講沒有餘數、不用小數，
+             所以不可以端出一個孩子算不完的 t ÷ (a ＋ b)。（codex 第一輪） */
+          if (!exact(t, a + b)) return null;
+          var right = t + ' ÷ (' + a + ' × ' + b + ')';
+          var opts = exprOpts(right, [
+            t + ' ÷ (' + a + ' ＋ ' + b + ')',
+            t + ' ÷ ' + a + ' × ' + b,
+            t + ' × ' + a + ' ÷ ' + b
+          ]);
+          if (!opts) return null;
+          return { t:t, a:a, b:b, c:c, opts:opts, ans:opts.indexOf(right) };
+        }, function(){
+          var right = '120 ÷ (4 × 6)';
+          var opts = exprOpts(right, ['120 ÷ (4 ＋ 6)', '120 ÷ 4 × 6', '120 × 4 ÷ 6']);
+          return { t:120, a:4, b:6, c:5, opts:opts, ans:opts.indexOf(right) };
+        });
+      },
+      fmt:function(d, lang){
+        var en = d.opts.map(function(s){ return s.replace(' ＋ ', ' + '); });
+        return {
+          stem: lang === 'zh'
+            ? '哪一個算式和 <strong>' + d.t + ' ÷ ' + d.a + ' ÷ ' + d.b + '</strong> 一樣？'
+            : 'Which expression is the same as <strong>' + d.t + ' ÷ ' + d.a + ' ÷ ' + d.b + '</strong>?',
+          opts: lang === 'zh' ? d.opts.slice() : en, ans:d.ans,
+          why: lang === 'zh'
+            ? '連續除以 ' + d.a + ' 再除以 ' + d.b + '，就是除以 ' + d.a + ' × ' + d.b + ' ＝ ' + (d.a * d.b) + '，兩個算式都算出 ' + d.c + '。除數要用<strong>乘</strong>起來的 ' + (d.a * d.b) + '，不是加起來的 ' + (d.a + d.b) + '；沒有括號的 ' + d.t + ' ÷ ' + d.a + ' × ' + d.b + ' 會先除再乘：' + d.t + ' ÷ ' + d.a + ' × ' + d.b + ' ＝ ' + (d.t / d.a * d.b) + '。'
+            : 'Dividing by ' + d.a + ' and then by ' + d.b + ' is dividing by ' + d.a + ' × ' + d.b + ' = ' + (d.a * d.b) + ', and both expressions come to ' + d.c + '. The divisor is the <strong>product</strong> ' + (d.a * d.b) + ', not the sum ' + (d.a + d.b) + '; without brackets it divides then multiplies: ' + d.t + ' ÷ ' + d.a + ' × ' + d.b + ' = ' + (d.t / d.a * d.b) + '.'
+        };
+      } },
+
+    /* 4. 括號裡面的先算：t ÷ (a × b) 的第一步是什麼。 */
+    { id:'bracketFirst', cat:'expr',
+      make:function(used){
+        return retry(function(){
+          var a = pickUnused(rangeList(2, 9), used);
+          var b = pick(rangeList(2, 9));
+          var c = pick(rangeList(2, 9));
+          var t = a * b * c;
+          if (t > TOTAL_MAX) return null;
+          if (a === b) return null;              /* t ÷ a 和 t ÷ b 會變成同一個選項 */
+          if (c === a || c === b) return null;   /* t ÷ a 或 t ÷ b 會和 a × b 同值 */
+          var right = a + ' × ' + b;
+          var opts = exprOpts(right, [t + ' ÷ ' + a, t + ' ÷ ' + b, t + ' × ' + a]);
+          if (!opts) return null;
+          return { t:t, a:a, b:b, c:c, opts:opts, ans:opts.indexOf(right) };
+        }, function(){
+          var right = '4 × 6';
+          var opts = exprOpts(right, ['120 ÷ 4', '120 ÷ 6', '120 × 4']);
+          return { t:120, a:4, b:6, c:5, opts:opts, ans:opts.indexOf(right) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.t + ' ÷ (' + d.a + ' × ' + d.b + ')</strong> 這個算式，要<strong>先算</strong>哪一步？'
+            : 'In <strong>' + d.t + ' ÷ (' + d.a + ' × ' + d.b + ')</strong>, which step comes <strong>first</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '括號裡面的先算，所以先算 ' + d.a + ' × ' + d.b + ' ＝ ' + (d.a * d.b) + '，再算 ' + d.t + ' ÷ ' + (d.a * d.b) + ' ＝ ' + d.c + '。括號就是為了讓那一段乘法先算才寫的。'
+            : 'What is inside the brackets goes first, so ' + d.a + ' × ' + d.b + ' = ' + (d.a * d.b) + ' and then ' + d.t + ' ÷ ' + (d.a * d.b) + ' = ' + d.c + '. The brackets are written for exactly that reason.'
+        };
+      } },
+
+    /* 5. 沒有括號就從左往右：t ÷ a × b 的值。頭號迷思是先算 a × b。 */
+    { id:'leftToRight', cat:'order',
+      make:function(used){
+        return retry(function(){
+          var a = pickUnused(rangeList(3, 9), used);
+          var b = pick(rangeList(2, 6));
+          var m = pick(rangeList(2, 25));
+          var q = m * b;                          /* q 一定被 b 整除，「先乘」那個誘答才是整數 */
+          var t = q * a;
+          if (t > TOTAL_MAX) return null;
+          var right = q * b;
+          if (right > TOTAL_MAX) return null;
+          var opts = numOpts(right, [m, q, exact(t, b) ? t / b : null], [t, a, b]);
+          if (!opts) return null;
+          return { t:t, a:a, b:b, q:q, m:m, val:right, opts:opts, ans:opts.indexOf(right) };
+        }, function(){
+          var opts = numOpts(240, [60, 120, 300, 200], [600, 5, 2]);
+          return { t:600, a:5, b:2, q:120, m:60, val:240, opts:opts, ans:opts.indexOf(240) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: '<strong>' + d.t + ' ÷ ' + d.a + ' × ' + d.b + '</strong>' + eq(lang) + '?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '只有乘和除，就從左往右：' + d.t + ' ÷ ' + d.a + ' ＝ ' + d.q + '，' + d.q + ' × ' + d.b + ' ＝ ' + d.val + '。想先算 ' + d.a + ' × ' + d.b + ' 的話一定要寫成 ' + d.t + ' ÷ (' + d.a + ' × ' + d.b + ')，那個算式的答案是 ' + d.t + ' ÷ (' + d.a + ' × ' + d.b + ') ＝ ' + d.m + '。'
+            : 'Nothing but × and ÷ means left to right: ' + d.t + ' ÷ ' + d.a + ' = ' + d.q + ', then ' + d.q + ' × ' + d.b + ' = ' + d.val + '. To work out ' + d.a + ' × ' + d.b + ' first you must write it with brackets: ' + d.t + ' ÷ (' + d.a + ' × ' + d.b + ') = ' + d.m + '.'
+        };
+      } },
+
+    /* 6. 把大除數拆成兩個乘起來剛好是它的數。誘答的兩個數乘起來都不是那個除數。 */
+    { id:'splitDivisor', cat:'split',
+      make:function(used){
+        return retry(function(){
+          var p = pickUnused(rangeList(2, 9), used);
+          var r = pick(rangeList(2, 9));
+          var D = p * r;
+          if (D < 10 || D > 81) return null;
+          var k = pick(rangeList(5, 40));
+          var t = D * k;
+          if (t > TOTAL_MAX) return null;
+          /* ⚠️ 誘答的兩次除法也要除得剛剛好（這一課明講沒有餘數），所以三個錯的拆法
+             都從 t 自己的因數組出來：(p, k)、(r, k)、(k, p) 乘起來都不是 D，
+             可是每一步都除得開。要求 p、r、k 兩兩不同，四個算式才不會撞在一起。
+             （codex 第一輪：原本用 r ＋ 1、p ＋ 1 組出來的誘答幾乎都有餘數。） */
+          if (p === r || k === p || k === r) return null;
+          var right = t + ' ÷ ' + p + ' ÷ ' + r;
+          /* 三個錯的拆法：(p, k)、(r, k)、(p, r × k)。乘起來都不是 D，每一步都除得開，
+             而且算出來的三個值（r、p、1）互不相同 —— (k, p) 和 (p, k) 會同值，
+             那樣孩子會看到兩個一樣的答案（codex 第二輪）。 */
+          var opts = exprOpts(right, [
+            t + ' ÷ ' + p + ' ÷ ' + k,
+            t + ' ÷ ' + r + ' ÷ ' + k,
+            t + ' ÷ ' + p + ' ÷ ' + (r * k)
+          ]);
+          if (!opts) return null;
+          return { t:t, D:D, p:p, r:r, k:k, opts:opts, ans:opts.indexOf(right) };
+        }, function(){
+          /* 保底：720 ＝ 24 × 30，三個錯的拆法都由 4、6、30 組出來，每一步都除得開。 */
+          var right = '720 ÷ 4 ÷ 6';
+          var opts = exprOpts(right, ['720 ÷ 4 ÷ 30', '720 ÷ 6 ÷ 30', '720 ÷ 4 ÷ 180']);
+          return { t:720, D:24, p:4, r:6, k:30, opts:opts, ans:opts.indexOf(right) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.t + ' ÷ ' + d.D + '</strong> 想拆成連續除兩次。哪一個是對的？'
+            : '<strong>' + d.t + ' ÷ ' + d.D + '</strong> is to be split into two divisions in a row. Which one is right?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '拆出來的兩個數乘起來要<strong>剛好是 ' + d.D + '</strong>：' + d.p + ' × ' + d.r + ' ＝ ' + d.D + '，所以 ' + d.t + ' ÷ ' + d.D + ' ＝ ' + d.t + ' ÷ ' + d.p + ' ÷ ' + d.r + ' ＝ ' + d.k + '。另外三個乘起來分別是 ' + d.p + ' × ' + d.k + ' ＝ ' + (d.p * d.k) + '、' + d.r + ' × ' + d.k + ' ＝ ' + (d.r * d.k) + '、' + d.p + ' × ' + (d.r * d.k) + ' ＝ ' + (d.p * d.r * d.k) + '，都不是 ' + d.D + '。'
+            : 'The two numbers must multiply back to <strong>exactly ' + d.D + '</strong>: ' + d.p + ' × ' + d.r + ' = ' + d.D + ', so ' + d.t + ' ÷ ' + d.D + ' = ' + d.t + ' ÷ ' + d.p + ' ÷ ' + d.r + ' = ' + d.k + '. The other three multiply to ' + d.p + ' × ' + d.k + ' = ' + (d.p * d.k) + ', ' + d.r + ' × ' + d.k + ' = ' + (d.r * d.k) + ' and ' + d.p + ' × ' + (d.r * d.k) + ' = ' + (d.p * d.r * d.k) + ', none of which is ' + d.D + '.'
+        };
+      } },
+
+    /* 7. 乘除混合：n × m ÷ k 的值（先乘再除）。 */
+    { id:'mixedMulDiv', cat:'order',
+      make:function(used){
+        return retry(function(){
+          var k = pickUnused(rangeList(2, 9), used);
+          var m = pick(rangeList(2, 9));
+          var n = pick(rangeList(6, 40));
+          var total = n * m;
+          if (total > TOTAL_MAX || !exact(total, k)) return null;
+          var val = total / k;
+          var opts = numOpts(val, [total, total * k, exact(n, k) ? n / k : null, val + k], [n, m, k]);
+          if (!opts) return null;
+          return { n:n, m:m, k:k, total:total, val:val, opts:opts, ans:opts.indexOf(val) };
+        }, function(){
+          var opts = numOpts(15, [120, 960, 3, 20], [24, 5, 8]);
+          return { n:24, m:5, k:8, total:120, val:15, opts:opts, ans:opts.indexOf(15) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: '<strong>' + d.n + ' × ' + d.m + ' ÷ ' + d.k + '</strong>' + eq(lang) + '?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '只有乘和除，就從左往右：' + d.n + ' × ' + d.m + ' ＝ ' + d.total + '，' + d.total + ' ÷ ' + d.k + ' ＝ ' + d.val + '。' + d.total + ' 是只做了第一步。'
+            : 'Nothing but × and ÷ means left to right: ' + d.n + ' × ' + d.m + ' = ' + d.total + ', then ' + d.total + ' ÷ ' + d.k + ' = ' + d.val + '. ' + d.total + ' is only the first step.'
+        };
+      } },
+
+    /* 8. 文字題（連除）：一批貨 → 大容器 → 小容器，問一個小容器幾件。 */
+    { id:'wordChain', cat:'word',
+      make:function(used){
+        return retry(function(){
+          var a = pickUnused(rangeList(2, 9), used);
+          var b = pick(rangeList(2, 9));
+          var c = pick(rangeList(2, 14));
+          var t = a * b * c;
+          if (t > TOTAL_MAX) return null;
+          if (a + b === a * b) return null;
+          var sc = pick(SCENES);
+          var opts = numOpts(c, [b * c, a * c, c * b * b], [t, a, b]);
+          if (!opts) return null;
+          return { t:t, a:a, b:b, c:c, scene:sc.id, opts:opts, ans:opts.indexOf(c) };
+        }, function(){
+          var opts = numOpts(6, [36, 12, 216, 18], [216, 6, 6]);
+          return { t:216, a:6, b:6, c:6, scene:'egg', opts:opts, ans:opts.indexOf(6) };
+        });
+      },
+      fmt:function(d, lang){
+        var sc = SCENES.filter(function(s){ return s.id === d.scene; })[0], t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '有 <strong>' + t.items(d.t, sc) + '</strong>，先<strong>平均</strong>裝成 <strong>' + t.bigs(d.a, sc) + '</strong>，' + t.perBig(sc) + '再<strong>平均</strong>分成 <strong>' + t.smalls(d.b, sc) + '</strong>。' + t.oneSmall(sc) + '有幾' + sc.zh.unit + '？'
+            : 'There are <strong>' + t.items(d.t, sc) + '</strong>. They are shared <strong>equally</strong> into <strong>' + t.bigs(d.a, sc) + '</strong> first, and ' + t.perBig(sc) + ' is then split <strong>equally</strong> into <strong>' + t.smalls(d.b, sc) + '</strong>. How many are in ' + t.oneSmall(sc) + '?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '分兩次就除兩次：' + d.t + ' ÷ ' + d.a + ' ＝ ' + (d.t / d.a) + '，' + (d.t / d.a) + ' ÷ ' + d.b + ' ＝ ' + d.c + '。併成一個算式是 ' + d.t + ' ÷ (' + d.a + ' × ' + d.b + ') ＝ ' + d.c + '，因為一共有 ' + d.a + ' × ' + d.b + ' ＝ ' + (d.a * d.b) + ' 個小容器。'
+            : 'Two sharings mean two divisions: ' + d.t + ' ÷ ' + d.a + ' = ' + (d.t / d.a) + ', then ' + (d.t / d.a) + ' ÷ ' + d.b + ' = ' + d.c + '. As one expression that is ' + d.t + ' ÷ (' + d.a + ' × ' + d.b + ') = ' + d.c + ', because there are ' + d.a + ' × ' + d.b + ' = ' + (d.a * d.b) + ' small containers altogether.'
+        };
+      } },
+
+    /* 9. 文字題（一次分完）：每小容器 p 件、每大容器 b 個小容器，問裝得滿幾個大容器。 */
+    { id:'wordOnce', cat:'word',
+      make:function(used){
+        return retry(function(){
+          var p = pickUnused(rangeList(2, 9), used);
+          var b = pick(rangeList(2, 9));
+          var k = pick(rangeList(5, 30));
+          var t = p * b * k;
+          if (t > TOTAL_MAX) return null;
+          if (p + b === p * b) return null;
+          var sc = pick(SCENES);
+          var opts = numOpts(k, [b * k, p * k, p * b], [t, p, b]);
+          if (!opts) return null;
+          return { t:t, p:p, b:b, k:k, scene:sc.id, opts:opts, ans:opts.indexOf(k) };
+        }, function(){
+          var opts = numOpts(24, [120, 144, 30, 20], [720, 6, 5]);
+          return { t:720, p:6, b:5, k:24, scene:'pen', opts:opts, ans:opts.indexOf(24) };
+        });
+      },
+      fmt:function(d, lang){
+        var sc = SCENES.filter(function(s){ return s.id === d.scene; })[0], t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? '有 <strong>' + t.items(d.t, sc) + '</strong>，' + t.perSmall(sc) + '裝 <strong>' + d.p + ' ' + sc.zh.unit + '</strong>，' + t.perBig(sc) + '裝 <strong>' + t.smalls(d.b, sc) + '</strong>。可以裝滿幾' + sc.zh.big + '？'
+            : 'There are <strong>' + t.items(d.t, sc) + '</strong>. ' + d.p + ' go in ' + t.perSmall(sc) + ', and ' + t.smalls(d.b, sc) + ' go in ' + t.perBig(sc) + '. How many ' + sc.en.big + 's can be filled?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '一個大容器裝的是 ' + d.p + ' × ' + d.b + ' ＝ ' + (d.p * d.b) + ' ' + sc.zh.unit + '，所以 ' + d.t + ' ÷ (' + d.p + ' × ' + d.b + ') ＝ ' + d.t + ' ÷ ' + (d.p * d.b) + ' ＝ ' + d.k + '。分兩步也一樣：' + d.t + ' ÷ ' + d.p + ' ＝ ' + (d.t / d.p) + '，' + (d.t / d.p) + ' ÷ ' + d.b + ' ＝ ' + d.k + '。'
+            : 'One big container holds ' + d.p + ' × ' + d.b + ' = ' + (d.p * d.b) + ', so ' + d.t + ' ÷ (' + d.p + ' × ' + d.b + ') = ' + d.t + ' ÷ ' + (d.p * d.b) + ' = ' + d.k + '. Two steps give the same: ' + d.t + ' ÷ ' + d.p + ' = ' + (d.t / d.p) + ', then ' + (d.t / d.p) + ' ÷ ' + d.b + ' = ' + d.k + '.'
+        };
+      } },
+
+    /* 10. 文字題 → 選併式（乘除混合）。 */
+    { id:'pickExpr', cat:'expr',
+      make:function(used){
+        return retry(function(){
+          var k = pickUnused(rangeList(2, 9), used);
+          var m = pick(rangeList(2, 9));
+          var n = pick(rangeList(6, 60));
+          if (m === k) return null;              /* n ÷ m × k 會和正解同值 */
+          /* ⚠️ 兩個誘答（n ÷ (m × k) 和 n ÷ m × k）印出來的除法也要除得剛剛好。
+             n 是 m × k 的倍數就同時保證了這兩個，也保證正解 n × m ÷ k 是整數。（codex 第一輪） */
+          if (!exact(n, m * k)) return null;
+          var total = n * m;
+          if (total > TOTAL_MAX || !exact(total, k)) return null;
+          var sc = pick(SCENES);
+          var right = n + ' × ' + m + ' ÷ ' + k;
+          var opts = exprOpts(right, [
+            n + ' ÷ (' + m + ' × ' + k + ')',
+            n + ' × ' + m + ' × ' + k,
+            n + ' ÷ ' + m + ' × ' + k
+          ]);
+          if (!opts) return null;
+          return { n:n, m:m, k:k, total:total, val:total / k, scene:sc.id, opts:opts, ans:opts.indexOf(right) };
+        }, function(){
+          /* 保底：n ＝ 24 是 m × k ＝ 6 的倍數，所以四個算式印出來的除法都除得剛剛好。 */
+          var right = '24 × 2 ÷ 3';
+          var opts = exprOpts(right, ['24 ÷ (2 × 3)', '24 × 2 × 3', '24 ÷ 2 × 3']);
+          return { n:24, m:2, k:3, total:48, val:16, scene:'candy', opts:opts, ans:opts.indexOf(right) };
+        });
+      },
+      fmt:function(d, lang){
+        var sc = SCENES.filter(function(s){ return s.id === d.scene; })[0], t = TXT[lang];
+        return {
+          stem: lang === 'zh'
+            ? t.oneBig(sc) + '裝 <strong>' + d.n + ' ' + sc.zh.unit + sc.zh.name + '</strong>，買了 <strong>' + t.bigs(d.m, sc) + '</strong>，要平分給 <strong>' + d.k + ' 個班</strong>。哪一個併式算得出「一個班分到幾' + sc.zh.unit + '」？'
+            : 'One ' + sc.en.big + ' holds <strong>' + plEn(d.n, sc.en.name) + '</strong>, <strong>' + t.bigs(d.m, sc) + '</strong> are bought, and they are shared equally between <strong>' + plEn(d.k, 'class') + '</strong>. Which single expression works out how many one class gets?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '先把總數乘出來：' + d.n + ' × ' + d.m + ' ＝ ' + d.total + '，再除以班數：' + d.total + ' ÷ ' + d.k + ' ＝ ' + d.val + '，所以是 ' + d.n + ' × ' + d.m + ' ÷ ' + d.k + '。另外三個都不是：乘上班數是算 ' + d.k + ' 倍的總數，用 ' + d.n + ' 去除的是拿一' + sc.zh.big + '的數量在分。'
+            : 'Multiply up to the total first: ' + d.n + ' × ' + d.m + ' = ' + d.total + ', then divide by the classes: ' + d.total + ' ÷ ' + d.k + ' = ' + d.val + ', so it is ' + d.n + ' × ' + d.m + ' ÷ ' + d.k + '. The other three are wrong: multiplying by the classes works out ' + d.k + ' times the total, and the two that start by dividing ' + d.n + ' share out a single ' + sc.en.big + '.'
+        };
+      } },
+
+    /* 11. 交錯題：「乘除升級站」—— 商是幾位數（商從第一次夠除的那一位開始）。 */
+    { id:'interDigits', cat:'inter',
+      make:function(used){
+        return retry(function(){
+          var wantTwo = pickUnused([0, 1], used) === 1;
+          var D = pick(rangeList(12, 49));
+          var Q = wantTwo ? pick(rangeList(10, 40)) : pick(rangeList(2, 9));
+          var t = D * Q;
+          if (t > TOTAL_MAX || t < 100) return null;
+          var digits = String(Q).length;
+          if (digits !== (wantTwo ? 2 : 1)) return null;
+          /* 位數的選項固定是 1~4：用 numOpts 的往外找保底會生出 0 位數這種不存在的答案。 */
+          var opts = shuffle([1, 2, 3, 4]);
+          return { D:D, Q:Q, t:t, digits:digits, opts:opts, ans:opts.indexOf(digits) };
+        }, function(){
+          var opts = shuffle([1, 2, 3, 4]);
+          return { D:34, Q:14, t:476, digits:2, opts:opts, ans:opts.indexOf(2) };
+        });
+      },
+      fmt:function(d, lang){
+        var head2 = Math.floor(d.t / 10);
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.t + ' ÷ ' + d.D + '</strong> 的商是<strong>幾位數</strong>？（「乘除升級站」的題型）'
+            : 'How many <strong>digits</strong> does the quotient of <strong>' + d.t + ' ÷ ' + d.D + '</strong> have? (from the multiplication and division lesson)',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '從左邊一位一位加進來，看第一次夠除是哪一位：' + (d.digits === 2 ? '前兩位是 ' + head2 + '，' + head2 + ' 大於或等於 ' + d.D + '，所以商的第一位落在十位，商是兩位數（' + d.t + ' ÷ ' + d.D + ' ＝ ' + d.Q + '）。' : '前兩位是 ' + head2 + '，比 ' + d.D + ' 小，要到三位才夠除，所以商只有一位數（' + d.t + ' ÷ ' + d.D + ' ＝ ' + d.Q + '）。')
+            : 'Bring the digits in from the left and see where it first divides: ' + (d.digits === 2 ? 'the first two digits are ' + head2 + ', which is at least ' + d.D + ', so the first quotient digit sits in the tens and the quotient has two digits (' + d.t + ' ÷ ' + d.D + ' = ' + d.Q + ').' : 'the first two digits are ' + head2 + ', which is less than ' + d.D + ', so it only divides once three digits are in and the quotient has one digit (' + d.t + ' ÷ ' + d.D + ' = ' + d.Q + ').')
+        };
+      } },
+
+    /* 12. 交錯題：三年級「兩步驟解題王」—— 沒有括號時先乘除後加減。 */
+    { id:'interOrder', cat:'inter',
+      make:function(used){
+        return retry(function(){
+          var x = pickUnused(rangeList(2, 9), used);
+          var y = pick(rangeList(3, 9));
+          var z = pick(rangeList(5, 40));
+          var right = z + x * y;
+          var sumFirst = (z + x) * y;
+          var opts = numOpts(right, [sumFirst, z + x + y, z * x + y, right + y], [x, y, z]);
+          if (!opts) return null;
+          return { x:x, y:y, z:z, prod:x * y, val:right, sumFirst:sumFirst, opts:opts, ans:opts.indexOf(right) };
+        }, function(){
+          var opts = numOpts(38, [80, 19, 47, 44], [4, 8, 6]);
+          return { x:4, y:8, z:6, prod:32, val:38, sumFirst:80, opts:opts, ans:opts.indexOf(38) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: '<strong>' + d.z + plus(lang) + d.x + ' × ' + d.y + '</strong>' + eq(lang) + '?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '沒有括號的時候<strong>先乘除後加減</strong>：先算 ' + d.x + ' × ' + d.y + ' ＝ ' + d.prod + '，再加 ' + d.z + '：' + d.z + ' ＋ ' + d.prod + ' ＝ ' + d.val + '。想先加的話一定要寫成 (' + d.z + ' ＋ ' + d.x + ') × ' + d.y + '，那個算式的答案是 (' + d.z + ' ＋ ' + d.x + ') × ' + d.y + ' ＝ ' + d.sumFirst + '。'
+            : 'With no brackets, <strong>× and ÷ come before + and −</strong>: work out ' + d.x + ' × ' + d.y + ' = ' + d.prod + ' first, then add ' + d.z + ': ' + d.z + ' + ' + d.prod + ' = ' + d.val + '. To add first you must write it with brackets: (' + d.z + ' + ' + d.x + ') × ' + d.y + ' = ' + d.sumFirst + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 分裝生產線', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：分裝生產線',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾幾題「乘除升級站」和三年級「兩步驟解題王」的題型。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>　·　直式與試商回<a href="../multiply-divide/index.html">乘除升級站</a>　·　先乘除後加減回三年級<a href="../../../grade-3/math/two-step/index.html">兩步驟解題王</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Packing Line', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Packing Line',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>A few of them come from the grade-4 multiplication and division lesson and the grade-3 two-step lesson too.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>　·　column form and guessing a quotient digit in <a href="../multiply-divide/index.html">the multiplication and division lesson</a>　·　× and ÷ before + and − in the grade-3 <a href="../../../grade-3/math/two-step/index.html">two-step lesson</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length){
+            resultLine.textContent = right === batch.length ? t.resAll(batch.length)
+              : right >= Math.ceil(batch.length * 2 / 3) ? t.resGood(right, batch.length)
+              : t.resTry(right, batch.length);
+            resultLinks.innerHTML = t.links;
+            resultEl.classList.add('on');
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function newRound(){
+    batch = buildBatch();
+    applyStatic();
+    render();
+  }
+
+  retryBtn.addEventListener('click', newRound);
+  /* 語言切換保留同一批題目（framework §六之一：切語言不重抽）。 */
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    render();
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>

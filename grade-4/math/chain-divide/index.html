@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我連除與併式 — 分裝生產線</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --purple:#9C6ADE; --purple-soft:#F1EAFB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 18px;font-size:16px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .chips.steps .chip[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-soft);color:var(--blue)}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px;min-height:20px}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px;text-align:center;cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .mode .mbig{font-size:26px}
+  .mode h3{font-size:17px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:16px;display:grid;gap:10px}
+
+  /* --- 生產線專用 --- */
+  .figwrap{margin-top:16px;text-align:center;overflow-x:auto}
+  .packfig{width:100%;max-width:460px;height:150px;display:block;margin:0 auto}
+  .figcap{margin-top:8px;font-size:14px;color:var(--muted);text-align:center}
+  .narr{margin-top:14px;font-size:17px;text-align:center;min-height:56px}
+  .calc{
+    margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:12px 16px;
+    font-size:19px;text-align:center;color:var(--blue);font-weight:700;min-height:30px;
+    word-break:break-word;
+  }
+  .resultline{
+    margin-top:14px;background:var(--green-soft);border-radius:14px;padding:12px 18px;
+    font-size:20px;font-weight:700;text-align:center;color:var(--green);min-height:30px;
+  }
+  .notebox{
+    margin-top:12px;background:var(--orange-soft);border:2px solid var(--orange);border-radius:14px;
+    padding:10px 16px;font-size:15px;text-align:center;color:var(--orange);
+  }
+  /* 三個算式並排：每一個算式配一句「它在回答哪一個問題」。 */
+  .exprgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:16px}
+  .exprbox{
+    border:2px solid var(--line);border-radius:14px;padding:12px 14px;text-align:center;
+    background:var(--bg);font-size:16px;
+  }
+  .exprbox .ex{display:block;font-size:20px;font-weight:700;margin-bottom:4px;word-break:break-word}
+  .exprbox.on{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .exprbox.off{border-color:var(--line);color:var(--muted)}
+  .degrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:16px}
+  .degbtn{
+    border:2px solid var(--line);background:var(--card);border-radius:14px;padding:14px 12px;
+    font-size:16px;font-weight:700;cursor:pointer;color:var(--ink);text-align:center;min-height:56px;
+    display:flex;align-items:center;justify-content:center;word-break:break-word;
+  }
+  .degbtn.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .degbtn.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .degbtn:disabled{cursor:default;opacity:.85}
+  .gprompt{text-align:center;font-size:20px;margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:14px;word-break:break-word}
+  .gprompt b{color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">📦 分裝生產線</h1>
+    <p class="sub" data-i18n="sub">分兩次分完，也可以一次分完 —— 連除與括號</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    生產線上的貨要分兩次：先裝進<strong>大箱</strong>，每個大箱再分裝成<strong>小袋</strong>。<br>
+    分兩次，就要除兩次 —— 可是聰明的作業員會<strong>一次就分完</strong>。<br>
+    這一課教你怎麼把<strong>兩個除法併成一個算式</strong>，還有一件不加括號就會出錯的事。
+  </div>
+
+  <p class="notebox" data-i18n="scopeNote">這一課只<strong>算</strong>只有乘和除的兩步驟問題（<strong>算式裡的 ＋</strong> 只出現在兩個地方：「不可以把兩個除數加起來」那個對照，以及複習頁刻意夾進來的<strong>三年級交錯題</strong>；遊戲加減分的「＋20 分」不是算式）：<strong>連續除以兩個數</strong>（連除）、<strong>乘除混合</strong>、把兩個步驟<strong>併成一個算式</strong>，以及為什麼「除以兩個數的積」一定要<strong>加括號</strong>。<strong>括號要先算</strong>和<strong>先乘除後加減</strong>這兩條規則本身是<strong>三年級「兩步驟解題王」</strong>教的，這一課只<strong>複習一句</strong>當作前提（有加減混在一起的算式仍然在那一課）；<strong>交換律、結合律、分配律在五年級「運算律魔術師」</strong>；三位數 × 二位數的直式與<strong>試商</strong>在<strong>「乘除升級站」</strong>。⚠️ 這一課的每一步都<strong>除得剛剛好</strong>（沒有餘數）—— 有餘數的時候還要多想一件事：<strong>剩下的怎麼算</strong>。那不在這一課的範圍。這一課只用整數，不用小數，也不用負數。</p>
+
+  <!-- 模式選擇 -->
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
+  </div>
+
+  <!-- 範例1：分兩次分完 -->
+  <section id="secTwice">
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">分兩次分完：除兩次</h2>
+    <p class="lead" data-i18n="s1lead">先選一批貨，再一步一步按下去看它怎麼被分完。每一個<strong>大箱</strong>裝一樣多，每一個<strong>小袋</strong>也裝一樣多。</p>
+    <div class="card">
+      <div class="chips" id="s1chips"></div>
+      <div class="chips steps" id="s1steps"></div>
+      <div class="figwrap">
+        <svg class="packfig" id="s1fig" viewBox="0 0 460 150" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s1cap"></p>
+      <p class="narr" id="s1narr"></p>
+      <p class="calc" id="s1calc"></p>
+      <p class="resultline" id="s1result"></p>
+      <p class="notebox" data-i18n="s1note">💬 分兩次就<strong>除兩次</strong>：第一次除以<strong>大箱的個數</strong>，算出「一個大箱幾個」；第二次除以<strong>每箱的小袋數</strong>，算出「一個小袋幾個」。⚠️ 第二次除的是<strong>第一次的答案</strong>，不是原來的總數。</p>
+    </div>
+  </section>
+
+  <!-- 範例2：一次分完 -->
+  <section id="secOnce">
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">一次分完：除以「一共幾袋」</h2>
+    <p class="lead" data-i18n="s2lead">同一批貨。這一次先不管大箱，直接問：<strong>一共有幾個小袋？</strong></p>
+    <div class="card">
+      <div class="chips" id="s2chips"></div>
+      <div class="chips steps" id="s2steps"></div>
+      <div class="figwrap">
+        <svg class="packfig" id="s2fig" viewBox="0 0 460 150" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s2cap"></p>
+      <p class="narr" id="s2narr"></p>
+      <p class="calc" id="s2calc"></p>
+      <p class="resultline" id="s2result"></p>
+      <p class="notebox" data-i18n="s2note">💬 <strong>連續除以兩個數，就是除以那兩個數的積</strong>。因為分成幾個大箱、每箱再分成幾個小袋之後，<strong>一共</strong>的袋數就是兩個數<strong>乘</strong>起來。⚠️ 是<strong>乘</strong>起來，不是加起來 —— 3 個大箱、每箱 2 個小袋，一共是 3 × 2 ＝ 6 袋。</p>
+    </div>
+  </section>
+
+  <!-- 範例3：括號不見了 -->
+  <section id="secBracket">
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">括號不見了，就變成另一個問題</h2>
+    <p class="lead" data-i18n="s3lead">同樣是 24、3、2 這三個數，<strong>擺法不一樣就在問不一樣的事</strong>。選一個問題，看看哪一個算式在回答它。</p>
+    <div class="card">
+      <div class="chips" id="s3chips"></div>
+      <div class="exprgrid" id="s3exprs"></div>
+      <p class="narr" id="s3narr"></p>
+      <p class="calc" id="s3calc"></p>
+      <p class="resultline" id="s3result"></p>
+      <p class="notebox" data-i18n="s3note">💬 除號後面如果是<strong>一段乘法</strong>，一定要用<strong>括號</strong>把它括起來 —— 不加括號的話，先算的是<strong>除法</strong>，那一段乘法就不會先算。⚠️ 所以 24 ÷ (3 × 2) 和 24 ÷ 3 × 2 是<strong>兩個不同的算式</strong>。</p>
+    </div>
+  </section>
+
+  <!-- 範例4：從左往右 -->
+  <section id="secOrder">
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">只有乘和除：從左往右一個一個算</h2>
+    <p class="lead" data-i18n="s4lead">沒有括號、也沒有加減的時候，<strong>×</strong> 和 <strong>÷</strong> 是同一層。按下面的步驟看電腦怎麼算。</p>
+    <div class="card">
+      <div class="chips" id="s4chips"></div>
+      <div class="chips steps" id="s4steps"></div>
+      <p class="narr" id="s4narr"></p>
+      <p class="calc" id="s4calc"></p>
+      <p class="resultline" id="s4result"></p>
+      <p class="notebox" data-i18n="s4note">💬 <strong>×</strong> 和 <strong>÷</strong> 是<strong>同一層</strong>，沒有「先乘後除」這回事 —— <strong>從左往右</strong>一個一個算。想改變算的順序，只能<strong>加括號</strong>。</p>
+    </div>
+  </section>
+
+  <!-- 範例5：把大除數拆小 -->
+  <section id="secSplit">
+    <span class="eyebrow" data-i18n="eb5">範例教學 5</span>
+    <h2 data-i18n="s5h2">反過來用：把大除數拆成兩個小的</h2>
+    <p class="lead" data-i18n="s5lead">「連續除兩次 ＝ 除以積」反過來讀，就是<strong>一個大除數可以拆成兩次小除法</strong>。選一種拆法看看。</p>
+    <div class="card">
+      <div class="chips" id="s5chips"></div>
+      <p class="narr" id="s5narr"></p>
+      <p class="calc" id="s5calc"></p>
+      <p class="resultline" id="s5result"></p>
+      <p class="notebox" data-i18n="s5note">💬 拆出來的兩個數<strong>乘起來要剛好是原來的除數</strong>（4 × 6 ＝ 24），這樣才可以連續除兩次。拆得好的話兩次除法都好算，這是除數兩位數時<strong>除了試商以外</strong>另一條走得通的路。⚠️ 乘起來不是原來那個除數的拆法，除的就<strong>不是同一個數</strong>了。</p>
+    </div>
+  </section>
+
+  <!-- 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">試題</span>
+    <h2 data-i18n="s6h2">檢查一下</h2>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 小遊戲 -->
+  <section class="game">
+    <span class="eyebrow" data-i18n="eb7">小遊戲</span>
+    <h2 data-i18n="s7h2">生產線接單</h2>
+    <p class="lead" data-i18n="s7lead">五張工單。每一張先問自己：<strong>這是在問一共幾袋、每袋幾個，還是在問算式怎麼寫？</strong></p>
+    <div class="card">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
+      </div>
+      <p class="hint" id="gHint" style="text-align:center"></p>
+      <p class="gprompt" id="gPrompt"></p>
+      <div class="degrid" id="gAnswers"></div>
+      <p id="gMsg" class="gamemsg" style="text-align:center"></p>
+      <div class="btnrow" style="justify-content:center">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的三個動作</h2>
+    <div class="card">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。</li>
+        <li data-i18n="next3">❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>連續除以兩個數，就是除以那兩個數的積</strong>；併成一個算式時，除號後面那一段乘法一定要<strong>加括號</strong>；只有乘和除的算式<strong>從左往右</strong>算；反過來，一個大除數可以拆成兩次小除法。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 語言無關的資料 ---------- */
+  /* 這一課教的是四年級「數與計算」四則混合計算單元裡**只有乘和除**的那一半：
+     連除（連續除以兩個數）、乘除混合、併式，以及括號在除號後面的必要性。
+
+     生產線的資料模型 —— 三種**不同的東西**，數量各自不同（不要把它們攤平成一堆數字）：
+       一批貨 t 個 → a 個**大箱**（每箱一樣多）→ 每箱 b 個**小袋**（每袋一樣多）→ 每袋 c 個
+     t ＝ a × b × c，所以**每一步都除得剛剛好**。這一課教的
+     「t ÷ a ÷ b ＝ t ÷ (a × b)」在有餘數的整數除法裡不成立，
+     所以整堂課（範例、試題、遊戲、產生器）一律只出整除的題目。 */
+
+  var S1_CASES = [
+    { id:'candy',  t:24, a:3, b:2 },   /* c ＝ 4 */
+    { id:'cookie', t:36, a:3, b:3 },   /* c ＝ 4 */
+    { id:'ball',   t:48, a:4, b:2 }    /* c ＝ 6 */
+  ];
+  var S1_STEPS = 3;   /* 0 還沒分、1 分成大箱、2 每箱再分成小袋 */
+  var S2_STEPS = 3;   /* 0 一共幾袋、1 一次除完、2 兩條路比一比 */
+
+  function perBox(cs){ return cs.t / cs.a; }                 /* 一個大箱幾個 */
+  function bagTotal(cs){ return cs.a * cs.b; }               /* 一共幾個小袋 */
+  function perBag(cs){ return cs.t / (cs.a * cs.b); }        /* 一個小袋幾個 */
+
+  /* --- 圖：大箱、小袋、點的座標。純資料 —— 畫圖那一段只照著畫，不重算。
+         圖上**一個字都沒有**（只有 rect 和 circle），數量一律寫在圖下面的 HTML 裡，
+         所以碰不到「SVG 標籤被畫布裁掉／兩個標籤疊在一起」那一類缺陷
+         （沿用 figurate／cubes／perpendicular 的決定）。 --- */
+  /* 畫布刻意只有 150 高：最寬的一批貨（3 箱 × 每箱 3 袋）畫出來 418 寬，而最高的內容（還沒分的那一堆 48 個點，6 排）是 110 高 —— 300 高的畫布有八成是空的，圖在頁面上會變成一條細細的橫帶。 */
+  var FIG_W = 460, FIG_H = 150;
+  var DOT_R = 5, DOT_DX = 14, DOT_DY = 14, DOT_COLS = 2;
+  var BAG_PAD = 6, BAG_GAP = 6, BOX_PAD = 7, BOX_GAP = 8;
+  var PILE_COLS = 8, PILE_DX = 20, PILE_DY = 20;
+
+  function dotRows(c){ return Math.ceil(c / DOT_COLS); }
+  function bagSize(c){
+    return { w:2 * BAG_PAD + (DOT_COLS - 1) * DOT_DX + 2 * DOT_R,
+             h:2 * BAG_PAD + (dotRows(c) - 1) * DOT_DY + 2 * DOT_R };
+  }
+  function boxSize(b, c){
+    var bg = bagSize(c);
+    return { w:2 * BOX_PAD + b * bg.w + (b - 1) * BAG_GAP,
+             h:2 * BOX_PAD + bg.h };
+  }
+  /* 每一袋裡第 k 個點的位置（袋子左上角為原點）。 */
+  function dotAt(bagX, bagY, k){
+    return { x:bagX + BAG_PAD + DOT_R + (k % DOT_COLS) * DOT_DX,
+             y:bagY + BAG_PAD + DOT_R + Math.floor(k / DOT_COLS) * DOT_DY };
+  }
+  /* step 0 一整堆（沒有箱子）；step 1 分成大箱（點的位置和 step 2 完全一樣，
+     只是還沒畫小袋的框）；step 2 每箱再分成小袋。
+     ⚠️ step 1 和 step 2 的點在同一個位置是刻意的：孩子看到的是「同一堆點被框起來」，
+     不是「點又重新排了一次」。 */
+  function packPlan(cs, step){
+    var rects = [], dots = [], i, j, k, c = perBag(cs);
+    if (step <= 0){
+      var cols = Math.min(PILE_COLS, cs.t), rows = Math.ceil(cs.t / PILE_COLS);
+      var pw = (cols - 1) * PILE_DX + 2 * DOT_R, ph = (rows - 1) * PILE_DY + 2 * DOT_R;
+      var px = (FIG_W - pw) / 2, py = (FIG_H - ph) / 2;
+      for (i = 0; i < cs.t; i++){
+        dots.push({ x:px + DOT_R + (i % PILE_COLS) * PILE_DX,
+                    y:py + DOT_R + Math.floor(i / PILE_COLS) * PILE_DY });
+      }
+      return { w:FIG_W, h:FIG_H, step:0, rects:rects, dots:dots };
+    }
+    var bg = bagSize(c), bx = boxSize(cs.b, c);
+    var totalW = cs.a * bx.w + (cs.a - 1) * BOX_GAP;
+    var ox = (FIG_W - totalW) / 2, oy = (FIG_H - bx.h) / 2;
+    for (i = 0; i < cs.a; i++){
+      var boxX = ox + i * (bx.w + BOX_GAP);
+      rects.push({ kind:'box', x:boxX, y:oy, w:bx.w, h:bx.h });
+      for (j = 0; j < cs.b; j++){
+        var bagX = boxX + BOX_PAD + j * (bg.w + BAG_GAP), bagY = oy + BOX_PAD;
+        if (step >= 2) rects.push({ kind:'bag', x:bagX, y:bagY, w:bg.w, h:bg.h });
+        for (k = 0; k < c; k++) dots.push(dotAt(bagX, bagY, k));
+      }
+    }
+    return { w:FIG_W, h:FIG_H, step:step, rects:rects, dots:dots };
+  }
+
+  /* --- 算式的三種擺法。這一課的核心對照就是這三個字串與它們的值。 --- */
+  var EXPR_KEYS = ['chain', 'once', 'left'];
+  function exprText(key, t, a, b){
+    if (key === 'chain') return t + ' ÷ ' + a + ' ÷ ' + b;
+    if (key === 'once')  return t + ' ÷ (' + a + ' × ' + b + ')';
+    return t + ' ÷ ' + a + ' × ' + b;
+  }
+  function exprValue(key, t, a, b){
+    if (key === 'chain') return t / a / b;
+    if (key === 'once')  return t / (a * b);
+    return t / a * b;
+  }
+  /* 範例 3 用的那一批數字（和範例 1 的第一個案例同一批貨）。
+     ⚠️ 三個算式的值必須兩兩可分辨才教得動「擺法不一樣就是不同的算式」：
+     chain 和 once 刻意相等（那正是這一課的規則），left 一定要和它們不同 ——
+     b ＝ 1 的時候 left 會和 once 相等，所以 b 一律 ≥ 2。 */
+  var S3_T = 24, S3_A = 3, S3_B = 2;
+  var S3_QKEYS = ['bag', 'box'];
+  /* 哪一個算式在回答哪一個問題。chain 和 once 一起回答「一個小袋幾個」——
+     那正是這一課的規則；left 回答的是另一個問題。
+     ⚠️ 這張表不可以寫死成「第幾個算式」：它必須和 exprValue() 算出來的值一致，
+     設定檔會拿值重算一次再比對。 */
+  var S3_ANSWERS = { bag:['chain', 'once'], box:['left'] };
+
+  /* --- 範例 4：只有乘和除的算式，從左往右一步一步收合。 --- */
+  var S4_CASES = [
+    { id:'divmul', head:720, ops:[['/', 6], ['*', 4]] },
+    { id:'muldiv', head:24,  ops:[['*', 5], ['/', 8]] }
+  ];
+  var S4_STEPS = 3;   /* 0 還沒算、1 做完第一步、2 做完第二步 */
+  function opText(op){ return op === '*' ? ' × ' : ' ÷ '; }
+  /* stepValues[k] ＝ 做完前 k 步之後最左邊那個數（k ＝ 0 就是原來的頭）。 */
+  function stepValues(cs){
+    var v = cs.head, out = [v], i;
+    for (i = 0; i < cs.ops.length; i++){
+      v = (cs.ops[i][0] === '*') ? v * cs.ops[i][1] : v / cs.ops[i][1];
+      out.push(v);
+    }
+    return out;
+  }
+  function partialExpr(cs, k){
+    var vals = stepValues(cs), s = String(vals[k]), i;
+    for (i = k; i < cs.ops.length; i++) s += opText(cs.ops[i][0]) + cs.ops[i][1];
+    return s;
+  }
+  function fullExpr(cs){ return partialExpr(cs, 0); }
+  function exprAnswer(cs){ var v = stepValues(cs); return v[v.length - 1]; }
+
+  /* --- 範例 5：把一個大除數拆成兩個乘起來剛好是它的數。 --- */
+  var S5_T = 720, S5_D = 24;
+  var S5_SPLITS = [[4, 6], [3, 8], [2, 12]];
+  function splitSteps(pair){
+    /* t 和 d 也一起帶出去，字典裡就不會出現寫死的 720／24
+       （寫死的話，改了 S5_T 之後旁白會說謊而沒有人響）。 */
+    return { t:S5_T, d:S5_D, mid:S5_T / pair[0], end:S5_T / pair[0] / pair[1] };
+  }
+
+  /* --- 小遊戲的五關。選項的值與正解位置都寫在資料裡（固定順序，
+         這樣設定檔驗的和孩子看到的是同一份），正解位置刻意不集中在同一格。 --- */
+  var ROUNDS = [
+    { kind:'total', a:5, b:6,           opts:[11, 30, 36, 25],  ans:1 },
+    { kind:'chain', t:180, a:5, b:6,    opts:[36, 216, 6, 30],  ans:2 },
+    { kind:'once',  t:720, a:6, b:4,    opts:[480, 30, 72, 120], ans:1 },
+    { kind:'left',  t:600, a:5, b:2,    opts:[60, 120, 300, 240], ans:3 },
+    { kind:'split', t:864, d:24, pairs:[[4, 4], [4, 6], [8, 4], [12, 12]], ans:1 }
+  ];
+  /* 每一關的正解由這裡**算出來**，不是讀 ans —— ans 只用來排版。
+     兩者對不上的時候設定檔會響（這是「畫面上的正解 ＝ 算出來的正解」那一條斷言）。 */
+  function roundValue(r){
+    if (r.kind === 'total') return r.a * r.b;
+    if (r.kind === 'chain') return r.t / r.a / r.b;
+    if (r.kind === 'once')  return r.t / (r.a * r.b);
+    if (r.kind === 'left')  return r.t / r.a * r.b;
+    return null;                                  /* split 的答案是一組拆法，不是一個值 */
+  }
+  function roundAnswerIndex(r){
+    if (r.kind === 'split'){
+      for (var i = 0; i < r.pairs.length; i++) if (r.pairs[i][0] * r.pairs[i][1] === r.d) return i;
+      return -1;
+    }
+    return r.opts.indexOf(roundValue(r));
+  }
+  function roundOptCount(r){ return (r.kind === 'split') ? r.pairs.length : r.opts.length; }
+
+  /* --- 英文的單複數。只有 1 會錯，而且 box／class 這種字尾要加 es 不是 s
+         （放在語言無關的區塊，不放進 en 字典 —— 放進去會破 zh/en 的 key 對應）。 --- */
+  function plEn(n, w){
+    if (n === 1) return n + ' ' + w;
+    return n + ' ' + w + (/(s|x|z|ch|sh)$/.test(w) ? 'es' : 's');
+  }
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'教我連除與併式 — 分裝生產線', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（本頁）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'📦 分裝生產線',
+      sub:'分兩次分完，也可以一次分完 —— 連除與括號',
+      intro:'生產線上的貨要分兩次：先裝進<strong>大箱</strong>，每個大箱再分裝成<strong>小袋</strong>。<br>分兩次，就要除兩次 —— 可是聰明的作業員會<strong>一次就分完</strong>。<br>這一課教你怎麼把<strong>兩個除法併成一個算式</strong>，還有一件不加括號就會出錯的事。',
+      scopeNote:'這一課只<strong>算</strong>只有乘和除的兩步驟問題（<strong>算式裡的 ＋</strong> 只出現在兩個地方：「不可以把兩個除數加起來」那個對照，以及複習頁刻意夾進來的<strong>三年級交錯題</strong>；遊戲加減分的「＋20 分」不是算式）：<strong>連續除以兩個數</strong>（連除）、<strong>乘除混合</strong>、把兩個步驟<strong>併成一個算式</strong>，以及為什麼「除以兩個數的積」一定要<strong>加括號</strong>。<strong>括號要先算</strong>和<strong>先乘除後加減</strong>這兩條規則本身是<strong>三年級「兩步驟解題王」</strong>教的，這一課只<strong>複習一句</strong>當作前提（有加減混在一起的算式仍然在那一課）；<strong>交換律、結合律、分配律在五年級「運算律魔術師」</strong>；三位數 × 二位數的直式與<strong>試商</strong>在<strong>「乘除升級站」</strong>。⚠️ 這一課的每一步都<strong>除得剛剛好</strong>（沒有餘數）—— 有餘數的時候還要多想一件事：<strong>剩下的怎麼算</strong>。那不在這一課的範圍。這一課只用整數，不用小數，也不用負數。',
+      modeTitle:'今天想怎麼學？（隨時可以換）',
+      modes:{
+        ahead:  { icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：範例慢慢按，試題只出 6 題基礎題，遊戲會自動給提示。' },
+        school: { icon:'🏫', h:'跟上進度', p:'學校正在教，完整練習', banner:'跟上模式：完整 10 題，包含 4 題課本型文字題。' },
+        boost:  { icon:'💪', h:'補強練習', p:'學過但還不穩，加強', banner:'補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。' }
+      },
+      eb1:'範例教學 1', eb2:'範例教學 2', eb3:'範例教學 3', eb4:'範例教學 4', eb5:'範例教學 5', eb6:'試題', eb7:'小遊戲',
+      ebNext:'學完之後',
+
+      stepName:function(i){ return '步驟 ' + i; },
+      stepDone:'完成',
+      unknown:'？',
+
+      itemName:{ candy:'糖果', cookie:'餅乾', ball:'彈珠' },
+      itemUnit:{ candy:'顆', cookie:'片', ball:'顆' },
+
+      s1h2:'分兩次分完：除兩次',
+      s1lead:'先選一批貨，再一步一步按下去看它怎麼被分完。每一個<strong>大箱</strong>裝一樣多，每一個<strong>小袋</strong>也裝一樣多。',
+      s1chip:function(cs, d){ return cs.t + ' ' + d.itemUnit[cs.id] + d.itemName[cs.id]; },
+      s1cap:function(step){
+        if (step <= 0) return '一個點代表一件貨，這一堆就是還沒分的全部。';
+        if (step === 1) return '每一個大方框是一個大箱，每一箱裝的點一樣多。';
+        return '大方框裡的每一個小方框是一個小袋 —— 點沒有動，只是又被分了一次。';
+      },
+      s1narr:function(cs, step, d){
+        var u = d.itemUnit[cs.id], nm = d.itemName[cs.id];
+        if (step <= 0) return '一共 ' + cs.t + ' ' + u + nm + '，還沒分。要先裝成 ' + cs.a + ' 個大箱，每個大箱再分成 ' + cs.b + ' 個小袋。';
+        if (step === 1) return '先裝成 ' + cs.a + ' 個大箱，每箱一樣多：' + cs.t + ' ÷ ' + cs.a + ' ＝ ' + (cs.t / cs.a) + '，一個大箱 ' + (cs.t / cs.a) + ' ' + u + '。';
+        return '再把一個大箱的 ' + (cs.t / cs.a) + ' ' + u + '分成 ' + cs.b + ' 個小袋：' + (cs.t / cs.a) + ' ÷ ' + cs.b + ' ＝ ' + (cs.t / (cs.a * cs.b)) + '，一個小袋 ' + (cs.t / (cs.a * cs.b)) + ' ' + u + '。';
+      },
+      s1calc:function(cs, step){
+        if (step <= 0) return '';
+        if (step === 1) return cs.t + ' ÷ ' + cs.a + ' ＝ ' + (cs.t / cs.a);
+        return (cs.t / cs.a) + ' ÷ ' + cs.b + ' ＝ ' + (cs.t / (cs.a * cs.b));
+      },
+      s1result:function(cs, step, d){
+        var u = d.itemUnit[cs.id];
+        if (step <= 0) return '？';
+        if (step === 1) return '一個大箱 ' + (cs.t / cs.a) + ' ' + u;
+        return '一個小袋 ' + (cs.t / (cs.a * cs.b)) + ' ' + u;
+      },
+      s1note:'💬 分兩次就<strong>除兩次</strong>：第一次除以<strong>大箱的個數</strong>，算出「一個大箱幾個」；第二次除以<strong>每箱的小袋數</strong>，算出「一個小袋幾個」。⚠️ 第二次除的是<strong>第一次的答案</strong>，不是原來的總數。',
+
+      s2h2:'一次分完：除以「一共幾袋」',
+      s2lead:'同一批貨。這一次先不管大箱，直接問：<strong>一共有幾個小袋？</strong>',
+      s2step:function(i){ return ['① 一共幾袋', '② 一次除完', '③ 兩條路比一比'][i]; },
+      s2cap:'每一個小方框是一個小袋 —— 把每一箱的小袋數乘上大箱數，就是一共幾袋。',
+      s2narr:function(cs, step, d){
+        var u = d.itemUnit[cs.id], nb = cs.a * cs.b, per = cs.t / nb;
+        if (step <= 0) return cs.a + ' 個大箱，每個大箱 ' + cs.b + ' 個小袋，所以一共有 ' + cs.a + ' × ' + cs.b + ' ＝ ' + nb + ' 個小袋。';
+        if (step === 1) return cs.t + ' ' + u + '平分給 ' + nb + ' 個小袋：' + cs.t + ' ÷ ' + nb + ' ＝ ' + per + '，一個小袋 ' + per + ' ' + u + '。';
+        return '兩條路的答案一樣：' + cs.t + ' ÷ ' + cs.a + ' ÷ ' + cs.b + ' ＝ ' + cs.t + ' ÷ (' + cs.a + ' × ' + cs.b + ') ＝ ' + per + '。連續除以 ' + cs.a + ' 再除以 ' + cs.b + '，就是除以 ' + cs.a + ' × ' + cs.b + ' ＝ ' + nb + '。';
+      },
+      s2calc:function(cs, step){
+        var nb = cs.a * cs.b, per = cs.t / nb;
+        if (step <= 0) return cs.a + ' × ' + cs.b + ' ＝ ' + nb;
+        if (step === 1) return cs.t + ' ÷ ' + nb + ' ＝ ' + per;
+        return cs.t + ' ÷ ' + cs.a + ' ÷ ' + cs.b + ' ＝ ' + cs.t + ' ÷ (' + cs.a + ' × ' + cs.b + ') ＝ ' + per;
+      },
+      s2result:function(cs, step, d){
+        var u = d.itemUnit[cs.id], nb = cs.a * cs.b, per = cs.t / nb;
+        if (step <= 0) return '一共 ' + nb + ' 個小袋';
+        return '一個小袋 ' + per + ' ' + u;
+      },
+      s2note:'💬 <strong>連續除以兩個數，就是除以那兩個數的積</strong>。因為分成幾個大箱、每箱再分成幾個小袋之後，<strong>一共</strong>的袋數就是兩個數<strong>乘</strong>起來。⚠️ 是<strong>乘</strong>起來，不是加起來 —— 3 個大箱、每箱 2 個小袋，一共是 3 × 2 ＝ 6 袋。',
+
+      s3h2:'括號不見了，就變成另一個問題',
+      s3lead:'同樣是 24、3、2 這三個數，<strong>擺法不一樣就在問不一樣的事</strong>。選一個問題，看看哪一個算式在回答它。',
+      s3q:{
+        bag:'一個小袋幾顆？',
+        box:'把其中 2 個大箱搬走，搬走的一共幾顆？'
+      },
+      s3desc:{
+        chain:'連續除兩次：先分大箱，再分小袋',
+        once:'一次除完：除以「一共幾袋」',
+        left:'先除再乘：一個大箱幾顆，再乘 2 箱'
+      },
+      s3on:'✅ 在回答這個問題',
+      s3off:'❌ 在回答另一個問題',
+      s3narr:function(qkey){
+        if (qkey === 'bag') return '「一個小袋幾顆」要把 24 顆先分給 3 個大箱，再分給每箱的 2 個小袋，所以是<strong>連續除兩次</strong>：24 ÷ 3 ÷ 2 ＝ 4。也可以先算一共 3 × 2 ＝ 6 袋，寫成 24 ÷ (3 × 2) ＝ 4 —— 這<strong>兩個算式都對</strong>，答案一樣。';
+        return '「搬走的 2 個大箱一共幾顆」要先算一個大箱幾顆（24 ÷ 3 ＝ 8），再乘 2：24 ÷ 3 × 2 ＝ 16。這個算式<strong>沒有括號</strong>，所以先除再乘。';
+      },
+      s3calc:function(qkey){
+        if (qkey === 'bag') return '24 ÷ 3 ÷ 2 ＝ 24 ÷ (3 × 2) ＝ 4';
+        return '24 ÷ 3 × 2 ＝ 16';
+      },
+      s3result:function(qkey){
+        if (qkey === 'bag') return '一個小袋 4 顆';
+        return '2 個大箱一共 16 顆';
+      },
+      s3note:'💬 除號後面如果是<strong>一段乘法</strong>，一定要用<strong>括號</strong>把它括起來 —— 不加括號的話，先算的是<strong>除法</strong>，那一段乘法就不會先算。⚠️ 所以 24 ÷ (3 × 2) 和 24 ÷ 3 × 2 是<strong>兩個不同的算式</strong>。',
+
+      s4h2:'只有乘和除：從左往右一個一個算',
+      s4lead:'沒有括號、也沒有加減的時候，<strong>×</strong> 和 <strong>÷</strong> 是同一層。按下面的步驟看電腦怎麼算。',
+      s4chip:{ divmul:'720 ÷ 6 × 4', muldiv:'24 × 5 ÷ 8' },
+      s4step:function(i){ return ['① 還沒算', '② 第一步', '③ 第二步'][i]; },
+      s4narr:function(st, k){
+        if (k <= 0) return '算式是 ' + st.full + '。只有乘和除，所以從<strong>最左邊</strong>開始，一步一步往右算。';
+        if (k < st.n) return '第 ' + k + ' 步：最左邊是 ' + st.line + '。算式剩下 ' + st.part + '。';
+        return '第 ' + k + ' 步：' + st.line + '。算完了。';
+      },
+      s4calc:function(st, k){ return st.part; },
+      s4result:function(st, k){
+        if (k < st.n) return '？';
+        return st.full + ' ＝ ' + st.answer;
+      },
+      s4note:'💬 <strong>×</strong> 和 <strong>÷</strong> 是<strong>同一層</strong>，沒有「先乘後除」這回事 —— <strong>從左往右</strong>一個一個算。想改變算的順序，只能<strong>加括號</strong>。',
+
+      s5h2:'反過來用：把大除數拆成兩個小的',
+      s5lead:'「連續除兩次 ＝ 除以積」反過來讀，就是<strong>一個大除數可以拆成兩次小除法</strong>。選一種拆法看看。',
+      s5chip:function(pair){ return '拆成 ' + pair[0] + ' 和 ' + pair[1]; },
+      s5narr:function(pair, st){
+        return st.d + ' ＝ ' + pair[0] + ' × ' + pair[1] + '，所以 ' + st.t + ' ÷ ' + st.d + ' 可以先除以 ' + pair[0] + '，再除以 ' + pair[1] + '：' + st.t + ' ÷ ' + pair[0] + ' ＝ ' + st.mid + '，' + st.mid + ' ÷ ' + pair[1] + ' ＝ ' + st.end + '。';
+      },
+      s5calc:function(pair, st){
+        return st.t + ' ÷ ' + st.d + ' ＝ ' + st.t + ' ÷ ' + pair[0] + ' ÷ ' + pair[1] + ' ＝ ' + st.end;
+      },
+      s5result:function(pair, st){ return '每一種拆法都算出 ' + st.t + ' ÷ ' + st.d + ' ＝ ' + st.end; },
+      s5note:'💬 拆出來的兩個數<strong>乘起來要剛好是原來的除數</strong>（4 × 6 ＝ 24），這樣才可以連續除兩次。拆得好的話兩次除法都好算，這是除數兩位數時<strong>除了試商以外</strong>另一條走得通的路。⚠️ 乘起來不是原來那個除數的拆法，除的就<strong>不是同一個數</strong>了。',
+
+      s6h2:'檢查一下',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      cAll:'全對！生產線可以交給你了 🏆',
+      cGood:'不錯，錯的那幾題看一下說明。',
+      cTry:'先回上面的範例，把每一組步驟都按過一次再回來。',
+
+      qs:[
+        { stem:'一批貨分成 <strong>6 個大箱</strong>，每個大箱再分成 <strong>4 個小袋</strong>。一共有幾個小袋？',
+          opts:['10', '24', '36', '2'], ans:1,
+          why:'每一個大箱都有 4 個小袋，6 個大箱就是 6 × 4 ＝ 24 個小袋。加起來的 10 和相減的 2 都不是袋數；36 是把「每箱 4 袋」看成 6 袋（6 × 6）算出來的。' },
+        { stem:'<strong>480 ÷ 6 ÷ 4</strong> ＝ ?',
+          opts:['20', '320', '48', '80'], ans:0,
+          why:'從左往右：480 ÷ 6 ＝ 80，80 ÷ 4 ＝ 20。80 是只做了第一步；320 是把第二個除號看成乘號（480 ÷ 6 × 4）；48 是把 6 和 4 加起來當除數（480 ÷ 10），可是連續除兩次要用<strong>乘</strong>起來的 24。' },
+        { stem:'哪一個算式和 <strong>480 ÷ 6 ÷ 4</strong> 一樣？',
+          opts:['480 ÷ (6 ＋ 4)', '480 × 6 ÷ 4', '480 ÷ (6 × 4)', '480 ÷ 6 × 4'], ans:2,
+          why:'連續除以 6 再除以 4，就是除以 6 × 4 ＝ 24，所以是 480 ÷ (6 × 4)，兩個都算出 20。要用<strong>乘</strong>起來的 24，不是加起來的 10；沒有括號的 480 ÷ 6 × 4 會先除再乘，答案是 320。' },
+        { stem:'<strong>720 ÷ (8 × 3)</strong> 這個算式，要<strong>先算</strong>哪一步？',
+          opts:['720 ÷ 8', '8 × 3', '720 ÷ 3', '720 × 8'], ans:1,
+          why:'括號裡面的先算，所以先算 8 × 3 ＝ 24，再算 720 ÷ 24 ＝ 30。括號就是為了讓那一段乘法先算才寫的 —— 沒有它的話先算的會是 720 ÷ 8。' },
+        { stem:'<strong>600 ÷ 5 × 2</strong> ＝ ?',
+          opts:['300', '60', '240', '120'], ans:2,
+          why:'只有乘和除，從左往右：600 ÷ 5 ＝ 120，120 × 2 ＝ 240。120 是只做了第一步；60 是先算 5 × 2 ＝ 10 再除（那要寫成 600 ÷ (5 × 2) 才對）；300 是只除了 2。' },
+        { stem:'<strong>960 ÷ 32</strong> 想拆成連續除兩次。哪一個是對的？',
+          opts:['960 ÷ 4 ÷ 8', '960 ÷ 4 ÷ 4', '960 ÷ 30 ÷ 2', '960 ÷ 8 ÷ 8'], ans:0,
+          why:'拆出來的兩個數乘起來要<strong>剛好是 32</strong>：4 × 8 ＝ 32，所以 960 ÷ 32 ＝ 960 ÷ 4 ÷ 8 ＝ 30。另外三個乘起來是 4 × 4 ＝ 16、30 × 2 ＝ 60、8 × 8 ＝ 64，都不是 32。' }
+      ],
+      qsAdv:[
+        { stem:'864 顆蛋要裝箱：先<strong>平均</strong>裝成 <strong>12 箱</strong>，每箱再<strong>平均</strong>分成 <strong>6 盒</strong>。一盒幾顆蛋？',
+          opts:['432', '12', '72', '48'], ans:1,
+          why:'先算一箱幾顆：864 ÷ 12 ＝ 72；再分成 6 盒：72 ÷ 6 ＝ 12。併成一個算式是 864 ÷ (12 × 6) ＝ 12。72 是只做了第一步；48 是把 12 和 6 加起來當除數；432 是把第二步的除號看成乘號。' },
+        { stem:'720 個麵包，<strong>每盒裝 6 個</strong>，<strong>每箱裝 5 盒</strong>。可以裝滿幾箱？',
+          opts:['120', '600', '24', '144'], ans:2,
+          why:'一箱裝的個數是 6 × 5 ＝ 30，所以 720 ÷ (6 × 5) ＝ 720 ÷ 30 ＝ 24 箱。也可以分兩步：720 ÷ 6 ＝ 120 盒，120 ÷ 5 ＝ 24 箱。120 是盒數不是箱數；144 是只除了 5。' },
+        { stem:'一箱有 <strong>24 瓶</strong>果汁，買了 <strong>4 箱</strong>，要平分給 <strong>6 個班</strong>。一個班分到幾瓶？',
+          opts:['16', '96', '4', '576'], ans:0,
+          why:'先算一共幾瓶：24 × 4 ＝ 96；再平分給 6 個班：96 ÷ 6 ＝ 16。併成一個算式是 24 × 4 ÷ 6 ＝ 16。96 是只做了第一步；4 是只用一箱去分（24 ÷ 6）；576 是把最後的除號看成乘號。' },
+        { stem:'一箱 <strong>24 瓶</strong>，買 <strong>4 箱</strong>，平分給 <strong>6 個班</strong>。下面哪一個併式算得出「一個班幾瓶」？',
+          opts:['24 ÷ (4 × 6)', '24 × 4 × 6', '24 × 4 ÷ 6', '24 ÷ 4 × 6'], ans:2,
+          why:'要先把總瓶數乘出來（24 × 4），再除以班數 6，所以是 24 × 4 ÷ 6 ＝ 16。24 × 4 × 6 算的是「6 倍的總瓶數」；另外兩個都在拿一箱的瓶數去除，不是總瓶數。' }
+      ],
+      qsBoost:[
+        { stem:'小明說：「<strong>480 ÷ 6 ÷ 4</strong> 就是 <strong>480 ÷ 10</strong>。」他哪裡想錯了？',
+          opts:['連續除以 6 再除以 4，是除以 6 × 4 ＝ 24，不是除以 10', '他沒有錯，兩個算式一樣', '應該寫成 480 ÷ 6 × 4', '應該先算 480 ÷ 4'], ans:0,
+          why:'分成 6 份、每份再分成 4 份，一共分成 6 × 4 ＝ 24 份 —— 袋數是<strong>乘</strong>出來的，不是加出來的。480 ÷ 6 ÷ 4 ＝ 20，480 ÷ 10 ＝ 48，不一樣。' },
+        { stem:'<strong>720 ÷ 6 × 4</strong> ＝ ?',
+          opts:['30', '120', '480', '4320'], ans:2,
+          why:'只有乘和除就從左往右：720 ÷ 6 ＝ 120，120 × 4 ＝ 480。想要先算 6 × 4 的話，一定要寫成 720 ÷ (6 × 4)，那個算式的答案是 30 —— 兩個算式不一樣。4320 是把除號也看成乘號。' }
+      ],
+
+      s7h2:'生產線接單',
+      s7lead:'五張工單。每一張先問自己：<strong>這是在問一共幾袋、每袋幾個，還是在問算式怎麼寫？</strong>',
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gPrompt:{
+        total:function(r){ return '工單：一批貨要裝成 <b>' + r.a + ' 個大箱</b>，每個大箱再分成 <b>' + r.b + ' 個小袋</b>。一共有幾個小袋？'; },
+        chain:function(r){ return '工單：<b>' + r.t + ' 件</b>貨<strong>平均</strong>裝成 <b>' + r.a + ' 個大箱</b>，每箱再<strong>平均</strong>分成 <b>' + r.b + ' 個小袋</b>。一個小袋幾件？'; },
+        once:function(r){ return '工單：算出 <b>' + r.t + ' ÷ (' + r.a + ' × ' + r.b + ')</b> 是多少。'; },
+        left:function(r){ return '工單：算出 <b>' + r.t + ' ÷ ' + r.a + ' × ' + r.b + '</b> 是多少。'; },
+        split:function(r){ return '工單：<b>' + r.t + ' ÷ ' + r.d + '</b> 要拆成連續除兩次。哪一個拆法是對的？'; }
+      },
+      gHint1:{
+        total:'袋數是<strong>乘</strong>出來的，不是加出來的。',
+        chain:'除兩次：第二次除的是第一次的答案。',
+        once:'括號裡面的先算。',
+        left:'沒有括號，就從左往右一個一個算。',
+        split:'拆出來的兩個數<strong>乘起來</strong>要剛好是原來的除數。'
+      },
+      gHint2:{
+        total:function(r){ return '每一箱 ' + r.b + ' 袋，' + r.a + ' 箱就是 ' + r.a + ' × ' + r.b + ' 袋。'; },
+        chain:function(r){ return r.t + ' ÷ ' + r.a + ' ＝ ' + (r.t / r.a) + '，再 ÷ ' + r.b + '。'; },
+        once:function(r){ return '先算 ' + r.a + ' × ' + r.b + ' ＝ ' + (r.a * r.b) + '，再拿 ' + r.t + ' 去除它。'; },
+        left:function(r){ return '先算 ' + r.t + ' ÷ ' + r.a + ' ＝ ' + (r.t / r.a) + '，再乘 ' + r.b + '。'; },
+        split:function(r){ return '把每一個拆法的兩個數乘起來，看哪一個剛好是 ' + r.d + '。'; }
+      },
+      gOptText:function(r, i){
+        if (r.kind === 'split') return r.t + ' ÷ ' + r.pairs[i][0] + ' ÷ ' + r.pairs[i][1];
+        return String(r.opts[i]);
+      },
+      gCorrectFirst:'✅ 工單完成！＋20 分',
+      gCorrectRetry:'✅ 這次對了！＋10 分',
+      gWrong:function(lost){ return '❌ 再想一次是乘還是除。－' + lost + ' 分'; },
+      gClear:'按「下一關」接下一張工單。',
+      gWin:function(s){ return '🏆 五張工單全部完成！總分 ' + s + ' 分。'; },
+
+      nextH2:'把它記牢的三個動作',
+      next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
+      next3:'❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
+      footer:'把整頁縮成一句：<strong>連續除以兩個數，就是除以那兩個數的積</strong>；併成一個算式時，除號後面那一段乘法一定要<strong>加括號</strong>；只有乘和除的算式<strong>從左往右</strong>算；反過來，一個大除數可以拆成兩次小除法。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Teach Me Chained Division — The Packing Line', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (this page)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'📦 The Packing Line',
+      sub:'Share it out twice, or all at once — chained division and brackets',
+      intro:'On the packing line a load is shared out twice: first into <strong>big boxes</strong>, then each big box into <strong>small bags</strong>.<br>Two sharings mean two divisions — but a clever packer does it <strong>in one go</strong>.<br>This lesson shows how to <strong>join two divisions into one expression</strong>, and the one thing that goes wrong without brackets.',
+      scopeNote:'This lesson only <strong>works out</strong> two-step problems with nothing but × and ÷ (a + sign inside an expression turns up in just two places: the "do not add the two divisors" comparison, and the deliberate grade-3 interleaving question on the review page; the +20 points in the game is not an expression): <strong>dividing by two numbers in a row</strong> (chained division), <strong>mixing × and ÷</strong>, joining the two steps into <strong>one expression</strong>, and why "divide by the product of two numbers" always needs <strong>brackets</strong>. The rules <strong>brackets first</strong> and <strong>× and ÷ before + and −</strong> are taught in the <strong>grade-3 two-step lesson</strong>; here they are only <strong>recalled in one sentence</strong> as a starting point (expressions that also contain + and − stay in that lesson). The <strong>commutative, associative and distributive laws are grade 5</strong>; long multiplication and <strong>guessing a quotient digit</strong> are in the <strong>grade-4 multiplication and division lesson</strong>. ⚠️ Every step in this lesson <strong>divides exactly</strong>, with no remainder — once there is a remainder there is also something left over to keep track of, and that is not part of this lesson. Whole numbers only: no decimals and no negative numbers.',
+      modeTitle:'How do you want to learn today? (you can switch any time)',
+      modes:{
+        ahead:  { icon:'🚀', h:'Getting ahead', p:'Not taught yet, first look', banner:'Ahead mode: take the examples slowly, only 6 basic questions, and the game gives a hint straight away.' },
+        school: { icon:'🏫', h:'Keeping up', p:'Being taught now, full practice', banner:'Keeping-up mode: all 10 questions, including 4 textbook-style word problems.' },
+        boost:  { icon:'💪', h:'Extra practice', p:'Taught but still shaky', banner:'Boost mode: 2 misconception checks first, 12 questions in total; then go to the review challenge.' }
+      },
+      eb1:'Example 1', eb2:'Example 2', eb3:'Example 3', eb4:'Example 4', eb5:'Example 5', eb6:'Questions', eb7:'Mini game',
+      ebNext:'After the lesson',
+
+      stepName:function(i){ return 'Step ' + i; },
+      stepDone:'Done',
+      unknown:'?',
+
+      itemName:{ candy:'sweet', cookie:'biscuit', ball:'marble' },
+      /* 英文沒有量詞，所以這一欄是空的；數量和名詞由 plEn() 接起來。 */
+      itemUnit:{ candy:'', cookie:'', ball:'' },
+
+      s1h2:'Sharing out twice means dividing twice',
+      s1lead:'Pick a load, then press through the steps to watch it being shared out. Every <strong>big box</strong> holds the same amount, and so does every <strong>small bag</strong>.',
+      s1chip:function(cs, d){ return plEn(cs.t, d.itemName[cs.id]); },
+      s1cap:function(step){
+        if (step <= 0) return 'One dot is one item, and this pile is all of them before any sharing.';
+        if (step === 1) return 'Each big rectangle is one big box, and every box holds the same number of dots.';
+        return 'Each small rectangle inside a big box is one small bag — the dots have not moved, they have just been grouped again.';
+      },
+      s1narr:function(cs, step, d){
+        var nm = d.itemName[cs.id], q1 = cs.t / cs.a, c = cs.t / (cs.a * cs.b);
+        if (step <= 0) return 'There are ' + plEn(cs.t, nm) + ' altogether, not shared out yet. First they go into ' + plEn(cs.a, 'big box') + ', and each big box is then split into ' + plEn(cs.b, 'small bag') + '.';
+        if (step === 1) return 'First into ' + plEn(cs.a, 'big box') + ', the same amount in each: ' + cs.t + ' ÷ ' + cs.a + ' = ' + q1 + ', so one big box holds ' + plEn(q1, nm) + '.';
+        return 'Now the ' + plEn(q1, nm) + ' in one big box are split into ' + plEn(cs.b, 'small bag') + ': ' + q1 + ' ÷ ' + cs.b + ' = ' + c + ', so one small bag holds ' + plEn(c, nm) + '.';
+      },
+      s1calc:function(cs, step){
+        if (step <= 0) return '';
+        if (step === 1) return cs.t + ' ÷ ' + cs.a + ' = ' + (cs.t / cs.a);
+        return (cs.t / cs.a) + ' ÷ ' + cs.b + ' = ' + (cs.t / (cs.a * cs.b));
+      },
+      s1result:function(cs, step, d){
+        var nm = d.itemName[cs.id];
+        if (step <= 0) return '?';
+        if (step === 1) return 'One big box: ' + plEn(cs.t / cs.a, nm);
+        return 'One small bag: ' + plEn(cs.t / (cs.a * cs.b), nm);
+      },
+      s1note:'💬 Two sharings mean <strong>two divisions</strong>: divide by the <strong>number of big boxes</strong> first to get "how many in one big box", then by the <strong>number of bags in a box</strong> to get "how many in one small bag". ⚠️ The second division works on the <strong>answer to the first one</strong>, not on the original total.',
+
+      s2h2:'All at once: divide by "how many bags altogether"',
+      s2lead:'The same load. This time forget the big boxes and ask straight away: <strong>how many small bags are there?</strong>',
+      s2step:function(i){ return ['① Bags altogether', '② Divide in one go', '③ Compare the two routes'][i]; },
+      s2cap:'Each small rectangle is one small bag — multiply the bags in one box by the number of boxes to get the total number of bags.',
+      s2narr:function(cs, step, d){
+        var nm = d.itemName[cs.id], nb = cs.a * cs.b, per = cs.t / nb;
+        if (step <= 0) return plEn(cs.a, 'big box') + ', each holding ' + plEn(cs.b, 'small bag') + ', so there are ' + cs.a + ' × ' + cs.b + ' = ' + nb + ' small bags altogether.';
+        if (step === 1) return 'The ' + plEn(cs.t, nm) + ' are shared equally between the ' + nb + ' small bags: ' + cs.t + ' ÷ ' + nb + ' = ' + per + ', so one small bag holds ' + plEn(per, nm) + '.';
+        return 'Both routes give the same answer: ' + cs.t + ' ÷ ' + cs.a + ' ÷ ' + cs.b + ' = ' + cs.t + ' ÷ (' + cs.a + ' × ' + cs.b + ') = ' + per + '. Dividing by ' + cs.a + ' and then by ' + cs.b + ' is dividing by ' + cs.a + ' × ' + cs.b + ' = ' + nb + '.';
+      },
+      s2calc:function(cs, step){
+        var nb = cs.a * cs.b, per = cs.t / nb;
+        if (step <= 0) return cs.a + ' × ' + cs.b + ' = ' + nb;
+        if (step === 1) return cs.t + ' ÷ ' + nb + ' = ' + per;
+        return cs.t + ' ÷ ' + cs.a + ' ÷ ' + cs.b + ' = ' + cs.t + ' ÷ (' + cs.a + ' × ' + cs.b + ') = ' + per;
+      },
+      s2result:function(cs, step, d){
+        var nm = d.itemName[cs.id], nb = cs.a * cs.b, per = cs.t / nb;
+        if (step <= 0) return nb + ' small bags altogether';
+        return 'One small bag: ' + plEn(per, nm);
+      },
+      s2note:'💬 <strong>Dividing by two numbers in a row is dividing by their product</strong>. Once a load is split into big boxes and each box into small bags, the <strong>total</strong> number of bags is the two numbers <strong>multiplied</strong> together. ⚠️ Multiplied, <strong>not added</strong> — 3 big boxes with 2 small bags each is 3 × 2 = 6 bags.',
+
+      s3h2:'Take the brackets away and the question changes',
+      s3lead:'The same three numbers — 24, 3 and 2 — <strong>arranged differently ask different things</strong>. Pick a question and see which expression answers it.',
+      s3q:{
+        bag:'How many sweets are in one small bag?',
+        box:'Two of the big boxes are carried away. How many sweets go with them?'
+      },
+      s3desc:{
+        chain:'Divide twice: into big boxes, then into small bags',
+        once:'Divide in one go: by "how many bags altogether"',
+        left:'Divide then multiply: one big box, then times 2 boxes'
+      },
+      s3on:'✅ answers this question',
+      s3off:'❌ answers the other question',
+      s3narr:function(qkey){
+        if (qkey === 'bag') return '"How many in one small bag" shares the 24 sweets between 3 big boxes and then between the 2 small bags in each box, so it is <strong>two divisions in a row</strong>: 24 ÷ 3 ÷ 2 = 4. You can also work out that there are 3 × 2 = 6 bags altogether and write 24 ÷ (3 × 2) = 4 — <strong>both expressions are right</strong> and give the same answer.';
+        return '"How many sweets go with the 2 big boxes" needs one big box first (24 ÷ 3 = 8) and then a multiplication by 2: 24 ÷ 3 × 2 = 16. This expression has <strong>no brackets</strong>, so it divides first and multiplies second.';
+      },
+      s3calc:function(qkey){
+        if (qkey === 'bag') return '24 ÷ 3 ÷ 2 = 24 ÷ (3 × 2) = 4';
+        return '24 ÷ 3 × 2 = 16';
+      },
+      s3result:function(qkey){
+        if (qkey === 'bag') return 'One small bag: 4 sweets';
+        return '2 big boxes: 16 sweets';
+      },
+      s3note:'💬 If a <strong>multiplication</strong> follows the division sign, it always needs <strong>brackets</strong> around it — without them the <strong>division</strong> happens first and that multiplication does not. ⚠️ So 24 ÷ (3 × 2) and 24 ÷ 3 × 2 are <strong>two different expressions</strong>.',
+
+      s4h2:'Only × and ÷: work from left to right',
+      s4lead:'With no brackets and no + or −, <strong>×</strong> and <strong>÷</strong> sit on the same level. Press through the steps to see how it is worked out.',
+      s4chip:{ divmul:'720 ÷ 6 × 4', muldiv:'24 × 5 ÷ 8' },
+      s4step:function(i){ return ['① Not started', '② Step 1', '③ Step 2'][i]; },
+      s4narr:function(st, k){
+        if (k <= 0) return 'The expression is ' + st.full + '. It has nothing but × and ÷, so start at the <strong>far left</strong> and take one step at a time to the right.';
+        if (k < st.n) return 'Step ' + k + ': the leftmost part is ' + st.line + '. That leaves ' + st.part + '.';
+        return 'Step ' + k + ': ' + st.line + '. Finished.';
+      },
+      s4calc:function(st, k){ return st.part; },
+      s4result:function(st, k){
+        if (k < st.n) return '?';
+        return st.full + ' = ' + st.answer;
+      },
+      s4note:'💬 <strong>×</strong> and <strong>÷</strong> are on the <strong>same level</strong>; there is no "multiply before divide" rule — go <strong>left to right</strong>, one step at a time. The only way to change the order is to <strong>add brackets</strong>.',
+
+      s5h2:'The other way round: split a big divisor into two small ones',
+      s5lead:'Read "two divisions in a row = divide by the product" backwards and it says <strong>one big divisor can be split into two small divisions</strong>. Pick a split.',
+      s5chip:function(pair){ return 'Split into ' + pair[0] + ' and ' + pair[1]; },
+      s5narr:function(pair, st){
+        return st.d + ' = ' + pair[0] + ' × ' + pair[1] + ', so ' + st.t + ' ÷ ' + st.d + ' can divide by ' + pair[0] + ' first and then by ' + pair[1] + ': ' + st.t + ' ÷ ' + pair[0] + ' = ' + st.mid + ', and ' + st.mid + ' ÷ ' + pair[1] + ' = ' + st.end + '.';
+      },
+      s5calc:function(pair, st){
+        return st.t + ' ÷ ' + st.d + ' = ' + st.t + ' ÷ ' + pair[0] + ' ÷ ' + pair[1] + ' = ' + st.end;
+      },
+      s5result:function(pair, st){ return 'Every split gives the same answer: ' + st.t + ' ÷ ' + st.d + ' = ' + st.end; },
+      s5note:'💬 The two numbers you split into must <strong>multiply back to the original divisor</strong> (4 × 6 = 24) before you can divide twice in a row. Split it well and both divisions are easy — a second way through a two-digit divisor <strong>besides guessing the quotient digit</strong>. ⚠️ A split whose numbers do not multiply back to that divisor is dividing by <strong>a different number</strong>.',
+
+      s6h2:'Check yourself',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      cAll:'All correct! The packing line is yours 🏆',
+      cGood:'Nicely done — read the explanations for the ones you missed.',
+      cTry:'Go back to the examples above and press through every set of steps, then come back.',
+
+      qs:[
+        { stem:'A load goes into <strong>6 big boxes</strong>, and each big box is then split into <strong>4 small bags</strong>. How many small bags are there altogether?',
+          opts:['10', '24', '36', '2'], ans:1,
+          why:'Every big box holds 4 small bags, so 6 big boxes hold 6 × 4 = 24 small bags. Adding gives 10 and subtracting gives 2, and neither is a number of bags; 36 comes from reading "4 bags in a box" as 6 bags (6 × 6).' },
+        { stem:'<strong>480 ÷ 6 ÷ 4</strong> = ?',
+          opts:['20', '320', '48', '80'], ans:0,
+          why:'Left to right: 480 ÷ 6 = 80, then 80 ÷ 4 = 20. 80 is only the first step; 320 reads the second ÷ as a × (480 ÷ 6 × 4); 48 adds 6 and 4 to get the divisor (480 ÷ 10), but two divisions in a row use the <strong>product</strong>, 24.' },
+        { stem:'Which expression is the same as <strong>480 ÷ 6 ÷ 4</strong>?',
+          opts:['480 ÷ (6 + 4)', '480 × 6 ÷ 4', '480 ÷ (6 × 4)', '480 ÷ 6 × 4'], ans:2,
+          why:'Dividing by 6 and then by 4 is dividing by 6 × 4 = 24, so it is 480 ÷ (6 × 4), and both come to 20. The divisor is the <strong>product</strong> 24, not the sum 10; without brackets 480 ÷ 6 × 4 divides then multiplies and comes to 320.' },
+        { stem:'In <strong>720 ÷ (8 × 3)</strong>, which step comes <strong>first</strong>?',
+          opts:['720 ÷ 8', '8 × 3', '720 ÷ 3', '720 × 8'], ans:1,
+          why:'What is inside the brackets goes first, so 8 × 3 = 24 and then 720 ÷ 24 = 30. The brackets are written for exactly that reason — without them the first step would be 720 ÷ 8.' },
+        { stem:'<strong>600 ÷ 5 × 2</strong> = ?',
+          opts:['300', '60', '240', '120'], ans:2,
+          why:'Nothing but × and ÷, so left to right: 600 ÷ 5 = 120, then 120 × 2 = 240. 120 is only the first step; 60 works out 5 × 2 = 10 first, which would have to be written 600 ÷ (5 × 2); 300 only divides by 2.' },
+        { stem:'<strong>960 ÷ 32</strong> is to be split into two divisions in a row. Which one is right?',
+          opts:['960 ÷ 4 ÷ 8', '960 ÷ 4 ÷ 4', '960 ÷ 30 ÷ 2', '960 ÷ 8 ÷ 8'], ans:0,
+          why:'The two numbers must multiply back to <strong>exactly 32</strong>: 4 × 8 = 32, so 960 ÷ 32 = 960 ÷ 4 ÷ 8 = 30. The other three multiply to 4 × 4 = 16, 30 × 2 = 60 and 8 × 8 = 64, none of which is 32.' }
+      ],
+      qsAdv:[
+        { stem:'864 eggs are packed: shared <strong>equally</strong> into <strong>12 crates</strong> first, then each crate split <strong>equally</strong> into <strong>6 trays</strong>. How many eggs are in one tray?',
+          opts:['432', '12', '72', '48'], ans:1,
+          why:'One crate first: 864 ÷ 12 = 72; then into 6 trays: 72 ÷ 6 = 12. As one expression that is 864 ÷ (12 × 6) = 12. 72 is only the first step; 48 adds 12 and 6 to get the divisor; 432 reads the second ÷ as a ×.' },
+        { stem:'720 bread rolls. <strong>6 go in a box</strong> and <strong>5 boxes go in a crate</strong>. How many crates can be filled?',
+          opts:['120', '600', '24', '144'], ans:2,
+          why:'One crate holds 6 × 5 = 30 rolls, so 720 ÷ (6 × 5) = 720 ÷ 30 = 24 crates. In two steps: 720 ÷ 6 = 120 boxes, then 120 ÷ 5 = 24 crates. 120 counts boxes, not crates; 144 only divides by 5.' },
+        { stem:'A crate holds <strong>24 bottles</strong> of juice. <strong>4 crates</strong> are bought and shared equally between <strong>6 classes</strong>. How many bottles does one class get?',
+          opts:['16', '96', '4', '576'], ans:0,
+          why:'The total first: 24 × 4 = 96 bottles; then between 6 classes: 96 ÷ 6 = 16. As one expression that is 24 × 4 ÷ 6 = 16. 96 is only the first step; 4 shares out a single crate (24 ÷ 6); 576 reads the last ÷ as a ×.' },
+        { stem:'A crate holds <strong>24 bottles</strong>, <strong>4 crates</strong> are bought, and they are shared equally between <strong>6 classes</strong>. Which single expression works out the bottles per class?',
+          opts:['24 ÷ (4 × 6)', '24 × 4 × 6', '24 × 4 ÷ 6', '24 ÷ 4 × 6'], ans:2,
+          why:'Multiply up to the total number of bottles first (24 × 4) and then divide by the 6 classes, so it is 24 × 4 ÷ 6 = 16. 24 × 4 × 6 works out six times the total; the other two divide a single crate instead of the total.' }
+      ],
+      qsBoost:[
+        { stem:'Ming says: "<strong>480 ÷ 6 ÷ 4</strong> is just <strong>480 ÷ 10</strong>." What has he got wrong?',
+          opts:['Dividing by 6 and then by 4 is dividing by 6 × 4 = 24, not by 10', 'Nothing is wrong; the two expressions are the same', 'It should be written 480 ÷ 6 × 4', 'He should work out 480 ÷ 4 first'], ans:0,
+          why:'Splitting into 6 parts and then each part into 4 gives 6 × 4 = 24 parts altogether — the number of bags is <strong>multiplied</strong>, never added. 480 ÷ 6 ÷ 4 = 20 while 480 ÷ 10 = 48, so they are not the same.' },
+        { stem:'<strong>720 ÷ 6 × 4</strong> = ?',
+          opts:['30', '120', '480', '4320'], ans:2,
+          why:'Nothing but × and ÷ means left to right: 720 ÷ 6 = 120, then 120 × 4 = 480. To work out 6 × 4 first you must write 720 ÷ (6 × 4), and that expression comes to 30 — the two are not the same. 4320 reads the ÷ as a × as well.' }
+      ],
+
+      s7h2:'Orders on the packing line',
+      s7lead:'Five order slips. For each one ask yourself first: <strong>is this about bags altogether, about how many in a bag, or about how the expression is written?</strong>',
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
+      gHintBtn:'💡 Hint', gNextBtn:'Next order', gRestartBtn:'Start again',
+      gPrompt:{
+        total:function(r){ return 'Order: a load goes into <b>' + plEn(r.a, 'big box') + '</b>, and each big box into <b>' + plEn(r.b, 'small bag') + '</b>. How many small bags altogether?'; },
+        chain:function(r){ return 'Order: <b>' + plEn(r.t, 'item') + '</b> are shared <strong>equally</strong> into <b>' + plEn(r.a, 'big box') + '</b>, and each box <strong>equally</strong> into <b>' + plEn(r.b, 'small bag') + '</b>. How many in one small bag?'; },
+        once:function(r){ return 'Order: work out <b>' + r.t + ' ÷ (' + r.a + ' × ' + r.b + ')</b>.'; },
+        left:function(r){ return 'Order: work out <b>' + r.t + ' ÷ ' + r.a + ' × ' + r.b + '</b>.'; },
+        split:function(r){ return 'Order: <b>' + r.t + ' ÷ ' + r.d + '</b> is to be split into two divisions in a row. Which split is right?'; }
+      },
+      gHint1:{
+        total:'The number of bags is <strong>multiplied</strong>, not added.',
+        chain:'Divide twice: the second division works on the first answer.',
+        once:'What is inside the brackets goes first.',
+        left:'No brackets, so go left to right one step at a time.',
+        split:'The two numbers must <strong>multiply back</strong> to the original divisor.'
+      },
+      gHint2:{
+        total:function(r){ return 'Each box holds ' + r.b + ' bags, so ' + r.a + ' boxes hold ' + r.a + ' × ' + r.b + ' bags.'; },
+        chain:function(r){ return r.t + ' ÷ ' + r.a + ' = ' + (r.t / r.a) + ', then ÷ ' + r.b + '.'; },
+        once:function(r){ return 'Work out ' + r.a + ' × ' + r.b + ' = ' + (r.a * r.b) + ' first, then divide ' + r.t + ' by it.'; },
+        left:function(r){ return 'Work out ' + r.t + ' ÷ ' + r.a + ' = ' + (r.t / r.a) + ' first, then multiply by ' + r.b + '.'; },
+        split:function(r){ return 'Multiply the two numbers in each split and see which one comes to ' + r.d + '.'; }
+      },
+      gOptText:function(r, i){
+        if (r.kind === 'split') return r.t + ' ÷ ' + r.pairs[i][0] + ' ÷ ' + r.pairs[i][1];
+        return String(r.opts[i]);
+      },
+      gCorrectFirst:'✅ Order filled! +20 points',
+      gCorrectRetry:'✅ Right this time! +10 points',
+      gWrong:function(lost){ return '❌ Think again: multiply or divide? −' + lost + ' points'; },
+      gClear:'Press “Next order” for the next slip.',
+      gWin:function(s){ return '🏆 All five orders filled! Final score ' + s + '.'; },
+
+      nextH2:'Three things that make it stick',
+      next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it out for your desk.',
+      next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering it a day later is what counts.',
+      next3:'❓ Anything unclear, ask a grown-up or an AI teacher until it makes sense — asking questions is the fastest way to learn.',
+      footer:'The whole page in one line: <strong>dividing by two numbers in a row is dividing by their product</strong>; when you join the steps into one expression, a multiplication after the ÷ sign always needs <strong>brackets</strong>; an expression with nothing but × and ÷ goes <strong>left to right</strong>; and read backwards, one big divisor can be split into two small divisions.'
+    }
+  };
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
+  var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function buildModeCards(){
+    var d = L();
+    modeCards.textContent = '';
+    ['ahead','school','boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+  function buildChips(host, items, cur, labelOf, onPick){
+    host.textContent = '';
+    items.forEach(function(it, i){
+      var b = makeChip(labelOf(it, i), i === cur);
+      b.addEventListener('click', function(){ onPick(i); });
+      host.appendChild(b);
+    });
+  }
+
+  /* --- 畫圖。座標全部來自上面 packPlan() 那個**純資料**函式，這裡一律不重算。
+         圖上只有 rect 和 circle —— 沒有任何文字。 --- */
+  var BOX_FILL = 'rgba(232,135,30,.10)', BOX_EDGE = '#E8871E';
+  var BAG_FILL = 'rgba(59,125,216,.14)', BAG_EDGE = '#3B7DD8';
+  var DOT_FILL = '#2F9E69';
+
+  function drawPack(svg, plan){
+    svg.textContent = '';
+    plan.rects.forEach(function(r){
+      svg.appendChild(svgEl('rect', {
+        x:r.x, y:r.y, width:r.w, height:r.h, rx:8,
+        fill:r.kind === 'bag' ? BAG_FILL : BOX_FILL,
+        stroke:r.kind === 'bag' ? BAG_EDGE : BOX_EDGE,
+        'stroke-width':r.kind === 'bag' ? 2 : 2.5
+      }));
+    });
+    plan.dots.forEach(function(p){
+      svg.appendChild(svgEl('circle', { cx:p.x, cy:p.y, r:DOT_R, fill:DOT_FILL }));
+    });
+  }
+
+  /* ===================== 範例1：分兩次分完 ===================== */
+  var s1i = 0, s1step = 0;
+  var s1chips = document.getElementById('s1chips');
+  var s1stepsEl = document.getElementById('s1steps');
+  var s1fig = document.getElementById('s1fig');
+  var s1cap = document.getElementById('s1cap');
+  var s1narr = document.getElementById('s1narr');
+  var s1calc = document.getElementById('s1calc');
+  var s1result = document.getElementById('s1result');
+
+  function renderS1(){
+    var d = L(), cs = S1_CASES[s1i];
+    drawPack(s1fig, packPlan(cs, s1step));
+    s1cap.textContent = d.s1cap(s1step);
+    s1narr.innerHTML = d.s1narr(cs, s1step, d);
+    var c1 = d.s1calc(cs, s1step);
+    s1calc.textContent = c1;
+    s1calc.style.display = c1 ? '' : 'none';
+    s1result.textContent = d.s1result(cs, s1step, d);
+    buildChips(s1chips, S1_CASES, s1i,
+      function(c){ return d.s1chip(c, d); },
+      function(i){ s1i = i; s1step = 0; renderS1(); });
+    buildChips(s1stepsEl, [0, 1, 2], s1step,
+      function(st, i){ return i === S1_STEPS - 1 ? d.stepDone : d.stepName(i + 1); },
+      function(i){ s1step = i; renderS1(); });
+  }
+
+  /* ===================== 範例2：一次分完 ===================== */
+  var s2i = 0, s2step = 0;
+  var s2chips = document.getElementById('s2chips');
+  var s2stepsEl = document.getElementById('s2steps');
+  var s2fig = document.getElementById('s2fig');
+  var s2cap = document.getElementById('s2cap');
+  var s2narr = document.getElementById('s2narr');
+  var s2calc = document.getElementById('s2calc');
+  var s2result = document.getElementById('s2result');
+
+  function renderS2(){
+    var d = L(), cs = S1_CASES[s2i];
+    /* 這一段一律畫「已經分成小袋」的樣子 —— 要數的是袋子。 */
+    drawPack(s2fig, packPlan(cs, 2));
+    s2cap.textContent = d.s2cap;
+    s2narr.innerHTML = d.s2narr(cs, s2step, d);
+    s2calc.textContent = d.s2calc(cs, s2step);
+    s2result.textContent = d.s2result(cs, s2step, d);
+    buildChips(s2chips, S1_CASES, s2i,
+      function(c){ return d.s1chip(c, d); },
+      function(i){ s2i = i; s2step = 0; renderS2(); });
+    buildChips(s2stepsEl, [0, 1, 2], s2step,
+      function(st, i){ return d.s2step(i); },
+      function(i){ s2step = i; renderS2(); });
+  }
+
+  /* ===================== 範例3：括號不見了 ===================== */
+  var s3q = 0;
+  var s3chips = document.getElementById('s3chips');
+  var s3exprs = document.getElementById('s3exprs');
+  var s3narr = document.getElementById('s3narr');
+  var s3calc = document.getElementById('s3calc');
+  var s3result = document.getElementById('s3result');
+
+  function renderS3(){
+    var d = L(), qkey = S3_QKEYS[s3q], answers = S3_ANSWERS[qkey];
+    s3exprs.textContent = '';
+    EXPR_KEYS.forEach(function(key){
+      var on = answers.indexOf(key) >= 0;
+      var box = document.createElement('div');
+      box.className = 'exprbox ' + (on ? 'on' : 'off');
+      var ex = document.createElement('span');
+      ex.className = 'ex';
+      ex.textContent = exprText(key, S3_T, S3_A, S3_B) + (lang === 'zh' ? ' ＝ ' : ' = ') + exprValue(key, S3_T, S3_A, S3_B);
+      var de = document.createElement('span');
+      de.textContent = d.s3desc[key] + ' — ' + (on ? d.s3on : d.s3off);
+      box.appendChild(ex); box.appendChild(de);
+      s3exprs.appendChild(box);
+    });
+    s3narr.innerHTML = d.s3narr(qkey);
+    s3calc.textContent = d.s3calc(qkey);
+    s3result.textContent = d.s3result(qkey);
+    buildChips(s3chips, S3_QKEYS, s3q,
+      function(k){ return d.s3q[k]; },
+      function(i){ s3q = i; renderS3(); });
+  }
+
+  /* ===================== 範例4：從左往右 ===================== */
+  var s4i = 0, s4step = 0;
+  var s4chips = document.getElementById('s4chips');
+  var s4stepsEl = document.getElementById('s4steps');
+  var s4narr = document.getElementById('s4narr');
+  var s4calc = document.getElementById('s4calc');
+  var s4result = document.getElementById('s4result');
+
+  /* 畫面上要用到的每一個字串都從純資料函式算出來，字典只負責包句子。 */
+  function s4State(cs, k){
+    var vals = stepValues(cs), n = cs.ops.length;
+    var line = '';
+    if (k >= 1){
+      var op = cs.ops[k - 1];
+      line = vals[k - 1] + opText(op[0]) + op[1] + (lang === 'zh' ? ' ＝ ' : ' = ') + vals[k];
+    }
+    return { full:fullExpr(cs), part:partialExpr(cs, k), line:line, n:n, answer:vals[n] };
+  }
+
+  function renderS4(){
+    var d = L(), cs = S4_CASES[s4i], st = s4State(cs, s4step);
+    s4narr.innerHTML = d.s4narr(st, s4step);
+    s4calc.textContent = d.s4calc(st, s4step);
+    s4result.textContent = d.s4result(st, s4step);
+    buildChips(s4chips, S4_CASES, s4i,
+      function(c){ return d.s4chip[c.id]; },
+      function(i){ s4i = i; s4step = 0; renderS4(); });
+    buildChips(s4stepsEl, [0, 1, 2], s4step,
+      function(x, i){ return d.s4step(i); },
+      function(i){ s4step = i; renderS4(); });
+  }
+
+  /* ===================== 範例5：把大除數拆小 ===================== */
+  var s5i = 0;
+  var s5chips = document.getElementById('s5chips');
+  var s5narr = document.getElementById('s5narr');
+  var s5calc = document.getElementById('s5calc');
+  var s5result = document.getElementById('s5result');
+
+  function renderS5(){
+    var d = L(), pair = S5_SPLITS[s5i], st = splitSteps(pair);
+    s5narr.innerHTML = d.s5narr(pair, st);
+    s5calc.textContent = d.s5calc(pair, st);
+    s5result.textContent = d.s5result(pair, st);
+    buildChips(s5chips, S5_SPLITS, s5i,
+      function(pp){ return d.s5chip(pp); },
+      function(i){ s5i = i; renderS5(); });
+  }
+
+  /* ===================== 試題 ===================== */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
+  function buildQuiz(){
+    var d = L();
+    var list = quizSet();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    qTotal.textContent = list.length;
+    list.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ===================== 小遊戲：生產線接單 ===================== */
+  var gRound = 0, gScore = 0, gMistake = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gPromptEl = document.getElementById('gPrompt');
+  var gAnswers = document.getElementById('gAnswers');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+  var hintLevel = 0;
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRound];
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+
+    hintLevel = (mode === 'ahead') ? 1 : 0;
+    gHintBtn.disabled = false;
+    elHint.innerHTML = (mode === 'ahead') ? d.gHint1[round.kind] : '';
+
+    gPromptEl.innerHTML = d.gPrompt[round.kind](round);
+
+    /* 正解的位置由資料裡的 ans 決定，可是「哪一個是正解」由 roundAnswerIndex()
+       **算出來** —— 兩者對不上的時候設定檔會響。 */
+    var ansAt = roundAnswerIndex(round);
+    gAnswers.textContent = '';
+    var i;
+    for (i = 0; i < roundOptCount(round); i++){
+      (function(oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'degbtn';
+        b.textContent = d.gOptText(round, oi);
+        b.addEventListener('click', function(){
+          if (b.disabled) return;
+          if (oi === ansAt){
+            var all = gAnswers.querySelectorAll('.degbtn');
+            for (var k = 0; k < all.length; k++) all[k].disabled = true;
+            b.classList.add('right');
+            if (gMistake){
+              gScore += 10;
+              gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry + '</span>';
+            } else {
+              gScore += 20;
+              gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst + '</span>';
+            }
+            if (gRound === ROUNDS.length - 1){
+              gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
+            } else {
+              gMsg.innerHTML += ' ' + d.gClear;
+              gNext.disabled = false;
+            }
+          } else {
+            gMistake = true;
+            b.disabled = true;
+            b.classList.add('wrong');
+            /* 分數不會低於 0，所以訊息要說真的扣了幾分；四年級也還沒學負數。 */
+            var lost = Math.min(5, gScore);
+            gScore -= lost;
+            gMsg.innerHTML = '<span class="no">' + d.gWrong(lost) + '</span>';
+          }
+          elScore.textContent = gScore;
+        });
+        gAnswers.appendChild(b);
+      })(i);
+    }
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+  gHintBtn.addEventListener('click', function(){
+    var d = L(), round = ROUNDS[gRound];
+    hintLevel++;
+    if (hintLevel === 1){
+      elHint.innerHTML = d.gHint1[round.kind];
+    } else {
+      elHint.innerHTML = d.gHint2[round.kind](round);
+      gHintBtn.disabled = true;
+    }
+  });
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildModeCards();
+    renderS1();
+    renderS2();
+    renderS3();
+    renderS4();
+    renderS5();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+  /* 記錄最後上的課，供首頁「繼續上次」使用 */
+  try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-4/math/chain-divide/', zh:'分裝生產線 — 連除、併式與括號', en:'The Packing Line', icon:'📦'})); } catch(e){}
+
+})();
+</script>
+</body>
+</html>
