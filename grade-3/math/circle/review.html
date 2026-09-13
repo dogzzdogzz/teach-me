@@ -124,6 +124,57 @@
     var rad = angleDeg * Math.PI / 180;
     return { x: cx + rpx * Math.cos(rad), y: cy - rpx * Math.sin(rad) };
   }
+  function estTextW(str, fs){
+    var w = 0, i, c;
+    str = String(str);
+    for (i = 0; i < str.length; i++){
+      c = str.charCodeAt(i);
+      if (c >= 0x2E80 && c <= 0xFFEF) w += 1.0;        /* 中日韓、全形 */
+      else if (c === 32) w += 0.34;                    /* 空白 */
+      else if (c >= 48 && c <= 57) w += 0.62;          /* 數字 */
+      else if (c >= 65 && c <= 90) w += 0.98;          /* 大寫 */
+      else w += 0.90;                                  /* 小寫 */
+    }
+    return w * fs * 1.06;
+  }
+
+  /* 標籤疊在一起就把後面那一個推開（和上課頁同一套）。
+     ⚠️ 每個標籤只沿著**自己那一個固定方向**推，所以推一次一定離原位更遠、不會震盪。
+     ⚠️ 推的距離有上限：字離自己那條線太遠，孩子就看不出它在標哪一條。 */
+  function placeLabels(labels){
+    var i, r, step, boxes = [];
+    labels.forEach(function(L){
+      var w = estTextW(L.text, L.fs);
+      var x0 = (L.anchor === 'end') ? L.x - w : ((L.anchor === 'start') ? L.x : L.x - w / 2);
+      boxes.push({ L:L, x0:x0, x1:x0 + w, y0:L.y - L.fs * 1.02, y1:L.y + L.fs * 0.32 });
+    });
+    var hits = function(b, upto){
+      for (var j = 0; j < upto; j++){
+        var a = boxes[j];
+        var ix = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+        var iy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+        /* 和 sweep 的判定對齊：兩個方向都要真的疊到才算。留 1px 餘裕。 */
+        if (ix > 1 && iy > 1) return true;
+      }
+      return false;
+    };
+    for (i = 1; i < boxes.length; i++){
+      var b = boxes[i];
+      if (!hits(b, i)) continue;
+      step = b.L.fs * 0.55;
+      var MAXR = 6;
+      for (r = 1; r <= MAXR; r++){
+        var dx = b.L.px * step * r, dy = b.L.py * step * r;
+        var t = { x0:b.x0 + dx, x1:b.x1 + dx, y0:b.y0 + dy, y1:b.y1 + dy };
+        if (hits(t, i)) continue;
+        b.L.x += dx; b.L.y += dy;
+        b.x0 = t.x0; b.x1 = t.x1; b.y0 = t.y0; b.y1 = t.y1;
+        break;
+      }
+    }
+    return labels;
+  }
+
   function circleFig(cfg){
     var maxR = 0, i;
     for (i = 0; i < cfg.circles.length; i++) if (cfg.circles[i].r > maxR) maxR = cfg.circles[i].r;
@@ -137,6 +188,8 @@
         '" fill="none" stroke="' + (c.color || '#E8871E') + '" stroke-width="' + (c.width || 3) + '"' +
         (c.dash ? ' stroke-dasharray="6,5"' : '') + '/>';
     });
+    /* 圖形先畫、標籤最後畫：標籤要先全部排好位置，才知道有沒有互相疊到。 */
+    var labels = [];
     (cfg.segs || []).forEach(function(s){
       var rp = (s.r != null ? s.r : maxR) * PXCM;
       var p1 = polar(cx, cy, rp, s.a1);
@@ -145,14 +198,29 @@
         '" stroke="' + (s.color || '#2F9E69') + '" stroke-width="' + (s.width || 4) + '"' +
         (s.dash ? ' stroke-dasharray="6,5"' : '') + ' stroke-linecap="round"/>';
       if (s.label){
-        var mx = (p1.x + p2.x) / 2 + (s.dx || 0), my = (p1.y + p2.y) / 2 + (s.dy != null ? s.dy : -8);
-        svg += '<text x="' + mx.toFixed(1) + '" y="' + my.toFixed(1) + '" font-size="13" font-weight="700" fill="' +
-          (s.color || '#2F9E69') + '" text-anchor="middle">' + s.label + '</text>';
+        var mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+        /* ⚠️ 預設不可以只是「中點往上 8」—— 直徑的中點**就是圓心**，弦的中點在夾角
+           接近 180 度時也會貼著圓心，兩個字就疊在一起（whichIsDiameter 就是這樣壞的）。
+           改成沿著**這一段自己的法線**往圓外挪，字才會落在線旁邊而不是圓心上。
+           有明確 dx／dy 的呼叫端維持原樣，避免動到本來就排好的圖。 */
+        var ux = p2.x - p1.x, uy = p2.y - p1.y;
+        var un = Math.sqrt(ux * ux + uy * uy) || 1;
+        var nx = -uy / un, ny = ux / un;
+        if ((mx + nx - cx) * (mx - cx) + (my + ny - cy) * (my - cy) < (mx - cx) * (mx - cx) + (my - cy) * (my - cy)){
+          nx = -nx; ny = -ny;
+        }
+        var lx = (s.dx != null) ? mx + s.dx : mx + nx * 13;
+        var ly = (s.dy != null) ? my + s.dy : my + ny * 13 + 4;
+        labels.push({ text:s.label, x:lx, y:ly, fs:13, fill:(s.color || '#2F9E69'), anchor:'middle', px:nx, py:ny });
       }
     });
     if (cfg.showCenter){
       svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="4" fill="#2B2A33"/>';
     }
+    placeLabels(labels).forEach(function(L){
+      svg += '<text x="' + L.x.toFixed(1) + '" y="' + L.y.toFixed(1) + '" font-size="' + L.fs +
+        '" font-weight="700" fill="' + L.fill + '" text-anchor="' + L.anchor + '">' + L.text + '</text>';
+    });
     svg += '</svg>';
     return svg;
   }
@@ -318,8 +386,8 @@
           stem: lang === 'zh' ? '這個圓裡有兩條線段 A、B，哪一條才是這個圓的直徑？' : 'This circle has two segments, A and B. Which one is the diameter?',
           pic: circleFig({ circles:[{ r:d.r, color:'#E8871E' }],
             segs:[
-              { a1:segAangles[0], a2:segAangles[1], r:d.r, color:'#3B7DD8', width:4, label:'A', dy:-8 },
-              { a1:segBangles[0], a2:segBangles[1], r:d.r, color:'#D64545', width:4, label:'B', dy:-8 }
+              { a1:segAangles[0], a2:segAangles[1], r:d.r, color:'#3B7DD8', width:4, label:'A' },
+              { a1:segBangles[0], a2:segBangles[1], r:d.r, color:'#D64545', width:4, label:'B' }
             ], showCenter:true }),
           opts: opts, ans: 0,
           why: lang === 'zh'
@@ -340,8 +408,8 @@
           stem: lang === 'zh' ? '這個圓裡畫了兩條半徑 A、B，方向不一樣，哪一條比較長？' : 'This circle has two radii, A and B, pointing in different directions. Which one is longer?',
           pic: circleFig({ circles:[{ r:d.r, color:'#E8871E' }],
             segs:[
-              { a1:d.a1, a2:null, r:d.r, color:'#3B7DD8', width:4, label:'A', dy:-8 },
-              { a1:d.a2, a2:null, r:d.r, color:'#D64545', width:4, label:'B', dy:-8 }
+              { a1:d.a1, a2:null, r:d.r, color:'#3B7DD8', width:4, label:'A' },
+              { a1:d.a2, a2:null, r:d.r, color:'#D64545', width:4, label:'B' }
             ], showCenter:true }),
           opts: opts, ans: 2,
           why: lang === 'zh'

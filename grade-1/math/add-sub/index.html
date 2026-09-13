@@ -314,7 +314,7 @@
     { a:4,  b:3, op:'add', ans:7,  opts:[7,6,8,5],   mid:7  },
     { a:9,  b:5, op:'add', ans:14, opts:[14,13,15,4], mid:10 },
     { a:12, b:5, op:'sub', ans:7,  opts:[7,8,6,17],  mid:10 },
-    { a:6,  b:6, op:'add', ans:12, opts:[12,11,13,10],mid:12 },
+    { a:6,  b:6, op:'add', ans:12, opts:[12,11,13,10],mid:10 },
     { a:16, b:9, op:'sub', ans:7,  opts:[7,8,6,25],  mid:10 }
   ];
 
@@ -903,6 +903,18 @@
   var elHint = document.getElementById('gHint');
   var hintLevel = 0;
 
+  /* ⚠️ 遊戲選項一定要洗牌再畫：ROUNDS 裡正解都寫在 choices[0]，
+     照順序畫的話每一關按最左邊那顆就對，遊戲就白玩了。
+     比對用的是「值」（v === round.xxx），所以洗牌不會動到答案。 */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+
   function startRound(){
     var round = ROUNDS[gRound];
     gMistake = false;
@@ -921,8 +933,13 @@
       elHint.textContent = '';
     }
 
+    /* ⚠️ 第二層提示是「中間會經過 mid」，mid 指的是 10（湊十／拆十）。
+       沒有進位的關卡（4+3=7）根本到不了 10，mid 只能等於答案 ——
+       這種關卡不可以給第二層提示，否則提示就是直接把答案講出來。 */
+    if (round.mid === round.ans) gHintBtn.disabled = (hintLevel >= 1);
+
     gAnswers.textContent = '';
-    round.opts.forEach(function(v){
+    shuffle(round.opts).forEach(function(v){
       var b = document.createElement('button');
       b.type = 'button'; b.className = 'opt'; b.textContent = '🚃 ' + v;
       b.addEventListener('click', function(){
@@ -970,6 +987,7 @@
     var round = ROUNDS[gRound];
     if (hintLevel === 1){
       elHint.textContent = L().gHint1(round.op);
+      if (round.mid === round.ans) gHintBtn.disabled = true;   /* 見 startRound 的說明 */
     } else {
       elHint.textContent = L().gHint2(round.mid);
       gHintBtn.disabled = true;
