@@ -111,20 +111,40 @@ module.exports = {
         if (SHAPES_REF[d.key] !== d.sides) return 'sides does not match the reference table for ' + d.key;
       }
     },
+    /* 正解字串的第二套實作。
+       ⚠️ 規則：**只讀題幹上真的印出來的東西**，然後自己算一次。不可以讀回 make()
+       算好的答案欄位（g／result／correct／sides）—— 那等於拿課本的答案比課本的答案，
+       課本算錯時兩邊一起錯，檢查照樣綠燈。
+       ⚠️ countUnits 與 numbersCount 是例外：它們的「答案」就是 make() 直接抽到的
+       那個原始參數（k／n），中間沒有任何運算可以重算。真正該被驗的是「圖上真的
+       畫了那麼多個」，而畫圖的 pic() 碰 DOM，simgen 跑不起來 —— 那一條由全站
+       瀏覽器 sweep 守，這裡守不到，不要以為有人在守。 */
     expectedCorrect: function(d, genId, lang){
       const t = DICT(lang);
       switch (genId){
+        /* 「這排小方塊……一共量出幾個長度單位？」—— k 是抽到的原始參數（見上面的例外說明）。 */
         case 'countUnits': return String(d.k);
+        /* 「A 排和 B 排……哪一排比較長？」 */
         case 'compareByCount': return d.a > d.b ? 'A' : 'B';
+        /* 「紅色和藍色的緞帶……哪一條比較長？」 */
         case 'barCompare': return t.barNames[d.wa > d.wb ? 'red' : 'blue'];
-        case 'smallToBig': return String(d.g);
-        case 'bigToSmall': return String(d.result);
+        /* 「小方塊量是 smallCount 個，換成大方塊（1 大 = 2 小）會是幾個？」 */
+        case 'smallToBig': return String(d.smallCount / 2);
+        /* 「大方塊量是 b 個，換成小方塊（1 大 = 2 小）會是幾個？」 */
+        case 'bigToSmall': return String(d.b * 2);
+        /* 「繩子比 B 長／短，誰比較高？」—— 繩子量的就是 A 的高度。 */
         case 'indirectCompareStory': return t.objNames[d.ropeLonger ? d.keyA : d.keyB];
+        /* 「誰的量法才正確？」—— 留縫隙的那個人錯，另一個人對。 */
         case 'gapMistakeSpot': return t.names[d.gapFirst ? d.nameIdxB : d.nameIdxA];
+        /* 「用大小不一樣的積木量，準不準？」—— 這一課的規則：一定不準。 */
         case 'mixedSizeMistakeSpot': return t.accLabels.inaccurate;
+        /* 「這排圓點一共有幾個？」—— n 是抽到的原始參數（見上面的例外說明）。 */
         case 'numbersCount': return String(d.n);
-        case 'addsubWithin20': return String(d.correct);
-        case 'shapesSides': return String(d.sides);
+        /* 「x + y = ?」或「x − y = ?」 */
+        case 'addsubWithin20': return String(d.isAdd ? d.x + d.y : d.x - d.y);
+        /* 「<形狀名>有幾條邊？」—— 邊數查這個設定檔自己的 SHAPES_REF，
+           不是把課程算好的 sides 抄回來。 */
+        case 'shapesSides': return String(SHAPES_REF[d.key]);
         default: throw new Error('unknown genId ' + genId);
       }
     },

@@ -1,11 +1,10 @@
 /* grade-1/math/two-digit 的檢查設定（兩位數加減：不進位／不退位、對齊、加減互逆）。
 
    ⚠️ 這一課的 review.html 每一題只有 3 個選項（正解 + 2 個錯的），不是全站慣例的 4 個
-   （makeWrongs 保底迴圈用 `out.length < 2`、`out.slice(0, 2)`）。tools/simgen.js 的
-   選項數檢查是寫死的 4（`if (!q.opts || q.opts.length !== 4)`），沒有讓各課覆寫，
-   所以 simgen.js 對這一課「structurally」不可能全綠 —— 這不是這份設定檔的洞，
-   是這一課的選項數和全站共用腳本的假設不一致。已如實記錄在 README 的段落與
-   任務報告裡，沒有去改 simgen.js（不在這次任務的範圍內）。 */
+   （makeWrongs 保底迴圈用 `out.length < 2`、`out.slice(0, 2)`）。
+   ✅ 2026-09-14：simgen.js／verify_lesson_data.js 已經支援每課自訂選項數，這一課用
+   下面的 `sim.optCount: 3` 與 `data.optCount`（qs/qsAdv 3、qsBoost 2）宣告，
+   所以選項數這一條現在是真的在看，不再是「結構上不可能全綠」。 */
 
 const arithTD = require('./lib/arith.js').makeArith({ units: ['元'], unitsEn: ['dollars?'] });
 
@@ -99,17 +98,33 @@ module.exports = {
         if (d.ans2 < 0 || d.ans2 > 20) return 'ans2 outside 0~20';
       }
     },
+    /* 正解字串的第二套實作。
+       ⚠️ 規則：**只讀題幹上真的印出來的那幾個數字**，然後自己算一次。
+       不可以讀回 make() 算好的答案欄位（p.sum／p.diff／p.a／d.t／part2／ans2）——
+       那等於拿課本的答案比課本的答案，課本算錯時兩邊一起錯，檢查照樣綠燈。
+       ⚠️ inverseCheck 特別注意：題幹問的是 sum − b，**不是**把另一個加數 a 抄回來。
+       兩者相等正是這一題要教的事（加減互逆），所以要算的必須是題目問的那一邊，
+       這樣 randAddPair() 的 sum 算錯時才會被抓到。 */
     expectedCorrect: function(d, genId){
       switch (genId){
-        case 'addNoRegroup': return String(d.p.sum);
-        case 'subNoRegroup': return String(d.p.diff);
-        case 'addOneDigit': return String(d.p.sum);
-        case 'subOneDigit': return String(d.p.diff);
-        case 'inverseCheck': return String(d.p.a);
-        case 'wordProblem': return String(d.isAdd ? d.p.sum : d.p.diff);
-        case 'placeValue': return String(d.d.t);
-        case 'numberBonds': return String(d.part2);
-        case 'addSub20': return String(d.ans2);
+        /* 「a + b = ?」（不進位） */
+        case 'addNoRegroup': return String(d.p.a + d.p.b);
+        /* 「a − b = ?」（不退位） */
+        case 'subNoRegroup': return String(d.p.a - d.p.b);
+        /* 「a + b = ?」（兩位數加一位數） */
+        case 'addOneDigit':  return String(d.p.a + d.p.b);
+        /* 「a − b = ?」（兩位數減一位數） */
+        case 'subOneDigit':  return String(d.p.a - d.p.b);
+        /* 「a + b = sum，所以 sum − b = ?」 */
+        case 'inverseCheck': return String(d.p.sum - d.p.b);
+        /* 「原本有 a 元，又得到／花掉 b 元，現在／還剩多少元？」 */
+        case 'wordProblem':  return String(d.isAdd ? d.p.a + d.p.b : d.p.a - d.p.b);
+        /* 「n 的十位是多少？」 */
+        case 'placeValue':   return String(Math.floor(d.n / 10));
+        /* 「whole 可以分成 part1 和多少？」 */
+        case 'numberBonds':  return String(d.whole - d.part1);
+        /* 「a + b = ?」或「a − b = ?」（20 以內） */
+        case 'addSub20':     return String(d.isAdd ? d.a + d.b : d.a - d.b);
         default: throw new Error('unknown genId ' + genId);
       }
     },
