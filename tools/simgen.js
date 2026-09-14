@@ -27,6 +27,7 @@ function configFor(p){
   if (!fs.existsSync(file)) throw new Error('no check config for this lesson: ' + file);
   return require(file);
 }
+const { resolveOptCount } = require('./checks/lib/optcount.js');
 const CFG = configFor(target).sim;
 const INVARIANTS = CFG.INVARIANTS || {};
 const STEM_ECHO_OK = CFG.stemEchoOk || {};
@@ -86,6 +87,11 @@ const problems = [];
 const echoHits = {};   // 刻意的迷思誘答（設定檔允許的），只記次數供人工複核
 function fail(id, msg){ problems.push(id + ': ' + msg); }
 
+/* ⚠️ optCount 必須在跑之前就全部解析完。設定檔寫壞時如果在迴圈中途才丟錯，
+   那是未捕捉例外 —— 已經收集到的真實缺陷一筆都印不出來，畫面只剩 stack trace，
+   看起來像「檢查爆掉」而不是「這裡有 N 個缺陷」。守門員不可以這樣壞。 */
+const ALLOWED_OPTS = new Map(GENS.map(g => [g.id, resolveOptCount(CFG.optCount, g.id)]));
+
 for (let batch = 0; batch < BATCHES; batch++){
   for (const g of GENS){
     const d = g.make([]);
@@ -95,7 +101,9 @@ for (let batch = 0; batch < BATCHES; batch++){
     for (const lang of ['zh', 'en']){
       const q = g.fmt(d, lang);
 
-      if (!q.opts || q.opts.length !== 4) fail(g.id, lang + ' option count ' + (q.opts||[]).length);
+      const allowedOpts = ALLOWED_OPTS.get(g.id);
+      if (!q.opts || allowedOpts.indexOf(q.opts.length) < 0)
+        fail(g.id, lang + ' option count ' + (q.opts||[]).length + '（允許：' + allowedOpts.join('/') + '）');
       if (!(q.ans >= 0 && q.ans < q.opts.length)) fail(g.id, lang + ' ans index out of range');
       /* 正解字串要由「設定檔自己的第二套實作」從原始參數重算出來。
          拿產生器自己的格式化函式來比，等於自己比自己：格式化寫錯（把 31 天印成

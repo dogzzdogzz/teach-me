@@ -18,6 +18,7 @@ function configFor(p){
   if (!fs.existsSync(file)) throw new Error('no check config for this lesson: ' + file);
   return require(file);
 }
+const { resolveOptCount } = require('./checks/lib/optcount.js');
 const CFG = configFor(target).data;
 
 const problems = [];
@@ -43,6 +44,9 @@ const ARITH = /^\s*(\d+)\s*([+−-])\s*(\d+)\s*=\s*\?\s*$/;
   const zh = I18N.zh[bank], en = I18N.en[bank];
   if (!zh || !en){ fail(`${bank}: missing in one language`); return; }
   if (zh.length !== en.length) fail(`${bank}: zh/en length mismatch`);
+  /* ⚠️ 同 simgen：optCount 要在開始檢查前就解析完。設定檔寫壞時若在中途丟錯，
+     已經收集到的 problems 一筆都印不出來，看起來像工具壞掉而不是課程有缺陷。 */
+  const allowedOpts = resolveOptCount(CFG.optCount, bank);
   zh.forEach((q, i) => {
     const e = en[i];
     /* 題數對不上時，這裡直接讀 en[i] 會丟 TypeError，整份報告變成 stack trace，
@@ -50,7 +54,8 @@ const ARITH = /^\s*(\d+)\s*([+−-])\s*(\d+)\s*=\s*\?\s*$/;
     if (!e){ fail(`${bank}[${i}]: missing in en`); return; }
     if (q.ans !== e.ans) fail(`${bank}[${i}]: ans differs zh=${q.ans} en=${e.ans}`);
     [['zh', q], ['en', e]].forEach(([L, item]) => {
-      if (item.opts.length !== 4) fail(`${bank}[${i}] ${L}: ${item.opts.length} options`);
+      if (allowedOpts.indexOf(item.opts.length) < 0)
+        fail(`${bank}[${i}] ${L}: ${item.opts.length} options（允許：${allowedOpts.join('/')}）`);
       const vals = item.opts.map(o => o.trim());
       if (new Set(vals).size !== vals.length) fail(`${bank}[${i}] ${L}: duplicate option strings`);
       const nums = vals.filter(v => /^\d+$/.test(v)).map(Number);
