@@ -8,12 +8,15 @@
 
 const arithTD = require('./lib/arith.js').makeArith({ units: ['元'], unitsEn: ['dollars?'] });
 
-/* 選項的合理範圍，依產生器分開給：兩位數加減本身宣稱「0~99」，但刻意的
-   「差 10」誘答（進位/借位教學常見的迷思）容許到 109；20 以內加減、位值、
+/* 選項的合理範圍，依產生器分開給：兩位數加減宣稱「0~99」，刻意的「差 10」誘答
+   （進位/借位教學常見的迷思）在 sum ≥ 90 時會變 100~109，2026-09-14 起由 review.html 的
+   makeWrongs 擋掉（一年級的課不放三位數），所以這裡也是 99；20 以內加減、位值、
    分與合則各自更窄。 */
 const RANGE = {
-  addNoRegroup:[0,109], subNoRegroup:[0,99], addOneDigit:[0,109], subOneDigit:[0,99],
-  inverseCheck:[0,109], wordProblem:[0,109], placeValue:[0,10], numberBonds:[0,10], addSub20:[0,21]
+  /* 2026-09-14 起 review.html 的 makeWrongs 連明寫的候選都擋在 MAX_OPT = 99 以內（sum + 10 在
+     sum ≥ 90 時會變 100~109，一年級「100 以內」的課不放三位數），所以這裡從 109 收緊到 99。 */
+  addNoRegroup:[0,99], subNoRegroup:[0,99], addOneDigit:[0,99], subOneDigit:[0,99],
+  inverseCheck:[0,99], wordProblem:[0,99], placeValue:[0,10], numberBonds:[0,10], addSub20:[0,21]
 };
 
 const { gameShuffleProblems } = require('./lib/gameshuffle.js');
@@ -34,11 +37,21 @@ module.exports = {
       find:'    var opts = shuffle([correct].concat(wrongs));\n    return { opts: opts, ans: opts.indexOf(correct) };',
       replace:'    var opts = shuffle([correct].concat(wrongs));\n    return { opts: opts, ans: (opts.indexOf(correct) + 1) % 3 };' },
     { file:'review', expect:'duplicate option value',
-      find:'      if (!seen[key] && c >= 0){ seen[key] = true; out.push(c); }',
-      replace:'      if (c >= 0){ out.push(c); }' },
-    { file:'review', expect:'option 171 outside',
-      find:'    { id:\'addOneDigit\', cat:\'twodigit\',\n      make: function(){ var p = randAddOneDigit(); var da = digs(p.a); var wrongTens = (da.t + p.b) * 10 + da.o; var m = mixOpts(p.sum, [wrongTens, p.sum + 1]); return { p:p, opts:m.opts, ans:m.ans }; },',
-      replace:'    { id:\'addOneDigit\', cat:\'twodigit\',\n      make: function(){ var p = { a:81, b:9, sum:90 }; var da = digs(p.a); var wrongTens = (da.t + p.b) * 10 + da.o; var m = mixOpts(p.sum, [wrongTens, p.sum + 1]); return { p:p, opts:m.opts, ans:m.ans }; },' },
+      find:'      if (!seen[key] && c >= 0 && c <= MAX_OPT){ seen[key] = true; out.push(c); }',
+      replace:'      if (c >= 0 && c <= MAX_OPT){ out.push(c); }' },
+    /* 這一課的上限 MAX_OPT = 99 同時管 addOneDigit 的「wrongTens 變三位數就退而放 sum + 10」與
+       makeWrongs 的候選／保底範圍；把它放寬到 999，141 那類三位數（以及 sum + 10 = 100~109）
+       就會直接端出來，RANGE 那條「outside 0~99」要響。（以前那筆把 p 釘成 81 + 9 等 171：
+       81 + 9 個位其實會進位，不變條件會先罵；而且現在 makeWrongs 會把 171 擋掉，證明不了 RANGE 在看。） */
+    { file:'review', expect:'outside 0~99 for this generator',
+      find:'  var MAX_OPT = 99;',
+      replace:'  var MAX_OPT = 999;' },
+    /* 2026-09-14：review 端的 makeWrongs 現在會避開題幹數字（avoid）。把 avoid 掏空，
+       ±1 保底又會撞回題幹上的數字（例：subOneDigit 的 diff + 1 在 b = 1 時就是 a），
+       simgen 那條「誘答抄題幹」要響。 */
+    { file:'review', expect:'is copied straight out of the stem',
+      find:'    (avoid || []).forEach(function(v){ seen[String(v)] = true; });',
+      replace:'    ([]).forEach(function(v){ seen[String(v)] = true; });' },
     { file:'index', expect:'ADD_PAIRS[0] carries',
       find:'    { a:{t:3,o:2}, b:{t:2,o:5} },  // 32 + 25 = 57',
       replace:'    { a:{t:3,o:2}, b:{t:2,o:8} },  // deliberately broken: 2+8 carries' },
@@ -146,7 +159,9 @@ module.exports = {
       return null;
     },
     /* inverseCheck 的題幹本來就把 b 和 sum 都印出來（a+b=sum，所以 sum-b=?），
-       兩個候選誘答剛好就是這兩個數字，是刻意設計；numberBonds 的 whole 同理。 */
+       兩個候選誘答剛好就是這兩個數字，是刻意設計；numberBonds 的 whole 同理。
+       其餘的題幹數字（a、b、part1……）review.html 的 makeWrongs 現在用 avoid 擋掉，
+       這裡沒有放行 → 再出現就是缺陷（2026-09-14）。 */
     stemEchoOk: {
       inverseCheck: (d, opt) => Number(opt) === d.p.b || Number(opt) === d.p.sum,
       numberBonds: (d, opt) => Number(opt) === d.whole

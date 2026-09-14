@@ -51,14 +51,24 @@ module.exports = {
       find:'    shuffle(round.choices).forEach(function(v){',
       replace:'    round.choices.forEach(function(v){' },
     { file:'review', expect:'nums[3]-nums[2] != step',
-      find:'        var nums = [start, start + step, start + 2 * step, start + 3 * step];\n        var next = start + 4 * step;\n        var m = mixOpts(next, [next - step, next + step]);\n        return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };\n      },\n      fmt: function(d, lang){\n        return {\n          stem: lang === \'zh\' ? d.nums.join(\'、\') + \'、<br>下一個是多少？\' : d.nums.join(\', \') + \', …<br>What comes next?\',',
-      replace:'        var nums = [start, start + step, start + 2 * step, start + 3 * step + 1];\n        var next = start + 4 * step;\n        var m = mixOpts(next, [next - step, next + step]);\n        return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };\n      },\n      fmt: function(d, lang){\n        return {\n          stem: lang === \'zh\' ? d.nums.join(\'、\') + \'、<br>下一個是多少？\' : d.nums.join(\', \') + \', …<br>What comes next?\',' },
+      find:'        var nums = [start, start + step, start + 2 * step, start + 3 * step];\n        var next = start + 4 * step;\n        /* 誘答：多跳一步（next + step）、差一（next − 1）。舊的 next − step 就是題幹上最後一個數，\n           那是抄題不是迷思；四個已經印出來的數都不可以出現 */\n        var m = mixOpts(next, [next + step, next - 1], nums);\n        return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };\n      },\n      fmt: function(d, lang){\n        return {\n          stem: lang === \'zh\' ? d.nums.join(\'、\') + \'、<br>下一個是多少？\' : d.nums.join(\', \') + \', …<br>What comes next?\',',
+      replace:'        var nums = [start, start + step, start + 2 * step, start + 3 * step + 1];\n        var next = start + 4 * step;\n        /* 誘答：多跳一步（next + step）、差一（next − 1）。舊的 next − step 就是題幹上最後一個數，\n           那是抄題不是迷思；四個已經印出來的數都不可以出現 */\n        var m = mixOpts(next, [next + step, next - 1], nums);\n        return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };\n      },\n      fmt: function(d, lang){\n        return {\n          stem: lang === \'zh\' ? d.nums.join(\'、\') + \'、<br>下一個是多少？\' : d.nums.join(\', \') + \', …<br>What comes next?\',' },
     { file:'review', expect:'opts[ans] != correct',
       find:'    var opts = shuffle([correct].concat(wrongs));\n    return { opts: opts, ans: opts.indexOf(correct) };',
       replace:'    var opts = shuffle([correct].concat(wrongs));\n    return { opts: opts, ans: (opts.indexOf(correct) + 1) % 3 };' },
     { file:'review', expect:'duplicate option value',
-      find:'      if (c >= 0 && !seen[key]){ seen[key] = true; out.push(c); }',
-      replace:'      if (c >= 0){ out.push(c); }' },
+      find:'      if (c >= 0 && c <= MAX_OPT && !seen[key]){ seen[key] = true; out.push(c); }',
+      replace:'      if (c >= 0 && c <= MAX_OPT){ out.push(c); }' },
+    /* 2026-09-14：review 端的 makeWrongs 現在會避開題幹數字（avoid）。把 avoid 掏空，
+       ±1 保底又會撞回題幹上的數字（例：addsub 的 answer − 1 在 b = 1 時就是 a），
+       simgen 那條「誘答抄題幹」要響。 */
+    { file:'review', expect:'is copied straight out of the stem',
+      find:'    (avoid || []).forEach(function(v){ seen[String(v)] = true; });',
+      replace:'    ([]).forEach(function(v){ seen[String(v)] = true; });' },
+    /* decNext 只放行 nums[2]（往回跳一步）；把誘答改回題幹上最後一個數（nums[3]），同一條要響。 */
+    { file:'review', expect:'is copied straight out of the stem',
+      find:'        var m = mixOpts(next, [next - step, nums[3] + step], avoidExcept(nums, [nums[2]]));',
+      replace:'        var m = mixOpts(next, [next - step, nums[3]], avoidExcept(nums, [nums[2], nums[3]]));' },
     /* 畫面上那一串圖案是把「重複的一組」**反過來**排的（shapeNext）。
        ⚠️ 這一筆是專門用來證明 expectedCorrect 真的在讀畫面上的 seq：
        INVARIANTS 的兩條（unit[0] === correct、seq.length % unit.length === 0）
@@ -184,9 +194,13 @@ module.exports = {
       return null;
     },
     /* hop 的題幹本來就把 b 和 c 都印出來（a+b=c，所以 c-b=?），兩個誘答剛好就是
-       這兩個數字，是刻意設計。 */
+       這兩個數字，是刻意設計。decNext 放行 nums[2]：那是「以為規律還在變大、往回跳一步」
+       的迷思（why 寫的就是「不是每個規律都越來越大」，上課頁的迷思檢查題 15、12、9、6 → 9
+       也是這樣設計的）；只放行那一格，nums[3]（最後一個數）再出現就是抄題（2026-09-14）。
+       其餘的題幹數字 review.html 的 makeWrongs 現在用 avoid 擋掉。 */
     stemEchoOk: {
-      hop: (d, opt) => Number(opt) === d.b || Number(opt) === d.c
+      hop: (d, opt) => Number(opt) === d.b || Number(opt) === d.c,
+      decNext: (d, opt) => Number(opt) === d.nums[2]
     }
   },
 

@@ -182,26 +182,36 @@
     return a;
   }
   function digs(n){ return { t: Math.floor(n / 10), o: n % 10 }; }
-  /* 保證 2 個相異、且不等於正解的錯誤選項 */
-  function makeWrongs(correct, candidates){
+  /* 這一課是「100 以內」：保底候選往上找也不可以超過 99 */
+  var MAX_OPT = 99;
+  /* 給出 2 個相異、且不等於正解的錯誤選項（avoid 與 MAX_OPT 把可用的數字擠到不夠時會少回傳幾個 —— 那時 simgen 的選項數檢查會響，不會卡死。）。
+     avoid：題幹上已經印出來、但「不是」刻意迷思誘答的那些數字 —— 先當成已用過，
+     候選與 ±step 保底都不會再端出來。孩子看到題幹上的數字又出現在選項裡，
+     那不是誘答，是抄題（2026-09-14 修：保底 ±1 常常撞上題幹數字）。 */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
-      if (!seen[key] && c >= 0){ seen[key] = true; out.push(c); }
+      /* 明寫的候選也不可以衝出這一課的範圍（sum + 10 在 sum = 99 時是 109） */
+      if (!seen[key] && c >= 0 && c <= MAX_OPT){ seen[key] = true; out.push(c); }
     });
-    var step = 1;
-    while (out.length < 2){
+    /* step 有上限：避開的數字多時不可以無限找下去，也不可以衝出這一課的範圍 */
+    for (var step = 1; out.length < 2 && step <= MAX_OPT; step++){
       var lo = correct - step, hi = correct + step;
       if (lo >= 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
-      if (out.length < 2 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
-      step++;
+      if (out.length < 2 && hi <= MAX_OPT && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
     }
     return out.slice(0, 2);
   }
+  /* 題幹上的數字，扣掉 keep（刻意拿來當誘答的那一個），其餘都不可以出現在選項裡 */
+  function avoidExcept(stemNums, keep){
+    return stemNums.filter(function(v){ return keep.indexOf(v) < 0; });
+  }
   /* 把選項值＋正解洗牌，回傳 {opts, ans}（三選一：正解 + 2 個錯誤選項） */
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -246,7 +256,8 @@
   /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
   var GENS = [
     { id:'addNoRegroup', cat:'twodigit',
-      make: function(){ var p = randAddPair(); var m = mixOpts(p.sum, [p.a + digs(p.b).t, p.sum + 10, p.sum - 10]); return { p:p, opts:m.opts, ans:m.ans }; },
+      /* 誘答都不是題幹數字（a 加上 b 的十位數字、多／少一個十）；a、b 本身不可以出現 */
+      make: function(){ var p = randAddPair(); var m = mixOpts(p.sum, [p.a + digs(p.b).t, p.sum + 10, p.sum - 10], [p.a, p.b]); return { p:p, opts:m.opts, ans:m.ans }; },
       fmt: function(d, lang){
         var da = digs(d.p.a), db = digs(d.p.b);
         return {
@@ -258,7 +269,8 @@
         };
       } },
     { id:'subNoRegroup', cat:'twodigit',
-      make: function(){ var p = randSubPair(); var m = mixOpts(p.diff, [p.diff + 10, p.diff - 10, digs(p.a).t - digs(p.b).t]); return { p:p, opts:m.opts, ans:m.ans }; },
+      /* 誘答都不是題幹數字（多／少一個十、只減了十位）；a、b 本身不可以出現 */
+      make: function(){ var p = randSubPair(); var m = mixOpts(p.diff, [p.diff + 10, p.diff - 10, digs(p.a).t - digs(p.b).t], [p.a, p.b]); return { p:p, opts:m.opts, ans:m.ans }; },
       fmt: function(d, lang){
         var da = digs(d.p.a), db = digs(d.p.b);
         return {
@@ -270,7 +282,10 @@
         };
       } },
     { id:'addOneDigit', cat:'twodigit',
-      make: function(){ var p = randAddOneDigit(); var da = digs(p.a); var wrongTens = (da.t + p.b) * 10 + da.o; var m = mixOpts(p.sum, [wrongTens, p.sum + 1]); return { p:p, opts:m.opts, ans:m.ans }; },
+      /* 誘答刻意放「把 b 加到十位」的結果（迷思：b 沒有十位卻跟十位對齊）。但這一課是 100 以內，
+         十位加起來滿十時它會變成三位數（81 + 6 → 141），一年級的孩子讀不了那個數，
+         那時退而放 sum + 10（多進了一個十）。a、b 本身不可以出現 */
+      make: function(){ var p = randAddOneDigit(); var da = digs(p.a); var wrongTens = (da.t + p.b) * 10 + da.o; if (wrongTens > MAX_OPT) wrongTens = p.sum + 10; var m = mixOpts(p.sum, [wrongTens, p.sum + 1], [p.a, p.b]); return { p:p, opts:m.opts, ans:m.ans }; },
       fmt: function(d, lang){
         var da = digs(d.p.a);
         return {
@@ -282,7 +297,8 @@
         };
       } },
     { id:'subOneDigit', cat:'twodigit',
-      make: function(){ var p = randSubOneDigit(); var da = digs(p.a); var m = mixOpts(p.diff, [(da.t - p.b) * 10 + da.o, p.diff + 1]); return { p:p, opts:m.opts, ans:m.ans }; },
+      /* 誘答「把 b 從十位減掉」不是題幹數字；a、b 本身不可以出現（b = 1 時 diff + 1 就是 a） */
+      make: function(){ var p = randSubOneDigit(); var da = digs(p.a); var m = mixOpts(p.diff, [(da.t - p.b) * 10 + da.o, p.diff + 1], [p.a, p.b]); return { p:p, opts:m.opts, ans:m.ans }; },
       fmt: function(d, lang){
         var da = digs(d.p.a);
         return {
@@ -314,7 +330,8 @@
         var namesEn = ['Mia', 'Ann', 'Jay', 'Hua'];
         var name = rand(names.length);
         var val = isAdd ? p.sum : p.diff;
-        var m = mixOpts(val, [val + 1, val - 1]);
+        /* ±1 保底在 b = 1 時就是 a；a、b 都不可以出現 */
+        var m = mixOpts(val, [val + 1, val - 1], [p.a, p.b]);
         return { isAdd:isAdd, p:p, name:name, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -339,7 +356,7 @@
       make: function(){
         var n = 10 + rand(90);
         var d = digs(n);
-        var m = mixOpts(d.t, [d.t + 1 <= 9 ? d.t + 1 : d.t - 1, d.o]);
+        var m = mixOpts(d.t, [d.t + 1 <= 9 ? d.t + 1 : d.t - 1, d.o], [n]);
         return { n:n, d:d, opts:m.opts, ans:m.ans };
       },
       fmt: function(data, lang){
@@ -356,7 +373,8 @@
         var whole = 5 + rand(6); // 5..10
         var part1 = 1 + rand(whole - 1);
         var part2 = whole - part1;
-        var m = mixOpts(part2, [part2 + 1, whole]);
+        /* 誘答刻意放 whole（把整體當成部分）；part1 不可以出現 */
+        var m = mixOpts(part2, [part2 + 1, whole], avoidExcept([whole, part1], [whole]));
         return { whole:whole, part1:part1, part2:part2, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -374,7 +392,8 @@
         var a, b, ans;
         if (isAdd){ a = 1 + rand(15); b = 1 + rand(20 - a); ans = a + b; }
         else { a = 5 + rand(15); b = 1 + rand(a); ans = a - b; }
-        var m = mixOpts(ans, [ans + 1, ans - 1]);
+        /* ±1 保底在 b = 1 時就是 a；a、b 都不可以出現 */
+        var m = mixOpts(ans, [ans + 1, ans - 1], [a, b]);
         return { isAdd:isAdd, a:a, b:b, ans2:ans, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){

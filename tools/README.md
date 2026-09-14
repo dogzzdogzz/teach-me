@@ -202,6 +202,10 @@ key（`grade-2/math/time/review.html` → `tools/checks/grade-2-time.js`），**
 - `sim.stemEchoOk`：哪些「把題幹的數字放進選項」是刻意的迷思誘答。值可以是布林，
   但**建議寫成謂詞** `function(d, opt, lang, idx)`，只放行那一個值 ——
   整個產生器全開的話，不小心抄回別的數字也會被一起蓋掉。
+  課程那一側對應的做法是 `makeWrongs(correct, candidates, avoid)` 的 `avoid`（題幹數字先當成
+  已用過，只留 `avoidExcept(題幹數字, [刻意的那一個])`），見 framework §六之三第 4 點；
+  一年級 `number-bonds`／`add-sub`／`two-digit`／`pattern`／`length` 五課是範本（2026-09-14）。
+  兩邊各自獨立地說出「哪一個是刻意的」——這裡掃的是渲染出來的題幹，不讀課程的 avoid。
 - `data.check(data, I18N, fail, src)`：那一課自己的範例資料與遊戲關卡。
   第四個參數 `src` 是**整份 index.html 原始碼**，給那種只有在原始碼層才驗得到的
   不變式用（例如「這句旁白必須是從座標算出來的，不可以寫死成某一筆的索引」）。

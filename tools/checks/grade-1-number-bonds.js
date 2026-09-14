@@ -21,14 +21,24 @@ module.exports = {
       find:'    shuffle(round.choices).forEach(function(v){',
       replace:'    round.choices.forEach(function(v){' },
     { file:'review', expect:'why says a+b=s but a+b != s',
-      find:"        var s = a + b;\n        var m = mixOpts(s, [s - 1, s + 1, Math.max(a, b)]);",
-      replace:"        var s = a + b + 1;\n        var m = mixOpts(s, [s - 1, s + 1, Math.max(a, b)]);" },
+      find:"        var s = a + b;\n        /* 誘答刻意放 max(a, b)（只抄了大的那個數）；另一個加數不可以出現 */\n        var m = mixOpts(s, [s - 1, s + 1, Math.max(a, b)], avoidExcept([a, b], [Math.max(a, b)]));",
+      replace:"        var s = a + b + 1;\n        /* 誘答刻意放 max(a, b)（只抄了大的那個數）；另一個加數不可以出現 */\n        var m = mixOpts(s, [s - 1, s + 1, Math.max(a, b)], avoidExcept([a, b], [Math.max(a, b)]));" },
+    /* 2026-09-14：review 端的 makeWrongs 現在會避開題幹數字（avoid）。把 avoid 掏空，
+       ±1 保底又會撞回題幹上的數字（例：wordProblemAdd 的 s − 1 在 b = 1 時就是 a），
+       simgen 那條「誘答抄題幹」要響。 */
+    { file:'review', expect:'is copied straight out of the stem',
+      find:'    (avoid || []).forEach(function(v){ seen[String(v)] = true; });',
+      replace:'    ([]).forEach(function(v){ seen[String(v)] = true; });' },
+    /* avoidExcept 把「刻意的那一個」以外的題幹數字都擋掉；改成什麼都不擋，同一條要響。 */
+    { file:'review', expect:'is copied straight out of the stem',
+      find:'    return stemNums.filter(function(v){ return keep.indexOf(v) < 0; });',
+      replace:'    return [];' },
     { file:'review', expect:'opts[ans] != correct',
       find:'    var opts = shuffle([correct].concat(wrongs));\n    return { opts: opts, ans: opts.indexOf(correct) };',
       replace:'    var opts = shuffle([correct].concat(wrongs));\n    return { opts: opts, ans: (opts.indexOf(correct) + 1) % 4 };' },
     { file:'review', expect:'duplicate option value',
-      find:'      if (c >= 0 && !seen[key]){ seen[key] = true; out.push(c); }',
-      replace:'      if (c >= 0){ out.push(c); }' },
+      find:'      if (c >= 0 && c <= MAX_OPT && !seen[key]){ seen[key] = true; out.push(c); }',
+      replace:'      if (c >= 0 && c <= MAX_OPT){ out.push(c); }' },
     /* ⚠️ 沒有「刻意抄題幹」這一條的獨立改壞測試：這一課的 makeWrongs() 沒有排除
        「題幹上已經印出來的數字」，只排除正解本身，所以 missing±1／s±1 這類保底候選
        常常會巧合等於題幹另一個數字（known／remainder／n／target／a／10）——這是
@@ -125,9 +135,14 @@ module.exports = {
     /* 哪些「把題幹的數字抄回選項」是刻意的迷思誘答（不是缺陷）。
        composeCalc 的 max(a,b)、decomposeFindPart 的 whole、decomposeFindSubtrahend 的
        remainder、bondsToTen 的 n、bondsToOther 的 target、familyInverse 的 a、
-       wordProblemSplit 的 whole，都是題幹本來就會印出來的數字，設計上刻意拿來當誘答。 */
+       wordProblemSplit 的 whole，都是題幹本來就會印出來的數字，設計上刻意拿來當誘答。
+       wordProblemAdd 的 |a − b|（該加卻減）本身不是題幹數字，但 a = 2b 時剛好等於 b、
+       b = 2a 時剛好等於 a —— 那仍然是同一個迷思的結果，放行的是這一個值而不是整個產生器。
+       其餘的題幹數字（另一個加數、分成「2 盤」的 2……）review.html 的 makeWrongs 現在
+       用 avoid 擋掉，這裡沒有放行 → 再出現就是缺陷。 */
     stemEchoOk: {
       composeCalc: (d, opt) => Number(opt) === Math.max(d.a, d.b),
+      wordProblemAdd: (d, opt) => Number(opt) === Math.abs(d.a - d.b),
       decomposeFindPart: (d, opt) => Number(opt) === d.whole,
       decomposeFindSubtrahend: (d, opt) => Number(opt) === d.remainder,
       bondsToTen: (d, opt) => Number(opt) === d.n,

@@ -47,6 +47,12 @@ module.exports = {
     { file:'index', expect:'without shuffle(...)',
       find:'      shuffle(choices).forEach(function(v){',
       replace:'      choices.forEach(function(v){' },
+    /* 2026-09-14：review 端的 makeWrongs 現在會避開題幹數字（avoid）。把 avoid 掏空，
+       ±1 保底又會撞回題幹上的數字（例：addsubWithin20 的 correct − 1 在 y = 1 時就是 x），
+       simgen 那條「誘答抄題幹」要響。 */
+    { file:'review', expect:'is copied straight out of the stem',
+      find:'    (avoid || []).forEach(function(v){ seen[String(v)] = true; });',
+      replace:'    ([]).forEach(function(v){ seen[String(v)] = true; });' },
     { file:'review', expect:'k outside 4~9',
       find:'        var k = pickUnused([4,5,6,7,8,9], used);\n        var unit = pick([20,24,30]);',
       replace:'        var k = pickUnused([4,5,6,7,8,9], used) + 1;\n        var unit = pick([20,24,30]);' },

@@ -185,25 +185,35 @@
     }
     return a;
   }
-  /* 保證 3 個相異、且都 >= 0、且不等於正解的錯誤選項 */
-  function makeWrongs(correct, candidates){
+  /* 這一課「所有結果 0~20 之間」：保底候選往上找也不可以超過 20 */
+  var MAX_OPT = 20;
+  /* 給出 3 個相異、且都 >= 0、且不等於正解的錯誤選項（avoid 與 MAX_OPT 把可用的數字擠到不夠時會少回傳幾個 —— 那時 simgen 的選項數檢查會響，不會卡死。）。
+     avoid：題幹上已經印出來、但「不是」刻意迷思誘答的那些數字 —— 先當成已用過，
+     候選與 ±step 保底都不會再端出來。孩子看到題幹上的數字又出現在選項裡，
+     那不是誘答，是抄題（2026-09-14 修：保底 ±1 常常撞上題幹數字）。 */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
-      if (c >= 0 && !seen[key]){ seen[key] = true; out.push(c); }
+      /* 明寫的候選也不可以衝出這一課的範圍（addMore 在 total = 20 時的 total + 1 = 21） */
+      if (c >= 0 && c <= MAX_OPT && !seen[key]){ seen[key] = true; out.push(c); }
     });
-    var step = 1;
-    while (out.length < 3){
+    /* step 有上限：避開的數字多時不可以無限找下去，也不可以衝出這一課的範圍 */
+    for (var step = 1; out.length < 3 && step <= MAX_OPT; step++){
       var lo = correct - step, hi = correct + step;
       if (lo >= 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
-      if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
-      step++;
+      if (out.length < 3 && hi <= MAX_OPT && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
     }
     return out.slice(0, 3);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  /* 題幹上的數字，扣掉 keep（刻意拿來當誘答的那一個），其餘都不可以出現在選項裡 */
+  function avoidExcept(stemNums, keep){
+    return stemNums.filter(function(v){ return keep.indexOf(v) < 0; });
+  }
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -215,7 +225,8 @@
         var a = pickUnused([2,3,4,5,6,7,8,9], used);
         var b = 2 + rand(Math.min(9, 18 - a) - 1);
         var sum = a + b;
-        var m = mixOpts(sum, [sum - 1, sum + 1, Math.abs(a - b)]);
+        /* 誘答刻意放 |a − b|（該加卻減）；它有時剛好等於 a 或 b，那仍是同一個迷思，其餘的加數不可以出現 */
+        var m = mixOpts(sum, [sum - 1, sum + 1, Math.abs(a - b)], avoidExcept([a, b], [Math.abs(a - b)]));
         return { a:a, b:b, sum:sum, opts:m.opts, ans:m.ans };
       },
       fmt:function(d, lang){
@@ -230,7 +241,8 @@
         var a = pickUnused([2,3,4,5,6,7,8,9], used);
         var b = 2 + rand(Math.min(9, 18 - a) - 1);
         var total = a + b;
-        var m = mixOpts(b, [b - 1, b + 1, total]);
+        /* 誘答刻意放 total（把總數當成缺的數）；a 不可以出現 */
+        var m = mixOpts(b, [b - 1, b + 1, total], avoidExcept([a, total], [total]));
         return { a:a, b:b, total:total, opts:m.opts, ans:m.ans };
       },
       fmt:function(d, lang){
@@ -245,7 +257,8 @@
         var start = pickUnused([3,4,5,6,7,8,9,10,11,12,13,14], used);
         var arrive = 1 + rand(6);
         var total = start + arrive;
-        var m = mixOpts(total, [total - 1, total + 1, arrive]);
+        /* 誘答刻意放 arrive（只答了新來的）；start 不可以出現 */
+        var m = mixOpts(total, [total - 1, total + 1, arrive], avoidExcept([start, arrive], [arrive]));
         return { start:start, arrive:arrive, total:total, opts:m.opts, ans:m.ans };
       },
       fmt:function(d, lang){
@@ -260,7 +273,8 @@
         var total = pickUnused([6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], used);
         var taken = 1 + rand(Math.min(9, total - 1));
         var remain = total - taken;
-        var m = mixOpts(remain, [remain - 1, remain + 1, taken]);
+        /* 誘答刻意放 taken（答了拿走的）；total 不可以出現 */
+        var m = mixOpts(remain, [remain - 1, remain + 1, taken], avoidExcept([total, taken], [taken]));
         return { total:total, taken:taken, remain:remain, opts:m.opts, ans:m.ans };
       },
       fmt:function(d, lang){
@@ -275,7 +289,8 @@
         var total = pickUnused([6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], used);
         var missing = 1 + rand(Math.min(9, total - 1));
         var result = total - missing;
-        var m = mixOpts(missing, [missing - 1, missing + 1, result]);
+        /* 誘答刻意放 result（答了剩下的）；total 不可以出現 */
+        var m = mixOpts(missing, [missing - 1, missing + 1, result], avoidExcept([total, result], [result]));
         return { total:total, missing:missing, result:result, opts:m.opts, ans:m.ans };
       },
       fmt:function(d, lang){
@@ -290,7 +305,10 @@
         var a = pickUnused([6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], used);
         var gap = 1 + rand(Math.min(9, a - 1));
         var b = a - gap;
-        var m = mixOpts(gap, [gap - 1, gap + 1, a + b]);
+        /* 誘答刻意放 a + b（比較卻拿去相加，見 why）；但這一課是 20 以內，a + b 衝出去時
+           退而放 b（直接抄小美的數量）—— 上課頁的迷思檢查題就是這兩個誘答。其餘題幹數字不可以出現 */
+        var addMistake = a + b <= MAX_OPT ? a + b : b;
+        var m = mixOpts(gap, [gap - 1, gap + 1, addMistake], avoidExcept([a, b], [addMistake]));
         return { a:a, b:b, gap:gap, opts:m.opts, ans:m.ans };
       },
       fmt:function(d, lang){
@@ -307,7 +325,8 @@
         var b = remain + 1 + rand(9 - remain);
         var sum = a + b;
         var leftover = b - remain;
-        var m = mixOpts(sum, [sum - 1, sum + 1, leftover]);
+        /* 誘答 leftover（只答了湊完十剩下的）不是題幹數字；a、b 都不可以出現 */
+        var m = mixOpts(sum, [sum - 1, sum + 1, leftover], [a, b]);
         return { a:a, b:b, remain:remain, leftover:leftover, sum:sum, opts:m.opts, ans:m.ans };
       },
       fmt:function(d, lang){
@@ -325,7 +344,8 @@
         var ones = total - 10;
         var b = ones + 1 + rand(9 - ones);
         var result = total - b;
-        var m = mixOpts(result, [result - 1, result + 1, Math.abs(ones - b)]);
+        /* 誘答 |ones − b|（個位倒著減）不是題幹數字；total、b 都不可以出現 */
+        var m = mixOpts(result, [result - 1, result + 1, Math.abs(ones - b)], [total, b]);
         return { total:total, ones:ones, b:b, result:result, opts:m.opts, ans:m.ans };
       },
       fmt:function(d, lang){

@@ -188,25 +188,36 @@
     }
     return a;
   }
-  /* 保證 N 個相異、非負、且不等於正解的錯誤選項 */
-  function makeWrongs(correct, candidates, count){
+  /* 這一課的數字最大到 70（從 0 開始每次加 10、加 6 次 → 60，誘答再加一步）：
+     保底候選往上找也不可以超過 70 */
+  var MAX_OPT = 70;
+  /* 給出 N 個相異、非負、且不等於正解的錯誤選項（avoid 與 MAX_OPT 把可用的數字擠到不夠時會少回傳幾個 —— 那時 simgen 的選項數檢查會響，不會卡死。）。
+     avoid：題幹上已經印出來、但「不是」刻意迷思誘答的那些數字 —— 先當成已用過，
+     候選與 ±step 保底都不會再端出來。孩子看到題幹上的數字又出現在選項裡，
+     那不是誘答，是抄題（2026-09-14 修：保底 ±1 常常撞上題幹數字）。 */
+  function makeWrongs(correct, candidates, count, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
-      if (c >= 0 && !seen[key]){ seen[key] = true; out.push(c); }
+      /* 明寫的候選也不可以衝出這一課的範圍（0~70） */
+      if (c >= 0 && c <= MAX_OPT && !seen[key]){ seen[key] = true; out.push(c); }
     });
-    var step = 1;
-    while (out.length < count){
+    /* step 有上限：避開的數字多時不可以無限找下去，也不可以衝出這一課的範圍 */
+    for (var step = 1; out.length < count && step <= MAX_OPT; step++){
       var lo = correct - step, hi = correct + step;
       if (lo >= 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
-      if (out.length < count && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
-      step++;
+      if (out.length < count && hi <= MAX_OPT && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
     }
     return out.slice(0, count);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates, 2);
+  /* 題幹上的數字，扣掉 keep（刻意拿來當誘答的那一個），其餘都不可以出現在選項裡 */
+  function avoidExcept(stemNums, keep){
+    return stemNums.filter(function(v){ return keep.indexOf(v) < 0; });
+  }
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, 2, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -230,7 +241,9 @@
         var start = pickUnused([1,2,3,4,5,6,7,8,9,10], used);
         var nums = [start, start + step, start + 2 * step, start + 3 * step];
         var next = start + 4 * step;
-        var m = mixOpts(next, [next - step, next + step]);
+        /* 誘答：多跳一步（next + step）、差一（next − 1）。舊的 next − step 就是題幹上最後一個數，
+           那是抄題不是迷思；四個已經印出來的數都不可以出現 */
+        var m = mixOpts(next, [next + step, next - 1], nums);
         return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -248,7 +261,10 @@
         var start = pickUnused([20,22,24,26,28,30,32,34], used);
         var nums = [start, start - step, start - 2 * step, start - 3 * step];
         var next = start - 4 * step;
-        var m = mixOpts(next, [next - step, next + step]);
+        /* 誘答：多跳一步（next − step）、以為還是越來越大而往回跳（nums[3] + step，就是題幹上的 nums[2]，
+           見 why「不是每個規律都越來越大」—— 上課頁的迷思檢查題用的就是這個）。
+           舊的 next + step 是題幹上最後一個數，那是抄題；其餘印出來的數都不可以出現 */
+        var m = mixOpts(next, [next - step, nums[3] + step], avoidExcept(nums, [nums[2]]));
         return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -317,7 +333,8 @@
         var nums = [start, start + step, start + 2 * step, start + 3 * step];
         var blank1 = start + 4 * step;
         var blank2 = start + 5 * step;
-        var m = mixOpts(blank2, [blank1, blank2 + step]);
+        /* 誘答：第一格（blank1）、多跳一步；題幹印出來的四個數都不可以出現 */
+        var m = mixOpts(blank2, [blank1, blank2 + step], nums);
         return { nums:nums, step:step, blank1:blank1, blank2:blank2, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -355,7 +372,8 @@
         var step = pick([2, 5, 10]);
         var k = pickUnused([3, 4, 5, 6], used);
         var answer = step * k;
-        var m = mixOpts(answer, [answer - step, answer + step]);
+        /* 題幹印了 0、step、k，都不可以出現 */
+        var m = mixOpts(answer, [answer - step, answer + step], [0, step, k]);
         return { step:step, k:k, answer:answer, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -373,7 +391,8 @@
       make: function(used){
         var n = pickUnused([1,2,3,4,5,6,7,8,9], used);
         var need = 10 - n;
-        var m = mixOpts(need, [need - 1, need + 1]);
+        /* 題幹印了 n 和 10，都不可以出現（n = 1 時 need + 1 就是 10） */
+        var m = mixOpts(need, [need - 1, need + 1], [n, 10]);
         return { n:n, need:need, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -396,7 +415,8 @@
           b = 1 + rand(a - 1);
           answer = a - b;
         }
-        var m = mixOpts(answer, [answer - 1, answer + 1]);
+        /* ±1 保底在 b = 1 時就是 a；a、b 都不可以出現 */
+        var m = mixOpts(answer, [answer - 1, answer + 1], [a, b]);
         return { isAdd:isAdd, a:a, b:b, answer:answer, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){

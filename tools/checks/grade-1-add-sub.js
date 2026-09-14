@@ -14,14 +14,26 @@ module.exports = {
       find:'    shuffle(round.opts).forEach(function(v){',
       replace:'    round.opts.forEach(function(v){' },
     { file:'review', expect:'a+b != sum',
-      find:'        var sum = a + b;\n        var m = mixOpts(sum, [sum - 1, sum + 1, Math.abs(a - b)]);',
-      replace:'        var sum = a + b + 1;\n        var m = mixOpts(sum, [sum - 1, sum + 1, Math.abs(a - b)]);' },
+      find:'        var sum = a + b;\n        /* 誘答刻意放 |a − b|（該加卻減）；它有時剛好等於 a 或 b，那仍是同一個迷思，其餘的加數不可以出現 */\n        var m = mixOpts(sum, [sum - 1, sum + 1, Math.abs(a - b)], avoidExcept([a, b], [Math.abs(a - b)]));',
+      replace:'        var sum = a + b + 1;\n        /* 誘答刻意放 |a − b|（該加卻減）；它有時剛好等於 a 或 b，那仍是同一個迷思，其餘的加數不可以出現 */\n        var m = mixOpts(sum, [sum - 1, sum + 1, Math.abs(a - b)], avoidExcept([a, b], [Math.abs(a - b)]));' },
+    /* 2026-09-14：review 端的 makeWrongs 現在會避開題幹數字（avoid）。把 avoid 掏空，
+       ±1 保底又會撞回題幹上的數字（例：addMore 的 total − 1 在 arrive = 1 時就是 start），
+       simgen 那條「誘答抄題幹」要響。 */
+    { file:'review', expect:'is copied straight out of the stem',
+      find:'    (avoid || []).forEach(function(v){ seen[String(v)] = true; });',
+      replace:'    ([]).forEach(function(v){ seen[String(v)] = true; });' },
+    /* 這一課的上限 MAX_OPT = 20 同時管 compareDiff 的「a + b 衝出去就退而放 b」與 makeWrongs 的
+       候選／保底範圍；把它放寬到 40，a + b（最大 39）就會直接端出來，RANGE 那條要響。
+       （只拿掉 compareDiff 那個門檻是不夠的：makeWrongs 還會用 MAX_OPT 把 a + b 擋掉，證明不了 RANGE 在看。） */
+    { file:'review', expect:'outside the lesson range',
+      find:'  var MAX_OPT = 20;',
+      replace:'  var MAX_OPT = 40;' },
     { file:'review', expect:'opts[ans] != correct',
       find:'    var opts = shuffle([correct].concat(wrongs));\n    return { opts: opts, ans: opts.indexOf(correct) };',
       replace:'    var opts = shuffle([correct].concat(wrongs));\n    return { opts: opts, ans: (opts.indexOf(correct) + 1) % 4 };' },
     { file:'review', expect:'duplicate option value',
-      find:'      if (c >= 0 && !seen[key]){ seen[key] = true; out.push(c); }',
-      replace:'      if (c >= 0){ out.push(c); }' },
+      find:'      if (c >= 0 && c <= MAX_OPT && !seen[key]){ seen[key] = true; out.push(c); }',
+      replace:'      if (c >= 0 && c <= MAX_OPT){ out.push(c); }' },
     { file:'review', expect:'a+remain != 10',
       find:'        var a = pickUnused([6,7,8,9], used);\n        var remain = 10 - a;',
       replace:'        var a = pickUnused([6,7,8,9], used);\n        var remain = 10 - a + 1;' },
@@ -103,18 +115,25 @@ module.exports = {
         default: throw new Error('unknown genId ' + genId);
       }
     },
-    /* 選項一律是非負整數。這一課宣稱「所有結果 0~20 之間」，邊界的 ±1 誘答容許到 21——
-       超過這個容差就是缺陷，不是設計（compareDiff 用 a+b 當誘答就是這樣一個例子，
-       見 tools/README.md 這一課的段落：候選值和正解無關，會衝出 0~20 很遠）。 */
+    /* 選項一律是非負整數。這一課宣稱「所有結果 0~20 之間」；2026-09-14 起 review.html 的
+       makeWrongs 連明寫的候選都擋在 MAX_OPT = 20 以內（addMore 在 total = 20 時的 total + 1 不再出現），
+       所以以前容許到 21 的邊界容差收緊成 20。compareDiff 以前用 a + b 當誘答會衝到 39，
+       現在 a + b > 20 時退而放 b —— 上限只有收緊，沒有放寬。 */
     optionOk: function(s){
       if (/[·#]/.test(s)) return 'junk option ' + s;
       if (!/^\d+$/.test(s)) return 'non-numeric option ' + s;
       const v = Number(s);
-      if (!(v >= 0 && v <= 21)) return 'option ' + s + ' outside the lesson range (0~20, ±1 slack at the edge)';
+      if (!(v >= 0 && v <= 20)) return 'option ' + s + ' outside the lesson range (0~20)';
       return null;
     },
-    /* 題幹本來就會印出來、刻意拿來當誘答的那個數字。 */
+    /* 題幹本來就會印出來、刻意拿來當誘答的那個數字。
+       combineSum 的 |a − b|（該加卻減）本身不是題幹數字，但 a = 2b 時剛好等於 b —— 仍是同一個
+       迷思的結果，放行的是這一個值。compareDiff 平常放 a + b（不是題幹數字），只有 a + b > 20
+       時退而放 b（直接抄小美的數量；上課頁的迷思檢查題就用了這個），所以謂詞連條件一起寫。
+       其餘的題幹數字 review.html 的 makeWrongs 現在用 avoid 擋掉，這裡沒有放行 → 再出現就是缺陷。 */
     stemEchoOk: {
+      combineSum: (d, opt) => Number(opt) === Math.abs(d.a - d.b),
+      compareDiff: (d, opt) => d.a + d.b > 20 && Number(opt) === d.b,
       missingAddend: (d, opt) => Number(opt) === d.total,
       addMore: (d, opt) => Number(opt) === d.arrive,
       takeAway: (d, opt) => Number(opt) === d.taken,

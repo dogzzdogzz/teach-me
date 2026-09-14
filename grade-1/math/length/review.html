@@ -205,25 +205,31 @@
     }
     return a;
   }
-  /* 保證 n 個相異、且不等於正解的錯誤選項 */
-  function makeWrongs(correct, candidates, need){
+  /* 這一課的數字最大到 25（數圓點最多 20 個、誘答再多幾個）：保底候選往上找也不可以超過 25 */
+  var MAX_OPT = 25;
+  /* 給出 n 個相異、且不等於正解的錯誤選項（avoid 與 MAX_OPT 把可用的數字擠到不夠時會少回傳幾個 —— 那時 simgen 的選項數檢查會響，不會卡死。）。
+     avoid：題幹上已經印出來、但「不是」刻意迷思誘答的那些數字 —— 先當成已用過，
+     候選與 ±step 保底都不會再端出來。孩子看到題幹上的數字又出現在選項裡，
+     那不是誘答，是抄題（2026-09-14 修：保底 ±1 常常撞上題幹數字）。 */
+  function makeWrongs(correct, candidates, need, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
-      if (!seen[key]){ seen[key] = true; out.push(c); }
+      /* 明寫的候選也不可以衝出這一課的範圍 */
+      if (c <= MAX_OPT && !seen[key]){ seen[key] = true; out.push(c); }
     });
-    var step = 1;
-    while (out.length < need){
+    /* step 有上限：避開的數字多時不可以無限找下去，也不可以衝出這一課的範圍 */
+    for (var step = 1; out.length < need && step <= MAX_OPT; step++){
       var lo = correct - step, hi = correct + step;
       if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
-      if (out.length < need && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
-      step++;
+      if (out.length < need && hi <= MAX_OPT && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
     }
     return out.slice(0, need);
   }
-  function mixOpts(correct, candidates, total){
-    var wrongs = makeWrongs(correct, candidates, (total || 4) - 1);
+  function mixOpts(correct, candidates, total, avoid){
+    var wrongs = makeWrongs(correct, candidates, (total || 4) - 1, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -364,7 +370,9 @@
       make: function(used){
         var g = pickUnused([3,4,5,6,7,8], used);
         var smallCount = g * 2;
-        var m = mixOpts(g, [g + 1, g > 1 ? g - 1 : g + 3, smallCount], 4);
+        /* 誘答刻意放 smallCount（沒換單位）；題幹還印了「1 個大方塊等於 2 個小方塊」的 1 和 2，
+           那兩個數不可以出現（g = 3 時 g − 1 就是 2） */
+        var m = mixOpts(g, [g + 1, g > 1 ? g - 1 : g + 3, smallCount], 4, [1, 2]);
         return { g:g, smallCount:smallCount, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -382,7 +390,8 @@
       make: function(used){
         var b = pickUnused([3,4,5,6,7,8], used);
         var result = b * 2;
-        var m = mixOpts(result, [b, result - 2 > 0 ? result - 2 : result + 4, result + 2], 4);
+        /* 誘答刻意放 b（沒換單位）；題幹上的 1 和 2 不可以出現 */
+        var m = mixOpts(result, [b, result - 2 > 0 ? result - 2 : result + 4, result + 2], 4, [1, 2]);
         return { b:b, result:result, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -487,7 +496,8 @@
           y = 1 + rand(8);
           correct = x - y;
         }
-        var m = mixOpts(correct, [correct - 1, correct + 1, correct + 2], 4);
+        /* ±1 保底在 y = 1 時就是 x；x、y 都不可以出現 */
+        var m = mixOpts(correct, [correct - 1, correct + 1, correct + 2], 4, [x, y]);
         return { isAdd:isAdd, x:x, y:y, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
