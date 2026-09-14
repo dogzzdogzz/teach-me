@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 數線探險隊</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .figwrap{margin:10px 0 12px;text-align:center;overflow-x:auto}
+  .nlfig{width:100%;max-width:460px;height:70px;display:block;margin:0 auto}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .result{margin-top:22px;background:var(--orange-soft);border-radius:18px;padding:18px;display:none}
+  .result.on{display:block}
+  .result .line{font-size:18px;font-weight:700}
+  .result .links{margin-top:10px;font-size:15px}
+  .result .links a{color:var(--blue)}
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：數線探險隊</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾幾題「分數變身工廠」和「小數放大鏡」的題型。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。
+     ⚠️ 畫圖用的 linePlan() 一定要放在 GENS **前面**：這樣 make()／fmt() 才能把
+     **算好的座標**放進 fig，設定檔驗的就是「頁面真的畫成什麼」，
+     而不是「設定檔自己會畫成什麼」。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function rangeList(a, b){
+    var out = [];
+    for (var i = a; i <= b; i++) out.push(i);
+    return out;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+  /* ⚠️ make() 一律不可以回 null（也不可以丟例外）：tools/simgen.js 每一批只呼叫 make()
+     一次、**不重試**，回 null 之後檢查會直接 dereference null 而當掉 —— 當掉不是「抓到」。
+     每一次迴圈都重新抽一組參數，所以連續 400 次全被拒絕的機率極低，可是「極低」不是
+     「不會」，所以每一支都給一組**手算過的**保底參數。 */
+  function retry(fn, fallback){
+    for (var i = 0; i < 400; i++){
+      var d = fn();
+      if (d) return d;
+    }
+    return fallback ? fallback() : null;
+  }
+
+  /* --- 這一課的數線模型：M 格（每一格代表 1）、一格平分成 d 份、點在第 k 段。
+         一個點的值 ＝ k/d，全部用整數 (k, d) 表示，不換成小數。
+         畫得出來的上界：M ≤ 3、d 在 DENS 裡、M × d ≤ 24（再多就擠成一片）。 --- */
+  var DENS = [2, 3, 4, 5, 6, 10];
+  var MAX_M = 3, MAX_SEGS = 24;
+  function densFor(M){ return DENS.filter(function(d){ return M * d <= MAX_SEGS; }); }
+
+  function gcd(a, b){ while (b){ var t = a % b; a = b; b = t; } return a; }
+  function wholeOf(k, d){ return Math.floor(k / d); }
+  function remOf(k, d){ return k % d; }
+  function fracText(k, d){ return k + '/' + d; }
+  function mixedText(k, d, lang){
+    var w = wholeOf(k, d), r = remOf(k, d);
+    if (r === 0) return String(w);
+    if (w === 0) return r + '/' + d;
+    return lang === 'zh' ? (w + ' 又 ' + r + '/' + d) : (w + ' ' + r + '/' + d);
+  }
+  /* 小數的寫法只有 d ＝ 10 才有（一小段就是 0.1）。 */
+  function tenthText(k){
+    var w = Math.floor(k / 10), r = k % 10;
+    return r === 0 ? String(w) : (w + '.' + r);
+  }
+
+  /* --- 選項的「值」：把每一種寫法解析回**整數分子／分母**，兩兩交叉相乘比。
+         字串比對抓不到 3/4 和 1 又 3/4 是同一個數，而那正是這一課最危險的等值形狀。 --- */
+  function valOf(s){
+    var t = String(s).replace(/\s+/g, ' ').trim();
+    var m = /^(\d+) 又 (\d+)\/(\d+)$/.exec(t) || /^(\d+) (\d+)\/(\d+)$/.exec(t);
+    if (m){
+      var w = Number(m[1]), n = Number(m[2]), d = Number(m[3]);
+      if (!d) return null;
+      return { n:w * d + n, d:d };
+    }
+    m = /^(\d+)\/(\d+)$/.exec(t);
+    if (m){ if (!Number(m[2])) return null; return { n:Number(m[1]), d:Number(m[2]) }; }
+    m = /^(\d+)\.(\d+)$/.exec(t);
+    if (m){
+      var pow = Math.pow(10, m[2].length);
+      return { n:Number(m[1]) * pow + Number(m[2]), d:pow };
+    }
+    m = /^(\d+)$/.exec(t);
+    if (m) return { n:Number(m[1]), d:1 };
+    return null;
+  }
+  function valKey(s){
+    var v = valOf(s);
+    if (!v) return 'raw:' + String(s).replace(/\s+/g, '');
+    var g = gcd(v.n, v.d) || 1;
+    return 'v:' + (v.n / g) + '/' + (v.d / g);
+  }
+  /* 四個**值**互不相同的字串選項。候選不夠就回 null，讓 make() 重抽。 */
+  function strOpts(correct, cands){
+    var out = [correct], keys = [valKey(correct)];
+    cands.forEach(function(s){
+      if (out.length >= 4 || !s) return;
+      var k = valKey(s);
+      if (keys.indexOf(k) >= 0) return;
+      keys.push(k); out.push(s);
+    });
+    return out.length === 4 ? shuffle(out) : null;
+  }
+  /* 四個互不相同的**整數**選項（單位在 fmt 裡才接上去）。 */
+  function numOpts(correct, cands){
+    var out = [correct], seen = {};
+    seen[String(correct)] = 1;
+    cands.forEach(function(v){
+      if (out.length >= 4) return;
+      if (typeof v !== 'number' || !isFinite(v) || v !== Math.round(v) || v < 1 || v > 99) return;
+      if (seen[String(v)]) return;
+      seen[String(v)] = 1;
+      out.push(v);
+    });
+    return out.length === 4 ? shuffle(out) : null;
+  }
+
+  /* --- 英文的單複數。只有 1 會錯，而且要放在語言無關的區塊
+         （放進 en 字典會破 zh/en 的 key 對應）。 --- */
+  function plEn(n, w){
+    if (n === 1) return n + ' ' + w;
+    return n + ' ' + w + (/(s|x|z|ch|sh)$/.test(w) ? 'es' : 's');
+  }
+
+  /* 「百分位的整數」印成小數：47 → 0.47、40 → 0.4、50 → 0.5。 */
+  function centText(c){
+    var w = Math.floor(c / 100), rest = c % 100;
+    if (rest === 0) return String(w);
+    if (rest % 10 === 0) return w + '.' + (rest / 10);
+    return w + '.' + (rest < 10 ? '0' + rest : String(rest));
+  }
+  /* 補零之後的兩位小數寫法（比大小時看到的樣子）。 */
+  function centPad(c){
+    var w = Math.floor(c / 100), rest = c % 100;
+    return w + '.' + (rest < 10 ? '0' + rest : String(rest));
+  }
+
+  /* --- 圖的座標（和 index.html 同一套版面常數）。純資料，畫圖那一段只照著畫。
+         圖上只有**單一個字**的標籤（整數 0~3），分數的寫法一律在題幹與選項裡。 --- */
+  var FIG_W = 460, FIG_H = 70;
+  var SPAN = 360, X0 = (FIG_W - SPAN) / 2, LINE_Y = 30;
+  var END_OVER = 14, TICK_BIG = 11, TICK_SMALL = 6;
+  var LBL_FS = 19, LBL_DY = 28, DOT_R = 6;
+  var LINE_W = 3, TICK_W = 2;
+
+  function segPx(M, d){ return SPAN / (M * d); }
+  function unitPx(M){ return SPAN / M; }
+  function xAt(M, d, k){ return X0 + k * segPx(M, d); }
+
+  function linePlan(M, d, mark){
+    var sp = segPx(M, d), up = unitPx(M), i, j;
+    var ticks = [], labels = [], dots = [];
+    for (j = 0; j <= M * d; j++){
+      var half = (j % d === 0) ? TICK_BIG : TICK_SMALL;
+      ticks.push({ x:X0 + j * sp, y1:LINE_Y - half, y2:LINE_Y + half, big:(j % d === 0) });
+    }
+    for (i = 0; i <= M; i++) labels.push({ x:X0 + i * up, y:LINE_Y + LBL_DY, text:String(i), fs:LBL_FS });
+    if (typeof mark === 'number') dots.push({ x:xAt(M, d, mark), y:LINE_Y, r:DOT_R, k:mark });
+    return {
+      w:FIG_W, h:FIG_H, M:M, d:d, segPx:sp, unitPx:up,
+      axis:{ x1:X0 - END_OVER, x2:X0 + SPAN + END_OVER, y:LINE_Y },
+      ticks:ticks, labels:labels, dots:dots
+    };
+  }
+
+  var GENS = [
+    /* 1. 一格平分成 d 份，一小段是多少？頭號迷思是把「份數」當成長度。 */
+    { id:'unitPart', cat:'unit',
+      make:function(used){
+        return retry(function(){
+          var d = pickUnused(DENS, used);
+          var opts = strOpts('1/' + d, [String(d), '1/' + (d + 1), d + '/' + d, '1/' + (d - 1)]);
+          if (!opts) return null;
+          return { d:d, opts:opts, ans:opts.indexOf('1/' + d) };
+        }, function(){
+          var opts = strOpts('1/5', ['5', '1/6', '5/5', '1/4']);
+          return { d:5, opts:opts, ans:opts.indexOf('1/5') };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一條數線的一格被<strong>平分成 ' + d.d + ' 份</strong>。<strong>一小段</strong>是多少？'
+            : 'One step of a number line is cut into <strong>' + plEn(d.d, 'equal part') + '</strong>. How big is <strong>one small part</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '一格平分成 ' + d.d + ' 份，其中的 1 份就是 1/' + d.d + '。' + d.d + ' 是段數，不是長度；' + d.d + '/' + d.d + ' 是數了 ' + d.d + ' 段、剛好走完一整格，那個點是 1。'
+            : 'One step cut into ' + plEn(d.d, 'equal part') + ' makes one of them 1/' + d.d + '. The number ' + d.d + ' counts parts, it is not a length, and ' + d.d + '/' + d.d + ' means all ' + d.d + ' parts counted, which finishes a whole step and lands on 1.'
+        };
+      } },
+
+    /* 2. 從 0 數 k 段的點是多少（不畫圖，只給文字）。誘答含「把格線數成分母」。 */
+    { id:'countParts', cat:'mark',
+      make:function(used){
+        return retry(function(){
+          var d = pickUnused(DENS, used);
+          var k = pick(rangeList(2, d - 1));
+          if (gcd(k, d) !== 1) return null;          /* 約分過的寫法會變成第二個正解 */
+          var right = fracText(k, d);
+          var opts = strOpts(right, [fracText(d, k), fracText(k, d + 1), fracText(k + 1, d), '1/' + d]);
+          if (!opts) return null;
+          return { d:d, k:k, opts:opts, ans:opts.indexOf(right) };
+        }, function(){
+          var opts = strOpts('3/4', ['4/3', '3/5', '4/4', '1/4']);
+          return { d:4, k:3, opts:opts, ans:opts.indexOf('3/4') };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一條數線的一格被<strong>平分成 ' + d.d + ' 份</strong>。從 0 往右<strong>數 ' + d.k + ' 段</strong>的那個點是多少？'
+            : 'One step of a number line is cut into <strong>' + plEn(d.d, 'equal part') + '</strong>. Which point do you reach by <strong>counting ' + plEn(d.k, 'part') + '</strong> to the right of 0?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '分母就是一格被平分成的份數，也就是 ' + d.d + '；分子就是從 0 數過的段數，也就是 ' + d.k + '，所以是 ' + d.k + '/' + d.d + '。' + d.d + '/' + d.k + ' 把分子分母寫反了；' + d.k + '/' + (d.d + 1) + ' 把<strong>格線</strong>的條數當成分母（' + d.d + ' 段有 ' + (d.d + 1) + ' 條格線）。'
+            : 'The denominator is how many parts a step is cut into (' + d.d + ') and the numerator is how many parts you counted (' + d.k + '), so it is ' + d.k + '/' + d.d + '. The option ' + d.d + '/' + d.k + ' has them the wrong way round, and ' + d.k + '/' + (d.d + 1) + ' uses the number of <strong>marks</strong> as the denominator (' + plEn(d.d, 'part') + ' have ' + (d.d + 1) + ' marks).'
+        };
+      } },
+
+    /* 3. 看圖讀出一個真分數。 */
+    { id:'readProper', cat:'read',
+      make:function(used){
+        return retry(function(){
+          var d = pickUnused(densFor(1), used);
+          var k = pick(rangeList(2, d - 1));
+          if (gcd(k, d) !== 1) return null;
+          var right = fracText(k, d);
+          var opts = strOpts(right, [fracText(d, k), fracText(k, d + 1), fracText(k + 1, d), fracText(k - 1, d)]);
+          if (!opts) return null;
+          return { M:1, d:d, k:k, opts:opts, ans:opts.indexOf(right), fig:linePlan(1, d, k) };
+        }, function(){
+          var opts = strOpts('5/6', ['6/5', '5/7', '4/6', '1/6']);
+          return { M:1, d:6, k:5, opts:opts, ans:opts.indexOf('5/6'), fig:linePlan(1, 6, 5) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '圖上這個點是多少？（一格被平分成 <strong>' + d.d + ' 份</strong>）'
+            : 'What is the marked point? (a step is cut into <strong>' + plEn(d.d, 'equal part') + '</strong>)',
+          opts: d.opts.slice(), ans:d.ans, fig:d.fig,
+          why: lang === 'zh'
+            ? '一格被平分成 ' + d.d + ' 段，這個點從 0 往右數了 ' + d.k + ' 段，所以是 ' + d.k + '/' + d.d + '。數的是<strong>段</strong>，不是格線。'
+            : 'A step holds ' + plEn(d.d, 'part') + ' and the point is ' + plEn(d.k, 'part') + ' to the right of 0, so it is ' + d.k + '/' + d.d + '. Count the <strong>parts</strong>, not the marks.'
+        };
+      } },
+
+    /* 4. 看圖讀出一個帶分數。題幹明講「用帶分數寫」，不然假分數也是對的。 */
+    { id:'readMixed', cat:'read',
+      make:function(used){
+        return retry(function(){
+          var M = pick([2, 3]);
+          /* r 要滿足 1 ≤ r ≤ d － 2（誘答「多數一段」得留在同一格裡），所以 d 至少要 3 ——
+             把 d ＝ 2 從抽樣池裡拿掉，不要靠「抽到了再拒絕」，那會讓定義域靜靜變窄。 */
+          var d = pickUnused(densFor(M).filter(function(x){ return x >= 3; }), used);
+          var w = pick(rangeList(1, M - 1));
+          var r = pick(rangeList(1, d - 2));
+          if (gcd(r, d) !== 1) return null;
+          var k = w * d + r;
+          var right = mixedText(k, d, 'zh');
+          var opts = strOpts(right,
+            [mixedText((w + 1) * d + r, d, 'zh'), mixedText(w * d + r + 1, d, 'zh'),
+             fracText(r, d), mixedText(w * d + r - 1, d, 'zh')]);
+          if (!opts) return null;
+          return { M:M, d:d, w:w, r:r, k:k, opts:opts, ans:opts.indexOf(right), fig:linePlan(M, d, k) };
+        }, function(){
+          var right = '1 又 2/5';
+          var opts = strOpts(right, ['2 又 2/5', '1 又 3/5', '2/5', '1 又 1/5']);
+          return { M:2, d:5, w:1, r:2, k:7, opts:opts, ans:opts.indexOf(right), fig:linePlan(2, 5, 7) };
+        });
+      },
+      fmt:function(d, lang){
+        var en = d.opts.map(function(s){ return s.replace(' 又 ', ' '); });
+        return {
+          stem: lang === 'zh'
+            ? '圖上這個點是多少？<strong>用帶分數寫</strong>。（一格被平分成 <strong>' + d.d + ' 份</strong>）'
+            : 'What is the marked point? <strong>Write it as a mixed number.</strong> (a step is cut into <strong>' + plEn(d.d, 'equal part') + '</strong>)',
+          opts: lang === 'zh' ? d.opts.slice() : en, ans:d.ans, fig:d.fig,
+          why: lang === 'zh'
+            ? '這個點在 ' + d.w + ' 和 ' + (d.w + 1) + ' 之間：先走完 ' + d.w + ' 整格，再從 ' + d.w + ' 往右數 ' + d.r + ' 段，所以是 ' + mixedText(d.k, d.d, 'zh') + '（假分數寫成 ' + fracText(d.k, d.d) + '）。'
+            : 'The point sits between ' + d.w + ' and ' + (d.w + 1) + ': ' + plEn(d.w, 'whole step') + ' walked, then ' + plEn(d.r, 'part') + ' to the right of ' + d.w + ', so it is ' + mixedText(d.k, d.d, 'en') + ' (' + fracText(d.k, d.d) + ' as an improper fraction).'
+        };
+      } },
+
+    /* 5. 一個分數落在哪兩個整數之間。 */
+    { id:'betweenWhich', cat:'between',
+      make:function(used){
+        return retry(function(){
+          var d = pickUnused(DENS, used);
+          var w = pick([0, 1, 2]);
+          var r = pick(rangeList(1, d - 1));
+          var k = w * d + r;
+          var right = 'b' + w + (w + 1);
+          var opts = shuffle(['b01', 'b12', 'b23', 'onOne']);
+          return { d:d, w:w, r:r, k:k, opts:opts, ans:opts.indexOf(right) };
+        }, function(){
+          var opts = shuffle(['b01', 'b12', 'b23', 'onOne']);
+          return { d:5, w:1, r:2, k:7, opts:opts, ans:opts.indexOf('b12') };
+        });
+      },
+      fmt:function(d, lang){
+        var T = (lang === 'zh')
+          ? { b01:'0 和 1 之間', b12:'1 和 2 之間', b23:'2 和 3 之間', onOne:'剛好在 1' }
+          : { b01:'between 0 and 1', b12:'between 1 and 2', b23:'between 2 and 3', onOne:'exactly on 1' };
+        return {
+          stem: lang === 'zh'
+            ? '數線上的 <strong>' + fracText(d.k, d.d) + '</strong> 這個點在哪裡？'
+            : 'Where does the point <strong>' + fracText(d.k, d.d) + '</strong> sit on a number line?',
+          opts: d.opts.map(function(k){ return T[k]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? d.k + ' ÷ ' + d.d + ' ＝ ' + d.w + ' 餘 ' + d.r + '：走完 ' + d.w + ' 整格，再往右 ' + d.r + ' 段，所以它在 ' + d.w + ' 和 ' + (d.w + 1) + ' 之間。這一題除不盡，所以商是左邊那個整數、餘數是還要數幾段。'
+            : d.k + ' ÷ ' + d.d + ' = ' + d.w + ' remainder ' + d.r + ': ' + plEn(d.w, 'whole step') + ' walked and then ' + plEn(d.r, 'part') + ' more, so it sits between ' + d.w + ' and ' + (d.w + 1) + '. This one does not divide exactly, so the quotient is the whole number on the left and the remainder is the parts still to count.'
+        };
+      } },
+
+    /* 6. 要標出 n/d 得從 0 數幾段。⚠️ 分母 d 是刻意的迷思誘答（設定檔的 stemEchoOk 放行它）。 */
+    { id:'partsToMark', cat:'mark',
+      make:function(used){
+        return retry(function(){
+          var d = pickUnused(DENS, used);
+          var n = pick(rangeList(2, 2 * d - 1));
+          if (n === d) return null;                    /* 正解會等於「分母」那個誘答 */
+          var opts = numOpts(n, [d, n + d, n + 1, n - 1]);
+          if (!opts) return null;
+          return { d:d, n:n, opts:opts, ans:opts.indexOf(n) };
+        }, function(){
+          var opts = numOpts(5, [6, 11, 6, 4]);
+          return { d:6, n:5, opts:opts, ans:opts.indexOf(5) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一條數線的一格被<strong>平分成 ' + d.d + ' 份</strong>。要標出 <strong>' + fracText(d.n, d.d) + '</strong>，得從 0 往右<strong>數幾段</strong>？'
+            : 'One step of a number line is cut into <strong>' + plEn(d.d, 'equal part') + '</strong>. To mark <strong>' + fracText(d.n, d.d) + '</strong>, <strong>how many parts</strong> do you count to the right of 0?',
+          opts: d.opts.map(function(v){ return lang === 'zh' ? (v + ' 段') : plEn(v, 'part'); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '<strong>分子</strong>就是要數的段數，所以數 ' + d.n + ' 段。' + d.d + ' 是<strong>分母</strong>（一格被平分成幾份），數 ' + d.d + ' 段只會走完一整格。'
+            : 'The <strong>numerator</strong> is the number of parts to count, so count ' + plEn(d.n, 'part') + '. The ' + d.d + ' is the <strong>denominator</strong> (how many parts a step is cut into); counting ' + plEn(d.d, 'part') + ' only finishes one whole step.'
+        };
+      } },
+
+    /* 7. 同一條數線上比大小 —— 分母一樣，段數多的在右邊。 */
+    { id:'compareOnLine', cat:'compare',
+      make:function(used){
+        return retry(function(){
+          var d = pickUnused(DENS, used);
+          var a = pick(rangeList(1, 2 * d - 1));
+          var b = pick(rangeList(1, 2 * d - 1));
+          if (a === b) return null;
+          var hi = Math.max(a, b), lo = Math.min(a, b);
+          var opts = shuffle([fracText(hi, d), fracText(lo, d), 'same', 'needDec']);
+          return { d:d, a:a, b:b, hi:hi, lo:lo, opts:opts, ans:opts.indexOf(fracText(hi, d)) };
+        }, function(){
+          var opts = shuffle(['4/5', '2/5', 'same', 'needDec']);
+          return { d:5, a:2, b:4, hi:4, lo:2, opts:opts, ans:opts.indexOf('4/5') };
+        });
+      },
+      fmt:function(d, lang){
+        var T = (lang === 'zh')
+          ? { same:'一樣大', needDec:'要先換成小數才知道' }
+          : { same:'they are the same', needDec:'you have to turn them into decimals first' };
+        return {
+          stem: lang === 'zh'
+            ? '同一條數線上（一格都平分成 ' + d.d + ' 份），<strong>' + fracText(d.a, d.d) + '</strong> 和 <strong>' + fracText(d.b, d.d) + '</strong> 哪一個比較大？'
+            : 'On one number line (every step cut into ' + plEn(d.d, 'part') + '), which is bigger, <strong>' + fracText(d.a, d.d) + '</strong> or <strong>' + fracText(d.b, d.d) + '</strong>?',
+          opts: d.opts.map(function(k){ return T[k] || k; }), ans:d.ans,
+          why: lang === 'zh'
+            ? fracText(d.hi, d.d) + ' 從 0 數了 ' + d.hi + ' 段，' + fracText(d.lo, d.d) + ' 只數了 ' + d.lo + ' 段，所以 ' + fracText(d.hi, d.d) + ' 在右邊 —— 同一條數線上，右邊的比較大。分母一樣的時候看段數就好，不用換成小數。'
+            : fracText(d.hi, d.d) + ' is ' + plEn(d.hi, 'part') + ' from 0 and ' + fracText(d.lo, d.d) + ' is only ' + plEn(d.lo, 'part') + ', so ' + fracText(d.hi, d.d) + ' sits further right — and on one number line the point further right is the bigger one. With the same denominator the parts are enough, no decimals needed.'
+        };
+      } },
+
+    /* 8. 數了 M × d 段走到哪個整數。⚠️ 段數本身是刻意的迷思誘答。 */
+    { id:'wholeOnLine', cat:'unit',
+      make:function(used){
+        return retry(function(){
+          var m = pickUnused([1, 2, 3], used);
+          var d = pick(densFor(m));
+          var segs = m * d;
+          var opts = numOpts(m, [segs, d, m + 1, m + d]);
+          if (!opts) return null;
+          return { m:m, d:d, segs:segs, opts:opts, ans:opts.indexOf(m) };
+        }, function(){
+          var opts = numOpts(2, [12, 6, 3, 8]);
+          return { m:2, d:6, segs:12, opts:opts, ans:opts.indexOf(2) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一條數線的一格被<strong>平分成 ' + d.d + ' 份</strong>。從 0 往右<strong>數了 ' + d.segs + ' 段</strong>，走到哪一個<strong>整數</strong>？'
+            : 'One step of a number line is cut into <strong>' + plEn(d.d, 'equal part') + '</strong>. You count <strong>' + plEn(d.segs, 'part') + '</strong> to the right of 0. Which <strong>whole number</strong> do you land on?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? d.d + ' 段剛好走完一整格，所以 ' + d.segs + ' ÷ ' + d.d + ' ＝ ' + d.m + '，走到整數 ' + d.m + '（' + fracText(d.segs, d.d) + ' ＝ ' + d.m + '）。' + d.segs + ' 是段數，不是走到的位置。'
+            : plEn(d.d, 'part') + ' finish one whole step, so ' + d.segs + ' ÷ ' + d.d + ' = ' + d.m + ' and you land on the whole number ' + d.m + ' (' + fracText(d.segs, d.d) + ' = ' + d.m + '). The number ' + d.segs + ' counts parts, it is not the place you land on.'
+        };
+      } },
+
+    /* 9. 中間 g 條格線 → 一格被平分成 g ＋ 1 份。⚠️ g 是刻意的迷思誘答。 */
+    { id:'marksVsParts', cat:'unit',
+      make:function(used){
+        return retry(function(){
+          var d = pickUnused(DENS, used);
+          var g = d - 1;                               /* 不含兩端的格線條數 */
+          var opts = numOpts(d, [g, d + 1, g + 2, d + 2]);
+          if (!opts) return null;
+          return { d:d, g:g, opts:opts, ans:opts.indexOf(d) };
+        }, function(){
+          var opts = numOpts(5, [4, 6, 7, 3]);
+          return { d:5, g:4, opts:opts, ans:opts.indexOf(5) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一條數線的 <strong>0 和 1 之間</strong>畫了 <strong>' + d.g + ' 條格線</strong>把它分開（0 和 1 那兩條不算）。一格被<strong>平分成幾份</strong>？'
+            : 'A number line has <strong>' + plEn(d.g, 'mark') + '</strong> drawn <strong>between 0 and 1</strong> to divide it up (not counting the marks at 0 and 1). Into how many <strong>equal parts</strong> is one step cut?',
+          opts: d.opts.map(function(v){ return lang === 'zh' ? (v + ' 份') : plEn(v, 'part'); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '中間 ' + d.g + ' 條格線把一格切成 ' + d.d + ' 小段，所以是平分成 ' + d.d + ' 份。段數永遠比中間的格線多 1。'
+            : plEn(d.g, 'mark') + ' in the middle cut the step into ' + plEn(d.d, 'small part') + ', so it is cut into ' + d.d + '. There is always one more part than there are marks in the middle.'
+        };
+      } },
+
+    /* 10. 一格 10 份，看圖用小數寫。 */
+    { id:'tenthsDecimal', cat:'decimal',
+      make:function(used){
+        return retry(function(){
+          var M = pickUnused([1, 2], used);
+          var w = pick(rangeList(0, M - 1));
+          var r = pick(rangeList(1, 9));
+          var k = w * 10 + r;
+          var right = tenthText(k);
+          var wrongR = (r === 9) ? 8 : r + 1;
+          var opts = strOpts(right, [k + '.0', w + '.0' + r, tenthText(w * 10 + wrongR), '0.1']);
+          if (!opts) return null;
+          return { M:M, d:10, w:w, r:r, k:k, opts:opts, ans:opts.indexOf(right), fig:linePlan(M, 10, k) };
+        }, function(){
+          var right = '0.4';
+          var opts = strOpts(right, ['4.0', '0.04', '0.5', '0.1']);
+          return { M:1, d:10, w:0, r:4, k:4, opts:opts, ans:opts.indexOf(right), fig:linePlan(1, 10, 4) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '圖上這個點用<strong>小數</strong>寫是多少？（一格被平分成 <strong>10 份</strong>）'
+            : 'What is the marked point <strong>as a decimal</strong>? (a step is cut into <strong>10 equal parts</strong>)',
+          opts: d.opts.slice(), ans:d.ans, fig:d.fig,
+          why: lang === 'zh'
+            ? '一格平分成 10 份，一小段是 1/10，也就是 0.1。這個點從 0 數了 ' + d.k + ' 段，分數寫成 ' + fracText(d.k, 10) + '，小數寫成 ' + tenthText(d.k) + '。'
+            : 'A step cut into 10 parts makes one part 1/10, which is 0.1. The point is ' + plEn(d.k, 'part') + ' from 0, which is ' + fracText(d.k, 10) + ' as a fraction and ' + tenthText(d.k) + ' as a decimal.'
+        };
+      } },
+
+    /* 11. 0 到 M 一共幾小段（一格 d 份）。誘答是格線的條數。 */
+    { id:'totalParts', cat:'unit',
+      make:function(used){
+        return retry(function(){
+          var M = pickUnused([2, 3], used);
+          var d = pick(densFor(M));
+          var segs = M * d;
+          var opts = numOpts(segs, [segs + 1, (M + 1) * d, segs - 1, segs + d]);
+          if (!opts) return null;
+          return { M:M, d:d, segs:segs, opts:opts, ans:opts.indexOf(segs) };
+        }, function(){
+          var opts = numOpts(10, [11, 15, 9, 12]);
+          return { M:2, d:5, segs:10, opts:opts, ans:opts.indexOf(10) };
+        });
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '一條數線從 <strong>0 畫到 ' + d.M + '</strong>，每一格都<strong>平分成 ' + d.d + ' 份</strong>。這條數線上一共有幾<strong>小段</strong>？'
+            : 'A number line runs from <strong>0 to ' + d.M + '</strong> and every step is cut into <strong>' + plEn(d.d, 'equal part') + '</strong>. How many <strong>small parts</strong> are there on the whole line?',
+          opts: d.opts.map(function(v){ return lang === 'zh' ? (v + ' 段') : plEn(v, 'part'); }), ans:d.ans,
+          why: lang === 'zh'
+            ? d.M + ' 格，每一格 ' + d.d + ' 段，所以 ' + d.M + ' × ' + d.d + ' ＝ ' + d.segs + ' 段。' + (d.segs + 1) + ' 是<strong>格線</strong>的條數（' + d.segs + ' 段會有 ' + (d.segs + 1) + ' 條格線）。'
+            : plEn(d.M, 'step') + ' with ' + plEn(d.d, 'part') + ' each make ' + d.M + ' × ' + d.d + ' = ' + d.segs + ' parts. The number ' + (d.segs + 1) + ' counts the <strong>marks</strong> (' + plEn(d.segs, 'part') + ' have ' + (d.segs + 1) + ' marks).'
+        };
+      } },
+
+    /* 12. 交錯題：四年級「小數放大鏡」—— 位數不一樣的小數比大小（要先補零）。 */
+    { id:'interDecMax', cat:'inter',
+      make:function(used){
+        return retry(function(){
+          /* 全部用「百分位的整數」表示，比大小完全精確（0.1 ＋ 0.2 !== 0.3）。 */
+          var a = pickUnused(rangeList(11, 89), used);
+          if (a % 10 === 0) return null;               /* 一位小數留給誘答那一組 */
+          var one = Math.floor(a / 10) * 10;           /* 同十分位的一位小數 */
+          var lo = one - 10, hi2 = one + 10;
+          if (lo < 10 || hi2 > 90) return null;
+          var cents = [a, one, lo, hi2];
+          /* lo、one、hi2 是三個不同的 10 的倍數，而 a 不是 10 的倍數（上面擋掉了），
+             所以四個值必然互不相同、最大的也必然只有一個 —— 這裡**不再放**
+             「最大的只有一個」與「四個值互不相同」那兩個拒絕條件：它們在這個抽樣
+             空間裡永遠不會響，留著只是看起來有人在守。真正的守衛在設定檔的
+             INVARIANTS 裡（它驗的是 make() 交出來的東西，不管是怎麼抽的）。 */
+          var big = Math.max.apply(null, cents);
+          var right = centText(big);
+          var opts = shuffle(cents.map(centText));
+          return { cents:cents, big:big, opts:opts, ans:opts.indexOf(right) };
+        }, function(){
+          var texts = [47, 40, 30, 50].map(centText);
+          var opts = shuffle(texts);
+          return { cents:[47, 40, 30, 50], big:50, opts:opts, ans:opts.indexOf('0.5') };
+        });
+      },
+      fmt:function(d, lang){
+        var second = d.cents.slice().sort(function(x, y){ return y - x; })[1];
+        return {
+          stem: lang === 'zh'
+            ? '下面四個小數，哪一個<strong>最大</strong>？'
+            : 'Which of these four decimals is the <strong>biggest</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '位數不一樣的小數要先在<strong>最後面補 0</strong> 補成一樣長，再從左邊一位一位比：' + centText(d.big) + ' 補成 ' + centPad(d.big) + '，比第二大的 ' + centPad(second) + ' 大。位數多不代表比較大。'
+            : 'Decimals with different numbers of places are first <strong>padded with zeros on the right</strong> so they are the same length, then compared place by place from the left: ' + centText(d.big) + ' pads to ' + centPad(d.big) + ', which beats the runner-up ' + centPad(second) + '. More decimal places does not mean bigger.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 數線探險隊', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：數線探險隊',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾幾題「分數變身工廠」和「小數放大鏡」的題型。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>　·　假分數與帶分數回<a href="../fraction/index.html">分數變身工廠</a>　·　小數比大小回<a href="../decimal/index.html">小數放大鏡</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Number Line Expedition', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Number Line Expedition',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>A few of them come from the grade-4 fraction lesson and the grade-4 decimals lesson too.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>　·　improper fractions and mixed numbers in <a href="../fraction/index.html">the fraction lesson</a>　·　comparing decimals in <a href="../decimal/index.html">the decimals lesson</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var C_AXIS = '#2B2A33', C_TICK = '#6B6875', C_DOT = '#2F9E69';
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  /* 畫圖：座標全部來自 linePlan()，這裡一律不重算。 */
+  function drawLine(svg, plan){
+    svg.textContent = '';
+    svg.appendChild(svgEl('line', {
+      x1:plan.axis.x1, y1:plan.axis.y, x2:plan.axis.x2, y2:plan.axis.y,
+      stroke:C_AXIS, 'stroke-width':LINE_W
+    }));
+    plan.ticks.forEach(function(t){
+      svg.appendChild(svgEl('line', {
+        x1:t.x, y1:t.y1, x2:t.x, y2:t.y2,
+        stroke:t.big ? C_AXIS : C_TICK, 'stroke-width':TICK_W
+      }));
+    });
+    plan.dots.forEach(function(p){
+      svg.appendChild(svgEl('circle', { cx:p.x, cy:p.y, r:p.r, fill:C_DOT }));
+    });
+    plan.labels.forEach(function(lb){
+      var t = svgEl('text', { x:lb.x, y:lb.y, 'font-size':lb.fs, 'text-anchor':'middle', fill:C_AXIS });
+      t.textContent = lb.text;
+      svg.appendChild(t);
+    });
+  }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      if (q.fig){
+        var fw = document.createElement('div');
+        fw.className = 'figwrap';
+        var svg = svgEl('svg', { 'class':'nlfig', viewBox:'0 0 ' + q.fig.w + ' ' + q.fig.h });
+        drawLine(svg, q.fig);
+        fw.appendChild(svg);
+        box.appendChild(fw);
+      }
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length){
+            resultLine.textContent = right === batch.length ? t.resAll(batch.length)
+              : right >= Math.ceil(batch.length * 2 / 3) ? t.resGood(right, batch.length)
+              : t.resTry(right, batch.length);
+            resultLinks.innerHTML = t.links;
+            resultEl.classList.add('on');
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function newRound(){
+    batch = buildBatch();
+    applyStatic();
+    render();
+  }
+
+  retryBtn.addEventListener('click', newRound);
+  /* 語言切換保留同一批題目（framework §六之一：切語言不重抽）。 */
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    render();
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>
