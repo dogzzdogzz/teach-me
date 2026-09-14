@@ -184,9 +184,11 @@ key（`grade-2/math/time/review.html` → `tools/checks/grade-2-time.js`），**
   沒有人會發現它已經不在看了。
   ⚠️ map 的查找用 `hasOwnProperty`，**不是 `in`** —— `in` 會走原型鏈，繼承來的數值會被
   當成設定值放行，而產生器剛好叫 `constructor`／`toString` 時又會撈到內建屬性而誤報。
-  用 `hasOwnProperty` 之後這兩種情況都正確地退回預設值 4。
-  ⚠️ 兩支腳本都在**開始檢查之前**就把 optCount 全部解析完（`simgen.js` 是用 `GENS` 先
-  建好 `ALLOWED_OPTS`）。設定檔寫壞時若在迴圈中途才丟錯，那是未捕捉例外 ——
+  改用 `hasOwnProperty` 之後，這種名字就跟其他沒列到的 key 一視同仁：有寫 `'*'` 就用
+  `'*'`，沒寫才是預設 4。
+  ⚠️ 兩支腳本都在**開始檢查之前**就把 optCount 全部解析完：`simgen.js` 用 `GENS` 建
+  `ALLOWED_OPTS`，`verify_lesson_data.js` 用三個題庫名建一份同名的表，兩者都在進入
+  各自的迴圈**之前**。設定檔寫壞時若在迴圈中途才丟錯，那是未捕捉例外 ——
   已經收集到的 `problems` 一筆都印不出來，畫面只剩 stack trace，看起來像「工具壞掉」
   而不是「這一課有 N 個缺陷」。守門員不可以這樣壞。
 - `sim.blockStart`：切片起點。預設是「工具」那一段的註解；少數課的 `fmt()` 會用到

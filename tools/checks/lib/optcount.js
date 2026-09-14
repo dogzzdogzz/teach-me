@@ -33,10 +33,14 @@ function resolveOptCount(spec, key){
   var list = Array.isArray(v) ? v : [v];
   if (!list.length) throw new Error('optCount: 空的允許清單（key=' + key + '）');
   if (list.length > 9) throw new Error('optCount: 允許清單過長（key=' + key + '）—— 合法值只有 2~10');
-  list.forEach(function(n){
+  /* ⚠️ 這裡不可以用 forEach —— 它會**跳過稀疏陣列的洞**，所以 `[3, , 4]`（多打一個
+     逗號）會整個通過驗證，那個洞被無聲忽略。用索引迴圈才看得到洞（值是 undefined），
+     才能照 fail closed 的規則擋下來。 */
+  for (var i = 0; i < list.length; i++){
+    var n = list[i];
     if (!Number.isInteger(n) || n < 2 || n > 10)
-      throw new Error('optCount: 不合理的值 ' + JSON.stringify(n) + '（key=' + key + '）');
-  });
+      throw new Error('optCount: 不合理的值 ' + JSON.stringify(n) + '（key=' + key + '，第 ' + i + ' 個）');
+  }
   return list;
 }
 module.exports = { resolveOptCount };

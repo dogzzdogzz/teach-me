@@ -40,13 +40,18 @@ const { I18N } = new Function(dataSrc + src.slice(iStart, iEnd) + '\n; return {I
 
 /* --- 3. 三層題庫：通用檢查（所有課都一樣） --- */
 const ARITH = /^\s*(\d+)\s*([+−-])\s*(\d+)\s*=\s*\?\s*$/;
-['qs','qsAdv','qsBoost'].forEach(bank => {
+const BANKS = ['qs','qsAdv','qsBoost'];
+/* ⚠️ 三個題庫的 optCount 要在**任何一個題庫開始檢查之前**就全部解析完。
+   放在迴圈裡面只解決一半：qs 正常、qsBoost 寫壞時，qs 已經收集到的缺陷
+   照樣被那個未捕捉例外丟掉（實測過）。而且原本放的位置在「題庫缺語言就 return」
+   之後，那種情況連解析都不會發生。 */
+const ALLOWED_OPTS = new Map(BANKS.map(b => [b, resolveOptCount(CFG.optCount, b)]));
+
+BANKS.forEach(bank => {
   const zh = I18N.zh[bank], en = I18N.en[bank];
   if (!zh || !en){ fail(`${bank}: missing in one language`); return; }
   if (zh.length !== en.length) fail(`${bank}: zh/en length mismatch`);
-  /* ⚠️ 同 simgen：optCount 要在開始檢查前就解析完。設定檔寫壞時若在中途丟錯，
-     已經收集到的 problems 一筆都印不出來，看起來像工具壞掉而不是課程有缺陷。 */
-  const allowedOpts = resolveOptCount(CFG.optCount, bank);
+  const allowedOpts = ALLOWED_OPTS.get(bank);
   zh.forEach((q, i) => {
     const e = en[i];
     /* 題數對不上時，這裡直接讀 en[i] 會丟 TypeError，整份報告變成 stack trace，
