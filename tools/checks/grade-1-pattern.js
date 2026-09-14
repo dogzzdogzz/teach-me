@@ -5,9 +5,10 @@
    ✅ 2026-09-14：simgen.js／verify_lesson_data.js 已經支援每課自訂選項數，這一課用
    下面的 `optCount: 3` 宣告（sim 與 data 各一份），所以選項數這一條現在是真的在看。
 
-   index.html 的小遊戲和其他幾課不一樣：`shuffle(round.choices).forEach(...)`
-   真的有洗牌，所以「正解永遠在第一個」那個缺陷這一課沒有 —— 讀 render 的程式碼
-   才知道，不能看到 ROUNDS 裡 choices[0] 剛好是正解就假設又中了同一個缺陷。 */
+   ⚠️ 不要看到 ROUNDS 裡 choices[0] 剛好是正解就假設「正解永遠在第一個」——
+   畫按鈕之前會 shuffle()，畫面上的位置和陣列順序無關。這一條由
+   lib/gameshuffle.js 統一守（六課共用），它是把 shuffle() 抽出來實際跑，
+   不是看原始碼有沒有寫。 */
 
 const ALL_SHAPES = ['🔺','⬜','⭐','🟢','🟡','🔷','🔴','🔵','🟨'];
 
@@ -38,8 +39,17 @@ const RANGE = {
   incNext:[0,40], decNext:[0,40], twoStep:[0,40], hop:[0,10], numbers:[0,70], bonds:[0,10], addsub:[0,21]
 };
 
+const { gameShuffleProblems } = require('./lib/gameshuffle.js');
+
 module.exports = {
   breaks: [
+    /* 把小遊戲畫選項那一行的 shuffle() 拿掉 —— 正解就會固定在同一個位置，
+       孩子玩兩關就會發現「按第 N 個就對」。這是 2026-09-14 之前 `grade-1/length`
+       真實存在的缺陷（選項排成 [count-1, count, count+1, count+2] 照順序畫，
+       正解永遠是第二顆），而當時那條「正解不可以在 index 0」的斷言看不到它。 */
+    { file:'index', expect:'without shuffle(...)',
+      find:'    shuffle(round.choices).forEach(function(v){',
+      replace:'    round.choices.forEach(function(v){' },
     { file:'review', expect:'nums[3]-nums[2] != step',
       find:'        var nums = [start, start + step, start + 2 * step, start + 3 * step];\n        var next = start + 4 * step;\n        var m = mixOpts(next, [next - step, next + step]);\n        return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };\n      },\n      fmt: function(d, lang){\n        return {\n          stem: lang === \'zh\' ? d.nums.join(\'、\') + \'、<br>下一個是多少？\' : d.nums.join(\', \') + \', …<br>What comes next?\',',
       replace:'        var nums = [start, start + step, start + 2 * step, start + 3 * step + 1];\n        var next = start + 4 * step;\n        var m = mixOpts(next, [next - step, next + step]);\n        return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };\n      },\n      fmt: function(d, lang){\n        return {\n          stem: lang === \'zh\' ? d.nums.join(\'、\') + \'、<br>下一個是多少？\' : d.nums.join(\', \') + \', …<br>What comes next?\',' },
@@ -187,7 +197,10 @@ module.exports = {
     dataEnd: '  /* ---------- i18n ---------- */',
     dataReturn: '{SHAPE_PATTERNS, INC_PATTERNS, DEC_PATTERNS, HOP_SETS, ROUNDS}',
     optionValueMax: 70,
-    check: function(data, I18N, fail){
+    check: function(data, I18N, fail, src){
+      /* 小遊戲的選項要洗牌（正解不可以固定在同一個位置）——
+         守的是**畫出來的按鈕**，不是資料陣列裡的順序，實作在 lib/gameshuffle.js。 */
+      gameShuffleProblems(src, 1).forEach(fail);
       /* --- 範例：圖形規律 --- */
       data.SHAPE_PATTERNS.forEach((p, i) => {
         if (p.unit.indexOf(p.decoy) >= 0) fail('SHAPE_PATTERNS[' + i + '] decoy is also inside its own unit');
@@ -234,8 +247,8 @@ module.exports = {
           fail('ROUNDS[' + i + '] unknown kind ' + r.kind);
         }
       });
-      /* 這一課的遊戲會在 render 時 shuffle(round.choices)，所以「來源資料裡
-         choices[0] 剛好是正解」不是缺陷 —— 特意不加「永遠在第一個」那條斷言。 */
+      /* 「來源資料裡 choices[0] 剛好是正解」不是缺陷 —— 畫按鈕之前會洗牌。
+         有沒有洗牌由 check() 開頭的 gameShuffleProblems() 守。 */
     }
   }
 };

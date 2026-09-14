@@ -8,9 +8,18 @@ const arithNB = require('./lib/arith.js').makeArith({
   wrongOnPurpose: ["7+3=4"]
 });
 
+const { gameShuffleProblems } = require('./lib/gameshuffle.js');
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-1/math/number-bonds */
   breaks: [
+    /* 把小遊戲畫選項那一行的 shuffle() 拿掉 —— 正解就會固定在同一個位置，
+       孩子玩兩關就會發現「按第 N 個就對」。這是 2026-09-14 之前 `grade-1/length`
+       真實存在的缺陷（選項排成 [count-1, count, count+1, count+2] 照順序畫，
+       正解永遠是第二顆），而當時那條「正解不可以在 index 0」的斷言看不到它。 */
+    { file:'index', expect:'without shuffle(...)',
+      find:'    shuffle(round.choices).forEach(function(v){',
+      replace:'    round.choices.forEach(function(v){' },
     { file:'review', expect:'why says a+b=s but a+b != s',
       find:"        var s = a + b;\n        var m = mixOpts(s, [s - 1, s + 1, Math.max(a, b)]);",
       replace:"        var s = a + b + 1;\n        var m = mixOpts(s, [s - 1, s + 1, Math.max(a, b)]);" },
@@ -133,7 +142,7 @@ module.exports = {
     dataEnd: '/* ---------- i18n ---------- */',
     dataReturn: '{COMBINE_ICONS, COMBINE_SETS, DOT_TOTAL, TEN_CHOICES, FAMILIES, ROUNDS}',
     optionValueMax: 10,
-    check: function(data, I18N, fail){
+    check: function(data, I18N, fail, src){
       /* --- 範例 1：推在一起 --- */
       if (data.COMBINE_ICONS.length !== data.COMBINE_SETS.length)
         fail('COMBINE_ICONS/COMBINE_SETS length mismatch');
@@ -189,8 +198,9 @@ module.exports = {
             fail('ROUNDS[' + i + '] ' + L + ' hint2 does not state the actual difference');
         });
       });
-      if (data.ROUNDS.map(r => r.choices.indexOf(r.correct)).every(x => x === 0))
-        fail('every game round has the answer first');
+      /* 小遊戲的選項要洗牌（正解不可以固定在同一個位置）——
+         守的是**畫出來的按鈕**，不是 choices 陣列裡的順序，實作在 lib/gameshuffle.js。 */
+      gameShuffleProblems(src, 1).forEach(fail);
 
       /* --- 試題：圖示型算式（🍎🍎🍎 + 🍎🍎 = ?）要真的數出來對得上答案 ---
          這種題幹沒有數字，一般的算式驗算器讀不到，一定要另外數 emoji。 */

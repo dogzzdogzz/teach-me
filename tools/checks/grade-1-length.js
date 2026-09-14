@@ -36,8 +36,17 @@ const RANGE = {
   numbersCount:[0,25], addsubWithin20:[0,22], shapesSides:[0,10]
 };
 
+const { gameShuffleProblems } = require('./lib/gameshuffle.js');
+
 module.exports = {
   breaks: [
+    /* 把小遊戲畫選項那一行的 shuffle() 拿掉 —— 正解就會固定在同一個位置，
+       孩子玩兩關就會發現「按第 N 個就對」。這是 2026-09-14 之前 `grade-1/length`
+       真實存在的缺陷（選項排成 [count-1, count, count+1, count+2] 照順序畫，
+       正解永遠是第二顆），而當時那條「正解不可以在 index 0」的斷言看不到它。 */
+    { file:'index', expect:'without shuffle(...)',
+      find:'      shuffle(choices).forEach(function(v){',
+      replace:'      choices.forEach(function(v){' },
     { file:'review', expect:'k outside 4~9',
       find:'        var k = pickUnused([4,5,6,7,8,9], used);\n        var unit = pick([20,24,30]);',
       replace:'        var k = pickUnused([4,5,6,7,8,9], used) + 1;\n        var unit = pick([20,24,30]);' },
@@ -186,6 +195,9 @@ module.exports = {
     dataReturn: '{}',
     optionValueMax: 25,
     check: function(data, I18N, fail, src){
+      /* 小遊戲的選項要洗牌（正解不可以固定在同一個位置）——
+         守的是**畫出來的按鈕**，不是資料陣列裡的順序，實作在 lib/gameshuffle.js。 */
+      gameShuffleProblems(src, 1).forEach(fail);
       const S1_PAIRS = extractArray(src, 'S1_PAIRS');
       S1_PAIRS.forEach((p, i) => {
         if (p.wa === p.wb) fail('S1_PAIRS[' + i + '] wa equals wb — no valid "longer" answer');

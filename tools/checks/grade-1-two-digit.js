@@ -16,8 +16,17 @@ const RANGE = {
   inverseCheck:[0,109], wordProblem:[0,109], placeValue:[0,10], numberBonds:[0,10], addSub20:[0,21]
 };
 
+const { gameShuffleProblems } = require('./lib/gameshuffle.js');
+
 module.exports = {
   breaks: [
+    /* 把小遊戲畫選項那一行的 shuffle() 拿掉 —— 正解就會固定在同一個位置，
+       孩子玩兩關就會發現「按第 N 個就對」。這是 2026-09-14 之前 `grade-1/length`
+       真實存在的缺陷（選項排成 [count-1, count, count+1, count+2] 照順序畫，
+       正解永遠是第二顆），而當時那條「正解不可以在 index 0」的斷言看不到它。 */
+    { file:'index', expect:'without shuffle(...)',
+      find:'    shuffle(round.choices).forEach(function(v){',
+      replace:'    round.choices.forEach(function(v){' },
     { file:'review', expect:'ones carry but why says no regroup',
       find:'      if (da.o + db.o <= 9 && da.t + db.t <= 9) return { a:a, b:b, sum:a + b };',
       replace:'      if (da.o + db.o <= 10 && da.t + db.t <= 9) return { a:a, b:b, sum:a + b };' },
@@ -39,9 +48,9 @@ module.exports = {
     { file:'index', expect:'ROUNDS[0] 32+25 != 58',
       find:'    { op:\'add\', a:{t:3,o:2}, b:{t:2,o:5}, ans:57, choices:[57,37,75,52] },',
       replace:'    { op:\'add\', a:{t:3,o:2}, b:{t:2,o:5}, ans:58, choices:[57,37,75,52] },' }
-    /* ⚠️ 沒有「每一關正解都在第一個」的獨立改壞測試：原檔本來就是這樣（5 關全部
-       把正解放在 choices[0]），所以這條斷言在原檔上已經在響 —— 沒有「改壞前必須先
-       過」的起點可以證明它。這是缺陷本身，不是設定檔的洞（見下面的缺陷紀錄）。 */
+    /* ⚠️ 資料裡 5 關都把正解放在 choices[0] —— 這**不是**缺陷：畫按鈕之前會
+       shuffle()，所以畫面上的位置和陣列順序無關。真正要守的是「有沒有洗牌」，
+       由 lib/gameshuffle.js 的斷言＋上面那一筆改壞測試負責。 */
   ],
 
   sim: {
@@ -153,7 +162,7 @@ module.exports = {
     dataEnd: '  /* ---------- i18n ---------- */',
     dataReturn: '{blocksSvg, opGroupsHTML, alignPicHTML, ADD_PAIRS, ALIGN_PAIRS, SUB_PAIRS, ROUNDS}',
     optionValueMax: 109,
-    check: function(data, I18N, fail){
+    check: function(data, I18N, fail, src){
       const { canvasProblems } = require('./lib/canvas.js');
 
       /* --- 範例 1：兩位數加兩位數（不進位） --- */
@@ -224,9 +233,9 @@ module.exports = {
           [ask, c1, c2].forEach(t => { if (/undefined|NaN/.test(t)) fail('ROUNDS[' + i + '] ' + L + ' text has undefined/NaN: ' + t); });
         });
       });
-      /* ⚠️ 和其他幾課同一種缺陷：choices 陣列沒有洗牌，畫面上永遠是第一個按鈕正確。 */
-      if (data.ROUNDS.every(r => r.choices.indexOf(r.ans) === 0))
-        fail('every game round has the answer first (ROUNDS choices arrays all put ans at index 0, and startRound() never shuffles)');
+      /* 小遊戲的選項要洗牌（正解不可以固定在同一個位置）——
+         守的是**畫出來的按鈕**，不是 choices 陣列裡的順序，實作在 lib/gameshuffle.js。 */
+      gameShuffleProblems(src, 1).forEach(fail);
 
       /* --- 試題：解釋裡真的寫成算式的那幾條要逐條驗算 --- */
       {

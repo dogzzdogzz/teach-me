@@ -55,8 +55,25 @@ function extractRounds(src){
   return new Function('return ' + m[1] + ';')();
 }
 
+const { gameShuffleProblems } = require('./lib/gameshuffle.js');
+
 module.exports = {
   breaks: [
+    /* 把小遊戲畫選項那一行的 shuffle() 拿掉 —— 正解就會固定在同一個位置，
+       孩子玩兩關就會發現「按第 N 個就對」。這是 2026-09-14 之前 `grade-1/length`
+       真實存在的缺陷（選項排成 [count-1, count, count+1, count+2] 照順序畫，
+       正解永遠是第二顆），而當時那條「正解不可以在 index 0」的斷言看不到它。 */
+    { file:'index', expect:'without shuffle(...)',
+      find:'    shuffle(round.choices).forEach(function(v){',
+      replace:'    round.choices.forEach(function(v){' },
+    /* shuffle() 還在被呼叫，但它自己不洗了（交換那兩行變成原地打轉）。
+       ⚠️ 只比對「有沒有寫 shuffle(...)」的話這個改壞會一路綠燈；連「定義裡有沒有
+       Math.random」也擋不住（codex 第三輪給的反例：`Math.random(); return arr;`）。
+       lib/gameshuffle.js 因此是**把 shuffle 切出來實際跑 200 次**，
+       要求它至少產生兩種順序、是原陣列的排列、而且不可以改到輸入。 */
+    { file:'index', expect:'returned the same order in all 200 runs',
+      find:'      var k = Math.floor(Math.random() * (j + 1));\n      var t = a[j]; a[j] = a[k]; a[k] = t;',
+      replace:'      var t = a[j]; a[j] = a[j]; a[j] = t;' },
     { file:'review', expect:'k*n != ans',
       find:'        var ans = k * n;\n        var m = mixOpts(ans, [ans - k, ans + k, (n - 1) * k, (n + 1) * k]);',
       replace:'        var ans = k * n + 1;\n        var m = mixOpts(ans, [ans - k, ans + k, (n - 1) * k, (n + 1) * k]);' },
@@ -306,10 +323,9 @@ module.exports = {
           if (r.kind === 'dots' && (r.n < 1 || r.n > 30)) fail('ROUNDS[' + i + '] dots n=' + r.n + ' is impractically large to count by eye');
         }
       });
-      /* ⚠️ 同一種缺陷：choices 陣列沒有洗牌，startRound() 直接照陣列順序畫按鈕，
-         所以正解在陣列裡的位置就是畫面上的位置。 */
-      if (ROUNDS.every(r => r.choices.indexOf(r.n) === 0))
-        fail('every game round has the answer first (ROUNDS choices arrays all put n at index 0, and startRound() never shuffles)');
+      /* 小遊戲的選項要洗牌（正解不可以固定在同一個位置）——
+         守的是**畫出來的按鈕**，不是 choices 陣列裡的順序，實作在 lib/gameshuffle.js。 */
+      gameShuffleProblems(src, 1).forEach(fail);
     }
   }
 };

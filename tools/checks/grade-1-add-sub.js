@@ -2,8 +2,17 @@
 
 const arithAS = require('./lib/arith.js').makeArith({});
 
+const { gameShuffleProblems } = require('./lib/gameshuffle.js');
+
 module.exports = {
   breaks: [
+    /* 把小遊戲畫選項那一行的 shuffle() 拿掉 —— 正解就會固定在同一個位置，
+       孩子玩兩關就會發現「按第 N 個就對」。這是 2026-09-14 之前 `grade-1/length`
+       真實存在的缺陷（選項排成 [count-1, count, count+1, count+2] 照順序畫，
+       正解永遠是第二顆），而當時那條「正解不可以在 index 0」的斷言看不到它。 */
+    { file:'index', expect:'without shuffle(...)',
+      find:'    shuffle(round.opts).forEach(function(v){',
+      replace:'    round.opts.forEach(function(v){' },
     { file:'review', expect:'a+b != sum',
       find:'        var sum = a + b;\n        var m = mixOpts(sum, [sum - 1, sum + 1, Math.abs(a - b)]);',
       replace:'        var sum = a + b + 1;\n        var m = mixOpts(sum, [sum - 1, sum + 1, Math.abs(a - b)]);' },
@@ -118,7 +127,7 @@ module.exports = {
     dataEnd: '/* ---------- i18n ---------- */',
     dataReturn: '{SCENARIOS, LINE_PROBS, REGROUP_UP, REGROUP_DOWN, ROUNDS}',
     optionValueMax: 21,
-    check: function(data, I18N, fail){
+    check: function(data, I18N, fail, src){
       /* --- 範例 1：四種情境類型 --- */
       data.SCENARIOS.forEach(s => {
         if (s.id === 'compare'){
@@ -180,11 +189,9 @@ module.exports = {
           });
         });
       });
-      /* ⚠️ 這一課的小遊戲不像三／四年級課程那樣洗牌選項——`round.opts.forEach` 直接
-         照陣列順序畫按鈕，所以正解在陣列裡的位置就是畫面上的位置。這一條和
-         grade-1-number-bonds 用的是同一份斷言，記錄同一種缺陷。 */
-      if (data.ROUNDS.every(r => r.opts.indexOf(r.ans) === 0))
-        fail('every game round has the answer first (ROUNDS array puts ans at opts[0], and startRound() never shuffles)');
+      /* 小遊戲的選項要洗牌（正解不可以固定在同一個位置）——
+         守的是**畫出來的按鈕**，不是 opts 陣列裡的順序，實作在 lib/gameshuffle.js。 */
+      gameShuffleProblems(src, 1).forEach(fail);
 
       /* --- 試題：解釋裡真的寫成算式的那幾條要逐條驗算 --- */
       {
