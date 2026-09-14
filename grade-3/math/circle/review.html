@@ -143,6 +143,10 @@
      ⚠️ 推的距離有上限：字離自己那條線太遠，孩子就看不出它在標哪一條。 */
   function placeLabels(labels){
     var i, r, step, boxes = [];
+    /* ⚠️ 輸出是 toFixed(1)，所以排版要用**捨入後**的座標判，
+       不然判的是一組座標、畫出來的是另一組，差那一點就擦到了。 */
+    var snap = function(v){ return Math.round(v * 10) / 10; };
+    labels.forEach(function(L){ L.x = snap(L.x); L.y = snap(L.y); });
     labels.forEach(function(L){
       var w = estTextW(L.text, L.fs);
       var x0 = (L.anchor === 'end') ? L.x - w : ((L.anchor === 'start') ? L.x : L.x - w / 2);
@@ -164,7 +168,8 @@
       step = b.L.fs * 0.55;
       var MAXR = 6;
       for (r = 1; r <= MAXR; r++){
-        var dx = b.L.px * step * r, dy = b.L.py * step * r;
+        var dx = snap(b.L.x + b.L.px * step * r) - b.L.x;
+        var dy = snap(b.L.y + b.L.py * step * r) - b.L.y;
         var t = { x0:b.x0 + dx, x1:b.x1 + dx, y0:b.y0 + dy, y1:b.y1 + dy };
         if (hits(t, i)) continue;
         b.L.x += dx; b.L.y += dy;
@@ -209,8 +214,11 @@
         if ((mx + nx - cx) * (mx - cx) + (my + ny - cy) * (my - cy) < (mx - cx) * (mx - cx) + (my - cy) * (my - cy)){
           nx = -nx; ny = -ny;
         }
-        var lx = (s.dx != null) ? mx + s.dx : mx + nx * 13;
-        var ly = (s.dy != null) ? my + s.dy : my + ny * 13 + 4;
+        /* ⚠️ 只要呼叫端給了 dx 或 dy，就是「這張圖的位置我自己排好了」，
+           x 和 y 都要照舊算 —— 只換 y 而讓 x 被法線推走，本來排好的單標籤圖會位移。 */
+        var manual = (s.dx != null) || (s.dy != null);
+        var lx = manual ? mx + (s.dx || 0) : mx + nx * 13;
+        var ly = manual ? my + (s.dy != null ? s.dy : -8) : my + ny * 13 + 4;
         labels.push({ text:s.label, x:lx, y:ly, fs:13, fill:(s.color || '#2F9E69'), anchor:'middle', px:nx, py:ny });
       }
     });
@@ -389,10 +397,13 @@
               { a1:segAangles[0], a2:segAangles[1], r:d.r, color:'#3B7DD8', width:4, label:'A' },
               { a1:segBangles[0], a2:segBangles[1], r:d.r, color:'#D64545', width:4, label:'B' }
             ], showCenter:true }),
-          opts: opts, ans: 0,
+          /* ⚠️ diamIsFirst 決定「直徑被畫成第一段還是第二段」，而第一段永遠標 A。
+             所以直徑的字母就是 letterA，答案不可以寫死 0 —— 寫死的話有一半的題目
+             畫的是 B 是直徑、卻判 A 才對。letterA／letterB 本來就是為此而算的。 */
+          opts: opts, ans: d.diamIsFirst ? 0 : 1,
           why: lang === 'zh'
-            ? '線段 A 通過圓心，是直徑；線段 B 沒有通過圓心，只是普通的線段（弦），不是直徑。'
-            : 'Segment A passes through the center, so it’s the diameter. Segment B does not pass through the center — it’s just an ordinary chord, not a diameter.'
+            ? '線段 ' + letterA + ' 通過圓心，是直徑；線段 ' + letterB + ' 沒有通過圓心，只是普通的線段（弦），不是直徑。'
+            : 'Segment ' + letterA + ' passes through the center, so it’s the diameter. Segment ' + letterB + ' does not pass through the center — it’s just an ordinary chord, not a diameter.'
         };
       } },
     { id:'equalRadii', cat:'circle',
