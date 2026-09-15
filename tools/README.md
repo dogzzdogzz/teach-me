@@ -150,7 +150,9 @@ node tools/verify_lesson_data.js grade-2/math/add-sub/index.html
 
 `verify_lesson_data.js` 驗 `index.html` 的靜態資料：三層題庫的算術（能從題幹解析的
 一律重算一次）、zh/en 的 `ans` 一致、選項值不重複、正解位置沒有全押同一個、
-以及該課的範例資料與遊戲關卡。
+以及該課的範例資料與遊戲關卡。選項通常是字串；`grade-1/shapes` 的靜態題把選項寫成
+形狀描述物件（畫成圖），去重時用 JSON 字串比（兩個 `{kind:'circle'}` 也算重複），
+物件的語意由那一課的 `data.check` 自己驗（2026-09-15）。
 
 **每一課的檢查設定住在 `tools/checks/<grade>-<slug>.js`**（2026-08-25 起；在那之前
 add-sub 的設定是寫死在腳本裡的，換課程就得改壞上一課）。兩支腳本都從課程路徑推出
@@ -196,6 +198,10 @@ key（`grade-2/math/time/review.html` → `tools/checks/grade-2-time.js`），**
   那種課用這個把起點往前移。**往前擴的那一段必須也不碰 DOM**，
   不然這裡跑不起來 —— 這不是萬用逃生門，只允許「純資料」往前擴。
 - `sim.renderCheck(d, q, lang, genId)`：拿**渲染出來的那一題**再驗一次。
+  2026-09-15 起一年級三課示範了三種「把畫面量回來」：`grade-1-money` 把 stemPic／optPics 的硬幣
+  加起來和選項的字比；`grade-1-clock` 從 stem 裡 `<svg>` 的兩條 `<line>` 讀出角度、換回幾點幾分
+  （時針必須在 (h + m/60) × 30°），再和正解比；`grade-1-shapes` 從形狀描述重算頂點、邊數、直角數與
+  對角線（長方形轉一轉會不會畫出 200×200 的畫布）。三份都不讀課程算好的 count／correct。
   `INVARIANTS` 只看得到資料，看不到題幹與解釋，可是題幹是拼出來的 ——
   `grade-2/multiply` 的連加題會印出 b 個加項，那個數量必須真的等於 b，
   不然孩子看到的是另一道題（資料層全對、模擬全綠，只有數畫面上的字才看得到）。

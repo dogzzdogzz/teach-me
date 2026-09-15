@@ -340,6 +340,16 @@ fallback 寫死的中文就原樣顯示出來 —— 兩邊字典都沒有那個
    `teaching-workspace/classroom-tests/grade-4-fraction.md` 是一份寫好的範例。
 
 ## Changelog
+- 2026-09-15 (fable): 一年級最後三課 `money`／`clock`／`shapes` 的檢查設定（`tools/checks/grade-1-*.js`），
+  一年級九課現在全部有設定檔（全站 39 份）。三份都以「把畫面量回來」為核心：硬幣圖加起來對選項、
+  時鐘的兩條針讀回幾點幾分、形狀從頂點重算邊數／直角／對角線。裝上去之後查出並修掉的課程缺陷：
+  `money` 的錢數會衝到 200（3 個 50 元；一年級的數在 100 以內）、`missingChange`／`bondsMakeTen`／
+  `addsubStory` 的誘答抄題幹、`comparePiles` 的補救會補到 101；`clock` 的「5點」少了全站慣例的空格、
+  `activityMatch` 的解釋把答案用「」引起來、`addSub` 誘答抄題幹；`shapes` 的長方形 w 最大 129、h 最大
+  198，**三成的參數組合轉到某些角度會被切掉一塊**（資料、選項、算術全對，只有畫出來才看得到），
+  改成用對角線的一半 ≤ 97 抽尺寸。`verify_lesson_data.js` 現在接受物件型選項（shapes 的靜態題）。
+  兩處小遊戲的洗牌改寫成 `shuffle(...).forEach(` 的形狀讓共用守衛切得到（money／clock）；
+  shapes 的小遊戲是固定的類別面板，刻意不接那個守衛。
 - 2026-09-14 (fable): 一年級五課 `review.html`（`number-bonds`／`add-sub`／`two-digit`／`pattern`／`length`）
   的 `makeWrongs()` 加上 `avoid`（題幹數字先當成已用過）＋ `MAX_OPT` 保底上限，五課 `simgen` 30000 批
   從 68／148／668／106／30 類失敗降到 0，一年級六份設定檔 index／review 兩端都真的裝上了。

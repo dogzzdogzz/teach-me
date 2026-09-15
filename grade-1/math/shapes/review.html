@@ -303,6 +303,21 @@
     return a;
   }
   function approxEq(a,b,tol){ return Math.abs(a-b) <= tol; }
+  /* 長方形要畫得進 200×200 的畫布：圓心在 (100,100)、描邊 5，四個角到圓心的距離不可以超過 96 ——
+     直角的尖角（miter）會再往外突出 2.5 × √2 ≈ 3.5，所以是 100 − 3.5。
+     形狀會隨機轉動，角落會掃過整個圓，所以要看的是**對角線的一半**，不是寬或高。
+     （2026-09-15 修：原本 w 最大 129、h 最大 198，三成的參數組合轉到某些角度會被切掉一塊，
+     資料層全對、選項全對，只有畫出來才看得到。） */
+  var HALF_DIAG_MAX = 96;
+  function fitRectangle(minW, spanW, minGap, spanGap){
+    for (var tries = 0; tries < 60; tries++){
+      var w = minW + rand(spanW);
+      var hMax = Math.floor(2 * Math.sqrt(HALF_DIAG_MAX*HALF_DIAG_MAX - (w/2)*(w/2)));
+      var hMin = w + minGap;
+      if (hMin <= hMax) return { w:w, h: Math.min(hMax, hMin + rand(spanGap)) };
+    }
+    return { w:minW, h:minW + minGap };
+  }
 
   /* ---------- generators: every answer is COMPUTED from the freshly generated shape ---------- */
   var GENS = [
@@ -312,12 +327,13 @@
         var kind = pick(PLANE_KINDS);
         var desc = { kind:kind, rot: rand(360) };
         if (kind==='triangle') desc.variant = pick(['normal','thin','wide']);
-        if (kind==='rectangle'){ desc.w = 70+rand(60); desc.h = desc.w + 30 + rand(40); }
+        if (kind==='rectangle'){ var rd = fitRectangle(70, 60, 30, 40); desc.w = rd.w; desc.h = rd.h; }
         if (kind==='square') desc.size = 60+rand(50);
         if (kind==='circle') desc.r = 30+rand(30);
         return { desc:desc, correctKind: kind };
       },
       fmt: function(d, lang, t){
+        t = t || TXT[lang];   /* simgen 只傳兩個參數 */
         /* A square IS technically also a rectangle (all 4 sides just happen to be
            equal), so when the shown shape is a square, offering "rectangle" as a
            WRONG option would be reachable by fully correct reasoning — drop it from
@@ -347,6 +363,7 @@
         return { desc:{kind:'square', rot:rot, size:side}, rot:rot, stillSquare: stillSquare };
       },
       fmt: function(d, lang, t){
+        t = t || TXT[lang];   /* simgen 只傳兩個參數 */
         var yes = lang==='zh' ? '還是正方形' : 'Still a square';
         var no = lang==='zh' ? '不是正方形了' : 'Not a square anymore';
         var opts = shuffle([yes, no]);
@@ -362,8 +379,9 @@
     { id:'squareOrRectangle', cat:'sqrect',
       make: function(){
         var isSq = Math.random() < 0.5;
-        var w = 60 + rand(60);
-        var h = isSq ? w : w + 25 + rand(45);
+        var rd = isSq ? null : fitRectangle(60, 60, 25, 45);
+        var w = isSq ? 60 + rand(60) : rd.w;
+        var h = isSq ? w : rd.h;
         var rot = rand(360);
         var pts = makeRectangle(100,100,w,h,rot);
         var sides = polygonSides(pts);
@@ -371,6 +389,7 @@
         return { desc:{kind:'rectangle', w:w, h:h, rot:rot}, actualSquare: actualSquare };
       },
       fmt: function(d, lang, t){
+        t = t || TXT[lang];   /* simgen 只傳兩個參數 */
         var sq = lang==='zh' ? '正方形' : 'Square';
         var rc = lang==='zh' ? '長方形' : 'Rectangle';
         var opts = shuffle([sq, rc]);
@@ -390,7 +409,7 @@
         var kind = pick(['triangle','square','rectangle']);
         var desc = { kind:kind, rot: rand(360) };
         if (kind==='triangle') desc.variant = pick(['normal','thin','wide']);
-        if (kind==='rectangle'){ desc.w = 70+rand(50); desc.h = desc.w+30+rand(30); }
+        if (kind==='rectangle'){ var rd = fitRectangle(70, 50, 30, 30); desc.w = rd.w; desc.h = rd.h; }
         if (kind==='square') desc.size = 60+rand(50);
         var pts = kind==='triangle' ? makeTriangle(100,100,desc.size||70,desc.rot,desc.variant)
                 : kind==='square' ? makeSquare(100,100,desc.size,desc.rot)
@@ -399,6 +418,7 @@
         return { desc:desc, count: pts.length };
       },
       fmt: function(d, lang, t){
+        t = t || TXT[lang];   /* simgen 只傳兩個參數 */
         var opts = shuffle([d.count, d.count+1, d.count-1, d.count+2].filter(function(v,i,a){ return v>0 && a.indexOf(v)===i; }).slice(0,4));
         while (opts.length < 4) opts.push(d.count + opts.length + 2);
         var ans = opts.indexOf(d.count);
@@ -415,17 +435,31 @@
         var kind = pick(['triangle','square','rectangle']);
         var desc = { kind:kind, rot: rand(360) };
         if (kind==='triangle') desc.variant = pick(['normal','thin','wide']);
-        if (kind==='rectangle'){ desc.w = 70+rand(50); desc.h = desc.w+30+rand(30); }
+        if (kind==='rectangle'){ var rd = fitRectangle(70, 50, 30, 30); desc.w = rd.w; desc.h = rd.h; }
         if (kind==='square') desc.size = 60+rand(50);
         var pts = kind==='triangle' ? makeTriangle(100,100,desc.size||70,desc.rot,desc.variant)
                 : kind==='square' ? makeSquare(100,100,desc.size,desc.rot)
                 : makeRectangle(100,100,desc.w,desc.h,desc.rot);
+        /* 三角形的角是隨機抖出來的：89.8° 會被兩邊都算成直角，可是孩子看不出來。
+           重抽到每個角都離 90° 至少 8°，「幾個直角」對三角形才是一題答得出來的題（答案 0）。 */
+        if (kind==='triangle'){
+          var near = true;
+          for (var tries = 0; tries < 30 && near; tries++){
+            near = polygonAngles(pts).some(function(a){ return Math.abs(a - 90) < 8; });
+            if (near) pts = makeTriangle(100,100,desc.size||70,desc.rot,desc.variant);
+          }
+          /* 30 次都抽到接近直角（機率極小）：退而畫一個正三角形（三個角都是 60°，一定答得出來） */
+          if (near){
+            pts = [0,120,240].map(function(a){ var r=deg2rad(a); var sz=desc.size||70; return rotatePoint(100+sz*Math.cos(r), 100+sz*Math.sin(r), 100, 100, desc.rot); });
+          }
+        }
         desc.pts = pts; /* freeze this exact instance so the rendered image matches the computed count */
         var angs = polygonAngles(pts);
         var rightCount = angs.filter(function(a){ return approxEq(a,90,1); }).length;
         return { desc:desc, count: rightCount };
       },
       fmt: function(d, lang, t){
+        t = t || TXT[lang];   /* simgen 只傳兩個參數 */
         /* Random scalene triangles can occasionally land within the angle tolerance of
            90° by chance, so d.count is NOT reliably 0 for a triangle — always build the
            option set FROM the actual computed count, never assume it. */
@@ -446,6 +480,7 @@
         return { obj:obj, fam: OBJECT_FAM[obj] };
       },
       fmt: function(d, lang, t){
+        t = t || TXT[lang];   /* simgen 只傳兩個參數 */
         var opts = shuffle(FAMILIES);
         var ans = opts.indexOf(d.fam);
         return {
@@ -467,6 +502,7 @@
         return { isPlane:false, obj:obj };
       },
       fmt: function(d, lang, t){
+        t = t || TXT[lang];   /* simgen 只傳兩個參數 */
         var plane = lang==='zh' ? '平面圖形（扁扁的）' : 'Flat shape (2D)';
         var solid = lang==='zh' ? '立體形體（有厚度）' : 'Solid (3D)';
         var opts = shuffle([plane, solid]);
@@ -492,6 +528,7 @@
         return { size:size, pieces:pieces, count: pieces.length };
       },
       fmt: function(d, lang, t){
+        t = t || TXT[lang];   /* simgen 只傳兩個參數 */
         var opts = shuffle([d.count, d.count+1, d.count+2, Math.max(1,d.count-1)]);
         var ans = opts.indexOf(d.count);
         return {
@@ -512,6 +549,7 @@
         return { seq:seq, next:next, decoy: kinds[(len+1)%2] };
       },
       fmt: function(d, lang, t){
+        t = t || TXT[lang];   /* simgen 只傳兩個參數 */
         var otherKinds = PLANE_KINDS.filter(function(k){ return d.seq.indexOf(k) < 0; });
         var opts = shuffle([d.next, d.decoy].concat(otherKinds.slice(0,1)));
         var ans = opts.indexOf(d.next);

@@ -357,7 +357,7 @@
   function shuffle(arr){
     var a = arr.slice();
     for (var j = a.length - 1; j > 0; j--){
-      var k = rand(j + 1);
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
       var t = a[j]; a[j] = a[k]; a[k] = t;
     }
     return a;
@@ -1024,8 +1024,10 @@
     if (r.kind === 'total'){
       gAskLine.textContent = d.gAskTotal;
       gPile.innerHTML = coinGroupHTML(r.pile);
-      gOrder = shuffle(r.opts.map(function(v, i){ return { v:v, correct:i === r.ans }; }));
-      gOrder.forEach(function(o){
+      /* 選項一定要洗牌再畫（正解不可以固定在同一顆）；寫成 shuffle(...).forEach 的形狀，
+         tools/checks/lib/gameshuffle.js 才切得出來驗 */
+      var totalItems = r.opts.map(function(v, i){ return { v:v, correct:i === r.ans }; });
+      (gOrder = shuffle(totalItems)).forEach(function(o){
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'opt'; b.textContent = o.v;
         b.addEventListener('click', function(){ onGameAnswer(b, o.correct); });
@@ -1033,8 +1035,8 @@
       });
     } else {
       gAskLine.textContent = d.gAskPay(r.price);
-      gOrder = shuffle(r.groups.map(function(g, i){ return { g:g, correct:i === r.ans }; }));
-      gOrder.forEach(function(o){
+      var payItems = r.groups.map(function(g, i){ return { g:g, correct:i === r.ans }; });
+      (gOrder = shuffle(payItems)).forEach(function(o){
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'opt pic';
         b.innerHTML = coinGroupHTML(o.g, 36);

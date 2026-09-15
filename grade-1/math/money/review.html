@@ -201,24 +201,46 @@
     }
     return a;
   }
-  function makeWrongs(correct, candidates){
+  /* 一年級的數在 100 以內：錢數題的選項不可以超過 100（換錢題 50、湊十 10、加減 20 各自更窄） */
+  var MAX_OPT = 100;
+  /* 給出 3 個相異、大於 0、且不等於正解的錯誤選項（avoid 與 max 把可用的數字擠到不夠時會少回傳幾個 ——
+     那時 simgen 的選項數檢查會響，不會卡死）。
+     avoid：題幹上已經印出來、但「不是」刻意迷思誘答的那些數字 —— 先當成已用過，候選與 ±step 保底
+     都不會再端出來（孩子看到題幹上的數字又出現在選項裡，那不是誘答，是抄題）。
+     max：這一題的上限，明寫的候選與保底都不可以超過（2026-09-15，比照其他一年級的課）。 */
+  function makeWrongs(correct, candidates, avoid, max){
+    max = max || MAX_OPT;
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
-      if (c > 0 && !seen[key]){ seen[key] = true; out.push(c); }
+      if (c > 0 && c <= max && !seen[key]){ seen[key] = true; out.push(c); }
     });
-    var step = 1;
-    while (out.length < 3){
+    for (var step = 1; out.length < 3 && step <= max; step++){
       var lo = correct - step, hi = correct + step;
       if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
-      if (out.length < 3 && hi > 0 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
-      step++;
+      if (out.length < 3 && hi <= max && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
     }
     return out.slice(0, 3);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  /* 題幹上的數字，扣掉 keep（刻意拿來當誘答的那幾個），其餘都不可以出現在選項裡 */
+  function avoidExcept(stemNums, keep){
+    return stemNums.filter(function(v){ return keep.indexOf(v) < 0; });
+  }
+  /* 抽 n 個硬幣，總額不可以超過 100（一年級的數在 100 以內；3 個 50 元就會衝到 150） */
+  function pickCoins(n){
+    var coins;
+    for (var tries = 0; tries < 100; tries++){
+      coins = []; for (var i = 0; i < n; i++) coins.push(pick(DENOMS));
+      if (sum(coins) <= MAX_OPT) return coins;
+    }
+    /* 100 次都抽到超過 100（機率極小）：退而給 n 個 1 元，總額一定在範圍內 */
+    coins = []; for (var j = 0; j < n; j++) coins.push(1);
+    return coins;
+  }
+  function mixOpts(correct, candidates, avoid, max){
+    var wrongs = makeWrongs(correct, candidates, avoid, max);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -258,7 +280,8 @@
       } },
     { id:'sumThreeCoins', cat:'money',
       make: function(){
-        var a = pick(DENOMS), b = pick(DENOMS), c = pick(DENOMS);
+        var three = pickCoins(3);
+        var a = three[0], b = three[1], c = three[2];
         var s = a + b + c;
         var m = mixOpts(s, [s - 5, s + 5, s - 10, a + b, b + c]);
         return { a:a, b:b, c:c, s:s, opts:m.opts, ans:m.ans };
@@ -276,12 +299,13 @@
         var na = 1 + rand(3), nb = 1 + rand(3);
         var pileA, pileB, sa, sb;
         for (var tries = 0; tries < 30; tries++){
-          pileA = []; for (var i = 0; i < na; i++) pileA.push(pick(DENOMS));
-          pileB = []; for (var j = 0; j < nb; j++) pileB.push(pick(DENOMS));
+          pileA = pickCoins(na);
+          pileB = pickCoins(nb);
           sa = sum(pileA); sb = sum(pileB);
           if (sa !== sb) break;
         }
-        if (sa === sb){ pileB.push(1); sb += 1; }
+        /* 30 次都一樣多（機率極小）：把 B 換成一個 1 元（A 也是 1 元時換成 5 元），一定不同而且不超過 100 */
+        if (sa === sb){ pileB = sa === 1 ? [5] : [1]; sb = sum(pileB); }
         return { pileA:pileA, pileB:pileB, sa:sa, sb:sb, ans: sa > sb ? 0 : 1 };
       },
       fmt: function(d, lang){
@@ -298,7 +322,9 @@
         var pr = pick(EXPAIRS);
         var big = pr[0], small = pr[1];
         var count = big / small;
-        var m = mixOpts(count, [count - 1, count + 1, big]);
+        /* 誘答刻意放 big（把面額當個數）；count − 1 在 10 換 5 時是 1，那是「一個換一個」的迷思
+           （上課頁進階題就放了 1），也刻意留；small 不可以出現。換錢的個數最多 50。 */
+        var m = mixOpts(count, [count - 1, count + 1, big], avoidExcept([1, big, small], [1, big]), 50);
         return { big:big, small:small, count:count, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -312,7 +338,7 @@
     { id:'payExact', cat:'money',
       make: function(){
         var n = 2 + rand(2);
-        var correct = []; for (var i = 0; i < n; i++) correct.push(pick(DENOMS));
+        var correct = pickCoins(n);
         var price = sum(correct);
         var groups = [correct];
         var sums = {}; sums[String(price)] = true;
@@ -320,7 +346,7 @@
         while (groups.length < 4 && guard < 200){
           guard++;
           var gn = 2 + rand(2);
-          var g = []; for (var j = 0; j < gn; j++) g.push(pick(DENOMS));
+          var g = pickCoins(gn);
           var s = sum(g);
           if (!sums[String(s)]){ sums[String(s)] = true; groups.push(g); }
         }
@@ -341,7 +367,8 @@
         var paid = pick([10, 20, 50, 60, 100]);
         var price = 1 + rand(paid - 1);
         var change = paid - price;
-        var m = mixOpts(change, [change - 5, change + 5, price]);
+        /* 誘答刻意放 price（把價錢當成找的錢）；paid 不可以出現（price = 5 時 change + 5 就是 paid） */
+        var m = mixOpts(change, [change - 5, change + 5, price], avoidExcept([paid, price], [price]));
         return { paid:paid, price:price, change:change, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -354,7 +381,7 @@
     { id:'countTotalHandful', cat:'money',
       make: function(){
         var n = 2 + rand(3);
-        var coins = []; for (var i = 0; i < n; i++) coins.push(pick(DENOMS));
+        var coins = pickCoins(n);
         var s = sum(coins);
         var m = mixOpts(s, [s - 5, s + 5, s - 10, s + 10]);
         return { coins:coins, s:s, opts:m.opts, ans:m.ans };
@@ -387,7 +414,8 @@
       make: function(){
         var n = 1 + rand(9);
         var partner = 10 - n;
-        var m = mixOpts(partner, [n, partner - 1, partner + 1]);
+        /* 誘答刻意放 n（把已知的數抄回來）；題幹上的 10 不可以出現（n = 1 時 partner + 1 就是 10） */
+        var m = mixOpts(partner, [n, partner - 1, partner + 1], avoidExcept([n, 10], [n]), 10);
         return { n:n, partner:partner, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -401,7 +429,9 @@
       make: function(){
         var a = 1 + rand(10), b = 1 + rand(20 - a);
         var s = a + b;
-        var m = mixOpts(s, [s - 1, s + 1, Math.abs(a - b)]);
+        /* 誘答刻意放 |a − b|（該加卻減）；它有時剛好等於 a 或 b，那仍是同一個迷思，其餘的加數不可以出現。
+           20 以內的加減，選項不超過 20。 */
+        var m = mixOpts(s, [s - 1, s + 1, Math.abs(a - b)], avoidExcept([a, b], [Math.abs(a - b)]), 20);
         return { a:a, b:b, s:s, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -413,6 +443,7 @@
       } }
   ];
 
+  /* ---------- 出一批 12 題：11 種題型各一題＋隨機 1 題錢幣加碼 ---------- */
   var EXTRA_POOL = GENS.filter(function(g){
     return ['sumTwoCoins','sumThreeCoins','countTotalHandful','payExact','exchangeCount'].indexOf(g.id) >= 0;
   });

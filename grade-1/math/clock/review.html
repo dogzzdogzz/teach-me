@@ -219,8 +219,9 @@
     var chosen = shuffle(pool).slice(0, n);
     return chosen;
   }
+  /* 中文和數字之間要有空格（全站慣例，simgen 會掃選項）：「5 點」「5 點半」 */
   function timeLabel(h, half, lang){
-    if (lang === 'zh') return half ? (h + '點半') : (h + '點');
+    if (lang === 'zh') return half ? (h + ' 點半') : (h + ' 點');
     return half ? ('half past ' + h) : (h + ' o’clock');
   }
 
@@ -332,8 +333,8 @@
           opts: d.opts.map(function(i){ var it = DAILY_G[i]; return it.icon + (lang === 'zh' ? it.zh : it.en); }),
           ans: d.ans,
           why: lang === 'zh'
-            ? timeLabel(item.h % 12 === 0 ? 12 : item.h % 12, item.m === 30, 'zh') + '通常是「' + item.zh + '」的時間。'
-            : 'That time is usually for “' + item.en + '”.'
+            ? timeLabel(item.h % 12 === 0 ? 12 : item.h % 12, item.m === 30, 'zh') + '通常是' + item.zh + '的時間。'
+            : 'That time is usually for ' + item.en + '.'
         };
       } },
     { id:'sameTime', cat:'clock',
@@ -407,13 +408,14 @@
           ans = a - b; op = '−';
         }
         var wrongs = [];
-        var seen = {}; seen[String(ans)] = true;
+        /* 題幹上印出來的 a、b 先當成已用過：±1 保底在 b = 1 時就是 a，那是抄題不是誘答（2026-09-15） */
+        var seen = {}; seen[String(ans)] = true; seen[String(a)] = true; seen[String(b)] = true;
         [ans - 1, ans + 1, ans - 2].forEach(function(v){
           var key = String(v);
           if (v >= 0 && !seen[key] && wrongs.length < 2){ seen[key] = true; wrongs.push(v); }
         });
-        while (wrongs.length < 2){
-          var v2 = ans + 3 + wrongs.length;
+        /* 保底往上找，但不可以超過這一課的 20 */
+        for (var v2 = ans + 2; wrongs.length < 2 && v2 <= 20; v2++){
           if (!seen[String(v2)]){ seen[String(v2)] = true; wrongs.push(v2); }
         }
         var opts = shuffle([ans].concat(wrongs));

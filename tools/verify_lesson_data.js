@@ -61,7 +61,9 @@ BANKS.forEach(bank => {
     [['zh', q], ['en', e]].forEach(([L, item]) => {
       if (allowedOpts.indexOf(item.opts.length) < 0)
         fail(`${bank}[${i}] ${L}: ${item.opts.length} options（允許：${allowedOpts.join('/')}）`);
-      const vals = item.opts.map(o => o.trim());
+      /* 選項通常是字串；grade-1/shapes 的靜態題把選項寫成形狀描述物件（畫成圖），
+         那種用 JSON 字串比對（兩個 {kind:'circle'} 也算重複）。物件的語意由那一課的 data.check 自己驗。 */
+      const vals = item.opts.map(o => typeof o === 'string' ? o.trim() : JSON.stringify(o));
       if (new Set(vals).size !== vals.length) fail(`${bank}[${i}] ${L}: duplicate option strings`);
       const nums = vals.filter(v => /^\d+$/.test(v)).map(Number);
       if (new Set(nums).size !== nums.length) fail(`${bank}[${i}] ${L}: duplicate option values`);
