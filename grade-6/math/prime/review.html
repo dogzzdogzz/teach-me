@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 質數原子實驗室</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .result{margin-top:22px;background:var(--orange-soft);border-radius:18px;padding:18px;display:none}
+  .result.on{display:block}
+  .result .line{font-size:18px;font-weight:700}
+  .result .links{margin-top:10px;font-size:15px}
+  .result .links a{color:var(--blue)}
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：質數原子實驗室</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾幾題五年級「因數工廠」和「好朋友車站」的題型。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function rangeList(a, b){
+    var out = [];
+    for (var i = a; i <= b; i++) out.push(i);
+    return out;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+  /* ⚠️ make() 一律不可以回 null：tools/simgen.js 每一批只呼叫 make() 一次、不重試，
+     回 null 之後檢查會直接 dereference null 而當掉。十一支產生器的抽樣不會失敗，直接建構；
+     只有 productOfPrimes 真的會拒絕重抽（乘積超過 100／同一批重複），它給一組手算過的保底參數。 */
+  function retry(fn, fallback){
+    for (var i = 0; i < 400; i++){
+      var d = fn();
+      if (d) return d;
+    }
+    return fallback ? fallback() : null;
+  }
+
+  /* --- 這一課的數論工具（和 index.html 同一套定義）。100 以內。 --- */
+  var LIMIT = 100;
+  function isPrime(n){
+    if (!isFinite(n) || n !== Math.floor(n) || n < 2) return false;
+    for (var p = 2; p * p <= n; p++) if (n % p === 0) return false;
+    return true;
+  }
+  function kindOf(n){ return n === 1 ? 'one' : (isPrime(n) ? 'prime' : 'composite'); }
+  function factorsOf(n){
+    var out = [];
+    for (var i = 1; i <= n; i++) if (n % i === 0) out.push(i);
+    return out;
+  }
+  function smallestPrimeFactor(n){
+    if (!isFinite(n) || n !== Math.floor(n) || n < 2) return null;
+    for (var p = 2; p <= n; p++) if (n % p === 0) return p;
+    return null;
+  }
+  function factorize(n){
+    var out = [], v = n;
+    while (v > 1){ var p = smallestPrimeFactor(v); if (!p) break; out.push(p); v = v / p; }
+    return out;
+  }
+  function productText(list){ return list.join(' × '); }
+  function productOf(list){ return list.reduce(function(a, b){ return a * b; }, 1); }
+  function gcd(a, b){ while (b){ var t = a % b; a = b; b = t; } return a; }
+  function pairsOf(n){
+    var out = [];
+    for (var a = 2; a * a <= n; a++) if (n % a === 0) out.push([a, n / a]);
+    return out;
+  }
+  var PRIMES = rangeList(2, LIMIT).filter(isPrime);                      /* 25 個 */
+  var COMPOSITES = rangeList(4, LIMIT).filter(function(n){ return !isPrime(n); });
+  /* 「看起來像質數」的奇合數：不是偶數、個位不是 5，一眼看不出來 —— 這一課最值得練的誘答。 */
+  var SNEAKY = COMPOSITES.filter(function(n){ return n % 2 === 1 && n % 5 !== 0; });   /* 9、21、27、33、39、49、51、57、63、69、77、81、87、91、93、99 */
+
+  function listText(list, lang){ return list.join(lang === 'zh' ? '、' : ', '); }
+
+  /* --- 整數選項：正解 ＋ 3 個誘答（framework §六之三 第 4 點）。
+         avoid ＝ 題幹上印出來的數字，先當成已用過，候選與保底都不會再端出來；
+         候選與保底都擋在 [1, max] 以內；擠到不夠時少回傳（simgen 的選項數檢查會響，不會卡死）。 --- */
+  var MAX_OPT = 100;
+  function makeWrongs(correct, candidates, avoid, max){
+    var lim = (typeof max === 'number') ? max : MAX_OPT;
+    var seen = {}, out = [];
+    seen[String(correct)] = 1;
+    (avoid || []).forEach(function(a){ seen[String(a)] = 1; });
+    candidates.forEach(function(c){
+      if (out.length >= 3) return;
+      if (typeof c !== 'number' || !isFinite(c) || c !== Math.round(c)) return;
+      if (c < 1 || c > lim || seen[String(c)]) return;
+      seen[String(c)] = 1; out.push(c);
+    });
+    for (var step = 1; out.length < 3 && step <= lim; step++){
+      var lo = correct - step, hi = correct + step;
+      if (lo >= 1 && !seen[String(lo)] && out.length < 3){ seen[String(lo)] = 1; out.push(lo); }
+      if (hi <= lim && !seen[String(hi)] && out.length < 3){ seen[String(hi)] = 1; out.push(hi); }
+    }
+    return out;
+  }
+  function numOpts(correct, candidates, avoid, max){
+    var wrongs = makeWrongs(correct, candidates, avoid, max);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+  /* 字串選項（算式或整句話）：四個互不相同的字串，不夠就回 null 讓 make() 重抽。 */
+  function strOpts(correct, cands){
+    var out = [correct];
+    cands.forEach(function(s){
+      if (out.length >= 4 || !s) return;
+      if (out.indexOf(s) >= 0) return;
+      out.push(s);
+    });
+    return out.length === 4 ? shuffle(out) : null;
+  }
+
+  /* --- 「哪一句話是對的」的句庫。每一句的真假寫死在這裡（設定檔另有一份獨立的真值表）。 --- */
+  var STATEMENTS = {
+    twoEvenPrime:   { truth:true,  zh:'2 是唯一的偶數質數', en:'2 is the only even prime number' },
+    oneNeither:     { truth:true,  zh:'1 既不是質數也不是合數', en:'1 is neither prime nor composite' },
+    primeTwoFactors:{ truth:true,  zh:'質數剛好有 2 個因數', en:'A prime number has exactly 2 factors' },
+    compThreePlus:  { truth:true,  zh:'合數至少有 3 個因數', en:'A composite number has at least 3 factors' },
+    everyBig:       { truth:true,  zh:'比 1 大的整數，不是質數就是合數', en:'Every whole number bigger than 1 is either prime or composite' },
+    allOddPrime:    { truth:false, zh:'所有的質數都是奇數', en:'Every prime number is odd' },
+    oneIsPrime:     { truth:false, zh:'1 是最小的質數', en:'1 is the smallest prime number' },
+    allOddArePrime: { truth:false, zh:'所有的奇數都是質數', en:'Every odd number is prime' },
+    primeTimesPrime:{ truth:false, zh:'兩個質數相乘還是質數', en:'Two primes multiplied together give a prime' },
+    nineIsPrime:    { truth:false, zh:'9 是質數', en:'9 is a prime number' },
+    compFactorsComp:{ truth:false, zh:'合數的因數都是合數', en:'Every factor of a composite number is composite' }
+  };
+  var TRUE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return STATEMENTS[k].truth; });
+  var FALSE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return !STATEMENTS[k].truth; });
+
+  /* 「只有一個質因數在 2、3、5、7 裡」而且不是質數的數：試除只會被其中一個抓到。 */
+  var TRIAL_PRIMES = [2, 3, 5, 7];
+  var ONE_SMALL = rangeList(10, LIMIT).filter(function(n){
+    return !isPrime(n) && TRIAL_PRIMES.filter(function(p){ return n % p === 0; }).length === 1;
+  });
+  /* 五年級「好朋友車站」的交錯題：兩個數的最大公因數（用列舉法就算得出來的小數字）。
+     ⚠️ 每一組的最大公因數都是**合數**：這樣「第二大的公因數」才不會是 1（和誘答「1」撞在一起），
+     而且最小公倍數都在 100 以內、不等於 a 或 b（它是「搞混成最小公倍數」那個誘答）。 */
+  var GCF_PAIRS = [[12, 18], [8, 12], [24, 36], [16, 24], [18, 27], [20, 30], [12, 20], [18, 30], [12, 30], [28, 42], [30, 45], [8, 20]];
+
+  var GENS = [
+    /* 1. 四個數裡哪一個是質數。誘答全是「看起來像質數」的奇合數。 */
+    { id:'whichPrime', cat:'prime',
+      /* SNEAKY 有 16 個、PRIMES ≥ 11 有 21 個，抽樣不會失敗，所以直接建構，不包 retry（永遠不會響的
+         拒絕條件不是守衛，是裝飾）。 */
+      make:function(used){
+        var p = pickUnused(PRIMES.filter(function(x){ return x >= 11; }), used);
+        var cands = shuffle(SNEAKY.filter(function(x){ return x >= 9; })).slice(0, 3);
+        var opts = shuffle([p].concat(cands));
+        return { p:p, comps:cands, opts:opts, ans:opts.indexOf(p) };
+      },
+      fmt:function(d, lang){
+        var how = d.comps.map(function(n){ return n + ' ＝ ' + smallestPrimeFactor(n) + ' × ' + (n / smallestPrimeFactor(n)); });
+        var howEn = d.comps.map(function(n){ return n + ' = ' + smallestPrimeFactor(n) + ' × ' + (n / smallestPrimeFactor(n)); });
+        return {
+          stem: lang === 'zh'
+            ? '下面四個數裡，<strong>只有一個是質數</strong>。是哪一個？'
+            : 'Of these four numbers, <strong>exactly one is prime</strong>. Which?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? d.p + ' 試除 2、3、5、7 都不整除，因數只有 1 和 ' + d.p + '，是質數。其他三個都拆得開：' + how.join('、') + '，是合數。'
+            : d.p + ' is not divisible by 2, 3, 5 or 7, so its only factors are 1 and ' + d.p + ' — prime. The other three all split: ' + howEn.join(', ') + ', so they are composite.'
+        };
+      } },
+
+    /* 2. 四個數裡哪一個是合數（其他三個是質數）。 */
+    { id:'whichComposite', cat:'prime',
+      make:function(used){
+        var c = pickUnused(SNEAKY.filter(function(x){ return x >= 21; }), used);
+        var ps = shuffle(PRIMES.filter(function(x){ return x >= 11; })).slice(0, 3);
+        var opts = shuffle([c].concat(ps));
+        return { c:c, primes:ps, opts:opts, ans:opts.indexOf(c) };
+      },
+      fmt:function(d, lang){
+        var p = smallestPrimeFactor(d.c);
+        return {
+          stem: lang === 'zh'
+            ? '下面四個數裡，<strong>只有一個是合數</strong>。是哪一個？'
+            : 'Of these four numbers, <strong>exactly one is composite</strong>. Which?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? d.c + ' ＝ ' + p + ' × ' + (d.c / p) + '，除了 1 和自己還有別的因數，是合數 —— 它是奇數、個位也不是 5，可是 ' + (p === 3 ? '各位數字相加是 3 的倍數' : '能被 ' + p + ' 整除') + '。' + listText(d.primes, 'zh') + ' 試除 2、3、5、7 都不整除，是質數。'
+            : d.c + ' = ' + p + ' × ' + (d.c / p) + ', so it has a factor other than 1 and itself — composite. It is odd and does not end in 5, but ' + (p === 3 ? 'its digit sum is a multiple of 3' : 'it is divisible by ' + p) + '. ' + listText(d.primes, 'en') + ' are not divisible by 2, 3, 5 or 7, so they are prime.'
+        };
+      } },
+
+    /* 3. n 是哪一種數（質數／合數／兩者都不是／兩者都是）。四句互斥的結論，剛好一句對。 */
+    { id:'classifyKind', cat:'prime',
+      make:function(used){
+        var n = pickUnused(rangeList(1, 30), used);
+        var kind = kindOf(n) === 'one' ? 'neither' : kindOf(n);
+        var opts = shuffle(['prime', 'composite', 'neither', 'both']);
+        return { n:n, kind:kind, opts:opts, ans:opts.indexOf(kind) };
+      },
+      fmt:function(d, lang){
+        var T = lang === 'zh'
+          ? { prime:'質數', composite:'合數', neither:'既不是質數也不是合數', both:'既是質數也是合數' }
+          : { prime:'prime', composite:'composite', neither:'neither prime nor composite', both:'both prime and composite' };
+        var fs = factorsOf(d.n);
+        var whyZh = d.kind === 'neither' ? '1 的因數只有 1 個（就是 1 自己）：質數要剛好 2 個、合數要 3 個以上，所以它兩種都不是。'
+          : d.kind === 'prime' ? d.n + ' 的因數只有 ' + listText(fs, 'zh') + '，剛好 2 個，所以是質數。'
+          : d.n + ' 的因數有 ' + listText(fs, 'zh') + '，' + fs.length + ' 個（3 個以上），所以是合數。沒有任何數同時是質數又是合數。';
+        var whyEn = d.kind === 'neither' ? '1 has only one factor (1 itself): a prime needs exactly 2 and a composite needs 3 or more, so 1 is neither.'
+          : d.kind === 'prime' ? 'The factors of ' + d.n + ' are just ' + listText(fs, 'en') + ', exactly two, so it is prime.'
+          : 'The factors of ' + d.n + ' are ' + listText(fs, 'en') + ', ' + fs.length + ' of them (three or more), so it is composite. No number is both prime and composite.';
+        return {
+          stem: lang === 'zh' ? '<strong>' + d.n + '</strong> 是哪一種數？' : 'What kind of number is <strong>' + d.n + '</strong>?',
+          opts: d.opts.map(function(k){ return T[k]; }), ans:d.ans,
+          why: lang === 'zh' ? whyZh : whyEn
+        };
+      } },
+
+    /* 4. n 的質因數分解是哪一個。問的是**寫法**：誘答「還沒拆完」的值和正解一樣，那正是它錯的地方
+          （framework §六之二 的合法例外：題幹問「哪一個是質因數分解」，值相等是設計）。 */
+    { id:'primeFactorization', cat:'factorize',
+      /* 每一個有 3 個以上質因數的 n ≤ 100，候選 (a)(b)(c) 去重、過 100 的上限之後都至少剩 3 個
+         （逐一算過：最少的是 8、27、75、81、92、98、99，各剩 3），所以 strOpts 不會回 null，直接建構。 */
+      make:function(used){
+        {
+          var n = pickUnused(COMPOSITES.filter(function(x){ return factorize(x).length >= 3; }), used);
+          var atoms = factorize(n);
+          var right = productText(atoms);
+          var cands = [];
+          /* (a) 第一刀就停：a × b，其中至少一個是合數 */
+          pairsOf(n).forEach(function(p){ if (!(isPrime(p[0]) && isPrime(p[1]))) cands.push(p[0] + ' × ' + p[1]); });
+          /* (b) 只拆了一刀：最小質因數 × 剩下的合數 */
+          var rest = n / atoms[0];
+          if (!isPrime(rest)) cands.push(atoms[0] + ' × ' + rest);
+          /* (c) 全是質數可是值不對：少一個原子／最後一個原子換成下一個質數 */
+          cands.push(productText(atoms.slice(0, -1)));
+          /* 換掉最後一個原子的誘答：值不可以超過這一課的 100（98 ＝ 2 × 7 × 7 換成 2 × 7 × 11 是 154）。 */
+          var nextP = PRIMES.filter(function(p){ return p > atoms[atoms.length - 1]; })[0];
+          if (nextP && productOf(atoms.slice(0, -1)) * nextP <= LIMIT) cands.push(productText(atoms.slice(0, -1).concat([nextP])));
+          var opts = strOpts(right, shuffle(cands));
+          return { n:n, atoms:atoms, opts:opts, ans:opts.indexOf(right) };
+        }
+      },
+      fmt:function(d, lang){
+        var wrongs = d.opts.filter(function(o, i){ return i !== d.ans; });
+        function explain(o){
+          var parts = o.split(' × ').map(Number);
+          var comp = parts.filter(function(x){ return !isPrime(x); });
+          if (comp.length) return lang === 'zh' ? o + ' 裡的 ' + comp[0] + ' 是合數，還沒拆完' : 'in ' + o + ' the ' + comp[0] + ' is composite, so the splitting is not finished';
+          return lang === 'zh' ? o + ' 乘起來是 ' + productOf(parts) + '，不是 ' + d.n : o + ' multiplies to ' + productOf(parts) + ', not ' + d.n;
+        }
+        return {
+          stem: lang === 'zh'
+            ? '哪一個是 <strong>' + d.n + '</strong> 的<strong>質因數分解</strong>？'
+            : 'Which is the <strong>prime factorisation</strong> of <strong>' + d.n + '</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '質因數分解的每一片都要是質數，乘起來要剛好是 ' + d.n + '：' + d.n + ' ＝ ' + productText(d.atoms) + '。其他選項：' + wrongs.map(explain).join('；') + '。'
+            : 'Every piece of a prime factorisation must be prime, and the pieces must multiply to exactly ' + d.n + ': ' + d.n + ' = ' + productText(d.atoms) + '. The others: ' + wrongs.map(explain).join('; ') + '.'
+        };
+      } },
+
+    /* 5. 幾個質數相乘是多少。誘答：相加、少乘一個、多乘一個 2。⚠️ 這一支是唯一真的會拒絕重抽的
+          （乘積超過 100／同一批重複），其他十一支直接建構。 */
+    { id:'productOfPrimes', cat:'factorize',
+      make:function(used){
+        return retry(function(){
+          var k = pick([2, 3, 3]);
+          var atoms = [];
+          for (var i = 0; i < k; i++) atoms.push(pick([2, 2, 3, 3, 5, 7, 11]));
+          atoms.sort(function(a, b){ return a - b; });
+          var n = productOf(atoms);
+          if (n > LIMIT || used.indexOf(n) >= 0) return null;
+          used.push(n);
+          var sum = atoms.reduce(function(a, b){ return a + b; }, 0);
+          var o = numOpts(n, [sum, productOf(atoms.slice(0, -1)), n * 2, productOf(atoms.slice(1))], atoms);
+          if (o.opts.length !== 4) return null;
+          return { atoms:atoms, n:n, opts:o.opts, ans:o.ans };
+        }, function(){
+          var o = numOpts(30, [10, 6, 60, 15], [2, 3, 5]);
+          return { atoms:[2, 3, 5], n:30, opts:o.opts, ans:o.ans };
+        });
+      },
+      fmt:function(d, lang){
+        var steps = [], acc = d.atoms[0];
+        for (var i = 1; i < d.atoms.length; i++){ steps.push(acc + ' × ' + d.atoms[i] + (lang === 'zh' ? ' ＝ ' : ' = ') + (acc * d.atoms[i])); acc *= d.atoms[i]; }
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + productText(d.atoms) + '</strong> 是哪一個數的質因數分解？'
+            : '<strong>' + productText(d.atoms) + '</strong> is the prime factorisation of which number?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '把原子乘回去：' + steps.join('，') + '，所以是 ' + d.n + '。質因數分解是相乘，不是相加。'
+            : 'Multiply the atoms back: ' + steps.join(', ') + ', so the number is ' + d.n + '. A prime factorisation multiplies, it does not add.'
+        };
+      } },
+
+    /* 6. n 最小的質因數。誘答**優先**用：最大的質因數（n ＝ 49 這種 p × p 的它等於正解，會被去掉）、
+          1（不是質數）、最小的合數因數（49 沒有，會被跳過）、2p；不夠三個時 makeWrongs 補 ± 1 的鄰近值。 */
+    { id:'smallestPrimeFactor', cat:'trial',
+      make:function(used){
+        var n = pickUnused(COMPOSITES.filter(function(x){ return x >= 10; }), used);
+        var atoms = factorize(n), p = atoms[0], big = atoms[atoms.length - 1];
+        var compF = factorsOf(n).filter(function(f){ return f > 1 && !isPrime(f) && f < n; })[0];
+        var o = numOpts(p, [big, 1, compF, p * 2], [n]);
+        return { n:n, p:p, atoms:atoms, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var tried = TRIAL_PRIMES.filter(function(q){ return q < d.p; });
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.n + '</strong> 最小的<strong>質因數</strong>是多少？'
+            : 'What is the smallest <strong>prime factor</strong> of <strong>' + d.n + '</strong>?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? (tried.length ? listText(tried, 'zh') + ' 都不整除 ' + d.n + '，' : '') + d.n + ' ÷ ' + d.p + ' ＝ ' + (d.n / d.p) + ' 整除，所以最小的質因數是 ' + d.p + '（' + d.n + ' ＝ ' + productText(d.atoms) + '）。1 不是質數，不算質因數。'
+            : (tried.length ? listText(tried, 'en') + (tried.length === 1 ? ' does not divide ' : ' do not divide ') + d.n + '; ' : '') + d.n + ' ÷ ' + d.p + ' = ' + (d.n / d.p) + ' exactly, so the smallest prime factor is ' + d.p + ' (' + d.n + ' = ' + productText(d.atoms) + '). 1 is not prime, so it does not count as a prime factor.'
+        };
+      } },
+
+    /* 7. 因數樹缺一片：n ＝ 已知的原子 × ?。誘答：± 1、另一個質數、n ÷ 那一片。 */
+    { id:'missingAtom', cat:'factorize',
+      make:function(used){
+        var n = pickUnused(COMPOSITES.filter(function(x){ return factorize(x).length >= 2 && x >= 10; }), used);
+        var atoms = factorize(n);
+        var hide = rand(atoms.length);
+        var shown = atoms.filter(function(a, i){ return i !== hide; });
+        var hidden = atoms[hide];
+        var nextP = PRIMES.filter(function(p){ return p > hidden; })[0];
+        var o = numOpts(hidden, [nextP, productOf(shown), hidden + 1, hidden - 1], [n].concat(shown));
+        return { n:n, atoms:atoms, shown:shown, hidden:hidden, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var known = productOf(d.shown);
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.n + ' ＝ ' + productText(d.shown) + ' × ？</strong>　問號是哪一個質數？'
+            : '<strong>' + d.n + ' = ' + productText(d.shown) + ' × ?</strong>　Which prime is the question mark?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '已知的原子乘起來是 ' + productText(d.shown) + ' ＝ ' + known + '，' + d.n + ' ÷ ' + known + ' ＝ ' + d.hidden + '，而 ' + d.hidden + ' 是質數，所以問號是 ' + d.hidden + '（' + d.n + ' ＝ ' + productText(d.atoms) + '）。'
+            : 'The known atoms multiply to ' + productText(d.shown) + ' = ' + known + ', and ' + d.n + ' ÷ ' + known + ' = ' + d.hidden + ', which is prime, so the question mark is ' + d.hidden + ' (' + d.n + ' = ' + productText(d.atoms) + ').'
+        };
+      } },
+
+    /* 8. a 到 b 之間（不含兩端）有幾個質數。誘答：奇數的個數（5）是刻意的迷思。 */
+    { id:'countPrimesBetween', cat:'prime',
+      make:function(used){
+        var a = pickUnused([10, 20, 30, 40, 50, 60, 70, 80, 90], used), b = a + 10;
+        var ps = rangeList(a + 1, b - 1).filter(isPrime);
+        var o = numOpts(ps.length, [5, ps.length + 1, ps.length - 1, ps.length + 2], [a, b], 9);
+        return { a:a, b:b, primes:ps, k:ps.length, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var comps = rangeList(d.a + 1, d.b - 1).filter(function(n){ return n % 2 === 1 && !isPrime(n); });
+        var how = comps.map(function(n){ return n + (lang === 'zh' ? ' ＝ ' : ' = ') + smallestPrimeFactor(n) + ' × ' + (n / smallestPrimeFactor(n)); });
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.a + ' 到 ' + d.b + ' 之間</strong>（不含 ' + d.a + ' 和 ' + d.b + '）有幾個<strong>質數</strong>？'
+            : 'How many <strong>primes</strong> are there <strong>between ' + d.a + ' and ' + d.b + '</strong> (not counting ' + d.a + ' and ' + d.b + ')?',
+          opts: d.opts.map(function(v){ return lang === 'zh' ? (v + ' 個') : String(v); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '偶數都是合數；奇數裡 ' + (how.length ? how.join('、') + ' 也是合數，' : '') + '剩下 ' + listText(d.primes, 'zh') + ' 試除 2、3、5、7 都不整除，是質數，所以有 ' + d.k + ' 個。這一段有 5 個奇數，可是奇數不一定是質數。'
+            : 'The even numbers are all composite; among the odd ones ' + (how.length ? how.join(', ') + ' are composite too, ' : '') + 'leaving ' + listText(d.primes, 'en') + ', which none of 2, 3, 5, 7 divide — so there ' + (d.k === 1 ? 'is 1 prime' : 'are ' + d.k + ' primes') + '. There are 5 odd numbers in the range, but odd does not mean prime.'
+        };
+      } },
+
+    /* 9. 試除：n 能被 2、3、5、7 之中的哪一個整除（剛好一個）。 */
+    { id:'divisibleByWhich', cat:'trial',
+      make:function(used){
+        var n = pickUnused(ONE_SMALL, used);
+        var p = TRIAL_PRIMES.filter(function(q){ return n % q === 0; })[0];
+        var opts = shuffle(TRIAL_PRIMES.slice());
+        return { n:n, p:p, opts:opts, ans:opts.indexOf(p) };
+      },
+      fmt:function(d, lang){
+        var n = d.n, ds = String(n).split('').reduce(function(a, c){ return a + Number(c); }, 0);
+        var rule = {
+          zh:{ 2:'個位是 ' + (n % 10) + '，是偶數', 3:'各位數字相加 ' + String(n).split('').join(' ＋ ') + ' ＝ ' + ds + '，是 3 的倍數', 5:'個位是 ' + (n % 10), 7:'直接除，' + n + ' ÷ 7 ＝ ' + (n / 7) + ' 剛好整除' },
+          en:{ 2:'its last digit is ' + (n % 10) + ', so it is even', 3:'its digit sum ' + String(n).split('').join(' + ') + ' = ' + ds + ' is a multiple of 3', 5:'its last digit is ' + (n % 10), 7:n + ' ÷ 7 = ' + (n / 7) + ' exactly' }
+        }[lang][d.p];
+        var others = TRIAL_PRIMES.filter(function(q){ return q !== d.p; });
+        return {
+          stem: lang === 'zh'
+            ? '用試除法判斷 <strong>' + d.n + '</strong>：它能被下面哪一個質數<strong>整除</strong>？'
+            : 'Testing <strong>' + d.n + '</strong> by trial division: which of these primes <strong>divides it exactly</strong>?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? d.n + ' 能被 ' + d.p + ' 整除，因為' + rule + '（' + d.n + ' ＝ ' + d.p + ' × ' + (d.n / d.p) + '），所以 ' + d.n + ' 是合數。' + others.map(function(q){ return d.n + ' ÷ ' + q + ' 餘 ' + (d.n % q); }).join('、') + '，都不整除。'
+            : d.n + ' is divisible by ' + d.p + ' because ' + rule + ' (' + d.n + ' = ' + d.p + ' × ' + (d.n / d.p) + '), so ' + d.n + ' is composite. ' + others.map(function(q){ return d.n + ' ÷ ' + q + ' leaves remainder ' + (d.n % q); }).join(', ') + ' — none of those divide it.'
+        };
+      } },
+
+    /* 10. 四句話裡只有一句是對的。 */
+    { id:'trueStatement', cat:'prime',
+      make:function(used){
+        var t = pickUnused(TRUE_KEYS, used);
+        var fs = shuffle(FALSE_KEYS).slice(0, 3);
+        var opts = shuffle([t].concat(fs));
+        return { t:t, opts:opts, ans:opts.indexOf(t) };
+      },
+      fmt:function(d, lang){
+        var WHY = {
+          zh:{ twoEvenPrime:'2 的因數只有 1 和 2，是質數；其他偶數都有因數 2，所以 2 是唯一的偶數質數。',
+               oneNeither:'1 只有 1 個因數，質數要 2 個、合數要 3 個以上，所以 1 兩種都不是。',
+               primeTwoFactors:'質數的定義就是因數剛好 2 個：1 和自己。',
+               compThreePlus:'合數除了 1 和自己還有別的因數，所以至少 3 個。',
+               everyBig:'比 1 大的整數，因數剛好 2 個就是質數、3 個以上就是合數，沒有第三種。',
+               allOddPrime:'2 是質數卻是偶數。', oneIsPrime:'1 既不是質數也不是合數，最小的質數是 2。',
+               allOddArePrime:'9 ＝ 3 × 3、15 ＝ 3 × 5 都是奇數的合數。', primeTimesPrime:'2 × 3 ＝ 6，6 是合數。',
+               nineIsPrime:'9 ＝ 3 × 3，有 3 個因數，是合數。', compFactorsComp:'每一個合數都有因數 1 和質因數，例如 6 的因數 2 和 3 都是質數。' },
+          en:{ twoEvenPrime:'The factors of 2 are just 1 and 2, so it is prime; every other even number has 2 as a factor, so 2 is the only even prime.',
+               oneNeither:'1 has only one factor; a prime needs 2 and a composite needs 3 or more, so 1 is neither.',
+               primeTwoFactors:'That is the definition of a prime: exactly 2 factors, 1 and itself.',
+               compThreePlus:'A composite has a factor other than 1 and itself, so at least 3.',
+               everyBig:'Any whole number bigger than 1 has either exactly 2 factors (prime) or 3 or more (composite); there is no third kind.',
+               allOddPrime:'2 is prime, yet it is even.', oneIsPrime:'1 is neither prime nor composite; the smallest prime is 2.',
+               allOddArePrime:'9 = 3 × 3 and 15 = 3 × 5 are odd composites.', primeTimesPrime:'2 × 3 = 6, and 6 is composite.',
+               nineIsPrime:'9 = 3 × 3 has 3 factors, so it is composite.', compFactorsComp:'Every composite has the factor 1 and prime factors — the factors 2 and 3 of 6 are both prime.' }
+        }[lang];
+        var wrongs = d.opts.filter(function(k){ return k !== d.t; });
+        return {
+          stem: lang === 'zh' ? '下面四句話，<strong>只有一句是對的</strong>。是哪一句？' : 'Of these four sentences, <strong>exactly one is true</strong>. Which?',
+          opts: d.opts.map(function(k){ return STATEMENTS[k][lang]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '對的那一句是：' + STATEMENTS[d.t].zh + '。' + WHY[d.t] + '其他三句：' + wrongs.map(function(k){ return WHY[k]; }).join('')
+            : 'The true one is: ' + STATEMENTS[d.t].en + '. ' + WHY[d.t] + ' The other three: ' + wrongs.map(function(k){ return WHY[k]; }).join(' ')
+        };
+      } },
+
+    /* 11. 交錯題：五年級「因數工廠」—— n 的因數有幾個。 */
+    { id:'interFactorCount', cat:'inter',
+      make:function(used){
+        var n = pickUnused(rangeList(6, 40), used);
+        var k = factorsOf(n).length;
+        var o = numOpts(k, [k - 1, k + 1, k + 2, 2], [n], 12);
+        return { n:n, k:k, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var fs = factorsOf(d.n);
+        return {
+          stem: lang === 'zh' ? '<strong>' + d.n + '</strong> 的<strong>因數</strong>一共有幾個？' : 'How many <strong>factors</strong> does <strong>' + d.n + '</strong> have in all?',
+          opts: d.opts.map(function(v){ return lang === 'zh' ? (v + ' 個') : String(v); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '從小到大配對找：' + listText(fs, 'zh') + '，一共 ' + d.k + ' 個。' + (d.k === 2 ? '剛好 2 個，所以 ' + d.n + ' 是質數。' : '3 個以上，所以 ' + d.n + ' 是合數。')
+            : 'Pair them up from the smallest: ' + listText(fs, 'en') + ', ' + d.k + ' in all. ' + (d.k === 2 ? 'Exactly two, so ' + d.n + ' is prime.' : 'Three or more, so ' + d.n + ' is composite.')
+        };
+      } },
+
+    /* 12. 交錯題：五年級「好朋友車站」—— 兩個數的最大公因數（列舉法）。
+           誘答是三個刻意的迷思：最小公倍數（把「最大公因數」和「最小公倍數」搞混；GCF_PAIRS 的
+           最小公倍數都在 100 以內、也都不等於 a 或 b）、1（最小的公因數）、第二大的公因數（沒找完）。 */
+    { id:'interGCF', cat:'inter',
+      make:function(used){
+        var pr = pickUnused(GCF_PAIRS.map(function(p){ return p.join('-'); }), used).split('-').map(Number);
+        var a = pr[0], b = pr[1], g = gcd(a, b), l = a * b / g;
+        var common = factorsOf(a).filter(function(f){ return b % f === 0; });
+        var o = numOpts(g, [l, 1, common[common.length - 2]], [a, b]);
+        return { a:a, b:b, g:g, l:l, common:common, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '<strong>' + d.a + '</strong> 和 <strong>' + d.b + '</strong> 的<strong>最大公因數</strong>是多少？' : 'What is the <strong>greatest common factor</strong> of <strong>' + d.a + '</strong> and <strong>' + d.b + '</strong>?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? d.a + ' 的因數：' + listText(factorsOf(d.a), 'zh') + '；' + d.b + ' 的因數：' + listText(factorsOf(d.b), 'zh') + '。兩邊都有的是 ' + listText(d.common, 'zh') + '，其中最大的是 ' + d.g + '。'
+            : 'Factors of ' + d.a + ': ' + listText(factorsOf(d.a), 'en') + '; factors of ' + d.b + ': ' + listText(factorsOf(d.b), 'en') + '. The common ones are ' + listText(d.common, 'en') + ', and the greatest is ' + d.g + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 質數原子實驗室', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：質數原子實驗室',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾幾題五年級「因數工廠」和「好朋友車站」的題型。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>　·　因數怎麼找回<a href="../../../grade-5/math/factor/index.html">因數工廠</a>　·　最大公因數回<a href="../../../grade-5/math/common-factor/index.html">好朋友車站</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Prime Atom Lab', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Prime Atom Lab',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>A few of them come from the grade-5 factor lesson and the grade-5 common-factor lesson too.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>　·　finding factors in <a href="../../../grade-5/math/factor/index.html">the grade-5 factor lesson</a>　·　the greatest common factor in <a href="../../../grade-5/math/common-factor/index.html">the grade-5 common-factor lesson</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length){
+            resultLine.textContent = right === batch.length ? t.resAll(batch.length)
+              : right >= Math.ceil(batch.length * 2 / 3) ? t.resGood(right, batch.length)
+              : t.resTry(right, batch.length);
+            resultLinks.innerHTML = t.links;
+            resultEl.classList.add('on');
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function newRound(){
+    batch = buildBatch();
+    applyStatic();
+    render();
+  }
+
+  retryBtn.addEventListener('click', newRound);
+  /* 語言切換保留同一批題目（framework §六之一：切語言不重抽）。 */
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    render();
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>
