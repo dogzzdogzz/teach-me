@@ -7,5 +7,5 @@ window.TEACHME_LESSONS = {
   3: ['add-sub', 'angle', 'capacity', 'circle', 'decimal', 'divide', 'equation', 'fraction', 'length', 'multiply', 'numbers', 'perimeter', 'rectangle', 'table', 'time', 'two-step', 'weight'],
   4: ['angle', 'angle-shape', 'area', 'chain-divide', 'chart', 'congruent', 'cubes', 'decimal', 'figurate', 'fraction', 'multiply-divide', 'numberline', 'numbers', 'pattern', 'perpendicular', 'quadrilateral', 'rounding', 'time', 'triangle'],
   5: ['angle-sum', 'area', 'average', 'big-units', 'common-factor', 'decimal', 'factor', 'fraction-add', 'fraction-divide', 'fraction-multiply', 'multiple', 'operations', 'percent', 'polygon', 'prisms', 'rounding', 'solid', 'statistics', 'symbol', 'symmetry', 'time', 'volume', 'weight'],
-  6: ['prime']
+  6: ['gcf-lcm', 'prime']
 };

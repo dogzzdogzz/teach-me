@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 短除法魔法梯</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .result{margin-top:22px;background:var(--orange-soft);border-radius:18px;padding:18px;display:none}
+  .result.on{display:block}
+  .result .line{font-size:18px;font-weight:700}
+  .result .links{margin-top:10px;font-size:15px}
+  .result .links a{color:var(--blue)}
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：短除法魔法梯</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題上一課「質數原子實驗室」的質因數分解。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function rangeList(a, b){
+    var out = [];
+    for (var i = a; i <= b; i++) out.push(i);
+    return out;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+  /* ⚠️ make() 一律不可以回 null：tools/simgen.js 每一批只呼叫 make() 一次、不重試。
+     十二支產生器的抽樣池都事先過濾好（見下面的 POOL_*），抽到就一定做得出四個選項，
+     所以全部直接建構，沒有 retry —— 永遠不會響的拒絕條件不是守衛，是裝飾。 */
+
+  /* --- 這一課的數論工具（和 index.html 同一套定義）。 --- */
+  var LIMIT = 100;          /* 兩個數的上限 */
+  var LCM_LIMIT = 600;      /* 最小公倍數與「最小公倍數那一類」選項的上限 */
+  function isPrime(n){
+    if (!isFinite(n) || n !== Math.floor(n) || n < 2) return false;
+    for (var p = 2; p * p <= n; p++) if (n % p === 0) return false;
+    return true;
+  }
+  function smallestPrimeFactor(n){
+    if (!isFinite(n) || n !== Math.floor(n) || n < 2) return null;
+    for (var p = 2; p <= n; p++) if (n % p === 0) return p;
+    return null;
+  }
+  function factorize(n){
+    var out = [], v = n;
+    while (v > 1){ var p = smallestPrimeFactor(v); if (!p) break; out.push(p); v = v / p; }
+    return out;
+  }
+  function productText(list){ return list.join(' × '); }
+  function productOf(list){ return list.reduce(function(a, b){ return a * b; }, 1); }
+  function commonPrime(a, b){
+    var m = Math.min(a, b);
+    for (var p = 2; p <= m; p++) if (isPrime(p) && a % p === 0 && b % p === 0) return p;
+    return null;
+  }
+  /* 短除法：左邊每一列是能同時整除兩個數的最小質數，除到底下互質就停。 */
+  function ladderRows(a, b){
+    var rows = [], x = a, y = b, p;
+    while ((p = commonPrime(x, y)) !== null){ rows.push({ p:p, a:x, b:y, qa:x / p, qb:y / p }); x = x / p; y = y / p; }
+    var left = rows.map(function(r){ return r.p; });
+    var gcf = productOf(left);
+    return { a:a, b:b, rows:rows, left:left, bottom:[x, y], gcf:gcf, lcm:gcf * x * y, coprime: gcf === 1 };
+  }
+  function gcfOf(a, b){ return ladderRows(a, b).gcf; }
+  function lcmOf(a, b){ return ladderRows(a, b).lcm; }
+  function commonFactors(a, b){ return rangeList(1, Math.min(a, b)).filter(function(f){ return a % f === 0 && b % f === 0; }); }
+  function pairsOf(n){
+    var out = [];
+    for (var a = 2; a * a <= n; a++) if (n % a === 0) out.push([a, n / a]);
+    return out;
+  }
+  var PRIMES = rangeList(2, LIMIT).filter(isPrime);
+  var COMPOSITES = rangeList(4, LIMIT).filter(function(n){ return !isPrime(n); });
+
+  function listText(list, lang){ return list.join(lang === 'zh' ? '、' : ', '); }
+  function pairText(a, b, lang){ return lang === 'zh' ? a + ' 和 ' + b : a + ' and ' + b; }
+  function pairKey(pr){ return pr[0] + '-' + pr[1]; }
+  function pairOf(key){ return String(key).split('-').map(Number); }
+
+  /* --- 抽樣池：a < b，兩個數都在 100 以內，最小公倍數在 600 以內。每一池的用途寫在旁邊。 --- */
+  var PAIRS_ALL = [];
+  (function(){
+    for (var a = 2; a <= LIMIT; a++) for (var b = a + 1; b <= LIMIT; b++){
+      var L = ladderRows(a, b);
+      if (L.lcm <= LCM_LIMIT) PAIRS_ALL.push([a, b]);
+    }
+  })();
+  function keysOf(list){ return list.map(pairKey); }
+  var POOL_NONCOP = PAIRS_ALL.filter(function(pr){ return pr[0] >= 4 && gcfOf(pr[0], pr[1]) > 1; });                    /* 最大公因數 > 1 */
+  var POOL_LADDER2 = POOL_NONCOP.filter(function(pr){ return ladderRows(pr[0], pr[1]).rows.length >= 2; });            /* 梯子至少兩列 */
+  var POOL_COP = PAIRS_ALL.filter(function(pr){ return pr[0] >= 4 && gcfOf(pr[0], pr[1]) === 1 && pr[0] * pr[1] <= LCM_LIMIT; }); /* 互質，乘積在 600 以內 */
+  var POOL_BUS = POOL_NONCOP.filter(function(pr){ return pr[1] <= 60; });                                              /* 公車：兩個週期都在 60 分以內 */
+  /* 「看起來像互質」的不互質數對：兩個都是奇數、或一奇一偶而且沒有一個是另一個的倍數。誘答用。 */
+  var POOL_SNEAKY = POOL_NONCOP.filter(function(pr){ return !(pr[0] % 2 === 0 && pr[1] % 2 === 0) && pr[1] % pr[0] !== 0 && pr[1] <= 60; });
+
+  /* --- 整數選項：正解 ＋ 3 個誘答（framework §六之三 第 4 點）。
+         avoid ＝ 題幹上印出來的數字，先當成已用過，候選與保底都不會再端出來；
+         候選與保底都擋在 [1, max] 以內；擠到不夠時少回傳（simgen 的選項數檢查會響，不會卡死）。 --- */
+  function makeWrongs(correct, candidates, avoid, max){
+    var lim = max;
+    var seen = {}, out = [];
+    seen[String(correct)] = 1;
+    (avoid || []).forEach(function(a){ seen[String(a)] = 1; });
+    candidates.forEach(function(c){
+      if (out.length >= 3) return;
+      if (typeof c !== 'number' || !isFinite(c) || c !== Math.round(c)) return;
+      if (c < 1 || c > lim || seen[String(c)]) return;
+      seen[String(c)] = 1; out.push(c);
+    });
+    for (var step = 1; out.length < 3 && step <= lim; step++){
+      var lo = correct - step, hi = correct + step;
+      if (lo >= 1 && !seen[String(lo)] && out.length < 3){ seen[String(lo)] = 1; out.push(lo); }
+      if (hi <= lim && !seen[String(hi)] && out.length < 3){ seen[String(hi)] = 1; out.push(hi); }
+    }
+    return out;
+  }
+  function numOpts(correct, candidates, avoid, max){
+    var wrongs = makeWrongs(correct, candidates, avoid, max);
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+  /* 字串選項（整句話或一組數）：四個互不相同的字串。候選不夠四個就少回傳（simgen 的選項數檢查會響）。 */
+  function strOpts(correct, cands){
+    var out = [correct];
+    cands.forEach(function(s){
+      if (out.length >= 4 || !s) return;
+      if (out.indexOf(s) >= 0) return;
+      out.push(s);
+    });
+    var opts = shuffle(out);
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+
+  /* --- 「哪一句話是對的」的句庫。每一句的真假寫死在這裡（設定檔另有一份獨立的真值表）。 --- */
+  var STATEMENTS = {
+    coprimeMeansOne:   { truth:true,  zh:'互質就是兩個數的最大公因數是 1', en:'Coprime means the GCF of the two numbers is 1' },
+    coprimeLcmProduct: { truth:true,  zh:'互質的兩個數，最小公倍數等於兩數相乘', en:'For two coprime numbers the LCM equals their product' },
+    twoPrimesCoprime:  { truth:true,  zh:'兩個不同的質數一定互質', en:'Two different primes are always coprime' },
+    consecutiveCoprime:{ truth:true,  zh:'相鄰的兩個整數一定互質', en:'Two neighbouring whole numbers are always coprime' },
+    leftIsGcf:         { truth:true,  zh:'短除法左邊那一排相乘是最大公因數（一個都沒有就是 1）', en:'The left column of short division multiplied is the GCF (none at all means 1)' },
+    productRule:       { truth:true,  zh:'最大公因數乘最小公倍數等於兩數相乘', en:'GCF times LCM equals the two numbers multiplied' },
+    coprimeBothPrime:  { truth:false, zh:'互質的兩個數一定都是質數', en:'Two coprime numbers are always both prime' },
+    oddEvenCoprime:    { truth:false, zh:'一個奇數和一個偶數一定互質', en:'An odd number and an even number are always coprime' },
+    twoOddCoprime:     { truth:false, zh:'兩個奇數一定互質', en:'Two odd numbers are always coprime' },
+    compositeNever:    { truth:false, zh:'兩個合數一定不互質', en:'Two composite numbers are never coprime' },
+    lcmIsProduct:      { truth:false, zh:'最小公倍數一定等於兩數相乘', en:'The LCM always equals the two numbers multiplied' },
+    leftIsLcm:         { truth:false, zh:'短除法左邊那一排相乘是最小公倍數', en:'The left column of short division multiplied is the LCM' }
+  };
+  var TRUE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return STATEMENTS[k].truth; });
+  var FALSE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return !STATEMENTS[k].truth; });
+
+  /* --- 應用題的六個情境。kind 是該找哪一個；stem／why 兩種語言各一份。
+         題幹上只印 a 和 b 這兩個數（reduce 印 a/b、denom 印 1/a 和 1/b），誘答的 avoid 要把它們都放進去。 --- */
+  var SCEN = {
+    ribbon:{ kind:'gcf', stem:function(a, b, lang){ return lang === 'zh'
+        ? '兩條繩子分別長 <strong>' + a + '</strong> 公分和 <strong>' + b + '</strong> 公分，要剪成<strong>一樣長</strong>的小段，剪完不能有剩。每一段<strong>最長</strong>幾公分？'
+        : 'Two ropes are <strong>' + a + '</strong> cm and <strong>' + b + '</strong> cm long. They are cut into pieces of <strong>equal length</strong> with nothing left over. What is the <strong>longest</strong> each piece can be, in cm?'; },
+      why:function(a, b, lang){ return lang === 'zh' ? '每一段的長度要同時整除 ' + a + ' 和 ' + b + '，問「最長」就是找最大公因數。' : 'The piece length must divide both ' + a + ' and ' + b + ', and “longest” means the GCF.'; } },
+    bags:{ kind:'gcf', stem:function(a, b, lang){ return lang === 'zh'
+        ? '有 <strong>' + a + '</strong> 顆糖和 <strong>' + b + '</strong> 顆巧克力，平均分裝成幾袋，每一袋的糖一樣多、巧克力也一樣多，剛好分完。<strong>最多</strong>可以分成幾袋？'
+        : 'There are <strong>' + a + '</strong> sweets and <strong>' + b + '</strong> chocolates, shared equally into bags, every bag with the same number of sweets and the same number of chocolates, nothing left over. What is the <strong>greatest</strong> number of bags?'; },
+      why:function(a, b, lang){ return lang === 'zh' ? '袋數要同時整除 ' + a + ' 和 ' + b + '，問「最多」就是找最大公因數。' : 'The number of bags must divide both ' + a + ' and ' + b + ', and “greatest number” means the GCF.'; } },
+    reduce:{ kind:'gcf', stem:function(a, b, lang){ return lang === 'zh'
+        ? '把 <strong>' + a + '/' + b + '</strong> 約成最簡分數，<strong>一次</strong>就約到底，分子和分母要同除以幾？'
+        : 'Simplify <strong>' + a + '/' + b + '</strong> to its simplest form in <strong>one</strong> step. What do you divide the numerator and denominator by?'; },
+      why:function(a, b, lang){ return lang === 'zh' ? '一次約到最簡要同除以分子分母的最大公因數，約完之後分子分母互質。' : 'Reaching the simplest form in one step means dividing by the GCF of numerator and denominator; afterwards they are coprime.'; } },
+    bus:{ kind:'lcm', stem:function(a, b, lang){ return lang === 'zh'
+        ? '兩路公車一路每 <strong>' + a + '</strong> 分鐘一班、另一路每 <strong>' + b + '</strong> 分鐘一班，剛才<strong>同時</strong>發車。<strong>最快</strong>再過幾分鐘會再一次同時發車？'
+        : 'One bus leaves every <strong>' + a + '</strong> minutes and another every <strong>' + b + '</strong> minutes; they have just left <strong>together</strong>. What is the <strong>soonest</strong> number of minutes until they leave together again?'; },
+      why:function(a, b, lang){ return lang === 'zh' ? '兩路都再次發車的時刻是 ' + a + ' 和 ' + b + ' 的公倍數，問「最快」就是找最小公倍數。' : 'A moment when both leave again is a common multiple of ' + a + ' and ' + b + ', and “soonest” means the LCM.'; } },
+    tile:{ kind:'lcm', stem:function(a, b, lang){ return lang === 'zh'
+        ? '長 <strong>' + b + '</strong> 公分、寬 <strong>' + a + '</strong> 公分的長方形磁磚，全部朝同一個方向、不切割，拼成一個<strong>最小</strong>的正方形。正方形的邊長是幾公分？'
+        : 'Rectangular tiles <strong>' + b + '</strong> cm long and <strong>' + a + '</strong> cm wide, all facing the same way and not cut, are laid to make the <strong>smallest</strong> possible square. What is the side of the square, in cm?'; },
+      why:function(a, b, lang){ return lang === 'zh' ? '正方形的邊長要同時是 ' + a + ' 和 ' + b + ' 的倍數，問「最小」就是找最小公倍數。' : 'The side must be a multiple of both ' + a + ' and ' + b + ', and “smallest” means the LCM.'; } },
+    denom:{ kind:'lcm', stem:function(a, b, lang){ return lang === 'zh'
+        ? '<strong>1/' + a + '</strong> ＋ <strong>1/' + b + '</strong> 要通分，<strong>最小</strong>的公分母是幾？'
+        : 'To add <strong>1/' + a + '</strong> + <strong>1/' + b + '</strong> you need a common denominator. What is the <strong>smallest</strong> one?'; },
+      why:function(a, b, lang){ return lang === 'zh' ? '公分母要同時是 ' + a + ' 和 ' + b + ' 的倍數，問「最小」就是找最小公倍數。' : 'A common denominator must be a multiple of both ' + a + ' and ' + b + ', and “smallest” means the LCM.'; } }
+  };
+  var SCEN_IDS = Object.keys(SCEN);
+  /* 每一個情境自己的抽樣池：公車的週期要在 60 分以內；其餘用最大公因數 > 1 的數對（這樣「相乘」永遠不是最小公倍數）。 */
+  function scenPool(id){ return id === 'bus' ? POOL_BUS : POOL_NONCOP; }
+  /* 該找哪一個：四個互斥的結論。 */
+  var FIND_KEYS = ['gcf', 'lcm', 'product', 'sum'];
+  var FIND_TEXT = {
+    zh:{ gcf:'找最大公因數', lcm:'找最小公倍數', product:'把兩個數相乘', sum:'把兩個數相加' },
+    en:{ gcf:'find the GCF', lcm:'find the LCM', product:'multiply the two numbers', sum:'add the two numbers' }
+  };
+  /* 用短除法把答案講出來（解釋用）。 */
+  function ladderText(L, lang){
+    if (L.coprime) return lang === 'zh' ? L.a + ' 和 ' + L.b + ' 沒有共同的質因數（互質），最大公因數 1，最小公倍數 ' + L.a + ' × ' + L.b + ' ＝ ' + L.lcm + '。' : L.a + ' and ' + L.b + ' share no prime factor (coprime): GCF 1, LCM ' + L.a + ' × ' + L.b + ' = ' + L.lcm + '.';
+    return lang === 'zh'
+      ? '短除法：左邊 ' + listText(L.left, 'zh') + '，底下 ' + L.bottom[0] + '、' + L.bottom[1] + '；最大公因數 ' + productText(L.left) + ' ＝ ' + L.gcf + '，最小公倍數 ' + productText(L.left.concat(L.bottom)) + ' ＝ ' + L.lcm + '。'
+      : 'Short division: left column ' + listText(L.left, 'en') + ', bottom ' + L.bottom[0] + ' and ' + L.bottom[1] + '; GCF ' + productText(L.left) + ' = ' + L.gcf + ', LCM ' + productText(L.left.concat(L.bottom)) + ' = ' + L.lcm + '.';
+  }
+  /* 「第二大的公因數」（沒除完就停的誤答）。最大公因數是質數時它會是 1 —— 1 不是這一課的迷思，回 null 讓保底接手。 */
+  function secondCommon(a, b){ var cf = commonFactors(a, b); var v = cf.length >= 2 ? cf[cf.length - 2] : null; return v === 1 ? null : v; }
+
+  var GENS = [
+    /* 1. 短除法求最大公因數（梯子至少兩列）。誘答：最小公倍數（100 以內時）、第二大的公因數（沒除完）、
+          底下兩個商相乘（乘錯排）、兩數的差。 */
+    { id:'gcfLadder', cat:'gcf',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_LADDER2), used)), a = pr[0], b = pr[1], L = ladderRows(a, b);
+        var o = numOpts(L.gcf, [L.lcm, secondCommon(a, b), L.bottom[0] * L.bottom[1], b - a], [a, b], LIMIT);
+        return { a:a, b:b, L:L, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '用短除法求 <strong>' + d.a + '</strong> 和 <strong>' + d.b + '</strong> 的<strong>最大公因數</strong>。' : 'Use short division to find the <strong>GCF</strong> of <strong>' + d.a + '</strong> and <strong>' + d.b + '</strong>.',
+          opts: d.opts.map(String), ans:d.ans,
+          why: ladderText(d.L, lang) + (lang === 'zh' ? '最大公因數只看左邊那一排。' : ' The GCF uses the left column only.')
+        };
+      } },
+
+    /* 2. 短除法求最小公倍數。誘答：兩數相乘（共同的原子算兩次）、底下相乘（漏掉左邊）、最大公因數、多乘一個 2。 */
+    { id:'lcmLadder', cat:'lcm',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_NONCOP), used)), a = pr[0], b = pr[1], L = ladderRows(a, b);
+        var o = numOpts(L.lcm, [a * b, L.bottom[0] * L.bottom[1], L.gcf, L.lcm * 2], [a, b], LCM_LIMIT);
+        return { a:a, b:b, L:L, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '用短除法求 <strong>' + d.a + '</strong> 和 <strong>' + d.b + '</strong> 的<strong>最小公倍數</strong>。' : 'Use short division to find the <strong>LCM</strong> of <strong>' + d.a + '</strong> and <strong>' + d.b + '</strong>.',
+          opts: d.opts.map(String), ans:d.ans,
+          why: ladderText(d.L, lang) + (lang === 'zh' ? '最小公倍數是 L 形：左邊乘底下。' + d.a + ' × ' + d.b + ' ＝ ' + (d.a * d.b) + ' 把共同的原子算了兩次，不是最小。' : ' The LCM is the L shape, left times bottom. ' + d.a + ' × ' + d.b + ' = ' + (d.a * d.b) + ' counts the shared atoms twice, so it is not the least.')
+        };
+      } },
+
+    /* 3. 哪一個是兩個數共同的質因數（可以寫在梯子左邊）。剛好一個選項同時是質數又整除兩個數；
+          誘答：只整除其中一個的質數、不是質數的公因數、兩個都不整除的質數。 */
+    { id:'commonPrime', cat:'gcf',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_NONCOP), used)), a = pr[0], b = pr[1], L = ladderRows(a, b);
+        var p = L.left[0];
+        var pool = [];
+        [2, 3, 5, 7, 11, 13].forEach(function(q){ if (!(a % q === 0 && b % q === 0)) pool.push(q); });
+        commonFactors(a, b).forEach(function(f){ if (f > 1 && !isPrime(f) && f !== a && f !== b) pool.push(f); });
+        /* 先放一個只整除其中一個的質數（最像正解的誘答），再補其餘 */
+        var oneSide = pool.filter(function(q){ return isPrime(q) && (a % q === 0 || b % q === 0); });
+        var rest = shuffle(pool.filter(function(q){ return oneSide.indexOf(q) < 0; }));
+        var cands = shuffle(oneSide).slice(0, 1).concat(rest);
+        var wrongs = [];
+        cands.forEach(function(c){ if (wrongs.length < 3 && wrongs.indexOf(c) < 0 && c !== p) wrongs.push(c); });
+        var opts = shuffle([p].concat(wrongs));
+        return { a:a, b:b, p:p, opts:opts, ans:opts.indexOf(p) };
+      },
+      fmt:function(d, lang){
+        var others = d.opts.filter(function(v){ return v !== d.p; });
+        function explain(v){
+          if (!isPrime(v)) return lang === 'zh' ? v + ' 不是質數' : v + ' is not prime';
+          if (d.a % v === 0) return lang === 'zh' ? v + ' 只整除 ' + d.a + '（' + d.b + ' ÷ ' + v + ' 餘 ' + (d.b % v) + '）' : v + ' divides only ' + d.a + ' (' + d.b + ' ÷ ' + v + ' leaves remainder ' + (d.b % v) + ')';
+          if (d.b % v === 0) return lang === 'zh' ? v + ' 只整除 ' + d.b + '（' + d.a + ' ÷ ' + v + ' 餘 ' + (d.a % v) + '）' : v + ' divides only ' + d.b + ' (' + d.a + ' ÷ ' + v + ' leaves remainder ' + (d.a % v) + ')';
+          return lang === 'zh' ? v + ' 兩個都不整除' : v + ' divides neither';
+        }
+        return {
+          stem: lang === 'zh'
+            ? '求 <strong>' + d.a + '</strong> 和 <strong>' + d.b + '</strong> 的最大公因數，下面哪一個是<strong>能同時整除</strong>兩個數的<strong>質數</strong>、可以寫在梯子左邊？'
+            : 'To find the GCF of <strong>' + d.a + '</strong> and <strong>' + d.b + '</strong>, which of these is a <strong>prime</strong> that <strong>divides both</strong> numbers and can go on the left of the ladder?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? d.p + ' 是質數，而且 ' + d.a + ' ÷ ' + d.p + ' ＝ ' + (d.a / d.p) + '、' + d.b + ' ÷ ' + d.p + ' ＝ ' + (d.b / d.p) + '，兩個都沒有餘數，可以寫在左邊。其他：' + others.map(explain).join('；') + '。'
+            : d.p + ' is prime and ' + d.a + ' ÷ ' + d.p + ' = ' + (d.a / d.p) + ', ' + d.b + ' ÷ ' + d.p + ' = ' + (d.b / d.p) + ' both leave no remainder, so it can go on the left. The others: ' + others.map(explain).join('; ') + '.'
+        };
+      } },
+
+    /* 4. 梯子除到底之後，底下剩下的兩個數。誘答：只除到倒數第二列（還有共同的質因數）、只除了其中一邊。 */
+    { id:'ladderBottom', cat:'gcf',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_LADDER2), used)), a = pr[0], b = pr[1], L = ladderRows(a, b);
+        var last = L.rows[L.rows.length - 1], p = last.p;
+        var right = pairKey(L.bottom);
+        /* 誘答：只除到倒數第二列、只除了一邊、只除了第一列；再補「底下一邊多乘一個 2／3」保底。
+           任何一組含 a 或 b 的不要（抄題幹），含 0 或超過 100 的也不要。 */
+        var raw = [[last.a, last.b], [L.bottom[0] * p, L.bottom[1]], [L.bottom[0], L.bottom[1] * p], [L.rows[0].qa, L.rows[0].qb],
+                   [L.bottom[0] * 2, L.bottom[1]], [L.bottom[0], L.bottom[1] * 2], [L.bottom[0] * 3, L.bottom[1]], [L.bottom[0], L.bottom[1] * 3]];
+        var cands = [];
+        raw.forEach(function(pr2){
+          if (pr2[0] === a || pr2[1] === a || pr2[0] === b || pr2[1] === b) return;
+          if (pr2[0] < 1 || pr2[1] < 1 || pr2[0] > LIMIT || pr2[1] > LIMIT) return;
+          cands.push(pairKey(pr2));
+        });
+        var o = strOpts(right, cands.slice(0, 4).concat(shuffle(cands.slice(4))));
+        return { a:a, b:b, L:L, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var L = d.L;
+        return {
+          stem: lang === 'zh'
+            ? '用短除法把 <strong>' + d.a + '</strong> 和 <strong>' + d.b + '</strong> <strong>除到底</strong>（底下兩個數互質才停），最後底下剩下哪兩個數？'
+            : 'Divide <strong>' + d.a + '</strong> and <strong>' + d.b + '</strong> <strong>all the way down</strong> by short division (stop only when the bottom pair is coprime). Which two numbers are left at the bottom?',
+          opts: d.opts.map(function(k){ var q = pairOf(k); return pairText(q[0], q[1], lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '左邊依序是 ' + listText(L.left, 'zh') + '：' + L.rows.map(function(r){ return r.a + ' ÷ ' + r.p + ' ＝ ' + r.qa + '、' + r.b + ' ÷ ' + r.p + ' ＝ ' + r.qb; }).join('；') + '。' + L.bottom[0] + ' 和 ' + L.bottom[1] + ' 沒有共同的質因數，才可以停；其他選項的兩個數還能同除以一個質數，或是只除了一邊。'
+            : 'The left column is ' + listText(L.left, 'en') + ': ' + L.rows.map(function(r){ return r.a + ' ÷ ' + r.p + ' = ' + r.qa + ', ' + r.b + ' ÷ ' + r.p + ' = ' + r.qb; }).join('; ') + '. ' + L.bottom[0] + ' and ' + L.bottom[1] + ' share no prime factor, so that is where you stop; in the other options the two numbers still share a prime, or only one side was divided.'
+        };
+      } },
+
+    /* 5. 四組數裡哪一組互質。誘答全是「看起來像互質」的不互質數對（不是兩個偶數、也不是倍數關係）。 */
+    { id:'whichCoprime', cat:'coprime',
+      make:function(used){
+        var cop = pairOf(pickUnused(keysOf(POOL_COP.filter(function(pr){ return pr[1] <= 60; })), used));
+        var sneaky = shuffle(POOL_SNEAKY).slice(0, 3);
+        var keys = shuffle([pairKey(cop)].concat(sneaky.map(pairKey)));
+        return { cop:cop, others:sneaky, opts:keys, ans:keys.indexOf(pairKey(cop)) };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '下面四組數裡，<strong>只有一組互質</strong>。是哪一組？' : 'Of these four pairs, <strong>exactly one is coprime</strong>. Which?',
+          opts: d.opts.map(function(k){ var q = pairOf(k); return pairText(q[0], q[1], lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? d.cop[0] + ' ＝ ' + productText(factorize(d.cop[0])) + '，' + d.cop[1] + ' ＝ ' + productText(factorize(d.cop[1])) + '，沒有共同的質因數，最大公因數是 1，互質。其他三組：' + d.others.map(function(pr){ return pr[0] + ' 和 ' + pr[1] + ' 都能被 ' + gcfOf(pr[0], pr[1]) + ' 整除'; }).join('；') + '。'
+            : d.cop[0] + ' = ' + productText(factorize(d.cop[0])) + ' and ' + d.cop[1] + ' = ' + productText(factorize(d.cop[1])) + ' share no prime factor, so the GCF is 1 and they are coprime. The other three: ' + d.others.map(function(pr){ return pr[0] + ' and ' + pr[1] + ' are both divisible by ' + gcfOf(pr[0], pr[1]); }).join('; ') + '.'
+        };
+      } },
+
+    /* 6. a 和 b 互質嗎？四個互斥的結論：互質；不互質，最大公因數是 g（三個不同的 g 值）。 */
+    { id:'coprimeVerdict', cat:'coprime',
+      make:function(used){
+        var cop = rand(2) === 0;
+        var pool = cop ? POOL_COP.filter(function(pr){ return pr[1] <= 60; }) : POOL_SNEAKY;
+        var pr = pairOf(pickUnused(keysOf(pool), used)), a = pr[0], b = pr[1], g = gcfOf(a, b);
+        /* 「不互質，最大公因數是 x」的 x 候選：一邊的最小質因數、第二大的公因數、最大公因數的兩倍、另一邊的最大質因數；
+           最後補幾個小數字保底（4 和 25 這種只湊得出 2、3 的數對需要它）。x 不可以等於 g、a、b。 */
+        var fa = factorize(a), fb = factorize(b);
+        var cands = [smallestPrimeFactor(a), smallestPrimeFactor(b), secondCommon(a, b), g * 2, fa[fa.length - 1], fb[fb.length - 1], 2, 3, 4, 5, 6, 7, 9];
+        var vals = [];
+        cands.forEach(function(v){ if (typeof v === 'number' && v > 1 && v <= LIMIT && v !== g && vals.indexOf(v) < 0 && v !== a && v !== b) vals.push(v); });
+        var wrongs = (cop ? vals.slice(0, 3) : ['cop'].concat(vals.slice(0, 2)));
+        var right = cop ? 'cop' : g;
+        var opts = shuffle([right].concat(wrongs));
+        return { a:a, b:b, g:g, cop:cop, opts:opts, ans:opts.indexOf(right) };
+      },
+      fmt:function(d, lang){
+        function T(o){ if (o === 'cop') return lang === 'zh' ? '互質（最大公因數是 1）' : 'coprime (GCF 1)'; return lang === 'zh' ? '不互質，最大公因數是 ' + o : 'not coprime, GCF ' + o; }
+        var fa = factorize(d.a), fb = factorize(d.b);
+        return {
+          stem: lang === 'zh' ? '<strong>' + d.a + '</strong> 和 <strong>' + d.b + '</strong> 互質嗎？' : 'Are <strong>' + d.a + '</strong> and <strong>' + d.b + '</strong> coprime?',
+          opts: d.opts.map(T), ans:d.ans,
+          why: lang === 'zh'
+            ? (fa.length > 1 ? d.a + ' ＝ ' + productText(fa) : d.a + ' 是質數') + '，' + (fb.length > 1 ? d.b + ' ＝ ' + productText(fb) : d.b + ' 是質數') + '。' + (d.cop ? '沒有共同的質因數，最大公因數是 1，所以互質；最小公倍數就是兩數相乘：' + d.a + ' × ' + d.b + ' ＝ ' + (d.a * d.b) + '。' : '共同的質因數是 ' + listText(ladderRows(d.a, d.b).left, 'zh') + '，相乘是 ' + d.g + '，最大公因數不是 1，所以不互質。')
+            : (fa.length > 1 ? d.a + ' = ' + productText(fa) : d.a + ' is prime') + ', ' + (fb.length > 1 ? d.b + ' = ' + productText(fb) : d.b + ' is prime') + '. ' + (d.cop ? 'They share no prime factor, so the GCF is 1 and they are coprime; the LCM is just the product, ' + d.a + ' × ' + d.b + ' = ' + (d.a * d.b) + '.' : 'The shared prime factors are ' + listText(ladderRows(d.a, d.b).left, 'en') + ', and multiplied they make ' + d.g + ', so the GCF is not 1 and they are not coprime.')
+        };
+      } },
+
+    /* 7. 互質的兩個數，最小公倍數是多少（兩數相乘）。誘答：相加、1（最大公因數）、乘積的兩倍、較大的數的兩倍。 */
+    { id:'lcmCoprime', cat:'coprime',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_COP), used)), a = pr[0], b = pr[1];
+        var o = numOpts(a * b, [a + b, 1, a * b * 2, b * 2], [a, b], LCM_LIMIT);
+        return { a:a, b:b, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '<strong>' + d.a + '</strong> 和 <strong>' + d.b + '</strong> 互質。它們的<strong>最小公倍數</strong>是多少？' : '<strong>' + d.a + '</strong> and <strong>' + d.b + '</strong> are coprime. What is their <strong>LCM</strong>?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '互質的兩個數沒有共同的原子，最小公倍數就是兩數相乘：' + d.a + ' × ' + d.b + ' ＝ ' + (d.a * d.b) + '。1 是它們的最大公因數；' + d.a + ' ＋ ' + d.b + ' ＝ ' + (d.a + d.b) + ' 是相加，不是公倍數。'
+            : 'Coprime numbers share no atom, so the LCM is just the product: ' + d.a + ' × ' + d.b + ' = ' + (d.a * d.b) + '. 1 is their GCF; ' + d.a + ' + ' + d.b + ' = ' + (d.a + d.b) + ' is the sum, not a common multiple.'
+        };
+      } },
+
+    /* 8. 題幹給兩個數的質因數分解，問最大公因數（共同的原子相乘）。誘答：最小公倍數（100 以內時）、第二大的公因數、最大公因數的兩倍。 */
+    { id:'atomsToGcf', cat:'gcf',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_LADDER2), used)), a = pr[0], b = pr[1], L = ladderRows(a, b);
+        var o = numOpts(L.gcf, [L.lcm, secondCommon(a, b), L.gcf * 2, L.bottom[0] * L.bottom[1]], [a, b].concat(factorize(a), factorize(b)), LIMIT);
+        return { a:a, b:b, L:L, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.a + '</strong> ＝ ' + productText(factorize(d.a)) + '，<strong>' + d.b + '</strong> ＝ ' + productText(factorize(d.b)) + '。它們的<strong>最大公因數</strong>是多少？'
+            : '<strong>' + d.a + '</strong> = ' + productText(factorize(d.a)) + ' and <strong>' + d.b + '</strong> = ' + productText(factorize(d.b)) + '. What is their <strong>GCF</strong>?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '兩邊都有的原子是 ' + listText(d.L.left, 'zh') + '（同一個原子兩邊各有幾個，取少的那個數量），相乘是 ' + d.L.gcf + '，就是最大公因數。全部原子共同的算一次相乘是最小公倍數 ' + d.L.lcm + '，不是最大公因數。'
+            : 'The atoms on both sides are ' + listText(d.L.left, 'en') + ' (for an atom on both sides, take the smaller count), and multiplied they make ' + d.L.gcf + ', the GCF. Every atom with the shared ones counted once gives the LCM ' + d.L.lcm + ', not the GCF.'
+        };
+      } },
+
+    /* 9. 應用題：該找哪一個？四個互斥的結論。數對的最大公因數 > 1，所以「相乘」永遠不是正確的路。 */
+    { id:'whichToFind', cat:'apply',
+      make:function(used){
+        var id = pickUnused(SCEN_IDS.slice(), used);
+        var pr = pick(scenPool(id)), a = pr[0], b = pr[1];
+        var opts = shuffle(FIND_KEYS.slice());
+        return { id:id, a:a, b:b, kind:SCEN[id].kind, opts:opts, ans:opts.indexOf(SCEN[id].kind) };
+      },
+      fmt:function(d, lang){
+        var L = ladderRows(d.a, d.b);
+        return {
+          stem: (lang === 'zh' ? '這一題該怎麼做？' : 'What should you do for this problem?') + '<br>' + SCEN[d.id].stem(d.a, d.b, lang),
+          opts: d.opts.map(function(k){ return FIND_TEXT[lang][k]; }), ans:d.ans,
+          why: SCEN[d.id].why(d.a, d.b, lang) + (lang === 'zh' ? '答案是 ' + (d.kind === 'gcf' ? L.gcf : L.lcm) + '。兩數相加、相乘都不是題目問的：' + d.a + ' × ' + d.b + ' ＝ ' + (d.a * d.b) + ' 把共同的原子算了兩次。' : ' The answer is ' + (d.kind === 'gcf' ? L.gcf : L.lcm) + '. Adding or multiplying the two numbers is not what is asked: ' + d.a + ' × ' + d.b + ' = ' + (d.a * d.b) + ' counts the shared atoms twice.')
+        };
+      } },
+
+    /* 10. 應用題：算出答案。找最大公因數的題：誘答是最小公倍數（100 以內時）、第二大的公因數、兩數的差；
+           找最小公倍數的題：誘答是最大公因數、兩數相乘、兩數相加、底下相乘。 */
+    { id:'wordProblem', cat:'apply',
+      make:function(used){
+        var id = pickUnused(SCEN_IDS.slice(), used);
+        var pr = pick(scenPool(id)), a = pr[0], b = pr[1], L = ladderRows(a, b), kind = SCEN[id].kind;
+        var avoid = [a, b].concat(id === 'denom' ? [1] : []);
+        var o = kind === 'gcf'
+          ? numOpts(L.gcf, [L.lcm, secondCommon(a, b), b - a, L.bottom[0] * L.bottom[1]], avoid, LIMIT)
+          : numOpts(L.lcm, [L.gcf, a * b, a + b, L.bottom[0] * L.bottom[1]], avoid, LCM_LIMIT);
+        return { id:id, a:a, b:b, kind:kind, L:L, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var v = d.kind === 'gcf' ? d.L.gcf : d.L.lcm;
+        var unit = { ribbon:[' 公分', ' cm'], bags:[' 袋', ''], reduce:['', ''], bus:[' 分鐘', ''], tile:[' 公分', ' cm'], denom:['', ''] }[d.id];
+        function withUnit(n){
+          if (lang === 'en' && d.id === 'bags') return n === 1 ? '1 bag' : n + ' bags';
+          if (lang === 'en' && d.id === 'bus') return n === 1 ? '1 minute' : n + ' minutes';
+          return n + unit[lang === 'zh' ? 0 : 1];
+        }
+        return {
+          stem: SCEN[d.id].stem(d.a, d.b, lang),
+          opts: d.opts.map(withUnit), ans:d.ans,
+          why: SCEN[d.id].why(d.a, d.b, lang) + (lang === 'zh' ? '' : ' ') + ladderText(d.L, lang) + (lang === 'zh' ? '所以答案是 ' + withUnit(v) + '。' : ' So the answer is ' + withUnit(v) + '.')
+        };
+      } },
+
+    /* 11. 四句話裡只有一句是對的。 */
+    { id:'trueStatement', cat:'coprime',
+      make:function(used){
+        var t = pickUnused(TRUE_KEYS, used);
+        var fs = shuffle(FALSE_KEYS).slice(0, 3);
+        var opts = shuffle([t].concat(fs));
+        return { t:t, opts:opts, ans:opts.indexOf(t) };
+      },
+      fmt:function(d, lang){
+        var WHY = {
+          zh:{ coprimeMeansOne:'互質的定義就是最大公因數等於 1。', coprimeLcmProduct:'沒有共同的原子，最小公倍數就要把兩邊的原子全收，等於相乘（8 × 15 ＝ 120）。',
+               twoPrimesCoprime:'兩個不同的質數各自只有一個原子，而且不一樣，沒有共同的。', consecutiveCoprime:'能同時整除兩個相鄰整數的數也整除它們的差 1，所以只有 1。',
+               leftIsGcf:'左邊每一個質數都是共同的原子，全部相乘就是最大公因數。', productRule:'最大公因數是共同的原子、最小公倍數是共同的算一次加其餘全部：共同的每一顆原子在兩邊各出現一次、其餘的只在最小公倍數，所以乘起來剛好是兩個數的原子每一個各用一次，和兩數相乘一樣。',
+               coprimeBothPrime:'8 和 15 都是合數卻互質。', oddEvenCoprime:'6 和 9 一奇一偶，最大公因數卻是 3。', twoOddCoprime:'9 和 15 都是奇數，最大公因數是 3。',
+               compositeNever:'8 和 15 都是合數，卻互質。', lcmIsProduct:'只有互質時才等於相乘：24 和 36 相乘是 864，最小公倍數卻是 72。', leftIsLcm:'左邊相乘是最大公因數；最小公倍數還要乘底下兩個商。' },
+          en:{ coprimeMeansOne:'That is the definition of coprime: a GCF of 1.', coprimeLcmProduct:'With no shared atom the LCM must collect every atom of both, which is the product (8 × 15 = 120).',
+               twoPrimesCoprime:'Two different primes have one atom each, and different ones, so nothing is shared.', consecutiveCoprime:'Anything dividing two neighbours also divides their difference, 1, so only 1 does.',
+               leftIsGcf:'Every prime on the left is a shared atom, and all of them multiplied are the GCF.', productRule:'The GCF is the shared atoms and the LCM is the shared atoms once plus everything else: each shared atom appears once in the GCF and once in the LCM, every other atom only in the LCM, so multiplied they use every atom of the two numbers exactly once, just like the product.',
+               coprimeBothPrime:'8 and 15 are both composite, yet coprime.', oddEvenCoprime:'6 and 9 are one odd and one even, yet their GCF is 3.', twoOddCoprime:'9 and 15 are both odd, and their GCF is 3.',
+               compositeNever:'8 and 15 are both composite, yet coprime.', lcmIsProduct:'Only for coprime numbers: 24 × 36 = 864, but their LCM is 72.', leftIsLcm:'The left column multiplied is the GCF; the LCM also needs the two numbers at the bottom.' }
+        }[lang];
+        var wrongs = d.opts.filter(function(k){ return k !== d.t; });
+        return {
+          stem: lang === 'zh' ? '下面四句話，<strong>只有一句是對的</strong>。是哪一句？' : 'Of these four sentences, <strong>exactly one is true</strong>. Which?',
+          opts: d.opts.map(function(k){ return STATEMENTS[k][lang]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '對的那一句是：' + STATEMENTS[d.t].zh + '。' + WHY[d.t] + '其他三句：' + wrongs.map(function(k){ return WHY[k]; }).join('')
+            : 'The true one is: ' + STATEMENTS[d.t].en + '. ' + WHY[d.t] + ' The other three: ' + wrongs.map(function(k){ return WHY[k]; }).join(' ')
+        };
+      } },
+
+    /* 12. 交錯題：上一課「質數原子實驗室」—— n 的質因數分解是哪一個。問的是**寫法**：「還沒拆完」的誘答值和正解一樣，
+           那正是它錯的地方（framework §六之二 的合法例外），所以這一支的去重比字串。 */
+    { id:'interFactorize', cat:'inter',
+      make:function(used){
+        var n = pickUnused(COMPOSITES.filter(function(x){ return factorize(x).length >= 3; }), used);
+        var atoms = factorize(n);
+        var right = productText(atoms);
+        var cands = [];
+        pairsOf(n).forEach(function(p){ if (!(isPrime(p[0]) && isPrime(p[1]))) cands.push(p[0] + ' × ' + p[1]); });
+        var rest = n / atoms[0];
+        if (!isPrime(rest)) cands.push(atoms[0] + ' × ' + rest);
+        cands.push(productText(atoms.slice(0, -1)));
+        var nextP = PRIMES.filter(function(p){ return p > atoms[atoms.length - 1]; })[0];
+        if (nextP && productOf(atoms.slice(0, -1)) * nextP <= LIMIT) cands.push(productText(atoms.slice(0, -1).concat([nextP])));
+        var o = strOpts(right, shuffle(cands));
+        return { n:n, atoms:atoms, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var wrongs = d.opts.filter(function(o, i){ return i !== d.ans; });
+        function explain(o){
+          var parts = o.split(' × ').map(Number);
+          var comp = parts.filter(function(x){ return !isPrime(x); });
+          if (comp.length) return lang === 'zh' ? o + ' 裡的 ' + comp[0] + ' 是合數，還沒拆完' : 'in ' + o + ' the ' + comp[0] + ' is composite, so the splitting is not finished';
+          return lang === 'zh' ? o + ' 乘起來是 ' + productOf(parts) + '，不是 ' + d.n : o + ' multiplies to ' + productOf(parts) + ', not ' + d.n;
+        }
+        return {
+          stem: lang === 'zh' ? '（上一課）哪一個是 <strong>' + d.n + '</strong> 的<strong>質因數分解</strong>？' : '(Last lesson) Which is the <strong>prime factorisation</strong> of <strong>' + d.n + '</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '質因數分解的每一片都要是質數，乘起來要剛好是 ' + d.n + '：' + d.n + ' ＝ ' + productText(d.atoms) + '。其他選項：' + wrongs.map(explain).join('；') + '。'
+            : 'Every piece of a prime factorisation must be prime, and the pieces must multiply to exactly ' + d.n + ': ' + d.n + ' = ' + productText(d.atoms) + '. The others: ' + wrongs.map(explain).join('; ') + '.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 短除法魔法梯', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：短除法魔法梯',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題上一課「質數原子實驗室」的質因數分解。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>　·　列舉法回五年級<a href="../../../grade-5/math/common-factor/index.html">好朋友車站</a>　·　質因數分解回上一課<a href="../prime/index.html">質數原子實驗室</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Short-Division Ladder', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Short-Division Ladder',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>One of them is a prime factorisation from the previous lesson.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>　·　listing in <a href="../../../grade-5/math/common-factor/index.html">the grade-5 common-factor lesson</a>　·　prime factorisation in <a href="../prime/index.html">the previous lesson</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length){
+            resultLine.textContent = right === batch.length ? t.resAll(batch.length)
+              : right >= Math.ceil(batch.length * 2 / 3) ? t.resGood(right, batch.length)
+              : t.resTry(right, batch.length);
+            resultLinks.innerHTML = t.links;
+            resultEl.classList.add('on');
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function newRound(){
+    batch = buildBatch();
+    applyStatic();
+    render();
+  }
+
+  retryBtn.addEventListener('click', newRound);
+  /* 語言切換保留同一批題目（framework §六之一：切語言不重抽）。 */
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    render();
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>

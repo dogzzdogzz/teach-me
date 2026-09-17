@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>速查卡 — 短除法魔法梯</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.75;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  section{margin-top:34px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:13px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(20px,3.6vw,26px);margin:8px 0 4px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:20px;margin-top:14px;box-shadow:0 3px 12px rgba(70,60,40,.05);
+  }
+  .card p + p{margin-top:10px}
+  .formula{
+    background:var(--blue-soft);border-radius:12px;padding:12px 16px;margin-top:12px;
+    font-size:19px;font-weight:700;color:var(--blue);text-align:center;
+  }
+  .formula .cond{display:block;font-size:14px;font-weight:400;color:var(--muted);margin-top:4px}
+  .scroller{overflow-x:auto;margin-top:12px}
+  table{border-collapse:collapse;width:100%;font-size:15px;min-width:460px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--green-soft);color:var(--green);font-size:14px;white-space:nowrap}
+  td.k{font-weight:700;white-space:nowrap}
+  ul.steps{list-style:none;display:grid;gap:10px;margin-top:6px}
+  ul.steps li{display:flex;gap:10px;align-items:flex-start;font-size:16px}
+  .sn{
+    flex:none;width:26px;height:26px;border-radius:50%;background:var(--orange-soft);
+    color:var(--orange);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;
+  }
+  .notebox{
+    margin-top:12px;background:var(--orange-soft);border:2px solid var(--orange);border-radius:14px;
+    padding:10px 16px;font-size:15px;color:var(--orange);
+  }
+  .warn{
+    margin-top:12px;background:var(--red-soft);border:2px solid var(--red);border-radius:14px;
+    padding:10px 16px;font-size:15px;color:var(--red);
+  }
+  /* 梯子是 HTML 表格，不是圖 */
+  .ladder{display:inline-grid;grid-template-columns:auto auto auto;gap:0 18px;margin:12px auto 0;font-size:21px;font-weight:700;font-variant-numeric:tabular-nums}
+  .ladder .p{color:var(--orange);text-align:right;padding-right:10px;border-right:3px solid var(--ink)}
+  .ladder .p.blank{border-right:3px solid transparent}
+  .ladder .v{text-align:center;padding:0 6px;border-bottom:3px solid var(--ink)}
+  .ladder .v.last{border-bottom:none;color:var(--blue)}
+  .ladderwrap{text-align:center}
+  .ladderwrap .lab{font-size:14px;color:var(--muted);margin-top:4px}
+  .twocol{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px}
+  .printbtn{
+    display:block;margin:30px auto 0;border:none;border-radius:12px;background:var(--green);
+    color:#fff;font-size:16px;font-weight:700;padding:10px 24px;cursor:pointer;
+  }
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+  @media print{
+    .topbar,.coursenav,.printbtn,footer{display:none}
+    body{background:#fff;font-size:13px}
+    .card{box-shadow:none}
+    section{margin-top:18px;break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <span data-i18n="nav2">🗂️ 速查卡（本頁）</span>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🗂️ 速查卡：短除法魔法梯</h1>
+    <p class="sub" data-i18n="sub">短除法怎麼寫、最大公因數和最小公倍數各讀哪裡、什麼是互質、題目該找哪一個</p>
+  </header>
+  <p class="notebox" data-i18n="scopeNote">這張卡只講五件事：<strong>質因數分解法</strong>（共同的原子相乘是最大公因數、共同的算一次加其餘全部是最小公倍數）；<strong>短除法</strong>的梯子（左邊那一排相乘是最大公因數、左邊乘底下是最小公倍數）；<strong>互質</strong>（最大公因數是 1）；應用題<strong>該找哪一個</strong>；<strong>約分用最大公因數、通分用最小公倍數</strong>。<strong>公因數、公倍數是什麼、怎麼列舉</strong>是<strong>五年級「好朋友車站」</strong>教的（這一課只複習、不重教）；<strong>質數與質因數分解</strong>是六年級<strong>上一課「質數原子實驗室」</strong>教的；<strong>分數加減</strong>是<strong>五年級「通分披薩屋」</strong>教的。這張卡一次只處理<strong>兩個數</strong>，兩個數都在 <strong>100 以內</strong>。</p>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb1">第一部分</span>
+    <h2 data-i18n="s1h2">短除法梯子：一張梯子讀出兩個答案</h2>
+    <div class="card">
+      <ul class="steps">
+        <li><span class="sn">1</span><span data-i18n="d1">兩個數<strong>並排</strong>寫。左邊寫一個<strong>能同時整除兩個數的質數</strong>（從最小的 2 開始試），下面寫兩個商。</span></li>
+        <li><span class="sn">2</span><span data-i18n="d2">對底下兩個商<strong>再做一次</strong>，一直到底下兩個數<strong>沒有任何質數能同時整除</strong>（互質）就停。⚠️ 不是「其中一個變成質數」就停。</span></li>
+        <li><span class="sn">3</span><span data-i18n="d3"><strong>左邊那一排相乘</strong> ＝ 最大公因數；<strong>左邊那一排 × 底下兩個商</strong>（L 形）＝ 最小公倍數。</span></li>
+      </ul>
+      <div class="twocol">
+        <div class="ladderwrap"><div class="ladder" id="lad1"></div><p class="lab" data-i18n="lab1">24 和 36：左邊 2、2、3 → 最大公因數 12；L 形 2 × 2 × 3 × 2 × 3 → 最小公倍數 72</p></div>
+        <div class="ladderwrap"><div class="ladder" id="lad2"></div><p class="lab" data-i18n="lab2">18 和 30：左邊 2、3 → 最大公因數 6；L 形 2 × 3 × 3 × 5 → 最小公倍數 90</p></div>
+      </div>
+      <p class="formula" data-i18n="f1">最大公因數 ＝ 左邊那一排相乘 · 最小公倍數 ＝ 左邊那一排 × 底下兩個商<span class="cond">左邊一個質數都沒有時，最大公因數是 1 · 驗算：最大公因數 × 最小公倍數 ＝ 兩數相乘（12 × 72 ＝ 24 × 36）</span></p>
+      <p data-i18n="p1why"><strong>為什麼</strong>：左邊每一個質數都是兩個數<strong>共同的原子</strong>，全部拿走就是最大公因數；最小公倍數要把兩個數的原子<strong>全部收齊</strong>，共同的只算一次（左邊），各自剩下的（底下兩個商）補上。這和<strong>質因數分解法</strong>是同一件事：把兩個數各自拆成原子，兩邊都有的原子相乘是最大公因數，共同的算一次加其餘全部相乘是最小公倍數。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb2">第二部分</span>
+    <h2 data-i18n="s2h2">互質：最大公因數是 1</h2>
+    <div class="card">
+      <p class="formula" data-i18n="f2">最大公因數是 1 → 互質 → 最小公倍數 ＝ 兩數相乘<span class="cond">梯子左邊一個質數都寫不出來</span></p>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="cth0">這句話</th><th data-i18n="cth1">對不對</th><th data-i18n="cth2">例子</th></tr>
+          </thead>
+          <tbody id="cbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb3">第三部分</span>
+    <h2 data-i18n="s3h2">題目該找哪一個</h2>
+    <div class="card">
+      <p class="formula" data-i18n="f3">答案要同時整除兩個數、問最多 → 最大公因數 · 答案要同時是兩個數的倍數、問最小 → 最小公倍數</p>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="ath0">題目在講什麼</th><th data-i18n="ath1">要找</th><th data-i18n="ath2">為什麼</th></tr>
+          </thead>
+          <tbody id="abody"></tbody>
+        </table>
+      </div>
+      <p class="notebox" data-i18n="anote">💬 <strong>約分</strong>：分子分母同除以<strong>最大公因數</strong>，一次就到最簡分數（最簡分數 ＝ 分子分母互質）。<strong>通分</strong>：分母用<strong>最小公倍數</strong>。分數怎麼加減是五年級「通分披薩屋」教的。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb4">第四部分</span>
+    <h2 data-i18n="s4h2">常用數對表（算出來的，不是背的）</h2>
+    <div class="card">
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="pth0">數對</th><th data-i18n="pth1">梯子左邊</th><th data-i18n="pth2">底下</th><th data-i18n="pth3">最大公因數</th><th data-i18n="pth4">最小公倍數</th></tr>
+          </thead>
+          <tbody id="pbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb5">最後</span>
+    <h2 data-i18n="s5h2">最容易錯的五件事</h2>
+    <div class="card">
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="xth0">很容易這樣想</th><th data-i18n="xth1">其實是</th></tr>
+          </thead>
+          <tbody id="xbody"></tbody>
+        </table>
+      </div>
+      <p class="warn" data-i18n="warn">⚠️ 一句話收尾：<strong>左邊寫能同時整除的質數、除到底下互質就停；左邊相乘是最大公因數，L 形相乘是最小公倍數；最大公因數是 1 就叫互質。</strong></p>
+    </div>
+  </section>
+
+  <button class="printbtn" onclick="window.print()" data-i18n="printBtn">🖨️ 印出這張速查卡</button>
+  <footer data-i18n="foot">回到<a class="home" href="index.html">課程</a>或去玩<a class="home" href="review.html">複習挑戰</a>。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'速查卡 — 短除法魔法梯', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（本頁）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🗂️ 速查卡：短除法魔法梯',
+      sub:'短除法怎麼寫、最大公因數和最小公倍數各讀哪裡、什麼是互質、題目該找哪一個',
+      scopeNote:'這張卡只講五件事：<strong>質因數分解法</strong>（共同的原子相乘是最大公因數、共同的算一次加其餘全部是最小公倍數）；<strong>短除法</strong>的梯子（左邊那一排相乘是最大公因數、左邊乘底下是最小公倍數）；<strong>互質</strong>（最大公因數是 1）；應用題<strong>該找哪一個</strong>；<strong>約分用最大公因數、通分用最小公倍數</strong>。<strong>公因數、公倍數是什麼、怎麼列舉</strong>是<strong>五年級「好朋友車站」</strong>教的（這一課只複習、不重教）；<strong>質數與質因數分解</strong>是六年級<strong>上一課「質數原子實驗室」</strong>教的；<strong>分數加減</strong>是<strong>五年級「通分披薩屋」</strong>教的。這張卡一次只處理<strong>兩個數</strong>，兩個數都在 <strong>100 以內</strong>。',
+      eb1:'第一部分', eb2:'第二部分', eb3:'第三部分', eb4:'第四部分', eb5:'最後',
+
+      s1h2:'短除法梯子：一張梯子讀出兩個答案',
+      d1:'兩個數<strong>並排</strong>寫。左邊寫一個<strong>能同時整除兩個數的質數</strong>（從最小的 2 開始試），下面寫兩個商。',
+      d2:'對底下兩個商<strong>再做一次</strong>，一直到底下兩個數<strong>沒有任何質數能同時整除</strong>（互質）就停。⚠️ 不是「其中一個變成質數」就停。',
+      d3:'<strong>左邊那一排相乘</strong> ＝ 最大公因數；<strong>左邊那一排 × 底下兩個商</strong>（L 形）＝ 最小公倍數。',
+      lab1:'24 和 36：左邊 2、2、3 → 最大公因數 12；L 形 2 × 2 × 3 × 2 × 3 → 最小公倍數 72',
+      lab2:'18 和 30：左邊 2、3 → 最大公因數 6；L 形 2 × 3 × 3 × 5 → 最小公倍數 90',
+      f1:'最大公因數 ＝ 左邊那一排相乘 · 最小公倍數 ＝ 左邊那一排 × 底下兩個商<span class="cond">左邊一個質數都沒有時，最大公因數是 1 · 驗算：最大公因數 × 最小公倍數 ＝ 兩數相乘（12 × 72 ＝ 24 × 36）</span>',
+      p1why:'<strong>為什麼</strong>：左邊每一個質數都是兩個數<strong>共同的原子</strong>，全部拿走就是最大公因數；最小公倍數要把兩個數的原子<strong>全部收齊</strong>，共同的只算一次（左邊），各自剩下的（底下兩個商）補上。這和<strong>質因數分解法</strong>是同一件事：把兩個數各自拆成原子，兩邊都有的原子相乘是最大公因數，共同的算一次加其餘全部相乘是最小公倍數。',
+
+      s2h2:'互質：最大公因數是 1',
+      f2:'最大公因數是 1 → 互質 → 最小公倍數 ＝ 兩數相乘<span class="cond">梯子左邊一個質數都寫不出來</span>',
+      cth0:'這句話', cth1:'對不對', cth2:'例子',
+      crows:[
+        ['互質的兩個數一定都是質數', '<strong>錯</strong>', '8 和 15 都是合數，卻互質（沒有共同的原子）'],
+        ['兩個不同的質數一定互質', '<strong>對</strong>', '7 和 11：各自只有一個原子，而且不一樣'],
+        ['相鄰的兩個整數一定互質', '<strong>對</strong>', '9 和 10、14 和 15：能同時整除兩個相鄰整數的只有 1'],
+        ['一奇一偶一定互質', '<strong>錯</strong>', '6 和 9 的最大公因數是 3'],
+        ['兩個奇數一定互質', '<strong>錯</strong>', '9 和 15 的最大公因數是 3'],
+        ['互質的兩個數，最小公倍數等於兩數相乘', '<strong>對</strong>', '8 和 15 的最小公倍數是 8 × 15 ＝ 120']
+      ],
+
+      s3h2:'題目該找哪一個',
+      f3:'答案要同時整除兩個數、問最多 → 最大公因數 · 答案要同時是兩個數的倍數、問最小 → 最小公倍數',
+      ath0:'題目在講什麼', ath1:'要找', ath2:'為什麼',
+      arows:[
+        ['兩條繩子剪成一樣長、不能有剩，每段<strong>最長</strong>幾公分', '最大公因數', '每段的長度要同時整除兩條繩子的長度'],
+        ['兩種東西分裝，每袋一樣多、剛好分完，<strong>最多</strong>幾袋', '最大公因數', '袋數要同時整除兩種東西的數量'],
+        ['把一個分數<strong>一次</strong>約到最簡，分子分母同除以幾', '最大公因數', '約完之後分子分母互質'],
+        ['兩件事各有週期，<strong>最快</strong>什麼時候再一次同時發生', '最小公倍數', '那個時刻要同時是兩個週期的倍數'],
+        ['長方形磁磚拼成<strong>最小</strong>的正方形，邊長幾公分', '最小公倍數', '邊長要同時是長和寬的倍數'],
+        ['兩個分數要通分，<strong>最小</strong>的公分母是幾', '最小公倍數', '公分母要同時是兩個分母的倍數']
+      ],
+      anote:'💬 <strong>約分</strong>：分子分母同除以<strong>最大公因數</strong>，一次就到最簡分數（最簡分數 ＝ 分子分母互質）。<strong>通分</strong>：分母用<strong>最小公倍數</strong>。分數怎麼加減是五年級「通分披薩屋」教的。',
+
+      s4h2:'常用數對表（算出來的，不是背的）',
+      pth0:'數對', pth1:'梯子左邊', pth2:'底下', pth3:'最大公因數', pth4:'最小公倍數',
+      pairSep:' 和 ', noneLeft:'（沒有）',
+
+      s5h2:'最容易錯的五件事',
+      xth0:'很容易這樣想', xth1:'其實是',
+      xrows:[
+        ['左邊那一排相乘就是最小公倍數', '左邊相乘是<strong>最大公因數</strong>；最小公倍數還要<strong>再乘底下兩個商</strong>（L 形）'],
+        ['最小公倍數就是兩數相乘', '只有<strong>互質</strong>時才對；24 × 36 ＝ 864 把共同的原子算了兩次，最小公倍數是 72'],
+        ['底下其中一個變成質數就可以停', '要停在<strong>底下兩個數互質</strong>：14、28 除以 2 得 7、14，7 是質數，可是 7 和 14 還能同除以 7'],
+        ['8 和 15 都是合數，所以不互質', '互質看的是<strong>最大公因數是不是 1</strong>：8 ＝ 2 × 2 × 2、15 ＝ 3 × 5，沒有共同的原子，互質'],
+        ['左邊寫的質數只要整除其中一個數就行', '左邊的質數<strong>兩個數都要整除</strong>；5 整除 30 但不整除 18，不能寫']
+      ],
+      warn:'⚠️ 一句話收尾：<strong>左邊寫能同時整除的質數、除到底下互質就停；左邊相乘是最大公因數，L 形相乘是最小公倍數；最大公因數是 1 就叫互質。</strong>',
+      printBtn:'🖨️ 印出這張速查卡',
+      foot:'回到<a class="home" href="index.html">課程</a>或去玩<a class="home" href="review.html">複習挑戰</a>。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Cheat Sheet — The Short-Division Ladder', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (this page)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🗂️ Cheat sheet: The Short-Division Ladder',
+      sub:'How to write short division, where to read the GCF and the LCM, what coprime means, which one a problem wants',
+      scopeNote:'This card covers five things: the <strong>prime-factorisation method</strong> (shared atoms multiplied give the GCF; shared atoms once plus every other atom give the LCM); the <strong>short-division</strong> ladder (left column multiplied is the GCF, left times bottom is the LCM); <strong>coprime</strong> numbers (GCF equal to 1); which one a <strong>word problem</strong> wants; and <strong>simplifying with the GCF, common denominators with the LCM</strong>. <strong>What common factors and multiples are, and how to list them</strong>, is the <strong>grade-5 common-factor lesson</strong> (reviewed here, not re-taught); <strong>primes and prime factorisation</strong> are the <strong>previous grade-6 lesson</strong>; <strong>adding and subtracting fractions</strong> is the <strong>grade-5 fraction-add lesson</strong>. This card works with <strong>two numbers</strong> at a time, both <strong>100 or less</strong>.',
+      eb1:'Part 1', eb2:'Part 2', eb3:'Part 3', eb4:'Part 4', eb5:'Finally',
+
+      s1h2:'The short-division ladder: two answers from one ladder',
+      d1:'Write the two numbers <strong>side by side</strong>. On the left write <strong>a prime that divides both</strong> (start trying from the smallest, 2), and write the two quotients underneath.',
+      d2:'<strong>Do it again</strong> to the two quotients, until <strong>no prime divides both</strong> numbers at the bottom (they are coprime) — then stop. ⚠️ Not when one of them happens to be prime.',
+      d3:'<strong>The left column multiplied</strong> = the GCF; <strong>the left column × the two numbers at the bottom</strong> (the L shape) = the LCM.',
+      lab1:'24 and 36: left 2, 2, 3 → GCF 12; the L 2 × 2 × 3 × 2 × 3 → LCM 72',
+      lab2:'18 and 30: left 2, 3 → GCF 6; the L 2 × 3 × 3 × 5 → LCM 90',
+      f1:'GCF = left column multiplied · LCM = left column × the two at the bottom<span class="cond">if nothing at all goes on the left, the GCF is 1 · check: GCF × LCM = the two numbers multiplied (12 × 72 = 24 × 36)</span>',
+      p1why:'<strong>Why</strong>: every prime on the left is an atom <strong>both numbers share</strong>, so taking all of them gives the GCF; the LCM has to <strong>collect every atom</strong> of both numbers, the shared ones once (the left column) and each number\'s leftovers (the two at the bottom). This is the same thing as the <strong>prime-factorisation method</strong>: split each number into atoms, the atoms that appear on both sides multiplied are the GCF, and shared atoms once plus every other atom multiplied are the LCM.',
+
+      s2h2:'Coprime: a GCF of 1',
+      f2:'GCF of 1 → coprime → LCM = the two numbers multiplied<span class="cond">not a single prime can go on the left of the ladder</span>',
+      cth0:'Statement', cth1:'True?', cth2:'Example',
+      crows:[
+        ['Two coprime numbers are always both prime', '<strong>False</strong>', '8 and 15 are both composite, yet coprime (no shared atom)'],
+        ['Two different primes are always coprime', '<strong>True</strong>', '7 and 11: one atom each, and different'],
+        ['Two neighbouring whole numbers are always coprime', '<strong>True</strong>', '9 and 10, 14 and 15: only 1 divides two neighbours'],
+        ['One odd and one even number are always coprime', '<strong>False</strong>', 'the GCF of 6 and 9 is 3'],
+        ['Two odd numbers are always coprime', '<strong>False</strong>', 'the GCF of 9 and 15 is 3'],
+        ['For coprime numbers the LCM equals the product', '<strong>True</strong>', 'the LCM of 8 and 15 is 8 × 15 = 120']
+      ],
+
+      s3h2:'Which one does the problem want?',
+      f3:'the answer must divide both numbers, asking for the most → GCF · the answer must be a multiple of both, asking for the smallest → LCM',
+      ath0:'What the problem describes', ath1:'Find the', ath2:'Why',
+      arows:[
+        ['Two ropes cut into equal pieces with nothing left, the <strong>longest</strong> piece', 'GCF', 'the piece length must divide both rope lengths'],
+        ['Two kinds of things shared into equal bags with nothing left, the <strong>most</strong> bags', 'GCF', 'the number of bags must divide both amounts'],
+        ['Simplifying a fraction to simplest form in <strong>one</strong> step, what to divide by', 'GCF', 'afterwards the numerator and denominator are coprime'],
+        ['Two things each with their own cycle, the <strong>soonest</strong> they happen together again', 'LCM', 'that moment must be a multiple of both cycles'],
+        ['Rectangular tiles making the <strong>smallest</strong> square, its side', 'LCM', 'the side must be a multiple of both the length and the width'],
+        ['Two fractions to be given a common denominator, the <strong>smallest</strong> one', 'LCM', 'a common denominator must be a multiple of both denominators']
+      ],
+      anote:'💬 <strong>Simplifying</strong>: divide the numerator and denominator by the <strong>GCF</strong> and you reach the simplest form in one step (simplest form = numerator and denominator coprime). <strong>Common denominator</strong>: use the <strong>LCM</strong>. How to add and subtract fractions is the grade-5 fraction-add lesson.',
+
+      s4h2:'Handy pairs (computed, not memorised)',
+      pth0:'Pair', pth1:'Left column', pth2:'Bottom', pth3:'GCF', pth4:'LCM',
+      pairSep:' and ', noneLeft:'(none)',
+
+      s5h2:'The five easiest mistakes to make',
+      xth0:'Easy to think', xth1:'What is actually true',
+      xrows:[
+        ['The left column multiplied is the LCM', 'The left column multiplied is the <strong>GCF</strong>; the LCM also needs <strong>the two numbers at the bottom</strong> (the L shape)'],
+        ['The LCM is just the two numbers multiplied', 'Only when they are <strong>coprime</strong>; 24 × 36 = 864 counts the shared atoms twice, and the LCM is 72'],
+        ['You can stop once one number at the bottom is prime', 'Stop when <strong>the two at the bottom are coprime</strong>: 14 and 28 ÷ 2 give 7 and 14 — 7 is prime, yet they still share a 7'],
+        ['8 and 15 are both composite, so they are not coprime', 'Coprime is about <strong>whether the GCF is 1</strong>: 8 = 2 × 2 × 2 and 15 = 3 × 5 share no atom, so they are coprime'],
+        ['A prime on the left only has to divide one of the numbers', 'It must divide <strong>both</strong>; 5 divides 30 but not 18, so it cannot go on the left']
+      ],
+      warn:'⚠️ One line to finish on: <strong>write a prime that divides both on the left and stop when the bottom pair is coprime; the left column multiplied is the GCF, the L multiplied is the LCM; a GCF of 1 means coprime.</strong>',
+      printBtn:'🖨️ Print this cheat sheet',
+      foot:'Back to the <a class="home" href="index.html">lesson</a>, or try the <a class="home" href="review.html">review challenge</a>.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  /* 表格一律先清空再渲染（瀏覽器存下來的快照會把渲染結果烤進 HTML）。 */
+  function fillTable(id, rows){
+    var tb = document.getElementById(id);
+    tb.textContent = '';
+    rows.forEach(function(r){
+      var tr = document.createElement('tr');
+      r.forEach(function(cell, ci){
+        var td = document.createElement('td');
+        if (ci === 0) td.className = 'k';
+        td.innerHTML = cell;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  }
+
+  /* 數對表和兩張梯子都是**算出來**的（和課程頁同一套短除法），不是手打的。 */
+  function isPrime(n){
+    if (n < 2) return false;
+    for (var p = 2; p * p <= n; p++) if (n % p === 0) return false;
+    return true;
+  }
+  function commonPrime(a, b){
+    for (var p = 2; p <= Math.min(a, b); p++) if (isPrime(p) && a % p === 0 && b % p === 0) return p;
+    return null;
+  }
+  function ladderRows(a, b){
+    var rows = [], x = a, y = b, p;
+    while ((p = commonPrime(x, y)) !== null){ rows.push({ p:p, a:x, b:y }); x = x / p; y = y / p; }
+    var left = rows.map(function(r){ return r.p; });
+    var gcf = left.reduce(function(m, q){ return m * q; }, 1);
+    return { a:a, b:b, rows:rows, left:left, bottom:[x, y], gcf:gcf, lcm:gcf * x * y };
+  }
+  function drawLadder(host, Ld){
+    host.textContent = '';
+    Ld.rows.forEach(function(row){
+      var p = document.createElement('div'); p.className = 'p'; p.textContent = String(row.p);
+      var va = document.createElement('div'); va.className = 'v'; va.textContent = String(row.a);
+      var vb = document.createElement('div'); vb.className = 'v'; vb.textContent = String(row.b);
+      host.appendChild(p); host.appendChild(va); host.appendChild(vb);
+    });
+    var pb = document.createElement('div'); pb.className = 'p blank';
+    var la = document.createElement('div'); la.className = 'v last'; la.textContent = String(Ld.bottom[0]);
+    var lb = document.createElement('div'); lb.className = 'v last'; lb.textContent = String(Ld.bottom[1]);
+    host.appendChild(pb); host.appendChild(la); host.appendChild(lb);
+  }
+  var LADDER_EXAMPLES = [[24, 36], [18, 30]];
+  var PAIR_TABLE = [[12, 18], [24, 36], [18, 30], [16, 40], [20, 30], [14, 35], [36, 60], [45, 75], [8, 15], [7, 9], [9, 10]];
+  function fillPairs(){
+    var d = L(), tb = document.getElementById('pbody');
+    tb.textContent = '';
+    PAIR_TABLE.forEach(function(pr){
+      var Ld = ladderRows(pr[0], pr[1]);
+      var tr = document.createElement('tr');
+      [pr[0] + d.pairSep + pr[1], Ld.left.length ? Ld.left.join(lang === 'zh' ? '、' : ', ') : d.noneLeft, Ld.bottom[0] + (lang === 'zh' ? '、' : ', ') + Ld.bottom[1], String(Ld.gcf), String(Ld.lcm)].forEach(function(cell, ci){
+        var td = document.createElement('td');
+        if (ci === 0) td.className = 'k';
+        td.textContent = cell;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  }
+
+  function renderAll(){
+    var d = L();
+    applyStatic();
+    fillTable('cbody', d.crows);
+    fillTable('abody', d.arows);
+    fillTable('xbody', d.xrows);
+    fillPairs();
+    drawLadder(document.getElementById('lad1'), ladderRows(LADDER_EXAMPLES[0][0], LADDER_EXAMPLES[0][1]));
+    drawLadder(document.getElementById('lad2'), ladderRows(LADDER_EXAMPLES[1][0], LADDER_EXAMPLES[1][1]));
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
