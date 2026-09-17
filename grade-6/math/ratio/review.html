@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 比與比值調色盤</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .result{margin-top:22px;background:var(--orange-soft);border-radius:18px;padding:18px;display:none}
+  .result.on{display:block}
+  .result .line{font-size:18px;font-weight:700}
+  .result .links{margin-top:10px;font-size:15px}
+  .result .links a{color:var(--blue)}
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：比與比值調色盤</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題上一課「短除法魔法梯」的最大公因數，和一題五年級的「占全部的幾分之幾」。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function rangeList(a, b){
+    var out = [];
+    for (var i = a; i <= b; i++) out.push(i);
+    return out;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+  /* ⚠️ make() 一律不可以回 null：tools/simgen.js 每一批只呼叫 make() 一次、不重試。
+     十二支產生器的抽樣池都事先過濾好（見下面的 POOL_*），抽到就一定做得出四個選項，
+     所以全部直接建構，沒有 retry —— 永遠不會響的拒絕條件不是守衛，是裝飾。 */
+
+  /* --- 這一課的工具（和 index.html 同一套定義）。 --- */
+  var LIMIT = 30;          /* 前項、後項的上限 */
+  var TOTAL_LIMIT = 100;   /* 總量與配出來的量的上限 */
+  function gcd(a, b){ while (b){ var t = a % b; a = b; b = t; } return a; }
+  function simplest(a, b){ var g = gcd(a, b); return [a / g, b / g]; }
+  function ratioText(a, b){ return a + ' : ' + b; }
+  /* 比值 ＝ 前項 ÷ 後項，最簡分數；分母 1 就是整數 */
+  function valueText(a, b){ var s = simplest(a, b); return s[1] === 1 ? String(s[0]) : s[0] + '/' + s[1]; }
+  /* 兩個比相等 ⇔ 交叉相乘相等 */
+  function sameRatio(a, b, c, d){ return a * d === b * c; }
+  function isPrime(n){ if (n < 2) return false; for (var p = 2; p * p <= n; p++) if (n % p === 0) return false; return true; }
+  function commonPrime(a, b){ for (var p = 2; p <= Math.min(a, b); p++) if (isPrime(p) && a % p === 0 && b % p === 0) return p; return null; }
+
+  /* --- 選項的「值」：比 `a : b` 的值是 a/b（交叉相乘比）、分數 `n/d`、整數。同一個值只能出現一次（framework §六之三）。 --- */
+  function parseRatio(s){ var m = /^(\d+) : (\d+)$/.exec(String(s)); return m ? [Number(m[1]), Number(m[2])] : null; }
+  function parseFrac(s){ var m = /^(\d+)(?:\/(\d+))?$/.exec(String(s).trim()); return m ? [Number(m[1]), m[2] === undefined ? 1 : Number(m[2])] : null; }
+  function fracKey(n, d){ var g = gcd(n, d); return (n / g) + '/' + (d / g); }
+  function valueKey(s){
+    var r = parseRatio(s); if (r) return 'r:' + fracKey(r[0], r[1]);
+    var f = parseFrac(s); if (f) return 'v:' + fracKey(f[0], f[1]);
+    return 'raw:' + String(s).replace(/\s+/g, '');
+  }
+  /* 從候選裡挑三個**值互不相同**、也和正解不同的誘答；候選不夠就用 fallbacks 補（同樣值去重）。
+     avoidKeys 是「不可以出現的值」（例如抄題幹的整數）。擠到不夠時少回傳（simgen 的選項數檢查會響，不會卡死）。 */
+  function pickWrongs(correct, cands, fallbacks, avoidKeys){
+    var seen = {}, out = [];
+    seen[valueKey(correct)] = 1;
+    (avoidKeys || []).forEach(function(k){ seen[k] = 1; });
+    cands.concat(fallbacks).forEach(function(c){
+      if (out.length >= 3 || c === null || c === undefined) return;
+      var k = valueKey(c);
+      if (seen[k]) return;
+      seen[k] = 1; out.push(c);
+    });
+    return out;
+  }
+  function optsOf(correct, wrongs){
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+  /* 整數的誘答：候選 ＋ 保底（正解 ±k），都擋在 [1, max]，題幹上印出來的數字先當成已用過。 */
+  function intWrongs(correct, cands, avoid, max){
+    var seen = {}, out = [];
+    seen[String(correct)] = 1;
+    (avoid || []).forEach(function(a){ seen[String(a)] = 1; });
+    cands.forEach(function(c){
+      if (out.length >= 3) return;
+      if (typeof c !== 'number' || !isFinite(c) || c !== Math.round(c)) return;
+      if (c < 1 || c > max || seen[String(c)]) return;
+      seen[String(c)] = 1; out.push(c);
+    });
+    for (var step = 1; out.length < 3 && step <= max; step++){
+      var lo = correct - step, hi = correct + step;
+      if (lo >= 1 && !seen[String(lo)] && out.length < 3){ seen[String(lo)] = 1; out.push(lo); }
+      if (hi <= max && !seen[String(hi)] && out.length < 3){ seen[String(hi)] = 1; out.push(hi); }
+    }
+    return out;
+  }
+  function intOpts(correct, cands, avoid, max){ return optsOf(correct, intWrongs(correct, cands, avoid, max)); }
+  /* 分數／比的保底：值長得像答案的鄰居 */
+  function fracFallbacks(n, d){
+    return [fracKey(n + d, d), fracKey(n, d + 1), fracKey(n + 1, d), fracKey(2 * n, d), fracKey(n, 2 * d), fracKey(n + 2, d + 1)].map(function(k){ var p = k.split('/'); return p[1] === '1' ? p[0] : k; });
+  }
+  function ratioFallbacks(c, d){
+    return [ratioText(c + 1, d), ratioText(c, d + 1), ratioText(c + 2, d), ratioText(c, d + 2), ratioText(c + 1, d + 2), ratioText(c + 2, d + 1)];
+  }
+
+  /* --- 抽樣池 --- */
+  var PAIRS_DISTINCT = [];      /* a ≠ b，都在 1 ~ 30 */
+  (function(){ for (var a = 1; a <= LIMIT; a++) for (var b = 1; b <= LIMIT; b++) if (a !== b) PAIRS_DISTINCT.push([a, b]); })();
+  function pairKey(pr){ return pr[0] + '-' + pr[1]; }
+  function pairOf(key){ return String(key).split('-').map(Number); }
+  function keysOf(list){ return list.map(pairKey); }
+  var POOL_SMALL = PAIRS_DISTINCT.filter(function(pr){ return pr[0] <= 12 && pr[1] <= 12; });                                   /* 看圖寫比、占全部：兩個量都在 12 以內 */
+  var POOL_NONSIMPLE = PAIRS_DISTINCT.filter(function(pr){ return gcd(pr[0], pr[1]) > 1 && pr[0] >= 2 && pr[1] >= 2; });          /* 還沒化簡的比 */
+  var POOL_BASE = PAIRS_DISTINCT.filter(function(pr){ return gcd(pr[0], pr[1]) === 1 && pr[0] <= 9 && pr[1] <= 9; });            /* 最簡整數比、兩項都在 9 以內 */
+  var POOL_BASE7 = POOL_BASE.filter(function(pr){ return pr[0] <= 7 && pr[1] <= 7; });                                             /* 乘到 4 倍仍在 30 以內 */
+  var POOL_VALUE = PAIRS_DISTINCT.filter(function(pr){ return pr[0] >= 2 && pr[1] >= 2; });                                        /* 比值：前後項都 ≥ 2 */
+
+  /* --- 情境的名字（兩個量叫什麼）。前項是 a、後項是 b。 --- */
+  var ITEMS = {
+    zh: {
+      paint:  { a:'藍色顏料', b:'白色顏料', ua:'杯', ub:'杯', sa:'藍色', sb:'白色' },
+      juice:  { a:'果汁', b:'水', ua:'杯', ub:'杯', sa:'果汁', sb:'水' },
+      team:   { a:'男生', b:'女生', ua:'人', ub:'人', sa:'男生', sb:'女生' },
+      snack:  { a:'餅乾', b:'糖果', ua:'塊', ub:'顆', sa:'餅乾', sb:'糖果' },
+      recipe: { a:'麵粉', b:'糖', ua:'杯', ub:'杯', sa:'麵粉', sb:'糖' }
+    },
+    en: {
+      paint:  { a:'blue paint', b:'white paint', ua:'cup', ub:'cup', sa:'blue', sb:'white' },
+      juice:  { a:'juice', b:'water', ua:'cup', ub:'cup', sa:'juice', sb:'water' },
+      team:   { a:'boys', b:'girls', ua:'', ub:'', sa:'boys', sb:'girls' },
+      snack:  { a:'cookies', b:'sweets', ua:'', ub:'', sa:'cookies', sb:'sweets' },
+      recipe: { a:'flour', b:'sugar', ua:'cup', ub:'cup', sa:'flour', sb:'sugar' }
+    }
+  };
+  var ITEM_IDS = ['paint', 'juice', 'team', 'snack', 'recipe'];
+  function plEn(n, w){ if (n === 1) return n + ' ' + w; return n + ' ' + w + (/(s|x|z|ch|sh)$/.test(w) ? 'es' : 's'); }
+  /* 「2 杯」／「2 cups」／「5 boys」 */
+  function qty(lang, id, side, n){
+    var it = ITEMS[lang][id], unit = side === 'a' ? it.ua : it.ub, name = side === 'a' ? it.a : it.b;
+    if (lang === 'zh') return n + ' ' + unit;
+    if (unit) return plEn(n, unit);
+    var SINGULAR = { boys:'boy', girls:'girl', cookies:'cookie', sweets:'sweet' };
+    return n === 1 ? '1 ' + (SINGULAR[name] || name) : n + ' ' + name;
+  }
+  /* 英文的名詞：沒有單位的（boys／cookies）在數量是 1 的時候用單數 */
+  function nounEn(id, side, n){ var it = ITEMS.en[id], name = side === 'a' ? it.a : it.b, unit = side === 'a' ? it.ua : it.ub; var SINGULAR = { boys:'boy', girls:'girl', cookies:'cookie', sweets:'sweet' }; return (!unit && n === 1) ? (SINGULAR[name] || name) : name; }
+  /* 中英文的「a 和 b」 */
+  function andText(a, b, lang){ return lang === 'zh' ? a + ' 和 ' + b : a + ' and ' + b; }
+
+  /* --- 「哪一句話是對的」的句庫。每一句的真假寫死在這裡（設定檔另有一份獨立的真值表）。 --- */
+  var STATEMENTS = {
+    valueIsDivision:  { truth:true,  zh:'比值是前項除以後項', en:'The value of a ratio is the first term divided by the second' },
+    sameMultiply:     { truth:true,  zh:'前項和後項同乘一個不是 0 的數，比值不變', en:'Multiplying both terms by the same non-zero number keeps the value' },
+    simplestCoprime:  { truth:true,  zh:'最簡整數比的前項和後項互質', en:'In the simplest whole-number ratio the two terms are coprime' },
+    valueOneEqual:    { truth:true,  zh:'比值是 1 表示前項和後項一樣多', en:'A value of 1 means the two terms are equal' },
+    orderMatters:     { truth:true,  zh:'前項和後項不一樣時，把它們交換就變成另一個比', en:'When the two terms are different, swapping them gives a different ratio' },
+    divideByGcf:      { truth:true,  zh:'前項和後項同除以最大公因數，就得到最簡整數比', en:'Dividing both terms by their GCF gives the simplest whole-number ratio' },
+    sameAdd:          { truth:false, zh:'前項和後項同加一個數，比值不變', en:'Adding the same number to both terms keeps the value' },
+    swapSame:         { truth:false, zh:'把前項和後項交換，還是同一個比', en:'Swapping the two terms gives the same ratio' },
+    valueBelowOne:    { truth:false, zh:'比值一定比 1 小', en:'A ratio value is always less than 1' },
+    valueIsPartWhole: { truth:false, zh:'比值就是前項占全部的幾分之幾', en:'The value is the fraction of the whole that the first term makes' },
+    smallOverBig:     { truth:false, zh:'比值是小的數除以大的數', en:'The value is the smaller number divided by the bigger' },
+    partsAreAmounts:  { truth:false, zh:'按比分配時，比裡的數字就是每個人拿到的數量', en:'When sharing in a ratio, the numbers in the ratio are the amounts each person gets' }
+  };
+  var TRUE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return STATEMENTS[k].truth; });
+  var FALSE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return !STATEMENTS[k].truth; });
+
+  var GENS = [
+    /* 1. 看圖寫比：a 個甲、b 個乙，問甲和乙（或乙和甲）的比。誘答：反過來、先說的 : 全部、全部 : 先說的。 */
+    { id:'readRatio', cat:'write',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_SMALL), used)), a = pr[0], b = pr[1];
+        var id = pick(ITEM_IDS.slice(0, 4)), rev = rand(2) === 0;
+        var f = rev ? b : a, s = rev ? a : b;           /* 先說的、後說的 */
+        var right = ratioText(f, s);
+        var wrongs = pickWrongs(right, [ratioText(s, f), ratioText(f, f + s), ratioText(f + s, f)], ratioFallbacks(f, s), []);
+        var o = optsOf(right, wrongs);
+        return { id:id, a:a, b:b, rev:rev, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var it = ITEMS[lang][d.id], first = d.rev ? it.sb : it.sa, second = d.rev ? it.sa : it.sb, f = d.rev ? d.b : d.a, s = d.rev ? d.a : d.b;
+        return {
+          stem: lang === 'zh'
+            ? it.a + ' <strong>' + qty('zh', d.id, 'a', d.a) + '</strong>、' + it.b + ' <strong>' + qty('zh', d.id, 'b', d.b) + '</strong>。<strong>' + first + '和' + second + '</strong>的比是多少？'
+            : '<strong>' + qty('en', d.id, 'a', d.a) + '</strong>' + (it.ua ? ' of ' + it.a : '') + ' and <strong>' + qty('en', d.id, 'b', d.b) + '</strong>' + (it.ub ? ' of ' + it.b : '') + '. What is the ratio of <strong>' + first + ' to ' + second + '</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? first + '先說、寫在前面，' + first + ' : ' + second + ' 就是 ' + ratioText(f, s) + '。' + ratioText(s, f) + ' 是' + second + '和' + first + '的比，順序換了就不是同一個比；把一種東西和兩種加起來的全部（' + (f + s) + '）比，不是題目問的。'
+            : first + ' is named first, so it goes in front: ' + first + ' : ' + second + ' is ' + ratioText(f, s) + '. ' + ratioText(s, f) + ' is ' + second + ' to ' + first + ' — swap the order and it is a different ratio; comparing one kind with the two together (' + (f + s) + ' in all) is not what the question asks.'
+        };
+      } },
+
+    /* 2. 比值：a : b → 前項 ÷ 後項 的最簡分數。誘答：倒過來、相減、相加、占全部（a/(a＋b)）。 */
+    { id:'ratioValue', cat:'value',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_VALUE), used)), a = pr[0], b = pr[1];
+        var right = valueText(a, b);
+        var sv = simplest(a, b);
+        var cands = [valueText(b, a), String(Math.abs(a - b)), String(a + b), valueText(a, a + b)];
+        var wrongs = pickWrongs(right, cands, fracFallbacks(sv[0], sv[1]), ['v:' + a + '/1', 'v:' + b + '/1']);
+        var o = optsOf(right, wrongs);
+        return { a:a, b:b, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '<strong>' + ratioText(d.a, d.b) + '</strong> 的比值是多少？' : 'What is the value of <strong>' + ratioText(d.a, d.b) + '</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '比值是前項 ÷ 後項：' + d.a + ' ÷ ' + d.b + ' ＝ ' + valueText(d.a, d.b) + '。' + valueText(d.b, d.a) + ' 是倒過來算 ' + d.b + ' ÷ ' + d.a + '；相減、相加都不是算比值的方法；' + valueText(d.a, d.a + d.b) + ' 是前項占全部的幾分之幾，不是比值。'
+            : 'The value is first term ÷ second term: ' + d.a + ' ÷ ' + d.b + ' = ' + valueText(d.a, d.b) + '. ' + valueText(d.b, d.a) + ' is the wrong way round, ' + d.b + ' ÷ ' + d.a + '; subtracting or adding is not how a value is found; ' + valueText(d.a, d.a + d.b) + ' is the first term as a fraction of the whole, not the value.'
+        };
+      } },
+
+    /* 3. 最簡整數比：a : b（最大公因數 > 1）→ c : d。誘答：反過來、前後項同減一個數、只除其中一邊。 */
+    { id:'simplestRatio', cat:'equal',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_NONSIMPLE), used)), a = pr[0], b = pr[1], g = gcd(a, b), s = simplest(a, b), c = s[0], dd = s[1];
+        var p = commonPrime(a, b);
+        var right = ratioText(c, dd);
+        var cands = [ratioText(dd, c), (a - p >= 1 && b - p >= 1) ? ratioText(a - p, b - p) : null, ratioText(a / g, b), ratioText(a, b / g)];
+        var wrongs = pickWrongs(right, cands, ratioFallbacks(c, dd), ['r:' + fracKey(a, b)]);
+        var o = optsOf(right, wrongs);
+        return { a:a, b:b, g:g, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var s = simplest(d.a, d.b);
+        return {
+          stem: lang === 'zh' ? '<strong>' + ratioText(d.a, d.b) + '</strong> 的<strong>最簡整數比</strong>是多少？' : 'What is <strong>' + ratioText(d.a, d.b) + '</strong> in its <strong>simplest whole-number form</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? d.a + ' 和 ' + d.b + ' 的最大公因數是 ' + d.g + '，前項和後項同除以 ' + d.g + '，' + d.a + ' ÷ ' + d.g + ' ＝ ' + s[0] + '，' + d.b + ' ÷ ' + d.g + ' ＝ ' + s[1] + '，得 ' + ratioText(s[0], s[1]) + '，而且 ' + s[0] + ' 和 ' + s[1] + ' 互質。反過來寫、同減一個數、只除其中一邊，都會變成不同的比。'
+            : 'The GCF of ' + d.a + ' and ' + d.b + ' is ' + d.g + '; divide both terms by ' + d.g + ': ' + d.a + ' ÷ ' + d.g + ' = ' + s[0] + ' and ' + d.b + ' ÷ ' + d.g + ' = ' + s[1] + ', giving ' + ratioText(s[0], s[1]) + ', and ' + s[0] + ' and ' + s[1] + ' are coprime. Writing it the other way round, subtracting from both terms, or dividing only one term all give a different ratio.'
+        };
+      } },
+
+    /* 4. 哪一個比和 c : d 相等（前後項同乘 k）。誘答：同加 1、同加 2、反過來同乘。 */
+    { id:'equalRatio', cat:'equal',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_BASE7), used)), c = pr[0], dd = pr[1], k = 2 + rand(3);
+        var right = ratioText(c * k, dd * k);
+        var cands = [ratioText(c + 1, dd + 1), ratioText(c + 2, dd + 2), ratioText(dd * k, c * k), ratioText(c * k + 1, dd * k)];
+        var wrongs = pickWrongs(right, cands, ratioFallbacks(c * k, dd * k), []);
+        var o = optsOf(right, wrongs);
+        return { c:c, d:dd, k:k, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '下面哪一個比和 <strong>' + ratioText(d.c, d.d) + '</strong> 是<strong>相等的比</strong>？' : 'Which of these ratios is <strong>equal to</strong> <strong>' + ratioText(d.c, d.d) + '</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '前項和後項同乘 ' + d.k + '，' + d.c + ' × ' + d.k + ' ＝ ' + (d.c * d.k) + '，' + d.d + ' × ' + d.k + ' ＝ ' + (d.d * d.k) + '，所以 ' + ratioText(d.c, d.d) + ' ＝ ' + ratioText(d.c * d.k, d.d * d.k) + '，比值都是 ' + valueText(d.c, d.d) + '。前項和後項不一樣時，同加一個數比值就變了（' + ratioText(d.c + 1, d.d + 1) + ' 的比值是 ' + valueText(d.c + 1, d.d + 1) + '）；反過來寫是另一個比。'
+            : 'Multiply both terms by ' + d.k + ': ' + d.c + ' × ' + d.k + ' = ' + (d.c * d.k) + ' and ' + d.d + ' × ' + d.k + ' = ' + (d.d * d.k) + ', so ' + ratioText(d.c, d.d) + ' = ' + ratioText(d.c * d.k, d.d * d.k) + ', both with value ' + valueText(d.c, d.d) + '. When the terms differ, adding the same number to both changes the value (' + ratioText(d.c + 1, d.d + 1) + ' has value ' + valueText(d.c + 1, d.d + 1) + '); the other way round is a different ratio.'
+        };
+      } },
+
+    /* 5. 照比例配：甲 : 乙 是 c : d，甲用了 k × c，乙要多少。誘答：加法（k × c ＋ d － c）、乘錯（k × c × d）、總量 k × (c ＋ d)。 */
+    { id:'scaleUp', cat:'apply',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_BASE), used)), c = pr[0], dd = pr[1], k = 2 + rand(5);
+        var id = pick(['paint', 'juice', 'recipe', 'team']);
+        var A = c * k, B = dd * k;
+        var o = intOpts(B, [A + dd - c, A * dd, k * (c + dd), B + dd], [A, c, dd], TOTAL_LIMIT);
+        return { id:id, c:c, d:dd, k:k, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var it = ITEMS[lang][d.id], A = d.c * d.k, B = d.d * d.k;
+        function unit(n){ return qty(lang, d.id, 'b', n); }
+        return {
+          stem: lang === 'zh'
+            ? it.a + '和' + it.b + '的比是 <strong>' + ratioText(d.c, d.d) + '</strong>。' + it.a + '用了 <strong>' + qty('zh', d.id, 'a', A) + '</strong>，' + it.b + '要用幾' + it.ub + '？'
+            : 'The ratio of ' + it.a + ' to ' + it.b + ' is <strong>' + ratioText(d.c, d.d) + '</strong>. <strong>' + qty('en', d.id, 'a', A) + '</strong>' + (it.ua ? ' of ' + it.a : '') + ' are used. ' + (it.ub ? 'How much ' + it.b + ' is needed?' : 'How many ' + it.b + ' are needed?'),
+          opts: d.opts.map(unit), ans:d.ans,
+          why: lang === 'zh'
+            ? it.a + '從 ' + d.c + ' 變成 ' + A + '，' + A + ' ÷ ' + d.c + ' ＝ ' + d.k + '，是 ' + d.k + ' 倍；' + it.b + '也要 ' + d.k + ' 倍：' + d.d + ' × ' + d.k + ' ＝ ' + B + '，所以 ' + ratioText(d.c, d.d) + ' ＝ ' + ratioText(A, B) + '。多了幾' + it.ua + '就加幾' + it.ub + '是加法，會改變比。'
+            : 'The ' + it.a + ' went from ' + d.c + ' to ' + A + ': ' + A + ' ÷ ' + d.c + ' = ' + d.k + ', so ' + d.k + ' times as much; the ' + it.b + ' must be ' + d.k + ' times as much too: ' + d.d + ' × ' + d.k + ' = ' + B + ', so ' + ratioText(d.c, d.d) + ' = ' + ratioText(A, B) + '. Adding the same extra amount to both sides changes the ratio.'
+        };
+      } },
+
+    /* 6. 按比分配：總量 T 照 c : d 分，問前項那一邊。誘答：後項那一邊、平分、一份、多一份。 */
+    { id:'shareTotal', cat:'apply',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_BASE), used)), c = pr[0], dd = pr[1];
+        var parts = c + dd, uMax = Math.floor(TOTAL_LIMIT / parts), u = 2 + rand(Math.max(1, uMax - 1));
+        var T = parts * u, A = c * u, B = dd * u;
+        var id = pick(['sweets', 'money', 'people']);
+        var o = intOpts(A, [B, T % 2 === 0 ? T / 2 : null, u, (c + 1) * u], [T, c, dd], TOTAL_LIMIT);
+        return { id:id, c:c, d:dd, u:u, total:T, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var N = {
+          zh:{ sweets:['顆糖', '哥哥', '弟弟', ' 顆'], money:['元', '小美', '小明', ' 元'], people:['個人', '紅隊', '藍隊', ' 人'] },
+          en:{ sweets:['sweets', 'the big brother', 'the little brother', 'sweet'], money:['dollars', 'Mia', 'Ben', 'dollar'], people:['people', 'the red team', 'the blue team', 'person'] }
+        }[lang][d.id];
+        var A = d.c * d.u, B = d.d * d.u, parts = d.c + d.d;
+        function unit(n){ return lang === 'zh' ? n + N[3] : (d.id === 'people' ? (n === 1 ? '1 person' : n + ' people') : plEn(n, N[3])); }
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.total + '</strong> ' + N[0] + '照 <strong>' + ratioText(d.c, d.d) + '</strong> 分給' + N[1] + '和' + N[2] + '。' + N[1] + '得到多少？'
+            : '<strong>' + d.total + '</strong> ' + N[0] + ' are shared between ' + N[1] + ' and ' + N[2] + ' in the ratio <strong>' + ratioText(d.c, d.d) + '</strong>. ' + (d.id === 'money' ? 'How much money does ' : (d.id === 'people' ? 'How many people does ' : 'How many sweets does ')) + N[1] + ' get?',
+          opts: d.opts.map(unit), ans:d.ans,
+          why: lang === 'zh'
+            ? ratioText(d.c, d.d) + ' 一共 ' + d.c + ' ＋ ' + d.d + ' ＝ ' + parts + ' 份，' + d.total + ' ÷ ' + parts + ' ＝ ' + d.u + '，一份 ' + unit(d.u) + '；' + N[1] + ' ' + d.c + ' 份：' + d.c + ' × ' + d.u + ' ＝ ' + A + '。' + N[2] + '有 ' + d.d + ' 份，得到 ' + unit(B) + '；驗算 ' + A + ' ＋ ' + B + ' ＝ ' + d.total + '。比裡的數字是份數，不是真正拿到的數量。'
+            : ratioText(d.c, d.d) + ' makes ' + d.c + ' + ' + d.d + ' = ' + parts + ' parts; ' + d.total + ' ÷ ' + parts + ' = ' + d.u + ', so one part is ' + unit(d.u) + '; ' + N[1] + ' has ' + d.c + ' part' + (d.c === 1 ? '' : 's') + ': ' + d.c + ' × ' + d.u + ' = ' + A + '. ' + N[2] + ' has ' + d.d + ' part' + (d.d === 1 ? '' : 's') + ', getting ' + unit(B) + '; check ' + A + ' + ' + B + ' = ' + d.total + '. The numbers in the ratio are parts, not the amounts received.'
+        };
+      } },
+
+    /* 7. 交錯題（五年級）：甲 a 個、乙 b 個，甲占全部的幾分之幾。誘答：比值 a/b（這一課最容易搞混的）、乙占全部、b/a。 */
+    { id:'fractionOfWhole', cat:'inter',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_SMALL), used)), a = pr[0], b = pr[1];
+        var id = pick(ITEM_IDS.slice(0, 4));
+        var right = valueText(a, a + b);
+        var s = simplest(a, a + b);
+        var wrongs = pickWrongs(right, [valueText(a, b), valueText(b, a + b), valueText(b, a)], fracFallbacks(s[0], s[1]), ['v:' + a + '/1', 'v:' + b + '/1']);
+        var o = optsOf(right, wrongs);
+        return { id:id, a:a, b:b, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var it = ITEMS[lang][d.id];
+        return {
+          stem: lang === 'zh'
+            ? '（五年級）' + it.a + ' <strong>' + qty('zh', d.id, 'a', d.a) + '</strong>、' + it.b + ' <strong>' + qty('zh', d.id, 'b', d.b) + '</strong>。' + it.sa + '<strong>占全部的幾分之幾</strong>？'
+            : '(Grade five) <strong>' + qty('en', d.id, 'a', d.a) + '</strong>' + (it.ua ? ' of ' + it.a : '') + ' and <strong>' + qty('en', d.id, 'b', d.b) + '</strong>' + (it.ub ? ' of ' + it.b : '') + '. <strong>What fraction of the whole</strong> ' + ((it.ua || d.a === 1) ? 'is the ' : 'are the ') + nounEn(d.id, 'a', d.a) + '?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '全部是 ' + d.a + ' ＋ ' + d.b + ' ＝ ' + (d.a + d.b) + '，' + it.sa + '占全部的 ' + d.a + '/' + (d.a + d.b) + (valueText(d.a, d.a + d.b) !== d.a + '/' + (d.a + d.b) ? ' ＝ ' + valueText(d.a, d.a + d.b) : '') + '。' + valueText(d.a, d.b) + ' 是' + it.sa + '和' + it.sb + '的比值（前項 ÷ 後項），不是占全部的幾分之幾 —— 兩件事不要混在一起。'
+            : 'The whole is ' + d.a + ' + ' + d.b + ' = ' + (d.a + d.b) + ', so the ' + nounEn(d.id, 'a', d.a) + ((it.ua || d.a === 1) ? ' is ' : ' are ') + d.a + '/' + (d.a + d.b) + (valueText(d.a, d.a + d.b) !== d.a + '/' + (d.a + d.b) ? ' = ' + valueText(d.a, d.a + d.b) : '') + ' of the whole. ' + valueText(d.a, d.b) + ' is the value of the ratio of ' + it.sa + ' to ' + it.sb + ' (first term ÷ second term), not a fraction of the whole — keep the two apart.'
+        };
+      } },
+
+    /* 8. 比值已知：比值是 n/d 的比是哪一個（n : d 的 k 倍）。誘答：反過來 d : n、n : (n ＋ d)、同加 1。 */
+    { id:'ratioFromValue', cat:'value',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_BASE7), used)), n = pr[0], dd = pr[1], k = 1 + rand(3);
+        var right = ratioText(n * k, dd * k);
+        var cands = [ratioText(dd * k, n * k), ratioText(n, n + dd), ratioText(n * k + 1, dd * k + 1), ratioText(dd, n)];
+        var wrongs = pickWrongs(right, cands, ratioFallbacks(n * k, dd * k), []);
+        var o = optsOf(right, wrongs);
+        return { n:n, d:dd, k:k, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var v = valueText(d.n, d.d);
+        return {
+          stem: lang === 'zh' ? '下面哪一個比的<strong>比值是 ' + v + '</strong>？' : 'Which of these ratios has <strong>value ' + v + '</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? ratioText(d.n * d.k, d.d * d.k) + ' 的比值是 ' + (d.n * d.k) + ' ÷ ' + (d.d * d.k) + ' ＝ ' + v + '。' + ratioText(d.d * d.k, d.n * d.k) + ' 的比值是倒過來的 ' + valueText(d.d, d.n) + '；前項和後項不一樣時，同加一個數比值就變了（' + ratioText(d.n * d.k + 1, d.d * d.k + 1) + ' 的比值是 ' + valueText(d.n * d.k + 1, d.d * d.k + 1) + '）；' + ratioText(d.n, d.n + d.d) + ' 的比值是 ' + valueText(d.n, d.n + d.d) + '。'
+            : 'The value of ' + ratioText(d.n * d.k, d.d * d.k) + ' is ' + (d.n * d.k) + ' ÷ ' + (d.d * d.k) + ' = ' + v + '. ' + ratioText(d.d * d.k, d.n * d.k) + ' has the upside-down value ' + valueText(d.d, d.n) + '; when the terms differ, adding the same number to both changes the value (' + ratioText(d.n * d.k + 1, d.d * d.k + 1) + ' has value ' + valueText(d.n * d.k + 1, d.d * d.k + 1) + '); ' + ratioText(d.n, d.n + d.d) + ' has value ' + valueText(d.n, d.n + d.d) + '.'
+        };
+      } },
+
+    /* 9. 四句話裡只有一句是對的。 */
+    { id:'trueStatement', cat:'concept',
+      make:function(used){
+        var t = pickUnused(TRUE_KEYS, used);
+        var fs = shuffle(FALSE_KEYS).slice(0, 3);
+        var opts = shuffle([t].concat(fs));
+        return { t:t, opts:opts, ans:opts.indexOf(t) };
+      },
+      fmt:function(d, lang){
+        var WHY = {
+          zh:{ valueIsDivision:'比值的定義就是前項 ÷ 後項。', sameMultiply:'同乘同一個數，商不變：2 : 3 和 4 : 6 的比值都是 2/3。', simplestCoprime:'除到不能再同除，前項和後項的最大公因數就是 1。',
+               valueOneEqual:'前項 ÷ 後項 ＝ 1，表示兩項相等（5 : 5）。', orderMatters:'5 : 3 的比值是 5/3，3 : 5 的比值是 3/5，不一樣。', divideByGcf:'12 : 18 同除以最大公因數 6 得 2 : 3。',
+               sameAdd:'2 : 3 同加 2 變成 4 : 5，比值從 2/3 變成 4/5。', swapSame:'5 : 3 和 3 : 5 的比值不同，是兩個比。', valueBelowOne:'5 : 3 的比值是 5/3，比 1 大。',
+               valueIsPartWhole:'2 : 3 的比值是 2/3，前項占全部的卻是 2/5。', smallOverBig:'6 : 4 的比值是 6 ÷ 4 ＝ 3/2，不是 4 ÷ 6。', partsAreAmounts:'20 顆照 3 : 2 分，哥哥拿的是 5 份裡的 3 份（12 顆），不是 3 顆。' },
+          en:{ valueIsDivision:'That is the definition of the value: first term ÷ second term.', sameMultiply:'Multiplying both by the same number leaves the quotient unchanged: 2 : 3 and 4 : 6 both have value 2/3.', simplestCoprime:'When no more common division is possible, the GCF of the two terms is 1.',
+               valueOneEqual:'First term ÷ second term = 1 means the terms are equal (5 : 5).', orderMatters:'5 : 3 has value 5/3 and 3 : 5 has value 3/5 — different.', divideByGcf:'12 : 18 divided by the GCF 6 gives 2 : 3.',
+               sameAdd:'Adding 2 to 2 : 3 gives 4 : 5, and the value changes from 2/3 to 4/5.', swapSame:'5 : 3 and 3 : 5 have different values, so they are two ratios.', valueBelowOne:'5 : 3 has value 5/3, above 1.',
+               valueIsPartWhole:'The value of 2 : 3 is 2/3, but the first term is 2/5 of the whole.', smallOverBig:'The value of 6 : 4 is 6 ÷ 4 = 3/2, not 4 ÷ 6.', partsAreAmounts:'Sharing 20 in the ratio 3 : 2, the big brother gets 3 of 5 parts (12), not 3.' }
+        }[lang];
+        var wrongs = d.opts.filter(function(k){ return k !== d.t; });
+        return {
+          stem: lang === 'zh' ? '下面四句話，<strong>只有一句是對的</strong>。是哪一句？' : 'Of these four sentences, <strong>exactly one is true</strong>. Which?',
+          opts: d.opts.map(function(k){ return STATEMENTS[k][lang]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '對的那一句是：' + STATEMENTS[d.t].zh + '。' + WHY[d.t] + '其他三句：' + wrongs.map(function(k){ return WHY[k]; }).join('')
+            : 'The true one is: ' + STATEMENTS[d.t].en + '. ' + WHY[d.t] + ' The other three: ' + wrongs.map(function(k){ return WHY[k]; }).join(' ')
+        };
+      } },
+
+    /* 10. 交錯題（上一課）：a : b 化成最簡整數比要同除以幾（最大公因數）。誘答：只除以最小的共同質數、除以最大公因數的 2 倍、只除以 2。 */
+    { id:'interGcf', cat:'inter',
+      make:function(used){
+        var pool = POOL_NONSIMPLE.filter(function(pr){ return !isPrime(gcd(pr[0], pr[1])); });     /* 最大公因數是合數，才有「沒除完」的誘答 */
+        var pr = pairOf(pickUnused(keysOf(pool), used)), a = pr[0], b = pr[1], g = gcd(a, b), p = commonPrime(a, b);
+        var o = intOpts(g, [p, g * 2, g / p, 2], [a, b], LIMIT);
+        return { a:a, b:b, g:g, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var s = simplest(d.a, d.b);
+        return {
+          stem: lang === 'zh' ? '（上一課）把 <strong>' + ratioText(d.a, d.b) + '</strong> <strong>一次</strong>化成最簡整數比，前項和後項要同除以幾？' : '(Last lesson) To turn <strong>' + ratioText(d.a, d.b) + '</strong> into its simplest form in <strong>one</strong> step, what do you divide both terms by?',
+          opts: d.opts.map(String), ans:d.ans,
+          why: lang === 'zh'
+            ? '一次到底要同除以最大公因數：' + d.a + ' 和 ' + d.b + ' 的最大公因數是 ' + d.g + '，' + d.a + ' ÷ ' + d.g + ' ＝ ' + s[0] + '，' + d.b + ' ÷ ' + d.g + ' ＝ ' + s[1] + '，' + s[0] + ' 和 ' + s[1] + ' 互質。除以比較小的公因數還沒化到最簡；比最大公因數大的數除不盡。'
+            : 'One step means dividing by the GCF: the GCF of ' + d.a + ' and ' + d.b + ' is ' + d.g + ', ' + d.a + ' ÷ ' + d.g + ' = ' + s[0] + ' and ' + d.b + ' ÷ ' + d.g + ' = ' + s[1] + ', and ' + s[0] + ' and ' + s[1] + ' are coprime. A smaller common factor leaves the ratio not yet simplest; a number bigger than the GCF does not divide both.'
+        };
+      } },
+
+    /* 11. 不同種的量：a 枝筆共 T 元，錢和筆數的比是 T : a，比值就是每一枝幾元。誘答：相減、相加一份、兩倍、一半。 */
+    { id:'unitRate', cat:'value',
+      make:function(used){
+        var a = pickUnused(rangeList(2, 9), used), uMax = Math.min(12, Math.floor(TOTAL_LIMIT / a)), u = 3 + rand(uMax - 2), T = a * u;   /* T ≤ 100 */
+        var o = intOpts(u, [T - a, u + a, u * 2, T % 2 === 0 ? T / 2 : null], [a, T], TOTAL_LIMIT);
+        return { a:a, u:u, T:T, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh'
+            ? '<strong>' + d.a + '</strong> 枝筆一共 <strong>' + d.T + '</strong> 元。錢和筆數的比是 ' + ratioText(d.T, d.a) + '，它的<strong>比值</strong>是多少？（也就是一枝筆幾元）'
+            : '<strong>' + d.a + '</strong> pens cost <strong>' + d.T + '</strong> dollars in all. The ratio of dollars to pens is ' + ratioText(d.T, d.a) + '. What is its <strong>value</strong>? (That is the price of one pen.)',
+          opts: d.opts.map(function(n){ return lang === 'zh' ? n + ' 元' : plEn(n, 'dollar'); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '比值是前項 ÷ 後項：' + d.T + ' ÷ ' + d.a + ' ＝ ' + d.u + '，所以一枝筆 ' + d.u + ' 元。不同種的量也可以比，比值 ' + d.u + ' 的意思是每一枝筆對應 ' + d.u + ' 元。相減、相加都不是算比值的方法。'
+            : 'The value is first term ÷ second term: ' + d.T + ' ÷ ' + d.a + ' = ' + d.u + ', so one pen costs ' + d.u + ' dollars. Different kinds of amounts can form a ratio too; the value ' + d.u + ' means ' + d.u + ' dollars for every pen. Subtracting or adding is not how a value is found.'
+        };
+      } },
+
+    /* 12. 反向題：哪一個比和 c : d **不相等**（三個相等的倍數、一個同加或反過來）。 */
+    { id:'whichNotEqual', cat:'equal',
+      make:function(used){
+        var pr = pairOf(pickUnused(keysOf(POOL_BASE7), used)), c = pr[0], dd = pr[1];
+        var ks = shuffle([2, 3, 4]).slice(0, 3);
+        var equalOnes = ks.map(function(k){ return ratioText(c * k, dd * k); });
+        /* 不相等的那一個：同加 1、或反過來（值一定不同，因為 c ≠ d） */
+        var oddCands = [ratioText(c + 1, dd + 1), ratioText(dd, c), ratioText(c + 2, dd + 2)];
+        var odd = null;
+        for (var i = 0; i < oddCands.length && odd === null; i++) if (!sameRatio(c, dd, parseRatio(oddCands[i])[0], parseRatio(oddCands[i])[1])) odd = oddCands[i];
+        var opts = shuffle([odd].concat(equalOnes));
+        return { c:c, d:dd, ks:ks, odd:odd, opts:opts, ans:opts.indexOf(odd) };
+      },
+      fmt:function(d, lang){
+        var op = parseRatio(d.odd);
+        return {
+          stem: lang === 'zh' ? '下面四個比裡，<strong>只有一個</strong>和 <strong>' + ratioText(d.c, d.d) + '</strong> <strong>不相等</strong>。是哪一個？' : 'Of these four ratios, <strong>exactly one</strong> is <strong>not equal</strong> to <strong>' + ratioText(d.c, d.d) + '</strong>. Which?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? ratioText(d.c, d.d) + ' 的比值是 ' + valueText(d.c, d.d) + '；' + d.ks.map(function(k){ return ratioText(d.c * k, d.d * k) + ' 是前後項同乘 ' + k; }).join('、') + '，比值都還是 ' + valueText(d.c, d.d) + '。' + d.odd + ' 的比值是 ' + valueText(op[0], op[1]) + '，不一樣，所以不相等。'
+            : ratioText(d.c, d.d) + ' has value ' + valueText(d.c, d.d) + '; ' + d.ks.map(function(k){ return ratioText(d.c * k, d.d * k) + ' multiplies both terms by ' + k; }).join(', ') + ', so their values are still ' + valueText(d.c, d.d) + '. ' + d.odd + ' has value ' + valueText(op[0], op[1]) + ', which is different, so it is not equal.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 比與比值調色盤', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：比與比值調色盤',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題上一課「短除法魔法梯」的最大公因數，和一題五年級的「占全部的幾分之幾」。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>　·　最大公因數回上一課<a href="../gcf-lcm/index.html">短除法魔法梯</a>　·　占全部的幾分之幾回五年級<a href="../../../grade-5/math/percent/index.html">百分百大挑戰</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Ratio Paint Studio', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Ratio Paint Studio',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>One of them is a GCF question from the previous lesson, and one is a grade-5 “fraction of the whole”.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>　·　the GCF in <a href="../gcf-lcm/index.html">the previous lesson</a>　·　fractions of the whole in <a href="../../../grade-5/math/percent/index.html">the grade-5 percent lesson</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length){
+            resultLine.textContent = right === batch.length ? t.resAll(batch.length)
+              : right >= Math.ceil(batch.length * 2 / 3) ? t.resGood(right, batch.length)
+              : t.resTry(right, batch.length);
+            resultLinks.innerHTML = t.links;
+            resultEl.classList.add('on');
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function newRound(){
+    batch = buildBatch();
+    applyStatic();
+    render();
+  }
+
+  retryBtn.addEventListener('click', newRound);
+  /* 語言切換保留同一批題目（framework §六之一：切語言不重抽）。 */
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    render();
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>速查卡 — 比與比值調色盤</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.75;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(26px,5vw,38px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  section{margin-top:34px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:13px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(20px,3.6vw,26px);margin:8px 0 4px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:20px;margin-top:14px;box-shadow:0 3px 12px rgba(70,60,40,.05);
+  }
+  .card p + p{margin-top:10px}
+  .formula{
+    background:var(--blue-soft);border-radius:12px;padding:12px 16px;margin-top:12px;
+    font-size:19px;font-weight:700;color:var(--blue);text-align:center;
+  }
+  .formula .cond{display:block;font-size:14px;font-weight:400;color:var(--muted);margin-top:4px}
+  .scroller{overflow-x:auto;margin-top:12px}
+  table{border-collapse:collapse;width:100%;font-size:15px;min-width:460px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--green-soft);color:var(--green);font-size:14px;white-space:nowrap}
+  td.k{font-weight:700;white-space:nowrap}
+  ul.steps{list-style:none;display:grid;gap:10px;margin-top:6px}
+  ul.steps li{display:flex;gap:10px;align-items:flex-start;font-size:16px}
+  .sn{
+    flex:none;width:26px;height:26px;border-radius:50%;background:var(--orange-soft);
+    color:var(--orange);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;
+  }
+  .notebox{
+    margin-top:12px;background:var(--orange-soft);border:2px solid var(--orange);border-radius:14px;
+    padding:10px 16px;font-size:15px;color:var(--orange);
+  }
+  .warn{
+    margin-top:12px;background:var(--red-soft);border:2px solid var(--red);border-radius:14px;
+    padding:10px 16px;font-size:15px;color:var(--red);
+  }
+  /* 化簡的階梯是 HTML，不是圖 */
+  .steps-list{display:inline-grid;grid-template-columns:auto auto;gap:4px 14px;margin:12px auto 0;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;text-align:left}
+  .steps-list .op{color:var(--orange);text-align:right}
+  .steps-list .rt{color:var(--ink)}
+  .steps-list .rt.hl{color:var(--green)}
+  .stepwrap{text-align:center}
+  .stepwrap .lab{font-size:14px;color:var(--muted);margin-top:4px}
+  .twocol{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px}
+  .printbtn{
+    display:block;margin:30px auto 0;border:none;border-radius:12px;background:var(--green);
+    color:#fff;font-size:16px;font-weight:700;padding:10px 24px;cursor:pointer;
+  }
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+  @media print{
+    .topbar,.coursenav,.printbtn,footer{display:none}
+    body{background:#fff;font-size:13px}
+    .card{box-shadow:none}
+    section{margin-top:18px;break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <span data-i18n="nav2">🗂️ 速查卡（本頁）</span>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🗂️ 速查卡：比與比值調色盤</h1>
+    <p class="sub" data-i18n="sub">比怎麼寫、比值怎麼算、相等的比怎麼看、兩種應用題怎麼做</p>
+  </header>
+  <p class="notebox" data-i18n="scopeNote">這張卡只講五件事：<strong>比的寫法</strong>（前項 : 後項，順序不能換）；<strong>比值</strong>（前項 ÷ 後項）；<strong>相等的比</strong>（前項和後項同乘或同除以同一個數，0 除外）與<strong>最簡整數比</strong>；<strong>照比例配</strong>；<strong>按比分配</strong>。<strong>約分與最大公因數</strong>是五年級「通分披薩屋」與六年級<strong>上一課「短除法魔法梯」</strong>教的；<strong>百分率</strong>是<strong>五年級「百分百大挑戰」</strong>教的；小數與分數的比、成正比、速率不在這一課。前項和後項都是 <strong>1 到 30</strong> 的整數；同乘或同除的數也是整數，同除時兩項都要除得盡；總量在 100 以內而且剛好分得完。</p>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb1">第一部分</span>
+    <h2 data-i18n="s1h2">比的寫法與比值</h2>
+    <div class="card">
+      <ul class="steps">
+        <li><span class="sn">1</span><span data-i18n="d1">兩個量並排寫成 <strong>前項 : 後項</strong>，讀作「前項比後項」。<strong>先說的寫前面</strong>；前項和後項不一樣時，順序換了就是不同的比（2 : 3 和 3 : 2 不一樣）。</span></li>
+        <li><span class="sn">2</span><span data-i18n="d2"><strong>比值 ＝ 前項 ÷ 後項</strong>，寫成最簡分數；除得盡就寫整數。比值告訴你<strong>前項是後項的幾倍</strong>。</span></li>
+        <li><span class="sn">3</span><span data-i18n="d3">比<strong>不是</strong>「占全部的幾分之幾」：2 : 3 的前項占全部的 2/5，比值卻是 2/3 —— 比的是兩個量<strong>彼此</strong>。</span></li>
+      </ul>
+      <p class="formula" data-i18n="f1">比值 ＝ 前項 ÷ 後項<span class="cond">6 : 4 的比值是 6 ÷ 4 ＝ 3/2 · 4 : 6 的比值是 4 ÷ 6 ＝ 2/3 · 5 : 5 的比值是 1</span></p>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="vth0">比</th><th data-i18n="vth1">前項</th><th data-i18n="vth2">後項</th><th data-i18n="vth3">比值</th><th data-i18n="vth4">意思</th></tr>
+          </thead>
+          <tbody id="vbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb2">第二部分</span>
+    <h2 data-i18n="s2h2">相等的比與最簡整數比</h2>
+    <div class="card">
+      <p class="formula" data-i18n="f2">前項和後項同乘或同除以同一個數（0 除外）→ 相等的比，比值不變<span class="cond">除到前項和後項互質 → 最簡整數比 · 一次到底：同除以最大公因數</span></p>
+      <div class="twocol">
+        <div class="stepwrap"><div class="steps-list" id="lad1"></div><p class="lab" data-i18n="lab1">12 : 18：同除以 2 得 6 : 9，再同除以 3 得 2 : 3；一次到底就是同除以最大公因數 6</p></div>
+        <div class="stepwrap"><div class="steps-list" id="lad2"></div><p class="lab" data-i18n="lab2">15 : 10：同除以 5 得 3 : 2，3 和 2 互質，停</p></div>
+      </div>
+      <p data-i18n="p2why"><strong>為什麼</strong>：比值是前項 ÷ 後項，前項和後項同乘（或同除以）同一個數，商不變 —— 12 ÷ 18 和 2 ÷ 3 都是 2/3。所以判斷兩個比相不相等，<strong>算比值</strong>就知道；也可以<strong>交叉相乘</strong>：2 × 18 ＝ 36，3 × 12 ＝ 36，一樣就相等。</p>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="cth0">這句話</th><th data-i18n="cth1">對不對</th><th data-i18n="cth2">例子</th></tr>
+          </thead>
+          <tbody id="cbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb3">第三部分</span>
+    <h2 data-i18n="s3h2">兩種應用題</h2>
+    <div class="card">
+      <p class="formula" data-i18n="f3">照比例配：先算幾倍，另一邊乘同樣的倍數 · 按比分配：先算一共幾份，總量 ÷ 份數是一份</p>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="ath0">題目在講什麼</th><th data-i18n="ath1">怎麼做</th><th data-i18n="ath2">例子</th></tr>
+          </thead>
+          <tbody id="abody"></tbody>
+        </table>
+      </div>
+      <p class="notebox" data-i18n="anote">💬 兩種題目都要<strong>驗算</strong>：照比例配完，新的比要和原來的比<strong>比值一樣</strong>（2 : 3 ＝ 6 : 9）；按比分配完，兩邊<strong>加起來要等於總量</strong>，兩邊的比要<strong>和原來的比相等</strong>（12 : 8 ＝ 3 : 2）。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb4">第四部分</span>
+    <h2 data-i18n="s4h2">常用的比（算出來的，不是背的）</h2>
+    <div class="card">
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="pth0">比</th><th data-i18n="pth1">同除以</th><th data-i18n="pth2">最簡整數比</th><th data-i18n="pth3">比值</th></tr>
+          </thead>
+          <tbody id="pbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb5">最後</span>
+    <h2 data-i18n="s5h2">最容易錯的六件事</h2>
+    <div class="card">
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="xth0">很容易這樣想</th><th data-i18n="xth1">其實是</th></tr>
+          </thead>
+          <tbody id="xbody"></tbody>
+        </table>
+      </div>
+      <p class="warn" data-i18n="warn">⚠️ 一句話收尾：<strong>前項 : 後項，順序不能換；比值是前項 ÷ 後項；前項和後項同乘或同除以同一個數（0 除外），比不變。</strong></p>
+    </div>
+  </section>
+
+  <button class="printbtn" onclick="window.print()" data-i18n="printBtn">🖨️ 印出這張速查卡</button>
+  <footer data-i18n="foot">回到<a class="home" href="index.html">課程</a>或去玩<a class="home" href="review.html">複習挑戰</a>。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'速查卡 — 比與比值調色盤', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（本頁）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🗂️ 速查卡：比與比值調色盤',
+      sub:'比怎麼寫、比值怎麼算、相等的比怎麼看、兩種應用題怎麼做',
+      scopeNote:'這張卡只講五件事：<strong>比的寫法</strong>（前項 : 後項，順序不能換）；<strong>比值</strong>（前項 ÷ 後項）；<strong>相等的比</strong>（前項和後項同乘或同除以同一個數，0 除外）與<strong>最簡整數比</strong>；<strong>照比例配</strong>；<strong>按比分配</strong>。<strong>約分與最大公因數</strong>是五年級「通分披薩屋」與六年級<strong>上一課「短除法魔法梯」</strong>教的；<strong>百分率</strong>是<strong>五年級「百分百大挑戰」</strong>教的；小數與分數的比、成正比、速率不在這一課。前項和後項都是 <strong>1 到 30</strong> 的整數；同乘或同除的數也是整數，同除時兩項都要除得盡；總量在 100 以內而且剛好分得完。',
+      eb1:'第一部分', eb2:'第二部分', eb3:'第三部分', eb4:'第四部分', eb5:'最後',
+
+      s1h2:'比的寫法與比值',
+      d1:'兩個量並排寫成 <strong>前項 : 後項</strong>，讀作「前項比後項」。<strong>先說的寫前面</strong>；前項和後項不一樣時，順序換了就是不同的比（2 : 3 和 3 : 2 不一樣）。',
+      d2:'<strong>比值 ＝ 前項 ÷ 後項</strong>，寫成最簡分數；除得盡就寫整數。比值告訴你<strong>前項是後項的幾倍</strong>。',
+      d3:'比<strong>不是</strong>「占全部的幾分之幾」：2 : 3 的前項占全部的 2/5，比值卻是 2/3 —— 比的是兩個量<strong>彼此</strong>。',
+      f1:'比值 ＝ 前項 ÷ 後項<span class="cond">6 : 4 的比值是 6 ÷ 4 ＝ 3/2 · 4 : 6 的比值是 4 ÷ 6 ＝ 2/3 · 5 : 5 的比值是 1</span>',
+      vth0:'比', vth1:'前項', vth2:'後項', vth3:'比值', vth4:'意思',
+      vMeanBig:'前項比後項多', vMeanSmall:'前項比後項少', vMeanSame:'前項和後項一樣多',
+
+      s2h2:'相等的比與最簡整數比',
+      f2:'前項和後項同乘或同除以同一個數（0 除外）→ 相等的比，比值不變<span class="cond">除到前項和後項互質 → 最簡整數比 · 一次到底：同除以最大公因數</span>',
+      lab1:'12 : 18：同除以 2 得 6 : 9，再同除以 3 得 2 : 3；一次到底就是同除以最大公因數 6',
+      lab2:'15 : 10：同除以 5 得 3 : 2，3 和 2 互質，停',
+      p2why:'<strong>為什麼</strong>：比值是前項 ÷ 後項，前項和後項同乘（或同除以）同一個數，商不變 —— 12 ÷ 18 和 2 ÷ 3 都是 2/3。所以判斷兩個比相不相等，<strong>算比值</strong>就知道；也可以<strong>交叉相乘</strong>：2 × 18 ＝ 36，3 × 12 ＝ 36，一樣就相等。',
+      cth0:'這句話', cth1:'對不對', cth2:'例子',
+      crows:[
+        ['比值是前項除以後項', '<strong>對</strong>', '6 : 4 的比值是 6 ÷ 4 ＝ 3/2'],
+        ['前項和後項同乘一個不是 0 的數，比值不變', '<strong>對</strong>', '2 : 3 和 4 : 6 的比值都是 2/3'],
+        ['最簡整數比的前項和後項互質', '<strong>對</strong>', '12 : 18 化成 2 : 3，2 和 3 的最大公因數是 1'],
+        ['比值是 1 表示前項和後項一樣多', '<strong>對</strong>', '5 : 5 的比值是 5 ÷ 5 ＝ 1'],
+        ['前項和後項同加一個數，比值不變', '<strong>錯</strong>', '2 : 3 同加 2 變成 4 : 5，比值從 2/3 變成 4/5'],
+        ['把比的前項和後項交換，還是同一個比', '<strong>錯</strong>', '5 : 3 的比值是 5/3，3 : 5 的比值是 3/5'],
+        ['比值一定比 1 小', '<strong>錯</strong>', '5 : 3 的比值是 5/3，比 1 大'],
+        ['比值就是前項占全部的幾分之幾', '<strong>錯</strong>', '2 : 3 的比值是 2/3，前項占全部的卻是 2/5']
+      ],
+
+      s3h2:'兩種應用題',
+      f3:'照比例配：先算幾倍，另一邊乘同樣的倍數 · 按比分配：先算一共幾份，總量 ÷ 份數是一份',
+      ath0:'題目在講什麼', ath1:'怎麼做', ath2:'例子',
+      arows:[
+        ['<strong>照比例配</strong>：知道比、知道其中一邊的量，問另一邊', '已知的量 ÷ 它的項 ＝ 幾倍；另一項 × 同樣的倍數', '藍 : 白 是 2 : 3，藍 6 杯：6 ÷ 2 ＝ 3，白 3 × 3 ＝ 9 杯'],
+        ['<strong>按比分配</strong>：知道比、知道總量，問兩邊各多少', '前項 ＋ 後項 ＝ 幾份；總量 ÷ 份數 ＝ 一份；各項 × 一份', '20 顆照 3 : 2 分：3 ＋ 2 ＝ 5 份，20 ÷ 5 ＝ 4，得 12 顆和 8 顆'],
+        ['<strong>比值已知</strong>：知道比值和一項，問另一項', '最簡分數的分子和分母就是對應的比（3/4 → 3 : 4；比值是整數 2 就當 2/1，得 2 : 1）；再照比例配', '比值 3/4、前項 9，9 ÷ 3 ＝ 3，後項 4 × 3 ＝ 12']
+      ],
+      anote:'💬 兩種題目都要<strong>驗算</strong>：照比例配完，新的比要和原來的比<strong>比值一樣</strong>（2 : 3 ＝ 6 : 9）；按比分配完，兩邊<strong>加起來要等於總量</strong>，兩邊的比要<strong>和原來的比相等</strong>（12 : 8 ＝ 3 : 2）。',
+
+      s4h2:'常用的比（算出來的，不是背的）',
+      pth0:'比', pth1:'同除以', pth2:'最簡整數比', pth3:'比值',
+      already:'（已經是最簡）',
+
+      s5h2:'最容易錯的六件事',
+      xth0:'很容易這樣想', xth1:'其實是',
+      xrows:[
+        ['2 : 3 和 3 : 2 一樣，反正數字都一樣', '順序不能換：2 : 3 的比值是 2/3，3 : 2 的比值是 3/2，是<strong>兩個不同的比</strong>'],
+        ['比值是「小的數除以大的數」', '比值是<strong>前項 ÷ 後項</strong>：5 : 3 的比值是 5/3，比 1 大也沒關係'],
+        ['前項和後項一起加 2，比不會變', '前項和後項不一樣時，同加一個數比就變了：2 : 3 加 2 變成 4 : 5，比值從 2/3 變成 4/5；要保證比不變，用<strong>同乘或同除</strong>'],
+        ['藍多了 4 杯，白也加 4 杯就好', '照比例要用<strong>乘法</strong>：藍從 2 變 6 是 3 倍，白 3 × 3 ＝ 9，不是 3 ＋ 4 ＝ 7'],
+        ['20 顆糖照 3 : 2 分，哥哥拿 3 顆', '比裡的數字是<strong>份數</strong>：一共 5 份，一份 20 ÷ 5 ＝ 4 顆，哥哥 3 份是 12 顆'],
+        ['2 : 3 的前項占全部的 2/3', '2 : 3 一共 5 份，前項占全部的 <strong>2/5</strong>；2/3 是比值（前項是後項的 2/3 倍）']
+      ],
+      warn:'⚠️ 一句話收尾：<strong>前項 : 後項，順序不能換；比值是前項 ÷ 後項；前項和後項同乘或同除以同一個數（0 除外），比不變。</strong>',
+      printBtn:'🖨️ 印出這張速查卡',
+      foot:'回到<a class="home" href="index.html">課程</a>或去玩<a class="home" href="review.html">複習挑戰</a>。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Cheat Sheet — The Ratio Paint Studio', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (this page)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🗂️ Cheat sheet: The Ratio Paint Studio',
+      sub:'How to write a ratio, work out its value, spot equal ratios, and solve the two kinds of problems',
+      scopeNote:'This card covers five things: <strong>writing a ratio</strong> (first term : second term, the order matters); the <strong>ratio value</strong> (first term ÷ second term); <strong>equal ratios</strong> (multiply or divide both terms by the same number, never 0) and the <strong>simplest whole-number ratio</strong>; <strong>scaling a mix</strong>; <strong>sharing a total in a ratio</strong>. <strong>Simplifying fractions and the GCF</strong> are the grade-5 fraction-add lesson and <strong>the previous grade-6 lesson (the short-division ladder)</strong>; <strong>percentages</strong> are the <strong>grade-5 percent lesson</strong>; ratios with decimals or fractions, direct proportion and speed are not in this lesson. Both terms are whole numbers <strong>from 1 to 30</strong>; every multiplier or divisor used is a whole number, and a divisor must divide both terms exactly; totals stay within 100 and always split exactly.',
+      eb1:'Part 1', eb2:'Part 2', eb3:'Part 3', eb4:'Part 4', eb5:'Finally',
+
+      s1h2:'Writing a ratio, and its value',
+      d1:'Two amounts side by side are written <strong>first term : second term</strong>, read “first term to second term”. <strong>The amount named first goes in front</strong>; when the two terms differ, swapping the order gives a different ratio (2 : 3 and 3 : 2 are not the same).',
+      d2:'<strong>Value = first term ÷ second term</strong>, as a fraction in simplest form, or a whole number if it divides exactly. The value tells you <strong>how many times the second term the first term is</strong>.',
+      d3:'A ratio is <strong>not</strong> “what fraction of the whole”: in 2 : 3 the first term is 2/5 of the whole, yet the value is 2/3 — a ratio compares the two amounts <strong>with each other</strong>.',
+      f1:'value = first term ÷ second term<span class="cond">the value of 6 : 4 is 6 ÷ 4 = 3/2 · the value of 4 : 6 is 4 ÷ 6 = 2/3 · the value of 5 : 5 is 1</span>',
+      vth0:'Ratio', vth1:'First term', vth2:'Second term', vth3:'Value', vth4:'Meaning',
+      vMeanBig:'the first term is bigger', vMeanSmall:'the first term is smaller', vMeanSame:'the two terms are the same',
+
+      s2h2:'Equal ratios and the simplest whole-number ratio',
+      f2:'multiply or divide both terms by the same number (never 0) → an equal ratio, same value<span class="cond">divide until the terms are coprime → the simplest whole-number ratio · in one step: divide both by the GCF</span>',
+      lab1:'12 : 18: divide both by 2 to get 6 : 9, then by 3 to get 2 : 3; in one step, divide both by the GCF 6',
+      lab2:'15 : 10: divide both by 5 to get 3 : 2; 3 and 2 are coprime, so stop',
+      p2why:'<strong>Why</strong>: the value is first term ÷ second term, and multiplying (or dividing) both terms by the same number leaves the quotient unchanged — 12 ÷ 18 and 2 ÷ 3 are both 2/3. So to decide whether two ratios are equal, <strong>compare their values</strong>; or <strong>cross-multiply</strong>: 2 × 18 = 36 and 3 × 12 = 36, the same, so they are equal.',
+      cth0:'Statement', cth1:'True?', cth2:'Example',
+      crows:[
+        ['The value of a ratio is the first term divided by the second', '<strong>True</strong>', 'the value of 6 : 4 is 6 ÷ 4 = 3/2'],
+        ['Multiplying both terms by the same non-zero number keeps the value', '<strong>True</strong>', '2 : 3 and 4 : 6 both have value 2/3'],
+        ['In the simplest whole-number ratio the two terms are coprime', '<strong>True</strong>', '12 : 18 becomes 2 : 3, and the GCF of 2 and 3 is 1'],
+        ['A value of 1 means the two terms are equal', '<strong>True</strong>', 'the value of 5 : 5 is 5 ÷ 5 = 1'],
+        ['Adding the same number to both terms keeps the value', '<strong>False</strong>', 'adding 2 to 2 : 3 gives 4 : 5, and the value changes from 2/3 to 4/5'],
+        ['Swapping the two terms gives the same ratio', '<strong>False</strong>', '5 : 3 has value 5/3, 3 : 5 has value 3/5'],
+        ['A ratio value is always less than 1', '<strong>False</strong>', '5 : 3 has value 5/3, more than 1'],
+        ['The value is the fraction of the whole that the first term makes', '<strong>False</strong>', 'the value of 2 : 3 is 2/3, but the first term is 2/5 of the whole']
+      ],
+
+      s3h2:'The two kinds of problems',
+      f3:'scaling: find the multiple, then multiply the other side by the same · sharing: count the parts, then total ÷ parts is one part',
+      ath0:'What the problem describes', ath1:'What to do', ath2:'Example',
+      arows:[
+        ['<strong>Scaling a mix</strong>: the ratio and one amount are known, the other is asked', 'known amount ÷ its term = the multiple; other term × the same multiple', 'blue : white is 2 : 3 and blue is 6 cups: 6 ÷ 2 = 3, so white is 3 × 3 = 9 cups'],
+        ['<strong>Sharing in a ratio</strong>: the ratio and the total are known, both shares are asked', 'first term + second term = parts; total ÷ parts = one part; each term × one part', '20 sweets in the ratio 3 : 2: 3 + 2 = 5 parts, 20 ÷ 5 = 4, giving 12 and 8'],
+        ['<strong>Value given</strong>: the value and one term are known, the other term is asked', 'the numerator and denominator of the simplest fraction give the matching ratio (3/4 → 3 : 4; a whole-number value 2 is 2/1, giving 2 : 1); then scale it', 'value 3/4, first term 9: 9 ÷ 3 = 3, so the second term is 4 × 3 = 12']
+      ],
+      anote:'💬 <strong>Check</strong> both kinds: after scaling, the new ratio must have <strong>the same value</strong> as the original (2 : 3 = 6 : 9); after sharing, the two shares must <strong>add up to the total</strong> and their ratio must <strong>be equal to the original</strong> (12 : 8 = 3 : 2).',
+
+      s4h2:'Handy ratios (computed, not memorised)',
+      pth0:'Ratio', pth1:'Divide both by', pth2:'Simplest form', pth3:'Value',
+      already:'(already simplest)',
+
+      s5h2:'The six easiest mistakes to make',
+      xth0:'Easy to think', xth1:'What is actually true',
+      xrows:[
+        ['2 : 3 and 3 : 2 are the same — same numbers', 'The order matters: 2 : 3 has value 2/3 and 3 : 2 has value 3/2, so they are <strong>two different ratios</strong>'],
+        ['The value is “the smaller number divided by the bigger”', 'The value is <strong>first term ÷ second term</strong>: 5 : 3 has value 5/3, and a value above 1 is fine'],
+        ['Add 2 to both terms and the ratio stays the same', 'When the terms differ, adding the same number changes the ratio: 2 : 3 plus 2 is 4 : 5, and the value changes from 2/3 to 4/5; <strong>multiplying or dividing</strong> both terms is what keeps it equal'],
+        ['Blue got 4 more cups, so give white 4 more too', 'Scaling uses <strong>multiplication</strong>: blue went from 2 to 6, which is 3 times, so white is 3 × 3 = 9, not 3 + 4 = 7'],
+        ['20 sweets in the ratio 3 : 2 — the big brother gets 3', 'The numbers in a ratio are <strong>parts</strong>: 5 parts in all, one part is 20 ÷ 5 = 4 sweets, and 3 parts are 12'],
+        ['In 2 : 3 the first term is 2/3 of the whole', '2 : 3 makes 5 parts, so the first term is <strong>2/5</strong> of the whole; 2/3 is the value (the first term is 2/3 of the second)']
+      ],
+      warn:'⚠️ One line to finish on: <strong>first term : second term, and the order matters; the value is first term ÷ second term; multiply or divide both terms by the same number (never 0) and the ratio stays equal.</strong>',
+      printBtn:'🖨️ Print this cheat sheet',
+      foot:'Back to the <a class="home" href="index.html">lesson</a>, or try the <a class="home" href="review.html">review challenge</a>.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  /* 表格一律先清空再渲染（瀏覽器存下來的快照會把渲染結果烤進 HTML）。 */
+  function fillTable(id, rows){
+    var tb = document.getElementById(id);
+    tb.textContent = '';
+    rows.forEach(function(r){
+      var tr = document.createElement('tr');
+      r.forEach(function(cell, ci){
+        var td = document.createElement('td');
+        if (ci === 0) td.className = 'k';
+        td.innerHTML = cell;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  }
+
+  /* 比值表、常用比表和兩張階梯都是**算出來**的（和課程頁同一套定義），不是手打的。 */
+  function gcd(a, b){ while (b){ var t = a % b; a = b; b = t; } return a; }
+  function ratioText(a, b){ return a + ' : ' + b; }
+  function valueText(a, b){ var g = gcd(a, b), n = a / g, d = b / g; return d === 1 ? String(n) : n + '/' + d; }
+  function isPrime(n){ if (n < 2) return false; for (var p = 2; p * p <= n; p++) if (n % p === 0) return false; return true; }
+  function commonPrime(a, b){ for (var p = 2; p <= Math.min(a, b); p++) if (isPrime(p) && a % p === 0 && b % p === 0) return p; return null; }
+  function reduceSteps(a, b){
+    var rows = [], x = a, y = b, p;
+    while ((p = commonPrime(x, y)) !== null){ rows.push({ p:p, qa:x / p, qb:y / p }); x = x / p; y = y / p; }
+    return { a:a, b:b, rows:rows, bottom:[x, y], g:gcd(a, b) };
+  }
+  function drawSteps(host, R){
+    host.textContent = '';
+    var op0 = document.createElement('div'); op0.className = 'op'; op0.textContent = '';
+    var r0 = document.createElement('div'); r0.className = 'rt' + (R.rows.length === 0 ? ' hl' : ''); r0.textContent = ratioText(R.a, R.b);
+    host.appendChild(op0); host.appendChild(r0);
+    R.rows.forEach(function(row, i){
+      var op = document.createElement('div'); op.className = 'op'; op.textContent = '÷ ' + row.p;
+      var rt = document.createElement('div'); rt.className = 'rt' + (i === R.rows.length - 1 ? ' hl' : ''); rt.textContent = ratioText(row.qa, row.qb);
+      host.appendChild(op); host.appendChild(rt);
+    });
+  }
+  var STEP_EXAMPLES = [[12, 18], [15, 10]];
+  var VALUE_TABLE = [[6, 4], [3, 5], [8, 2], [5, 5], [2, 3], [3, 2]];
+  var PAIR_TABLE = [[2, 4], [4, 6], [6, 9], [12, 18], [8, 12], [15, 10], [9, 6], [10, 4], [12, 16], [2, 3], [5, 3]];
+  function fillValues(){
+    var d = L(), tb = document.getElementById('vbody');
+    tb.textContent = '';
+    VALUE_TABLE.forEach(function(pr){
+      var a = pr[0], b = pr[1];
+      var tr = document.createElement('tr');
+      [ratioText(a, b), String(a), String(b), valueText(a, b), a > b ? d.vMeanBig : (a < b ? d.vMeanSmall : d.vMeanSame)].forEach(function(cell, ci){
+        var td = document.createElement('td');
+        if (ci === 0) td.className = 'k';
+        td.textContent = cell;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  }
+  function fillPairs(){
+    var d = L(), tb = document.getElementById('pbody');
+    tb.textContent = '';
+    PAIR_TABLE.forEach(function(pr){
+      var a = pr[0], b = pr[1], g = gcd(a, b);
+      var tr = document.createElement('tr');
+      [ratioText(a, b), g === 1 ? d.already : String(g), ratioText(a / g, b / g), valueText(a, b)].forEach(function(cell, ci){
+        var td = document.createElement('td');
+        if (ci === 0) td.className = 'k';
+        td.textContent = cell;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  }
+
+  function renderAll(){
+    var d = L();
+    applyStatic();
+    fillValues();
+    fillTable('cbody', d.crows);
+    fillTable('abody', d.arows);
+    fillTable('xbody', d.xrows);
+    fillPairs();
+    drawSteps(document.getElementById('lad1'), reduceSteps(STEP_EXAMPLES[0][0], STEP_EXAMPLES[0][1]));
+    drawSteps(document.getElementById('lad2'), reduceSteps(STEP_EXAMPLES[1][0], STEP_EXAMPLES[1][1]));
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
