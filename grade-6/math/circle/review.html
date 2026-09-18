@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 圓周率工作坊</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .result{margin-top:22px;background:var(--orange-soft);border-radius:18px;padding:18px;display:none}
+  .result.on{display:block}
+  .result .line{font-size:18px;font-weight:700}
+  .result .links{margin-top:10px;font-size:15px}
+  .result .links a{color:var(--blue)}
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：圓周率工作坊</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題三年級的半徑與直徑，和一題五年級的直線圖形面積。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+  /* ⚠️ make() 一律不可以回 null：tools/simgen.js 每一批只呼叫 make() 一次、不重試。
+     所有抽樣池都事先過濾好，抽到就一定做得出四個選項。 */
+
+  /* --- 這一課的工具（和 index.html 同一套定義：所有量都用百分之一的整數存）。 --- */
+  var PI_H = 314;          /* 圓周率 3.14 */
+  var R_MAX = 12;          /* 半徑的上限（公分） */
+  var VAL_MAX = 200000;    /* 選項裡任何一個量的上限（百分之一）＝ 2000 */
+  function hText(h){
+    var w = Math.floor(h / 100), f = h % 100;
+    if (f === 0) return String(w);
+    if (f % 10 === 0) return w + '.' + (f / 10);
+    return w + '.' + (f < 10 ? '0' + f : String(f));
+  }
+  function circH(r){ return 2 * r * PI_H; }
+  function areaH(r){ return r * r * PI_H; }
+
+  /* --- 選項的編碼：`百分之一的值|單位代號`。單位代號 cm 公分、sq 平方公分、x 倍。
+         這樣「31.4 公分」和「31.4 平方公分」是兩個不同的值，去重才擋得住。 --- */
+  function tok(h, u){ return h + '|' + u; }
+  function tokVal(t){ return Number(String(t).split('|')[0]); }
+  function tokUnit(t){ return String(t).split('|')[1]; }
+  function plEn(n, w){
+    if (String(n) === '1') return n + ' ' + w;
+    return n + ' ' + w + (/(s|x|z|ch|sh)$/.test(w) ? 'es' : 's');
+  }
+  var UNIT_WORD = { zh:{ cm:'公分', sq:'平方公分', x:'倍' }, en:{ cm:'centimetre', sq:'square centimetre', x:'time' } };
+  function tokText(t, lang){
+    var v = hText(tokVal(t)), u = tokUnit(t);
+    return lang === 'zh' ? v + ' ' + UNIT_WORD.zh[u] : plEn(v, UNIT_WORD.en[u]);
+  }
+
+  /* 從候選裡挑三個**值互不相同**、也和正解不同的誘答；候選不夠就用 fallbacks 補（同樣去重）。
+     avoid 是「不可以出現的編碼」（例如抄題幹的數）。擠到不夠時少回傳（simgen 的選項數檢查會響，不會卡死）。 */
+  function pickWrongs(correct, cands, fallbacks, avoid){
+    var seen = {}, out = [];
+    seen[correct] = 1;
+    (avoid || []).forEach(function(k){ seen[k] = 1; });
+    cands.concat(fallbacks).forEach(function(c){
+      if (out.length >= 3 || c === null || c === undefined) return;
+      var v = tokVal(c);
+      if (!isFinite(v) || v < 1 || v > VAL_MAX || v !== Math.floor(v)) return;
+      if (seen[c]) return;
+      seen[c] = 1; out.push(c);
+    });
+    return out;
+  }
+  function optsOf(correct, wrongs){
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+  /* 保底：值長得像答案的鄰居（同一個單位，± 一個圓周率、加倍、加 1） */
+  function nearFallbacks(h, u){
+    var out = [tok(h + PI_H, u), tok(h - PI_H, u), tok(2 * h, u), tok(h + 100, u), tok(h + 2 * PI_H, u)];
+    if (h % 2 === 0) out.push(tok(h / 2, u));
+    return out;
+  }
+
+  /* --- 抽樣池 --- */
+  /* ⚠️ 半徑 2 要排除：那時候圓周長和面積剛好是同一個數（12.56 公分 / 12.56 平方公分），
+     四個選項裡會出現兩個一模一樣的數字只差單位，讀起來像在玩文字遊戲。直徑 4 同理。 */
+  var POOL_R = [];          /* 半徑 3 ~ 12 公分 */
+  (function(){ for (var r = 3; r <= R_MAX; r++) POOL_R.push(r); })();
+  var POOL_D = [];          /* 直徑：偶數 6 ~ 24 公分（半徑才會是整數） */
+  (function(){ for (var d = 6; d <= 2 * R_MAX; d += 2) POOL_D.push(d); })();
+  var POOL_K = [2, 3];      /* 半徑變成幾倍 */
+
+  /* --- 應用題的情境。circ 是沿著邊走、area 是把裡面填滿。 --- */
+  var SCEN = {
+    zh: {
+      lid:   { what:'餅乾盒蓋', ask:'要沿著蓋子的<strong>邊緣</strong>貼一圈緞帶，緞帶至少要多長？' },
+      track: { what:'圓形跑道', ask:'沿著跑道的<strong>邊緣</strong>跑一圈，跑了多遠？' },
+      pot:   { what:'圓形花盆口', ask:'要沿著盆口的<strong>邊緣</strong>繞一圈鐵絲，鐵絲至少要多長？' },
+      mat:   { what:'圓形杯墊', ask:'<strong>整片</strong>都要用布鋪滿，需要多少布？' },
+      pizza: { what:'圓形披薩', ask:'<strong>整個表面</strong>都要鋪滿起司，要鋪多大一片？' },
+      sign:  { what:'圓形招牌', ask:'<strong>整面</strong>都要塗上油漆，要塗多大一片？' }
+    },
+    en: {
+      lid:   { what:'the lid of a biscuit tin', ask:'A ribbon is glued right round the <strong>rim of the lid</strong>. How long does the ribbon have to be?' },
+      track: { what:'a circular track', ask:'Running right round the <strong>edge</strong> of the track, how far is that?' },
+      pot:   { what:'the mouth of a round flowerpot', ask:'A wire is wound right round the <strong>rim</strong>. How long does the wire have to be?' },
+      mat:   { what:'a round coaster', ask:'It is to be covered <strong>all over</strong> with cloth. How much cloth is needed?' },
+      pizza: { what:'a round pizza', ask:'The <strong>whole top</strong> is to be covered with cheese. How large a patch is that?' },
+      sign:  { what:'a round sign', ask:'The <strong>whole face</strong> is to be painted. How large a patch is that?' }
+    }
+  };
+  var CIRC_IDS = ['lid', 'track', 'pot'];
+  var AREA_IDS = ['mat', 'pizza', 'sign'];
+
+  /* --- 「哪一個問題要算面積」的句庫：三句問周長、一句問面積。 --- */
+  var ASKS = {
+    circ: {
+      fence:  { zh:'圓形花圃要圍一圈籬笆，籬笆要多長', en:'How long a fence is needed right round a round flower bed' },
+      edge:   { zh:'圓形桌子的邊緣要貼一圈防撞條，防撞條要多長', en:'How long an edging strip is needed right round a round table' },
+      lap:    { zh:'沿著圓形水池走一圈，走了多遠', en:'How far it is to walk right round a round pond' },
+      wheel:  { zh:'車輪滾一圈，前進了多遠', en:'How far a wheel moves forward in one turn' }
+    },
+    area: {
+      cloth:  { zh:'圓形桌子要鋪滿一張桌巾，桌巾要多大', en:'How large a cloth is needed to cover a round table' },
+      paint:  { zh:'圓形招牌整面要塗油漆，要塗多大一片', en:'How large a patch of paint covers the whole face of a round sign' },
+      lawn:   { zh:'圓形草地要鋪滿草皮，草皮要多大', en:'How much turf is needed to cover a round lawn' },
+      glass:  { zh:'圓形桌面要蓋一塊玻璃，玻璃要多大', en:'How large a sheet of glass is needed to cover a round tabletop' }
+    }
+  };
+  var ASK_CIRC_KEYS = Object.keys(ASKS.circ);
+  var ASK_AREA_KEYS = Object.keys(ASKS.area);
+
+  /* --- 「哪一句話是對的」的句庫。每一句的真假寫死在這裡（設定檔另有一份獨立的真值表）。 --- */
+  var STATEMENTS = {
+    circFormula:   { truth:true,  zh:'圓周長 ＝ 直徑 × 3.14', en:'Circumference ＝ diameter × 3.14' },
+    areaFormula:   { truth:true,  zh:'圓面積 ＝ 半徑 × 半徑 × 3.14', en:'Area ＝ radius × radius × 3.14' },
+    piFixed:       { truth:true,  zh:'不管圓多大，圓周長 ÷ 直徑 都是同一個數', en:'Circumference ÷ diameter is the same number for every circle' },
+    areaUnit:      { truth:true,  zh:'面積的單位是平方公分，周長的單位是公分', en:'An area is in square centimetres and a perimeter is in centimetres' },
+    halfDiameter:  { truth:true,  zh:'算面積的時候，給的是直徑要先除以 2', en:'To work out an area from a diameter, halve the diameter first' },
+    doubleArea:    { truth:true,  zh:'半徑變成 2 倍，面積會變成 4 倍', en:'Doubling the radius makes the area 4 times as big' },
+    piGrows:       { truth:false, zh:'圓愈大，圓周率就愈大', en:'The bigger the circle, the bigger pi gets' },
+    radiusTimesPi: { truth:false, zh:'圓周長 ＝ 半徑 × 3.14', en:'Circumference ＝ radius × 3.14' },
+    diameterArea:  { truth:false, zh:'圓面積 ＝ 直徑 × 直徑 × 3.14', en:'Area ＝ diameter × diameter × 3.14' },
+    sameUnit:      { truth:false, zh:'圓面積的單位也是公分', en:'An area is measured in centimetres too' },
+    doubleBoth:    { truth:false, zh:'半徑變成 2 倍，面積也只變成 2 倍', en:'Doubling the radius only doubles the area' },
+    piExact:       { truth:false, zh:'圓周率剛剛好等於 3.14，沒有多也沒有少', en:'Pi is exactly 3.14, no more and no less' }
+  };
+  var TRUE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return STATEMENTS[k].truth; });
+  var FALSE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return !STATEMENTS[k].truth; });
+
+  /* --- 交錯題（五年級）的直線圖形 --- */
+  var RECT_KINDS = ['rect', 'tri'];
+
+  var GENS = [
+    /* 1. 半徑求圓周長。誘答：半徑只乘一次、面積、忘了乘圓周率。 */
+    { id:'circFromR', cat:'circ',
+      make:function(used){
+        var r = pickUnused(POOL_R.slice(), used);
+        var correct = tok(circH(r), 'cm');
+        var cands = [tok(r * PI_H, 'cm'), tok(areaH(r), 'sq'), tok(2 * r * 100, 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(circH(r), 'cm'), [tok(r * 100, 'cm')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '一個圓的<strong>半徑</strong>是 <strong>' + d.r + ' 公分</strong>，<strong>圓周長</strong>是多少？'
+                              : 'A circle has a <strong>radius</strong> of <strong>' + plEn(d.r, 'centimetre') + '</strong>. What is its <strong>circumference</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '先把半徑變成直徑：' + d.r + ' × 2 ＝ ' + (2 * d.r) + '，再乘以圓周率：' + (2 * d.r) + ' × 3.14 ＝ ' + hText(circH(d.r)) + '，單位是公分。半徑只乘一次是 ' + d.r + ' × 3.14 ＝ ' + hText(d.r * PI_H) + '，只有一半；' + hText(areaH(d.r)) + ' 是這個圓的面積，單位也不一樣。'
+            : 'Turn the radius into the diameter first, ' + d.r + ' × 2 ＝ ' + (2 * d.r) + ', then multiply by pi: ' + (2 * d.r) + ' × 3.14 ＝ ' + hText(circH(d.r)) + ', in centimetres. Multiplying the radius once gives ' + d.r + ' × 3.14 ＝ ' + hText(d.r * PI_H) + ', only half as much; ' + hText(areaH(d.r)) + ' is this circle’s area, with a different unit as well.'
+        };
+      } },
+
+    /* 2. 直徑求圓周長。誘答：用半徑、面積、多乘一次 2。 */
+    { id:'circFromD', cat:'circ',
+      make:function(used){
+        var dm = pickUnused(POOL_D.slice(), used), r = dm / 2;
+        var correct = tok(dm * PI_H, 'cm');
+        var cands = [tok(r * PI_H, 'cm'), tok(areaH(r), 'sq'), tok(2 * dm * PI_H, 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(dm * PI_H, 'cm'), [tok(dm * 100, 'cm')]);
+        var o = optsOf(correct, wrongs);
+        return { d:dm, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var r = d.d / 2;
+        return {
+          stem: lang === 'zh' ? '一個圓的<strong>直徑</strong>是 <strong>' + d.d + ' 公分</strong>，<strong>圓周長</strong>是多少？'
+                              : 'A circle has a <strong>diameter</strong> of <strong>' + plEn(d.d, 'centimetre') + '</strong>. What is its <strong>circumference</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '直徑已經給了，一步就好：' + d.d + ' × 3.14 ＝ ' + hText(d.d * PI_H) + '，單位是公分。拿半徑去乘是 ' + r + ' × 3.14 ＝ ' + hText(r * PI_H) + '，只有一半；' + hText(areaH(r)) + ' 是面積，不是周長。'
+            : 'The diameter is already given, so it is one step: ' + d.d + ' × 3.14 ＝ ' + hText(d.d * PI_H) + ', in centimetres. Using the radius gives ' + r + ' × 3.14 ＝ ' + hText(r * PI_H) + ', only half as much; ' + hText(areaH(r)) + ' is the area, not the perimeter.'
+        };
+      } },
+
+    /* 3. 圓周長求直徑。誘答：半徑、除以 2、乘以 2。 */
+    { id:'dFromCirc', cat:'circ',
+      make:function(used){
+        var dm = pickUnused(POOL_D.slice(), used), c = dm * PI_H;
+        var correct = tok(dm * 100, 'cm');
+        var cands = [tok(dm * 50, 'cm'), tok(c / 2, 'cm'), tok(2 * dm * 100, 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(dm * 100, 'cm'), [tok(c, 'cm')]);
+        var o = optsOf(correct, wrongs);
+        return { d:dm, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var c = d.d * PI_H;
+        return {
+          stem: lang === 'zh' ? '一個圓的<strong>圓周長</strong>是 <strong>' + hText(c) + ' 公分</strong>，<strong>直徑</strong>是多少？'
+                              : 'A circle has a <strong>circumference</strong> of <strong>' + plEn(hText(c), 'centimetre') + '</strong>. What is its <strong>diameter</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '圓周長是直徑的 3.14 倍，倒過來就除以 3.14：' + hText(c) + ' ÷ 3.14 ＝ ' + d.d + '，單位是公分。驗算：' + d.d + ' × 3.14 ＝ ' + hText(c) + '，對了。' + (d.d / 2) + ' 是半徑，不是直徑。'
+            : 'A circumference is 3.14 diameters, so going backwards means dividing by 3.14: ' + hText(c) + ' ÷ 3.14 ＝ ' + d.d + ', in centimetres. Check: ' + d.d + ' × 3.14 ＝ ' + hText(c) + '. ' + (d.d / 2) + ' is the radius, not the diameter.'
+        };
+      } },
+
+    /* 4. 半徑求面積。誘答：周長、半徑只乘一次、把直徑當半徑。 */
+    { id:'areaFromR', cat:'area',
+      make:function(used){
+        var r = pickUnused(POOL_R.slice(), used);
+        var correct = tok(areaH(r), 'sq');
+        var cands = [tok(circH(r), 'cm'), tok(r * PI_H, 'sq'), tok(4 * r * r * PI_H, 'sq')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(areaH(r), 'sq'), [tok(r * 100, 'sq')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '一個圓的<strong>半徑</strong>是 <strong>' + d.r + ' 公分</strong>，<strong>面積</strong>是多少？'
+                              : 'A circle has a <strong>radius</strong> of <strong>' + plEn(d.r, 'centimetre') + '</strong>. What is its <strong>area</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '面積要用到半徑兩次：' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(areaH(d.r)) + '，單位是平方公分。' + hText(circH(d.r)) + ' 是圓周長，單位是公分；半徑只乘一次是 ' + d.r + ' × 3.14 ＝ ' + hText(d.r * PI_H) + '。'
+            : 'An area uses the radius twice: ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(areaH(d.r)) + ', in square centimetres. ' + hText(circH(d.r)) + ' is the circumference, measured in centimetres; multiplying the radius once gives ' + d.r + ' × 3.14 ＝ ' + hText(d.r * PI_H) + '.'
+        };
+      } },
+
+    /* 5. 直徑求面積。誘答：把直徑當半徑（4 倍）、周長、半徑只乘一次。 */
+    { id:'areaFromD', cat:'area',
+      make:function(used){
+        var dm = pickUnused(POOL_D.slice(), used), r = dm / 2;
+        var correct = tok(areaH(r), 'sq');
+        var cands = [tok(dm * dm * PI_H, 'sq'), tok(circH(r), 'cm'), tok(r * PI_H, 'sq')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(areaH(r), 'sq'), [tok(dm * 100, 'sq')]);
+        var o = optsOf(correct, wrongs);
+        return { d:dm, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var r = d.d / 2;
+        return {
+          stem: lang === 'zh' ? '一個圓的<strong>直徑</strong>是 <strong>' + d.d + ' 公分</strong>，<strong>面積</strong>是多少？'
+                              : 'A circle has a <strong>diameter</strong> of <strong>' + plEn(d.d, 'centimetre') + '</strong>. What is its <strong>area</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '公式裡要的是半徑，所以先除以 2：' + d.d + ' ÷ 2 ＝ ' + r + '，再 ' + r + ' × ' + r + ' × 3.14 ＝ ' + hText(areaH(r)) + '，單位是平方公分。直接拿直徑相乘是 ' + d.d + ' × ' + d.d + ' × 3.14 ＝ ' + hText(d.d * d.d * PI_H) + '，剛好是正確答案的 4 倍。'
+            : 'The formula wants the radius, so halve it first: ' + d.d + ' ÷ 2 ＝ ' + r + ', then ' + r + ' × ' + r + ' × 3.14 ＝ ' + hText(areaH(r)) + ', in square centimetres. Multiplying the diameter by itself gives ' + d.d + ' × ' + d.d + ' × 3.14 ＝ ' + hText(d.d * d.d * PI_H) + ', exactly 4 times too much.'
+        };
+      } },
+
+    /* 6. 應用題（沿著邊走）→ 周長。誘答：面積、半徑只乘一次、直徑。 */
+    { id:'wordCirc', cat:'word',
+      make:function(used){
+        var r = pickUnused(POOL_R.slice(), used), id = pick(CIRC_IDS);
+        var correct = tok(circH(r), 'cm');
+        var cands = [tok(areaH(r), 'sq'), tok(r * PI_H, 'cm'), tok(2 * r * 100, 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(circH(r), 'cm'), [tok(r * 100, 'cm')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, id:id, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var s = SCEN[lang][d.id];
+        return {
+          stem: lang === 'zh' ? '一個' + s.what + '的半徑是 <strong>' + d.r + ' 公分</strong>。' + s.ask
+                              : 'There is ' + s.what + ' with a radius of <strong>' + plEn(d.r, 'centimetre') + '</strong>. ' + s.ask,
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '沿著邊走一圈就是<strong>周長</strong>：' + d.r + ' × 2 × 3.14 ＝ ' + hText(circH(d.r)) + '，單位是公分。' + hText(areaH(d.r)) + ' 平方公分是整個圓面的面積，那是把裡面填滿才會用到的量。'
+            : 'Travelling right round the edge is the <strong>perimeter</strong>: ' + d.r + ' × 2 × 3.14 ＝ ' + hText(circH(d.r)) + ', in centimetres. The ' + hText(areaH(d.r)) + ' square centimetres is the area of the whole face, which only a question about filling the inside would want.'
+        };
+      } },
+
+    /* 7. 應用題（把裡面填滿）→ 面積。誘答：周長、半徑只乘一次、把直徑當半徑。 */
+    { id:'wordArea', cat:'word',
+      make:function(used){
+        var r = pickUnused(POOL_R.slice(), used), id = pick(AREA_IDS);
+        var correct = tok(areaH(r), 'sq');
+        var cands = [tok(circH(r), 'cm'), tok(r * PI_H, 'sq'), tok(4 * r * r * PI_H, 'sq')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(areaH(r), 'sq'), [tok(r * 100, 'sq')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, id:id, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var s = SCEN[lang][d.id];
+        return {
+          stem: lang === 'zh' ? '一個' + s.what + '的半徑是 <strong>' + d.r + ' 公分</strong>。' + s.ask
+                              : 'There is ' + s.what + ' with a radius of <strong>' + plEn(d.r, 'centimetre') + '</strong>. ' + s.ask,
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '把裡面整片填滿就是<strong>面積</strong>：' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(areaH(d.r)) + '，單位是平方公分。' + hText(circH(d.r)) + ' 公分是繞邊緣一圈的長度，那是沿著邊走才會用到的量。'
+            : 'Covering the inside is the <strong>area</strong>: ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(areaH(d.r)) + ', in square centimetres. The ' + hText(circH(d.r)) + ' centimetres is the distance right round the edge, which only a question about travelling along the edge would want.'
+        };
+      } },
+
+    /* 8. 半徑變 k 倍，面積變幾倍（k × k 倍）。誘答 k 是刻意的迷思：周長才是 k 倍。 */
+    { id:'scaleArea', cat:'scale',
+      make:function(used){
+        var k = pickUnused(POOL_K.slice(), used);
+        /* ⚠️ 半徑不可以剛好等於 k 或 k × k：那時候正解（k × k 倍）會和題幹印出來的數字撞在一起。 */
+        var r = pick(POOL_R.filter(function(v){ return v * k <= R_MAX && v !== k && v !== k * k; }));
+        var correct = tok(k * k * 100, 'x');
+        var cands = [tok(k * 100, 'x'), tok(2 * k * 100, 'x'), tok(k * k * k * 100, 'x')];
+        var wrongs = pickWrongs(correct, cands,
+          [tok((k * k + 1) * 100, 'x'), tok((k * k + 2) * 100, 'x'), tok((k * k + 3) * 100, 'x')],
+          [tok(r * 100, 'x'), tok(k * r * 100, 'x')]);
+        var o = optsOf(correct, wrongs);
+        return { k:k, r:r, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var big = d.k * d.r;
+        return {
+          stem: lang === 'zh' ? '小圓的半徑是 <strong>' + d.r + ' 公分</strong>，大圓的半徑是 <strong>' + big + ' 公分</strong>。大圓的<strong>面積</strong>是小圓的幾倍？'
+                              : 'A small circle has a radius of <strong>' + plEn(d.r, 'centimetre') + '</strong> and a large one <strong>' + plEn(big, 'centimetre') + '</strong>. The large circle’s <strong>area</strong> is how many times the small one’s?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '小圓面積 ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(areaH(d.r)) + '，大圓面積 ' + big + ' × ' + big + ' × 3.14 ＝ ' + hText(big * big * PI_H) + '，相除 ' + hText(big * big * PI_H) + ' ÷ ' + hText(areaH(d.r)) + ' ＝ ' + (d.k * d.k) + '。半徑變成 ' + d.k + ' 倍，而面積要用到半徑兩次，所以是 ' + d.k + ' × ' + d.k + ' ＝ ' + (d.k * d.k) + ' 倍。周長才是 ' + d.k + ' 倍，因為周長只用到半徑一次。'
+            : 'The small area is ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(areaH(d.r)) + ' and the large one ' + big + ' × ' + big + ' × 3.14 ＝ ' + hText(big * big * PI_H) + ', so ' + hText(big * big * PI_H) + ' ÷ ' + hText(areaH(d.r)) + ' ＝ ' + (d.k * d.k) + '. The radius became ' + d.k + ' times as long and an area uses the radius twice, so the factor is ' + d.k + ' × ' + d.k + ' ＝ ' + (d.k * d.k) + '. The perimeter is the one that becomes ' + d.k + ' times as long, because it uses the radius once.'
+        };
+      } },
+
+    /* 9. 四個問題，只有一個要算面積（其餘三個都是周長）。 */
+    { id:'whichQuestion', cat:'concept',
+      make:function(used){
+        var a = pickUnused(ASK_AREA_KEYS.slice(), used);
+        var cs = shuffle(ASK_CIRC_KEYS).slice(0, 3);
+        var opts = shuffle(['area:' + a].concat(cs.map(function(k){ return 'circ:' + k; })));
+        return { a:a, opts:opts, ans:opts.indexOf('area:' + a) };
+      },
+      fmt:function(d, lang){
+        var textOf = function(key){
+          var p = key.split(':');
+          return ASKS[p[0]][p[1]][lang];
+        };
+        return {
+          stem: lang === 'zh' ? '下面四個問題，<strong>只有一個要算面積</strong>。是哪一個？' : 'Of these four questions, <strong>exactly one wants an area</strong>. Which?',
+          opts: d.opts.map(textOf), ans:d.ans,
+          /* ⚠️ 這裡不可以用引號把選項的句子夾起來：simgen 會檢查「解釋引用的提示詞必須真的在題幹裡」，
+             而那一句在**選項**上，不在題幹上。 */
+          why: lang === 'zh'
+            ? '要算面積的是 —— ' + textOf('area:' + d.a) + '。那一個是把整個圓面<strong>填滿</strong>，所以要算面積，單位是平方公分。另外三個都是<strong>沿著邊走一圈</strong>，要算周長，單位是公分。'
+            : 'The one that wants an area is: ' + textOf('area:' + d.a) + '. That one <strong>fills</strong> the whole face, so it is an area, measured in square centimetres. The other three all travel <strong>right round the edge</strong>, so they want a perimeter, measured in centimetres.'
+        };
+      } },
+
+    /* 10. 四句話裡只有一句是對的。 */
+    { id:'trueStatement', cat:'concept',
+      make:function(used){
+        var t = pickUnused(TRUE_KEYS.slice(), used);
+        var fs = shuffle(FALSE_KEYS).slice(0, 3);
+        var opts = shuffle([t].concat(fs));
+        return { t:t, opts:opts, ans:opts.indexOf(t) };
+      },
+      fmt:function(d, lang){
+        var WHY = {
+          zh:{ circFormula:'圓周長用的是直徑：直徑 10 公分的圓，10 × 3.14 ＝ 31.4。', areaFormula:'面積用的是半徑，而且要乘兩次：半徑 5 公分的圓，5 × 5 × 3.14 ＝ 78.5。',
+               piFixed:'圓變大的時候圓周長和直徑一起變大，相除的結果不變。', areaUnit:'面積數的是一格一格的正方形，所以是平方公分。',
+               halfDiameter:'直徑 10 公分的圓，半徑是 5，面積是 5 × 5 × 3.14 ＝ 78.5。', doubleArea:'半徑 3 的面積是 28.26，半徑 6 的面積是 113.04，剛好 4 倍。',
+               piGrows:'圓周率是固定的數，不會隨圓的大小改變。', radiusTimesPi:'那只有一半：半徑 5 的圓周長是 5 × 2 × 3.14 ＝ 31.4，不是 15.7。',
+               diameterArea:'那是 4 倍：直徑 10 的圓面積是 78.5，不是 314。', sameUnit:'面積的單位是平方公分。',
+               doubleBoth:'面積用到半徑兩次，所以是 4 倍不是 2 倍。', piExact:'圓周率是除不盡的小數，3.14 只是取到百分位的近似值。' },
+          en:{ circFormula:'A circumference uses the diameter: a circle of diameter 10 centimetres gives 10 × 3.14 ＝ 31.4.', areaFormula:'An area uses the radius, twice: a circle of radius 5 centimetres gives 5 × 5 × 3.14 ＝ 78.5.',
+               piFixed:'As a circle grows, its circumference and its diameter grow together, so the quotient stays put.', areaUnit:'An area counts little squares, so it is in square centimetres.',
+               halfDiameter:'A circle of diameter 10 centimetres has a radius of 5, and an area of 5 × 5 × 3.14 ＝ 78.5.', doubleArea:'Radius 3 gives an area of 28.26 and radius 6 gives 113.04, exactly 4 times as much.',
+               piGrows:'Pi is a fixed number and does not change with the size of the circle.', radiusTimesPi:'That is only half: a circle of radius 5 has a circumference of 5 × 2 × 3.14 ＝ 31.4, not 15.7.',
+               diameterArea:'That is 4 times too big: a circle of diameter 10 has an area of 78.5, not 314.', sameUnit:'An area is measured in square centimetres.',
+               doubleBoth:'An area uses the radius twice, so it becomes 4 times as big, not 2.', piExact:'Pi is a decimal that never ends; 3.14 is only the value rounded to hundredths.' }
+        }[lang];
+        var wrongs = d.opts.filter(function(k){ return k !== d.t; });
+        return {
+          stem: lang === 'zh' ? '下面四句話，<strong>只有一句是對的</strong>。是哪一句？' : 'Of these four sentences, <strong>exactly one is true</strong>. Which?',
+          opts: d.opts.map(function(k){ return STATEMENTS[k][lang]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '對的那一句是：' + STATEMENTS[d.t].zh + '。' + WHY[d.t] + '其他三句：' + wrongs.map(function(k){ return WHY[k]; }).join('')
+            : 'The true one is: ' + STATEMENTS[d.t].en + ' ' + WHY[d.t] + ' The other three: ' + wrongs.map(function(k){ return WHY[k]; }).join(' ')
+        };
+      } },
+
+    /* 11. 交錯題（三年級）：半徑與直徑互換。誘答：另一個方向、＋2、×4。 */
+    { id:'interRadius', cat:'inter',
+      make:function(used){
+        var toR = rand(2) === 0;
+        /* ⚠️ 兩個方向給的是**不同的量**，池子不可以共用：問半徑時給的是直徑（偶數 6 ~ 24），
+           問直徑時給的是半徑（3 ~ 12）。拿直徑池當半徑用的話，題幹會寫出「半徑 24 公分」，
+           超出這一課說的 1 ~ 12（codex 第一輪抓到）。 */
+        var given = toR ? pickUnused(POOL_D.slice(), used) : pickUnused(POOL_R.slice(), used);
+        var correct = toR ? tok(given * 50, 'cm') : tok(2 * given * 100, 'cm');
+        var cands = toR ? [tok(2 * given * 100, 'cm'), tok((given + 2) * 100, 'cm'), tok((given / 2 + 1) * 100, 'cm')]
+                        : [tok(4 * given * 100, 'cm'), tok((given + 2) * 100, 'cm'), tok((2 * given + 1) * 100, 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(tokVal(correct), 'cm'), [tok(given * 100, 'cm')]);
+        var o = optsOf(correct, wrongs);
+        return { d:given, toR:toR, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var r = d.d / 2;
+        if (d.toR) return {
+          stem: lang === 'zh' ? '（三年級）一個圓的<strong>直徑</strong>是 <strong>' + d.d + ' 公分</strong>，<strong>半徑</strong>是多少？'
+                              : '(Grade three) A circle has a <strong>diameter</strong> of <strong>' + plEn(d.d, 'centimetre') + '</strong>. What is its <strong>radius</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh' ? '直徑通過圓心，剛好是兩條半徑接起來，所以半徑是直徑的一半：' + d.d + ' ÷ 2 ＝ ' + r + '，單位是公分。'
+                             : 'A diameter runs through the centre and is exactly two radiuses end to end, so the radius is half of it: ' + d.d + ' ÷ 2 ＝ ' + r + ', in centimetres.'
+        };
+        return {
+          stem: lang === 'zh' ? '（三年級）一個圓的<strong>半徑</strong>是 <strong>' + d.d + ' 公分</strong>，<strong>直徑</strong>是多少？'
+                              : '(Grade three) A circle has a <strong>radius</strong> of <strong>' + plEn(d.d, 'centimetre') + '</strong>. What is its <strong>diameter</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh' ? '直徑是半徑的 2 倍：' + d.d + ' × 2 ＝ ' + (2 * d.d) + '，單位是公分。'
+                             : 'A diameter is 2 radiuses: ' + d.d + ' × 2 ＝ ' + (2 * d.d) + ', in centimetres.'
+        };
+      } },
+
+    /* 12. 交錯題（五年級）：長方形與三角形的面積（直線圖形，用不到圓周率）。 */
+    { id:'interStraight', cat:'inter',
+      make:function(used){
+        var kind = pickUnused(RECT_KINDS.slice(), used);
+        var a = 4 + 2 * rand(7);            /* 4 ~ 16 的偶數：三角形除以 2 才會是整數 */
+        var b = 3 + rand(10);               /* 3 ~ 12 */
+        var area = kind === 'rect' ? a * b : a * b / 2;
+        var correct = tok(area * 100, 'sq');
+        var cands = kind === 'rect'
+          ? [tok(2 * (a + b) * 100, 'cm'), tok(a * b * 50, 'sq'), tok((a + b) * 100, 'sq')]
+          : [tok(a * b * 100, 'sq'), tok((a + b) * 100, 'sq'), tok(a * b * 200, 'sq')];
+        /* ⚠️ 這一題是直線圖形，答案一律是整數平方公分：保底不可以用 nearFallbacks（它會 ± 一個圓周率，
+           端出 3.14 的尾數）。保底自己生整數。 */
+        var fb = [tok((area + 1) * 100, 'sq'), tok((area + 2) * 100, 'sq'), tok(2 * area * 100, 'sq'), tok((area + 3) * 100, 'sq')];
+        var wrongs = pickWrongs(correct, cands, fb, [tok(a * 100, 'sq'), tok(b * 100, 'sq')]);
+        var o = optsOf(correct, wrongs);
+        return { kind:kind, a:a, b:b, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var area = d.kind === 'rect' ? d.a * d.b : d.a * d.b / 2;
+        if (d.kind === 'rect') return {
+          stem: lang === 'zh' ? '（五年級）一個長方形的長是 <strong>' + d.a + ' 公分</strong>、寬是 <strong>' + d.b + ' 公分</strong>，面積是多少？'
+                              : '(Grade five) A rectangle is <strong>' + plEn(d.a, 'centimetre') + '</strong> long and <strong>' + plEn(d.b, 'centimetre') + '</strong> wide. What is its area?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh' ? '長方形的面積是長乘以寬：' + d.a + ' × ' + d.b + ' ＝ ' + area + '，單位是平方公分。這一題是<strong>直線圖形</strong>，用不到圓周率。'
+                             : 'A rectangle’s area is length times width: ' + d.a + ' × ' + d.b + ' ＝ ' + area + ', in square centimetres. This shape has <strong>straight sides</strong>, so pi is not needed.'
+        };
+        return {
+          stem: lang === 'zh' ? '（五年級）一個三角形的底是 <strong>' + d.a + ' 公分</strong>、高是 <strong>' + d.b + ' 公分</strong>，面積是多少？'
+                              : '(Grade five) A triangle has a base of <strong>' + plEn(d.a, 'centimetre') + '</strong> and a height of <strong>' + plEn(d.b, 'centimetre') + '</strong>. What is its area?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh' ? '三角形的面積是底乘以高再除以 2：' + d.a + ' × ' + d.b + ' ÷ 2 ＝ ' + area + '，單位是平方公分。這一題是<strong>直線圖形</strong>，用不到圓周率。'
+                             : 'A triangle’s area is base times height, halved: ' + d.a + ' × ' + d.b + ' ÷ 2 ＝ ' + area + ', in square centimetres. This shape has <strong>straight sides</strong>, so pi is not needed.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 圓周率工作坊', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：圓周率工作坊',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題三年級的半徑與直徑，和一題五年級的直線圖形面積。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>　·　半徑與直徑回三年級<a href="../../../grade-3/math/circle/index.html">圓規畫圓趣</a>　·　直線圖形的面積回五年級<a href="../../../grade-5/math/area/index.html">面積魔術師</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Pi Workshop', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Pi Workshop',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>One of them is the grade-3 radius and diameter, and one is the grade-5 area of a straight-sided shape.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>　·　radius and diameter in <a href="../../../grade-3/math/circle/index.html">the grade-3 lesson</a>　·　areas of straight-sided shapes in <a href="../../../grade-5/math/area/index.html">the grade-5 lesson</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length){
+            resultLine.textContent = right === batch.length ? t.resAll(batch.length)
+              : right >= Math.ceil(batch.length * 2 / 3) ? t.resGood(right, batch.length)
+              : t.resTry(right, batch.length);
+            resultLinks.innerHTML = t.links;
+            resultEl.classList.add('on');
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function newRound(){
+    batch = buildBatch();
+    applyStatic();
+    render();
+  }
+
+  retryBtn.addEventListener('click', newRound);
+  /* 語言切換保留同一批題目（framework §六之一：切語言不重抽）。 */
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    render();
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>
