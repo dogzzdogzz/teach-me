@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>速查卡 — 倒數翻轉機</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 60px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:26px 0 6px}
+  header h1{font-size:clamp(24px,5vw,34px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:6px;font-size:16px}
+  section{margin-top:26px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:13px;letter-spacing:2px;border-radius:999px;padding:2px 12px;
+  }
+  h2{font-size:clamp(19px,3.4vw,24px);margin:8px 0 4px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:18px;margin-top:12px;
+  }
+  ul.steps{list-style:none;display:grid;gap:10px}
+  ul.steps li{display:flex;gap:12px;align-items:flex-start;font-size:16px}
+  .sn{
+    flex:0 0 auto;width:26px;height:26px;border-radius:999px;background:var(--blue-soft);
+    color:var(--blue);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;
+  }
+  .formula{
+    margin-top:12px;background:var(--green-soft);border-radius:12px;padding:12px 16px;
+    font-size:19px;font-weight:700;color:var(--green);text-align:center;
+  }
+  .formula .cond{display:block;font-size:14px;font-weight:400;color:var(--muted);margin-top:4px}
+  .scroller{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;margin-top:12px;font-size:15px;min-width:420px}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:center}
+  th{background:var(--blue-soft);color:var(--blue)}
+  td.k{font-weight:700}
+  .notebox{
+    margin-top:12px;background:var(--orange-soft);border:2px solid var(--orange);border-radius:14px;
+    padding:10px 16px;font-size:15px;color:var(--orange);
+  }
+  .warn{
+    margin-top:12px;background:var(--red-soft);border:2px solid var(--red);border-radius:14px;
+    padding:10px 16px;font-size:15px;color:var(--red);
+  }
+  /* 翻轉的步驟是 HTML，不是圖 */
+  .steps-list{display:inline-grid;grid-template-columns:auto auto;gap:4px 14px;margin:12px auto 0;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;text-align:left}
+  .steps-list .op{color:var(--orange);text-align:right;font-size:14px}
+  .steps-list .rt{color:var(--ink)}
+  .steps-list .rt.hl{color:var(--green)}
+  .stepwrap{text-align:center}
+  .stepwrap .lab{font-size:14px;color:var(--muted);margin-top:4px}
+  .twocol{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px}
+  .printbtn{
+    display:block;margin:30px auto 0;border:none;border-radius:12px;background:var(--green);
+    color:#fff;font-size:16px;font-weight:700;padding:10px 24px;cursor:pointer;
+  }
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+  @media print{
+    .topbar,.coursenav,.printbtn,footer{display:none}
+    body{background:#fff;font-size:13px}
+    .card{box-shadow:none}
+    section{margin-top:18px;break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <span data-i18n="nav2">🗂️ 速查卡（本頁）</span>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🗂️ 速查卡：倒數翻轉機</h1>
+    <p class="sub" data-i18n="sub">倒數怎麼找、除以分數怎麼算、商會變大還是變小</p>
+  </header>
+  <p class="notebox" data-i18n="scopeNote">這張卡只講五件事：<strong>除以分數</strong>（兩個量同一種時讀成「<strong>裡面有幾個</strong>」，不同種時讀成「1 個單位是多少」）；<strong>倒數</strong>（相乘等於 1，0 沒有倒數）；<strong>除以一個不是 0 的分數，就是乘以它的倒數</strong>；<strong>商比被除數大還是小</strong>（看除數和 1 比）；兩種<strong>應用題</strong>。<strong>分數除以整數</strong>是<strong>五年級「分數大平分」</strong>教的，<strong>通分</strong>是<strong>五年級「通分披薩屋」</strong>教的，<strong>分數乘法</strong>是<strong>五年級「分數乘法」</strong>教的；<strong>帶分數的除法</strong>、<strong>分數的四則混合計算</strong>、<strong>小數除法</strong>不在這一課。分子和分母都是 1 到 12 的整數，被除數和除數都比 0 大，答案寫成最簡分數，不寫帶分數。</p>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb1">第一部分</span>
+    <h2 data-i18n="s1h2">三步算完一題</h2>
+    <div class="card">
+      <ul class="steps">
+        <li><span class="sn">1</span><span data-i18n="d1"><strong>先看誰是除數</strong>：寫在 ÷ 後面的那一個（<strong>不可以是 0</strong>）。不是 0 的整數要先寫成分母 1 的分數（4 ＝ 4/1）。</span></li>
+        <li><span class="sn">2</span><span data-i18n="d2"><strong>把除數翻過來</strong>（分子分母對調），<strong>÷ 改成 ×</strong>。被除數<strong>不動</strong>。</span></li>
+        <li><span class="sn">3</span><span data-i18n="d3"><strong>分子乘分子、分母乘分母</strong>，再<strong>約成最簡分數</strong>；除得盡就寫整數。</span></li>
+      </ul>
+      <p class="formula" data-i18n="f1">a/b ÷ c/d ＝ a/b × d/c<span class="cond">除數 c/d 不可以是 0 · 例：3/4 ÷ 2/5 ＝ 3/4 × 5/2 ＝ 15/8</span></p>
+      <p class="notebox" data-i18n="n1">💬 檢查有沒有算對：把答案<strong>乘回除數</strong>，要變回被除數。15/8 × 2/5 ＝ 30/40 ＝ 3/4，對了。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb2">第二部分</span>
+    <h2 data-i18n="s2h2">倒數（相乘等於 1）</h2>
+    <div class="card">
+      <p class="formula" data-i18n="f2">兩個數相乘等於 1 → 互為倒數<span class="cond">分數：分子分母對調 · 整數 n ＝ n/1，倒數是 1/n · 0 沒有倒數</span></p>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="rth0">這個數</th><th data-i18n="rth1">倒數</th><th data-i18n="rth2">相乘</th><th data-i18n="rth3">倒數比它</th></tr>
+          </thead>
+          <tbody id="rbody"></tbody>
+        </table>
+      </div>
+      <p class="notebox" data-i18n="n2">💬 <strong>1 的倒數還是 1</strong>，因為 1 × 1 ＝ 1。<strong>0 沒有倒數</strong>：任何數乘以 0 都是 0，湊不出 1。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb3">第三部分</span>
+    <h2 data-i18n="s3h2">為什麼可以這樣翻</h2>
+    <div class="card">
+      <p data-i18n="p3why"><strong>為什麼</strong>：先把兩個分數<strong>通分</strong>成同一種小格，除法就變成「幾小格 ÷ 幾小格」。3/4 ÷ 2/5 通分成 20 分之幾：3/4 ＝ 15/20、2/5 ＝ 8/20，所以答案是 <strong>15 ÷ 8 ＝ 15/8</strong>。而 15 ＝ 3 × 5、8 ＝ 2 × 4，寫出來剛好就是 <strong>3/4 × 5/2</strong> —— 這就是「乘以倒數」的由來。<strong>分母一樣的時候，分子相除就是商。</strong></p>
+      <div class="twocol">
+        <div class="stepwrap"><div class="steps-list" id="lad1"></div><p class="lab" data-i18n="lab1">3/4 ÷ 2/5：通分成 15/20 ÷ 8/20，數格子是 15 ÷ 8，寫成 3/4 × 5/2 ＝ 15/8</p></div>
+        <div class="stepwrap"><div class="steps-list" id="lad2"></div><p class="lab" data-i18n="lab2">5/6 ÷ 2/3：通分成 15/18 ÷ 12/18，數格子是 15 ÷ 12，寫成 5/6 × 3/2 ＝ 15/12，約成 5/4</p></div>
+      </div>
+      <p class="notebox" data-i18n="n3">💬 通分只是<strong>用來解釋為什麼</strong>。真的算的時候<strong>不用先通分</strong>，直接翻除數再相乘就好。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb4">第四部分</span>
+    <h2 data-i18n="s4h2">商比被除數大還是小</h2>
+    <div class="card">
+      <p class="formula" data-i18n="f4">被除數比 0 大時：除數 &lt; 1 → 商變大 · 除數 ＝ 1 → 不變 · 除數 &gt; 1 → 商變小</p>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="cth0">算式</th><th data-i18n="cth1">除數和 1 比</th><th data-i18n="cth2">商</th><th data-i18n="cth3">和被除數比</th></tr>
+          </thead>
+          <tbody id="cbody"></tbody>
+        </table>
+      </div>
+      <p class="notebox" data-i18n="n4">💬 為什麼：除以比 1 小的數，等於乘以比 1 大的倒數，所以變大；除以比 1 大的數，等於乘以比 1 小的倒數，所以變小。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb5">第五部分</span>
+    <h2 data-i18n="s5h2">兩種應用題，加上一個常見的變形</h2>
+    <div class="card">
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="ath0">題目在問什麼</th><th data-i18n="ath1">怎麼列式</th><th data-i18n="ath2">例子</th></tr>
+          </thead>
+          <tbody id="abody"></tbody>
+        </table>
+      </div>
+      <p class="notebox" data-i18n="anote">💬 三列都<strong>先列除法再翻</strong>。前兩列是<strong>總量</strong>放前面（被除數）、一份的量或單位數放後面（除數）；第三列是<strong>積</strong>放前面、已知的那一個因數放後面。列完<strong>驗算</strong>：答案 × 除數 要變回前面那一個數。</p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow" data-i18n="eb6">最後</span>
+    <h2 data-i18n="s6h2">這幾句話對不對</h2>
+    <div class="card">
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="tth0">這句話</th><th data-i18n="tth1">對不對</th><th data-i18n="tth2">例子</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="scroller">
+        <table>
+          <thead>
+            <tr><th data-i18n="xth0">很容易這樣想</th><th data-i18n="xth1">其實是</th></tr>
+          </thead>
+          <tbody id="xbody"></tbody>
+        </table>
+      </div>
+      <p class="warn" data-i18n="warn">⚠️ 一句話收尾：<strong>除以一個不是 0 的分數，就是乘以它的倒數；翻的是除數，被除數不動；除數比 1 小，商就比被除數大。</strong></p>
+    </div>
+  </section>
+
+  <button class="printbtn" onclick="window.print()" data-i18n="printBtn">🖨️ 印出這張速查卡</button>
+  <footer data-i18n="foot">回到<a class="home" href="index.html">課程</a>或去玩<a class="home" href="review.html">複習挑戰</a>。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'速查卡 — 倒數翻轉機', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（本頁）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🗂️ 速查卡：倒數翻轉機',
+      sub:'倒數怎麼找、除以分數怎麼算、商會變大還是變小',
+      scopeNote:'這張卡只講五件事：<strong>除以分數</strong>（兩個量同一種時讀成「<strong>裡面有幾個</strong>」，不同種時讀成「1 個單位是多少」）；<strong>倒數</strong>（相乘等於 1，0 沒有倒數）；<strong>除以一個不是 0 的分數，就是乘以它的倒數</strong>；<strong>商比被除數大還是小</strong>（看除數和 1 比）；兩種<strong>應用題</strong>。<strong>分數除以整數</strong>是<strong>五年級「分數大平分」</strong>教的，<strong>通分</strong>是<strong>五年級「通分披薩屋」</strong>教的，<strong>分數乘法</strong>是<strong>五年級「分數乘法」</strong>教的；<strong>帶分數的除法</strong>、<strong>分數的四則混合計算</strong>、<strong>小數除法</strong>不在這一課。分子和分母都是 1 到 12 的整數，被除數和除數都比 0 大，答案寫成最簡分數，不寫帶分數。',
+      eb1:'第一部分', eb2:'第二部分', eb3:'第三部分', eb4:'第四部分', eb5:'第五部分', eb6:'最後',
+
+      s1h2:'三步算完一題',
+      d1:'<strong>先看誰是除數</strong>：寫在 ÷ 後面的那一個（<strong>不可以是 0</strong>）。不是 0 的整數要先寫成分母 1 的分數（4 ＝ 4/1）。',
+      d2:'<strong>把除數翻過來</strong>（分子分母對調），<strong>÷ 改成 ×</strong>。被除數<strong>不動</strong>。',
+      d3:'<strong>分子乘分子、分母乘分母</strong>，再<strong>約成最簡分數</strong>；除得盡就寫整數。',
+      f1:'a/b ÷ c/d ＝ a/b × d/c<span class="cond">除數 c/d 不可以是 0 · 例：3/4 ÷ 2/5 ＝ 3/4 × 5/2 ＝ 15/8</span>',
+      n1:'💬 檢查有沒有算對：把答案<strong>乘回除數</strong>，要變回被除數。15/8 × 2/5 ＝ 30/40 ＝ 3/4，對了。',
+
+      s2h2:'倒數（相乘等於 1）',
+      f2:'兩個數相乘等於 1 → 互為倒數<span class="cond">分數：分子分母對調 · 整數 n ＝ n/1，倒數是 1/n · 0 沒有倒數</span>',
+      rth0:'這個數', rth1:'倒數', rth2:'相乘', rth3:'倒數比它',
+      rBig:'大', rSmall:'小', rSame:'一樣',
+      n2:'💬 <strong>1 的倒數還是 1</strong>，因為 1 × 1 ＝ 1。<strong>0 沒有倒數</strong>：任何數乘以 0 都是 0，湊不出 1。',
+
+      s3h2:'為什麼可以這樣翻',
+      p3why:'<strong>為什麼</strong>：先把兩個分數<strong>通分</strong>成同一種小格，除法就變成「幾小格 ÷ 幾小格」。3/4 ÷ 2/5 通分成 20 分之幾：3/4 ＝ 15/20、2/5 ＝ 8/20，所以答案是 <strong>15 ÷ 8 ＝ 15/8</strong>。而 15 ＝ 3 × 5、8 ＝ 2 × 4，寫出來剛好就是 <strong>3/4 × 5/2</strong> —— 這就是「乘以倒數」的由來。<strong>分母一樣的時候，分子相除就是商。</strong>',
+      lab1:'3/4 ÷ 2/5：通分成 15/20 ÷ 8/20，數格子是 15 ÷ 8，寫成 3/4 × 5/2 ＝ 15/8',
+      lab2:'5/6 ÷ 2/3：通分成 15/18 ÷ 12/18，數格子是 15 ÷ 12，寫成 5/6 × 3/2 ＝ 15/12，約成 5/4',
+      rowLabel:{ start:'原式', common:'通分', cells:'數格子', flip:'乘倒數', final:'最簡' },
+      n3:'💬 通分只是<strong>用來解釋為什麼</strong>。真的算的時候<strong>不用先通分</strong>，直接翻除數再相乘就好。',
+
+      s4h2:'商比被除數大還是小',
+      f4:'被除數比 0 大時：除數 &lt; 1 → 商變大 · 除數 ＝ 1 → 不變 · 除數 &gt; 1 → 商變小',
+      cth0:'算式', cth1:'除數和 1 比', cth2:'商', cth3:'和被除數比',
+      cBelow:'比 1 小', cEqual:'等於 1', cAbove:'比 1 大',
+      cBig:'商比較大', cSmall:'商比較小', cSame:'一樣大',
+      n4:'💬 為什麼：除以比 1 小的數，等於乘以比 1 大的倒數，所以變大；除以比 1 大的數，等於乘以比 1 小的倒數，所以變小。',
+
+      s5h2:'兩種應用題，加上一個常見的變形',
+      ath0:'題目在問什麼', ath1:'怎麼列式', ath2:'例子',
+      arows:[
+        ['<strong>可以分成幾份</strong>：知道總量、知道一份多少，問有幾份', '總量 ÷ 一份的量', '3 公尺的緞帶每 3/4 公尺剪一段：3 ÷ 3/4 ＝ 3 × 4/3 ＝ 4 段'],
+        ['<strong>1 個單位是多少</strong>：知道幾個單位對應多少，問 1 個單位', '總量 ÷ 單位數', '2/3 公斤的糖賣 4 元：4 ÷ 2/3 ＝ 4 × 3/2 ＝ 6 元'],
+        ['<strong>乘法找回不見的那一個</strong>：□ × 除數 ＝ 積', '積 ÷ 已知的那一個', '□ × 3/4 ＝ 5/8：5/8 ÷ 3/4 ＝ 5/8 × 4/3 ＝ 5/6']
+      ],
+      anote:'💬 三列都<strong>先列除法再翻</strong>。前兩列是<strong>總量</strong>放前面（被除數）、一份的量或單位數放後面（除數）；第三列是<strong>積</strong>放前面、已知的那一個因數放後面。列完<strong>驗算</strong>：答案 × 除數 要變回前面那一個數。',
+
+      s6h2:'這幾句話對不對',
+      tth0:'這句話', tth1:'對不對', tth2:'例子',
+      trows:[
+        ['除以一個不是 0 的分數，等於乘以它的倒數', '<strong>對</strong>', '3/4 ÷ 2/5 ＝ 3/4 × 5/2 ＝ 15/8'],
+        ['兩個數相乘等於 1，它們就互為倒數', '<strong>對</strong>', '2/3 × 3/2 ＝ 6/6 ＝ 1'],
+        ['被除數比 0 大時，除數比 1 小，商就比被除數大', '<strong>對</strong>', '3/4 ÷ 1/2 ＝ 3/2，比 3/4 大'],
+        ['除以 1，商和被除數一樣', '<strong>對</strong>', '3/4 ÷ 1 ＝ 3/4'],
+        ['兩個分數通分成同一個分母之後，分子相除就是商', '<strong>對</strong>', '15/20 ÷ 8/20 ＝ 15 ÷ 8 ＝ 15/8'],
+        ['整數 n 可以寫成 n/1，倒數是 1/n（n 不是 0）', '<strong>對</strong>', '5 ＝ 5/1，倒數是 1/5'],
+        ['除法算出來的商一定比被除數小', '<strong>錯</strong>', '3 ÷ 1/4 ＝ 12，比 3 大'],
+        ['一個分數的倒數一定比它大', '<strong>錯</strong>', '3/2 的倒數是 2/3，比 3/2 小'],
+        ['除以分數要把被除數翻過來再相乘', '<strong>錯</strong>', '翻的是除數：3/5 ÷ 1/2 ＝ 3/5 × 2 ＝ 6/5'],
+        ['除以分數要把兩個分數都翻過來再相乘', '<strong>錯</strong>', '只翻除數：2/3 ÷ 4/5 ＝ 2/3 × 5/4 ＝ 5/6'],
+        ['0 的倒數是 0', '<strong>錯</strong>', '0 乘任何數都是 0，湊不出 1，所以 0 沒有倒數'],
+        ['分數除法一定要先通分才算得出來', '<strong>錯</strong>', '通分只是解釋；直接翻除數相乘就算得出來']
+      ],
+      xth0:'很容易這樣想', xth1:'其實是',
+      xrows:[
+        ['除法就是把東西分開，所以商一定比較小', '要看<strong>除數和 1 比</strong>：3 ÷ 1/4 ＝ 12 就比 3 大'],
+        ['把 3/5 ÷ 1/2 直接乘成 3/5 × 1/2', '除數要<strong>先翻</strong>：3/5 × 2/1 ＝ 6/5'],
+        ['把被除數翻過來：5/3 × 1/2', '<strong>被除數不動</strong>，只翻除數'],
+        ['兩個都翻：5/3 × 2/1', '只翻<strong>除數</strong>一個'],
+        ['整數不能當被除數或除數', '不是 0 的整數先寫成<strong>分母 1</strong> 的分數：4 ＝ 4/1，倒數是 1/4；0 還是不能當除數'],
+        ['算完就交卷', '答案要<strong>約成最簡分數</strong>，再乘回除數<strong>驗算</strong>一次']
+      ],
+      warn:'⚠️ 一句話收尾：<strong>除以一個不是 0 的分數，就是乘以它的倒數；翻的是除數，被除數不動；除數比 1 小，商就比被除數大。</strong>',
+      printBtn:'🖨️ 印出這張速查卡',
+      foot:'回到<a class="home" href="index.html">課程</a>或去玩<a class="home" href="review.html">複習挑戰</a>。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Cheat Sheet — The Flip-It Divider', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (this page)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🗂️ Cheat sheet: The Flip-It Divider',
+      sub:'Finding a reciprocal, dividing by a fraction, and whether the quotient grows or shrinks',
+      scopeNote:'This card covers five things: <strong>dividing by a fraction</strong> (read as “<strong>how many fit inside</strong>” when both amounts are the same kind, and as “how much is one unit” when they are not); the <strong>reciprocal</strong> (product 1; 0 has none); <strong>dividing by a non-zero fraction is multiplying by its reciprocal</strong>; whether the <strong>quotient is bigger or smaller than the dividend</strong> (compare the divisor with 1); and the two kinds of <strong>word problem</strong>. <strong>A fraction divided by a whole number</strong> is the <strong>grade-5 sharing-chocolate lesson</strong>, <strong>common denominators</strong> the <strong>grade-5 pizza lesson</strong>, and <strong>multiplying fractions</strong> the <strong>grade-5 fraction multiplication lesson</strong>; <strong>dividing mixed numbers</strong>, <strong>mixed fraction operations</strong> and <strong>decimal division</strong> are not in this lesson. Numerators and denominators are whole numbers from 1 to 12, both the dividend and the divisor are greater than 0, and answers are written in simplest form, never as mixed numbers.',
+      eb1:'Part 1', eb2:'Part 2', eb3:'Part 3', eb4:'Part 4', eb5:'Part 5', eb6:'Finally',
+
+      s1h2:'Three steps for any question',
+      d1:'<strong>Find the divisor first</strong>: the one written after the ÷ sign (it <strong>must not be 0</strong>). A non-zero whole number is written over 1 first (4 = 4/1).',
+      d2:'<strong>Flip the divisor</strong> (swap numerator and denominator) and <strong>change ÷ into ×</strong>. The dividend <strong>stays as it is</strong>.',
+      d3:'<strong>Multiply numerators, multiply denominators</strong>, then write the result in <strong>simplest form</strong>; a whole number if it divides exactly.',
+      f1:'a/b ÷ c/d = a/b × d/c<span class="cond">the divisor c/d must not be 0 · example: 3/4 ÷ 2/5 = 3/4 × 5/2 = 15/8</span>',
+      n1:'💬 To check the answer, <strong>multiply it back by the divisor</strong> and the dividend should return: 15/8 × 2/5 = 30/40 = 3/4.',
+
+      s2h2:'The reciprocal (product exactly 1)',
+      f2:'two numbers with product 1 → reciprocals<span class="cond">fraction: swap numerator and denominator · a whole number n = n/1, reciprocal 1/n · 0 has no reciprocal</span>',
+      rth0:'Number', rth1:'Reciprocal', rth2:'Product', rth3:'Reciprocal is',
+      rBig:'bigger', rSmall:'smaller', rSame:'the same',
+      n2:'💬 <strong>The reciprocal of 1 is 1</strong>, because 1 × 1 = 1. <strong>0 has no reciprocal</strong>: anything times 0 is 0, so a product of 1 is impossible.',
+
+      s3h2:'Why the flip works',
+      p3why:'<strong>Why</strong>: give both fractions <strong>the same denominator</strong> and the division becomes “how many cells ÷ how many cells”. For 3/4 ÷ 2/5 use twentieths: 3/4 = 15/20 and 2/5 = 8/20, so the answer is <strong>15 ÷ 8 = 15/8</strong>. And 15 = 3 × 5 while 8 = 2 × 4, which written out is exactly <strong>3/4 × 5/2</strong> — that is where “multiply by the reciprocal” comes from. <strong>When the denominators match, dividing the numerators gives the quotient.</strong>',
+      lab1:'3/4 ÷ 2/5: twentieths give 15/20 ÷ 8/20, counting cells gives 15 ÷ 8, written 3/4 × 5/2 = 15/8',
+      lab2:'5/6 ÷ 2/3: eighteenths give 15/18 ÷ 12/18, counting cells gives 15 ÷ 12, written 5/6 × 3/2 = 15/12, simplified to 5/4',
+      rowLabel:{ start:'start', common:'same denominator', cells:'count cells', flip:'flip and multiply', final:'simplest form' },
+      n3:'💬 The common denominator is only there to <strong>explain why</strong>. When actually calculating you <strong>do not need it</strong> — just flip the divisor and multiply.',
+
+      s4h2:'Is the quotient bigger or smaller than the dividend',
+      f4:'with a dividend above 0: divisor &lt; 1 → quotient grows · divisor = 1 → unchanged · divisor &gt; 1 → quotient shrinks',
+      cth0:'Calculation', cth1:'Divisor vs 1', cth2:'Quotient', cth3:'vs the dividend',
+      cBelow:'below 1', cEqual:'exactly 1', cAbove:'above 1',
+      cBig:'quotient is bigger', cSmall:'quotient is smaller', cSame:'they are equal',
+      n4:'💬 Why: dividing by a number below 1 means multiplying by a reciprocal above 1, so it grows; dividing by a number above 1 means multiplying by a reciprocal below 1, so it shrinks.',
+
+      s5h2:'The two kinds of word problem, and one common variant',
+      ath0:'What the problem asks', ath1:'How to write it', ath2:'Example',
+      arows:[
+        ['<strong>How many parts</strong>: the total and the size of one part are known, the number of parts is asked', 'total ÷ size of one part', 'a 3-metre ribbon cut into 3/4-metre pieces: 3 ÷ 3/4 = 3 × 4/3 = 4 pieces'],
+        ['<strong>How much one unit is</strong>: how many units go with how much is known, one unit is asked', 'total ÷ number of units', '2/3 of a kilogram of sugar costs 4 dollars: 4 ÷ 2/3 = 4 × 3/2 = 6 dollars'],
+        ['<strong>A missing factor</strong>: □ × divisor = product', 'product ÷ the known factor', '□ × 3/4 = 5/8: 5/8 ÷ 3/4 = 5/8 × 4/3 = 5/6']
+      ],
+      anote:'💬 All three <strong>start as a division and then flip</strong>. In the first two rows the <strong>total</strong> goes first (the dividend) and the size of one part or the number of units goes second (the divisor); in the third row the <strong>product</strong> goes first and the known factor second. Then <strong>check</strong>: answer × divisor should give the first number back.',
+
+      s6h2:'True or false',
+      tth0:'Statement', tth1:'True?', tth2:'Example',
+      trows:[
+        ['Dividing by a non-zero fraction is multiplying by its reciprocal', '<strong>True</strong>', '3/4 ÷ 2/5 = 3/4 × 5/2 = 15/8'],
+        ['Two numbers whose product is 1 are reciprocals of each other', '<strong>True</strong>', '2/3 × 3/2 = 6/6 = 1'],
+        ['With a dividend above 0, a divisor below 1 makes the quotient bigger than the dividend', '<strong>True</strong>', '3/4 ÷ 1/2 = 3/2, bigger than 3/4'],
+        ['Dividing by 1 leaves the quotient equal to the dividend', '<strong>True</strong>', '3/4 ÷ 1 = 3/4'],
+        ['Once two fractions share a denominator, dividing the numerators gives the quotient', '<strong>True</strong>', '15/20 ÷ 8/20 = 15 ÷ 8 = 15/8'],
+        ['A whole number n can be written as n/1, with reciprocal 1/n (n not 0)', '<strong>True</strong>', '5 = 5/1, reciprocal 1/5'],
+        ['A quotient is always smaller than the dividend', '<strong>False</strong>', '3 ÷ 1/4 = 12, bigger than 3'],
+        ['The reciprocal of a fraction is always bigger than the fraction', '<strong>False</strong>', 'the reciprocal of 3/2 is 2/3, which is smaller'],
+        ['To divide by a fraction you flip the dividend and multiply', '<strong>False</strong>', 'the divisor is flipped: 3/5 ÷ 1/2 = 3/5 × 2 = 6/5'],
+        ['To divide by a fraction you flip both fractions and multiply', '<strong>False</strong>', 'only the divisor flips: 2/3 ÷ 4/5 = 2/3 × 5/4 = 5/6'],
+        ['The reciprocal of 0 is 0', '<strong>False</strong>', '0 times anything is 0, so a product of 1 is impossible and 0 has no reciprocal'],
+        ['Fraction division only works if you find a common denominator first', '<strong>False</strong>', 'the common denominator only explains why; flipping the divisor and multiplying works on its own']
+      ],
+      xth0:'Easy to think', xth1:'What is actually true',
+      xrows:[
+        ['Dividing splits things up, so the quotient must be smaller', 'It depends on the <strong>divisor compared with 1</strong>: 3 ÷ 1/4 = 12, which is bigger than 3'],
+        ['Turning 3/5 ÷ 1/2 straight into 3/5 × 1/2', 'The divisor is <strong>flipped first</strong>: 3/5 × 2/1 = 6/5'],
+        ['Flip the dividend: 5/3 × 1/2', 'The <strong>dividend stays as it is</strong>; only the divisor flips'],
+        ['Flip both: 5/3 × 2/1', 'Only the <strong>divisor</strong> flips'],
+        ['Whole numbers cannot be a dividend or a divisor', 'Write a non-zero whole number <strong>over 1</strong>: 4 = 4/1, reciprocal 1/4; 0 still cannot be a divisor'],
+        ['Finish the calculation and stop', 'Write the answer in <strong>simplest form</strong>, then <strong>check</strong> it by multiplying back by the divisor']
+      ],
+      warn:'⚠️ The card in one line: <strong>dividing by a non-zero fraction is multiplying by its reciprocal; the divisor is the one that flips and the dividend stays; a divisor below 1 makes the quotient bigger than the dividend.</strong>',
+      printBtn:'🖨️ Print this cheat sheet',
+      foot:'Back to the <a class="home" href="index.html">lesson</a> or try the <a class="home" href="review.html">review challenge</a>.'
+    }
+  };
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var langBtn = document.getElementById('langBtn');
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  /* 表格一律先清空再渲染（瀏覽器存下來的快照會把渲染結果烤進 HTML）。 */
+  function fillTable(id, rows){
+    var tb = document.getElementById(id);
+    tb.textContent = '';
+    rows.forEach(function(r){
+      var tr = document.createElement('tr');
+      r.forEach(function(cell, ci){
+        var td = document.createElement('td');
+        if (ci === 0) td.className = 'k';
+        td.innerHTML = cell;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  }
+
+  /* 倒數表、除法表與兩張步驟表都是**算出來**的（和課程頁同一套定義），不是手打的。 */
+  function gcd(a, b){ while (b){ var t = a % b; a = b; b = t; } return a; }
+  function simplify(x){ var g = gcd(x.n, x.d); return { n:x.n / g, d:x.d / g }; }
+  function rawText(x){ return x.d === 1 ? String(x.n) : x.n + '/' + x.d; }
+  function fracText(x){ return rawText(simplify(x)); }
+  function recip(x){ return { n:x.d, d:x.n }; }
+  function mul(x, y){ return simplify({ n:x.n * y.n, d:x.d * y.d }); }
+  function div(x, y){ return mul(x, recip(y)); }
+  function cmp(x, y){ var l = x.n * y.d, r = y.n * x.d; return l === r ? 0 : (l > r ? 1 : -1); }
+  var ONE = { n:1, d:1 };
+  function flipRows(x, y){
+    var D = x.d * y.d, N = x.n * y.d, C = y.n * x.d;
+    return [
+      { key:'start',  expr:rawText(x) + ' ÷ ' + rawText(y) },
+      { key:'common', expr:rawText({ n:N, d:D }) + ' ÷ ' + rawText({ n:C, d:D }) },
+      { key:'cells',  expr:N + ' ÷ ' + C },
+      { key:'flip',   expr:rawText(x) + ' × ' + rawText(recip(y)) + ' ＝ ' + rawText({ n:N, d:C }) },
+      { key:'final',  expr:fracText({ n:N, d:C }) }
+    ];
+  }
+  function drawSteps(host, rows){
+    var d = L();
+    host.textContent = '';
+    rows.forEach(function(row, i){
+      var op = document.createElement('div'); op.className = 'op'; op.textContent = d.rowLabel[row.key];
+      var rt = document.createElement('div'); rt.className = 'rt' + (i === rows.length - 1 ? ' hl' : ''); rt.textContent = row.expr;
+      host.appendChild(op); host.appendChild(rt);
+    });
+  }
+
+  var STEP_EXAMPLES = [[{ n:3, d:4 }, { n:2, d:5 }], [{ n:5, d:6 }, { n:2, d:3 }]];
+  var RECIP_TABLE = [{ n:2, d:3 }, { n:3, d:2 }, { n:1, d:4 }, { n:5, d:1 }, { n:1, d:1 }, { n:8, d:5 }, { n:7, d:10 }];
+  var DIV_TABLE = [[{ n:3, d:4 }, { n:1, d:2 }], [{ n:3, d:4 }, { n:2, d:3 }], [{ n:3, d:4 }, { n:1, d:1 }], [{ n:3, d:4 }, { n:3, d:2 }], [{ n:3, d:1 }, { n:1, d:4 }], [{ n:5, d:8 }, { n:5, d:4 }]];
+
+  function fillRecip(){
+    var d = L(), tb = document.getElementById('rbody');
+    tb.textContent = '';
+    RECIP_TABLE.forEach(function(x){
+      var r = recip(x), c = cmp(r, x);
+      var tr = document.createElement('tr');
+      [rawText(x), rawText(r), rawText(x) + ' × ' + rawText(r) + ' ＝ ' + fracText(mul(x, r)), c > 0 ? d.rBig : (c < 0 ? d.rSmall : d.rSame)].forEach(function(cell, ci){
+        var td = document.createElement('td');
+        if (ci === 0) td.className = 'k';
+        td.textContent = cell;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  }
+  function fillDiv(){
+    var d = L(), tb = document.getElementById('cbody');
+    tb.textContent = '';
+    DIV_TABLE.forEach(function(pr){
+      var x = pr[0], y = pr[1], q = div(x, y), c = cmp(y, ONE), s = -c;
+      var tr = document.createElement('tr');
+      [rawText(x) + ' ÷ ' + rawText(y),
+       c < 0 ? d.cBelow : (c > 0 ? d.cAbove : d.cEqual),
+       fracText(q),
+       s > 0 ? d.cBig : (s < 0 ? d.cSmall : d.cSame)].forEach(function(cell, ci){
+        var td = document.createElement('td');
+        if (ci === 0) td.className = 'k';
+        td.textContent = cell;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  }
+
+  function renderAll(){
+    var d = L();
+    applyStatic();
+    fillRecip();
+    fillDiv();
+    fillTable('abody', d.arows);
+    fillTable('tbody', d.trows);
+    fillTable('xbody', d.xrows);
+    drawSteps(document.getElementById('lad1'), flipRows(STEP_EXAMPLES[0][0], STEP_EXAMPLES[0][1]));
+    drawSteps(document.getElementById('lad2'), flipRows(STEP_EXAMPLES[1][0], STEP_EXAMPLES[1][1]));
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
