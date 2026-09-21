@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 小數除法放大鏡</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .result{margin-top:22px;background:var(--orange-soft);border-radius:18px;padding:18px;display:none}
+  .result.on{display:block}
+  .result .line{font-size:18px;font-weight:700}
+  .result .links{margin-top:10px;font-size:15px}
+  .result .links a{color:var(--blue)}
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：小數除法放大鏡</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題五年級的小數 ÷ 整數，和一題六年級的比值。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+  /* ⚠️ make() 一律不可以回 null：tools/simgen.js 每一批只呼叫 make() 一次、不重試。
+     所有抽樣池都事先過濾好，抽到就一定做得出四個選項。 */
+
+  /* --- 這一課的工具（和 index.html 同一套定義：所有的量都用百分之一的整數存）。 --- */
+  var A_MIN_H = 10, A_MAX_H = 5000;    /* 複習頁的被除數再收緊一點：0.1 ~ 50 */
+  var B_MIN_H = 5,  B_MAX_H = 990;     /* 除數 0.05 ~ 9.9 */
+  var Q_MIN_H = 100, Q_MAX_H = 5000;   /* 商 1 ~ 50 */
+  /* 選項裡任何一個量的上限（百分之一）。50000 ＝ 500，是**推出來的**：誘答最大的是
+     「只放大被除數」＝ 商 × 10，而商的上限是 50。 */
+  var VAL_MAX = 50000;
+
+  function dText(h){
+    var w = Math.floor(h / 100), f = h % 100;
+    if (f === 0) return String(w);
+    if (f % 10 === 0) return w + '.' + (f / 10);
+    return w + '.' + (f < 10 ? '0' + f : String(f));
+  }
+  function dpOf(h){
+    if (h % 100 === 0) return 0;
+    if (h % 10 === 0) return 1;
+    return 2;
+  }
+  function scaleOf(h){ var p = dpOf(h); return p === 0 ? 1 : (p === 1 ? 10 : 100); }
+
+  /* --- 選項的編碼：`百分之一的值|單位代號`。這樣「9」和「9 段」是兩個不同的值，去重才擋得住。 --- */
+  function tok(h, u){ return h + '|' + u; }
+  function tokVal(t){ return Number(String(t).split('|')[0]); }
+  function tokUnit(t){ return String(t).split('|')[1]; }
+  function plEn(n, w){
+    if (String(n) === '1') return n + ' ' + w;
+    return n + ' ' + w + (/(s|x|z|ch|sh)$/.test(w) ? 'es' : 's');
+  }
+  var UNIT_WORD = {
+    zh:{ n:'', seg:'段', bot:'瓶', bag:'袋', yuan:'元', pl:'位' },
+    en:{ n:'', seg:'piece', bot:'bottle', bag:'bag', yuan:'dollar', pl:'place' }
+  };
+  function tokText(t, lang){
+    var v = dText(tokVal(t)), u = tokUnit(t);
+    if (u === 'n') return v;
+    return lang === 'zh' ? v + ' ' + UNIT_WORD.zh[u] : plEn(v, UNIT_WORD.en[u]);
+  }
+
+  /* 從候選裡挑三個**值互不相同**、也和正解不同的誘答；候選不夠就用 fallbacks 補（同樣去重）。
+     avoid 是「不可以出現的編碼」（例如抄題幹的數）。擠到不夠時少回傳（simgen 的選項數檢查會響，不會卡死）。 */
+  function pickWrongs(correct, cands, fallbacks, avoid){
+    var seen = {}, out = [];
+    seen[correct] = 1;
+    (avoid || []).forEach(function(k){ seen[k] = 1; });
+    cands.concat(fallbacks).forEach(function(c){
+      if (out.length >= 3 || c === null || c === undefined) return;
+      var v = tokVal(c);
+      if (!isFinite(v) || v < 1 || v > VAL_MAX || v !== Math.floor(v)) return;
+      if (seen[c]) return;
+      seen[c] = 1; out.push(c);
+    });
+    return out;
+  }
+  function optsOf(correct, wrongs){
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+  /* 保底：值長得像答案的鄰居（同一個單位，×10、÷10、± 1、× 2）。全部維持最多一位小數。 */
+  function nearFallbacks(h, u){
+    var out = [tok(h * 10, u), tok(h + 100, u), tok(2 * h, u)];
+    if (h % 10 === 0 && h >= 100) out.push(tok(h / 10, u));
+    if (h > 100) out.push(tok(h - 100, u));
+    out.push(tok(h + 200, u));
+    return out;
+  }
+
+  /* --- 抽樣池：所有合法的（被除數、除數、商）組合都事先算好 ---
+     商一律是 10 的倍數（最多一位小數），被除數一定除得盡。 */
+  /* 三個「只動一邊／改成相乘」的誘答不可以撞到題幹印出來的數，也不可以撞到正解 ——
+     撞到的話 pickWrongs 會把它擋掉，那一組刻意的迷思誘答就靜靜不見了。事先把這種組合濾掉。 */
+  /* 印出來有幾個數字（小數點不算）。這一課教的是方法，不是硬算 ——
+     被除數最多 3 個數字，不然 14.16 ÷ 0.8 這種題目考的變成直式計算。 */
+  function digitCount(h){ return dText(h).replace('.', '').length; }
+  function distractorsClean(a, b, q){
+    var xs = [q / 10, q * 10], m = a * b / 100, i;
+    if (m === Math.floor(m)) xs.push(m);
+    for (i = 0; i < xs.length; i++) if (xs[i] === a || xs[i] === b || xs[i] === q) return false;
+    return true;
+  }
+  function buildPairs(bPool, keep){
+    var out = [], i, q, a;
+    for (i = 0; i < bPool.length; i++){
+      for (q = Q_MIN_H; q <= Q_MAX_H; q += 10){
+        if ((bPool[i] * q) % 100 !== 0) continue;
+        a = bPool[i] * q / 100;
+        if (a < A_MIN_H || a > A_MAX_H) continue;
+        if (a === 100 || bPool[i] === 100) continue;        /* 被除數或除數剛好是 1：誘答會撞到題幹的數 */
+        if (keep(a, bPool[i], q)) out.push({ a:a, b:bPool[i], q:q });
+      }
+    }
+    return out;
+  }
+  var B_TENTH = [20, 40, 50, 60, 80];                 /* 一位小數、比 1 小 */
+  var B_HUND  = [5, 15, 25, 35, 45, 75];              /* 兩位小數、比 1 小 */
+  var B_BIG   = [120, 150, 160, 180, 250, 450];       /* 比 1 大的小數 */
+  var B_ALL   = B_TENTH.concat(B_HUND, B_BIG);
+
+  /* 1 一位小數的除數；被除數本身也是小數 */
+  var P_TENTH = buildPairs(B_TENTH, function(a, b, q){ return dpOf(a) >= 1 && digitCount(a) <= 3 && distractorsClean(a, b, q); });
+  /* 2 兩位小數的除數 */
+  var P_HUND  = buildPairs(B_HUND, function(a, b, q){ return digitCount(a) <= 3 && distractorsClean(a, b, q); });
+  /* 3 被除數是整數（要補 0） */
+  var P_WHOLE = buildPairs(B_TENTH.concat(B_HUND), function(a, b, q){ return dpOf(a) === 0 && digitCount(a) <= 3 && distractorsClean(a, b, q); });
+  /* 4 除數比 1 大 */
+  var P_BIG   = buildPairs(B_BIG, function(a, b, q){ return digitCount(a) <= 3 && distractorsClean(a, b, q); });
+  /* 5 商是小數（不是整數） */
+  var P_DEC   = buildPairs(B_ALL, function(a, b, q){ return q % 100 !== 0 && digitCount(a) <= 3 && distractorsClean(a, b, q); });
+  /* 6 剪東西的應用題：商是整數，2 ~ 30 份，兩個數都是一位小數 */
+  var P_CUT   = buildPairs(B_TENTH, function(a, b, q){ return q % 100 === 0 && q >= 200 && q <= 3000 && dpOf(a) === 1 && digitCount(a) <= 3 && distractorsClean(a, b, q); });
+  /* 7 1 個單位是多少：總量 ÷ 數量，答案是錢 */
+  var P_UNIT  = buildPairs(B_TENTH.concat(B_HUND, B_BIG), function(a, b, q){ return q % 100 === 0 && q >= 200 && q <= 2000 && digitCount(a) <= 3 && q !== 100 && q / 10 !== 100 && q * 10 !== 100 && distractorsClean(a, b, q); });
+  /* 8 商和被除數比大小：除數剛好是 1 的那一組也要出得到，所以另外建 */
+  var P_CMP   = buildPairs(B_ALL, function(a){ return digitCount(a) <= 3; }).concat(
+                  (function(){ var o = [], q; for (q = Q_MIN_H; q <= Q_MAX_H; q += 10) if (q !== 100 && digitCount(q) <= 3) o.push({ a:q, b:100, q:q }); return o; })());
+  /* placesAsk 的四個選項固定是 1 ~ 4 位，所以被除數不可以剛好是 1 ~ 4 —— 那會變成誘答抄題幹。 */
+  var P_PLACES = P_DEC.concat(P_TENTH, P_HUND).filter(function(p){ return p.a !== 100 && p.a !== 200 && p.a !== 300 && p.a !== 400; });
+
+  /* --- 應用題的情境。cut 是包含除（答案是個數），unit 是 1 個單位是多少（答案是錢）。 --- */
+  var CUT_SCEN = {
+    zh:{
+      rope:  { what:'繩子', unit:'公尺', per:'段', ask:'剪一段', count:'可以剪成幾段' },
+      juice: { what:'果汁', unit:'公升', per:'瓶', ask:'裝一瓶', count:'可以裝幾瓶' },
+      rice:  { what:'米',   unit:'公斤', per:'袋', ask:'裝一袋', count:'可以裝幾袋' }
+    },
+    en:{
+      rope:  { what:'rope',  unit:'metre',    per:'piece',  ask:'cut into pieces of' },
+      juice: { what:'juice', unit:'litre',    per:'bottle', ask:'poured into bottles of' },
+      rice:  { what:'rice',  unit:'kilogram', per:'bag',    ask:'packed into bags of' }
+    }
+  };
+  var CUT_IDS = ['rope', 'juice', 'rice'];
+  var CUT_UNITTOK = { rope:'seg', juice:'bot', rice:'bag' };
+  var UNIT_SCEN = {
+    zh:{
+      sugar:  { what:'糖',   unit:'公斤' },
+      ribbon: { what:'緞帶', unit:'公尺' },
+      oil:    { what:'油',   unit:'公升' }
+    },
+    en:{
+      sugar:  { what:'sugar',  unit:'kilogram' },
+      ribbon: { what:'ribbon', unit:'metre' },
+      oil:    { what:'oil',    unit:'litre' }
+    }
+  };
+  var UNIT_IDS = ['sugar', 'ribbon', 'oil'];
+
+  /* --- 「商比被除數大還是小」的四句話。真假由除數和 1 比決定（設定檔另有一份獨立的表）。 --- */
+  var SIDES = {
+    bigger:  { zh:'商比被除數大', en:'The quotient is bigger than the dividend' },
+    smaller: { zh:'商比被除數小', en:'The quotient is smaller than the dividend' },
+    same:    { zh:'商和被除數一樣大', en:'The quotient equals the dividend' },
+    depends: { zh:'不算出來就不知道', en:'There is no way to tell without dividing' }
+  };
+  var SIDE_KEYS = ['bigger', 'smaller', 'same', 'depends'];
+  function sideOf(b){ return b < 100 ? 'bigger' : (b > 100 ? 'smaller' : 'same'); }
+
+  /* --- 交錯題（六年級「比與比值調色盤」）：比值 ＝ 前項 ÷ 後項。前項後項都在 30 以內。 --- */
+  var RATIO_PAIRS = (function(){
+    var out = [], b, k;
+    for (b = 2; b <= 9; b++) for (k = 2; k <= 9; k++) if (b * k <= 30) out.push({ b:b, k:k });
+    return out;
+  })();
+  /* --- 交錯題（五年級「小數商店」）：小數 ÷ 整數。 --- */
+  var DECINT_PAIRS = (function(){
+    var out = [], n, q, a;
+    /* 被除數（百分之一）＝ 除數 × 商，所以一定除得盡。 */
+    for (n = 2; n <= 9; n++) for (q = 110; q <= 900; q += 10){
+      a = n * q;
+      /* 被除數要是小數（整數 ÷ 整數不是五年級那一課的重點），而且誘答不可以撞到題幹印出來的兩個數。 */
+      if (a < 100 || a > 5000 || dpOf(a) < 1 || digitCount(a) > 3) continue;
+      if (q * 10 === a || q / 10 === a || a * n === a) continue;
+      if (q === n * 100 || q * 10 === n * 100 || q / 10 === n * 100 || a * n === n * 100) continue;
+      out.push({ n:n, q:q, a:a });
+    }
+    return out;
+  })();
+
+  var GENS = [
+    /* 1. 一位小數的除數。誘答：只放大除數（商變成十分之一）、只放大被除數（10 倍）、改成相乘。 */
+    { id:'divTenth', cat:'calc',
+      make:function(used){
+        var p = pickUnused(P_TENTH, used);
+        var correct = tok(p.q, 'n');
+        var cands = [tok(p.q / 10, 'n'), tok(p.q * 10, 'n'), tok(p.a * p.b / 100, 'n')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.q, 'n'), [tok(p.a, 'n'), tok(p.b, 'n')]);
+        var o = optsOf(correct, wrongs);
+        return { a:p.a, b:p.b, q:p.q, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var k = scaleOf(d.b);
+        return {
+          stem: lang === 'zh' ? '<strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong> ＝ ?'
+                              : '<strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong> ＝ ?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '除數 ' + dText(d.b) + ' 有 ' + dpOf(d.b) + ' 位小數，兩個數都乘以 ' + k + '：' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '。只放大除數會得到 ' + dText(d.q / 10) + '，只有答案的十分之一；只放大被除數會得到 ' + dText(d.q * 10) + '，大了 10 倍。'
+            : 'The divisor ' + dText(d.b) + ' has ' + plEn(dpOf(d.b), 'decimal place') + ', so both numbers are multiplied by ' + k + ': ' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '. Magnifying only the divisor gives ' + dText(d.q / 10) + ', a tenth of that; magnifying only the dividend gives ' + dText(d.q * 10) + ', ten times too much.'
+        };
+      } },
+
+    /* 2. 兩位小數的除數：要移兩位。誘答同上。 */
+    { id:'divHundredth', cat:'calc',
+      make:function(used){
+        var p = pickUnused(P_HUND, used);
+        var correct = tok(p.q, 'n');
+        var cands = [tok(p.q / 10, 'n'), tok(p.q * 10, 'n'), tok(p.a * p.b / 100, 'n')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.q, 'n'), [tok(p.a, 'n'), tok(p.b, 'n')]);
+        var o = optsOf(correct, wrongs);
+        return { a:p.a, b:p.b, q:p.q, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: '<strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong> ＝ ?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '除數 ' + dText(d.b) + ' 有 <strong>2 位</strong>小數，所以兩個數都乘以 100：' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * 100) + ' ÷ ' + dText(d.b * 100) + ' ＝ ' + dText(d.q) + '。只移一位的話除數還是小數，還沒有變成整數，要再移一位。'
+            : 'The divisor ' + dText(d.b) + ' has <strong>2 decimal places</strong>, so both numbers are multiplied by 100: ' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * 100) + ' ÷ ' + dText(d.b * 100) + ' ＝ ' + dText(d.q) + '. Sliding one place only leaves the divisor a decimal; it is not whole yet, so the points slide once more.'
+        };
+      } },
+
+    /* 3. 被除數是整數：位數不夠要補 0。 */
+    { id:'divWhole', cat:'calc',
+      make:function(used){
+        var p = pickUnused(P_WHOLE, used);
+        var correct = tok(p.q, 'n');
+        var cands = [tok(p.q / 10, 'n'), tok(p.q * 10, 'n'), tok(p.a * p.b / 100, 'n')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.q, 'n'), [tok(p.a, 'n'), tok(p.b, 'n')]);
+        var o = optsOf(correct, wrongs);
+        return { a:p.a, b:p.b, q:p.q, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var k = scaleOf(d.b);
+        return {
+          stem: '<strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong> ＝ ?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '被除數 ' + dText(d.a) + ' 沒有小數位，往右移的時候後面要<strong>補 ' + dpOf(d.b) + ' 個 0</strong>，才會變成 ' + dText(d.a * k) + '：' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '。忘了補 0 就會算成 ' + dText(d.q / 10) + '。'
+            : 'The dividend ' + dText(d.a) + ' has no decimal places, so <strong>' + plEn(dpOf(d.b), 'zero') + (dpOf(d.b) === 1 ? ' is' : ' are') + ' added</strong> as the point slides, making ' + dText(d.a * k) + ': ' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '. Forgetting the 0 lands on ' + dText(d.q / 10) + ' instead.'
+        };
+      } },
+
+    /* 4. 除數比 1 大：商會比被除數小。 */
+    { id:'divBigDivisor', cat:'calc',
+      make:function(used){
+        var p = pickUnused(P_BIG, used);
+        var correct = tok(p.q, 'n');
+        var cands = [tok(p.q / 10, 'n'), tok(p.q * 10, 'n'), tok(p.a * p.b / 100, 'n')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.q, 'n'), [tok(p.a, 'n'), tok(p.b, 'n')]);
+        var o = optsOf(correct, wrongs);
+        return { a:p.a, b:p.b, q:p.q, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var k = scaleOf(d.b);
+        return {
+          stem: '<strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong> ＝ ?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '除數 ' + dText(d.b) + ' 比 1 大，所以商會比被除數小。兩個數都乘以 ' + k + '：' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '，真的比 ' + dText(d.a) + ' 小。'
+            : 'The divisor ' + dText(d.b) + ' is above 1, so the quotient comes out smaller than the dividend. Both numbers are multiplied by ' + k + ': ' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + ', which really is less than ' + dText(d.a) + '.'
+        };
+      } },
+
+    /* 5. 最少要移幾位？答案是除數的小數位數，四個選項固定是 1 ~ 4 位。 */
+    { id:'placesAsk', cat:'method',
+      make:function(used){
+        var p = pickUnused(P_PLACES, used);
+        var correct = tok(dpOf(p.b) * 100, 'pl');
+        var opts = shuffle([tok(100, 'pl'), tok(200, 'pl'), tok(300, 'pl'), tok(400, 'pl')]);
+        return { a:p.a, b:p.b, q:p.q, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '算 <strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong> 的時候，兩個數的小數點<strong>最少</strong>要一起往右移幾位，除數才會變成整數？'
+                              : 'To work out <strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong>, what is the <strong>smallest</strong> number of places both points must slide right before the divisor is whole?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '要看的是<strong>除數</strong>：' + dText(d.b) + ' 有 ' + dpOf(d.b) + ' 位小數，所以移 ' + dpOf(d.b) + ' 位，變成 ' + dText(d.a * scaleOf(d.b)) + ' ÷ ' + dText(d.b * scaleOf(d.b)) + ' ＝ ' + dText(d.q) + '。被除數有幾位小數不用管；移得比這個多雖然也是整數，但不是最少的那一個。'
+            : 'What counts is <strong>the divisor</strong>: ' + dText(d.b) + ' has ' + plEn(dpOf(d.b), 'decimal place') + ', so both points slide ' + dpOf(d.b) + ', giving ' + dText(d.a * scaleOf(d.b)) + ' ÷ ' + dText(d.b * scaleOf(d.b)) + ' ＝ ' + dText(d.q) + '. How many the dividend has makes no difference, and sliding further still ends up whole but is not the smallest.'
+        };
+      } },
+
+    /* 6. 哪一個算式的商一樣？誘答：只放大一邊、兩邊放大得不一樣多。 */
+    { id:'sameQuotient', cat:'method',
+      make:function(used){
+        var p = pickUnused(P_TENTH.concat(P_HUND), used), k = scaleOf(p.b);
+        var correct = dText(p.a * k) + ' ÷ ' + dText(p.b * k);
+        var wrongs = [dText(p.a * k) + ' ÷ ' + dText(p.b), dText(p.a) + ' ÷ ' + dText(p.b * k), dText(p.a * k * 10) + ' ÷ ' + dText(p.b * k)];
+        var opts = shuffle([correct].concat(wrongs));
+        return { a:p.a, b:p.b, q:p.q, k:k, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '下面哪一個算式的<strong>商</strong>和 <strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong> 一樣？'
+                              : 'Which of these has the <strong>same quotient</strong> as <strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong>?',
+          opts: d.opts.slice(), ans:d.ans,
+          why: lang === 'zh'
+            ? '被除數和除數<strong>同時</strong>乘以 ' + d.k + '，商才不會變：' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * d.k) + ' ÷ ' + dText(d.b * d.k) + ' ＝ ' + dText(d.q) + '。只放大被除數，商會變成 ' + d.k + ' 倍；只放大除數，商會變成 ' + d.k + ' 分之一；兩邊放大得不一樣多也不行。'
+            : 'The quotient only survives when the dividend and the divisor are multiplied by ' + d.k + ' <strong>together</strong>: ' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * d.k) + ' ÷ ' + dText(d.b * d.k) + ' ＝ ' + dText(d.q) + '. Growing the dividend alone makes it ' + d.k + ' times too big, growing the divisor alone makes it that many times too small, and growing them by different amounts is no better.'
+        };
+      } },
+
+    /* 7. 商比被除數大還是小？四句話固定，答案由除數和 1 比決定。 */
+    { id:'compareQuot', cat:'concept',
+      make:function(used){
+        var p = pickUnused(P_CMP, used);
+        var correct = sideOf(p.b);
+        var opts = shuffle(SIDE_KEYS.slice());
+        return { a:p.a, b:p.b, q:p.q, opts:opts, ans:opts.indexOf(correct) };
+      },
+      fmt:function(d, lang){
+        var side = sideOf(d.b);
+        var whyZh = side === 'bigger' ? '除數 ' + dText(d.b) + ' <strong>比 1 小</strong>，所以商比被除數大：' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.q) + '，' + dText(d.q) + ' 比 ' + dText(d.a) + ' 大。'
+                  : side === 'smaller' ? '除數 ' + dText(d.b) + ' <strong>比 1 大</strong>，所以商比被除數小：' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.q) + '，' + dText(d.q) + ' 比 ' + dText(d.a) + ' 小。'
+                  : '除數<strong>剛好是 1</strong>，任何數除以 1 都不會變：' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.q) + '。';
+        var whyEn = side === 'bigger' ? 'The divisor ' + dText(d.b) + ' is <strong>below 1</strong>, so the quotient is bigger than the dividend: ' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.q) + ', and ' + dText(d.q) + ' is bigger than ' + dText(d.a) + '.'
+                  : side === 'smaller' ? 'The divisor ' + dText(d.b) + ' is <strong>above 1</strong>, so the quotient is smaller than the dividend: ' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.q) + ', and ' + dText(d.q) + ' is smaller than ' + dText(d.a) + '.'
+                  : 'The divisor is <strong>exactly 1</strong>, and dividing by 1 changes nothing: ' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.q) + '.';
+        return {
+          stem: lang === 'zh' ? '<strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong> 的商，和被除數 ' + dText(d.a) + ' 比起來會怎樣？'
+                              : 'Next to the dividend ' + dText(d.a) + ', how does the quotient of <strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong> come out?',
+          opts: d.opts.map(function(k){ return SIDES[k][lang]; }), ans:d.ans,
+          why: lang === 'zh' ? whyZh + '只要把除數和 1 比一比，不用算完就知道往哪一邊。' : whyEn + ' Comparing the divisor with 1 settles which way it goes before any dividing.'
+        };
+      } },
+
+    /* 8. 包含除的應用題：可以分成幾份。答案是個數，一定是整數。 */
+    { id:'wordCut', cat:'word',
+      make:function(used){
+        var p = pickUnused(P_CUT, used), id = pick(CUT_IDS), u = CUT_UNITTOK[id];
+        var correct = tok(p.q, u);
+        var cands = [tok(p.q / 10, u), tok(p.q * 10, u), tok(p.a * p.b / 100, u)];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.q, u), [tok(p.a, u), tok(p.b, u)]);
+        var o = optsOf(correct, wrongs);
+        return { a:p.a, b:p.b, q:p.q, id:id, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var sc = CUT_SCEN[lang][d.id], k = scaleOf(d.b);
+        return {
+          stem: lang === 'zh' ? '<strong>' + dText(d.a) + ' ' + sc.unit + '</strong>的' + sc.what + '，每 <strong>' + dText(d.b) + ' ' + sc.unit + '</strong>' + sc.ask + '，' + sc.count + '？'
+                              : '<strong>' + plEn(dText(d.a), sc.unit) + '</strong> of ' + sc.what + ' is ' + sc.ask + ' <strong>' + plEn(dText(d.b), sc.unit) + '</strong>. How many ' + sc.per + 's are there?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '問裡面有幾個那麼多，是包含除：' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '。答案是<strong>個數</strong>，一定是整數，所以帶小數的選項一看就不對。'
+            : 'Asking how many of that size fit inside is measurement division: ' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '. The answer is a <strong>count</strong> and has to be whole, so any option with a decimal is out on sight.'
+        };
+      } },
+
+    /* 9. 1 個單位是多少：總量除以數量。答案是錢，可以是小數。 */
+    { id:'wordUnit', cat:'word',
+      make:function(used){
+        var p = pickUnused(P_UNIT, used), id = pick(UNIT_IDS);
+        var correct = tok(p.q, 'yuan');
+        var cands = [tok(p.q / 10, 'yuan'), tok(p.q * 10, 'yuan'), tok(p.a * p.b / 100, 'yuan')];
+        /* ⚠️ 題幹一定會印出「1 個單位」的那個 1，所以 1 元不可以當誘答（那是抄題幹）。 */
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.q, 'yuan'), [tok(p.a, 'yuan'), tok(p.b, 'yuan'), tok(100, 'yuan')]);
+        var o = optsOf(correct, wrongs);
+        return { a:p.a, b:p.b, q:p.q, id:id, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var sc = UNIT_SCEN[lang][d.id], k = scaleOf(d.b);
+        return {
+          stem: lang === 'zh' ? '<strong>' + dText(d.b) + ' ' + sc.unit + '</strong>的' + sc.what + '要 <strong>' + dText(d.a) + ' 元</strong>，<strong>1 ' + sc.unit + '</strong>要多少元？'
+                              : '<strong>' + plEn(dText(d.b), sc.unit) + '</strong> of ' + sc.what + ' costs <strong>' + plEn(dText(d.a), 'dollar') + '</strong>. What does <strong>1 ' + sc.unit + '</strong> cost?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '要問 1 個單位多少錢，就用<strong>錢除以數量</strong>：' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '。除數 ' + dText(d.b) + ' 比 1 ' + (d.b < 100 ? '小，所以 1 個單位的錢比題目給的多' : '大，所以 1 個單位的錢比題目給的少') + '。'
+            : 'For the price of 1 unit, <strong>divide the money by the amount</strong>: ' + dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '. The divisor ' + dText(d.b) + ' is ' + (d.b < 100 ? 'below 1, so 1 unit costs more than the amount given' : 'above 1, so 1 unit costs less than the amount given') + '.'
+        };
+      } },
+
+    /* 10. 商是小數：提醒商不一定是整數。 */
+    { id:'decQuotient', cat:'calc',
+      make:function(used){
+        var p = pickUnused(P_DEC, used);
+        var correct = tok(p.q, 'n');
+        var cands = [tok(p.q / 10, 'n'), tok(p.q * 10, 'n'), tok(p.a * p.b / 100, 'n')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.q, 'n'), [tok(p.a, 'n'), tok(p.b, 'n')]);
+        var o = optsOf(correct, wrongs);
+        return { a:p.a, b:p.b, q:p.q, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var k = scaleOf(d.b);
+        return {
+          stem: '<strong>' + dText(d.a) + ' ÷ ' + dText(d.b) + '</strong> ＝ ?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '。<strong>商本來就可以是小數</strong> —— 只要除數變成整數就可以動手，被除數是不是小數都沒關係。'
+            : dText(d.a) + ' ÷ ' + dText(d.b) + ' ＝ ' + dText(d.a * k) + ' ÷ ' + dText(d.b * k) + ' ＝ ' + dText(d.q) + '. <strong>A quotient is allowed to be a decimal</strong> — once the divisor is whole you can start, whether or not the dividend is still a decimal.'
+        };
+      } },
+
+    /* 11. 交錯題（五年級「小數商店」）：小數 ÷ 整數，這一課的第三步就落在這裡。 */
+    { id:'interDecInt', cat:'inter',
+      make:function(used){
+        var p = pickUnused(DECINT_PAIRS, used);
+        var correct = tok(p.q, 'n');
+        var cands = [tok(p.q * 10, 'n'), tok(p.q / 10, 'n'), tok(p.a * p.n, 'n')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.q, 'n'), [tok(p.a, 'n'), tok(p.n * 100, 'n')]);
+        var o = optsOf(correct, wrongs);
+        return { a:p.a, n:p.n, q:p.q, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '（五年級）<strong>' + dText(d.a) + ' ÷ ' + d.n + '</strong> ＝ ?'
+                              /* ⚠️ 英文的前綴不可以用小括號：`(Grade five) 12.3 ÷ 3 ＝ ?` 會讓算式鏈把 `)` 吃進去，整條讀不到。 */
+                              : 'Grade five: <strong>' + dText(d.a) + ' ÷ ' + d.n + '</strong> ＝ ?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '除數已經是整數，不用放大：先當整數除完再點回小數點，' + dText(d.a) + ' ÷ ' + d.n + ' ＝ ' + dText(d.q) + '。驗算 ' + dText(d.q) + ' × ' + d.n + ' ＝ ' + dText(d.a) + '，對了。'
+            : 'The divisor is already whole, so nothing needs magnifying: divide as whole numbers and put the point back, giving ' + dText(d.a) + ' ÷ ' + d.n + ' ＝ ' + dText(d.q) + '. Check: ' + dText(d.q) + ' × ' + d.n + ' ＝ ' + dText(d.a) + '.'
+        };
+      } },
+
+    /* 12. 交錯題（六年級「比與比值調色盤」）：比值 ＝ 前項 ÷ 後項，也是一個除法。 */
+    { id:'interRatio', cat:'inter',
+      make:function(used){
+        var p = pickUnused(RATIO_PAIRS, used), first = p.b * p.k;
+        var correct = tok(p.k * 100, 'n');
+        var cands = [tok((first + p.b) * 100, 'n'), tok((first - p.b) * 100, 'n'), tok(first * p.b * 100, 'n')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.k * 100, 'n'), [tok(first * 100, 'n'), tok(p.b * 100, 'n')]);
+        var o = optsOf(correct, wrongs);
+        return { b:p.b, k:p.k, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var first = d.b * d.k;
+        return {
+          stem: lang === 'zh' ? '（六年級）<strong>' + first + ' : ' + d.b + '</strong> 的<strong>比值</strong>是多少？'
+                              : 'Grade six: what is the <strong>ratio value</strong> of <strong>' + first + ' : ' + d.b + '</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '比值就是<strong>前項 ÷ 後項</strong>，也是一個除法：' + first + ' ÷ ' + d.b + ' ＝ ' + d.k + '。這一課的商不變，換成比就是前項和後項同乘以同一個不是 0 的數，比值不變。'
+            : 'A ratio value is <strong>the first part divided by the second</strong>, which is a division too: ' + first + ' ÷ ' + d.b + ' ＝ ' + d.k + '. The quotient holding still in this lesson is the same idea in ratio language: multiply both parts by the same number other than 0 and the ratio value stays put.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 小數除法放大鏡', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：小數除法放大鏡',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題五年級的小數 ÷ 整數，和一題六年級的比值。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>　·　小數 ÷ 整數回五年級<a href="../../../grade-5/math/decimal/index.html">小數商店</a>　·　比值回<a href="../ratio/index.html">比與比值調色盤</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Decimal Division Magnifier', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Decimal Division Magnifier',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>One of them is the grade-5 decimal ÷ whole number, and one is the grade-6 ratio value.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>　·　decimal ÷ whole number is grade five <a href="../../../grade-5/math/decimal/index.html">The Decimal Shop</a>　·　ratio values are in <a href="../ratio/index.html">The Ratio Palette</a>',
+      retryBtn:'🔄 Another round',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another go.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length){
+            resultLine.textContent = right === batch.length ? t.resAll(batch.length)
+              : right >= Math.ceil(batch.length * 2 / 3) ? t.resGood(right, batch.length)
+              : t.resTry(right, batch.length);
+            resultLinks.innerHTML = t.links;
+            resultEl.classList.add('on');
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function newRound(){
+    batch = buildBatch();
+    applyStatic();
+    render();
+  }
+
+  retryBtn.addEventListener('click', newRound);
+  /* 語言切換保留同一批題目（framework §六之一：切語言不重抽）。 */
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    render();
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>

@@ -448,157 +448,10 @@ function stringProblems(s, lang, where){
   return out;
 }
 
-/* ---------- 6b) 算式逐條驗算：這一課自己的精確有理數（小數）求值器 ---------- */
-function rNorm(x){
-  if (!x || !Number.isFinite(x.n) || !Number.isFinite(x.d) || x.d === 0) return null;
-  const s = x.d < 0 ? -1 : 1;
-  const n = x.n * s, d = x.d * s;
-  const g = (function e(a, b){ a = Math.abs(a); while (b){ const t = a % b; a = b; b = t; } return a || 1; })(n, d);
-  return { n:n / g, d:d / g };
-}
-function rAdd(a, b){ return (a && b) ? rNorm({ n:a.n * b.d + b.n * a.d, d:a.d * b.d }) : null; }
-function rSub(a, b){ return (a && b) ? rNorm({ n:a.n * b.d - b.n * a.d, d:a.d * b.d }) : null; }
-function rMul(a, b){ return (a && b) ? rNorm({ n:a.n * b.n, d:a.d * b.d }) : null; }
-function rDivR(a, b){ return (a && b && b.n !== 0) ? rNorm({ n:a.n * b.d, d:a.d * b.n }) : null; }
-function rEq(a, b){ return !!(a && b) && a.n * b.d === b.n * a.d; }
+/* ---------- 6b) 算式逐條驗算：全站共用的小數求值器（lib/decarith.js） ---------- */
+/* ⚠️ 2026-09-21 從這裡抽到 lib/，讓 grade-6/decimal-divide 共用。要改就改 lib/，不要複製回來。 */
+const { decArith, seen: DEC_SEEN } = require('./lib/decarith.js')();
 
-const TERM_SRC = '(?:\\d+(?:\\.\\d+)?|[?？□])';
-const OP_SRC = '[×*÷+＋\\-－−–]';
-const ATOM_SRC = '(?:[()]\\s*)*' + TERM_SRC + '(?:\\s*[()])*';
-/* ⚠️ 收尾的 lookahead 只可以擋「數字還沒讀完」，不可以擋句末的句點：
-   `62.8 ÷ 20 ＝ 3.14.` 用 (?![\\d.]) 的話，最後一節讀不完就會回溯成 `62.8 ÷ 20`，
-   那個等號整條被丟掉 —— 靜靜不驗。 */
-const CHAIN_RE = new RegExp('(?<!\\d)(?<!\\d\\.)' + ATOM_SRC + '(?:\\s*(?:' + OP_SRC + '|[＝=])\\s*' + ATOM_SRC + ')*(?!\\.?\\d)', 'g');
-
-function tokensOf(span){
-  const toks = [];
-  const re = /(\d+(?:\.\d+)?|[?？□]|[×*]|÷|[+＋]|[\-－−–]|[＝=]|[()])/g;
-  let m, last = 0;
-  while ((m = re.exec(span)) !== null){
-    if (span.slice(last, m.index).trim() !== '') return null;
-    toks.push(m[0]); last = m.index + m[0].length;
-  }
-  return span.slice(last).trim() === '' ? toks : null;
-}
-function valueOfTok(t){
-  let m = /^(\d+)\.(\d+)$/.exec(t);
-  if (m){
-    const scale = Math.pow(10, m[2].length);
-    return rNorm({ n:Number(m[1]) * scale + Number(m[2]), d:scale });
-  }
-  m = /^(\d+)$/.exec(t);
-  if (m) return { n:Number(m[1]), d:1 };
-  return null;
-}
-/* 遞迴下降：expr := term (('+'|'-') term)* ；term := factor (('×'|'÷') factor)* */
-function parseSide(toks){
-  let i = 0, err = null;
-  function factor(){
-    const t = toks[i];
-    if (t === undefined){ err = err || 'an operand is missing'; return null; }
-    if (t === '('){
-      i++;
-      const v = expr();
-      if (toks[i] !== ')'){ err = err || 'an unclosed bracket'; return null; }
-      i++;
-      return v;
-    }
-    i++;
-    const v = valueOfTok(t);
-    if (v === null) err = err || ('cannot read the operand "' + t + '"');
-    return v;
-  }
-  function term(){
-    let v = factor();
-    while (i < toks.length && /^[×*÷]$/.test(toks[i])){
-      const op = toks[i++]; const r = factor();
-      if (op === '÷'){ const q = rDivR(v, r); if (q === null && r && r.n === 0) err = err || 'division by zero'; v = q; }
-      else v = rMul(v, r);
-    }
-    return v;
-  }
-  function expr(){
-    let v = term();
-    while (i < toks.length && /^[+＋\-－−–]$/.test(toks[i])){
-      const op = toks[i++]; const r = term();
-      v = /^[+＋]$/.test(op) ? rAdd(v, r) : rSub(v, r);
-    }
-    return v;
-  }
-  const v = expr();
-  if (i !== toks.length) err = err || 'the expression did not parse to the end';
-  return { v:v, err:err };
-}
-const DEC_SEEN = [];
-function decArith(text){
-  const problems = [];
-  let verified = 0, questions = 0;
-  const plain = String(text).replace(/<[^>]+>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-  const consumed = [];
-  const rest = plain.replace(CHAIN_RE, (whole, ...rx) => {
-    const at = rx[rx.length - 2], full = rx[rx.length - 1];
-    if (!/[＝=]/.test(whole)) return whole;                    /* 沒有等號 → 只是名詞，不是宣稱 */
-    let span = whole;
-    /* 散文的括號會被一起吃進來：先把**邊緣不成對**的括號剝掉，剝完才是真正的算式。 */
-    for (let guard = 0; guard < 8; guard++){
-      const opens = (span.match(/\(/g) || []).length, closes = (span.match(/\)/g) || []).length;
-      if (opens === closes) break;
-      const before = String(full).slice(0, at);
-      const proseOpen = (before.match(/\(/g) || []).length > (before.match(/\)/g) || []).length;
-      if (closes > opens && proseOpen && /\)\s*$/.test(span)) span = span.replace(/\s*\)\s*$/, '');
-      else break;
-    }
-    for (let guard = 0; guard < 8; guard++){
-      const t = span.trim();
-      if (!(t.startsWith('(') && t.endsWith(')'))) break;
-      let depth = 0, matches = true;
-      for (let k = 0; k < t.length; k++){
-        if (t[k] === '(') depth++;
-        else if (t[k] === ')'){ depth--; if (depth === 0 && k !== t.length - 1){ matches = false; break; } }
-      }
-      if (!matches || depth !== 0) break;
-      span = t.slice(1, -1);
-    }
-    if (!/[＝=]/.test(span)) return whole;
-    consumed.push(span.replace(/\s+/g, ' ').trim());
-    const sides = span.split(/[＝=]/).map(s => s.trim());
-    /* ⚠️ 未知數只讓**貼著它的那一段**變成題目，不是整條鏈：`□ × 3.14 ＝ 31.4 ＝ 99` 裡的
-       `31.4 ＝ 99` 是一條實實在在的宣稱，整條跳過等於替它背書（codex 抓到）。 */
-    const isQ = sides.map(x => /[?？□]/.test(x));
-    const vals = sides.map((x, k) => {
-      if (isQ[k]) return { v:null, err:null };
-      const tk = tokensOf(x);
-      return tk === null ? { v:null, err:'cannot tokenise "' + x + '"' } : parseSide(tk);
-    });
-    vals.forEach(r => { if (r.err) problems.push(r.err + ' in "' + span + '"'); });
-    for (let k = 1; k < vals.length; k++){
-      if (isQ[k - 1] || isQ[k]){ questions++; continue; }
-      verified++;
-      if (!rEq(vals[k - 1].v, vals[k].v)) problems.push('this claim is wrong: "' + span + '"');
-    }
-    return ' Q ';
-  });
-  /* 沒有被任何一條鏈吃掉、而且**兩邊都貼著數字**的等號：fail closed。
-     ⚠️ 只有一邊是數字的等號當散文放行 —— 規則表就是那樣寫的
-        （`圓周長 ＝ 直徑 × 3.14`、`直徑 ＝ 圓周長 ÷ 3.14`）。這是這支驗算器**唯一**的 fail-open，
-        四頁因此一律把「算出來的結果」寫成「圓周長是 31.4 公分」而不是「圓周長 ＝ 31.4」。 */
-  const leftover = rest.match(/[\d)）]\s*[＝=]\s*[\d(（]/g);
-  if (leftover) problems.push('an equals sign with a number on its left was not verified: "' + leftover[0].trim() + '"');
-  /* ⚠️ 上面那條只抓「兩邊都是數字」。剩下兩種讀不到的形狀要**直接禁止**，不是跳過：
-     ① `圓周長 ＝ 31.5`：左邊是字、右邊是一個光禿禿的數 —— 驗算器算不出左邊是多少，
-        所以四頁一律寫成「圓周長是 31.5 公分」。規則表的 `圓周長 ＝ 直徑 × 3.14` 右邊不是光禿禿的數，不受影響。
-     ② `10 × × 3.14 ＝ 3.14`：兩個運算子連在一起，鏈會在壞掉的地方斷開，只驗到後面那半截。 */
-  /* ⚠️ 括號要一起擋：`圓周長 ＝ (31.4)` 不擋的話一樣繞過去（codex 第二輪抓到）。 */
-  const wordEq = plain.match(/[^\s\d(（＝=][ 　]*[＝=][ 　]*[(（]?\d+(?:\.\d+)?(?![ 　]*[×÷+＋\-－−–\d.])/);
-  if (wordEq) problems.push('a result is written as "word ＝ number", which cannot be verified: "' + wordEq[0].trim() + '" — write it as 「… 是 …」 instead');
-  /* ⚠️ 連兩個運算子要把 ＋ － 也算進去：只擋 × ÷ 的話 `10 × ＋ 3.14 ＝ 3.14` 照樣溜過去，
-     後半截還會被當成驗過（codex 第二輪抓到）。 */
-  const OPS = '×÷+＋\\-－−–';
-  const badOps = plain.match(new RegExp('[' + OPS + '][ 　]*[' + OPS + '＝=]|[＝=][ 　]*[' + OPS + ']'));
-  if (badOps) problems.push('a malformed equation: two operators in a row near "' + badOps[0].trim() + '"');
-  consumed.forEach(c => DEC_SEEN.push(c));
-  return { problems, verified, questions, consumed };
-}
 /* 驗算器自己的 PROBE：bad:false 必須零誤報，bad:true 一定要抓到。 */
 const CLAIM_PROBES = [
   { text:'10 × 3.14 ＝ 31.4', bad:false },
@@ -616,6 +469,8 @@ const CLAIM_PROBES = [
   { text:'圓周率是 3.14159… 這個除不盡的小數', bad:false },
   { text:'□ × 3.14 ＝ 31.4', bad:false },
   { text:'(2 × 3) × 3.14 ＝ 18.84', bad:false },
+  { text:'(3 + 6) ＝ 9', bad:false },
+  { text:'(3 + 6) ＝ 10', bad:true },
   { text:'（10 × 3.14 ＝ 31.4）', bad:false },
   { text:'連結最後檢查：2026-09-18', bad:false },
   { text:'圓周長 ＝ 直徑 × 3.14 ＝ 半徑 × 2 × 3.14', bad:false },
@@ -626,6 +481,9 @@ const CLAIM_PROBES = [
   { text:'□ × 3.14 ＝ 31.4 ＝ 99', bad:true },
   { text:'圓周長 ＝ 31.5', bad:true },
   { text:'圓周長 ＝ (31.4)', bad:true },
+  /* 2026-09-21：右邊是一條算式的時候以前會靜靜跳過；全形數字整條讀不到。兩個都補上探針。 */
+  { text:'圓周長 ＝ 31.4 × 1', bad:true },
+  { text:'１０ × 3.14 ＝ 31.5', bad:true },
   { text:'10 × × 3.14 ＝ 3.14', bad:true },
   { text:'10 × ＋ 3.14 ＝ 3.14', bad:true },
   { text:'半徑 ＝ 直徑 ÷ 2', bad:false },
