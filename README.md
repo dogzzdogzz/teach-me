@@ -156,7 +156,7 @@ grade-5/math/                  # 五年級：單元整理＋ 23 個四頁迷你�
 │       ├── reference.html     #     速查卡（重點整理）
 │       ├── review.html        #     複習挑戰（隨機新題）
 │       └── parents.html       #     給家長（陪讀指引）
-grade-6/math/                  # 六年級：單元整理 ＋ prime（質數與合數）、gcf-lcm（最大公因數與最小公倍數）、ratio（比與比值）、divide-fraction（分數除以分數）、circle（圓周率與圓面積）、decimal-divide（除數是小數的除法）
+grade-6/math/                  # 六年級：單元整理 ＋ prime（質數與合數）、gcf-lcm（最大公因數與最小公倍數）、ratio（比與比值）、divide-fraction（分數除以分數）、circle（圓周率與圓面積）、decimal-divide（除數是小數的除法）、sector（扇形的弧長與面積）
 ```
 
 導覽設計：**首頁（選年級）→ 年級頁（依領域分區的課程清單）→ 課程**，最多兩次點擊；
@@ -171,7 +171,7 @@ grade-6/math/                  # 六年級：單元整理 ＋ prime（質數與�
 | 三年級 | 萬以內的數、乘除直式、分數與小數入門、周長、圓 | [grade-3/math](grade-3/math/README.md) |
 | 四年級 | 大數與概數、整數乘除、連除與併式、帶分數、二三位小數、數線上的分數與小數、角度與三角板拼角、垂直平行的作圖與距離、面積公式、24 時制、數量模式與圖形數、長條圖與折線圖 | [grade-4/math](grade-4/math/README.md) |
 | 五年級 | **因數與倍數**、通分與異分母加減、分數小數乘除、體積 | [grade-5/math](grade-5/math/README.md) |
-| 六年級 | **質數與質因數分解**、**最大公因數與最小公倍數**、**比與比值**、**分數除以分數**、**圓周率與圓面積**、**小數除法**、速率 | [grade-6/math](grade-6/math/README.md) |
+| 六年級 | **質數與質因數分解**、**最大公因數與最小公倍數**、**比與比值**、**分數除以分數**、**圓周率與圓面積**、**小數除法**、**扇形**、速率 | [grade-6/math](grade-6/math/README.md) |
 
 ## 教學架構
 

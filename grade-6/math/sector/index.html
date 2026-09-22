@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>教我扇形 — 扇形披薩工廠</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --purple:#9C6ADE; --purple-soft:#F1EAFB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7; font-size:17px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  header{text-align:center;padding:40px 0 8px}
+  header h1{font-size:clamp(30px,6vw,44px);letter-spacing:2px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:18px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:20px;
+    padding:20px 24px;margin:28px 0;font-size:18px;text-align:center;
+  }
+  section{margin-top:56px}
+  .eyebrow{
+    display:inline-block;background:var(--orange-soft);color:var(--orange);
+    font-weight:700;font-size:14px;letter-spacing:2px;border-radius:999px;padding:2px 14px;
+  }
+  h2{font-size:clamp(22px,4vw,30px);margin:10px 0 6px}
+  .lead{color:var(--muted)}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:18px;box-shadow:0 4px 14px rgba(70,60,40,.06);
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .btn:disabled{background:#C9C4B8;cursor:not-allowed}
+  .btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .chip{
+    border:2px solid var(--line);background:var(--card);border-radius:999px;
+    padding:6px 18px;font-size:16px;font-weight:700;cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
+  .hint{color:var(--muted);font-size:15px;margin-top:4px;min-height:20px}
+  .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  footer{
+    margin-top:64px;text-align:center;background:var(--orange-soft);
+    border-radius:20px;padding:24px;font-size:18px;
+  }
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .mode{
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px;text-align:center;cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .mode .mbig{font-size:26px}
+  .mode h3{font-size:17px;margin:4px 0}
+  .mode p{font-size:13px;color:var(--muted)}
+  .mode[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+  .modebanner{margin-top:12px;font-size:15px;color:var(--muted);min-height:24px}
+  .nextsteps ul{list-style:none;font-size:16px;display:grid;gap:10px}
+
+  /* --- 這一課的圖：一張 460 × 200 的畫布，圓、扇形、分格長條都畫在同一個座標系裡 --- */
+  .figwrap{margin-top:16px;text-align:center;overflow-x:auto}
+  .secfig{width:100%;max-width:460px;height:200px;display:block;margin:0 auto}
+  .figcap{margin-top:8px;font-size:14px;color:var(--muted);text-align:center}
+  .narr{margin-top:14px;font-size:17px;text-align:center;min-height:56px}
+  .calc{
+    margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:12px 16px;
+    font-size:19px;text-align:center;color:var(--blue);font-weight:700;min-height:30px;
+    word-break:break-word;
+  }
+  .resultline{
+    margin-top:14px;background:var(--green-soft);border-radius:14px;padding:12px 18px;
+    font-size:20px;font-weight:700;text-align:center;color:var(--green);min-height:30px;
+  }
+  .notebox{
+    margin-top:12px;background:var(--orange-soft);border:2px solid var(--orange);border-radius:14px;
+    padding:10px 16px;font-size:15px;text-align:center;color:var(--orange);
+  }
+  .degrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:16px}
+  .degbtn{
+    border:2px solid var(--line);background:var(--card);border-radius:14px;padding:14px 12px;
+    font-size:16px;font-weight:700;cursor:pointer;color:var(--ink);text-align:center;min-height:56px;
+    display:flex;align-items:center;justify-content:center;word-break:break-word;
+  }
+  .degbtn.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .degbtn.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .degbtn:disabled{cursor:default;opacity:.85}
+  .gprompt{text-align:center;font-size:20px;margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:14px;word-break:break-word}
+  .gprompt b{color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <span data-i18n="nav1">📖 上課（本頁）</span>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <a href="review.html" data-i18n="nav3">🔁 複習挑戰（隨機新題）</a>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+
+  <header>
+    <h1 data-i18n="h1">🍕 扇形披薩工廠</h1>
+    <p class="sub" data-i18n="sub">扇形是圓的一部分：圓心角占幾分之幾，弧長和面積就是幾分之幾</p>
+  </header>
+
+  <div class="intro" data-i18n="intro">
+    切一片披薩下來，它有<strong>兩條半徑</strong>和<strong>一段弧</strong> —— 這就是<strong>扇形</strong>。<br>
+    要算這一片的<strong>弧有多長</strong>、<strong>這一片有多大</strong>，不必再重學公式：<br>
+    先算<strong>整個圓</strong>，再乘上這一片占整個圓的<strong>幾分之幾</strong>就好。
+  </div>
+
+  <p class="notebox" data-i18n="scopeNote">這一課只做五件事：認得<strong>扇形</strong>的三個零件（<strong>圓心角</strong>、<strong>兩條半徑</strong>、<strong>一段弧</strong>）；算<strong>弧長</strong>（圓周長 × 圓心角 ÷ 360）；算<strong>扇形面積</strong>（圓面積 × 圓心角 ÷ 360）；算<strong>扇形的周長</strong>（弧長 ＋ 兩條半徑 —— 最常忘的就是那兩條）；分清楚一題要的是<strong>弧長</strong>、<strong>周長</strong>還是<strong>面積</strong>。<strong>圓心角占 360 度的幾分之幾</strong>是<strong>五年級「多邊形轉轉盤」</strong>教的，這一課只用範例教學 1 複習一次就直接拿來用；<strong>圓周長與圓面積</strong>是<strong>六年級「圓周率工作坊」</strong>教的；<strong>圓心、半徑、直徑</strong>是<strong>三年級「圓規畫圓趣」</strong>教的；<strong>一圈是 360 度</strong>是<strong>四年級「角度測量站」</strong>教的。<strong>弓形</strong>、<strong>半圓加長方形這種複合圖形</strong>、<strong>圓柱的表面積與體積</strong>都<strong>不在這一課</strong>。這一課的圓周率<strong>一律用 3.14</strong>，半徑是 <strong>1 到 12</strong> 的整數公分，給<strong>圓的直徑</strong>的時候<strong>一定是偶數</strong>，圓心角只用 <strong>30、45、60、90、120、135、180、240、270、300</strong> 這十個度數，而且題目只會挑<strong>算得出剛好小數</strong>的半徑與圓心角組合（例如半徑 6、圓心角 90 度），長度的單位是<strong>公分</strong>、面積的單位是<strong>平方公分</strong>。</p>
+
+  <!-- 模式選擇 -->
+  <div class="card">
+    <p style="font-weight:700" data-i18n="modeTitle">今天想怎麼學？（隨時可以換）</p>
+    <div class="modes" id="modeCards"></div>
+    <p class="modebanner" id="modeBanner"></p>
+  </div>
+
+  <!-- 範例1：占幾分之幾 -->
+  <section id="secFrac">
+    <span class="eyebrow" data-i18n="eb1">範例教學 1</span>
+    <h2 data-i18n="s1h2">一片是整個圓的幾分之幾？</h2>
+    <p class="lead" data-i18n="s1lead">整個圓轉一圈是 <strong>360 度</strong>。扇形的<strong>圓心角</strong>是幾度，它就占 360 度的幾分之幾 —— 這一片也就是整個圓的<strong>幾分之幾</strong>。右邊那一條把整個圓剪成一樣大的幾份，塗色的就是這一片。</p>
+    <div class="card">
+      <div class="chips" id="s1chips"></div>
+      <div class="figwrap">
+        <svg class="secfig" id="s1fig" viewBox="0 0 460 200" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s1cap"></p>
+      <p class="narr" id="s1narr"></p>
+      <p class="calc" id="s1calc"></p>
+      <p class="resultline" id="s1result"></p>
+      <p class="notebox" data-i18n="s1note">💬 <strong>扇形有三個零件</strong>：頂點在圓心的<strong>圓心角</strong>、<strong>兩條半徑</strong>、還有半徑之間的那<strong>一段弧</strong>。⚠️ 同樣兩條半徑會切出<strong>兩片</strong>扇形（剛好 180 度的時候兩片一樣大，其他角度一大一小），所以<strong>圓心角要沿著你要的那一片量</strong>：大的那一片，圓心角就<strong>超過 180 度</strong>（像 270 度那一片）。⚠️ 算周長的時候只走<strong>邊</strong>：一段弧和兩條半徑 —— 圓心角是角度，不是長度。⚠️ 「幾分之幾」是<strong>圓心角 ÷ 360</strong>，不是 360 ÷ 圓心角 —— 圓心角 60 度的扇形是圓的 1/6，不是 6 倍。一片怎麼可能比整個圓還大？</p>
+    </div>
+  </section>
+
+  <!-- 範例2：弧長 -->
+  <section id="secArc">
+    <span class="eyebrow" data-i18n="eb2">範例教學 2</span>
+    <h2 data-i18n="s2h2">弧長：圓周長的幾分之幾</h2>
+    <p class="lead" data-i18n="s2lead">扇形的那一段<strong>弧</strong>，就是圓周上的一小段。所以先算<strong>整個圓的圓周長</strong>，再乘上這一片占的<strong>幾分之幾</strong>。橘色畫粗的那一段就是要算的弧。</p>
+    <div class="card">
+      <div class="chips" id="s2chips"></div>
+      <div class="figwrap">
+        <svg class="secfig" id="s2fig" viewBox="0 0 460 200" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s2cap"></p>
+      <p class="narr" id="s2narr"></p>
+      <p class="calc" id="s2calc"></p>
+      <p class="resultline" id="s2result"></p>
+      <p class="notebox" data-i18n="s2note">💬 寫成一條就是：<strong>弧長 ＝ 半徑 × 2 × 3.14 × 圓心角 ÷ 360</strong>。⚠️ 題目給<strong>圓的直徑</strong>的時候，一樣要<strong>先除以 2</strong> 變成半徑（或是直接用「直徑 × 3.14」算圓周長）。⚠️ 弧長是<strong>一條線的長度</strong>，單位是<strong>公分</strong>，不是平方公分。</p>
+    </div>
+  </section>
+
+  <!-- 範例3：扇形面積 -->
+  <section id="secArea">
+    <span class="eyebrow" data-i18n="eb3">範例教學 3</span>
+    <h2 data-i18n="s3h2">扇形面積：圓面積的幾分之幾</h2>
+    <p class="lead" data-i18n="s3lead">整片塗色的就是<strong>扇形面積</strong>。做法和弧長<strong>一模一樣</strong>：先算<strong>整個圓的面積</strong>，再乘上這一片占的<strong>幾分之幾</strong>。</p>
+    <div class="card">
+      <div class="chips" id="s3chips"></div>
+      <div class="figwrap">
+        <svg class="secfig" id="s3fig" viewBox="0 0 460 200" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s3cap"></p>
+      <p class="narr" id="s3narr"></p>
+      <p class="calc" id="s3calc"></p>
+      <p class="resultline" id="s3result"></p>
+      <p class="notebox" data-i18n="s3note">💬 寫成一條就是：<strong>扇形面積 ＝ 半徑 × 半徑 × 3.14 × 圓心角 ÷ 360</strong>。⚠️ 面積的單位是<strong>平方公分</strong>，因為它數的是<strong>一格一格的正方形</strong>。⚠️ 同一個扇形，弧長和面積的「幾分之幾」是<strong>同一個</strong>分數 —— 換掉的只有前面那個整圓的量。</p>
+    </div>
+  </section>
+
+  <!-- 範例4：扇形的周長 -->
+  <section id="secPerim">
+    <span class="eyebrow" data-i18n="eb4">範例教學 4</span>
+    <h2 data-i18n="s4h2">扇形的周長：弧長還要加兩條半徑</h2>
+    <p class="lead" data-i18n="s4lead">沿著扇形的<strong>邊緣走一圈</strong>，走過的是：<strong>一段弧</strong>，再<strong>兩條半徑</strong>。橘色畫粗的這幾段合起來才是<strong>周長</strong>（圓心角剛好 180 度的時候，那兩條半徑接成一條直徑，看起來就只有兩段）。這一題是整課最容易漏掉的一步。</p>
+    <div class="card">
+      <div class="chips" id="s4chips"></div>
+      <div class="figwrap">
+        <svg class="secfig" id="s4fig" viewBox="0 0 460 200" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s4cap"></p>
+      <p class="narr" id="s4narr"></p>
+      <p class="calc" id="s4calc"></p>
+      <p class="resultline" id="s4result"></p>
+      <p class="notebox" data-i18n="s4note">💬 <strong>扇形的周長 ＝ 弧長 ＋ 半徑 × 2</strong>。⚠️ 半圓也一樣：半圓的周長是<strong>那一段弧</strong>再加上<strong>直徑</strong>（兩條半徑接起來剛好是直徑），不是圓周長的一半。⚠️ 「弧長」和「周長」是<strong>兩個不同的量</strong>，題目問哪一個要看清楚。</p>
+    </div>
+  </section>
+
+  <!-- 範例5：要算哪一個 -->
+  <section id="secWhich">
+    <span class="eyebrow" data-i18n="eb5">範例教學 5</span>
+    <h2 data-i18n="s5h2">這一題要算弧長、周長，還是面積？</h2>
+    <p class="lead" data-i18n="s5lead">同一片扇形可以問三種問題。只沿著<strong>那一段彎的邊</strong>走是<strong>弧長</strong>；<strong>整圈邊緣</strong>都走是<strong>周長</strong>（弧長 ＋ 兩條半徑）；<strong>整片鋪滿</strong>是<strong>面積</strong>。四個情境，先自己判斷再看答案。</p>
+    <div class="card">
+      <div class="chips" id="s5chips"></div>
+      <p class="gprompt" id="s5stem"></p>
+      <div class="figwrap">
+        <svg class="secfig" id="s5fig" viewBox="0 0 460 200" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="figcap" id="s5cap"></p>
+      <p class="narr" id="s5narr"></p>
+      <p class="calc" id="s5calc"></p>
+      <p class="resultline" id="s5result"></p>
+      <p class="notebox" data-i18n="s5note">💬 判斷只有兩句話：<strong>走的是哪幾段邊？</strong>（只有彎的那一段 → 弧長；弧和兩條半徑都走 → 周長）<strong>還是要把裡面填滿？</strong>（→ 面積）。⚠️ 單位是最後一道防線：答案是<strong>一條</strong>的東西（緞帶、鐵絲、滾邊）用<strong>公分</strong>；是<strong>一片</strong>的東西（布、草皮、起司）用<strong>平方公分</strong>。</p>
+    </div>
+  </section>
+
+  <!-- 試題 -->
+  <section>
+    <span class="eyebrow" data-i18n="eb6">試題</span>
+    <h2 data-i18n="s6h2">檢查一下</h2>
+    <div id="quiz" class="quiz"></div>
+    <div class="scoreboard">
+      <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">6</span></span>
+      <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+      <span id="qComment"></span>
+    </div>
+  </section>
+
+  <!-- 小遊戲 -->
+  <section class="game">
+    <span class="eyebrow" data-i18n="eb7">小遊戲</span>
+    <h2 data-i18n="s7h2">切披薩五連發</h2>
+    <p class="lead" data-i18n="s7lead">五道題。每一道先問自己：<strong>這一片占整個圓的幾分之幾？要算的是弧長、周長還是面積？單位該寫哪一個？</strong></p>
+    <div class="card">
+      <div class="stats">
+        <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
+        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+      </div>
+      <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
+      </div>
+      <p class="hint" id="gHint" style="text-align:center"></p>
+      <div class="figwrap"><svg class="secfig" id="gFig" viewBox="0 0 460 200" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <p class="figcap" id="gCap"></p>
+      <p class="gprompt" id="gPrompt"></p>
+      <div class="degrid" id="gAnswers"></div>
+      <p id="gMsg" class="gamemsg" style="text-align:center"></p>
+      <div class="btnrow" style="justify-content:center">
+        <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
+        <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="nextsteps">
+    <span class="eyebrow" data-i18n="ebNext">學完之後</span>
+    <h2 data-i18n="nextH2">把它記牢的四個動作</h2>
+    <div class="card">
+      <ul>
+        <li data-i18n="next1">🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。</li>
+        <li data-i18n="next2">🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。</li>
+        <li data-i18n="next3">🧑‍🏫 <strong>換你當老師</strong>：拿一張圓形的紙對摺再對摺，剪下一片，量出半徑，說出這一片是整個圓的幾分之幾，再把「弧長怎麼算、周長為什麼要多加兩條半徑」講給家人聽。講得出來，才是真的懂。</li>
+        <li data-i18n="next4">❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer data-i18n="footer">
+    把整頁縮成一句：<strong>圓心角占 360 度的幾分之幾，弧長就是圓周長的幾分之幾、扇形面積就是圓面積的幾分之幾</strong>；<strong>扇形的周長還要加上兩條半徑</strong>。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 語言無關的資料 ---------- */
+  /* 這一課教的是六年級「量與實測」裡「扇形」那一格（108 課綱：扇形面積 —— 圓心角占圓的幾分之幾）。
+     五年級「多邊形轉轉盤」已經教完「圓心角占 360 度的幾分之幾」（那一課到此為止，沒有算過弧長與面積），
+     六年級「圓周率工作坊」已經教完圓周長與圓面積，三年級「圓規畫圓趣」教過圓心、半徑、直徑，
+     四年級「角度測量站」教過「一圈是 360 度」—— 這一課把它們接起來：
+       弧長      ＝ 圓周長 × 圓心角 ÷ 360
+       扇形面積  ＝ 圓面積 × 圓心角 ÷ 360
+       扇形周長  ＝ 弧長 ＋ 半徑 × 2      ← 最常漏掉的一步
+
+     模型：所有長度與面積都用**百分之一**的整數存（hundredths），避免浮點誤差。
+       圓周率        PI_H ＝ 314（也就是 3.14）
+       圓周長(公分)   circH(r)      ＝ 2 × r × PI_H
+       圓面積(平方)   areaH(r)      ＝ r × r × PI_H
+       弧長(公分)     arcH(r, n)    ＝ circH(r) × n / 360   （除不盡就回 null，fail-closed）
+       扇形面積(平方) secAreaH(r,n) ＝ areaH(r) × n / 360   （除不盡就回 null，fail-closed）
+       扇形周長(公分) perimH(r, n)  ＝ arcH(r, n) ＋ 2 × r × 100
+
+     範圍（四頁對讀者也是這樣講的）：
+     - 半徑是 1 ~ R_MAX（12）的整數公分；給直徑的時候一定是偶數，半徑才會是整數。
+     - 圓心角只用 ANGLES 這十個度數，而且 (半徑, 圓心角) 這一對一定要讓弧長與面積都**除得盡**。
+     - 圓周率一律用 3.14；長度的單位是公分，面積的單位是平方公分。
+     - 弓形、半圓加長方形這種複合圖形、圓柱的表面積與體積不在這一課。
+     ⚠️ 全站規則：**算式裡不可以夾單位**（`6 公分 × 2` 會讓檢查工具把算式切成兩半），
+        單位一律寫在算式的後面（`6 × 2 × 3.14 ＝ 37.68` 公分）。 */
+
+  var PI_H = 314;        /* 圓周率 3.14，存成百分之一 */
+  var R_MAX = 12;        /* 半徑的上限（公分） */
+  var FULL_DEG = 360;    /* 一圈是 360 度（四年級「角度測量站」） */
+  /* 這一課用得到的圓心角。十個都好約分，而且都有整數答案的半徑。 */
+  var ANGLES = [30, 45, 60, 90, 120, 135, 180, 240, 270, 300];
+
+  /* --- 基本工具。壞輸入一律 fail-closed：回 null，不要用迴圈條件去「相信」輸入。 --- */
+  function isPosInt(n){ return typeof n === 'number' && isFinite(n) && n === Math.floor(n) && n >= 1; }
+  function isNonNegInt(n){ return typeof n === 'number' && isFinite(n) && n === Math.floor(n) && n >= 0; }
+  /* 半徑合法嗎（1 ~ 12 的整數公分）。 */
+  function okR(r){ return isPosInt(r) && r <= R_MAX; }
+  /* 直徑合法嗎（偶數，而且一半是合法的半徑）。 */
+  function okD(d){ return isPosInt(d) && d % 2 === 0 && okR(d / 2); }
+  /* 圓心角合法嗎（只認清單上那十個）。 */
+  function okAng(n){ return isPosInt(n) && ANGLES.indexOf(n) >= 0; }
+  /* 百分之一 → 讀者看到的字：尾端的 0 要拿掉（942 → 9.42、3140 → 31.4、15700 → 157）。 */
+  function hText(h){
+    if (!isNonNegInt(h)) return '?';
+    var w = Math.floor(h / 100), f = h % 100;
+    if (f === 0) return String(w);
+    if (f % 10 === 0) return w + '.' + (f / 10);
+    return w + '.' + (f < 10 ? '0' + f : String(f));
+  }
+  /* 最大公因數（六年級「短除法魔法梯」教的）。壞輸入回 null。 */
+  function gcdInt(a, b){
+    if (!isPosInt(a) || !isPosInt(b)) return null;
+    while (b){ var t = a % b; a = b; b = t; }
+    return a;
+  }
+  /* 圓心角占整圈的幾分之幾，約分到最簡：{p:分子, q:分母}。 */
+  function fracOf(n){
+    if (!okAng(n)) return null;
+    var g = gcdInt(n, FULL_DEG);
+    return g === null ? null : { p:n / g, q:FULL_DEG / g };
+  }
+  /* 寫出來的樣子：1/4、3/8（和六年級「倒數翻轉機」同一種寫法）。 */
+  function fracText(n){
+    var f = fracOf(n);
+    return f === null ? '?' : f.p + '/' + f.q;
+  }
+  /* 圓周長（百分之一公分）＝ 直徑 × 3.14 ＝ 半徑 × 2 × 3.14 */
+  function circH(r){ return okR(r) ? 2 * r * PI_H : null; }
+  /* 圓面積（百分之一平方公分）＝ 半徑 × 半徑 × 3.14 */
+  function areaH(r){ return okR(r) ? r * r * PI_H : null; }
+  /* 弧長（百分之一公分）＝ 圓周長 × 圓心角 ÷ 360。除不盡就回 null —— 這一課不出除不盡的題目。 */
+  function arcH(r, n){
+    if (!okR(r) || !okAng(n)) return null;
+    var v = circH(r) * n;
+    return v % FULL_DEG === 0 ? v / FULL_DEG : null;
+  }
+  /* 扇形面積（百分之一平方公分）＝ 圓面積 × 圓心角 ÷ 360。除不盡就回 null。 */
+  function secAreaH(r, n){
+    if (!okR(r) || !okAng(n)) return null;
+    var v = areaH(r) * n;
+    return v % FULL_DEG === 0 ? v / FULL_DEG : null;
+  }
+  /* 扇形的周長（百分之一公分）＝ 弧長 ＋ 兩條半徑。 */
+  function perimH(r, n){
+    var a = arcH(r, n);
+    return a === null ? null : a + 2 * r * 100;
+  }
+  /* 倒過來：知道占幾分之幾，圓心角是幾度。算不出清單上的角度就回 null。 */
+  function angFromFrac(p, q){
+    if (!isPosInt(p) || !isPosInt(q) || p >= q) return null;
+    var v = FULL_DEG * p;
+    if (v % q !== 0) return null;
+    var n = v / q;
+    return okAng(n) ? n : null;
+  }
+  /* (半徑, 圓心角) 這一對可不可以出題：弧長與面積都要除得盡。 */
+  function okPair(r, n){ return arcH(r, n) !== null && secAreaH(r, n) !== null; }
+
+  /* --- 版面常數。全部從這裡匯出，繪圖函式照著畫、不重算；設定檔驗四個邊與 viewBox。 --- */
+  var FIG_W = 460, FIG_H = 200;
+  var SC = 6;                                  /* 1 公分畫成 6 px（所有圖同一個比例尺） */
+  var CX = 110, CY = 100;                      /* 圓心（和右邊的分格長條並排時靠左） */
+  var CX_SOLO = 230;                           /* 只有一片扇形的時候，圓心放在畫布正中央 */
+  var DOT_R = 3;                               /* 圓心那個小點 */
+  var STROKE = 3;                              /* 圓與線的粗細 */
+  var HI_STROKE = 7;                           /* 「要算的那幾段」畫粗 */
+  var LABEL_X = 16, LABEL_A_Y = 20, LABEL_B_Y = 192, LABEL_FS = 14;
+  var LABEL_MAX = 26;                          /* 一個標籤最多幾個字（算過：從 x=16 起 26 個字剛好不出界） */
+  /* 範例 1 右邊那一條「整個圓剪成 q 份」的長條。240 被 2、3、4、6、8、12 整除，每一格才是整數寬。 */
+  var BAR_X0 = 200, BAR_W = 240, BAR_Y = 88, BAR_H = 24;
+  var BAR_QS = [2, 3, 4, 6, 8, 12];            /* 約分之後可能出現的分母 */
+
+  /* 一個圖 ＝ 一串純資料的圖元。座標一律在 viewBox 的座標系裡；
+     畫圖的人照著畫，設定檔用同一組常數重算一次再量回來。 */
+  function prCircle(cx, cy, r, fill, stroke, sw){ return { k:'circle', cx:cx, cy:cy, r:r, fill:fill, stroke:stroke || 'none', sw:sw || 0 }; }
+  function prRect(x, y, w, h, fill, stroke, sw){ return { k:'rect', x:x, y:y, w:w, h:h, fill:fill, stroke:stroke || 'none', sw:sw || 0 }; }
+  function prLine(x1, y1, x2, y2, stroke, sw){ return { k:'line', x1:x1, y1:y1, x2:x2, y2:y2, stroke:stroke, sw:sw }; }
+  function prPath(d, fill, stroke, sw){ return { k:'path', d:d, fill:fill || 'none', stroke:stroke || 'none', sw:sw || 0 }; }
+  function labelSlots(){ return [{ slot:'a', x:LABEL_X, y:LABEL_A_Y }, { slot:'b', x:LABEL_X, y:LABEL_B_Y }]; }
+  function emptyPlan(){ return { w:FIG_W, h:FIG_H, tooBig:true, prims:[], labels:labelSlots() }; }
+  /* 角度轉座標時的四捨五入：頁面與設定檔都用這一個 */
+  function r1(v){ return Math.round(v * 10) / 10; }
+  /* 圓上的一點。0 度在正右方，角度往**逆時針**長（畫布的 y 往下，所以要減）。 */
+  function ptOn(cx, cy, rp, deg){
+    var t = deg * Math.PI / 180;
+    return { x:r1(cx + rp * Math.cos(t)), y:r1(cy - rp * Math.sin(t)) };
+  }
+  /* 扇形（兩條半徑 ＋ 一段弧）。⚠️ 逆時針畫，所以 sweep-flag 是 0；
+     圓心角超過 180 度的時候 large-arc-flag 要是 1，不然瀏覽器會畫成小的那一邊。 */
+  function wedgePath(cx, cy, rp, n){
+    var a = ptOn(cx, cy, rp, 0), b = ptOn(cx, cy, rp, n);
+    return 'M ' + cx + ' ' + cy + ' L ' + a.x + ' ' + a.y +
+           ' A ' + rp + ' ' + rp + ' 0 ' + (n > 180 ? 1 : 0) + ' 0 ' + b.x + ' ' + b.y + ' Z';
+  }
+  /* 只有那一段弧（沒有兩條半徑）。 */
+  function arcPath(cx, cy, rp, n){
+    var a = ptOn(cx, cy, rp, 0), b = ptOn(cx, cy, rp, n);
+    return 'M ' + a.x + ' ' + a.y +
+           ' A ' + rp + ' ' + rp + ' 0 ' + (n > 180 ? 1 : 0) + ' 0 ' + b.x + ' ' + b.y;
+  }
+
+  var C_LINE = '#2B2A33', C_CIRC = '#3B7DD8', C_WEDGE = '#E8F0FB', C_FILL = '#BBD5F4';
+  var C_HI = '#E8871E', C_CELL = '#FFFFFF';
+
+  /* ===== 圖 A：一片扇形。mark 決定「要算的是哪幾段」畫粗： =====
+     'arc' 弧畫粗、'perim' 弧和兩條半徑都畫粗、'fill' 只塗色不畫粗（範例 1、3 與遊戲的面積題）。
+     ⚠️ 範例 1 的扇形和右邊長條的格子要**同一個顏色**，讀者才看得出「這一片 ＝ 這幾格」。 */
+  var MARKS = ['arc', 'perim', 'fill'];
+  function planSector(r, n, mark, cx){
+    if (!okR(r) || !okAng(n) || MARKS.indexOf(mark) < 0) return emptyPlan();
+    /* 圓心的 x 只認兩個位置：單獨一張圖放中央，和長條並排時靠左。別的值一律 fail-closed。 */
+    var cxx = (cx === undefined) ? CX_SOLO : cx;
+    if (cxx !== CX_SOLO && cxx !== CX) return emptyPlan();
+    var rp = r * SC, prims = [];
+    var a = ptOn(cxx, CY, rp, 0), b = ptOn(cxx, CY, rp, n);
+    var hot = (mark === 'perim');
+    prims.push(prPath(wedgePath(cxx, CY, rp, n), mark === 'fill' ? C_FILL : C_WEDGE, 'none', 0));
+    prims.push(prCircle(cxx, CY, rp, 'none', C_CIRC, STROKE));
+    if (mark === 'arc' || mark === 'perim') prims.push(prPath(arcPath(cxx, CY, rp, n), 'none', C_HI, HI_STROKE));
+    prims.push(prLine(cxx, CY, a.x, a.y, hot ? C_HI : C_LINE, hot ? HI_STROKE : STROKE));
+    prims.push(prLine(cxx, CY, b.x, b.y, hot ? C_HI : C_LINE, hot ? HI_STROKE : STROKE));
+    prims.push(prCircle(cxx, CY, DOT_R, C_LINE, 'none', 0));
+    return { w:FIG_W, h:FIG_H, tooBig:false, prims:prims, labels:labelSlots(), r:r, n:n, mark:mark, rp:rp, cx:cxx };
+  }
+
+  /* ===== 圖 B：範例 1 —— 左邊一片扇形，右邊把整個圓剪成 q 等份，塗色的是 p 份。 ===== */
+  function planFraction(r, n){
+    if (!okR(r) || !okAng(n)) return emptyPlan();
+    var f = fracOf(n);
+    if (f === null || BAR_QS.indexOf(f.q) < 0) return emptyPlan();
+    var base = planSector(r, n, 'fill', CX);
+    if (base.tooBig) return emptyPlan();
+    var prims = base.prims.slice(), cell = BAR_W / f.q, i;
+    for (i = 0; i < f.q; i++){
+      prims.push(prRect(BAR_X0 + i * cell, BAR_Y, cell, BAR_H, i < f.p ? C_FILL : C_CELL, C_CIRC, 2));
+    }
+    return { w:FIG_W, h:FIG_H, tooBig:false, prims:prims, labels:labelSlots(), r:r, n:n, p:f.p, q:f.q, cell:cell };
+  }
+
+  /* ===== 範例 1：四個圓心角，占整個圓的幾分之幾 ===== */
+  var S1_CASES = [90, 60, 45, 270];
+  var S1_R = 10;                                  /* 範例 1 只講分數，半徑固定，圖才不會忽大忽小 */
+  /* ===== 範例 2：弧長。kind 'r' 給半徑、'd' 給直徑（要先除以 2） ===== */
+  var S2_CASES = [
+    { kind:'r', v:6,  n:90 },    /* 半徑 6、90 度  → 弧長 9.42 */
+    { kind:'r', v:9,  n:120 },   /* 半徑 9、120 度 → 弧長 18.84 */
+    { kind:'r', v:10, n:45 },    /* 半徑 10、45 度 → 弧長 7.85 */
+    { kind:'d', v:16, n:135 }    /* 直徑 16 → 半徑 8、135 度 → 弧長 18.84 */
+  ];
+  /* ===== 範例 3：扇形面積（和範例 2 同樣的四片，好對照） ===== */
+  var S3_CASES = [
+    { kind:'r', v:6,  n:90 },    /* 面積 28.26 */
+    { kind:'r', v:9,  n:120 },   /* 面積 84.78 */
+    { kind:'r', v:10, n:45 },    /* 面積 39.25 */
+    { kind:'d', v:16, n:135 }    /* 面積 75.36 */
+  ];
+  /* ===== 範例 4：扇形的周長 ===== */
+  var S4_CASES = [
+    { kind:'r', v:6,  n:90 },    /* 9.42 ＋ 12 ＝ 21.42 */
+    { kind:'r', v:10, n:180 },   /* 半圓：31.4 ＋ 20 ＝ 51.4 */
+    { kind:'r', v:9,  n:120 },   /* 18.84 ＋ 18 ＝ 36.84 */
+    { kind:'r', v:12, n:30 }     /* 6.28 ＋ 24 ＝ 30.28 */
+  ];
+  /* ===== 範例 5：四個情境，一個要弧長、一個要周長、兩個要面積 ===== */
+  var S5_CASES = [
+    { id:'fan',   want:'arc',   r:12, n:120 },   /* 扇子的弧邊要縫緞帶 → 弧長 25.12 公分 */
+    { id:'lawn',  want:'area',  r:10, n:45 },    /* 扇形草地要鋪草皮 → 面積 39.25 平方公分 */
+    { id:'flag',  want:'perim', r:6,  n:90 },    /* 扇形旗子沿邊縫滾邊 → 周長 21.42 公分 */
+    { id:'pizza', want:'area',  r:9,  n:120 }    /* 披薩整片鋪起司 → 面積 84.78 平方公分 */
+  ];
+  /* 一個情境要算的那個量（百分之一）。 */
+  function caseValueH(sc){
+    if (sc.want === 'arc') return arcH(sc.r, sc.n);
+    if (sc.want === 'perim') return perimH(sc.r, sc.n);
+    if (sc.want === 'area') return secAreaH(sc.r, sc.n);
+    return null;
+  }
+  /* 情境要畫成哪一種標記。 */
+  function caseMark(sc){
+    if (sc.want === 'arc') return 'arc';
+    if (sc.want === 'perim') return 'perim';
+    if (sc.want === 'area') return 'fill';
+    return null;
+  }
+  /* 範例 2、3 的半徑：給直徑的話先除以 2。 */
+  function radiusOf(sc){
+    if (sc.kind === 'r') return okR(sc.v) ? sc.v : null;
+    if (sc.kind === 'd') return okD(sc.v) ? sc.v / 2 : null;
+    return null;
+  }
+  function diameterOf(sc){ var r = radiusOf(sc); return r === null ? null : 2 * r; }
+
+  /* ===== 小遊戲的五關。選項的順序寫在資料裡（設定檔驗的和孩子看到的是同一份）；
+           正解由 roundAnswer() **算出來**，頁面不讀 ans —— ans 是給設定檔核對用的宣告，兩者對不上時設定檔會響。 ===== */
+  var ROUNDS = [
+    /* 1. 占幾分之幾：圓心角 120 度 → 1/3。誘答是別的常見分數。 */
+    { kind:'frac', r:10, n:120, opts:['1/3', '1/2', '1/4', '2/3'], ans:0 },
+    /* 2. 弧長：半徑 6、90 度 → 9.42 公分。誘答：整圓周長 37.68、扇形面積 28.26、只有兩條半徑 12。 */
+    { kind:'arc', r:6, n:90, opts:['37.68', '9.42', '28.26', '12'], ans:1 },
+    /* 3. 扇形面積：半徑 10、45 度 → 39.25 平方公分。誘答：整圓面積 314、弧長 7.85、圓周長 62.8。 */
+    { kind:'area', r:10, n:45, opts:['314', '7.85', '39.25', '62.8'], ans:2 },
+    /* 4. 扇形周長：半徑 9、120 度 → 36.84 公分。誘答：只有弧長 18.84、面積 84.78、整圓周長 56.52。 */
+    { kind:'perim', r:9, n:120, opts:['18.84', '84.78', '36.84', '56.52'], ans:2 },
+    /* 5. 情境（沿著整圈邊緣圍籬笆）：半徑 12、30 度 → 周長 30.28 公分。誘答：只有弧長 6.28、面積 37.68、兩條半徑 24。 */
+    { kind:'which', want:'perim', r:12, n:30, opts:['6.28', '37.68', '24', '30.28'], ans:3 }
+  ];
+  /* 每一關的正解由這裡算出來，不是讀 ans。回傳的是**選項上的那個字串**（不含單位）。 */
+  function roundAnswer(rd){
+    if (rd.kind === 'frac') return fracText(rd.n);
+    if (rd.kind === 'arc') return hText(arcH(rd.r, rd.n));
+    if (rd.kind === 'area') return hText(secAreaH(rd.r, rd.n));
+    if (rd.kind === 'perim') return hText(perimH(rd.r, rd.n));
+    if (rd.kind === 'which') return hText(caseValueH(rd));
+    return null;
+  }
+  function roundAnswerIndex(rd){
+    var want = roundAnswer(rd), i;
+    if (want === null) return -1;
+    for (i = 0; i < rd.opts.length; i++) if (String(rd.opts[i]) === String(want)) return i;
+    return -1;
+  }
+  /* 每一關畫什麼圖。 */
+  function roundFigure(rd){
+    if (rd.kind === 'frac') return planFraction(rd.r, rd.n);
+    if (rd.kind === 'arc') return planSector(rd.r, rd.n, 'arc');
+    if (rd.kind === 'area') return planSector(rd.r, rd.n, 'fill');
+    if (rd.kind === 'perim') return planSector(rd.r, rd.n, 'perim');
+    if (rd.kind === 'which') return planSector(rd.r, rd.n, caseMark(rd));
+    return emptyPlan();
+  }
+  /* 遊戲選項後面要接哪一個單位：'cm' 公分、'sq' 平方公分、'none' 不加單位（分數）。 */
+  function roundUnit(rd){
+    if (rd.kind === 'frac') return 'none';
+    if (rd.kind === 'area') return 'sq';
+    if (rd.kind === 'which') return rd.want === 'area' ? 'sq' : 'cm';
+    return 'cm';
+  }
+
+  /* --- 英文的單複數。只有 1 會錯（1 centimetre / 2 centimetres），放在語言無關的區塊。 --- */
+  function plEn(n, w){
+    if (String(n) === '1') return n + ' ' + w;
+    return n + ' ' + w + (/(s|x|z|ch|sh)$/.test(w) ? 'es' : 's');
+  }
+  /* 「9.42 公分」／「9.42 centimetres」：一個量加上單位。 */
+  var UNIT_WORD = { zh:{ cm:'公分', sq:'平方公分', deg:'度' }, en:{ cm:'centimetre', sq:'square centimetre', deg:'degree' } };
+  function withUnit(lang, kind, t){
+    if (kind === 'none') return String(t);
+    /* 認不得的單位一律 fail-closed：印一個看得見的 ?，不要印出「4 undefineds」。 */
+    if (!UNIT_WORD[lang] || !UNIT_WORD[lang][kind]) return '?';
+    if (lang === 'zh') return t + ' ' + UNIT_WORD.zh[kind];
+    return plEn(String(t), UNIT_WORD.en[kind]);
+  }
+
+  /* ---------- i18n ---------- */
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'教我扇形 — 扇形披薩工廠', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（本頁）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（隨機新題）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🍕 扇形披薩工廠',
+      sub:'扇形是圓的一部分：圓心角占幾分之幾，弧長和面積就是幾分之幾',
+      intro:'切一片披薩下來，它有<strong>兩條半徑</strong>和<strong>一段弧</strong> —— 這就是<strong>扇形</strong>。<br>要算這一片的<strong>弧有多長</strong>、<strong>這一片有多大</strong>，不必再重學公式：<br>先算<strong>整個圓</strong>，再乘上這一片占整個圓的<strong>幾分之幾</strong>就好。',
+      scopeNote:'這一課只做五件事：認得<strong>扇形</strong>的三個零件（<strong>圓心角</strong>、<strong>兩條半徑</strong>、<strong>一段弧</strong>）；算<strong>弧長</strong>（圓周長 × 圓心角 ÷ 360）；算<strong>扇形面積</strong>（圓面積 × 圓心角 ÷ 360）；算<strong>扇形的周長</strong>（弧長 ＋ 兩條半徑 —— 最常忘的就是那兩條）；分清楚一題要的是<strong>弧長</strong>、<strong>周長</strong>還是<strong>面積</strong>。<strong>圓心角占 360 度的幾分之幾</strong>是<strong>五年級「多邊形轉轉盤」</strong>教的，這一課只用範例教學 1 複習一次就直接拿來用；<strong>圓周長與圓面積</strong>是<strong>六年級「圓周率工作坊」</strong>教的；<strong>圓心、半徑、直徑</strong>是<strong>三年級「圓規畫圓趣」</strong>教的；<strong>一圈是 360 度</strong>是<strong>四年級「角度測量站」</strong>教的。<strong>弓形</strong>、<strong>半圓加長方形這種複合圖形</strong>、<strong>圓柱的表面積與體積</strong>都<strong>不在這一課</strong>。這一課的圓周率<strong>一律用 3.14</strong>，半徑是 <strong>1 到 12</strong> 的整數公分，給<strong>圓的直徑</strong>的時候<strong>一定是偶數</strong>，圓心角只用 <strong>30、45、60、90、120、135、180、240、270、300</strong> 這十個度數，而且題目只會挑<strong>算得出剛好小數</strong>的半徑與圓心角組合（例如半徑 6、圓心角 90 度），長度的單位是<strong>公分</strong>、面積的單位是<strong>平方公分</strong>。',
+      modeTitle:'今天想怎麼學？（隨時可以換）',
+      modes:{
+        ahead:  { icon:'🚀', h:'超前學習', p:'還沒學過，第一次認識', banner:'超前模式：範例慢慢按，試題只出 6 題基礎題，遊戲會自動給提示。' },
+        school: { icon:'🏫', h:'跟上進度', p:'學校正在教，完整練習', banner:'跟上模式：完整 10 題，包含 4 題兩步驟與課本型文字題。' },
+        boost:  { icon:'💪', h:'補強練習', p:'學過但還不穩，加強', banner:'補強模式：先做 2 題迷思檢查，一共 12 題；做完記得去「複習挑戰」。' }
+      },
+      eb1:'範例教學 1', eb2:'範例教學 2', eb3:'範例教學 3', eb4:'範例教學 4', eb5:'範例教學 5', eb6:'試題', eb7:'小遊戲',
+      ebNext:'學完之後',
+
+      s1h2:'一片是整個圓的幾分之幾？',
+      s1lead:'整個圓轉一圈是 <strong>360 度</strong>。扇形的<strong>圓心角</strong>是幾度，它就占 360 度的幾分之幾 —— 這一片也就是整個圓的<strong>幾分之幾</strong>。右邊那一條把整個圓剪成一樣大的幾份，塗色的就是這一片。',
+      s1chip:function(n){ return '圓心角 ' + n; },
+      s1labelA:function(n){ return '圓心角 ' + n + ' 度'; },
+      s1labelB:function(n){ return '整個圓的 ' + fracText(n); },
+      s1cap:function(n){
+        var f = fracOf(n);
+        return '左邊是圓心角 ' + n + ' 度的扇形，右邊把整個圓剪成一樣大的 ' + f.q + ' 份，塗色的 ' + f.p + ' 份就是這一片。';
+      },
+      s1narr:function(n){
+        var f = fracOf(n), g = gcdInt(n, FULL_DEG);
+        return '圓心角 <strong>' + n + '</strong> 度，整圈是 <strong>360</strong> 度，所以這一片占 ' + n + ' ÷ 360。上下同時除以 ' + g + '（' + n + ' ÷ ' + g + ' ＝ ' + f.p + '，360 ÷ ' + g + ' ＝ ' + f.q + '），約分之後就是 <strong>' + fracText(n) + '</strong> —— 整個圓剪成 ' + f.q + ' 份，這一片是其中的 ' + f.p + ' 份。';
+      },
+      s1calc:function(n){ var f = fracOf(n), g = gcdInt(n, FULL_DEG); return n + ' ÷ ' + g + ' ＝ ' + f.p + '，360 ÷ ' + g + ' ＝ ' + f.q; },
+      s1result:function(n){ return '圓心角 ' + n + ' 度的扇形是整個圓的 ' + fracText(n); },
+      s1note:'💬 <strong>扇形有三個零件</strong>：頂點在圓心的<strong>圓心角</strong>、<strong>兩條半徑</strong>、還有半徑之間的那<strong>一段弧</strong>。⚠️ 同樣兩條半徑會切出<strong>兩片</strong>扇形（剛好 180 度的時候兩片一樣大，其他角度一大一小），所以<strong>圓心角要沿著你要的那一片量</strong>：大的那一片，圓心角就<strong>超過 180 度</strong>（像 270 度那一片）。⚠️ 算周長的時候只走<strong>邊</strong>：一段弧和兩條半徑 —— 圓心角是角度，不是長度。⚠️ 「幾分之幾」是<strong>圓心角 ÷ 360</strong>，不是 360 ÷ 圓心角 —— 圓心角 60 度的扇形是圓的 1/6，不是 6 倍。一片怎麼可能比整個圓還大？',
+
+      s2h2:'弧長：圓周長的幾分之幾',
+      s2lead:'扇形的那一段<strong>弧</strong>，就是圓周上的一小段。所以先算<strong>整個圓的圓周長</strong>，再乘上這一片占的<strong>幾分之幾</strong>。橘色畫粗的那一段就是要算的弧。',
+      s2chip:function(sc){ return (sc.kind === 'r' ? '半徑 ' + radiusOf(sc) : '圓的直徑 ' + diameterOf(sc)) + '、' + sc.n + ' 度'; },
+      s2labelA:function(sc){ return (sc.kind === 'r' ? '半徑 ' + radiusOf(sc) : '圓的直徑 ' + diameterOf(sc)) + ' 公分，' + sc.n + ' 度'; },
+      s2labelB:function(sc){ return '弧長 ' + hText(arcH(radiusOf(sc), sc.n)) + ' 公分'; },
+      s2cap:function(sc){
+        return '橘色畫粗的那一段是<strong>弧</strong>，它是整條圓周的 ' + fracText(sc.n) + '；兩條黑線是半徑 —— 它們的長度要拿去算圓周長，只是<strong>不加進弧長</strong>裡。';
+      },
+      s2narr:function(sc){
+        var r = radiusOf(sc), c = circH(r), a = arcH(r, sc.n);
+        var head = sc.kind === 'd'
+          ? '題目給的是<strong>圓的直徑</strong>，先除以 2 變成半徑：' + diameterOf(sc) + ' ÷ 2 ＝ <strong>' + r + '</strong>（公分）。'
+          : '題目給的就是<strong>半徑</strong>，可以直接算。';
+        return head + '先算整個圓的圓周長：' + r + ' × 2 × 3.14 ＝ <strong>' + hText(c) + '</strong>（公分）。這一片占整個圓的 <strong>' + fracText(sc.n) + '</strong>，所以弧長就是圓周長的 ' + fracText(sc.n) + '：' + hText(c) + ' × ' + sc.n + ' ÷ 360 ＝ <strong>' + hText(a) + '</strong>（公分）。';
+      },
+      s2calc:function(sc){
+        var r = radiusOf(sc), c = circH(r);
+        return hText(c) + ' × ' + sc.n + ' ÷ 360 ＝ ' + hText(arcH(r, sc.n)) + ' 公分';
+      },
+      s2result:function(sc){ return '弧長是 ' + hText(arcH(radiusOf(sc), sc.n)) + ' 公分'; },
+      s2note:'💬 寫成一條就是：<strong>弧長 ＝ 半徑 × 2 × 3.14 × 圓心角 ÷ 360</strong>。⚠️ 題目給<strong>圓的直徑</strong>的時候，一樣要<strong>先除以 2</strong> 變成半徑（或是直接用「直徑 × 3.14」算圓周長）。⚠️ 弧長是<strong>一條線的長度</strong>，單位是<strong>公分</strong>，不是平方公分。',
+
+      s3h2:'扇形面積：圓面積的幾分之幾',
+      s3lead:'整片塗色的就是<strong>扇形面積</strong>。做法和弧長<strong>一模一樣</strong>：先算<strong>整個圓的面積</strong>，再乘上這一片占的<strong>幾分之幾</strong>。',
+      s3chip:function(sc){ return (sc.kind === 'r' ? '半徑 ' + radiusOf(sc) : '圓的直徑 ' + diameterOf(sc)) + '、' + sc.n + ' 度'; },
+      s3labelA:function(sc){ return (sc.kind === 'r' ? '半徑 ' + radiusOf(sc) : '圓的直徑 ' + diameterOf(sc)) + ' 公分，' + sc.n + ' 度'; },
+      s3labelB:function(sc){ return '面積 ' + hText(secAreaH(radiusOf(sc), sc.n)) + ' 平方公分'; },
+      s3cap:function(sc){
+        return '塗深色的那一整片就是扇形的面積，它是整個圓面的 ' + fracText(sc.n) + '。';
+      },
+      s3narr:function(sc){
+        var r = radiusOf(sc), ar = areaH(r), s = secAreaH(r, sc.n);
+        var head = sc.kind === 'd'
+          ? '題目給的是<strong>圓的直徑</strong>，先除以 2 變成半徑：' + diameterOf(sc) + ' ÷ 2 ＝ <strong>' + r + '</strong>（公分）。'
+          : '題目給的就是<strong>半徑</strong>，可以直接算。';
+        return head + '先算整個圓的面積：' + r + ' × ' + r + ' × 3.14 ＝ <strong>' + hText(ar) + '</strong>（平方公分）。這一片占整個圓的 <strong>' + fracText(sc.n) + '</strong>，所以扇形面積就是圓面積的 ' + fracText(sc.n) + '：' + hText(ar) + ' × ' + sc.n + ' ÷ 360 ＝ <strong>' + hText(s) + '</strong>（平方公分）。';
+      },
+      s3calc:function(sc){
+        var r = radiusOf(sc);
+        return hText(areaH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ ' + hText(secAreaH(r, sc.n)) + ' 平方公分';
+      },
+      s3result:function(sc){ return '扇形面積是 ' + hText(secAreaH(radiusOf(sc), sc.n)) + ' 平方公分'; },
+      s3note:'💬 寫成一條就是：<strong>扇形面積 ＝ 半徑 × 半徑 × 3.14 × 圓心角 ÷ 360</strong>。⚠️ 面積的單位是<strong>平方公分</strong>，因為它數的是<strong>一格一格的正方形</strong>。⚠️ 同一個扇形，弧長和面積的「幾分之幾」是<strong>同一個</strong>分數 —— 換掉的只有前面那個整圓的量。',
+
+      s4h2:'扇形的周長：弧長還要加兩條半徑',
+      s4lead:'沿著扇形的<strong>邊緣走一圈</strong>，走過的是：<strong>一段弧</strong>，再<strong>兩條半徑</strong>。橘色畫粗的這幾段合起來才是<strong>周長</strong>（圓心角剛好 180 度的時候，那兩條半徑接成一條直徑，看起來就只有兩段）。這一題是整課最容易漏掉的一步。',
+      s4chip:function(sc){ return '半徑 ' + radiusOf(sc) + '、' + sc.n + ' 度'; },
+      s4labelA:function(sc){ return '半徑 ' + radiusOf(sc) + ' 公分，' + sc.n + ' 度'; },
+      s4labelB:function(sc){ return '周長 ' + hText(perimH(radiusOf(sc), sc.n)) + ' 公分'; },
+      s4cap:function(sc){
+        var r = radiusOf(sc);
+        if (sc.n === 180) return '橘色的兩段：一段弧 ' + hText(arcH(r, sc.n)) + ' 公分，加上一條直徑（兩條半徑接起來）' + (2 * r) + ' 公分。';
+        return '橘色的三段：一段弧 ' + hText(arcH(r, sc.n)) + ' 公分，加上兩條半徑各 ' + r + ' 公分。';
+      },
+      s4narr:function(sc){
+        var r = radiusOf(sc), a = arcH(r, sc.n), p = perimH(r, sc.n);
+        var half = sc.n === 180 ? '這一片剛好是<strong>半圓</strong>，兩條半徑接起來就是直徑，所以也可以說成「弧長 ＋ 直徑」。' : '';
+        return '先算弧長：' + hText(circH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ <strong>' + hText(a) + '</strong>（公分）。再把<strong>兩條半徑</strong>加上去：' + hText(a) + ' ＋ ' + r + ' × 2 ＝ <strong>' + hText(p) + '</strong>（公分）。' + half;
+      },
+      s4calc:function(sc){
+        var r = radiusOf(sc);
+        return hText(arcH(r, sc.n)) + ' ＋ ' + r + ' × 2 ＝ ' + hText(perimH(r, sc.n)) + ' 公分';
+      },
+      s4result:function(sc){ return '扇形的周長是 ' + hText(perimH(radiusOf(sc), sc.n)) + ' 公分'; },
+      s4note:'💬 <strong>扇形的周長 ＝ 弧長 ＋ 半徑 × 2</strong>。⚠️ 半圓也一樣：半圓的周長是<strong>那一段弧</strong>再加上<strong>直徑</strong>（兩條半徑接起來剛好是直徑），不是圓周長的一半。⚠️ 「弧長」和「周長」是<strong>兩個不同的量</strong>，題目問哪一個要看清楚。',
+
+      s5h2:'這一題要算弧長、周長，還是面積？',
+      s5lead:'同一片扇形可以問三種問題。只沿著<strong>那一段彎的邊</strong>走是<strong>弧長</strong>；<strong>整圈邊緣</strong>都走是<strong>周長</strong>（弧長 ＋ 兩條半徑）；<strong>整片鋪滿</strong>是<strong>面積</strong>。四個情境，先自己判斷再看答案。',
+      s5chip:function(sc){ return { fan:'扇子弧邊', lawn:'扇形草地', flag:'扇形旗子', pizza:'披薩起司' }[sc.id]; },
+      s5stem:function(sc){
+        return {
+          fan:'一把扇形的扇子，半徑 <b>' + sc.r + ' 公分</b>、圓心角 <b>' + sc.n + ' 度</b>。只在<b>彎的那一段邊</b>縫一條緞帶，緞帶至少要多長？',
+          lawn:'一塊扇形的草地，半徑 <b>' + sc.r + ' 公分</b>、圓心角 <b>' + sc.n + ' 度</b>。<b>整片</b>都要鋪滿草皮，需要多少草皮？',
+          flag:'一面扇形的旗子，半徑 <b>' + sc.r + ' 公分</b>、圓心角 <b>' + sc.n + ' 度</b>。沿著<b>整圈邊緣</b>縫一條滾邊，滾邊至少要多長？',
+          pizza:'一片扇形的披薩，半徑 <b>' + sc.r + ' 公分</b>、圓心角 <b>' + sc.n + ' 度</b>。<b>整片表面</b>都要鋪滿起司，要鋪多大一片？'
+        }[sc.id];
+      },
+      s5labelA:function(sc){ return '半徑 ' + sc.r + ' 公分，' + sc.n + ' 度'; },
+      s5labelB:function(sc){ return { arc:'要算弧長', perim:'要算周長', area:'要算面積' }[sc.want]; },
+      s5cap:function(sc){
+        return { arc:'橘色畫粗的只有彎的那一段邊 —— 只走這一段。',
+                 perim:'橘色畫粗的是整圈邊緣：一段弧加上兩條半徑。',
+                 area:'塗深色的那一整片就是要算的東西。' }[sc.want];
+      },
+      s5narr:function(sc){
+        var r = sc.r, v = caseValueH(sc), a = arcH(r, sc.n);
+        if (sc.want === 'arc') return '「只在彎的那一段邊縫」就是只走<strong>弧</strong>，所以算<strong>弧長</strong>：整個圓的圓周長是 ' + r + ' × 2 × 3.14 ＝ ' + hText(circH(r)) + '，這一片占 ' + fracText(sc.n) + '，' + hText(circH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ <strong>' + hText(v) + '</strong>（公分）。兩條半徑<strong>不算</strong>，因為緞帶沒有縫在那兩條上。';
+        if (sc.want === 'perim') return '「沿著整圈邊緣縫」就是弧和兩條半徑都走，所以算<strong>周長</strong>：弧長是 ' + hText(circH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ ' + hText(a) + '，再加兩條半徑 ' + hText(a) + ' ＋ ' + r + ' × 2 ＝ <strong>' + hText(v) + '</strong>（公分）。少加那兩條就會短一截。';
+        return '「整片鋪滿」就是把裡面填滿，所以算<strong>面積</strong>：整個圓的面積是 ' + r + ' × ' + r + ' × 3.14 ＝ ' + hText(areaH(r)) + '，這一片占 ' + fracText(sc.n) + '，' + hText(areaH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ <strong>' + hText(v) + '</strong>（平方公分）。單位是<strong>平方公分</strong>，因為答案是蓋住一片的東西。';
+      },
+      s5calc:function(sc){
+        var r = sc.r, v = caseValueH(sc);
+        if (sc.want === 'perim') return hText(arcH(r, sc.n)) + ' ＋ ' + r + ' × 2 ＝ ' + hText(v) + ' 公分';
+        if (sc.want === 'arc') return hText(circH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ ' + hText(v) + ' 公分';
+        return hText(areaH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ ' + hText(v) + ' 平方公分';
+      },
+      s5result:function(sc){ return withUnit('zh', sc.want === 'area' ? 'sq' : 'cm', hText(caseValueH(sc))); },
+      s5note:'💬 判斷只有兩句話：<strong>走的是哪幾段邊？</strong>（只有彎的那一段 → 弧長；弧和兩條半徑都走 → 周長）<strong>還是要把裡面填滿？</strong>（→ 面積）。⚠️ 單位是最後一道防線：答案是<strong>一條</strong>的東西（緞帶、鐵絲、滾邊）用<strong>公分</strong>；是<strong>一片</strong>的東西（布、草皮、起司）用<strong>平方公分</strong>。',
+
+      s6h2:'檢查一下',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      cAll:'全對！占幾分之幾、弧長、面積、周長，你都分得清清楚楚 🏆',
+      cGood:'不錯，錯的那幾題看一下說明。',
+      cTry:'先回上面的範例，把每一片都按過一次再回來。',
+
+      qs:[
+        { stem:'一個扇形的<strong>圓心角</strong>是 <strong>90 度</strong>，它是整個圓的幾分之幾？',
+          opts:['1/2', '1/9', '4', '1/4'], ans:3,
+          why:'整圈是 360 度，所以這一片占 90 ÷ 360。上下同時除以 90：90 ÷ 90 ＝ 1，360 ÷ 90 ＝ 4，約分之後是 1/4。倒過來寫成 360 ÷ 90 ＝ 4 是在數「整個圓可以切成 4 片」，不是這一片的大小 —— 一片不可能比整個圓大。' },
+        { stem:'一個扇形的半徑是 <strong>6 公分</strong>、圓心角是 <strong>60 度</strong>，它的<strong>弧長</strong>是多少？',
+          opts:['37.68 公分', '6.28 公分', '18.84 平方公分', '12 公分'], ans:1,
+          why:'先算整個圓的圓周長：6 × 2 × 3.14 ＝ 37.68。圓心角 60 度占 360 度的 1/6，所以弧長是 37.68 × 60 ÷ 360 ＝ 6.28，單位是公分。37.68 是整個圓的圓周長；18.84 是這個扇形的面積，單位也不一樣；12 是兩條半徑加起來。' },
+        { stem:'一個扇形的半徑是 <strong>10 公分</strong>、圓心角是 <strong>180 度</strong>（半圓），它的<strong>面積</strong>是多少？',
+          opts:['314 平方公分', '31.4 公分', '157 平方公分', '62.8 公分'], ans:2,
+          why:'先算整個圓的面積：10 × 10 × 3.14 ＝ 314。半圓的圓心角 180 度占 360 度的 1/2，所以面積是 314 × 180 ÷ 360 ＝ 157，單位是平方公分。314 是整個圓的面積；31.4 是這個半圓的弧長，單位是公分；62.8 是整個圓的圓周長。' },
+        { stem:'一個扇形的半徑是 <strong>6 公分</strong>、圓心角是 <strong>90 度</strong>，它的<strong>周長</strong>是多少？',
+          opts:['9.42 公分', '21.42 公分', '28.26 平方公分', '37.68 公分'], ans:1,
+          why:'扇形的周長是弧長加上兩條半徑。弧長是 37.68 × 90 ÷ 360 ＝ 9.42，再加兩條半徑 9.42 ＋ 6 × 2 ＝ 21.42，單位是公分。9.42 只有弧長，忘了那兩條半徑；28.26 是面積；37.68 是整個圓的圓周長。' },
+        { stem:'一個扇形是整個圓的 <strong>1/6</strong>，它的<strong>圓心角</strong>是幾度？',
+          opts:['6 度', '300 度', '36 度', '60 度'], ans:3,
+          why:'整圈是 360 度，切成一樣大的 6 份，每一份是 360 ÷ 6 ＝ 60，所以圓心角是 60 度。驗算：60 ÷ 360 約分之後就是 1/6。300 度是剩下的那一大片，360 － 60 ＝ 300。' },
+        { stem:'一片扇形披薩的半徑是 <strong>12 公分</strong>、圓心角是 <strong>45 度</strong>。<strong>彎的那一段餅皮邊</strong>有多長？',
+          opts:['9.42 公分', '75.36 公分', '56.52 平方公分', '24 公分'], ans:0,
+          why:'彎的那一段就是弧。整個圓的圓周長是 12 × 2 × 3.14 ＝ 75.36，這一片占的分數是 45 ÷ 360，約分之後是 1/8，所以弧長是 75.36 × 45 ÷ 360 ＝ 9.42，單位是公分。75.36 是整個圓的圓周長；56.52 是這一片的面積；24 是兩條半徑加起來，那是切開的兩條直邊，不是餅皮邊。' }
+      ],
+      qsAdv:[
+        { stem:'一個扇形的半徑是 <strong>9 公分</strong>、圓心角是 <strong>120 度</strong>，它的<strong>面積</strong>是多少？',
+          opts:['254.34 平方公分', '18.84 公分', '28.26 平方公分', '84.78 平方公分'], ans:3,
+          why:'整個圓的面積是 9 × 9 × 3.14 ＝ 254.34，圓心角 120 度占 360 度的 1/3，所以扇形面積是 254.34 × 120 ÷ 360 ＝ 84.78，單位是平方公分。254.34 是整個圓的面積；18.84 是這個扇形的弧長，單位是公分；28.26 是半徑 6、圓心角 90 度那一片的面積，和這一題無關。' },
+        { stem:'一個扇形的<strong>弧長</strong>剛好是整個圓周長的 <strong>1/8</strong>，它的<strong>圓心角</strong>是幾度？',
+          opts:['8 度', '45 度', '60 度', '315 度'], ans:1,
+          why:'弧長占圓周長的幾分之幾，圓心角就占 360 度的幾分之幾，兩個是同一個分數。所以圓心角是 360 ÷ 8 ＝ 45，答案是 45 度。315 度是剩下的那一大片，360 － 45 ＝ 315。' },
+        { stem:'一個<strong>半圓</strong>的半徑是 <strong>10 公分</strong>，沿著它的<strong>邊緣走一圈</strong>有多長？',
+          opts:['31.4 公分', '62.8 公分', '51.4 公分', '157 平方公分'], ans:2,
+          why:'半圓的邊緣有兩段：弧和那一條直直的邊。弧長是 62.8 × 180 ÷ 360 ＝ 31.4，直直的那一條是兩條半徑接起來，也就是直徑 10 × 2 ＝ 20。合起來 31.4 ＋ 20 ＝ 51.4，單位是公分。只寫 31.4 是漏掉直徑那一條；62.8 是整個圓的圓周長；157 是半圓的面積。' },
+        { stem:'小安說：「扇形的周長就是那一段弧的長度。」下面哪一句話的<strong>結論和理由都對</strong>？',
+          opts:['不對，扇形的邊緣還有兩條半徑，所以周長是弧長再加上半徑 × 2', '對，因為弧是扇形唯一的邊', '對，因為兩條半徑在扇形的裡面，不算邊', '不對，扇形的周長一律是弧長再加上直徑，不管圓心角是幾度'], ans:0,
+          why:'沿著扇形的邊緣走一圈，會走過一段弧和兩條半徑 —— 那兩條半徑就是切開時留下的兩條直邊，它們是邊，不是裡面的線。所以周長是弧長 ＋ 半徑 × 2。只有圓心角剛好 180 度（半圓）的時候，那兩條半徑接起來才等於直徑；其他角度都不是。舉一個例：半徑 6 公分、圓心角 90 度的扇形，弧長是 9.42，周長是 9.42 ＋ 6 × 2 ＝ 21.42。' }
+      ],
+      qsBoost:[
+        { stem:'小華算「<strong>半徑 6 公分、圓心角 90 度</strong>的扇形<strong>周長</strong>」，寫成「37.68 × 90 ÷ 360 ＝ 9.42 公分」。他哪裡想錯了？',
+          opts:['他沒有錯，扇形的周長就是那一段弧的長度', '他算出來的 9.42 只是<strong>弧長</strong>，還要加兩條半徑：9.42 ＋ 6 × 2 ＝ 21.42', '應該用面積公式：6 × 6 × 3.14 × 90 ÷ 360 ＝ 28.26', '應該再乘以 2：9.42 × 2 ＝ 18.84'], ans:1,
+          why:'他算的那一步是對的，可是算出來的 9.42 只是<strong>弧</strong>那一段。沿著扇形的邊緣走一圈還要走兩條半徑，所以周長是 9.42 ＋ 6 × 2 ＝ 21.42，單位是公分。28.26 是這個扇形的面積，單位是平方公分；把弧長乘以 2 沒有任何道理，兩條半徑不是弧長那麼長。' },
+        { stem:'小美說：「圓心角 60 度的扇形，是整個圓的 360 ÷ 60 ＝ 6 倍。」她哪裡想錯了？',
+          opts:['她沒有錯，6 倍就是答案', '分數要寫成<strong>圓心角 ÷ 360</strong>：60 ÷ 360 約分之後是 1/6', '應該算 360 － 60 ＝ 300，所以是 300 倍', '應該用 60 × 360 ＝ 21600'], ans:1,
+          why:'她把分子分母顛倒了。這一片占整圈的幾分之幾，要用圓心角 ÷ 360：60 ÷ 360，上下同時除以 60 就是 1/6。她算出來的 6 是在數「整個圓可以切成 6 片這麼大的扇形」，那是<strong>片數</strong>，不是一片的大小 —— 一片不可能是整個圓的 6 倍。' }
+      ],
+
+      s7h2:'切披薩五連發',
+      s7lead:'五道題。每一道先問自己：<strong>這一片占整個圓的幾分之幾？要算的是弧長、周長還是面積？單位該寫哪一個？</strong>',
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gLabelA:function(rd){ return '半徑 ' + rd.r + ' 公分，' + rd.n + ' 度'; },
+      gLabelB:function(rd){
+        return { frac:'占整個圓的幾分之幾', arc:'要算弧長', area:'要算面積', perim:'要算周長', which:'要算周長' }[rd.kind];
+      },
+      gCap:{
+        frac:'右邊那一條把整個圓剪成一樣大的幾份，塗色的就是這一片。',
+        arc:'橘色畫粗的只有彎的那一段弧。',
+        area:'塗深色的那一整片就是要算的東西。',
+        perim:'橘色畫粗的是整圈邊緣：一段弧加上兩條半徑。',
+        which:'橘色畫粗的是整圈邊緣：一段弧加上兩條半徑。'
+      },
+      gPrompt:{
+        frac:function(rd){ return '第 ① 題：圓心角 <b>' + rd.n + ' 度</b>的扇形，是整個圓的<b>幾分之幾</b>？'; },
+        arc:function(rd){ return '第 ② 題：半徑 <b>' + rd.r + ' 公分</b>、圓心角 <b>' + rd.n + ' 度</b>的扇形，<b>弧長</b>是多少？'; },
+        area:function(rd){ return '第 ③ 題：半徑 <b>' + rd.r + ' 公分</b>、圓心角 <b>' + rd.n + ' 度</b>的扇形，<b>面積</b>是多少？'; },
+        perim:function(rd){ return '第 ④ 題：半徑 <b>' + rd.r + ' 公分</b>、圓心角 <b>' + rd.n + ' 度</b>的扇形，<b>周長</b>是多少？'; },
+        which:function(rd){ return '第 ⑤ 題：一塊扇形花圃，半徑 <b>' + rd.r + ' 公分</b>、圓心角 <b>' + rd.n + ' 度</b>。沿著<b>整圈邊緣</b>圍一圈籬笆，籬笆至少要多長？'; }
+      },
+      gHint1:{
+        frac:'圓心角是幾度，就占 360 度的幾分之幾 —— 記得約分。',
+        arc:'先算整個圓的圓周長，再乘上這一片占的幾分之幾。',
+        area:'先算整個圓的面積，再乘上這一片占的幾分之幾。別忘了單位是平方公分。',
+        perim:'周長不是只有弧 —— 走完一圈還會走到兩條半徑。',
+        which:'「沿著整圈邊緣」是弧和兩條半徑都走，還是只走彎的那一段？'
+      },
+      gHint2:{
+        frac:function(rd){ return rd.n + ' ÷ 360 約分之後是多少？'; },
+        arc:function(rd){ return rd.r + ' × 2 × 3.14 ＝ ' + hText(circH(rd.r)) + '，再 ' + hText(circH(rd.r)) + ' × ' + rd.n + ' ÷ 360。'; },
+        area:function(rd){ return rd.r + ' × ' + rd.r + ' × 3.14 ＝ ' + hText(areaH(rd.r)) + '，再 ' + hText(areaH(rd.r)) + ' × ' + rd.n + ' ÷ 360。'; },
+        perim:function(rd){ return '弧長是 ' + hText(arcH(rd.r, rd.n)) + '，再加 ' + rd.r + ' × 2。'; },
+        which:function(rd){ return '弧長是 ' + hText(arcH(rd.r, rd.n)) + '，再加 ' + rd.r + ' × 2。'; }
+      },
+      gOptText:function(rd, i){ return withUnit('zh', roundUnit(rd), rd.opts[i]); },
+      gCorrectFirst:'✅ 答對了！＋20 分',
+      gCorrectRetry:'✅ 這次對了！＋10 分',
+      gWrong:function(lost, kind){ return '❌ ' + (kind === 'frac' ? '再想一想：分數是圓心角 ÷ 360 嗎？' : '再想一想：要算的是弧長、周長還是面積？') + '－' + lost + ' 分'; },
+      gClear:'按「下一關」接下一題。',
+      gWin:function(s){ return '🏆 五題全部完成！總分 ' + s + ' 分。'; },
+
+      nextH2:'把它記牢的四個動作',
+      next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
+      next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
+      next3:'🧑‍🏫 <strong>換你當老師</strong>：拿一張圓形的紙對摺再對摺，剪下一片，量出半徑，說出這一片是整個圓的幾分之幾，再把「弧長怎麼算、周長為什麼要多加兩條半徑」講給家人聽。講得出來，才是真的懂。',
+      next4:'❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
+      footer:'把整頁縮成一句：<strong>圓心角占 360 度的幾分之幾，弧長就是圓周長的幾分之幾、扇形面積就是圓面積的幾分之幾</strong>；<strong>扇形的周長還要加上兩條半徑</strong>。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Teach Me Sectors — The Sector Pizza Workshop', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (this page)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (fresh questions)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🍕 The Sector Pizza Workshop',
+      sub:'A sector is part of a circle: the share the angle takes is the share the arc and the area take',
+      intro:'Cut a slice of pizza and it has <strong>two radiuses</strong> and <strong>one arc</strong> — that is a <strong>sector</strong>.<br>To find out <strong>how long its curved edge is</strong> or <strong>how big the slice is</strong>, no new formula is needed:<br>work out the <strong>whole circle</strong> first, then take the <strong>share</strong> this slice has of it.',
+      scopeNote:'This lesson does five things: meets the three parts of a <strong>sector</strong> (the <strong>angle at the centre</strong>, <strong>two radiuses</strong> and <strong>one arc</strong>); works out an <strong>arc length</strong> (circumference × angle ÷ 360); works out a <strong>sector area</strong> (circle area × angle ÷ 360); works out the <strong>perimeter of a sector</strong> (arc length ＋ two radiuses — those two are what everybody forgets); and tells apart a question about an <strong>arc length</strong>, a <strong>perimeter</strong> and an <strong>area</strong>. <strong>What share of 360 degrees the angle at the centre takes</strong> comes from the <strong>grade-5 polygon lesson</strong> and is only revisited once, in Example 1, before being used; the <strong>circumference and the area of a circle</strong> come from the <strong>grade-6 pi lesson</strong>; the <strong>centre, radius and diameter</strong> come from the <strong>grade-3 compass lesson</strong>; and <strong>a full turn being 360 degrees</strong> comes from the <strong>grade-4 angle lesson</strong>. <strong>Circular segments</strong>, <strong>composite shapes such as a half circle on top of a rectangle</strong> and <strong>the surface area and volume of a cylinder</strong> are <strong>not in this lesson</strong>. Pi is <strong>always 3.14</strong> here, every radius is a whole number of centimetres from <strong>1 to 12</strong>, every circle diameter given is <strong>even</strong>, the angle at the centre is only ever <strong>30, 45, 60, 90, 120, 135, 180, 240, 270 or 300</strong> degrees, and every question picks a radius and angle whose answer <strong>comes out exactly</strong> (radius 6 with 90 degrees, say), lengths are in <strong>centimetres</strong> and areas in <strong>square centimetres</strong>.',
+      modeTitle:'How do you want to learn today? (you can switch any time)',
+      modes:{
+        ahead:  { icon:'🚀', h:'Getting ahead', p:'Not taught yet, first look', banner:'Ahead mode: take the examples slowly, only 6 basic questions, and the game gives a hint straight away.' },
+        school: { icon:'🏫', h:'Keeping up', p:'Being taught now, full practice', banner:'Keeping-up mode: all 10 questions, including 4 two-step and textbook-style problems.' },
+        boost:  { icon:'💪', h:'Extra practice', p:'Taught, but still shaky', banner:'Extra-practice mode: 2 misconception checks first, 12 questions in all. Then try the review challenge.' }
+      },
+      eb1:'Example 1', eb2:'Example 2', eb3:'Example 3', eb4:'Example 4', eb5:'Example 5', eb6:'Questions', eb7:'Game',
+      ebNext:'After the lesson',
+
+      s1h2:'What share of the whole circle is one slice?',
+      s1lead:'A full turn round the circle is <strong>360 degrees</strong>. Whatever the sector’s <strong>angle at the centre</strong> is, that is its share of 360 degrees — and that is the <strong>share of the whole circle</strong> the slice takes. The strip on the right cuts the whole circle into equal parts; the coloured ones are this slice.',
+      s1chip:function(n){ return 'angle ' + n; },
+      s1labelA:function(n){ return 'angle ' + n + ' degrees'; },
+      s1labelB:function(n){ return fracText(n) + ' of the circle'; },
+      s1cap:function(n){
+        var f = fracOf(n);
+        return 'On the left is a sector with an angle of ' + plEn(n, 'degree') + ' at the centre; on the right the whole circle is cut into ' + f.q + ' equal parts, and the ' + f.p + ' coloured ones are this slice.';
+      },
+      s1narr:function(n){
+        var f = fracOf(n), g = gcdInt(n, FULL_DEG);
+        return 'The angle is <strong>' + n + '</strong> degrees and a full turn is <strong>360</strong>, so the share is ' + n + ' ÷ 360. Divide top and bottom by ' + g + ' (' + n + ' ÷ ' + g + ' ＝ ' + f.p + ' and 360 ÷ ' + g + ' ＝ ' + f.q + ') and the share is <strong>' + fracText(n) + '</strong> — cut the whole circle into ' + f.q + ' equal parts and this slice is ' + f.p + ' of them.';
+      },
+      s1calc:function(n){ var f = fracOf(n), g = gcdInt(n, FULL_DEG); return n + ' ÷ ' + g + ' ＝ ' + f.p + ', 360 ÷ ' + g + ' ＝ ' + f.q; },
+      s1result:function(n){ return 'a sector with an angle of ' + plEn(n, 'degree') + ' is ' + fracText(n) + ' of the whole circle'; },
+      s1note:'💬 A <strong>sector has three parts</strong>: the <strong>angle at the centre</strong>, the <strong>two radiuses</strong>, and the <strong>arc</strong> between them. ⚠️ The same two radiuses cut the circle into <strong>two</strong> sectors (equal ones at exactly 180 degrees, otherwise one small and one big), so <strong>measure the angle through the slice you mean</strong>: the big one has an angle of <strong>more than 180 degrees</strong>, like the 270-degree slice. ⚠️ A perimeter only travels the <strong>edges</strong> — one arc and two radiuses; the angle at the centre is an angle, not a length. ⚠️ The share is <strong>angle ÷ 360</strong>, never 360 ÷ angle — a sector with an angle of 60 degrees is 1/6 of the circle, not 6 times it. How could one slice be bigger than the whole circle?',
+
+      s2h2:'Arc length: that share of the circumference',
+      s2lead:'A sector’s <strong>arc</strong> is just a piece of the circle’s edge. So work out the <strong>whole circumference</strong> first, then take the <strong>share</strong> this slice has. The thick orange piece is the arc being worked out.',
+      s2chip:function(sc){ return (sc.kind === 'r' ? 'radius ' + radiusOf(sc) : 'circle diameter ' + diameterOf(sc)) + ', ' + sc.n + '°'; },
+      s2labelA:function(sc){ return (sc.kind === 'r' ? 'radius ' + radiusOf(sc) : 'circle diam. ' + diameterOf(sc)) + ' cm, ' + sc.n + '°'; },
+      s2labelB:function(sc){ return 'arc ' + hText(arcH(radiusOf(sc), sc.n)) + ' cm'; },
+      s2cap:function(sc){
+        return 'The thick orange piece is the <strong>arc</strong>, which is ' + fracText(sc.n) + ' of the whole edge; the two black lines are the radiuses — their length is what the circumference is worked out from, it is just <strong>not added to the arc</strong>.';
+      },
+      s2narr:function(sc){
+        var r = radiusOf(sc), c = circH(r), a = arcH(r, sc.n);
+        var head = sc.kind === 'd'
+          ? 'The question gives the <strong>circle’s diameter</strong>, so halve it first: ' + diameterOf(sc) + ' ÷ 2 ＝ <strong>' + r + '</strong> centimetres. '
+          : 'The question already gives the <strong>radius</strong>, so it can be used straight away. ';
+        return head + 'The whole circumference is ' + r + ' × 2 × 3.14 ＝ <strong>' + hText(c) + '</strong> centimetres. This slice is <strong>' + fracText(sc.n) + '</strong> of the circle, so the arc is that share of the circumference: ' + hText(c) + ' × ' + sc.n + ' ÷ 360 ＝ <strong>' + hText(a) + '</strong> centimetres.';
+      },
+      s2calc:function(sc){
+        var r = radiusOf(sc), c = circH(r);
+        return hText(c) + ' × ' + sc.n + ' ÷ 360 ＝ ' + hText(arcH(r, sc.n)) + ' cm';
+      },
+      s2result:function(sc){ return 'the arc is ' + plEn(hText(arcH(radiusOf(sc), sc.n)), 'centimetre') + ' long'; },
+      s2note:'💬 As one line: <strong>arc length ＝ radius × 2 × 3.14 × angle ÷ 360</strong>. ⚠️ When the question gives the <strong>circle’s diameter</strong>, halve it first to get the radius (or work out the circumference straight from “diameter × 3.14”). ⚠️ An arc is <strong>the length of a line</strong>, so it is in <strong>centimetres</strong>, not square centimetres.',
+
+      s3h2:'Sector area: that share of the circle’s area',
+      s3lead:'The whole coloured slice is the <strong>sector area</strong>. It works <strong>exactly like the arc</strong>: work out the <strong>whole circle’s area</strong> first, then take the <strong>share</strong> this slice has.',
+      s3chip:function(sc){ return (sc.kind === 'r' ? 'radius ' + radiusOf(sc) : 'circle diameter ' + diameterOf(sc)) + ', ' + sc.n + '°'; },
+      s3labelA:function(sc){ return (sc.kind === 'r' ? 'radius ' + radiusOf(sc) : 'circle diam. ' + diameterOf(sc)) + ' cm, ' + sc.n + '°'; },
+      s3labelB:function(sc){ return 'area ' + hText(secAreaH(radiusOf(sc), sc.n)) + ' sq cm'; },
+      s3cap:function(sc){
+        return 'The whole shaded slice is the sector’s area, which is ' + fracText(sc.n) + ' of the whole circle’s face.';
+      },
+      s3narr:function(sc){
+        var r = radiusOf(sc), ar = areaH(r), s = secAreaH(r, sc.n);
+        var head = sc.kind === 'd'
+          ? 'The question gives the <strong>circle’s diameter</strong>, so halve it first: ' + diameterOf(sc) + ' ÷ 2 ＝ <strong>' + r + '</strong> centimetres. '
+          : 'The question already gives the <strong>radius</strong>, so it can be used straight away. ';
+        return head + 'The whole circle’s area is ' + r + ' × ' + r + ' × 3.14 ＝ <strong>' + hText(ar) + '</strong> square centimetres. This slice is <strong>' + fracText(sc.n) + '</strong> of the circle, so its area is that share: ' + hText(ar) + ' × ' + sc.n + ' ÷ 360 ＝ <strong>' + hText(s) + '</strong> square centimetres.';
+      },
+      s3calc:function(sc){
+        var r = radiusOf(sc);
+        return hText(areaH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ ' + hText(secAreaH(r, sc.n)) + ' sq cm';
+      },
+      s3result:function(sc){ return 'the sector’s area is ' + plEn(hText(secAreaH(radiusOf(sc), sc.n)), 'square centimetre'); },
+      s3note:'💬 As one line: <strong>sector area ＝ radius × radius × 3.14 × angle ÷ 360</strong>. ⚠️ An area is in <strong>square centimetres</strong>, because it counts <strong>little squares</strong>. ⚠️ For one sector the share used for the arc and the share used for the area are the <strong>same</strong> fraction — only the whole-circle amount in front of it changes.',
+
+      s4h2:'A sector’s perimeter: the arc plus two radiuses',
+      s4lead:'Walking <strong>right round the edge</strong> of a sector covers <strong>one arc</strong> and then <strong>two radiuses</strong>. Only all the thick orange pieces together are the <strong>perimeter</strong> (at exactly 180 degrees the two radiuses join into one diameter, so it looks like just two pieces). This is the step that goes missing most often in the whole lesson.',
+      s4chip:function(sc){ return 'radius ' + radiusOf(sc) + ', ' + sc.n + '°'; },
+      s4labelA:function(sc){ return 'radius ' + radiusOf(sc) + ' cm, ' + sc.n + '°'; },
+      s4labelB:function(sc){ return 'perimeter ' + hText(perimH(radiusOf(sc), sc.n)) + ' cm'; },
+      s4cap:function(sc){
+        var r = radiusOf(sc);
+        if (sc.n === 180) return 'Two orange pieces: an arc of ' + plEn(hText(arcH(r, sc.n)), 'centimetre') + ', plus a diameter (two radiuses end to end) of ' + plEn(2 * r, 'centimetre') + '.';
+        return 'Three orange pieces: an arc of ' + plEn(hText(arcH(r, sc.n)), 'centimetre') + ', plus two radiuses of ' + plEn(r, 'centimetre') + ' each.';
+      },
+      s4narr:function(sc){
+        var r = radiusOf(sc), a = arcH(r, sc.n), p = perimH(r, sc.n);
+        var half = sc.n === 180 ? ' This slice is exactly a <strong>half circle</strong>, and two radiuses end to end are the diameter, so it can also be read as “arc ＋ diameter”.' : '';
+        return 'The arc first: ' + hText(circH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ <strong>' + hText(a) + '</strong> centimetres. Then add the <strong>two radiuses</strong>: ' + hText(a) + ' ＋ ' + r + ' × 2 ＝ <strong>' + hText(p) + '</strong> centimetres.' + half;
+      },
+      s4calc:function(sc){
+        var r = radiusOf(sc);
+        return hText(arcH(r, sc.n)) + ' ＋ ' + r + ' × 2 ＝ ' + hText(perimH(r, sc.n)) + ' cm';
+      },
+      s4result:function(sc){ return 'the sector’s perimeter is ' + plEn(hText(perimH(radiusOf(sc), sc.n)), 'centimetre'); },
+      s4note:'💬 <strong>Perimeter of a sector ＝ arc length ＋ radius × 2</strong>. ⚠️ A half circle is no different: its perimeter is <strong>the arc</strong> plus <strong>the diameter</strong> (two radiuses end to end), not half the circumference. ⚠️ “Arc length” and “perimeter” are <strong>two different amounts</strong> — read which one the question wants.',
+
+      s5h2:'Does this question want an arc, a perimeter or an area?',
+      s5lead:'One sector can be asked about in three ways. Travelling along <strong>the curved edge only</strong> is the <strong>arc</strong>; travelling <strong>right round the edge</strong> is the <strong>perimeter</strong> (arc ＋ two radiuses); covering the <strong>whole slice</strong> is the <strong>area</strong>. Four situations — decide first, then look.',
+      s5chip:function(sc){ return { fan:'fan edge', lawn:'sector lawn', flag:'sector flag', pizza:'pizza cheese' }[sc.id]; },
+      s5stem:function(sc){
+        return {
+          fan:'A fan is a sector with a radius of <b>' + plEn(sc.r, 'centimetre') + '</b> and an angle of <b>' + sc.n + ' degrees</b> at the centre. A ribbon is sewn along the <b>curved edge only</b>. How long does the ribbon have to be?',
+          lawn:'A patch of lawn is a sector with a radius of <b>' + plEn(sc.r, 'centimetre') + '</b> and an angle of <b>' + sc.n + ' degrees</b> at the centre. The <b>whole patch</b> is to be covered with turf. How much turf is needed?',
+          flag:'A flag is a sector with a radius of <b>' + plEn(sc.r, 'centimetre') + '</b> and an angle of <b>' + sc.n + ' degrees</b> at the centre. A trim is sewn <b>right round the edge</b>. How long does the trim have to be?',
+          pizza:'A slice of pizza is a sector with a radius of <b>' + plEn(sc.r, 'centimetre') + '</b> and an angle of <b>' + sc.n + ' degrees</b> at the centre. The <b>whole top</b> is to be covered with cheese. How large a patch is that?'
+        }[sc.id];
+      },
+      s5labelA:function(sc){ return 'radius ' + sc.r + ' cm, ' + sc.n + '°'; },
+      s5labelB:function(sc){ return { arc:'wants the arc', perim:'wants the perimeter', area:'wants the area' }[sc.want]; },
+      s5cap:function(sc){
+        return { arc:'Only the curved edge is drawn thick — only that piece is travelled.',
+                 perim:'The whole edge is drawn thick: one arc plus two radiuses.',
+                 area:'The whole shaded slice is what the question wants.' }[sc.want];
+      },
+      s5narr:function(sc){
+        var r = sc.r, v = caseValueH(sc), a = arcH(r, sc.n);
+        if (sc.want === 'arc') return 'Sewing “along the curved edge only” travels the <strong>arc</strong>, so this is an <strong>arc length</strong>: the whole circumference is ' + r + ' × 2 × 3.14 ＝ ' + hText(circH(r)) + ', this slice is ' + fracText(sc.n) + ' of it, and ' + hText(circH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ <strong>' + hText(v) + '</strong> centimetres. The two radiuses are <strong>not</strong> counted, because no ribbon is sewn along them.';
+        if (sc.want === 'perim') return 'Sewing “right round the edge” travels the arc and both radiuses, so this is a <strong>perimeter</strong>: the arc is ' + hText(circH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ ' + hText(a) + ', and adding the two radiuses gives ' + hText(a) + ' ＋ ' + r + ' × 2 ＝ <strong>' + hText(v) + '</strong> centimetres. Leaving those two out comes up short.';
+        return 'Covering the “whole patch” fills the inside, so this is an <strong>area</strong>: the whole circle’s area is ' + r + ' × ' + r + ' × 3.14 ＝ ' + hText(areaH(r)) + ', this slice is ' + fracText(sc.n) + ' of it, and ' + hText(areaH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ <strong>' + hText(v) + '</strong> square centimetres. The unit is <strong>square centimetres</strong>, because the answer covers a patch.';
+      },
+      s5calc:function(sc){
+        var r = sc.r, v = caseValueH(sc);
+        if (sc.want === 'perim') return hText(arcH(r, sc.n)) + ' ＋ ' + r + ' × 2 ＝ ' + hText(v) + ' cm';
+        if (sc.want === 'arc') return hText(circH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ ' + hText(v) + ' cm';
+        return hText(areaH(r)) + ' × ' + sc.n + ' ÷ 360 ＝ ' + hText(v) + ' sq cm';
+      },
+      s5result:function(sc){ return withUnit('en', sc.want === 'area' ? 'sq' : 'cm', hText(caseValueH(sc))); },
+      s5note:'💬 Deciding takes two questions: <strong>which edges are travelled?</strong> (only the curved one → arc; the arc and both radiuses → perimeter) and <strong>is the inside being filled?</strong> (→ area). ⚠️ The unit is the last line of defence: an answer that is <strong>a length of something</strong> (ribbon, wire, trim) is in <strong>centimetres</strong>; an answer that <strong>covers a patch</strong> (cloth, turf, cheese) is in <strong>square centimetres</strong>.',
+
+      s6h2:'Check yourself',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      cAll:'All correct! Shares, arcs, areas and perimeters — you have them all sorted 🏆',
+      cGood:'Nicely done. Read the explanations for the ones you missed.',
+      cTry:'Go back to the examples above and click through every slice, then come back.',
+
+      qs:[
+        { stem:'A sector has an <strong>angle of 90 degrees</strong> at the centre. What share of the whole circle is it?',
+          opts:['1/2', '1/9', '4', '1/4'], ans:3,
+          why:'A full turn is 360 degrees, so the share is 90 ÷ 360. Divide top and bottom by 90: 90 ÷ 90 ＝ 1 and 360 ÷ 90 ＝ 4, so the share is 1/4. Turning it upside down as 360 ÷ 90 ＝ 4 counts how many such slices fit in the circle, not how big one slice is — one slice cannot be bigger than the whole circle.' },
+        { stem:'A sector has a radius of <strong>6 centimetres</strong> and an angle of <strong>60 degrees</strong>. How long is its <strong>arc</strong>?',
+          opts:['37.68 centimetres', '6.28 centimetres', '18.84 square centimetres', '12 centimetres'], ans:1,
+          why:'The whole circumference is 6 × 2 × 3.14 ＝ 37.68. An angle of 60 degrees is 1/6 of 360, so the arc is 37.68 × 60 ÷ 360 ＝ 6.28 centimetres. The 37.68 is the whole circumference; 18.84 is this sector’s area, with a different unit as well; 12 is the two radiuses added together.' },
+        { stem:'A sector has a radius of <strong>10 centimetres</strong> and an angle of <strong>180 degrees</strong> (a half circle). What is its <strong>area</strong>?',
+          opts:['314 square centimetres', '31.4 centimetres', '157 square centimetres', '62.8 centimetres'], ans:2,
+          why:'The whole circle’s area is 10 × 10 × 3.14 ＝ 314. A half circle’s 180 degrees is 1/2 of 360, so the area is 314 × 180 ÷ 360 ＝ 157 square centimetres. The 314 is the whole circle; 31.4 is this half circle’s arc, measured in centimetres; 62.8 is the whole circumference.' },
+        { stem:'A sector has a radius of <strong>6 centimetres</strong> and an angle of <strong>90 degrees</strong>. What is its <strong>perimeter</strong>?',
+          opts:['9.42 centimetres', '21.42 centimetres', '28.26 square centimetres', '37.68 centimetres'], ans:1,
+          why:'A sector’s perimeter is its arc plus two radiuses. The arc is 37.68 × 90 ÷ 360 ＝ 9.42, and adding the radiuses gives 9.42 ＋ 6 × 2 ＝ 21.42 centimetres. The 9.42 is the arc on its own, with the two radiuses forgotten; 28.26 is the area; 37.68 is the whole circumference.' },
+        { stem:'A sector is <strong>1/6</strong> of a whole circle. What is its <strong>angle at the centre</strong>?',
+          opts:['6 degrees', '300 degrees', '36 degrees', '60 degrees'], ans:3,
+          why:'A full turn is 360 degrees cut into 6 equal parts, so each part is 360 ÷ 6 ＝ 60 degrees. Check: 60 ÷ 360 cancels down to 1/6. The 300 degrees is the big piece left over, 360 － 60 ＝ 300.' },
+        { stem:'A slice of pizza is a sector with a radius of <strong>12 centimetres</strong> and an angle of <strong>45 degrees</strong>. How long is the <strong>curved crust</strong>?',
+          opts:['9.42 centimetres', '75.36 centimetres', '56.52 square centimetres', '24 centimetres'], ans:0,
+          why:'The curved crust is the arc. The whole circumference is 12 × 2 × 3.14 ＝ 75.36 and this slice’s share is 45 ÷ 360, which cancels down to 1/8, so the arc is 75.36 × 45 ÷ 360 ＝ 9.42 centimetres. The 75.36 is the whole circumference; 56.52 is this slice’s area; 24 is the two radiuses added together, which are the straight cut edges, not the crust.' }
+      ],
+      qsAdv:[
+        { stem:'A sector has a radius of <strong>9 centimetres</strong> and an angle of <strong>120 degrees</strong>. What is its <strong>area</strong>?',
+          opts:['254.34 square centimetres', '18.84 centimetres', '28.26 square centimetres', '84.78 square centimetres'], ans:3,
+          why:'The whole circle’s area is 9 × 9 × 3.14 ＝ 254.34, and an angle of 120 degrees is 1/3 of 360, so the sector’s area is 254.34 × 120 ÷ 360 ＝ 84.78 square centimetres. The 254.34 is the whole circle; 18.84 is this sector’s arc, measured in centimetres; 28.26 is the area of a different slice altogether, one of radius 6 with an angle of 90 degrees.' },
+        { stem:'A sector’s <strong>arc</strong> is exactly <strong>1/8</strong> of the whole circumference. What is its <strong>angle at the centre</strong>?',
+          opts:['8 degrees', '45 degrees', '60 degrees', '315 degrees'], ans:1,
+          why:'The share the arc takes of the circumference and the share the angle takes of 360 degrees are the same fraction, so the angle is 360 ÷ 8 ＝ 45 degrees. The 315 degrees is the big piece left over, 360 － 45 ＝ 315.' },
+        { stem:'A <strong>half circle</strong> has a radius of <strong>10 centimetres</strong>. How far is it <strong>right round its edge</strong>?',
+          opts:['31.4 centimetres', '62.8 centimetres', '51.4 centimetres', '157 square centimetres'], ans:2,
+          why:'A half circle’s edge has two pieces: the arc and the straight side. The arc is 62.8 × 180 ÷ 360 ＝ 31.4, and the straight side is two radiuses end to end, the diameter, 10 × 2 ＝ 20. Together 31.4 ＋ 20 ＝ 51.4 centimetres. Answering 31.4 leaves the diameter out; 62.8 is the whole circumference; 157 is the half circle’s area.' },
+        { stem:'Ann says: “A sector’s perimeter is just the length of its arc.” Which sentence has <strong>both the right conclusion and the right reason</strong>?',
+          opts:['No: the edge also has two radiuses, so the perimeter is the arc plus radius × 2', 'Yes: the arc is a sector’s only edge', 'Yes: the two radiuses are inside the sector, so they are not edges', 'No: a sector’s perimeter is always the arc plus the diameter, whatever the angle'], ans:0,
+          why:'Walking right round a sector covers one arc and two radiuses — those radiuses are the straight edges left by the cut, so they are edges, not lines inside. The perimeter is therefore the arc plus radius × 2. Only when the angle is exactly 180 degrees, a half circle, do those two radiuses add up to the diameter; for any other angle they do not. For example, a sector of radius 6 with an angle of 90 has an arc of 9.42 and a perimeter of 9.42 ＋ 6 × 2 ＝ 21.42.' }
+      ],
+      qsBoost:[
+        { stem:'Ben works out the <strong>perimeter</strong> of a sector with a <strong>radius of 6 centimetres and an angle of 90 degrees</strong> as “37.68 × 90 ÷ 360 ＝ 9.42 centimetres”. What has he got wrong?',
+          opts:['Nothing; a sector’s perimeter is the length of its arc', 'His 9.42 is only the <strong>arc</strong>; the two radiuses still have to be added: 9.42 ＋ 6 × 2 ＝ 21.42', 'He should use the area instead: 6 × 6 × 3.14 × 90 ÷ 360 ＝ 28.26', 'He should double it: 9.42 × 2 ＝ 18.84'], ans:1,
+          why:'That step of his is right, but 9.42 is only the <strong>arc</strong>. Walking right round the edge also covers two radiuses, so the perimeter is 9.42 ＋ 6 × 2 ＝ 21.42 centimetres. The 28.26 is this sector’s area, in square centimetres; doubling the arc has no reason behind it, because the two radiuses are not as long as the arc.' },
+        { stem:'Mia says: “A sector with an angle of 60 degrees is 360 ÷ 60 ＝ 6 times the whole circle.” What has she got wrong?',
+          opts:['Nothing; 6 times is the answer', 'The share is <strong>angle ÷ 360</strong>: 60 ÷ 360 cancels down to 1/6', 'She should work out 360 － 60 ＝ 300, so it is 300 times', 'She should work out 60 × 360 ＝ 21600'], ans:1,
+          why:'She has the fraction upside down. The share of the whole circle is angle ÷ 360, so 60 ÷ 360, and dividing top and bottom by 60 gives 1/6. Her 6 counts how many such slices fit in the circle — that is a <strong>number of slices</strong>, not the size of one — and one slice cannot be 6 times the whole circle.' }
+      ],
+
+      s7h2:'Five slices in a row',
+      s7lead:'Five questions. Before each one ask: <strong>what share of the circle is this slice? Does the question want an arc, a perimeter or an area? And which unit does the answer take?</strong>',
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
+      gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Start over',
+      gLabelA:function(rd){ return 'radius ' + rd.r + ' cm, ' + rd.n + '°'; },
+      gLabelB:function(rd){
+        return { frac:'share of the circle', arc:'wants the arc', area:'wants the area', perim:'wants the perimeter', which:'wants the perimeter' }[rd.kind];
+      },
+      gCap:{
+        frac:'The strip on the right cuts the whole circle into equal parts; the coloured ones are this slice.',
+        arc:'Only the curved edge is drawn thick.',
+        area:'The whole shaded slice is what the question wants.',
+        perim:'The whole edge is drawn thick: one arc plus two radiuses.',
+        which:'The whole edge is drawn thick: one arc plus two radiuses.'
+      },
+      gPrompt:{
+        frac:function(rd){ return 'Round ①: a sector with an angle of <b>' + rd.n + ' degrees</b> is <b>what share</b> of the whole circle?'; },
+        arc:function(rd){ return 'Round ②: a sector with a radius of <b>' + plEn(rd.r, 'centimetre') + '</b> and an angle of <b>' + rd.n + ' degrees</b> — how long is its <b>arc</b>?'; },
+        area:function(rd){ return 'Round ③: a sector with a radius of <b>' + plEn(rd.r, 'centimetre') + '</b> and an angle of <b>' + rd.n + ' degrees</b> — what is its <b>area</b>?'; },
+        perim:function(rd){ return 'Round ④: a sector with a radius of <b>' + plEn(rd.r, 'centimetre') + '</b> and an angle of <b>' + rd.n + ' degrees</b> — what is its <b>perimeter</b>?'; },
+        which:function(rd){ return 'Round ⑤: a flower bed is a sector with a radius of <b>' + plEn(rd.r, 'centimetre') + '</b> and an angle of <b>' + rd.n + ' degrees</b>. A fence goes <b>right round its edge</b>. How long does the fence have to be?'; }
+      },
+      gHint1:{
+        frac:'Whatever the angle is, that is its share of 360 degrees — remember to cancel it down.',
+        arc:'Work out the whole circumference first, then take this slice’s share of it.',
+        area:'Work out the whole circle’s area first, then take this slice’s share. The unit is square centimetres.',
+        perim:'A perimeter is not only the arc — going right round also covers two radiuses.',
+        which:'Does “right round the edge” travel the arc and both radiuses, or only the curved one?'
+      },
+      gHint2:{
+        frac:function(rd){ return 'What is ' + rd.n + ' ÷ 360 cancelled down?'; },
+        arc:function(rd){ return rd.r + ' × 2 × 3.14 ＝ ' + hText(circH(rd.r)) + ', then ' + hText(circH(rd.r)) + ' × ' + rd.n + ' ÷ 360.'; },
+        area:function(rd){ return rd.r + ' × ' + rd.r + ' × 3.14 ＝ ' + hText(areaH(rd.r)) + ', then ' + hText(areaH(rd.r)) + ' × ' + rd.n + ' ÷ 360.'; },
+        perim:function(rd){ return 'The arc is ' + hText(arcH(rd.r, rd.n)) + ', then add ' + rd.r + ' × 2.'; },
+        which:function(rd){ return 'The arc is ' + hText(arcH(rd.r, rd.n)) + ', then add ' + rd.r + ' × 2.'; }
+      },
+      gOptText:function(rd, i){ return withUnit('en', roundUnit(rd), rd.opts[i]); },
+      gCorrectFirst:'✅ Correct! ＋20 points',
+      gCorrectRetry:'✅ Right this time! ＋10 points',
+      gWrong:function(lost, kind){ return '❌ ' + (kind === 'frac' ? 'Think again: is the share angle ÷ 360?' : 'Think again: does this want an arc, a perimeter or an area?') + ' －' + lost + ' points'; },
+      gClear:'Press “Next round” for the next one.',
+      gWin:function(s){ return '🏆 All five done! Final score ' + s + '.'; },
+
+      nextH2:'Four things that make it stick',
+      next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for the wall above your desk.',
+      next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering it a day later is what counts.',
+      next3:'🧑‍🏫 <strong>Your turn to teach</strong>: fold a paper circle in half and in half again, cut one slice out, measure its radius, say what share of the circle it is, and then explain to someone at home how the arc is worked out and why the perimeter needs two extra radiuses. Explaining it is knowing it.',
+      next4:'❓ Anything unclear — ask a parent or an AI tutor until it is clear. Asking questions is how the fastest learners learn.',
+      footer:'The whole page in one line: <strong>the share the angle takes of 360 degrees is the share the arc takes of the circumference and the share the sector takes of the circle’s area</strong>; <strong>a sector’s perimeter needs two radiuses added on top</strong>.'
+    }
+  };
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+  function L(){ return I18N[lang]; }
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
+
+  var langBtn = document.getElementById('langBtn');
+  var modeCards = document.getElementById('modeCards');
+  var modeBanner = document.getElementById('modeBanner');
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function buildModeCards(){
+    var d = L();
+    modeCards.textContent = '';
+    ['ahead','school','boost'].forEach(function(mo){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      b.setAttribute('aria-pressed', mo === mode ? 'true' : 'false');
+      b.innerHTML = '<div class="mbig">' + d.modes[mo].icon + '</div><h3>' + d.modes[mo].h + '</h3><p>' + d.modes[mo].p + '</p>';
+      b.addEventListener('click', function(){
+        if (mode === mo) return;
+        mode = mo;
+        try { localStorage.setItem('teachme-mode', mode); } catch(e){}
+        renderAll();
+      });
+      modeCards.appendChild(b);
+    });
+    modeBanner.textContent = d.modes[mode].banner;
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function makeChip(label, pressed){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    return b;
+  }
+  function buildChips(host, items, cur, labelOf, onPick){
+    host.textContent = '';
+    items.forEach(function(it, i){
+      var b = makeChip(labelOf(it, i), i === cur);
+      b.addEventListener('click', function(){ onPick(i); });
+      host.appendChild(b);
+    });
+  }
+
+  /* --- 畫圖。座標全部來自上面那幾個**純資料**的 planXxx()，這裡一律不重算。
+         labelA／labelB 是畫布左上與左下的兩行字（語言相關，由呼叫端給）。 --- */
+  function drawPlan(svg, plan, labelA, labelB){
+    svg.textContent = '';
+    if (!plan || plan.tooBig) return;
+    plan.prims.forEach(function(p){
+      if (p.k === 'circle') svg.appendChild(svgEl('circle', { cx:p.cx, cy:p.cy, r:p.r, fill:p.fill, stroke:p.stroke, 'stroke-width':p.sw }));
+      else if (p.k === 'rect') svg.appendChild(svgEl('rect', { x:p.x, y:p.y, width:p.w, height:p.h, fill:p.fill, stroke:p.stroke, 'stroke-width':p.sw }));
+      else if (p.k === 'line') svg.appendChild(svgEl('line', { x1:p.x1, y1:p.y1, x2:p.x2, y2:p.y2, stroke:p.stroke, 'stroke-width':p.sw }));
+      else if (p.k === 'path') svg.appendChild(svgEl('path', { d:p.d, fill:p.fill, stroke:p.stroke, 'stroke-width':p.sw }));
+    });
+    plan.labels.forEach(function(lb){
+      var t = svgEl('text', { x:lb.x, y:lb.y, 'font-size':LABEL_FS, 'font-weight':'700', 'text-anchor':'start', fill:C_LINE });
+      t.textContent = lb.slot === 'a' ? labelA : labelB;
+      svg.appendChild(t);
+    });
+  }
+
+  /* ===================== 範例1：占幾分之幾 ===================== */
+  var s1i = 0;
+  var s1chips = document.getElementById('s1chips');
+  var s1fig = document.getElementById('s1fig');
+  var s1cap = document.getElementById('s1cap');
+  var s1narr = document.getElementById('s1narr');
+  var s1calc = document.getElementById('s1calc');
+  var s1result = document.getElementById('s1result');
+
+  function renderS1(){
+    var d = L(), n = S1_CASES[s1i], pl = planFraction(S1_R, n);
+    drawPlan(s1fig, pl, d.s1labelA(n), d.s1labelB(n));
+    s1cap.textContent = d.s1cap(n);
+    s1narr.innerHTML = d.s1narr(n);
+    s1calc.textContent = d.s1calc(n);
+    s1result.textContent = d.s1result(n);
+    buildChips(s1chips, S1_CASES, s1i, function(x){ return d.s1chip(x); }, function(i){ s1i = i; renderS1(); });
+  }
+
+  /* ===================== 範例2：弧長 ===================== */
+  var s2i = 0;
+  var s2chips = document.getElementById('s2chips');
+  var s2fig = document.getElementById('s2fig');
+  var s2cap = document.getElementById('s2cap');
+  var s2narr = document.getElementById('s2narr');
+  var s2calc = document.getElementById('s2calc');
+  var s2result = document.getElementById('s2result');
+
+  function renderS2(){
+    var d = L(), sc = S2_CASES[s2i], pl = planSector(radiusOf(sc), sc.n, 'arc');
+    drawPlan(s2fig, pl, d.s2labelA(sc), d.s2labelB(sc));
+    s2cap.innerHTML = d.s2cap(sc);
+    s2narr.innerHTML = d.s2narr(sc);
+    s2calc.textContent = d.s2calc(sc);
+    s2result.textContent = d.s2result(sc);
+    buildChips(s2chips, S2_CASES, s2i, function(x){ return d.s2chip(x); }, function(i){ s2i = i; renderS2(); });
+  }
+
+  /* ===================== 範例3：扇形面積 ===================== */
+  var s3i = 0;
+  var s3chips = document.getElementById('s3chips');
+  var s3fig = document.getElementById('s3fig');
+  var s3cap = document.getElementById('s3cap');
+  var s3narr = document.getElementById('s3narr');
+  var s3calc = document.getElementById('s3calc');
+  var s3result = document.getElementById('s3result');
+
+  function renderS3(){
+    var d = L(), sc = S3_CASES[s3i], pl = planSector(radiusOf(sc), sc.n, 'fill');
+    drawPlan(s3fig, pl, d.s3labelA(sc), d.s3labelB(sc));
+    s3cap.textContent = d.s3cap(sc);
+    s3narr.innerHTML = d.s3narr(sc);
+    s3calc.textContent = d.s3calc(sc);
+    s3result.textContent = d.s3result(sc);
+    buildChips(s3chips, S3_CASES, s3i, function(x){ return d.s3chip(x); }, function(i){ s3i = i; renderS3(); });
+  }
+
+  /* ===================== 範例4：扇形的周長 ===================== */
+  var s4i = 0;
+  var s4chips = document.getElementById('s4chips');
+  var s4fig = document.getElementById('s4fig');
+  var s4cap = document.getElementById('s4cap');
+  var s4narr = document.getElementById('s4narr');
+  var s4calc = document.getElementById('s4calc');
+  var s4result = document.getElementById('s4result');
+
+  function renderS4(){
+    var d = L(), sc = S4_CASES[s4i], pl = planSector(radiusOf(sc), sc.n, 'perim');
+    drawPlan(s4fig, pl, d.s4labelA(sc), d.s4labelB(sc));
+    s4cap.textContent = d.s4cap(sc);
+    s4narr.innerHTML = d.s4narr(sc);
+    s4calc.textContent = d.s4calc(sc);
+    s4result.textContent = d.s4result(sc);
+    buildChips(s4chips, S4_CASES, s4i, function(x){ return d.s4chip(x); }, function(i){ s4i = i; renderS4(); });
+  }
+
+  /* ===================== 範例5：要算哪一個 ===================== */
+  var s5i = 0;
+  var s5chips = document.getElementById('s5chips');
+  var s5stem = document.getElementById('s5stem');
+  var s5fig = document.getElementById('s5fig');
+  var s5cap = document.getElementById('s5cap');
+  var s5narr = document.getElementById('s5narr');
+  var s5calc = document.getElementById('s5calc');
+  var s5result = document.getElementById('s5result');
+
+  function renderS5(){
+    var d = L(), sc = S5_CASES[s5i], pl = planSector(sc.r, sc.n, caseMark(sc));
+    s5stem.innerHTML = d.s5stem(sc);
+    drawPlan(s5fig, pl, d.s5labelA(sc), d.s5labelB(sc));
+    s5cap.textContent = d.s5cap(sc);
+    s5narr.innerHTML = d.s5narr(sc);
+    s5calc.textContent = d.s5calc(sc);
+    s5result.textContent = d.s5result(sc);
+    buildChips(s5chips, S5_CASES, s5i, function(x){ return d.s5chip(x); }, function(i){ s5i = i; renderS5(); });
+  }
+
+  /* ===================== 試題 ===================== */
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var qComment = document.getElementById('qComment');
+  var done = 0, right = 0;
+
+  function quizSet(){
+    var d = L();
+    if (mode === 'ahead') return d.qs.slice();
+    if (mode === 'boost') return d.qsBoost.concat(d.qs, d.qsAdv);
+    return d.qs.concat(d.qsAdv);
+  }
+
+  function buildQuiz(){
+    var d = L();
+    var list = quizSet();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0'; qComment.textContent = '';
+    qTotal.textContent = list.length;
+    list.forEach(function(q, qi){
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = d.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(opt, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.innerHTML = opt;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === list.length){
+            qComment.textContent = right === list.length ? d.cAll
+              : right >= Math.ceil(list.length * 2 / 3) ? d.cGood : d.cTry;
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  /* ===================== 小遊戲：切披薩五連發 ===================== */
+  var gRound = 0, gScore = 0, gMistake = false;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gFig = document.getElementById('gFig');
+  var gCap = document.getElementById('gCap');
+  var gPromptEl = document.getElementById('gPrompt');
+  var gAnswers = document.getElementById('gAnswers');
+  var gMsg = document.getElementById('gMsg');
+  var gNext = document.getElementById('gNext');
+  var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+  var hintLevel = 0;
+
+  function startRound(){
+    var d = L();
+    var round = ROUNDS[gRound];
+    gMistake = false;
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+
+    hintLevel = (mode === 'ahead') ? 1 : 0;
+    gHintBtn.disabled = false;
+    elHint.innerHTML = (mode === 'ahead') ? d.gHint1[round.kind] : '';
+
+    var fig = roundFigure(round);
+    drawPlan(gFig, fig, d.gLabelA(round), d.gLabelB(round));
+    gCap.textContent = d.gCap[round.kind];
+    gPromptEl.innerHTML = d.gPrompt[round.kind](round);
+
+    /* 「哪一個是正解」由 roundAnswerIndex() **算出來**；資料裡的 ans 頁面不讀，
+       它是給設定檔核對的宣告，兩者對不上的時候設定檔會響。 */
+    var ansAt = roundAnswerIndex(round);
+    gAnswers.textContent = '';
+    var i;
+    for (i = 0; i < round.opts.length; i++){
+      (function(oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'degbtn';
+        b.textContent = d.gOptText(round, oi);
+        b.addEventListener('click', function(){
+          if (b.disabled) return;
+          if (oi === ansAt){
+            var all = gAnswers.querySelectorAll('.degbtn');
+            for (var k = 0; k < all.length; k++) all[k].disabled = true;
+            b.classList.add('right');
+            if (gMistake){
+              gScore += 10;
+              gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry + '</span>';
+            } else {
+              gScore += 20;
+              gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst + '</span>';
+            }
+            if (gRound === ROUNDS.length - 1){
+              gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
+            } else {
+              gMsg.innerHTML += ' ' + d.gClear;
+              gNext.disabled = false;
+            }
+          } else {
+            gMistake = true;
+            b.disabled = true;
+            b.classList.add('wrong');
+            /* 分數不會低於 0，所以訊息要說真的扣了幾分。 */
+            var lost = Math.min(5, gScore);
+            gScore -= lost;
+            gMsg.innerHTML = '<span class="no">' + d.gWrong(lost, round.kind) + '</span>';
+          }
+          elScore.textContent = gScore;
+        });
+        gAnswers.appendChild(b);
+      })(i);
+    }
+  }
+
+  function restartGame(){
+    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  }
+  gNext.addEventListener('click', function(){
+    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+  });
+  gRestart.addEventListener('click', restartGame);
+  gHintBtn.addEventListener('click', function(){
+    var d = L(), round = ROUNDS[gRound];
+    hintLevel++;
+    if (hintLevel === 1){
+      elHint.innerHTML = d.gHint1[round.kind];
+    } else {
+      elHint.innerHTML = d.gHint2[round.kind](round);
+      gHintBtn.disabled = true;
+    }
+  });
+
+  /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
+  function renderAll(){
+    applyStatic();
+    buildModeCards();
+    renderS1();
+    renderS2();
+    renderS3();
+    renderS4();
+    renderS5();
+    buildQuiz();
+    restartGame();
+  }
+
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    renderAll();
+  });
+
+  renderAll();
+  /* 記錄最後上的課，供首頁「繼續上次」使用 */
+  try { localStorage.setItem('teachme-last', JSON.stringify({p:'grade-6/math/sector/', zh:'扇形披薩工廠 — 弧長與扇形面積', en:'The Sector Pizza Workshop', icon:'🍕'})); } catch(e){}
+
+})();
+</script>
+</body>
+</html>

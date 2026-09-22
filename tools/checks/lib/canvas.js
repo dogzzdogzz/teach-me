@@ -46,6 +46,89 @@ function halfStroke(attrs){
   if (/(?:^|\s)stroke="none"/.test(attrs)) return 0;
   return sw / 2;
 }
+/* 一段**正圓弧**畫過的範圍：兩個端點，加上落在掃過範圍裡的正東／正南／正西／正北。
+   ⚠️ 只看兩個端點是不夠的 —— 一段弧可以在**中間**凸出畫布，兩個端點卻都在裡面。
+   ⚠️ 讀不懂一律回 null（半徑放不下兩個端點、算出來不是有限數），由呼叫端報錯。 */
+function arcBox(x1, y1, x2, y2, r0, large, sweep){
+  if (![x1, y1, x2, y2, r0].every(Number.isFinite) || !(r0 > 0)) return null;
+  const hx = (x1 - x2) / 2, hy = (y1 - y2) / 2;
+  const d2 = hx * hx + hy * hy;
+  /* ⚠️ 兩個端點重合：SVG 規定整段弧當作沒畫（不是讀不懂），所以只留那一個點。 */
+  if (!(d2 > 0)) return { x0:x1, y0:y1, x1:x1, y1:y1 };
+  /* ⚠️ 半徑太小裝不下兩個端點：SVG 規定**把半徑放大**到剛好裝得下，瀏覽器就是這樣畫的。
+     照原本那個小半徑去算極值點，框會算得比實際小 —— 那才是 fail-open。 */
+  const r = Math.max(r0, Math.sqrt(d2));
+  const k0 = Math.sqrt(Math.max(0, (r * r - d2) / d2));
+  const k = (large === sweep) ? -k0 : k0;
+  const cx = k * hy + (x1 + x2) / 2;
+  const cy = -k * hx + (y1 + y2) / 2;
+  if (![cx, cy].every(Number.isFinite)) return null;
+  const th1 = Math.atan2(y1 - cy, x1 - cx);
+  const th2 = Math.atan2(y2 - cy, x2 - cx);
+  const TAU = Math.PI * 2;
+  /* sweep ＝ 1 是角度**變大**的方向（畫布的 y 往下，所以看起來是順時針）。 */
+  let delta = th2 - th1;
+  if (sweep === 1 && delta < 0) delta += TAU;
+  if (sweep === 0 && delta > 0) delta -= TAU;
+  const xs = [x1, x2], ys = [y1, y2];
+  [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2].forEach(ang => {
+    /* 這個極值角落在掃過的範圍裡嗎（照掃的方向量距離）。 */
+    let t = (ang - th1) * (sweep === 1 ? 1 : -1);
+    t = ((t % TAU) + TAU) % TAU;
+    if (t <= Math.abs(delta) + 1e-9){
+      xs.push(cx + r * Math.cos(ang));
+      ys.push(cy + r * Math.sin(ang));
+    }
+  });
+  return { x0:Math.min.apply(null, xs), y0:Math.min.apply(null, ys),
+           x1:Math.max.apply(null, xs), y1:Math.max.apply(null, ys) };
+}
+/* 一條 <path> 的 d= 拆成一串外框。認得的只有絕對座標的 M／L／A／Z。 */
+function pathBoxes(d){
+  const toks = String(d).trim().split(/[\s,]+/).filter(t => t !== '');
+  if (!toks.length) return { error:'has an empty d=' };
+  const boxes = [];
+  let i = 0, cx = null, cy = null, sx = null, sy = null;
+  const num = () => {
+    const t = toks[i];
+    if (t === undefined || !/^-?\d+(?:\.\d+)?$/.test(t)) return null;
+    i++;
+    return Number(t);
+  };
+  const seg = (ax, ay, bx, by) => boxes.push({ x0:Math.min(ax, bx), y0:Math.min(ay, by), x1:Math.max(ax, bx), y1:Math.max(ay, by) });
+  while (i < toks.length){
+    const cmd = toks[i++];
+    if (cmd === 'M' || cmd === 'L'){
+      const x = num(), y = num();
+      if (x === null || y === null) return { error:'has an unreadable ' + cmd + ' command' };
+      if (cmd === 'L'){
+        if (cx === null) return { error:'starts with L before any M' };
+        seg(cx, cy, x, y);
+      } else { sx = x; sy = y; boxes.push({ x0:x, y0:y, x1:x, y1:y }); }
+      cx = x; cy = y;
+    } else if (cmd === 'A'){
+      const rx = num(), ry = num(), rot = num(), large = num(), sweep = num(), x = num(), y = num();
+      if ([rx, ry, rot, large, sweep, x, y].some(v => v === null)) return { error:'has an unreadable A command' };
+      if (cx === null) return { error:'starts with A before any M' };
+      if (rx !== ry) return { error:'draws an elliptical arc (rx ≠ ry), which this checker does not bound' };
+      if (rot !== 0) return { error:'draws a rotated arc, which this checker does not bound' };
+      if ((large !== 0 && large !== 1) || (sweep !== 0 && sweep !== 1)) return { error:'has an arc flag that is neither 0 nor 1' };
+      const b = arcBox(cx, cy, x, y, rx, large, sweep);
+      if (b === null) return { error:'has an arc whose centre cannot be worked out (radius too small, or the two ends coincide)' };
+      boxes.push(b);
+      cx = x; cy = y;
+    } else if (cmd === 'Z' || cmd === 'z'){
+      if (cx === null || sx === null) return { error:'closes a subpath that never started' };
+      seg(cx, cy, sx, sy);
+      cx = sx; cy = sy;
+    } else {
+      return { error:'uses the path command "' + cmd + '", which this checker does not read (only absolute M, L, A and Z)' };
+    }
+  }
+  if (!boxes.length) return { error:'draws nothing this checker can bound' };
+  return { boxes:boxes };
+}
+
 function canvasProblems(svgRaw, opts){
   opts = opts || {};
   const svg = String(svgRaw || '');
@@ -139,6 +222,39 @@ function canvasProblems(svgRaw, opts){
     box.push({ x0:Math.min(x1,x2), y0:Math.min(y1,y2), x1:Math.max(x1,x2), y1:Math.max(y1,y2), half:halfStroke(a), what:'a line' });
   }
 
+  /* <path>：只認**絕對座標**的 M／L／A／Z，而且弧一律是**正圓**（rx ＝ ry、旋轉 0）。
+     其餘（相對座標、C／Q／S／T／H／V、橢圓弧、讀不到的數）一律回報 ——
+     讀不懂是「沒檢查」，不是「通過」。2026-09-21 為了六年級「扇形」那一課加上去的。 */
+  const rePath = /<path([^>]*?)\/?>/g;
+  while ((m = rePath.exec(svg)) !== null){
+    const a = m[1];
+    const dm = a.match(/(?:^|\s)d="([^"]*)"/);
+    if (!dm){ out.push('a <path> has no readable d= — unchecked, not passing'); continue; }
+    /* ⚠️ 會改幾何、而這裡讀不到的東西一律回報（transform 由上面那條全域檢查擋）：
+       style／class 可能改 d 或線寬，marker 會在端點多畫東西。 */
+    /* ⚠️ 只擋**會改幾何**的宣告：`style="fill:red"` 這種純外觀的不算（不然全是假警報）。
+       `class=` 一律回報，因為 CSS 可能在別處把線寬或 d 改掉，這裡讀不到。 */
+    const styleAttr = (a.match(/(?:^|\s)style="([^"]*)"/) || [])[1] || '';
+    if (/(?:^|[;\s])(?:d|stroke-width|transform|marker[a-z-]*|stroke-linejoin|stroke-miterlimit|stroke-linecap)\s*:/i.test(styleAttr)){
+      out.push('a <path> has a style= that changes its geometry, which this checker does not follow — unchecked, not passing'); continue;
+    }
+    if (/(?:^|\s)class=/.test(a)){ out.push('a <path> carries class=, whose CSS this checker cannot resolve — unchecked, not passing'); continue; }
+    if (/(?:^|\s)marker(?:-start|-mid|-end)?=/.test(a)){ out.push('a <path> carries a marker, which draws extra geometry this checker does not bound — unchecked, not passing'); continue; }
+    const seg = pathBoxes(dm[1]);
+    if (seg.error){ out.push('a <path> ' + seg.error + ' — unchecked, not passing'); continue; }
+    /* ⚠️ 描邊的**折點**會伸得比半個線寬遠：miter 接法伸出去最多是
+       stroke-miterlimit（預設 4）× 半個線寬。只有**真的有折點**（兩段以上）而且接法是 miter
+       才要這樣墊；round／bevel 不會超過半個線寬，單獨一段弧也沒有折點。
+       （線帽 round／square 往外伸的長度就是半個線寬，已經含在 halfStroke 裡。） */
+    const hs0 = halfStroke(a);
+    const join = (a.match(/(?:^|\s)stroke-linejoin="([a-z]+)"/) || [])[1] || 'miter';
+    const mlRaw = Number((a.match(/(?:^|\s)stroke-miterlimit="([\d.]+)"/) || [])[1]);
+    const miterLimit = Number.isFinite(mlRaw) && mlRaw >= 1 ? mlRaw : 4;
+    let hs = hs0;
+    if (hs0 > 0 && seg.boxes.length > 1 && join === 'miter') hs = hs0 * miterLimit;
+    seg.boxes.forEach(b => box.push({ x0:b.x0, y0:b.y0, x1:b.x1, y1:b.y1, half:hs, what:'a path' }));
+  }
+
   /* 文字：屬性要各自抓，不要寫成一條含選擇性群組的正規式 —— x 後面接的是 y，
      選擇性的 font-size 群組永遠抓不到，每個字都會被當成預設字級。
      而且 x ＋ 字級不是文字的右緣：還要看有幾個字、以及 text-anchor 把字擺在
@@ -170,13 +286,15 @@ function canvasProblems(svgRaw, opts){
   }
 
   if (!box.length){
-    out.push('cannot read the drawing geometry — no rect/circle/line/text with usable coordinates');
+    out.push('cannot read the drawing geometry — no rect/circle/line/path/text with usable coordinates');
     return out;
   }
 
   /* ⚠️ 認得的標籤都算過了，但**認不得的標籤要 fail-closed**：畫布上有 polygon
      或 path 而這裡讀不到，就等於那一塊沒被檢查 —— 要說出來，不要默默放行。 */
-  const UNSUPPORTED = ['polygon', 'polyline', 'path', 'ellipse', 'image', 'use', 'foreignObject'];
+  /* `path` 不在這一份清單裡：上面**真的量過**它（只認絕對座標的 M／L／A／Z，
+     其餘形狀在那裡就回報了）。 */
+  const UNSUPPORTED = ['polygon', 'polyline', 'ellipse', 'image', 'use', 'foreignObject'];
   UNSUPPORTED.forEach(tag => {
     if (new RegExp('<' + tag + '[\\s>]').test(svg) && !(opts.allow || []).includes(tag)){
       out.push('the drawing contains <' + tag + '>, whose extent this checker cannot read — it is unchecked, not passing');

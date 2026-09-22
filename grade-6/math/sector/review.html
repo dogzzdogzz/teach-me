@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 扇形披薩工廠</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .result{margin-top:22px;background:var(--orange-soft);border-radius:18px;padding:18px;display:none}
+  .result.on{display:block}
+  .result .line{font-size:18px;font-weight:700}
+  .result .links{margin-top:10px;font-size:15px}
+  .result .links a{color:var(--blue)}
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：扇形披薩工廠</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題六年級的整圓周長與面積，和一題四年級的角度。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+  /* (半徑, 圓心角) 這種**物件**的池子要用 key 去重，不能直接比物件。 */
+  function pickUnusedPair(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v.r + '@' + v.n) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v.r + '@' + v.n);
+    return v;
+  }
+  /* ⚠️ make() 一律不可以回 null：tools/simgen.js 每一批只呼叫 make() 一次、不重試。
+     所有抽樣池都事先過濾好，抽到就一定做得出四個選項。 */
+
+  /* --- 這一課的工具（和 index.html 同一套定義：所有量都用百分之一的整數存）。 --- */
+  var PI_H = 314;          /* 圓周率 3.14 */
+  var R_MAX = 12;          /* 半徑的上限（公分） */
+  var FULL_DEG = 360;      /* 一圈 360 度 */
+  var VAL_MAX = 200000;    /* 選項裡任何一個量的上限（百分之一）＝ 2000 */
+  function hText(h){
+    var w = Math.floor(h / 100), f = h % 100;
+    if (f === 0) return String(w);
+    if (f % 10 === 0) return w + '.' + (f / 10);
+    return w + '.' + (f < 10 ? '0' + f : String(f));
+  }
+  function gcdInt(a, b){ while (b){ var t = a % b; a = b; b = t; } return a; }
+  function circH(r){ return 2 * r * PI_H; }
+  function areaH(r){ return r * r * PI_H; }
+  /* 弧長與扇形面積：除不盡就回 null（抽樣池已經先濾過，這裡是最後一道防線）。 */
+  function arcH(r, n){
+    var v = circH(r) * n;
+    return v % FULL_DEG === 0 ? v / FULL_DEG : null;
+  }
+  function secAreaH(r, n){
+    var v = areaH(r) * n;
+    return v % FULL_DEG === 0 ? v / FULL_DEG : null;
+  }
+  function perimH(r, n){
+    var a = arcH(r, n);
+    return a === null ? null : a + 2 * r * 100;
+  }
+  /* 圓心角占整圈的最簡分數 */
+  function fracOf(n){
+    var g = gcdInt(n, FULL_DEG);
+    return { p:n / g, q:FULL_DEG / g };
+  }
+  function fracKey(n){ var f = fracOf(n); return f.p + '/' + f.q; }
+
+  /* --- 選項的編碼：`百分之一的值|單位代號`。單位代號 cm 公分、sq 平方公分、deg 度；
+         分數是 `p/q|fr`（一律先約分，所以同一個值只有一種寫法）。
+         這樣「9.42 公分」和「9.42 平方公分」是兩個不同的值，去重才擋得住。 --- */
+  function tok(h, u){ return h + '|' + u; }
+  function tokF(n){ return fracKey(n) + '|fr'; }
+  function tokVal(t){ return Number(String(t).split('|')[0]); }
+  function tokUnit(t){ return String(t).split('|')[1]; }
+  function plEn(n, w){
+    if (String(n) === '1') return n + ' ' + w;
+    return n + ' ' + w + (/(s|x|z|ch|sh)$/.test(w) ? 'es' : 's');
+  }
+  var UNIT_WORD = { zh:{ cm:'公分', sq:'平方公分', deg:'度' }, en:{ cm:'centimetre', sq:'square centimetre', deg:'degree' } };
+  function tokText(t, lang){
+    var u = tokUnit(t);
+    if (u === 'fr') return String(t).split('|')[0];
+    var v = hText(tokVal(t));
+    return lang === 'zh' ? v + ' ' + UNIT_WORD.zh[u] : plEn(v, UNIT_WORD.en[u]);
+  }
+
+  /* 從候選裡挑三個**值互不相同**、也和正解不同的誘答；候選不夠就用 fallbacks 補（同樣去重）。
+     avoid 是「不可以出現的編碼」（例如抄題幹的數）。擠到不夠時少回傳（simgen 的選項數檢查會響，不會卡死）。
+     ⚠️ 度數一律是**整數度**：0.5 度那種選項不在這一課的範圍裡。 */
+  function pickWrongs(correct, cands, fallbacks, avoid){
+    var seen = {}, shown = {}, out = [];
+    seen[correct] = 1;
+    /* ⚠️ 連**印出來的數字**都要去重，不能只比「數字＋單位」：`3.14 公分` 和 `3.14 平方公分`
+       是兩個不同的量沒錯，可是排在一起讀起來像在玩文字遊戲。 */
+    if (tokUnit(correct) !== 'fr') shown[hText(tokVal(correct))] = 1;
+    (avoid || []).forEach(function(k){ seen[k] = 1; });
+    cands.concat(fallbacks).forEach(function(c){
+      if (out.length >= 3 || c === null || c === undefined) return;
+      if (tokUnit(c) !== 'fr'){
+        var v = tokVal(c);
+        if (!isFinite(v) || v < 1 || v > VAL_MAX || v !== Math.floor(v)) return;
+        if (tokUnit(c) === 'deg' && (v % 100 !== 0 || v > FULL_DEG * 100)) return;
+        if (shown[hText(v)]) return;
+      }
+      if (seen[c]) return;
+      seen[c] = 1;
+      if (tokUnit(c) !== 'fr') shown[hText(tokVal(c))] = 1;
+      out.push(c);
+    });
+    return out;
+  }
+  function optsOf(correct, wrongs){
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+  /* 保底：值長得像答案的鄰居（同一個單位，± 一個圓周率、加倍、加 1） */
+  function nearFallbacks(h, u){
+    var out = [tok(h + PI_H, u), tok(h - PI_H, u), tok(2 * h, u), tok(h + 100, u), tok(h + 2 * PI_H, u)];
+    if (h % 2 === 0) out.push(tok(h / 2, u));
+    return out;
+  }
+  /* 角度的保底：一律是 1 ~ 359 的整數度 */
+  function degFallbacks(n){
+    var out = [], cand = [n + 15, n - 15, n + 30, n - 30, n + 45, n - 45], i;
+    for (i = 0; i < cand.length; i++) if (cand[i] >= 1 && cand[i] < FULL_DEG) out.push(tok(cand[i] * 100, 'deg'));
+    return out;
+  }
+
+  /* --- 抽樣池 --- */
+  /* 這一課用得到的十個圓心角（和 index.html 同一份）。 */
+  var POOL_ANG = [30, 45, 60, 90, 120, 135, 180, 240, 270, 300];
+  /* (半徑, 圓心角) 的合法對：弧長與扇形面積都要**除得盡**。
+     （「弧長剛好等於兩條半徑」會讓誘答和正解撞在一起，不過這一課的十個角一個都做不到，
+       設定檔那邊是**證明它不會發生**，不是在這裡過濾。） */
+  /* ⚠️ 半徑 2 要排除：2 × 2 ＝ 2 ＋ 2，所以弧長和扇形面積**永遠**是同一個數字，
+     「答成面積」那個誘答就只剩單位不一樣（六年級「圓周率工作坊」為了同一件事也排除半徑 2）。 */
+  var PAIRS = [];
+  (function(){
+    for (var r = 1; r <= R_MAX; r++){
+      if (r === 2) continue;
+      for (var i = 0; i < POOL_ANG.length; i++){
+        var n = POOL_ANG[i], a = arcH(r, n), s = secAreaH(r, n);
+        if (a === null || s === null) continue;
+        PAIRS.push({ r:r, n:n });
+      }
+    }
+  })();
+  /* 交錯題（六年級「圓周率工作坊」）的半徑：整圓的圓周長與面積不可以是同一個數（半徑 2 就是）。 */
+  var POOL_R_WHOLE = [];
+  (function(){ for (var r = 3; r <= R_MAX; r++) POOL_R_WHOLE.push(r); })();
+
+  /* --- 應用題的情境。arc 只走彎的那一段、area 把裡面填滿。 --- */
+  var SCEN = {
+    zh: {
+      fan:   { what:'扇形的扇子', ask:'只在<strong>彎的那一段邊</strong>縫一條緞帶，緞帶至少要多長？' },
+      crust: { what:'扇形的披薩', ask:'<strong>彎的那一段餅皮邊</strong>有多長？' },
+      window:{ what:'扇形的窗戶', ask:'只在<strong>彎的那一段邊</strong>貼一條膠條，膠條至少要多長？' },
+      lawn:  { what:'扇形的草地', ask:'<strong>整片</strong>都要鋪滿草皮，需要多少草皮？' },
+      cheese:{ what:'扇形的披薩', ask:'<strong>整片表面</strong>都要鋪滿起司，要鋪多大一片？' },
+      sign:  { what:'扇形的招牌', ask:'<strong>整面</strong>都要塗上油漆，要塗多大一片？' }
+    },
+    en: {
+      fan:   { what:'a fan', ask:'A ribbon is sewn along the <strong>curved edge only</strong>. How long does the ribbon have to be?' },
+      crust: { what:'a slice of pizza', ask:'How long is the <strong>curved crust</strong>?' },
+      window:{ what:'a window', ask:'A strip of tape is stuck along the <strong>curved edge only</strong>. How long does the tape have to be?' },
+      lawn:  { what:'a patch of lawn', ask:'The <strong>whole patch</strong> is to be covered with turf. How much turf is needed?' },
+      cheese:{ what:'a slice of pizza', ask:'The <strong>whole top</strong> is to be covered with cheese. How large a patch is that?' },
+      sign:  { what:'a sign', ask:'The <strong>whole face</strong> is to be painted. How large a patch is that?' }
+    }
+  };
+  var ARC_IDS = ['fan', 'crust', 'window'];
+  var AREA_IDS = ['lawn', 'cheese', 'sign'];
+
+  /* --- 「哪一個問題要算面積」的句庫：三句問長度（弧長或周長），一句問面積。 --- */
+  var ASKS = {
+    len: {
+      fence:  { zh:'扇形花圃要沿著整圈邊緣圍一圈籬笆，籬笆要多長', en:'How long a fence goes right round the edge of a sector flower bed' },
+      trim:   { zh:'扇形旗子要沿著整圈邊緣縫一條滾邊，滾邊要多長', en:'How long a trim is sewn right round the edge of a sector flag' },
+      crustQ: { zh:'扇形披薩彎的那一段餅皮邊有多長', en:'How long the curved crust of a slice of pizza is' },
+      tape:   { zh:'扇形窗戶彎的那一段邊要貼多長的膠條', en:'How long a strip of tape covers the curved edge of a sector window' }
+    },
+    area: {
+      turf:   { zh:'扇形草地整片要鋪多少草皮', en:'How much turf covers the whole of a sector lawn' },
+      paint:  { zh:'扇形招牌整面要塗多大一片油漆', en:'How large a patch of paint covers the whole face of a sector sign' },
+      cloth:  { zh:'扇形桌巾整片要用多少布', en:'How much cloth a whole sector tablecloth takes' },
+      cheeseQ:{ zh:'扇形披薩整片表面要鋪多大一片起司', en:'How large a patch of cheese covers the whole top of a slice of pizza' }
+    }
+  };
+  var ASK_LEN_KEYS = Object.keys(ASKS.len);
+  var ASK_AREA_KEYS = Object.keys(ASKS.area);
+
+  /* --- 「哪一句話是對的」的句庫。每一句的真假寫死在這裡（設定檔另有一份獨立的真值表）。 --- */
+  var STATEMENTS = {
+    arcRule:     { truth:true,  zh:'弧長 ＝ 圓周長 × 圓心角 ÷ 360', en:'Arc length ＝ circumference × angle ÷ 360' },
+    areaRule:    { truth:true,  zh:'扇形面積 ＝ 圓面積 × 圓心角 ÷ 360', en:'Sector area ＝ circle area × angle ÷ 360' },
+    perimRule:   { truth:true,  zh:'扇形的周長 ＝ 弧長 ＋ 半徑 × 2', en:'Perimeter of a sector ＝ arc length ＋ radius × 2' },
+    shareRule:   { truth:true,  zh:'圓心角占 360 度的幾分之幾，扇形就占整個圓的幾分之幾', en:'The share the angle takes of 360 degrees is the share the sector takes of the circle' },
+    sameFrac:    { truth:true,  zh:'同一個扇形，算弧長和算面積用的是同一個分數', en:'For one sector, the arc and the area use the same fraction' },
+    halfDisc:    { truth:true,  zh:'半圓的周長是那一段弧再加上直徑', en:'A half circle’s perimeter is its arc plus the diameter' },
+    perimIsArc:  { truth:false, zh:'扇形的周長 ＝ 弧長', en:'Perimeter of a sector ＝ arc length' },
+    flipped:     { truth:false, zh:'扇形占整個圓的幾分之幾，要用 360 除以圓心角', en:'The share a sector takes of the circle is 360 divided by the angle' },
+    arcUnitSq:   { truth:false, zh:'弧長的單位是平方公分', en:'An arc length is measured in square centimetres' },
+    halfPerim:   { truth:false, zh:'半圓的周長是圓周長的一半', en:'A half circle’s perimeter is half the circumference' },
+    diameterIn:  { truth:false, zh:'算扇形面積的時候，可以把直徑當成半徑代進「半徑 × 半徑 × 3.14」', en:'For a sector’s area, the diameter can be used as the radius in “radius × radius × 3.14”' },
+    angleTimes:  { truth:false, zh:'圓心角變成 2 倍，扇形面積會變成 4 倍', en:'Doubling the angle makes the sector’s area 4 times as big' }
+  };
+  var TRUE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return STATEMENTS[k].truth; });
+  var FALSE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return !STATEMENTS[k].truth; });
+
+  var GENS = [
+    /* 1. 圓心角占整個圓的幾分之幾。誘答：別的圓心角的分數（十個分數兩兩不同）。 */
+    { id:'fracOfCircle', cat:'frac',
+      make:function(used){
+        var n = pickUnused(POOL_ANG.slice(), used);
+        var correct = tokF(n);
+        var others = shuffle(POOL_ANG.filter(function(v){ return v !== n; }));
+        var cands = others.slice(0, 3).map(function(v){ return tokF(v); });
+        var wrongs = pickWrongs(correct, cands, others.slice(3).map(function(v){ return tokF(v); }), []);
+        var o = optsOf(correct, wrongs);
+        return { n:n, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var f = fracOf(d.n), g = gcdInt(d.n, FULL_DEG);
+        return {
+          stem: lang === 'zh' ? '一個扇形的<strong>圓心角</strong>是 <strong>' + d.n + ' 度</strong>，它是整個圓的幾分之幾？'
+                              : 'A sector has an <strong>angle of ' + d.n + ' degrees</strong> at the centre. What share of the whole circle is it?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '整圈是 360 度，所以這一片占 ' + d.n + ' ÷ 360。上下同時除以 ' + g + '：' + d.n + ' ÷ ' + g + ' ＝ ' + f.p + '，360 ÷ ' + g + ' ＝ ' + f.q + '，約分之後是 ' + f.p + '/' + f.q + ' —— 整個圓剪成 ' + f.q + ' 份，這一片是其中的 ' + f.p + ' 份。'
+            : 'A full turn is 360 degrees, so the share is ' + d.n + ' ÷ 360. Dividing top and bottom by ' + g + ' gives ' + d.n + ' ÷ ' + g + ' ＝ ' + f.p + ' and 360 ÷ ' + g + ' ＝ ' + f.q + ', so the share is ' + f.p + '/' + f.q + ' — cut the circle into ' + f.q + ' equal parts and this slice is ' + f.p + ' of them.'
+        };
+      } },
+
+    /* 2. 倒過來：知道占幾分之幾，求圓心角。⚠️ 分母當成角度是**刻意的**迷思誘答（它抄了題幹印出來的 q）。 */
+    { id:'angleFromFrac', cat:'frac',
+      make:function(used){
+        var n = pickUnused(POOL_ANG.slice(), used), f = fracOf(n);
+        var correct = tok(n * 100, 'deg');
+        /* 刻意的迷思：把分母 q 當成角度（這是唯一放行的「抄題幹」值）。另一個是「剩下的那一片」。
+           ⚠️ 分子 p 不可以當候選：它也印在題幹上，會變成抄題幹。 */
+        var cands = [tok(f.q * 100, 'deg'), tok((FULL_DEG - n) * 100, 'deg'), tok(2 * n * 100, 'deg')];
+        var wrongs = pickWrongs(correct, cands, degFallbacks(n), []);
+        var o = optsOf(correct, wrongs);
+        return { n:n, p:f.p, q:f.q, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '一個扇形是整個圓的 <strong>' + d.p + '/' + d.q + '</strong>，它的<strong>圓心角</strong>是幾度？'
+                              : 'A sector is <strong>' + d.p + '/' + d.q + '</strong> of a whole circle. What is its <strong>angle at the centre</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '整圈是 360 度，剪成一樣大的 ' + d.q + ' 份，每一份是 360 ÷ ' + d.q + ' ＝ ' + (FULL_DEG / d.q) + '，這一片有 ' + d.p + ' 份，所以 ' + (FULL_DEG / d.q) + ' × ' + d.p + ' ＝ ' + d.n + '，圓心角是 ' + d.n + ' 度。分母 ' + d.q + ' 說的是整個圓剪成幾份，不是角度。'
+            : 'A full turn is 360 degrees cut into ' + d.q + ' equal parts, so each part is 360 ÷ ' + d.q + ' ＝ ' + (FULL_DEG / d.q) + ' degrees, and this slice has ' + d.p + ' of them: ' + (FULL_DEG / d.q) + ' × ' + d.p + ' ＝ ' + d.n + ' degrees. The ' + d.q + ' on the bottom counts the parts the circle is cut into; it is not an angle.'
+        };
+      } },
+
+    /* 3. 給半徑與圓心角，求弧長。誘答：整圓周長、扇形面積、只有兩條半徑。 */
+    { id:'arcFromR', cat:'arc',
+      make:function(used){
+        var pr = pickUnusedPair(PAIRS, used), r = pr.r, n = pr.n;
+        var correct = tok(arcH(r, n), 'cm');
+        var cands = [tok(circH(r), 'cm'), tok(secAreaH(r, n), 'sq'), tok(2 * r * 100, 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(arcH(r, n), 'cm'), [tok(r * 100, 'cm'), tok(n * 100, 'cm')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, n:n, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var c = circH(d.r), a = arcH(d.r, d.n), f = fracOf(d.n);
+        return {
+          stem: lang === 'zh' ? '一個扇形的半徑是 <strong>' + d.r + ' 公分</strong>、圓心角是 <strong>' + d.n + ' 度</strong>，它的<strong>弧長</strong>是多少？'
+                              : 'A sector has a radius of <strong>' + plEn(d.r, 'centimetre') + '</strong> and an angle of <strong>' + d.n + ' degrees</strong>. How long is its <strong>arc</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '先算整個圓的圓周長：' + d.r + ' × 2 × 3.14 ＝ ' + hText(c) + '。這一片占 ' + f.p + '/' + f.q + '，所以弧長是 ' + hText(c) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(a) + '，單位是公分。' + hText(c) + ' 是整個圓的圓周長，不是這一段；' + hText(secAreaH(d.r, d.n)) + ' 是這一片的面積，單位也不一樣。'
+            : 'The whole circumference is ' + d.r + ' × 2 × 3.14 ＝ ' + hText(c) + '. This slice is ' + f.p + '/' + f.q + ' of the circle, so the arc is ' + hText(c) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(a) + ', in centimetres. The ' + hText(c) + ' is the whole circumference, not this piece; ' + hText(secAreaH(d.r, d.n)) + ' is this slice’s area, with a different unit as well.'
+        };
+      } },
+
+    /* 4. 給直徑（要先除以 2）與圓心角，求弧長。誘答：把直徑當半徑（2 倍）、整圓周長、扇形面積。 */
+    { id:'arcFromD', cat:'arc',
+      make:function(used){
+        var pr = pickUnusedPair(PAIRS, used), r = pr.r, n = pr.n;
+        var correct = tok(arcH(r, n), 'cm');
+        var cands = [tok(2 * arcH(r, n), 'cm'), tok(circH(r), 'cm'), tok(secAreaH(r, n), 'sq')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(arcH(r, n), 'cm'), [tok(2 * r * 100, 'cm'), tok(n * 100, 'cm')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, n:n, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var c = circH(d.r), a = arcH(d.r, d.n), f = fracOf(d.n);
+        return {
+          stem: lang === 'zh' ? '一個扇形所在的圓，<strong>直徑</strong>是 <strong>' + (2 * d.r) + ' 公分</strong>；這個扇形的圓心角是 <strong>' + d.n + ' 度</strong>，它的<strong>弧長</strong>是多少？'
+                              : 'The circle a sector is cut from has a <strong>diameter</strong> of <strong>' + plEn(2 * d.r, 'centimetre') + '</strong>, and the sector’s angle at the centre is <strong>' + d.n + ' degrees</strong>. How long is its <strong>arc</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '先把直徑除以 2 變成半徑：' + (2 * d.r) + ' ÷ 2 ＝ ' + d.r + '。整個圓的圓周長是 ' + d.r + ' × 2 × 3.14 ＝ ' + hText(c) + '，這一片占 ' + f.p + '/' + f.q + '，所以弧長是 ' + hText(c) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(a) + '，單位是公分。把直徑當成半徑算，會得到 ' + hText(2 * a) + '，剛好是 2 倍。'
+            : 'Halve the diameter first: ' + (2 * d.r) + ' ÷ 2 ＝ ' + d.r + '. The whole circumference is ' + d.r + ' × 2 × 3.14 ＝ ' + hText(c) + ', this slice is ' + f.p + '/' + f.q + ' of it, so the arc is ' + hText(c) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(a) + ', in centimetres. Using the diameter as the radius gives ' + hText(2 * a) + ', exactly twice as much.'
+        };
+      } },
+
+    /* 5. 扇形面積。誘答：整圓面積、弧長、扇形的周長。 */
+    { id:'areaFromR', cat:'area',
+      make:function(used){
+        var pr = pickUnusedPair(PAIRS, used), r = pr.r, n = pr.n;
+        var correct = tok(secAreaH(r, n), 'sq');
+        var cands = [tok(areaH(r), 'sq'), tok(arcH(r, n), 'cm'), tok(perimH(r, n), 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(secAreaH(r, n), 'sq'), [tok(r * 100, 'sq'), tok(n * 100, 'sq')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, n:n, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var ar = areaH(d.r), s = secAreaH(d.r, d.n), f = fracOf(d.n);
+        return {
+          stem: lang === 'zh' ? '一個扇形的半徑是 <strong>' + d.r + ' 公分</strong>、圓心角是 <strong>' + d.n + ' 度</strong>，它的<strong>面積</strong>是多少？'
+                              : 'A sector has a radius of <strong>' + plEn(d.r, 'centimetre') + '</strong> and an angle of <strong>' + d.n + ' degrees</strong>. What is its <strong>area</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '先算整個圓的面積：' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(ar) + '。這一片占 ' + f.p + '/' + f.q + '，所以扇形面積是 ' + hText(ar) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(s) + '，單位是平方公分。' + hText(ar) + ' 是整個圓的面積；' + hText(arcH(d.r, d.n)) + ' 是這一片的弧長，單位是公分。'
+            : 'The whole circle’s area is ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(ar) + '. This slice is ' + f.p + '/' + f.q + ' of it, so its area is ' + hText(ar) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(s) + ', in square centimetres. The ' + hText(ar) + ' is the whole circle; ' + hText(arcH(d.r, d.n)) + ' is this slice’s arc, measured in centimetres.'
+        };
+      } },
+
+    /* 6. 扇形的周長（弧長 ＋ 兩條半徑）。誘答：只有弧長、面積、整圓周長。 */
+    { id:'perimFromR', cat:'perim',
+      make:function(used){
+        var pr = pickUnusedPair(PAIRS, used), r = pr.r, n = pr.n;
+        var correct = tok(perimH(r, n), 'cm');
+        var cands = [tok(arcH(r, n), 'cm'), tok(secAreaH(r, n), 'sq'), tok(circH(r), 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(perimH(r, n), 'cm'), [tok(r * 100, 'cm'), tok(n * 100, 'cm')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, n:n, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var c = circH(d.r), a = arcH(d.r, d.n), p = perimH(d.r, d.n);
+        return {
+          stem: lang === 'zh' ? '一個扇形的半徑是 <strong>' + d.r + ' 公分</strong>、圓心角是 <strong>' + d.n + ' 度</strong>，沿著它的<strong>整圈邊緣</strong>走一圈有多長？'
+                              : 'A sector has a radius of <strong>' + plEn(d.r, 'centimetre') + '</strong> and an angle of <strong>' + d.n + ' degrees</strong>. How far is it <strong>right round its edge</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '先算弧長：' + hText(c) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(a) + '。走一圈還會走到兩條半徑，所以 ' + hText(a) + ' ＋ ' + d.r + ' × 2 ＝ ' + hText(p) + '，單位是公分。只寫 ' + hText(a) + ' 是忘了那兩條半徑。'
+            : 'The arc first: ' + hText(c) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(a) + '. Going right round also covers two radiuses, so ' + hText(a) + ' ＋ ' + d.r + ' × 2 ＝ ' + hText(p) + ', in centimetres. Answering ' + hText(a) + ' forgets those two radiuses.'
+        };
+      } },
+
+    /* 7. 應用題（只走彎的那一段）→ 弧長。誘答：整圈邊緣、面積、整圓周長。 */
+    { id:'wordArc', cat:'word',
+      make:function(used){
+        var pr = pickUnusedPair(PAIRS, used), r = pr.r, n = pr.n, id = pick(ARC_IDS);
+        var correct = tok(arcH(r, n), 'cm');
+        var cands = [tok(perimH(r, n), 'cm'), tok(secAreaH(r, n), 'sq'), tok(circH(r), 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(arcH(r, n), 'cm'), [tok(r * 100, 'cm'), tok(n * 100, 'cm')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, n:n, id:id, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var s = SCEN[lang][d.id], c = circH(d.r), a = arcH(d.r, d.n), f = fracOf(d.n);
+        return {
+          stem: lang === 'zh' ? '一個' + s.what + '，半徑是 <strong>' + d.r + ' 公分</strong>、圓心角是 <strong>' + d.n + ' 度</strong>。' + s.ask
+                              : 'There is ' + s.what + ' with a radius of <strong>' + plEn(d.r, 'centimetre') + '</strong> and an angle of <strong>' + d.n + ' degrees</strong> at the centre. ' + s.ask,
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '只走彎的那一段就是<strong>弧長</strong>：整個圓的圓周長是 ' + hText(c) + '，這一片占 ' + f.p + '/' + f.q + '，' + hText(c) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(a) + '，單位是公分。兩條半徑不算，加上去會變成整圈邊緣的長度 ' + hText(perimH(d.r, d.n)) + '。'
+            : 'Travelling only the curved piece is the <strong>arc</strong>: the whole circumference is ' + hText(c) + ', this slice is ' + f.p + '/' + f.q + ' of it, and ' + hText(c) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(a) + ', in centimetres. The two radiuses do not count; adding them would give ' + hText(perimH(d.r, d.n)) + ', the distance right round the edge.'
+        };
+      } },
+
+    /* 8. 應用題（整片鋪滿）→ 面積。誘答：弧長、整圓面積、整圈邊緣。 */
+    { id:'wordArea', cat:'word',
+      make:function(used){
+        var pr = pickUnusedPair(PAIRS, used), r = pr.r, n = pr.n, id = pick(AREA_IDS);
+        var correct = tok(secAreaH(r, n), 'sq');
+        var cands = [tok(arcH(r, n), 'cm'), tok(areaH(r), 'sq'), tok(perimH(r, n), 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(secAreaH(r, n), 'sq'), [tok(r * 100, 'sq'), tok(n * 100, 'sq')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, n:n, id:id, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var s = SCEN[lang][d.id], ar = areaH(d.r), sec = secAreaH(d.r, d.n), f = fracOf(d.n);
+        return {
+          stem: lang === 'zh' ? '一個' + s.what + '，半徑是 <strong>' + d.r + ' 公分</strong>、圓心角是 <strong>' + d.n + ' 度</strong>。' + s.ask
+                              : 'There is ' + s.what + ' with a radius of <strong>' + plEn(d.r, 'centimetre') + '</strong> and an angle of <strong>' + d.n + ' degrees</strong> at the centre. ' + s.ask,
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '整片鋪滿就是<strong>面積</strong>：整個圓的面積是 ' + hText(ar) + '，這一片占 ' + f.p + '/' + f.q + '，' + hText(ar) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(sec) + '，單位是平方公分。' + hText(arcH(d.r, d.n)) + ' 公分是彎的那一段有多長，那是沿著邊走才會用到的量。'
+            : 'Covering the whole slice is the <strong>area</strong>: the whole circle’s area is ' + hText(ar) + ', this slice is ' + f.p + '/' + f.q + ' of it, and ' + hText(ar) + ' × ' + d.n + ' ÷ 360 ＝ ' + hText(sec) + ', in square centimetres. The ' + hText(arcH(d.r, d.n)) + ' centimetres is how long the curved edge is, which only a question about travelling along it would want.'
+        };
+      } },
+
+    /* 9. 四個問題，只有一個要算面積（其餘三個都是長度）。 */
+    { id:'whichQuestion', cat:'concept',
+      make:function(used){
+        var a = pickUnused(ASK_AREA_KEYS.slice(), used);
+        var ls = shuffle(ASK_LEN_KEYS).slice(0, 3);
+        var opts = shuffle(['area:' + a].concat(ls.map(function(k){ return 'len:' + k; })));
+        return { a:a, opts:opts, ans:opts.indexOf('area:' + a) };
+      },
+      fmt:function(d, lang){
+        var textOf = function(key){
+          var p = key.split(':');
+          return ASKS[p[0]][p[1]][lang];
+        };
+        return {
+          stem: lang === 'zh' ? '下面四個問題，<strong>只有一個要算面積</strong>。是哪一個？' : 'Of these four questions, <strong>exactly one wants an area</strong>. Which?',
+          opts: d.opts.map(textOf), ans:d.ans,
+          /* ⚠️ 這裡不可以用引號把選項的句子夾起來：simgen 會檢查「解釋引用的提示詞必須真的在題幹裡」，
+             而那一句在**選項**上，不在題幹上。 */
+          why: lang === 'zh'
+            ? '要算面積的是 —— ' + textOf('area:' + d.a) + '。那一個是把整片<strong>填滿</strong>，所以算面積，單位是平方公分。另外三個都是<strong>沿著邊走</strong>，量的是長度（只走彎的那一段是弧長，弧和兩條半徑都走是周長），單位是公分。'
+            : 'The one that wants an area is: ' + textOf('area:' + d.a) + '. That one <strong>fills</strong> the whole slice, so it is an area, in square centimetres. The other three all travel <strong>along an edge</strong>, so they want a length (the curved edge only is the arc, the arc with both radiuses is the perimeter), in centimetres.'
+        };
+      } },
+
+    /* 10. 四句話裡只有一句是對的。 */
+    { id:'trueStatement', cat:'concept',
+      make:function(used){
+        var t = pickUnused(TRUE_KEYS.slice(), used);
+        var fs = shuffle(FALSE_KEYS).slice(0, 3);
+        var opts = shuffle([t].concat(fs));
+        return { t:t, opts:opts, ans:opts.indexOf(t) };
+      },
+      fmt:function(d, lang){
+        var WHY = {
+          zh:{ arcRule:'弧是圓周上的一段：半徑 6、90 度 的弧長是 37.68 × 90 ÷ 360 ＝ 9.42。',
+               areaRule:'扇形是圓面的一部分：半徑 6、90 度 的面積是 113.04 × 90 ÷ 360 ＝ 28.26。',
+               perimRule:'走一圈會走到一段弧和兩條半徑：9.42 ＋ 6 × 2 ＝ 21.42。',
+               shareRule:'圓心角 90 度占 360 度的 1/4，扇形也就是整個圓的 1/4。',
+               sameFrac:'弧長用它乘圓周長，面積用它乘圓面積，分數是同一個。',
+               halfDisc:'半徑 10 的半圓：31.4 ＋ 20 ＝ 51.4。',
+               perimIsArc:'還有兩條半徑沒算進去。',
+               flipped:'分數是圓心角 ÷ 360；倒過來算的話一片會比整個圓還大。',
+               arcUnitSq:'弧是一條線，單位是公分。',
+               halfPerim:'弧是圓周長的一半沒錯，可是還要加上直徑。',
+               diameterIn:'公式裡要的是半徑：直徑當成半徑代進去，算出來會是 4 倍。',
+               angleTimes:'面積和圓心角是一起變大的：同一個半徑，90 度換成 180 度，面積是 2 倍，不是 4 倍。' },
+          en:{ arcRule:'An arc is a piece of the circle’s edge: radius 6 with an angle of 90 gives 37.68 × 90 ÷ 360 ＝ 9.42.',
+               areaRule:'A sector is a share of the circle’s face: radius 6 with an angle of 90 gives 113.04 × 90 ÷ 360 ＝ 28.26.',
+               perimRule:'Going right round covers one arc and two radiuses: 9.42 ＋ 6 × 2 ＝ 21.42.',
+               shareRule:'An angle of 90 is 1/4 of 360, and the sector is 1/4 of the circle.',
+               sameFrac:'The arc multiplies it by the circumference and the area multiplies it by the circle’s area; the fraction is the same.',
+               halfDisc:'A half circle of radius 10: 31.4 ＋ 20 ＝ 51.4.',
+               perimIsArc:'Two radiuses are still missing.',
+               flipped:'The share is angle ÷ 360; the other way up would make one slice bigger than the circle.',
+               arcUnitSq:'An arc is a line, so it is in centimetres.',
+               halfPerim:'The arc is half the circumference, but the diameter still has to be added.',
+               diameterIn:'The formula wants the radius: using the diameter in its place gives four times too much.',
+               angleTimes:'The area grows with the angle: for the same radius, 90 degrees changed to 180 doubles the area, it does not quadruple it.' }
+        }[lang];
+        var wrongs = d.opts.filter(function(k){ return k !== d.t; });
+        return {
+          stem: lang === 'zh' ? '下面四句話，<strong>只有一句是對的</strong>。是哪一句？' : 'Of these four sentences, <strong>exactly one is true</strong>. Which?',
+          opts: d.opts.map(function(k){ return STATEMENTS[k][lang]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '對的那一句是：' + STATEMENTS[d.t].zh + '。' + WHY[d.t] + '其他三句：' + wrongs.map(function(k){ return WHY[k]; }).join('')
+            : 'The true one is: ' + STATEMENTS[d.t].en + ' ' + WHY[d.t] + ' The other three: ' + wrongs.map(function(k){ return WHY[k]; }).join(' ')
+        };
+      } },
+
+    /* 11. 交錯題（六年級「圓周率工作坊」）：整個圓的圓周長或面積。 */
+    { id:'interCircle', cat:'inter',
+      make:function(used){
+        var r = pickUnused(POOL_R_WHOLE.slice(), used), wantArea = rand(2) === 0;
+        var correct = wantArea ? tok(areaH(r), 'sq') : tok(circH(r), 'cm');
+        var cands = wantArea
+          ? [tok(circH(r), 'cm'), tok(r * PI_H, 'sq'), tok(4 * areaH(r), 'sq')]
+          : [tok(areaH(r), 'sq'), tok(r * PI_H, 'cm'), tok(2 * circH(r), 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(tokVal(correct), wantArea ? 'sq' : 'cm'),
+          [tok(r * 100, wantArea ? 'sq' : 'cm')]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, wantArea:wantArea, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        if (d.wantArea) return {
+          stem: lang === 'zh' ? '（六年級）一個<strong>整圓</strong>的半徑是 <strong>' + d.r + ' 公分</strong>，它的<strong>面積</strong>是多少？'
+                              : '(Grade six) A <strong>whole circle</strong> has a radius of <strong>' + plEn(d.r, 'centimetre') + '</strong>. What is its <strong>area</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh' ? '整圓的面積是 半徑 × 半徑 × 3.14：' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(areaH(d.r)) + '，單位是平方公分。這一題沒有圓心角，不必乘任何分數。'
+                             : 'A whole circle’s area is radius × radius × 3.14: ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(areaH(d.r)) + ', in square centimetres. There is no angle here, so no fraction is needed.'
+        };
+        return {
+          stem: lang === 'zh' ? '（六年級）一個<strong>整圓</strong>的半徑是 <strong>' + d.r + ' 公分</strong>，它的<strong>圓周長</strong>是多少？'
+                              : '(Grade six) A <strong>whole circle</strong> has a radius of <strong>' + plEn(d.r, 'centimetre') + '</strong>. What is its <strong>circumference</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh' ? '整圓的圓周長是 半徑 × 2 × 3.14：' + d.r + ' × 2 × 3.14 ＝ ' + hText(circH(d.r)) + '，單位是公分。這一題沒有圓心角，不必乘任何分數。'
+                             : 'A whole circle’s circumference is radius × 2 × 3.14: ' + d.r + ' × 2 × 3.14 ＝ ' + hText(circH(d.r)) + ', in centimetres. There is no angle here, so no fraction is needed.'
+        };
+      } },
+
+    /* 12. 交錯題（四年級「角度測量站」）：一圈是 360 度，剩下的那一片是幾度。 */
+    { id:'interAngle', cat:'inter',
+      make:function(used){
+        var n = pickUnused(POOL_ANG.slice(), used);
+        var rest = FULL_DEG - n;
+        var correct = tok(rest * 100, 'deg');
+        /* 候選：把平角當一圈、切走兩片、剩下的一半。不合法（≤ 0 或不是整數度）的會被 pickWrongs 濾掉。 */
+        var cands = [tok((180 - n) * 100, 'deg'), tok((FULL_DEG - 2 * n) * 100, 'deg'), tok((rest / 2) * 100, 'deg')];
+        var wrongs = pickWrongs(correct, cands, degFallbacks(rest), [tok(n * 100, 'deg')]);
+        var o = optsOf(correct, wrongs);
+        return { n:n, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var rest = FULL_DEG - d.n;
+        return {
+          stem: lang === 'zh' ? '（四年級）一塊圓形蛋糕切走一片，切走的那一片<strong>圓心角</strong>是 <strong>' + d.n + ' 度</strong>。<strong>剩下</strong>的那一片圓心角是幾度？'
+                              : '(Grade four) One slice is cut from a round cake, and that slice’s <strong>angle at the centre</strong> is <strong>' + d.n + ' degrees</strong>. What is the angle of the piece <strong>left over</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh' ? '繞圓心一圈是 360 度，切走 ' + d.n + ' 度，剩下的就是 360 － ' + d.n + ' ＝ ' + rest + '，答案是 ' + rest + ' 度。'
+                             : 'A full turn round the centre is 360 degrees and ' + d.n + ' were cut away, so what is left is 360 － ' + d.n + ' ＝ ' + rest + ' degrees.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 扇形披薩工廠', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：扇形披薩工廠',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題六年級的整圓周長與面積，和一題四年級的角度。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>　·　整圓的周長與面積回<a href="../circle/index.html">圓周率工作坊</a>　·　圓心角占幾分之幾回五年級<a href="../../../grade-5/math/polygon/index.html">多邊形轉轉盤</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Sector Pizza Workshop', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Sector Pizza Workshop',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>One of them is the grade-6 circumference and area of a whole circle, and one is a grade-4 angle.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>　·　whole circles in <a href="../circle/index.html">the pi lesson</a>　·　what share an angle takes in <a href="../../../grade-5/math/polygon/index.html">the grade-5 polygon lesson</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length){
+            resultLine.textContent = right === batch.length ? t.resAll(batch.length)
+              : right >= Math.ceil(batch.length * 2 / 3) ? t.resGood(right, batch.length)
+              : t.resTry(right, batch.length);
+            resultLinks.innerHTML = t.links;
+            resultEl.classList.add('on');
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function newRound(){
+    batch = buildBatch();
+    applyStatic();
+    render();
+  }
+
+  retryBtn.addEventListener('click', newRound);
+  /* 語言切換保留同一批題目（framework §六之一：切語言不重抽）。 */
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    render();
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>
