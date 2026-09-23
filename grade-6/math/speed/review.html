@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 速率測速站</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .result{margin-top:22px;background:var(--orange-soft);border-radius:18px;padding:18px;display:none}
+  .result.on{display:block}
+  .result .line{font-size:18px;font-weight:700}
+  .result .links{margin-top:10px;font-size:15px}
+  .result .links a{color:var(--blue)}
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：速率測速站</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題五年級的時間換算，和一題六年級的比值。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  /* 同一輪裡不要一直抽到同一個值 */
+  function pickUnused(pool, used){
+    var avail = pool.filter(function(v){ return used.indexOf(v) < 0; });
+    var v = avail.length ? pick(avail) : pick(pool);
+    used.push(v);
+    return v;
+  }
+  function range(a, b, step){ var o = [], x; for (x = a; x <= b; x += (step || 1)) o.push(x); return o; }
+  /* ⚠️ make() 一律不可以回 null：tools/simgen.js 每一批只呼叫 make() 一次、不重試。
+     所有抽樣池都事先過濾好，抽到就一定做得出四個選項。 */
+
+  /* --- 這一課的單位（和 index.html 同一套）：速率有三種，距離兩種，時間三種。 --- */
+  var DIST_OF = { mps:'m', mpm:'m', kmh:'km' };
+  var TIME_OF = { mps:'s', mpm:'min', kmh:'h' };
+  var UW = {
+    zh:{ m:'公尺', km:'公里', s:'秒', min:'分鐘', h:'小時' },
+    en:{ m:'metre', km:'kilometre', s:'second', min:'minute', h:'hour' }
+  };
+  var SPEED_NAME = { mps:'秒速', mpm:'分速', kmh:'時速' };
+  function plEn(n, w){
+    if (String(n) === '1') return n + ' ' + w;
+    return n + ' ' + w + (/(s|x|z|ch|sh)$/.test(w) ? 'es' : 's');
+  }
+  function isSpeedUnit(u){ return u === 'mps' || u === 'mpm' || u === 'kmh'; }
+  function qty(lang, n, u){ return lang === 'zh' ? n + ' ' + UW.zh[u] : plEn(n, UW.en[u]); }
+  function spd(lang, v, su){
+    if (lang === 'zh') return SPEED_NAME[su] + ' ' + v + ' ' + UW.zh[DIST_OF[su]];
+    return plEn(v, UW.en[DIST_OF[su]]) + ' per ' + UW.en[TIME_OF[su]];
+  }
+
+  /* --- 選項的編碼：`值|單位代號`。這樣「80 公尺」和「分速 80 公尺」是兩個不同的值，去重才擋得住。 --- */
+  function tok(v, u){ return v + '|' + u; }
+  function tokVal(t){ return Number(String(t).split('|')[0]); }
+  function tokUnit(t){ return String(t).split('|')[1]; }
+  function tokText(t, lang){
+    var v = tokVal(t), u = tokUnit(t);
+    if (u === 'n') return String(v);
+    return isSpeedUnit(u) ? spd(lang, v, u) : qty(lang, v, u);
+  }
+
+  /* 從候選裡挑三個**值互不相同**、也和正解不同的誘答；候選不夠就用 fallbacks 補（同樣去重）。
+     avoid 是「不可以出現的編碼」（抄題幹的數）；max 是這一題選項的上限（從這一題的參數推出來的）。
+     擠到不夠時少回傳（simgen 的選項數檢查會響，不會卡死）。 */
+  function pickWrongs(correct, cands, fallbacks, avoid, max){
+    var seen = {}, out = [];
+    seen[correct] = 1;
+    (avoid || []).forEach(function(k){ seen[k] = 1; });
+    cands.concat(fallbacks).forEach(function(c){
+      if (out.length >= 3 || c === null || c === undefined) return;
+      var v = tokVal(c);
+      if (!isFinite(v) || v < 1 || v > max || v !== Math.floor(v)) return;
+      if (seen[c]) return;
+      seen[c] = 1; out.push(c);
+    });
+    return out;
+  }
+  function optsOf(correct, wrongs){
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+  /* 保底：值長得像答案的鄰居（同一個單位）。 */
+  function nearFallbacks(v, u){ return [tok(v + 1, u), tok(v + 2, u), tok(v - 1, u), tok(v * 2, u), tok(v + 10, u)]; }
+  /* 所有候選都抄不到題幹：avoid 清單。 */
+  function avoidOf(nums, u){ return nums.map(function(n){ return tok(n, u); }); }
+
+  /* --- 三種「移動的人」：走路（分速）、開車（時速）、賽跑（秒速）。 --- */
+  var FAM = {
+    walk:{ su:'mpm', vs:range(50, 90, 5), ts:range(2, 12) },
+    car: { su:'kmh', vs:range(30, 90, 5), ts:range(2, 6) },
+    run: { su:'mps', vs:range(3, 9),      ts:range(5, 20) }
+  };
+  var FAM_IDS = ['walk', 'car', 'run'];
+  /* 每一個（人、速率、時間）的組合 */
+  var P_VT = (function(){
+    var out = [];
+    FAM_IDS.forEach(function(f){ FAM[f].vs.forEach(function(v){ FAM[f].ts.forEach(function(t){ out.push({ f:f, v:v, t:t, d:v * t }); }); }); });
+    return out;
+  })();
+  /* 求距離那一支：「多算一段」「少算一段」「相加」「相減」四個誘答要乾淨，
+     不可以撞到題幹的速率與時間，也不可以撞到正解，不然 avoid 會把刻意的迷思誘答靜靜擋掉。 */
+  var P_DIST = P_VT.filter(function(p){
+    var xs = [p.v + p.t, p.v * (p.t + 1), p.v * (p.t - 1)];
+    return xs.every(function(x){ return x !== p.v && x !== p.t && x !== p.d; });
+  });
+  /* 求速率那一支：「相乘」「相加」「相減」三個誘答 */
+  var P_SPEED = P_VT.filter(function(p){
+    var xs = [p.d * p.t, p.d + p.t, p.d - p.t];
+    return xs.every(function(x){ return x !== p.d && x !== p.t && x !== p.v; });
+  });
+  /* 求時間那一支：「相乘」「相加」「相減」三個誘答 */
+  var P_TIME = P_VT.filter(function(p){
+    var xs = [p.d * p.v, p.d + p.v, p.d - p.v];
+    return xs.every(function(x){ return x > 0 && x !== p.d && x !== p.v && x !== p.t; });
+  });
+
+  /* --- 比快慢：甲、乙都在走路（分速、公尺、分鐘）。 --- */
+  var WALK_V = range(50, 90, 5), CMP_T = range(2, 8);
+  /* 時間一樣或距離一樣 */
+  var P_CMP_EASY = (function(){
+    var out = [];
+    WALK_V.forEach(function(va){ WALK_V.forEach(function(vb){
+      if (va === vb) return;
+      CMP_T.forEach(function(t){ out.push({ same:'t', ta:t, tb:t, da:va * t, db:vb * t, va:va, vb:vb }); });
+      CMP_T.forEach(function(ta){ CMP_T.forEach(function(tb){
+        if (ta !== tb && va * ta === vb * tb) out.push({ same:'d', ta:ta, tb:tb, da:va * ta, db:vb * tb, va:va, vb:vb });
+      }); });
+    }); });
+    return out;
+  })();
+  /* 都不一樣，而且**走得比較遠的那一個比較慢**（這一課最重要的迷思） */
+  var P_CMP_MIX = (function(){
+    var out = [];
+    WALK_V.forEach(function(va){ WALK_V.forEach(function(vb){
+      if (va === vb) return;
+      CMP_T.forEach(function(ta){ CMP_T.forEach(function(tb){
+        var da = va * ta, db = vb * tb;
+        if (ta === tb || da === db) return;
+        if ((da > db) === (va < vb)) out.push({ same:'none', ta:ta, tb:tb, da:da, db:db, va:va, vb:vb });
+      }); });
+    }); });
+    return out;
+  })();
+  var WHO_KEYS = ['a', 'b', 'same', 'cannot'];
+  var WHO = {
+    a:     { zh:'甲比較快', en:'A is faster' },
+    b:     { zh:'乙比較快', en:'B is faster' },
+    same:  { zh:'一樣快', en:'They are equally fast' },
+    cannot:{ zh:'時間不一樣，不能比', en:'The times differ, so they cannot be compared' }
+  };
+
+  /* --- 「分速 65 公尺」是什麼意思：四句話，只有 per 是對的。 --- */
+  var MEAN_KEYS = ['per', 'inv', 'total', 'howLong'];
+  function meanText(key, v, su, lang){
+    var du = DIST_OF[su], tu = TIME_OF[su];
+    if (lang === 'zh'){
+      if (key === 'per') return '每 1 ' + UW.zh[tu] + '走 ' + v + ' ' + UW.zh[du];
+      if (key === 'inv') return '走 ' + v + ' ' + UW.zh[tu] + '才走 1 ' + UW.zh[du];
+      if (key === 'total') return '它說的是一共走了多遠';
+      return '它說的是一共走了多久';
+    }
+    if (key === 'per') return plEn(v, UW.en[du]) + ' in each ' + UW.en[tu];
+    if (key === 'inv') return '1 ' + UW.en[du] + ' in ' + plEn(v, UW.en[tu]);
+    if (key === 'total') return 'It tells how far was travelled in all';
+    return 'It tells how long the trip took';
+  }
+
+  /* --- 換單位（只做大單位到小單位）。 --- */
+  /* 時速 → 分速：時速是 3 的倍數，分速才是整數 */
+  var P_KMH_MPM = range(6, 144, 3).filter(function(v){ return v * 1000 / 60 <= 2400; });
+  /* 分速 → 秒速：分速是 60 的倍數 */
+  var P_MPM_MPS = range(2, 30).map(function(k){ return k * 60; });
+  /* 時速 → 秒速：時速是 18 的倍數 */
+  var P_KMH_MPS = range(18, 144, 18);
+
+  /* --- 應用題：單位沒有對齊。T：分速配小時；D：公里配分速。 --- */
+  var P_MIX_T = (function(){
+    var out = [];
+    /* 只用 2 小時：3 小時是 180 分鐘，超出這一課說的「時間最多 120 個單位」；1 小時的話「沒換單位」的誘答就是題幹的數。 */
+    WALK_V.forEach(function(v){ [2].forEach(function(h){ out.push({ v:v, h:h, d:v * 60 * h }); }); });
+    return out;
+  })();
+  var P_MIX_D = (function(){
+    var out = [];
+    [200, 250, 300, 400, 500].forEach(function(v){ range(2, 30).forEach(function(km){
+      var m = km * 1000;
+      if (m % v !== 0) return;
+      var t = m / v;
+      if (t < 5 || t > 120 || t % 10 !== 0) return;
+      /* 「0 補少了」「0 補多了」「相乘」三個誘答不可以撞到題幹的數 */
+      var xs = [t / 10, t * 10, km * v];
+      if (xs.some(function(x){ return x === km || x === v || x === t; })) return;
+      out.push({ km:km, v:v, t:t });
+    }); });
+    return out;
+  })();
+
+  /* --- 兩段路的平均速率：全部的距離 ÷ 全部的時間。 --- */
+  var P_AVG = (function(){
+    var out = [];
+    var vs = range(30, 90, 10), ts = range(1, 4);
+    vs.forEach(function(v1){ vs.forEach(function(v2){
+      if (v1 === v2) return;
+      ts.forEach(function(t1){ ts.forEach(function(t2){
+        if (t1 === t2) return;
+        var d1 = v1 * t1, d2 = v2 * t2, D = d1 + d2, T = t1 + t2;
+        if (D % T !== 0) return;
+        var V = D / T;
+        if ((v1 + v2) % 2 !== 0) return;
+        var mean = (v1 + v2) / 2;
+        if (mean === V) return;
+        /* 三個迷思誘答（兩個速率平均、相加、全部的距離）要乾淨：不撞題幹、不撞正解、彼此不同 */
+        var xs = [mean, v1 + v2, D], stem = [t1, d1, t2, d2];
+        if (xs.some(function(x){ return x === V || stem.indexOf(x) >= 0; })) return;
+        if (xs[0] === xs[1] || xs[0] === xs[2] || xs[1] === xs[2]) return;
+        out.push({ t1:t1, d1:d1, t2:t2, d2:d2, v1:v1, v2:v2, V:V, mean:mean, D:D, T:T });
+      }); });
+    }); });
+    return out;
+  })();
+
+  /* --- 交錯題（五年級「時間管理局」）：幾小時幾分鐘是幾分鐘。 --- */
+  var P_HM = (function(){
+    var out = [];
+    [1, 2, 3].forEach(function(h){ range(5, 55, 5).forEach(function(m){ out.push({ h:h, m:m }); }); });
+    return out;
+  })();
+  /* --- 交錯題（六年級「比與比值調色盤」）：比值 ＝ 前項 ÷ 後項。前項後項都在 30 以內。 --- */
+  var RATIO_PAIRS = (function(){
+    var out = [], b, k;
+    for (b = 2; b <= 9; b++) for (k = 2; k <= 9; k++) if (b * k <= 30) out.push({ b:b, k:k });
+    return out;
+  })();
+
+  /* --- 三種人的題幹（兩種語言）。 --- */
+  var WHO_DOES = {
+    zh:{ walk:['小明', '走', '走路'], car:['一輛汽車', '開', '開車'], run:['一位選手', '跑', '跑步'] },
+    en:{ walk:['Ming', 'walks', 'walking'], car:['A car', 'drives', 'driving'], run:['A runner', 'runs', 'running'] }
+  };
+
+  var GENS = [
+    /* 1. 求速率：距離 ÷ 時間。誘答：相乘、相加、相減。 */
+    { id:'speedCalc', cat:'calc',
+      make:function(used){
+        var p = pickUnused(P_SPEED, used), su = FAM[p.f].su;
+        var correct = tok(p.v, su);
+        var cands = [tok(p.d * p.t, su), tok(p.d + p.t, su), tok(p.d - p.t, su)];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.v, su), avoidOf([p.d, p.t], su), p.d * p.t);
+        var o = optsOf(correct, wrongs);
+        return { f:p.f, v:p.v, t:p.t, d:p.d, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var su = FAM[d.f].su, w = WHO_DOES[lang][d.f];
+        var stem = lang === 'zh'
+          ? w[0] + ' <strong>' + qty('zh', d.t, TIME_OF[su]) + '</strong>' + w[1] + '了 <strong>' + qty('zh', d.d, DIST_OF[su]) + '</strong>，' + (d.f === 'car' ? '它' : '他') + '的<strong>' + SPEED_NAME[su] + '</strong>是多少？'
+          : w[0] + ' ' + w[1] + ' <strong>' + qty('en', d.d, DIST_OF[su]) + '</strong> in <strong>' + qty('en', d.t, TIME_OF[su]) + '</strong>. What is the speed in <strong>' + UW.en[DIST_OF[su]] + 's per ' + UW.en[TIME_OF[su]] + '</strong>?';
+        return {
+          stem: stem,
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? SPEED_NAME[su] + '就是每 1 ' + UW.zh[TIME_OF[su]] + w[1] + '多遠，用<strong>距離 ÷ 時間</strong>：' + d.d + ' ÷ ' + d.t + ' ＝ ' + d.v + '，所以是' + spd('zh', d.v, su) + '。把距離和時間乘起來、加起來、減掉，都不是速率。'
+            : 'Speed is how far is travelled in each ' + UW.en[TIME_OF[su]] + ', so use <strong>distance ÷ time</strong>: ' + d.d + ' ÷ ' + d.t + ' ＝ ' + d.v + ', which is ' + spd('en', d.v, su) + '. Multiplying, adding or subtracting the distance and the time does not give a speed.'
+        };
+      } },
+
+    /* 2. 求距離：速率 × 時間。誘答：多算一段、少算一段、相加、相減。 */
+    { id:'distCalc', cat:'calc',
+      make:function(used){
+        var p = pickUnused(P_DIST, used), su = FAM[p.f].su, du = DIST_OF[su];
+        var correct = tok(p.d, du);
+        var cands = [tok(p.v * (p.t + 1), du), tok(p.v * (p.t - 1), du), tok(p.v + p.t, du)];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.d, du), avoidOf([p.v, p.t], du), p.v * (p.t + 1));
+        var o = optsOf(correct, wrongs);
+        return { f:p.f, v:p.v, t:p.t, d:p.d, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var su = FAM[d.f].su, w = WHO_DOES[lang][d.f];
+        var stem = lang === 'zh'
+          ? w[0] + '的<strong>' + SPEED_NAME[su] + '是 ' + d.v + ' ' + UW.zh[DIST_OF[su]] + '</strong>，' + w[1] + '了 <strong>' + qty('zh', d.t, TIME_OF[su]) + '</strong>，一共' + w[1] + '了多少' + UW.zh[DIST_OF[su]] + '？'
+          : w[0] + ' ' + w[1] + ' at <strong>' + spd('en', d.v, su) + '</strong> for <strong>' + qty('en', d.t, TIME_OF[su]) + '</strong>. How many ' + UW.en[DIST_OF[su]] + 's is that?';
+        return {
+          stem: stem,
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '每 1 ' + UW.zh[TIME_OF[su]] + w[1] + ' ' + d.v + ' ' + UW.zh[DIST_OF[su]] + '，' + d.t + ' ' + UW.zh[TIME_OF[su]] + '就是 ' + d.t + ' 個 ' + d.v + '：<strong>距離 ＝ 速率 × 時間</strong>，' + d.v + ' × ' + d.t + ' ＝ ' + d.d + '，一共 ' + qty('zh', d.d, DIST_OF[su]) + '。' + d.v + ' × ' + (d.t + 1) + ' 是多算了一段，' + d.v + ' × ' + (d.t - 1) + ' 是少算了一段。'
+            : 'Each ' + UW.en[TIME_OF[su]] + ' covers ' + qty('en', d.v, DIST_OF[su]) + ', so ' + qty('en', d.t, TIME_OF[su]) + ' is ' + d.t + ' lots of ' + d.v + ': <strong>distance ＝ speed × time</strong>, ' + d.v + ' × ' + d.t + ' ＝ ' + d.d + ', which is ' + qty('en', d.d, DIST_OF[su]) + '. ' + d.v + ' × ' + (d.t + 1) + ' counts one piece too many and ' + d.v + ' × ' + (d.t - 1) + ' one too few.'
+        };
+      } },
+
+    /* 3. 求時間：距離 ÷ 速率。誘答：相乘、相加、相減。 */
+    { id:'timeCalc', cat:'calc',
+      make:function(used){
+        var p = pickUnused(P_TIME, used), su = FAM[p.f].su, tu = TIME_OF[su];
+        var correct = tok(p.t, tu);
+        var cands = [tok(p.d * p.v, tu), tok(p.d + p.v, tu), tok(p.d - p.v, tu)];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.t, tu), avoidOf([p.d, p.v], tu), p.d * p.v);
+        var o = optsOf(correct, wrongs);
+        return { f:p.f, v:p.v, t:p.t, d:p.d, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var su = FAM[d.f].su, w = WHO_DOES[lang][d.f];
+        var stem = lang === 'zh'
+          ? '一段 <strong>' + qty('zh', d.d, DIST_OF[su]) + '</strong>的路，' + w[0] + '用<strong>' + spd('zh', d.v, su) + '</strong>' + w[1] + '，要' + w[1] + '幾' + UW.zh[TIME_OF[su]] + '？'
+          : 'A route is <strong>' + qty('en', d.d, DIST_OF[su]) + '</strong> long. ' + w[0] + ' ' + w[1] + ' it at <strong>' + spd('en', d.v, su) + '</strong>. How many ' + UW.en[TIME_OF[su]] + 's does it take?';
+        return {
+          stem: stem,
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '每 1 ' + UW.zh[TIME_OF[su]] + w[1] + ' ' + d.v + ' ' + UW.zh[DIST_OF[su]] + '，整段裡面有幾個 ' + d.v + '，就要' + w[1] + '幾' + UW.zh[TIME_OF[su]] + '：<strong>時間 ＝ 距離 ÷ 速率</strong>，' + d.d + ' ÷ ' + d.v + ' ＝ ' + d.t + '。驗算：' + d.v + ' × ' + d.t + ' ＝ ' + d.d + '，對了。'
+            : 'Each ' + UW.en[TIME_OF[su]] + ' covers ' + qty('en', d.v, DIST_OF[su]) + ', so however many ' + d.v + 's fit into the route is how many ' + UW.en[TIME_OF[su]] + 's: <strong>time ＝ distance ÷ speed</strong>, ' + d.d + ' ÷ ' + d.v + ' ＝ ' + d.t + '. Check: ' + d.v + ' × ' + d.t + ' ＝ ' + d.d + '.'
+        };
+      } },
+
+    /* 4. 速率是什麼意思：四句話，只有「每 1 個單位時間走多遠」是對的。 */
+    { id:'meaning', cat:'concept',
+      make:function(used){
+        var p = pickUnused(P_VT, used);
+        var opts = shuffle(MEAN_KEYS.slice());
+        return { f:p.f, v:p.v, t:p.t, d:p.d, opts:opts, ans:opts.indexOf('per') };
+      },
+      fmt:function(d, lang){
+        var su = FAM[d.f].su;
+        return {
+          stem: lang === 'zh' ? '「<strong>' + spd('zh', d.v, su) + '</strong>」是什麼意思？'
+                              : 'What does “<strong>' + spd('en', d.v, su) + '</strong>” mean?',
+          opts: d.opts.map(function(k){ return meanText(k, d.v, su, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? SPEED_NAME[su] + '說的是<strong>每 1 ' + UW.zh[TIME_OF[su]] + '</strong>走多遠。它沒有說一共走了多久，也沒有說一共走了多遠；走 ' + d.t + ' ' + UW.zh[TIME_OF[su]] + '的話，就是 ' + d.v + ' × ' + d.t + ' ＝ ' + d.d + '，一共 ' + qty('zh', d.d, DIST_OF[su]) + '。另外有一句把距離和時間的位置弄反了。'
+            : 'A speed says how far is travelled <strong>in each ' + UW.en[TIME_OF[su]] + '</strong>. It says nothing about how long the trip lasted or how far it went in all; for ' + qty('en', d.t, TIME_OF[su]) + ' it would be ' + d.v + ' × ' + d.t + ' ＝ ' + d.d + ', that is ' + qty('en', d.d, DIST_OF[su]) + '. One of the other sentences swaps distance and time around.'
+        };
+      } },
+
+    /* 5. 比快慢（簡單的）：時間一樣比距離，或距離一樣比時間。 */
+    { id:'compareEasy', cat:'compare',
+      make:function(used){
+        var p = pickUnused(P_CMP_EASY, used);
+        var opts = shuffle(WHO_KEYS.slice());
+        return { same:p.same, ta:p.ta, tb:p.tb, da:p.da, db:p.db, va:p.va, vb:p.vb, opts:opts, ans:opts.indexOf(p.va > p.vb ? 'a' : 'b') };
+      },
+      fmt:function(d, lang){
+        var win = d.va > d.vb ? 'a' : 'b';
+        var nm = { zh:{ a:'甲', b:'乙' }, en:{ a:'A', b:'B' } }[lang];
+        var whyZh = d.same === 't'
+          ? '兩個人都走了 ' + d.ta + ' 分鐘，時間一樣，就比誰走得遠：' + nm[win] + '走得比較遠，所以' + nm[win] + '比較快。算速率也一樣：' + d.da + ' ÷ ' + d.ta + ' ＝ ' + d.va + '，' + d.db + ' ÷ ' + d.tb + ' ＝ ' + d.vb + '。'
+          : '兩個人都走了 ' + d.da + ' 公尺，距離一樣，就比誰花的時間少：' + nm[win] + '花的時間比較少，所以' + nm[win] + '比較快。算速率也一樣：' + d.da + ' ÷ ' + d.ta + ' ＝ ' + d.va + '，' + d.db + ' ÷ ' + d.tb + ' ＝ ' + d.vb + '。';
+        var whyEn = d.same === 't'
+          ? 'Both walk for ' + plEn(d.ta, 'minute') + ', so the time is the same and the one who goes further is faster: that is ' + nm[win] + '. The speeds agree: ' + d.da + ' ÷ ' + d.ta + ' ＝ ' + d.va + ' and ' + d.db + ' ÷ ' + d.tb + ' ＝ ' + d.vb + '.'
+          : 'Both walk ' + plEn(d.da, 'metre') + ', so the distance is the same and the one who takes less time is faster: that is ' + nm[win] + '. The speeds agree: ' + d.da + ' ÷ ' + d.ta + ' ＝ ' + d.va + ' and ' + d.db + ' ÷ ' + d.tb + ' ＝ ' + d.vb + '.';
+        return {
+          stem: lang === 'zh' ? '<strong>甲</strong> ' + d.ta + ' 分鐘走了 <strong>' + d.da + ' 公尺</strong>，<strong>乙</strong> ' + d.tb + ' 分鐘走了 <strong>' + d.db + ' 公尺</strong>。誰走得比較快？'
+                              : '<strong>A</strong> walks <strong>' + plEn(d.da, 'metre') + '</strong> in ' + plEn(d.ta, 'minute') + ' and <strong>B</strong> walks <strong>' + plEn(d.db, 'metre') + '</strong> in ' + plEn(d.tb, 'minute') + '. Who is faster?',
+          opts: d.opts.map(function(k){ return WHO[k][lang]; }), ans:d.ans,
+          why: lang === 'zh' ? whyZh : whyEn
+        };
+      } },
+
+    /* 6. 比快慢（都不一樣）：走得比較遠的那一個比較慢。 */
+    { id:'compareMix', cat:'compare',
+      make:function(used){
+        var p = pickUnused(P_CMP_MIX, used);
+        var opts = shuffle(WHO_KEYS.slice());
+        return { ta:p.ta, tb:p.tb, da:p.da, db:p.db, va:p.va, vb:p.vb, opts:opts, ans:opts.indexOf(p.va > p.vb ? 'a' : 'b') };
+      },
+      fmt:function(d, lang){
+        var win = d.va > d.vb ? 'a' : 'b', far = d.da > d.db ? 'a' : 'b';
+        var nm = { zh:{ a:'甲', b:'乙' }, en:{ a:'A', b:'B' } }[lang];
+        return {
+          stem: lang === 'zh' ? '<strong>甲</strong> ' + d.ta + ' 分鐘走了 <strong>' + d.da + ' 公尺</strong>，<strong>乙</strong> ' + d.tb + ' 分鐘走了 <strong>' + d.db + ' 公尺</strong>。誰走得比較快？'
+                              : '<strong>A</strong> walks <strong>' + plEn(d.da, 'metre') + '</strong> in ' + plEn(d.ta, 'minute') + ' and <strong>B</strong> walks <strong>' + plEn(d.db, 'metre') + '</strong> in ' + plEn(d.tb, 'minute') + '. Who is faster?',
+          opts: d.opts.map(function(k){ return WHO[k][lang]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? '時間和距離都不一樣，就比<strong>每 1 分鐘走多遠</strong>：甲 ' + d.da + ' ÷ ' + d.ta + ' ＝ ' + d.va + '，乙 ' + d.db + ' ÷ ' + d.tb + ' ＝ ' + d.vb + '，' + nm[win] + '比較快。' + nm[far] + '走得比較遠，是因為走得比較久，不是因為比較快。'
+            : 'Neither the time nor the distance is the same, so compare <strong>how far in each minute</strong>: A gives ' + d.da + ' ÷ ' + d.ta + ' ＝ ' + d.va + ' and B gives ' + d.db + ' ÷ ' + d.tb + ' ＝ ' + d.vb + ', so ' + nm[win] + ' is faster. ' + nm[far] + ' went further only by walking for longer, not by being faster.'
+        };
+      } },
+
+    /* 7. 換單位一步：時速 → 分速（公里換公尺、每小時換每分鐘），或分速 → 秒速（÷ 60）。 */
+    { id:'convOne', cat:'convert',
+      make:function(used){
+        var dir = pick(['hm', 'ms']), v, correct, cands, max, wrongs, o, from, to;
+        if (dir === 'hm'){
+          v = pickUnused(P_KMH_MPM, used); from = 'kmh'; to = 'mpm';
+          correct = tok(v * 1000 / 60, to);
+          /* 只換了公里（停在每小時）、每小時換每分鐘乘反了（沒有換公里）、換過頭換到秒速 */
+          cands = [tok(v * 1000, to), tok(v * 60, to), (v * 1000) % 3600 === 0 ? tok(v * 1000 / 3600, to) : null];
+          max = v * 1000;
+        } else {
+          v = pickUnused(P_MPM_MPS, used); from = 'mpm'; to = 'mps';
+          correct = tok(v / 60, to);
+          /* 乘反了、加上 60、減掉 60 */
+          cands = [tok(v * 60, to), tok(v + 60, to), tok(v - 60, to)];
+          max = v * 60;
+        }
+        wrongs = pickWrongs(correct, cands, nearFallbacks(tokVal(correct), to), avoidOf([v], to), max);
+        o = optsOf(correct, wrongs);
+        return { dir:dir, v:v, from:from, to:to, w:tokVal(correct), opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var stem = lang === 'zh'
+          ? '<strong>' + spd('zh', d.v, d.from) + '</strong>，換成<strong>' + SPEED_NAME[d.to] + '</strong>是多少公尺？'
+          : '<strong>' + spd('en', d.v, d.from) + '</strong> is how many <strong>metres per ' + UW.en[TIME_OF[d.to]] + '</strong>?';
+        var why = d.dir === 'hm'
+          ? (lang === 'zh'
+             ? d.v + ' 公里是 ' + (d.v * 1000) + ' 公尺（' + d.v + ' × 1000 ＝ ' + (d.v * 1000) + '），1 小時是 60 分鐘，每 1 分鐘只走六十分之一：' + (d.v * 1000) + ' ÷ 60 ＝ ' + d.w + '，所以是' + spd('zh', d.w, 'mpm') + '。時間的單位變小，一段時間走的路變短，要<strong>除以 60</strong>。'
+             : plEn(d.v, 'kilometre') + ' is ' + (d.v * 1000) + ' metres (' + d.v + ' × 1000 ＝ ' + (d.v * 1000) + '), and 1 hour is 60 minutes, so each minute covers a sixtieth: ' + (d.v * 1000) + ' ÷ 60 ＝ ' + d.w + ', which is ' + spd('en', d.w, 'mpm') + '. A smaller unit of time covers less ground, so it is <strong>divide by 60</strong>.')
+          : (lang === 'zh'
+             ? '1 分鐘是 60 秒，每 1 秒只走六十分之一：' + d.v + ' ÷ 60 ＝ ' + d.w + '，所以是' + spd('zh', d.w, 'mps') + '。時間的單位變小，一段時間走的路變短，要<strong>除以 60</strong>，不是乘以 60。'
+             : '1 minute is 60 seconds, so each second covers a sixtieth: ' + d.v + ' ÷ 60 ＝ ' + d.w + ', which is ' + spd('en', d.w, 'mps') + '. A smaller unit of time covers less ground, so it is <strong>divide by 60</strong>, not multiply.');
+        return { stem:stem, opts:d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans, why:why };
+      } },
+
+    /* 8. 時速 → 秒速（兩步）：時速是 18 的倍數。誘答：停在分速、只換了公里、乘反了。 */
+    { id:'convHtoS', cat:'convert',
+      make:function(used){
+        var v = pickUnused(P_KMH_MPS, used), w = v * 1000 / 3600;
+        var correct = tok(w, 'mps');
+        var cands = [tok(v * 1000 / 60, 'mps'), tok(v * 1000, 'mps'), tok(v * 60, 'mps')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(w, 'mps'), avoidOf([v], 'mps'), v * 1000);
+        var o = optsOf(correct, wrongs);
+        return { v:v, w:w, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var m = d.v * 1000, mpm = m / 60;
+        return {
+          stem: lang === 'zh' ? '<strong>' + spd('zh', d.v, 'kmh') + '</strong>，換成<strong>秒速</strong>是多少公尺？'
+                              : '<strong>' + spd('en', d.v, 'kmh') + '</strong> is how many <strong>metres per second</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '一步一步換：' + d.v + ' × 1000 ＝ ' + m + '，1 小時走 ' + m + ' 公尺；' + m + ' ÷ 60 ＝ ' + mpm + '，1 分鐘走 ' + mpm + ' 公尺；' + mpm + ' ÷ 60 ＝ ' + d.w + '，1 秒走 ' + d.w + ' 公尺。' + mpm + ' 是換到分速就停了。'
+            : 'One step at a time: ' + d.v + ' × 1000 ＝ ' + m + ', so each hour covers ' + m + ' metres; ' + m + ' ÷ 60 ＝ ' + mpm + ', so each minute covers ' + mpm + '; ' + mpm + ' ÷ 60 ＝ ' + d.w + ', so each second covers ' + d.w + '. ' + mpm + ' stops at metres per minute.'
+        };
+      } },
+
+    /* 9. 應用題：單位沒有對齊。T 分速配小時，D 公里配分速。 */
+    { id:'wordMix', cat:'word',
+      make:function(used){
+        var kind = pick(['T', 'D']), p, correct, cands, wrongs, o, max;
+        if (kind === 'T'){
+          p = pickUnused(P_MIX_T, used);
+          correct = tok(p.d, 'm');
+          /* 沒換單位、只算了 1 小時、把 1 小時當成 100 分鐘 */
+          cands = [tok(p.v * p.h, 'm'), tok(p.v * 60, 'm'), tok(p.v * 100 * p.h, 'm')];
+          max = p.v * 100 * p.h;
+          wrongs = pickWrongs(correct, cands, nearFallbacks(p.d, 'm'), avoidOf([p.v, p.h], 'm'), max);
+          o = optsOf(correct, wrongs);
+          return { kind:kind, v:p.v, h:p.h, d:p.d, opts:o.opts, ans:o.ans };
+        }
+        p = pickUnused(P_MIX_D, used);
+        correct = tok(p.t, 'min');
+        /* 公里換公尺時 0 補少了、補多了，把距離和速率乘起來 */
+        cands = [tok(p.t / 10, 'min'), tok(p.t * 10, 'min'), tok(p.km * p.v, 'min')];
+        max = Math.max(p.t * 10, p.km * p.v);
+        wrongs = pickWrongs(correct, cands, nearFallbacks(p.t, 'min'), avoidOf([p.km, p.v], 'min'), max);
+        o = optsOf(correct, wrongs);
+        return { kind:kind, km:p.km, v:p.v, t:p.t, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        if (d.kind === 'T') return {
+          stem: lang === 'zh' ? '小明走路的<strong>分速是 ' + d.v + ' 公尺</strong>，走了 <strong>' + d.h + ' 小時</strong>，一共走了多少公尺？'
+                              : 'Ming walks at <strong>' + plEn(d.v, 'metre') + ' per minute</strong> for <strong>' + plEn(d.h, 'hour') + '</strong>. How many metres does he walk?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '分速配的是分鐘，時間卻是小時，要先換：' + d.h + ' × 60 ＝ ' + (d.h * 60) + '，' + d.h + ' 小時是 ' + (d.h * 60) + ' 分鐘。再用<strong>距離 ＝ 速率 × 時間</strong>：' + d.v + ' × ' + (d.h * 60) + ' ＝ ' + d.d + '，一共 ' + d.d + ' 公尺。直接 ' + d.v + ' × ' + d.h + ' 是單位沒有對齊；1 小時是 60 分鐘，不是 100 分鐘。'
+            : 'Metres per minute goes with minutes, but the time is in hours, so change it first: ' + d.h + ' × 60 ＝ ' + (d.h * 60) + ', so ' + plEn(d.h, 'hour') + ' is ' + (d.h * 60) + ' minutes. Then <strong>distance ＝ speed × time</strong>: ' + d.v + ' × ' + (d.h * 60) + ' ＝ ' + d.d + ', which is ' + d.d + ' metres. Working out ' + d.v + ' × ' + d.h + ' leaves the units unmatched, and 1 hour is 60 minutes, not 100.'
+        };
+        return {
+          stem: lang === 'zh' ? '一段 <strong>' + d.km + ' 公里</strong>的路，腳踏車用<strong>分速 ' + d.v + ' 公尺</strong>騎，要騎幾分鐘？'
+                              : 'A road is <strong>' + plEn(d.km, 'kilometre') + '</strong> long, and a bike rides it at <strong>' + plEn(d.v, 'metre') + ' per minute</strong>. How many minutes does it take?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '距離是公里、速率是公尺，要先換成一樣的單位：' + d.km + ' × 1000 ＝ ' + (d.km * 1000) + '，' + d.km + ' 公里是 ' + (d.km * 1000) + ' 公尺。再用<strong>時間 ＝ 距離 ÷ 速率</strong>：' + (d.km * 1000) + ' ÷ ' + d.v + ' ＝ ' + d.t + '，要騎 ' + d.t + ' 分鐘。0 補少了或補多了，答案就差 10 倍。'
+            : 'The distance is in kilometres and the speed in metres, so change them to match first: ' + d.km + ' × 1000 ＝ ' + (d.km * 1000) + ', so ' + plEn(d.km, 'kilometre') + ' is ' + (d.km * 1000) + ' metres. Then <strong>time ＝ distance ÷ speed</strong>: ' + (d.km * 1000) + ' ÷ ' + d.v + ' ＝ ' + d.t + ', which is ' + d.t + ' minutes. Too few or too many zeros makes the answer 10 times off.'
+        };
+      } },
+
+    /* 10. 兩段路的平均速率：全部的距離 ÷ 全部的時間。誘答：兩個速率平均、相加、全部的距離。 */
+    { id:'avgTrip', cat:'word',
+      make:function(used){
+        var p = pickUnused(P_AVG, used);
+        var correct = tok(p.V, 'kmh');
+        var cands = [tok(p.mean, 'kmh'), tok(p.v1 + p.v2, 'kmh'), tok(p.D, 'kmh')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.V, 'kmh'), avoidOf([p.t1, p.d1, p.t2, p.d2], 'kmh'), Math.max(p.D, p.v1 + p.v2));
+        var o = optsOf(correct, wrongs);
+        return { t1:p.t1, d1:p.d1, t2:p.t2, d2:p.d2, v1:p.v1, v2:p.v2, V:p.V, D:p.D, T:p.T, mean:p.mean, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '一輛車先用 <strong>' + d.t1 + ' 小時</strong>開了 <strong>' + d.d1 + ' 公里</strong>，再用 <strong>' + d.t2 + ' 小時</strong>開了 <strong>' + d.d2 + ' 公里</strong>。全程的平均時速是多少公里？'
+                              : 'A car first covers <strong>' + plEn(d.d1, 'kilometre') + '</strong> in <strong>' + plEn(d.t1, 'hour') + '</strong>, then <strong>' + plEn(d.d2, 'kilometre') + '</strong> in <strong>' + plEn(d.t2, 'hour') + '</strong>. What is its average speed for the whole journey?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '平均速率是<strong>全部的距離 ÷ 全部的時間</strong>：' + d.d1 + ' ＋ ' + d.d2 + ' ＝ ' + d.D + '，' + d.t1 + ' ＋ ' + d.t2 + ' ＝ ' + d.T + '，' + d.D + ' ÷ ' + d.T + ' ＝ ' + d.V + '，平均時速 ' + d.V + ' 公里。兩段的時速是 ' + d.v1 + ' 公里和 ' + d.v2 + ' 公里，可是兩段開的時間不一樣長，不能把它們加起來除以 2（那會得到 ' + d.mean + '）。'
+            : 'Average speed is <strong>all the distance ÷ all the time</strong>: ' + d.d1 + ' ＋ ' + d.d2 + ' ＝ ' + d.D + ', ' + d.t1 + ' ＋ ' + d.t2 + ' ＝ ' + d.T + ', ' + d.D + ' ÷ ' + d.T + ' ＝ ' + d.V + ', so ' + plEn(d.V, 'kilometre') + ' per hour on average. The legs go at ' + d.v1 + ' and ' + d.v2 + ' kilometres per hour, but they take different lengths of time, so the two cannot just be added and halved (that would give ' + d.mean + ').'
+        };
+      } },
+
+    /* 11. 交錯題（五年級「時間管理局」）：幾小時幾分鐘是幾分鐘。誘答：當成 100 進位、相加、忘了加分鐘。 */
+    { id:'interTime', cat:'inter',
+      make:function(used){
+        var p = pickUnused(P_HM, used), m = p.h * 60 + p.m;
+        var correct = tok(m, 'min');
+        var cands = [tok(p.h * 100 + p.m, 'min'), tok(p.h + p.m, 'min'), tok(p.h * 60, 'min')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(m, 'min'), avoidOf([p.h, p.m], 'min'), p.h * 100 + p.m);
+        var o = optsOf(correct, wrongs);
+        return { h:p.h, m:p.m, total:m, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '（五年級）<strong>' + d.h + ' 小時 ' + d.m + ' 分鐘</strong>是幾分鐘？'
+                              : 'Grade five: <strong>' + plEn(d.h, 'hour') + ' ' + plEn(d.m, 'minute') + '</strong> is how many minutes?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '1 小時是 60 分鐘：' + d.h + ' × 60 ＋ ' + d.m + ' ＝ ' + d.total + '，一共 ' + d.total + ' 分鐘。時間是 60 進位，不是 100 進位 —— 這正是速率題換單位的時候要用的。'
+            : '1 hour is 60 minutes: ' + d.h + ' × 60 ＋ ' + d.m + ' ＝ ' + d.total + ', which is ' + d.total + ' minutes. Time counts in sixties, not hundreds — exactly what a speed problem needs when the units are changed.'
+        };
+      } },
+
+    /* 12. 交錯題（六年級「比與比值調色盤」）：比值 ＝ 前項 ÷ 後項，速率也是一個比值。 */
+    { id:'interRatio', cat:'inter',
+      make:function(used){
+        var p = pickUnused(RATIO_PAIRS, used), first = p.b * p.k;
+        var correct = tok(p.k, 'n');
+        var cands = [tok(first + p.b, 'n'), tok(first - p.b, 'n'), tok(first * p.b, 'n')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(p.k, 'n'), [tok(first, 'n'), tok(p.b, 'n')], first * p.b);
+        var o = optsOf(correct, wrongs);
+        return { b:p.b, k:p.k, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var first = d.b * d.k;
+        return {
+          stem: lang === 'zh' ? '（六年級）<strong>' + first + ' : ' + d.b + '</strong> 的<strong>比值</strong>是多少？'
+                              : 'Grade six: what is the <strong>ratio value</strong> of <strong>' + first + ' : ' + d.b + '</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '比值就是<strong>前項 ÷ 後項</strong>：' + first + ' ÷ ' + d.b + ' ＝ ' + d.k + '。速率也是一個比值：距離和時間的比值，就是每 1 個單位時間走多遠。'
+            : 'A ratio value is <strong>the first part divided by the second</strong>: ' + first + ' ÷ ' + d.b + ' ＝ ' + d.k + '. A speed is a ratio value too: the ratio value of distance to time is how far is travelled in each unit of time.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 速率測速站', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：速率測速站',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題五年級的時間換算，和一題六年級的比值。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>　·　時間換算回五年級<a href="../../../grade-5/math/time/index.html">時間管理局</a>　·　比值回<a href="../ratio/index.html">比與比值調色盤</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Speed Check Station', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Speed Check Station',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>One of them is the grade-5 time conversion, and one is the grade-6 ratio value.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>　·　time conversion is grade five <a href="../../../grade-5/math/time/index.html">The Time Office</a>　·　ratio values are in <a href="../ratio/index.html">The Ratio Palette</a>',
+      retryBtn:'🔄 Another round',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another go.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length){
+            resultLine.textContent = right === batch.length ? t.resAll(batch.length)
+              : right >= Math.ceil(batch.length * 2 / 3) ? t.resGood(right, batch.length)
+              : t.resTry(right, batch.length);
+            resultLinks.innerHTML = t.links;
+            resultEl.classList.add('on');
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function newRound(){
+    batch = buildBatch();
+    applyStatic();
+    render();
+  }
+
+  retryBtn.addEventListener('click', newRound);
+  /* 語言切換保留同一批題目（framework §六之一：切語言不重抽）。 */
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    render();
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>
