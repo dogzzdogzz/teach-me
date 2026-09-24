@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>複習挑戰 — 柱體疊疊樂</title>
+<style>
+  :root{
+    --bg:#FAF7F0; --card:#FFFFFF; --ink:#2B2A33; --muted:#6B6875;
+    --green:#2F9E69; --green-soft:#E3F4EB; --orange:#E8871E; --orange-soft:#FDF0E0;
+    --red:#D64545; --red-soft:#FBE9E9; --blue:#3B7DD8; --blue-soft:#E8F0FB;
+    --line:#E8E2D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    line-height:1.7;font-size:17px;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .langbtn{
+    border:2px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:999px;padding:4px 16px;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .langbtn:hover{border-color:var(--green);color:var(--green)}
+  a.home{color:var(--blue);font-size:15px}
+  .coursenav{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px}
+  .coursenav a{color:var(--blue)}
+  .coursenav span{color:var(--muted)}
+  header{text-align:center;padding:32px 0 8px}
+  header h1{font-size:clamp(25px,5vw,36px);letter-spacing:1px}
+  header .sub{color:var(--muted);margin-top:8px;font-size:17px}
+  .intro{
+    background:var(--green-soft);border:2px solid var(--green);border-radius:18px;
+    padding:16px 20px;margin:22px 0;font-size:16px;text-align:center;
+  }
+  .quiz{display:grid;gap:18px;margin-top:20px}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .qn{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-size:13px;
+    font-weight:700;border-radius:999px;padding:1px 12px;
+  }
+  .stem{margin:8px 0 12px;font-size:18px}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+  .opt{
+    border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;
+    font-size:16px;cursor:pointer;color:var(--ink);word-break:break-word;
+  }
+  .opt.right{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+  .opt:disabled{cursor:default;opacity:.85}
+  .fb{margin-top:10px;font-size:15px;color:var(--muted);min-height:22px}
+  .scoreboard{
+    display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;background:var(--blue-soft);
+    border-radius:14px;padding:12px 20px;font-size:16px;
+  }
+  .btn{
+    border:none;border-radius:12px;background:var(--green);color:#fff;font-size:17px;
+    font-weight:700;padding:10px 22px;cursor:pointer;
+  }
+  .result{margin-top:22px;background:var(--orange-soft);border-radius:18px;padding:18px;display:none}
+  .result.on{display:block}
+  .result .line{font-size:18px;font-weight:700}
+  .result .links{margin-top:10px;font-size:15px}
+  .result .links a{color:var(--blue)}
+  footer{margin-top:44px;text-align:center;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <p><a class="home" href="../../../index.html" data-i18n="home">← 回 teach-me 首頁</a></p>
+    <button class="langbtn" id="langBtn" type="button" data-i18n-aria="langAria" aria-label="Switch language">EN</button>
+  </div>
+  <nav class="coursenav">
+    <a href="index.html" data-i18n="nav1">📖 上課（互動教學）</a>
+    <a href="reference.html" data-i18n="nav2">🗂️ 速查卡（重點整理）</a>
+    <span data-i18n="nav3">🔁 複習挑戰（本頁）</span>
+    <a href="parents.html" data-i18n="nav4">👨‍👩‍👧 給家長（陪讀指引）</a>
+  </nav>
+  <header>
+    <h1 data-i18n="h1">🔁 複習挑戰：柱體疊疊樂</h1>
+    <p class="sub" data-i18n="sub">每次重新整理，12 題都不一樣</p>
+  </header>
+  <div class="intro" data-i18n="intro">這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題六年級的圓面積與圓周長，和一題五年級的長方體體積。<br>這裡的柱體都是<strong>直柱體</strong>（側面和底面垂直），表面積只算底面是長方形、直角三角形或圓的柱體。</div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="scoreboard">
+    <span><span data-i18n="qDoneLabel">已作答</span> <b id="qDone">0</b> / <span id="qTotal">12</span></span>
+    <span><span data-i18n="qRightLabel">答對</span> <b id="qRight">0</b> <span data-i18n="qRightUnit">題</span></span>
+  </div>
+
+  <div class="result" id="result">
+    <p class="line" id="resultLine"></p>
+    <p class="links" id="resultLinks"></p>
+    <button class="btn" id="retryBtn" type="button" data-i18n="retryBtn">🔄 再來一輪新題</button>
+  </div>
+
+  <footer data-i18n="foot">記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  /* 這一段到 GENS 結束都是**純資料 + 純函式**，不碰 DOM ——
+     tools/simgen.js 會把這一段切出來，在 Node 裡跑幾萬批檢查出題品質。 */
+
+  function rand(n){ return Math.floor(Math.random() * n); }
+  function pick(arr){ return arr[rand(arr.length)]; }
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function range(a, b){ var out = []; for (var i = a; i <= b; i++) out.push(i); return out; }
+  /* ⚠️ make() 一律不可以回 null：tools/simgen.js 每一批只呼叫 make() 一次、不重試。
+     所有抽樣池都事先過濾好，抽到就一定做得出四個選項。 */
+
+  /* --- 這一課的工具（和 index.html 同一套定義：所有量都用百分之一的整數存）。 --- */
+  var PI_H = 314;           /* 圓周率 3.14 */
+  /* 選項裡任何一個量的上限（百分之一）＝ 20000。⚠️ 要容得下「把直徑當半徑」那個 4 倍的誘答（最大 4 × 10 × 10 × 3.14 × 15 ＝ 18840），
+     太小的話 pickWrongs 會靜靜把它丟掉（檢查設定抓到）。 */
+  var VAL_MAX = 2000000;
+  function hText(h){
+    var w = Math.floor(h / 100), f = h % 100;
+    if (f === 0) return String(w);
+    if (f % 10 === 0) return w + '.' + (f / 10);
+    return w + '.' + (f < 10 ? '0' + f : String(f));
+  }
+  /* 底面積、底面周長（百分之一）。形狀描述和 index.html 同一套。 */
+  function baseAreaH(b){
+    if (b.shape === 'rect') return b.a * b.b * 100;
+    if (b.shape === 'tri') return b.w * b.t * 50;
+    if (b.shape === 'para') return b.w * b.t * 100;
+    if (b.shape === 'trap') return (b.u + b.w) * b.t * 50;
+    if (b.shape === 'circ') return b.r * b.r * PI_H;
+    return null;
+  }
+  function basePerimH(b){
+    if (b.shape === 'rect') return (b.a + b.b) * 2 * 100;
+    if (b.shape === 'circ') return b.r * 2 * PI_H;
+    return null;
+  }
+  function volH(b, h){ return baseAreaH(b) * h; }
+  function latH(b, h){ return basePerimH(b) * h; }
+  function surfH(b, h){ return baseAreaH(b) * 2 + latH(b, h); }
+
+  /* --- 選項的編碼：`百分之一的值|單位代號`。單位代號 cm 公分、sq 平方公分、cu 立方公分。 --- */
+  function tok(h, u){ return h + '|' + u; }
+  function tokVal(t){ return Number(String(t).split('|')[0]); }
+  function tokUnit(t){ return String(t).split('|')[1]; }
+  function plEn(n, w){
+    if (String(n) === '1') return n + ' ' + w;
+    return n + ' ' + w + (/(s|x|z|ch|sh)$/.test(w) ? 'es' : 's');
+  }
+  var UNIT_WORD = { zh:{ cm:'公分', sq:'平方公分', cu:'立方公分' }, en:{ cm:'centimetre', sq:'square centimetre', cu:'cubic centimetre' } };
+  function tokText(t, lang){
+    var u = tokUnit(t), v = hText(tokVal(t));
+    return lang === 'zh' ? v + ' ' + UNIT_WORD.zh[u] : plEn(v, UNIT_WORD.en[u]);
+  }
+  function cm(n){ return plEn(n, 'centimetre'); }
+
+  /* 從候選裡挑三個**值互不相同**、也和正解不同的誘答；候選不夠就用 fallbacks 補（同樣去重）。
+     avoid 是「不可以出現的數」（題幹印出來的數，百分之一）。
+     ⚠️ 連**印出來的數字**都要去重：`60 立方公分` 和 `60 平方公分` 排在一起讀起來像在玩文字遊戲。
+     擠到不夠時少回傳（simgen 的選項數檢查會響，不會卡死）。 */
+  function pickWrongs(correct, cands, fallbacks, avoid){
+    var shown = {}, out = [];
+    shown[tokVal(correct)] = 1;
+    (avoid || []).forEach(function(v){ shown[v] = 1; });
+    cands.concat(fallbacks).forEach(function(c){
+      if (out.length >= 3 || c === null || c === undefined) return;
+      var v = tokVal(c);
+      if (!isFinite(v) || v < 1 || v > VAL_MAX || v !== Math.floor(v)) return;
+      if (shown[v]) return;
+      shown[v] = 1;
+      out.push(c);
+    });
+    return out;
+  }
+  function optsOf(correct, wrongs){
+    var opts = shuffle([correct].concat(wrongs));
+    return { opts:opts, ans:opts.indexOf(correct) };
+  }
+  /* 保底：值長得像答案的鄰居（同一個單位）。 */
+  function nearFallbacks(h, u){
+    var out = [tok(h + 100, u), tok(h - 100, u), tok(2 * h, u), tok(h + 1000, u), tok(h + 200, u)];
+    if (h % 2 === 0) out.push(tok(h / 2, u));
+    return out;
+  }
+
+  /* --- 抽樣池 --- */
+  /* ⚠️ 圓柱的半徑從 3 起：半徑 2 讓「底面積」和「底面周長」是同一個數（12.56），「算成側面積」的誘答會撞上正解；
+     半徑 1 讓「半徑只乘一次」的誘答撞上正解（1 × 3.14 ＝ 1 × 1 × 3.14）。 */
+  var POOL_R = [3, 4, 5, 6, 7, 8, 9, 10];
+  var POOL_H = range(2, 15);
+  /* 三角形的底與高：2 ~ 12 與 3 ~ 10（底面積最多 60）。⚠️ 高不用 2：高 2 的時候「底 × 柱體的高」那個誘答剛好等於正解。 */
+  var POOL_TW = range(2, 12), POOL_TT = range(3, 10);
+  /* 梯形：上底比下底短。平行四邊形：底與高。 */
+  var POOL_TRAP = [];
+  (function(){
+    for (var w = 3; w <= 12; w++) for (var u = 1; u < w; u++) for (var t = 2; t <= 8; t++) POOL_TRAP.push({ shape:'trap', u:u, w:w, t:t });
+  })();
+  /* 求高的題目：底面是 a × b 的長方形，高 2 ~ 15，體積由乘法算出來（一定除得盡）。 */
+  var POOL_RECT_A = range(2, 12), POOL_RECT_B = range(2, 10);
+  /* 整圓交錯題（六年級「圓周率工作坊」）：半徑 3 ~ 10（半徑 2 的圓周長和面積是同一個數）。 */
+  var POOL_R_WHOLE = range(3, 10);
+
+  /* --- 「哪一個情境要算體積」的句庫：一句要體積，三句要面積（表面積或側面積）。 --- */
+  var ASKS = {
+    vol: {
+      fillTank:  { zh:'圓柱形水桶裝滿水（不算桶子的厚度），可以裝多少水', en:'How much water fills a cylinder-shaped bucket (ignoring its thickness)' },
+      sandMould: { zh:'三角柱形的模子裝滿沙（不算模子的厚度），要用多少立方公分的沙', en:'How many cubic centimetres of sand fill a triangular-prism mould (ignoring its thickness)' },
+      cakeBox:   { zh:'長方體的盒子裡面可以放多少立方公分的東西', en:'How many cubic centimetres fit inside a cuboid box' },
+      clayBar:   { zh:'做一條實心的圓柱形黏土棒，要用多少立方公分的黏土', en:'How many cubic centimetres of clay make a solid cylinder-shaped clay stick' }
+    },
+    area: {
+      wrapBox:   { zh:'長方體禮物盒整個包起來，要多大一張包裝紙', en:'How big a sheet of paper wraps a cuboid gift box all over' },
+      canLabel:  { zh:'圓柱形罐頭旁邊貼一圈標籤，標籤要多大一張', en:'How big a label goes right round the side of a cylinder-shaped can' },
+      paintTin:  { zh:'圓柱形的鐵罐外面全部塗上油漆，要塗多大一片', en:'How large an area of paint covers the whole outside of a cylinder-shaped tin' },
+      tentCloth: { zh:'底面是直角三角形的三角柱形帳篷，外面全部蓋上布，要用多少布', en:'How much cloth covers the whole outside of a tent shaped like a triangular prism with a right-angled triangle base' }
+    }
+  };
+  var ASK_VOL_KEYS = Object.keys(ASKS.vol);
+  var ASK_AREA_KEYS = Object.keys(ASKS.area);
+
+  /* --- 「哪一句話是對的」的句庫。每一句的真假寫死在這裡（設定檔另有一份獨立的真值表）。 --- */
+  var STATEMENTS = {
+    volRule:    { truth:true,  zh:'柱體的體積 ＝ 底面積 × 高', en:'Volume of a prism ＝ base area × height' },
+    latRule:    { truth:true,  zh:'柱體的側面積 ＝ 底面周長 × 高', en:'Side area of a prism ＝ perimeter of the base × height' },
+    surfRule:   { truth:true,  zh:'柱體的表面積 ＝ 底面積 × 2 ＋ 側面積', en:'Surface area of a prism ＝ base area × 2 ＋ side area' },
+    triHalf:    { truth:true,  zh:'三角柱的底面積要用 底 × 高 ÷ 2 來算', en:'A triangular prism’s base area is base × height ÷ 2' },
+    twoBases:   { truth:true,  zh:'柱體有兩個一模一樣、互相平行的底面', en:'A prism has two identical, parallel bases' },
+    unitCu:     { truth:true,  zh:'體積的單位是立方公分', en:'Volume is measured in cubic centimetres' },
+    volTwice:   { truth:false, zh:'柱體的體積 ＝ 底面積 × 高 × 2', en:'Volume of a prism ＝ base area × height × 2' },
+    diamOk:     { truth:false, zh:'算圓柱的底面積時，可以把直徑當成半徑', en:'For a cylinder’s base area, the diameter can be used as the radius' },
+    oneBase:    { truth:false, zh:'柱體的表面積 ＝ 底面積 ＋ 側面積', en:'Surface area of a prism ＝ base area ＋ side area' },
+    sameHeight: { truth:false, zh:'三角柱的高一定和底面三角形的高一樣長', en:'A triangular prism’s height is always as long as its base triangle’s height' },
+    unitSq:     { truth:false, zh:'體積的單位是平方公分', en:'Volume is measured in square centimetres' },
+    hTimes4:    { truth:false, zh:'柱體的高變成 2 倍，體積會變成 4 倍', en:'Doubling a prism’s height makes its volume 4 times as big' }
+  };
+  var TRUE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return STATEMENTS[k].truth; });
+  var FALSE_KEYS = Object.keys(STATEMENTS).filter(function(k){ return !STATEMENTS[k].truth; });
+
+  var GENS = [
+    /* 1. 三角柱的體積。誘答：忘了除以 2（2 倍）、只算底面積、底 × 柱體的高（漏掉三角形的高）。 */
+    { id:'triPrismVol', cat:'vol',
+      make:function(){
+        var w = pick(POOL_TW), t = pick(POOL_TT), h = pick(POOL_H), b = { shape:'tri', w:w, t:t };
+        var v = volH(b, h), correct = tok(v, 'cu');
+        var cands = [tok(2 * v, 'cu'), tok(baseAreaH(b), 'cu'), tok(w * h * 100, 'cu')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(v, 'cu'), [w * 100, t * 100, h * 100]);
+        var o = optsOf(correct, wrongs);
+        return { w:w, t:t, h:h, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var b = { shape:'tri', w:d.w, t:d.t }, a = baseAreaH(b), v = volH(b, d.h);
+        return {
+          stem: lang === 'zh' ? '一個三角柱，底面三角形的<strong>底是 ' + d.w + ' 公分</strong>、<strong>高是 ' + d.t + ' 公分</strong>，柱體的<strong>高是 ' + d.h + ' 公分</strong>。它的體積是多少？'
+                              : 'A triangular prism has a base triangle with a <strong>base of ' + cm(d.w) + '</strong> and a <strong>height of ' + cm(d.t) + '</strong>; the prism is <strong>' + cm(d.h) + ' high</strong>. What is its volume?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '先算底面積：' + d.w + ' × ' + d.t + ' ÷ 2 ＝ ' + hText(a) + '（平方公分）。再乘柱體的高：' + hText(a) + ' × ' + d.h + ' ＝ ' + hText(v) + '，單位是立方公分。忘了除以 2 會得到 ' + hText(2 * v) + '，剛好是 2 倍。'
+            : 'First the base area: ' + d.w + ' × ' + d.t + ' ÷ 2 ＝ ' + hText(a) + ' square centimetres. Then times the prism’s height: ' + hText(a) + ' × ' + d.h + ' ＝ ' + hText(v) + ', in cubic centimetres. Forgetting the ÷ 2 gives ' + hText(2 * v) + ', exactly twice as much.'
+        };
+      } },
+
+    /* 2. 四角柱（底面是梯形或平行四邊形）的體積。
+          誘答：梯形忘了除以 2／平行四邊形多除了 2、只算底面積、梯形只用下底。 */
+    { id:'quadPrismVol', cat:'vol',
+      make:function(){
+        var b, h = pick(POOL_H);
+        if (rand(2) === 0) b = pick(POOL_TRAP);
+        else b = { shape:'para', w:pick(POOL_TW), t:pick(POOL_TT) };
+        var v = volH(b, h), correct = tok(v, 'cu');
+        var cands = b.shape === 'trap'
+          ? [tok(2 * v, 'cu'), tok(baseAreaH(b), 'cu'), tok(b.w * b.t * h * 100, 'cu')]
+          : [tok(v / 2, 'cu'), tok(baseAreaH(b), 'cu'), tok(b.w * h * 100, 'cu')];
+        var avoid = b.shape === 'trap' ? [b.u * 100, b.w * 100, b.t * 100, h * 100] : [b.w * 100, b.t * 100, h * 100];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(v, 'cu'), avoid);
+        var o = optsOf(correct, wrongs);
+        return { base:b, h:h, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var b = d.base, a = baseAreaH(b), v = volH(b, d.h), zh = lang === 'zh';
+        var stem, calc;
+        if (b.shape === 'trap'){
+          stem = zh ? '一個四角柱的底面是梯形，<strong>上底 ' + b.u + ' 公分、下底 ' + b.w + ' 公分、高 ' + b.t + ' 公分</strong>；柱體的<strong>高是 ' + d.h + ' 公分</strong>。它的體積是多少？'
+                    : 'A four-sided prism has a trapezium base: <strong>top ' + cm(b.u) + ', bottom ' + cm(b.w) + ', height ' + cm(b.t) + '</strong>; the prism is <strong>' + cm(d.h) + ' high</strong>. What is its volume?';
+          calc = '(' + b.u + ' ＋ ' + b.w + ') × ' + b.t + ' ÷ 2 ＝ ' + hText(a);
+        } else {
+          stem = zh ? '一個四角柱的底面是平行四邊形，<strong>底 ' + b.w + ' 公分、高 ' + b.t + ' 公分</strong>；柱體的<strong>高是 ' + d.h + ' 公分</strong>。它的體積是多少？'
+                    : 'A four-sided prism has a parallelogram base: <strong>base ' + cm(b.w) + ', height ' + cm(b.t) + '</strong>; the prism is <strong>' + cm(d.h) + ' high</strong>. What is its volume?';
+          calc = b.w + ' × ' + b.t + ' ＝ ' + hText(a);
+        }
+        var tailZh = b.shape === 'trap' ? '梯形的面積要除以 2，平行四邊形不用。' : '平行四邊形的面積是 底 × 高，不必除以 2。';
+        var tailEn = b.shape === 'trap' ? ' A trapezium’s area is halved; a parallelogram’s is not.' : ' A parallelogram’s area is base × height, with no ÷ 2.';
+        return {
+          stem: stem,
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: zh ? '底面積：' + calc + '（平方公分）。體積：' + hText(a) + ' × ' + d.h + ' ＝ ' + hText(v) + '，單位是立方公分。' + tailZh
+                  : 'Base area: ' + calc + ' square centimetres. Volume: ' + hText(a) + ' × ' + d.h + ' ＝ ' + hText(v) + ', in cubic centimetres.' + tailEn
+        };
+      } },
+
+    /* 3. 圓柱（給半徑）的體積。誘答：算成側面積、半徑只乘一次、只算底面積。 */
+    { id:'cylVolR', cat:'cyl',
+      make:function(){
+        var r = pick(POOL_R), h = pick(POOL_H), b = { shape:'circ', r:r };
+        var v = volH(b, h), correct = tok(v, 'cu');
+        var cands = [tok(latH(b, h), 'cu'), tok(r * PI_H * h, 'cu'), tok(baseAreaH(b), 'cu')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(v, 'cu'), [r * 100, h * 100]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, h:h, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var b = { shape:'circ', r:d.r }, a = baseAreaH(b), v = volH(b, d.h);
+        return {
+          stem: lang === 'zh' ? '一個圓柱的底面<strong>半徑是 ' + d.r + ' 公分</strong>、<strong>高是 ' + d.h + ' 公分</strong>，它的體積是多少？'
+                              : 'A cylinder has a base <strong>radius of ' + cm(d.r) + '</strong> and a <strong>height of ' + cm(d.h) + '</strong>. What is its volume?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '底面積是 ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(a) + '（平方公分），再乘高：' + hText(a) + ' × ' + d.h + ' ＝ ' + hText(v) + '，單位是立方公分。' + hText(latH(b, d.h)) + ' 是底面周長乘高，那是側面積。'
+            : 'The base area is ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(a) + ' square centimetres; times the height: ' + hText(a) + ' × ' + d.h + ' ＝ ' + hText(v) + ', in cubic centimetres. ' + hText(latH(b, d.h)) + ' is the perimeter of the base times the height, which is the side area.'
+        };
+      } },
+
+    /* 4. 圓柱（給直徑，要先除以 2）的體積。誘答：把直徑當半徑（4 倍）、算成側面積、只算底面積。 */
+    { id:'cylVolD', cat:'cyl',
+      make:function(){
+        var r = pick(POOL_R), h = pick(POOL_H), b = { shape:'circ', r:r };
+        var v = volH(b, h), correct = tok(v, 'cu');
+        var cands = [tok(4 * v, 'cu'), tok(latH(b, h), 'cu'), tok(baseAreaH(b), 'cu')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(v, 'cu'), [2 * r * 100, h * 100]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, h:h, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var b = { shape:'circ', r:d.r }, a = baseAreaH(b), v = volH(b, d.h), dd = 2 * d.r;
+        return {
+          stem: lang === 'zh' ? '一個圓柱的底面<strong>直徑是 ' + dd + ' 公分</strong>、<strong>高是 ' + d.h + ' 公分</strong>，它的體積是多少？'
+                              : 'A cylinder has a base <strong>diameter of ' + cm(dd) + '</strong> and a <strong>height of ' + cm(d.h) + '</strong>. What is its volume?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '先把直徑除以 2：' + dd + ' ÷ 2 ＝ ' + d.r + '（公分）。底面積是 ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(a) + '，體積是 ' + hText(a) + ' × ' + d.h + ' ＝ ' + hText(v) + '，單位是立方公分。把直徑當成半徑會得到 ' + hText(4 * v) + '，剛好是 4 倍。'
+            : 'Halve the diameter first: ' + dd + ' ÷ 2 ＝ ' + d.r + ', so the radius is ' + cm(d.r) + '. The base area is ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(a) + ' and the volume is ' + hText(a) + ' × ' + d.h + ' ＝ ' + hText(v) + ', in cubic centimetres. Using the diameter as the radius gives ' + hText(4 * v) + ', exactly 4 times as much.'
+        };
+      } },
+
+    /* 5. 倒過來求高：知道體積與底面積（長 × 寬的長方形）。誘答：用減的、用加的、多除一次 2（或多乘一次 2）。 */
+    { id:'heightFromVol', cat:'vol',
+      make:function(){
+        var a = pick(POOL_RECT_A), bb = pick(POOL_RECT_B), h = pick(POOL_H);
+        var A = a * bb, V = A * h, correct = tok(h * 100, 'cm');
+        var cands = [tok((V - A) * 100, 'cm'), tok((V + A) * 100, 'cm'), tok(h % 2 === 0 ? h * 50 : h * 200, 'cm')];
+        var wrongs = pickWrongs(correct, cands, [1, 2, 3, 4, 5, 6, -1, -2].map(function(k){ return tok((h + k) * 100, 'cm'); }), [a * 100, bb * 100, A * 100, V * 100]);
+        var o = optsOf(correct, wrongs);
+        return { a:a, b:bb, h:h, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var A = d.a * d.b, V = A * d.h;
+        return {
+          stem: lang === 'zh' ? '一個長方體的底面是<strong>長 ' + d.a + ' 公分、寬 ' + d.b + ' 公分</strong>的長方形，<strong>體積是 ' + V + ' 立方公分</strong>。它的<strong>高</strong>是多少？'
+                              : 'A cuboid’s base is a rectangle <strong>' + cm(d.a) + ' long and ' + cm(d.b) + ' wide</strong>, and its <strong>volume is ' + plEn(V, 'cubic centimetre') + '</strong>. What is its <strong>height</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '底面積是 ' + d.a + ' × ' + d.b + ' ＝ ' + A + '（平方公分）。體積 ＝ 底面積 × 高，倒過來 高 ＝ 體積 ÷ 底面積：' + V + ' ÷ ' + A + ' ＝ ' + d.h + '，所以高是 ' + d.h + ' 公分。驗算：' + A + ' × ' + d.h + ' ＝ ' + V + '。'
+            : 'The base area is ' + d.a + ' × ' + d.b + ' ＝ ' + A + ' square centimetres. Volume ＝ base area × height, so turned round, height ＝ volume ÷ base area: ' + V + ' ÷ ' + A + ' ＝ ' + d.h + ', so the height is ' + cm(d.h) + '. Check: ' + A + ' × ' + d.h + ' ＝ ' + V + '.'
+        };
+      } },
+
+    /* 6. 長方體的表面積（兩個底面 ＋ 底面周長 × 高）。誘答：只算一個底面、只算側面、底面周長只算一半。 */
+    { id:'cuboidSurf', cat:'surf',
+      make:function(){
+        var a = pick(POOL_RECT_A), bb = pick(POOL_RECT_B), h = pick(POOL_H), b = { shape:'rect', a:a, b:bb };
+        var s = surfH(b, h), correct = tok(s, 'sq');
+        var cands = [tok(baseAreaH(b) + latH(b, h), 'sq'), tok(latH(b, h), 'sq'), tok(2 * baseAreaH(b) + latH(b, h) / 2, 'sq')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(s, 'sq'), [a * 100, bb * 100, h * 100]);
+        var o = optsOf(correct, wrongs);
+        return { a:a, b:bb, h:h, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var b = { shape:'rect', a:d.a, b:d.b }, A = baseAreaH(b), P = basePerimH(b), L2 = latH(b, d.h), S = surfH(b, d.h);
+        return {
+          stem: lang === 'zh' ? '一個長方體長 <strong>' + d.a + ' 公分</strong>、寬 <strong>' + d.b + ' 公分</strong>、高 <strong>' + d.h + ' 公分</strong>，它的<strong>表面積</strong>是多少？'
+                              : 'A cuboid is <strong>' + cm(d.a) + '</strong> long, <strong>' + cm(d.b) + '</strong> wide and <strong>' + cm(d.h) + '</strong> high. What is its <strong>surface area</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '兩個底面：' + d.a + ' × ' + d.b + ' ＝ ' + hText(A) + '，' + hText(A) + ' × 2 ＝ ' + hText(2 * A) + '。側面：底面周長 (' + d.a + ' ＋ ' + d.b + ') × 2 ＝ ' + hText(P) + '，' + hText(P) + ' × ' + d.h + ' ＝ ' + hText(L2) + '。加起來 ' + hText(2 * A) + ' ＋ ' + hText(L2) + ' ＝ ' + hText(S) + '，單位是平方公分。'
+            : 'Two bases: ' + d.a + ' × ' + d.b + ' ＝ ' + hText(A) + ', and ' + hText(A) + ' × 2 ＝ ' + hText(2 * A) + '. The side: the perimeter of the base is (' + d.a + ' ＋ ' + d.b + ') × 2 ＝ ' + hText(P) + ', and ' + hText(P) + ' × ' + d.h + ' ＝ ' + hText(L2) + '. Together ' + hText(2 * A) + ' ＋ ' + hText(L2) + ' ＝ ' + hText(S) + ', in square centimetres.'
+        };
+      } },
+
+    /* 7. 圓柱的側面積（底面周長 × 高）。誘答：表面積、半徑 × 3.14 × 高（少乘 2）、側面再加一個底面。 */
+    { id:'cylLateral', cat:'surf',
+      make:function(){
+        var r = pick(POOL_R), h = pick(POOL_H), b = { shape:'circ', r:r };
+        var l = latH(b, h), correct = tok(l, 'sq');
+        var cands = [tok(surfH(b, h), 'sq'), tok(r * PI_H * h, 'sq'), tok(l + baseAreaH(b), 'sq')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(l, 'sq'), [r * 100, h * 100]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, h:h, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var b = { shape:'circ', r:d.r }, P = basePerimH(b), l = latH(b, d.h);
+        return {
+          stem: lang === 'zh' ? '一個圓柱形的罐頭，底面<strong>半徑 ' + d.r + ' 公分</strong>、<strong>高 ' + d.h + ' 公分</strong>。只在<strong>旁邊貼一圈標籤</strong>（上下兩面不貼），標籤要多大一張？'
+                              : 'A can is a cylinder with a base <strong>radius of ' + cm(d.r) + '</strong> and a <strong>height of ' + cm(d.h) + '</strong>. A label goes <strong>right round its side only</strong> (not on the top or bottom). How big is the label?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '標籤攤開是一個長方形，長是底面周長 ' + d.r + ' × 2 × 3.14 ＝ ' + hText(P) + '，寬是高 ' + d.h + '，所以是 ' + hText(P) + ' × ' + d.h + ' ＝ ' + hText(l) + '，單位是平方公分。上下兩個底面沒有貼，不算。'
+            : 'Unrolled, the label is a rectangle whose length is the perimeter of the base ' + d.r + ' × 2 × 3.14 ＝ ' + hText(P) + ' and whose width is the height ' + d.h + ', so it is ' + hText(P) + ' × ' + d.h + ' ＝ ' + hText(l) + ', in square centimetres. The two bases are not covered, so they do not count.'
+        };
+      } },
+
+    /* 8. 圓柱的表面積。誘答：只算一個底面、只算側面、底面周長少乘 2。 */
+    { id:'cylSurf', cat:'surf',
+      make:function(){
+        var r = pick(POOL_R), h = pick(POOL_H), b = { shape:'circ', r:r };
+        var s = surfH(b, h), correct = tok(s, 'sq');
+        var cands = [tok(baseAreaH(b) + latH(b, h), 'sq'), tok(latH(b, h), 'sq'), tok(2 * baseAreaH(b) + r * PI_H * h, 'sq')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(s, 'sq'), [r * 100, h * 100]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, h:h, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var b = { shape:'circ', r:d.r }, A = baseAreaH(b), P = basePerimH(b), l = latH(b, d.h), s = surfH(b, d.h);
+        return {
+          stem: lang === 'zh' ? '一個圓柱的底面<strong>半徑是 ' + d.r + ' 公分</strong>、<strong>高是 ' + d.h + ' 公分</strong>，它的<strong>表面積</strong>是多少？'
+                              : 'A cylinder has a base <strong>radius of ' + cm(d.r) + '</strong> and a <strong>height of ' + cm(d.h) + '</strong>. What is its <strong>surface area</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh'
+            ? '兩個底面：' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(A) + '，' + hText(A) + ' × 2 ＝ ' + hText(2 * A) + '。側面：' + d.r + ' × 2 × 3.14 ＝ ' + hText(P) + '，' + hText(P) + ' × ' + d.h + ' ＝ ' + hText(l) + '。加起來 ' + hText(2 * A) + ' ＋ ' + hText(l) + ' ＝ ' + hText(s) + '，單位是平方公分。'
+            : 'Two bases: ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(A) + ', and ' + hText(A) + ' × 2 ＝ ' + hText(2 * A) + '. The side: ' + d.r + ' × 2 × 3.14 ＝ ' + hText(P) + ', and ' + hText(P) + ' × ' + d.h + ' ＝ ' + hText(l) + '. Together ' + hText(2 * A) + ' ＋ ' + hText(l) + ' ＝ ' + hText(s) + ', in square centimetres.'
+        };
+      } },
+
+    /* 9. 四個情境，只有一個要算體積。 */
+    { id:'whichQuantity', cat:'concept',
+      make:function(){
+        var v = pick(ASK_VOL_KEYS);
+        var others = shuffle(ASK_AREA_KEYS).slice(0, 3);
+        var keys = ['vol:' + v].concat(others.map(function(k){ return 'area:' + k; }));
+        var o = optsOf(keys[0], shuffle(keys.slice(1)));
+        return { v:v, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        return {
+          stem: lang === 'zh' ? '下面四個問題，<strong>只有一個要算體積</strong>。是哪一個？' : 'Of these four questions, <strong>exactly one wants a volume</strong>. Which?',
+          opts: d.opts.map(function(k){ var p = String(k).split(':'); return ASKS[p[0]][p[1]][lang]; }), ans:d.ans,
+          why: lang === 'zh'
+            ? ASKS.vol[d.v].zh + '，問的是<strong>裡面裝得下多少</strong>，所以是體積（立方公分）。其他三個都是把外面<strong>包起來、貼起來、蓋起來</strong>，要算的是表面積或側面積（平方公分）。'
+            : ASKS.vol[d.v].en + ': that question asks <strong>how much fits inside</strong>, so it is a volume (cubic centimetres). The other three all <strong>cover, wrap or label the outside</strong>, so they want a surface area or a side area (square centimetres).'
+        };
+      } },
+
+    /* 10. 四句話，只有一句是對的。 */
+    { id:'trueStatement', cat:'concept',
+      make:function(){
+        var t = pick(TRUE_KEYS);
+        var o = optsOf(t, shuffle(FALSE_KEYS).slice(0, 3));
+        return { t:t, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var why = {
+          volRule:  { zh:'一樣大的底面一層一層疊上去，每一層厚 1 公分，疊幾層就乘幾，所以體積是底面積 × 高。例如底面積 12、高 5：12 × 5 ＝ 60。', en:'Stack the same base in layers, each 1 centimetre thick, and multiply by the number of layers: that is why the volume is base area × height. For base area 12 and height 5: 12 × 5 ＝ 60.' },
+          latRule:  { zh:'側面攤開是一個長方形，長是底面周長、寬是高。例如長方形底面 5 × 3、高 4：(5 ＋ 3) × 2 ＝ 16，16 × 4 ＝ 64。', en:'The side unrolls into a rectangle whose length is the perimeter of the base and whose width is the height. For a 5 by 3 base 4 high: (5 ＋ 3) × 2 ＝ 16, and 16 × 4 ＝ 64.' },
+          surfRule: { zh:'表面積是兩個底面加上側面。例如長方體 5 × 3、高 4：15 × 2 ＋ 64 ＝ 94。', en:'The surface area is the two bases plus the side. For a 5 by 3 cuboid 4 high: 15 × 2 ＋ 64 ＝ 94.' },
+          triHalf:  { zh:'三角形是同底同高的平行四邊形的一半，所以要除以 2。例如底 6、高 4：6 × 4 ÷ 2 ＝ 12。', en:'A triangle is half of the parallelogram with the same base and height, so it is halved. For base 6 and height 4: 6 × 4 ÷ 2 ＝ 12.' },
+          twoBases: { zh:'柱體一定有兩個一模一樣、互相平行的底面，高就是它們之間的距離。例如三角柱有 2 個三角形的底面和 3 個長方形的側面：2 ＋ 3 ＝ 5，一共 5 個面。', en:'A prism always has two identical, parallel bases, and its height is the distance between them. A triangular prism has 2 triangle bases and 3 rectangle sides: 2 ＋ 3 ＝ 5 faces in all.' },
+          unitCu:   { zh:'體積數的是一塊一塊 1 立方公分的小正方體，所以單位是立方公分。例如 12 × 5 ＝ 60，就是 60 個小正方體。', en:'Volume counts little cubes of 1 cubic centimetre each, so it is in cubic centimetres. For example 12 × 5 ＝ 60 means 60 little cubes.' }
+        }[d.t];
+        return {
+          stem: lang === 'zh' ? '下面四句話，<strong>只有一句是對的</strong>。是哪一句？' : 'Of these four sentences, <strong>exactly one is true</strong>. Which?',
+          opts: d.opts.map(function(k){ return STATEMENTS[k][lang]; }), ans:d.ans,
+          why: why[lang]
+        };
+      } },
+
+    /* 11. 交錯題（六年級「圓周率工作坊」）：整個圓的面積或圓周長。 */
+    { id:'interCircle', cat:'inter',
+      make:function(){
+        var r = pick(POOL_R_WHOLE), wantArea = rand(2) === 0;
+        var area = r * r * PI_H, circ = 2 * r * PI_H;
+        var correct = wantArea ? tok(area, 'sq') : tok(circ, 'cm');
+        var cands = wantArea
+          ? [tok(circ, 'cm'), tok(r * PI_H, 'sq'), tok(4 * area, 'sq')]
+          : [tok(area, 'sq'), tok(r * PI_H, 'cm'), tok(2 * circ, 'cm')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(tokVal(correct), wantArea ? 'sq' : 'cm'), [r * 100]);
+        var o = optsOf(correct, wrongs);
+        return { r:r, wantArea:wantArea, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        if (d.wantArea) return {
+          stem: lang === 'zh' ? '（六年級）一個<strong>圓</strong>的半徑是 <strong>' + d.r + ' 公分</strong>，它的<strong>面積</strong>是多少？'
+                              : '(Grade six) A <strong>circle</strong> has a radius of <strong>' + cm(d.r) + '</strong>. What is its <strong>area</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh' ? '圓面積是 半徑 × 半徑 × 3.14：' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(d.r * d.r * PI_H) + '，單位是平方公分。這也就是圓柱的底面積。'
+                             : 'A circle’s area is radius × radius × 3.14: ' + d.r + ' × ' + d.r + ' × 3.14 ＝ ' + hText(d.r * d.r * PI_H) + ', in square centimetres. This is exactly a cylinder’s base area.'
+        };
+        return {
+          stem: lang === 'zh' ? '（六年級）一個<strong>圓</strong>的半徑是 <strong>' + d.r + ' 公分</strong>，它的<strong>圓周長</strong>是多少？'
+                              : '(Grade six) A <strong>circle</strong> has a radius of <strong>' + cm(d.r) + '</strong>. What is its <strong>circumference</strong>?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh' ? '圓周長是 半徑 × 2 × 3.14：' + d.r + ' × 2 × 3.14 ＝ ' + hText(2 * d.r * PI_H) + '，單位是公分。這也就是圓柱側面攤開之後的長。'
+                             : 'A circle’s circumference is radius × 2 × 3.14: ' + d.r + ' × 2 × 3.14 ＝ ' + hText(2 * d.r * PI_H) + ', in centimetres. This is exactly the length of a cylinder’s unrolled side.'
+        };
+      } },
+
+    /* 12. 交錯題（五年級「體積積木塔」）：長方體的體積 ＝ 長 × 寬 × 高。誘答：只算一層、三個數加起來、多乘 2。 */
+    { id:'interCuboid', cat:'inter',
+      make:function(){
+        var a = pick(POOL_RECT_A), bb = pick(POOL_RECT_B), h = pick(POOL_H);
+        var v = a * bb * h * 100, correct = tok(v, 'cu');
+        var cands = [tok(a * bb * 100, 'cu'), tok((a + bb + h) * 100, 'cu'), tok(2 * v, 'cu')];
+        var wrongs = pickWrongs(correct, cands, nearFallbacks(v, 'cu'), [a * 100, bb * 100, h * 100]);
+        var o = optsOf(correct, wrongs);
+        return { a:a, b:bb, h:h, opts:o.opts, ans:o.ans };
+      },
+      fmt:function(d, lang){
+        var layer = d.a * d.b, v = layer * d.h;
+        return {
+          stem: lang === 'zh' ? '（五年級）一個長方體長 <strong>' + d.a + ' 公分</strong>、寬 <strong>' + d.b + ' 公分</strong>、高 <strong>' + d.h + ' 公分</strong>，它的體積是多少？'
+                              : '(Grade five) A cuboid is <strong>' + cm(d.a) + '</strong> long, <strong>' + cm(d.b) + '</strong> wide and <strong>' + cm(d.h) + '</strong> high. What is its volume?',
+          opts: d.opts.map(function(t){ return tokText(t, lang); }), ans:d.ans,
+          why: lang === 'zh' ? '一層有 ' + d.a + ' × ' + d.b + ' ＝ ' + layer + ' 塊，疊 ' + d.h + ' 層：' + layer + ' × ' + d.h + ' ＝ ' + v + '，單位是立方公分。那一層的 ' + layer + ' 就是長方體的底面積。'
+                             : 'One layer holds ' + d.a + ' × ' + d.b + ' ＝ ' + layer + ' cubes and there are ' + d.h + ' layers: ' + layer + ' × ' + d.h + ' ＝ ' + v + ', in cubic centimetres. That layer of ' + layer + ' is the cuboid’s base area.'
+        };
+      } }
+  ];
+
+  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */
+  var QCOUNT = 12;
+
+  /* ---------- 以下開始碰 DOM ---------- */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var I18N = {
+    zh: {
+      langAria:'切換語言', htmlLang:'zh-Hant', title:'複習挑戰 — 柱體疊疊樂', btn:'EN',
+      home:'← 回 teach-me 首頁',
+      nav1:'📖 上課（互動教學）', nav2:'🗂️ 速查卡（重點整理）', nav3:'🔁 複習挑戰（本頁）', nav4:'👨‍👩‍👧 給家長（陪讀指引）',
+      h1:'🔁 複習挑戰：柱體疊疊樂',
+      sub:'每次重新整理，12 題都不一樣',
+      intro:'這裡的題目是<strong>每次現出</strong>的，不是背得起來的固定題。<br>裡面也會夾一題六年級的圓面積與圓周長，和一題五年級的長方體體積。<br>這裡的柱體都是<strong>直柱體</strong>（側面和底面垂直），表面積只算底面是長方形、直角三角形或圓的柱體。',
+      qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
+      qn:function(i){ return '第 ' + i + ' 題'; },
+      fbRight:'<b>答對了。</b> ',
+      fbWrong:function(a){ return '<b>正確答案是「' + a + '」。</b> '; },
+      resAll:function(n){ return '全部 ' + n + ' 題都對！這一課你已經很穩了 🏆'; },
+      resGood:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 很不錯，錯的那幾題看一下說明。'; },
+      resTry:function(r, n){ return n + ' 題對 ' + r + ' 題 —— 先回速查卡看一眼，再來一輪。'; },
+      links:'👉 <a href="reference.html">看速查卡</a>　·　<a href="index.html">回課程重看範例</a>　·　圓面積與圓周長回六年級<a href="../circle/index.html">圓周率工作坊</a>　·　長方體的體積回五年級<a href="../../../grade-5/math/volume/index.html">體積積木塔</a>',
+      retryBtn:'🔄 再來一輪新題',
+      foot:'記不起來很正常 —— 回<a class="home" href="reference.html">速查卡</a>看一眼，再回來做一次。'
+    },
+    en: {
+      langAria:'Switch language', htmlLang:'en', title:'Review Challenge — The Prism Stacking Game', btn:'中',
+      home:'← Back to teach-me home',
+      nav1:'📖 Lesson (interactive)', nav2:'🗂️ Cheat sheet (key points)', nav3:'🔁 Review challenge (this page)', nav4:'👨‍👩‍👧 For parents (how to help)',
+      h1:'🔁 Review Challenge: The Prism Stacking Game',
+      sub:'Reload the page and all 12 questions are different',
+      intro:'These questions are <strong>generated fresh every time</strong>, so there is nothing to memorise.<br>One of them is the grade-6 area and circumference of a circle, and one is a grade-5 cuboid volume.<br>Every prism and cylinder here is a <strong>right</strong> one (its sides stand straight up from the bases), and surface area is only asked for bases that are rectangles, right-angled triangles or circles.',
+      qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
+      qn:function(i){ return 'Question ' + i; },
+      fbRight:'<b>Correct!</b> ',
+      fbWrong:function(a){ return '<b>The correct answer is “' + a + '”.</b> '; },
+      resAll:function(n){ return 'All ' + n + ' correct! You have this one solid 🏆'; },
+      resGood:function(r, n){ return r + ' out of ' + n + ' — nicely done. Read the explanations for the ones you missed.'; },
+      resTry:function(r, n){ return r + ' out of ' + n + ' — take a look at the cheat sheet, then try another round.'; },
+      links:'👉 <a href="reference.html">Open the cheat sheet</a>　·　<a href="index.html">Back to the lesson examples</a>　·　circles in <a href="../circle/index.html">the grade-6 pi lesson</a>　·　cuboid volume in <a href="../../../grade-5/math/volume/index.html">the grade-5 volume lesson</a>',
+      retryBtn:'🔄 Another round of fresh questions',
+      foot:'Forgetting is normal — glance at the <a class="home" href="reference.html">cheat sheet</a> and come back for another round.'
+    }
+  };
+  function L(){ return I18N[lang]; }
+
+  var quizEl = document.getElementById('quiz');
+  var qDone = document.getElementById('qDone');
+  var qRight = document.getElementById('qRight');
+  var qTotal = document.getElementById('qTotal');
+  var resultEl = document.getElementById('result');
+  var resultLine = document.getElementById('resultLine');
+  var resultLinks = document.getElementById('resultLinks');
+  var retryBtn = document.getElementById('retryBtn');
+  var langBtn = document.getElementById('langBtn');
+  var done = 0, right = 0, batch = [];
+
+  /* 一輪 12 題，每個產生器各出一題，順序打散。 */
+  function buildBatch(){
+    var used = [], out = [];
+    shuffle(GENS).forEach(function(g){
+      for (var tries = 0; tries < 60; tries++){
+        var d = g.make(used);
+        if (d){ out.push({ g:g, d:d }); return; }
+      }
+      throw new Error('generator ' + g.id + ' could not produce a question');
+    });
+    return out.slice(0, QCOUNT);
+  }
+
+  function applyStatic(){
+    var d = L();
+    document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    langBtn.textContent = d.btn;
+    var nodes = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < nodes.length; i++){
+      var key = nodes[i].getAttribute('data-i18n');
+      if (typeof d[key] === 'string') nodes[i].innerHTML = d[key];
+    }
+    var arias = document.querySelectorAll('[data-i18n-aria]');
+    for (var j = 0; j < arias.length; j++){
+      var akey = arias[j].getAttribute('data-i18n-aria');
+      if (typeof d[akey] === 'string') arias[j].setAttribute('aria-label', d[akey]);
+    }
+  }
+
+  function render(){
+    var t = L();
+    quizEl.textContent = '';
+    done = 0; right = 0;
+    qDone.textContent = '0'; qRight.textContent = '0';
+    qTotal.textContent = batch.length;
+    resultEl.classList.remove('on');
+
+    batch.forEach(function(item, qi){
+      var q = item.g.fmt(item.d, lang);
+      var box = document.createElement('div');
+      box.className = 'q';
+      var n = document.createElement('span');
+      n.className = 'qn'; n.textContent = t.qn(qi + 1);
+      var stem = document.createElement('p');
+      stem.className = 'stem'; stem.innerHTML = q.stem;
+      box.appendChild(n); box.appendChild(stem);
+
+      var opts = document.createElement('div');
+      opts.className = 'opts';
+      var fb = document.createElement('p');
+      fb.className = 'fb';
+      var answered = false;
+      q.opts.forEach(function(text, oi){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.textContent = text;
+        b.addEventListener('click', function(){
+          if (answered) return;
+          answered = true;
+          var good = (oi === q.ans);
+          var all = opts.querySelectorAll('.opt');
+          for (var i = 0; i < all.length; i++){
+            all[i].disabled = true;
+            if (i === q.ans) all[i].classList.add('right');
+          }
+          if (!good) b.classList.add('wrong');
+          fb.innerHTML = (good ? t.fbRight : t.fbWrong(q.opts[q.ans])) + q.why;
+          done++; if (good) right++;
+          qDone.textContent = done; qRight.textContent = right;
+          if (done === batch.length){
+            resultLine.textContent = right === batch.length ? t.resAll(batch.length)
+              : right >= Math.ceil(batch.length * 2 / 3) ? t.resGood(right, batch.length)
+              : t.resTry(right, batch.length);
+            resultLinks.innerHTML = t.links;
+            resultEl.classList.add('on');
+          }
+        });
+        opts.appendChild(b);
+      });
+      box.appendChild(opts); box.appendChild(fb);
+      quizEl.appendChild(box);
+    });
+  }
+
+  function newRound(){
+    batch = buildBatch();
+    applyStatic();
+    render();
+  }
+
+  retryBtn.addEventListener('click', newRound);
+  /* 語言切換保留同一批題目（framework §六之一：切語言不重抽）。 */
+  langBtn.addEventListener('click', function(){
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    try { localStorage.setItem('teachme-lang', lang); } catch(e){}
+    applyStatic();
+    render();
+  });
+
+  newRound();
+})();
+</script>
+</body>
+</html>

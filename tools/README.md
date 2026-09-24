@@ -343,11 +343,19 @@ capacity-weight 105、shapes 114、solid 97、table 130 —— **二年級十一
 **time 146**、**fraction 132**、**quadrilateral 24**、**triangle 53**、**decimal 82**、
 **multiply-divide 66**、**pattern 98**、**chart 135**、**figurate 73**、**angle-shape 59**、**congruent 71**、**cubes 73**、
 **perpendicular 73**、**chain-divide 134**、**numberline 77**，一年級九課 117，
-再加上 **grade-6 prime 40**、**gcf-lcm 48**、**ratio 57**、**divide-fraction 76**、**circle 53**、**decimal-divide 73**、**sector 64**、**speed 82** ——
-**47 份設定檔全站共 3112 筆**（2026-09-23 用 `node -e` 逐檔讀 `breaks.length` 重新數過，
+再加上 **grade-6 prime 40**、**gcf-lcm 48**、**ratio 57**、**divide-fraction 76**、**circle 53**、**decimal-divide 73**、**sector 64**、**speed 83**、**prism-volume 152** ——
+**48 份設定檔全站共 3265 筆**（2026-09-24 用 `node -e` 逐檔讀 `breaks.length` 重新數過，
 不是把上一次的數字加上去）。
 ⚠️ 這一行的數字**每一次都要重新數，不要用加的**：先前寫 1535、又寫 1616，
 兩次都是加總漏掉（decimal 實際是 82，不是 78）。
+
+`grade-6-prism-volume.js`（柱體的體積與表面積）是六年級第九份設定，**由沒有寫課程頁的代理獨立寫成**，有三件事值得別課抄過去：
+
+- **立體圖要驗「畫的是不是那個立體」**，不是只驗座標：底面那一塊的像素面積 ÷ 比例尺² 必須等於底面積（真形）；每一條往後的稜都是 (0.4h·s, −0.3h·s)；
+  哪一面看得到用另一種方法（公分座標裡的外法向量）重判；展開圖做**摺紙測試**（每一個底面貼著的那一格兩端的邊長要接得上側面那一條的下一格）——
+  直角三角柱的鏡像展開圖就是這一條抓到的，座標比對與四個邊全綠。
+- **產生器的整個池子逐一渲染**（兩種語言），不是只靠隨機批次：邊界上「誘答撞正解」（三角形高 2、半徑 1）在隨機裡是機率事件，逐一掃就是確定的。
+- 已知極限寫在檔頭：沒有真的在 DOM 裡跑畫圖程式（RENDER_PINS 是字面掃描）、祖先元素的 CSS 沒有驗、中英文的語意等價只驗「印出來的數字集合相同」。
 
 `grade-6-speed.js`（速率、距離、時間；時速／分速／秒速；大單位換到小單位；平均速率）是六年級第八份設定，有四件事值得別課抄過去：
 
