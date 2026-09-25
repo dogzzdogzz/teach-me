@@ -252,6 +252,36 @@ module.exports = {
          守的是**畫出來的按鈕**，不是 choices 陣列裡的順序，實作在 lib/gameshuffle.js。 */
       gameShuffleProblems(src, 1).forEach(fail);
 
+      /* 試題和遊戲的結果格不可以直接畫出答案（2026-09-25 Tony 抓到：積木銀行
+         最右邊那格把 57 的積木和數字都畫出來了）。
+         守三件事：hide=true 時結果格真的蓋成「?」且積木／數字在 .sitreal 裡；
+         遊戲的 gPic 和兩題看積木試題都傳 hide=true；答對後會把 .hide 拿掉。 */
+      {
+        const hidden = data.opGroupsHTML(3, 2, 2, 5, 'add', 5, 7, true);
+        const shown = data.opGroupsHTML(3, 2, 2, 5, 'add', 5, 7);
+        if (!/class="sitbox result hide"><div class="sitq">\?<\/div><div class="sitreal">/.test(hidden))
+          fail('opGroupsHTML(..., hide=true) does not cover the result box with "?"');
+        if (/sitbox result hide/.test(shown)) fail('opGroupsHTML without hide still hides the result (examples must show it)');
+        /* 三條 CSS 缺一不可：少了第一條範例會多一個「?」；少了第二條結果格變空白；少了第三條答案又露出來 */
+        [/\.sitq\{display:none;/, /\.sitbox\.hide \.sitq\{display:block\}/, /\.sitbox\.hide \.sitreal\{display:none\}/].forEach(re => {
+          if (!re.test(src)) fail('result-box hide CSS rule missing: ' + re);
+        });
+        if (!/gPic\.innerHTML = opGroupsHTML\([^;]*, true\);/.test(src)) fail('Block Bank game renders the result box unhidden');
+        const quizCalls = (src.match(/opGroupsHTML\(\d,\d,\d,\d,'(?:add|sub)',\d,\d(,true)?\)/g) || []);
+        if (quizCalls.length !== 4 || quizCalls.some(c => !/,true\)$/.test(c)))
+          fail('quiz block-picture stems must be exactly 4 opGroupsHTML(...,true) calls, got ' + JSON.stringify(quizCalls));
+        const reveals = (src.match(/querySelectorAll\('\.sitbox\.hide'\)/g) || []).length;
+        if (reveals !== 2) fail('expected 2 reveal points (quiz answer + game correct), found ' + reveals);
+        /* 遊戲只能在答對的分支打開結果格：切出 if (v === round.ans){ … } else { … } 兩段各自檢查 */
+        const gi = src.indexOf('if (v === round.ans){'), ge = gi < 0 ? -1 : src.indexOf('} else {', gi);
+        const gEnd = ge < 0 ? -1 : src.indexOf('elScore.textContent', ge);
+        if (gi < 0 || ge < 0 || gEnd < 0) fail('cannot locate the Block Bank right/wrong branches');
+        else {
+          if (!/gPic\.querySelectorAll\('\.sitbox\.hide'\)/.test(src.slice(gi, ge))) fail('Block Bank does not reveal the result inside the correct-answer branch');
+          if (/sitbox\.hide/.test(src.slice(ge, gEnd))) fail('Block Bank wrong-answer branch touches the hidden result box');
+        }
+      }
+
       /* --- 試題：解釋裡真的寫成算式的那幾條要逐條驗算 --- */
       {
         let vSum = 0, qSum = 0;
@@ -267,8 +297,11 @@ module.exports = {
             });
           });
         });
-        if (vSum !== 54) fail(`arithmetic coverage changed: verified ${vSum} equations, expected 54`);
-        if (qSum !== 7) fail(`question-shaped equations changed: found ${qSum}, expected 7`);
+        /* 54→50、7→11（2026-09-25）：兩題「看積木」試題的結果格改成「?」之後，
+           題幹不再寫出「32 + 25 = 57」「57 − 23 = 34」（2 題 × 2 語言 = 4 條），
+           這 4 條從「驗過的算式」變成「問句」。數字變回去 = 題幹又把答案畫出來了。 */
+        if (vSum !== 50) fail(`arithmetic coverage changed: verified ${vSum} equations, expected 50`);
+        if (qSum !== 11) fail(`question-shaped equations changed: found ${qSum}, expected 11`);
         arithTD.unmatched().forEach(w => fail(`wrongOnPurpose "${w}" never matched — stale`));
       }
     }

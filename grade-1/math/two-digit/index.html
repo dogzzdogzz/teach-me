@@ -110,6 +110,10 @@
   .sitgroup{display:flex;justify-content:center;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-top:16px;min-height:150px}
   .sitbox{border:2px solid var(--line);border-radius:16px;padding:12px;background:var(--bg);min-width:110px;text-align:center}
   .sitbox.result{border-color:var(--green);background:var(--green-soft)}
+  /* 結果格在試題和遊戲裡先藏起來（只顯示「?」），答完才打開，不然圖就直接給了答案 */
+  .sitq{display:none;font-size:44px;font-weight:800;color:var(--green);line-height:1;padding:18px 0}
+  .sitbox.hide .sitq{display:block}
+  .sitbox.hide .sitreal{display:none}
   .sitop{font-size:34px;font-weight:800;color:var(--orange);align-self:center}
   .stacklabelnum{font-weight:800;font-size:20px;margin-top:6px}
   .aligngrid{
@@ -298,14 +302,16 @@
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + totalW + ' ' + totalH + '" width="180" style="display:block;margin:6px auto;height:auto">' + rodsHtml + onesHtml + '</svg>';
   }
 
-  function opGroupsHTML(aT, aO, bT, bO, op, rT, rO){
+  /* hide=true：結果格先蓋成「?」，要等作答後把 .hide 拿掉才看得到積木和數字
+     （試題和遊戲用；範例教學是示範，不用藏） */
+  function opGroupsHTML(aT, aO, bT, bO, op, rT, rO, hide){
     var opSym = op === 'add' ? '+' : '−';
     return '<div class="sitgroup">' +
       '<div class="sitbox"><div>' + blocksSvg(aT, aO) + '</div><div class="stacklabelnum">' + (aT * 10 + aO) + '</div></div>' +
       '<div class="sitop">' + opSym + '</div>' +
       '<div class="sitbox"><div>' + blocksSvg(bT, bO) + '</div><div class="stacklabelnum">' + (bT * 10 + bO) + '</div></div>' +
       '<div class="sitop">=</div>' +
-      '<div class="sitbox result"><div>' + blocksSvg(rT, rO) + '</div><div class="stacklabelnum">' + (rT * 10 + rO) + '</div></div>' +
+      '<div class="sitbox result' + (hide ? ' hide' : '') + '"><div class="sitq">?</div><div class="sitreal"><div>' + blocksSvg(rT, rO) + '</div><div class="stacklabelnum">' + (rT * 10 + rO) + '</div></div></div>' +
       '</div>';
   }
 
@@ -405,13 +411,13 @@
       cGood:'很棒！錯的那幾題再看一次說明。',
       cTry:'沒關係，回到上面再看一次積木怎麼合起來、怎麼拿走。',
       qs:[
-        { stem:'看看積木，32 + 25 一共是多少？' + opGroupsHTML(3,2,2,5,'add',5,7),
+        { stem:'看看積木，32 + 25 一共是多少？' + opGroupsHTML(3,2,2,5,'add',5,7,true),
           opts:['75','37','57'], ans:2,
           why:'十位 3 + 2 = 5，個位 2 + 5 = 7，合起來是 57。' },
         { stem:'41 + 6 = ?',
           opts:['47','45','48'], ans:0,
           why:'個位 1 + 6 = 7，十位不變是 4，41 + 6 = 47。' },
-        { stem:'看看積木，57 − 23 剩下多少？' + opGroupsHTML(5,7,2,3,'sub',3,4),
+        { stem:'看看積木，57 − 23 剩下多少？' + opGroupsHTML(5,7,2,3,'sub',3,4,true),
           opts:['37','44','34'], ans:2,
           why:'十位 5 − 2 = 3，個位 7 − 3 = 4，57 − 23 = 34。' },
         { stem:'68 − 5 = ?',
@@ -509,13 +515,13 @@
       cGood:'Great job! Re-read the explanations for the ones you missed.',
       cTry:'That’s okay — scroll up and watch the blocks come together or get taken away again.',
       qs:[
-        { stem:'Look at the blocks — what is 32 + 25?' + opGroupsHTML(3,2,2,5,'add',5,7),
+        { stem:'Look at the blocks — what is 32 + 25?' + opGroupsHTML(3,2,2,5,'add',5,7,true),
           opts:['75','37','57'], ans:2,
           why:'Tens: 3 + 2 = 5. Ones: 2 + 5 = 7. Together that’s 57.' },
         { stem:'41 + 6 = ?',
           opts:['47','45','48'], ans:0,
           why:'Ones: 1 + 6 = 7. The tens digit stays 4, so 41 + 6 = 47.' },
-        { stem:'Look at the blocks — what is left after 57 − 23?' + opGroupsHTML(5,7,2,3,'sub',3,4),
+        { stem:'Look at the blocks — what is left after 57 − 23?' + opGroupsHTML(5,7,2,3,'sub',3,4,true),
           opts:['37','44','34'], ans:2,
           why:'Tens: 5 − 2 = 3. Ones: 7 − 3 = 4. So 57 − 23 = 34.' },
         { stem:'68 − 5 = ?',
@@ -794,6 +800,8 @@
           }
           if (!good) b.classList.add('wrong');
           fb.innerHTML = (good ? d.fbRight : d.fbWrong(q.opts[q.ans])) + q.why;
+          var hid = stem.querySelectorAll('.sitbox.hide');
+          for (var h = 0; h < hid.length; h++) hid[h].classList.remove('hide');
           done++; if (good) right++;
           qDone.textContent = done; qRight.textContent = right;
           if (done === list.length){
@@ -844,7 +852,7 @@
     gMsg.textContent = '';
     gNext.disabled = true;
 
-    gPic.innerHTML = opGroupsHTML(round.a.t, round.a.o, round.b.t, round.b.o, round.op, rT, rO);
+    gPic.innerHTML = opGroupsHTML(round.a.t, round.a.o, round.b.t, round.b.o, round.op, rT, rO, true);
     gAskLine.innerHTML = '<span style="font-size:26px;font-weight:800">' + L().gAsk(aVal, bVal, round.op) + '</span>';
 
     hintLevel = 0;
@@ -867,6 +875,8 @@
           var all = gAnswers.querySelectorAll('.opt');
           for (var i = 0; i < all.length; i++) all[i].disabled = true;
           b.classList.add('right');
+          var hid = gPic.querySelectorAll('.sitbox.hide');
+          for (var h = 0; h < hid.length; h++) hid[h].classList.remove('hide');
           if (gMistake){
             gScore += 10;
             gMsg.innerHTML = '<span class="yes">' + L().gCorrectRetry(round.ans) + '</span>';
