@@ -1054,6 +1054,22 @@ await sweepOptions(PATHS.filter(p => p.endsWith('/review.html')), 10);
   垃圾字串（`·`、`#`）、字串重複、**值重複**（key 相等且題幹沒說「記得約分」＝ `KEY-EQUAL`，
   最嚴重）。
 
+- `tools/game-positions.html`（2026-09-29 起）—— 把每一課 `index.html` 的小遊戲**玩 8 遍**，
+  每一關照順序按選項直到答對，記下正確答案在第幾個。**某一課所有關卡、所有遍數的正確答案
+  都在同一個位置 → fail**（小孩一直按那一顆就能滿分）。當時有 13 課的遊戲正確答案永遠是
+  第一個：資料裡把正解寫在第一個，畫面照資料順序排，沒有打亂。`runSweep` 雖然也會按遊戲
+  按鈕，但只收集 JS 錯誤，看不出這種問題。
+
+  ```bash
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless --disable-gpu \
+    --virtual-time-budget=3000000 --dump-dom http://localhost:8765/tools/game-positions.html > /tmp/gpos.html
+  # 只測一課： …/tools/game-positions.html?only=grade-5/math/time
+  ```
+
+  `positions:` 要是 `clean`。`skipped:` 列的是不是「一關一個正解按鈕」的遊戲
+  （factor／multiple 的 1–30 格子，一關要找出好幾個數），不算失敗，但新課出現在這裡要看一下為什麼。
+  新課的遊戲選項請在**畫出來的時候**打亂（打亂索引、用原本的索引判對錯），不要手排資料。
+
 ### 兩個會咬人的坑
 
 1. **`localStorage` 會跨測試殘留**（`teachme-lang`／`teachme-mode`）。harness 會在

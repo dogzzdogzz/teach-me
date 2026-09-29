@@ -1,0 +1,62 @@
+<!doctype html><meta charset="utf-8"><title>game positions</title>
+<pre id="out">running…</pre>
+<iframe id="f" style="width:1100px;height:900px"></iframe>
+<script>
+/* Plays every lesson's game PLAYS times. Per round it clicks the options in DOM order
+   until the round is solved, and records the position of the correct option.
+   FAIL = a game whose correct answer sits at the SAME position in every round of every
+   play — a child can win by always tapping that button (2026-09-29: 13 games were
+   "always the first option"). Games that are not one-correct-button-per-round (the
+   1–30 grids in factor/multiple) are listed as `skipped`, not failed. */
+(async function(){
+  var PLAYS = 8, MAXR = 12;
+  var SEL = '#gAnswers button, #gOpts button, .gameopt, #gGrid button, #gCards button, #gCardsGrid button, #gameStage button';
+  var f = document.getElementById('f'), out = document.getElementById('out');
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  function load(p){ return new Promise(function(res){ f.onload = function(){ setTimeout(res, 700); }; f.src = p; }); }
+  async function play(p){
+    await load(p);
+    var d = f.contentDocument, next = d.getElementById('gNext'), rs = d.getElementById('gRestart');
+    var pos = [], notes = [];
+    if (!next) return { pos: pos, notes: ['no #gNext'] };
+    for (var k = 0; k < PLAYS; k++){
+      if (rs){ rs.click(); await sleep(40); }
+      for (var r = 0; r < MAXR; r++){
+        var btns = Array.prototype.slice.call(d.querySelectorAll(SEL));
+        if (!btns.length){ notes.push('no options @round ' + (r + 1)); break; }
+        // every option already locked = the previous round was the last one
+        // (some games leave 下一關 enabled after the final round)
+        if (!btns.some(function(b){ return !b.disabled; })) break;
+        if (!next.disabled){ notes.push('next enabled before a click @round ' + (r + 1)); break; }
+        var hit = -1;
+        for (var i = 0; i < btns.length; i++){
+          if (btns[i].disabled || !d.contains(btns[i])) continue;
+          btns[i].click(); await sleep(25);
+          var open = btns.filter(function(b){ return d.contains(b) && !b.disabled; });
+          if (!next.disabled || !open.length){ hit = i; break; }
+        }
+        if (hit < 0){ notes.push('unsolved @round ' + (r + 1)); break; }
+        pos.push(hit);
+        if (next.disabled) break;            // last round
+        next.click(); await sleep(40);
+      }
+    }
+    return { pos: pos, notes: Array.from(new Set(notes)) };
+  }
+  try{
+    var all = await (await fetch('/tools/paths.json')).json();
+    var only = new URLSearchParams(location.search).get('only');
+    var PATHS = all.filter(function(p){ return /\/math\/[^/]+\/index\.html$/.test(p) && (!only || p.indexOf(only) >= 0); });
+    var fails = [], skipped = [];
+    for (var i = 0; i < PATHS.length; i++){
+      var r = await play(PATHS[i]);
+      if (r.notes.length || r.pos.length < 5){ skipped.push(PATHS[i] + ' — ' + (r.notes.join('; ') || 'only ' + r.pos.length + ' rounds')); continue; }
+      var distinct = Array.from(new Set(r.pos));
+      if (distinct.length === 1) fails.push(PATHS[i] + ' — correct answer is option ' + (distinct[0] + 1) + ' in all ' + r.pos.length + ' rounds');
+    }
+    out.textContent = 'DONE\npages: ' + PATHS.length +
+      '\npositions: ' + (fails.length ? JSON.stringify(fails, null, 1) : 'clean') +
+      '\nskipped: ' + (skipped.length ? JSON.stringify(skipped, null, 1) : 'none');
+  }catch(e){ out.textContent = 'DRIVER ERROR: ' + (e && e.stack || e); }
+})();
+</script>
