@@ -128,7 +128,7 @@
       <li data-i18n="st4">再讀：數清楚指針過了幾大格、幾小格，「大格數 × 大格值 ＋ 小格數 × 小格值」就是答案。</li>
     </ol>
     <div class="dialcard" id="dialCard"></div>
-    <p style="margin-top:8px;text-align:center" data-i18n="dialEx">例：一小格 ＝ 20 公克，指針停在「4 大格又 3 小格」→ 一大格 ＝ 5 × 20 ＝ 100 公克 → 4 × 100 ＋ 3 × 20 ＝ <strong>460 公克</strong>。<br><strong>同一根指針，換一個刻度，答案就不一樣！</strong>先看刻度，再讀數字。</p>
+    <p style="margin-top:8px;text-align:center" data-i18n="dialEx">例：相鄰兩個數字差 100，所以一大格是 100 公克，分成 5 小格，一小格是 100 ÷ 5 ＝ 20 公克；指針停在「4 大格又 3 小格」→ 4 × 100 ＋ 3 × 20 ＝ <strong>460 公克</strong>。<br><strong>同一根指針，換一個刻度，答案就不一樣！</strong>先看刻度，再讀數字。</p>
 
     <h2 data-i18n="s6">易混淆對照表</h2>
     <table>
@@ -149,19 +149,21 @@
 (function(){
   "use strict";
   function buildDialSVG(){
-    var TOTAL = 50, MAJOR = 5, raw = 23;
+    /* 刻度上的數字是公克（i × 一小格），和下面的例子一致：一小格 20 公克、指針 23 小格 → 460 公克。
+       2026-10-01 以前印的是 0～10（第幾大格），第一步卻問「這台秤的數字是公克還是公斤？」。 */
+    var TOTAL = 50, MAJOR = 5, raw = 23, TICK_G = 20;
     function polarXY(cx, cy, r, thetaDeg){
       var rad = thetaDeg * Math.PI / 180;
       return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
     }
     function theta(i){ return 180 * (1 - i / TOTAL); }
     /* ⚠️ 畫布的寬度要**先算進刻度數字**，不能只算錶面的弧。數字畫在半徑 rLabel 上，
-       所以最外側的數字會伸到 cx ± (rLabel + 半個字寬)；W 只夠裝弧的話，「0」和「10」
-       就會被 viewBox 直接切掉。
+       所以最外側的數字會伸到 cx ± (rLabel + 半個字寬)；W 只夠裝弧的話，「0」和「1000」
+       就會被 viewBox 直接切掉（tools/checks/lib/canvas.js 一個字算 1.2 個字級，所以 W 是 294）。
        ⚠️ 靠 fitSVG 事後撐大 viewBox 不算修好：畫布變寬、但 width/height 沒變，
        整個錶面會被等比縮到 9 成，本來就很小的刻度數字更看不清楚。錶面的大小
        （rOuter／rLabel／rNeedle）完全沒動，只是左右多留白。 */
-    var W = 270, H = 150, cx = W / 2, cy = H - 14, rOuter = 100, rLabel = 118, rNeedle = 82;
+    var W = 294, H = 150, cx = W / 2, cy = H - 14, rOuter = 100, rLabel = 118, rNeedle = 82;
     /* ⚠️ width 一定要跟著 W 走，不可以寫死。寫死舊的 240 而 viewBox 變寬，
        瀏覽器就會把整個錶面等比縮小塞進去 —— 那正是這次要避免的事。 */
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" xmlns="http://www.w3.org/2000/svg">';
@@ -174,7 +176,7 @@
       svg += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) + '" stroke="' + (isMajor ? '#2B2A33' : '#B9B3A0') + '" stroke-width="' + (isMajor ? 2 : 1) + '"/>';
       if (isMajor){
         var lp = polarXY(cx, cy, rLabel, t);
-        svg += '<text x="' + lp.x.toFixed(1) + '" y="' + lp.y.toFixed(1) + '" font-size="11" text-anchor="middle" dominant-baseline="middle" fill="#6B6875">' + (i / MAJOR) + '</text>';
+        svg += '<text x="' + lp.x.toFixed(1) + '" y="' + lp.y.toFixed(1) + '" font-size="11" text-anchor="middle" dominant-baseline="middle" fill="#6B6875">' + (i * TICK_G) + '</text>';
       }
     }
     var nt = theta(raw);
@@ -213,7 +215,7 @@
       st2:'看一大格是多少：通常標在秤面上，或用「總量 ÷ 大格數」算出來。',
       st3:'看一小格是多少：一大格通常分成 5 小格，一小格 ＝ 一大格 ÷ 5。',
       st4:'再讀：數清楚指針過了幾大格、幾小格，「大格數 × 大格值 ＋ 小格數 × 小格值」就是答案。',
-      dialEx:'例：一小格 ＝ 20 公克，指針停在「4 大格又 3 小格」→ 一大格 ＝ 5 × 20 ＝ 100 公克 → 4 × 100 ＋ 3 × 20 ＝ <strong>460 公克</strong>。<br><strong>同一根指針，換一個刻度，答案就不一樣！</strong>先看刻度，再讀數字。',
+      dialEx:'例：相鄰兩個數字差 100，所以一大格是 100 公克，分成 5 小格，一小格是 100 ÷ 5 ＝ 20 公克；指針停在「4 大格又 3 小格」→ 4 × 100 ＋ 3 × 20 ＝ <strong>460 公克</strong>。<br><strong>同一根指針，換一個刻度，答案就不一樣！</strong>先看刻度，再讀數字。',
       s6:'易混淆對照表',
       tblH1:'容易搞混的地方', tblH2:'正確觀念',
       tr1a:'1 公斤 ＝ 100 公克（跟公分/公尺搞混）', tr1b:'1 公斤 ＝ <strong>1000</strong> 公克，公斤換公克要 ×1000',
@@ -249,7 +251,7 @@
       st2:'Check what one large tick is worth: it’s usually marked on the face, or work it out as “total ÷ number of large ticks”.',
       st3:'Check what one small tick is worth: a large tick is usually split into 5 small ticks, so one small tick = one large tick ÷ 5.',
       st4:'Now read it: count how many large and small ticks the needle has passed — “large ticks × large-tick value + small ticks × small-tick value” is the answer.',
-      dialEx:'Example: one small tick = 20 g, and the needle stops at “4 large ticks plus 3 small ticks” → one large tick = 5 × 20 = 100 g → 4 × 100 + 3 × 20 = <strong>460 g</strong>.<br><strong>Same needle, different tick value, different answer!</strong> Check the ticks before you read the number.',
+      dialEx:'Example: neighbouring numbers are 100 apart, so one large tick is 100 g; it is split into 5 small ticks, so one small tick is 100 ÷ 5 = 20 g. The needle stops at “4 large ticks plus 3 small ticks” → 4 × 100 + 3 × 20 = <strong>460 g</strong>.<br><strong>Same needle, different tick value, different answer!</strong> Check the ticks before you read the number.',
       s6:'Common Mix-Ups',
       tblH1:'Easy to mix up', tblH2:'The correct idea',
       tr1a:'1 kg = 100 g (mixed up with cm/m)', tr1b:'1 kg = <strong>1000</strong> g — kg to g is always ×1000',

@@ -125,14 +125,16 @@
     return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
   }
   function dialTheta(raw){ return 180 * (1 - raw / TOTAL_TICKS); }
-  function buildDialSVG(raw){
+  function buildDialSVG(raw, tickG){
     /* ⚠️ 畫布的寬度要**先算進刻度數字**，不能只算錶面的弧。數字畫在半徑 rLabel 上，
        所以最外側的數字會伸到 cx ± (rLabel + 半個字寬)；W 只夠裝弧的話，「0」和「10」
        就會被 viewBox 直接切掉。
        ⚠️ 靠 fitSVG 事後撐大 viewBox 不算修好：畫布變寬、但 width/height 沒變，
        整個錶面會被等比縮到 9 成，本來就很小的刻度數字更看不清楚。錶面的大小
        （rOuter／rLabel／rNeedle）完全沒動，只是左右多留白。 */
-    var W = 210, H = 118, cx = W / 2, cy = H - 14, rOuter = 74, rLabel = 90, rNeedle = 60, fs = 10;
+    /* 刻度上的數字是公克（i × 一小格），最長四位數（2500）：W 留到 232，最外側的數字才不會被切掉
+       （tools/checks/lib/canvas.js 一個字算 1.2 個字級）。 */
+    var W = 232, H = 118, cx = W / 2, cy = H - 14, rOuter = 74, rLabel = 90, rNeedle = 60, fs = 10;
     /* ⚠️ width 一定要跟著 W 走，不可以寫死。寫死舊的 170 而 viewBox 變寬，
        瀏覽器就會把整個錶面等比縮小塞進去 —— 那正是這次要避免的事。 */
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" xmlns="http://www.w3.org/2000/svg">';
@@ -145,7 +147,7 @@
       svg += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) + '" stroke="' + (isMajor ? '#2B2A33' : '#B9B3A0') + '" stroke-width="' + (isMajor ? 2.2 : 1.1) + '"/>';
       if (isMajor){
         var lp = polarXY(cx, cy, rLabel, theta);
-        svg += '<text x="' + lp.x.toFixed(1) + '" y="' + lp.y.toFixed(1) + '" font-size="' + fs + '" text-anchor="middle" dominant-baseline="middle" fill="#6B6875">' + (i / MAJOR_EVERY) + '</text>';
+        svg += '<text x="' + lp.x.toFixed(1) + '" y="' + lp.y.toFixed(1) + '" font-size="' + fs + '" text-anchor="middle" dominant-baseline="middle" fill="#6B6875">' + (i * tickG) + '</text>';
       }
     }
     var nt = dialTheta(raw);
@@ -224,10 +226,13 @@
     }
     return a;
   }
-  /* 整數選項防呆：去重、剔除等於正解的候選，不足 3 個就用固定步長補齊 */
-  function dedupWrongsInt(correct, candidates){
+  /* 整數選項防呆：去重、剔除等於正解的候選，不足 3 個就用固定步長補齊。
+     avoid：題幹上印出來的量（換成公克）先當成已用過 —— 誘答和保底都不可以把題幹的「50 公克」「1 公斤」抄回來
+     （framework §六之三第 4 點；2026-10-01 加上：「1 公斤 700 公克 ＋ 300 公克」的「沒進位」剛好是 1000 公克，印出來就是題幹上的「1 公斤」）。 */
+  function dedupWrongsInt(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       c = Math.round(c);
       var key = String(c);
@@ -244,8 +249,8 @@
     }
     return out.slice(0, 3);
   }
-  function mixOptsInt(correct, candidates){
-    var wrongs = dedupWrongsInt(correct, candidates);
+  function mixOptsInt(correct, candidates, avoid){
+    var wrongs = dedupWrongsInt(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -272,15 +277,17 @@
   }
 
   /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
+  /* 估重量：誘答一律差 10 倍以上（3000 公克的西瓜旁邊放 3500 公克，兩個都講得通 —— §六之二）；
+     重量和速查卡的對照表、上課頁的範例一致（書包 3 公斤，不是 4 公斤）；題幹寫出東西的名字（只畫 🧒 看不出是幾歲）。 */
   var OBJ_POOL = [
-    { icon:'📎', g:1,     wrongs:[10,100,1000] },
-    { icon:'🍬', g:3,     wrongs:[30,300,15] },
-    { icon:'🔑', g:50,    wrongs:[5,500,150] },
-    { icon:'🍎', g:150,   wrongs:[15,1500,1000] },
-    { icon:'🧂', g:1000,  wrongs:[100,10000,500] },
-    { icon:'🍉', g:3000,  wrongs:[300,30000,3500] },
-    { icon:'🎒', g:4000,  wrongs:[400,40000,4500] },
-    { icon:'🧒', g:35000, wrongs:[3500,350000,35500] }
+    { icon:'📎', g:1,     wrongs:[10,100,1000],      zh:'一根迴紋針', en:'a paperclip' },
+    { icon:'🍬', g:3,     wrongs:[30,300,3000],      zh:'一顆糖果',   en:'a piece of candy' },
+    { icon:'🔑', g:50,    wrongs:[5,500,5000],       zh:'一串鑰匙',   en:'a bunch of keys' },
+    { icon:'🍎', g:150,   wrongs:[15,1500,15000],    zh:'一顆蘋果',   en:'an apple' },
+    { icon:'🧂', g:1000,  wrongs:[100,10000,10],     zh:'一大包鹽',   en:'a big bag of salt' },
+    { icon:'🍉', g:3000,  wrongs:[300,30000,30],     zh:'一顆西瓜',   en:'a watermelon' },
+    { icon:'🎒', g:3000,  wrongs:[300,30000,30],     zh:'一個書包',   en:'a school backpack' },
+    { icon:'🧒', g:35000, wrongs:[3500,350000,350],  zh:'一個五年級小孩', en:'a 5th-grade student' }
   ];
   var NAME_PAIRS = [['小明','小華'],['小美','小傑'],['阿光','小英']];
   var NAME_PAIRS_EN = [['Ming','Hua'],['Mia','Jay'],['Kai','Ying']];
@@ -291,22 +298,23 @@
         var idx = pickUnused([0,1,2,3,4,5,6,7], used);
         var o = OBJ_POOL[idx];
         var m = mixOptsInt(o.g, o.wrongs);
-        return { icon:o.icon, g:o.g, opts:m.opts, ans:m.ans };
+        return { icon:o.icon, g:o.g, zh:o.zh, en:o.en, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
         var unit = lang === 'zh' ? ' 公克' : ' g';
         return {
-          stem: lang === 'zh' ? d.icon + ' 這個東西大約多重？' : 'About how heavy is this ' + d.icon + '?',
+          stem: lang === 'zh' ? d.icon + ' ' + d.zh + '大約多重？' : d.icon + ' About how heavy is ' + d.en + '?',
           opts: d.opts.map(function(v){ return v + unit; }),
           ans: d.ans,
-          why: lang === 'zh' ? '這個東西大約是 ' + d.g + ' 公克。' : 'It weighs about ' + d.g + ' g.'
+          why: lang === 'zh' ? d.zh + '大約是 ' + d.g + ' 公克。' : 'It weighs about ' + d.g + ' g.'
         };
       } },
     { id:'ladderKgToG', cat:'weight',
       make: function(used){
         var kg = pickUnused([1,2,3,4,5,6,7,8,9], used);
         var correct = kg * 1000;
-        var m = mixOptsInt(correct, [kg * 100, correct + 100, kg * 10000]);
+        /* 誘答：×100（和公分／公尺搞混）、×10、多 100。不放 ×10000 —— 30000 公克超出這一課的範圍（9 公斤以內） */
+        var m = mixOptsInt(correct, [kg * 100, correct + 100, kg * 10]);
         return { kg:kg, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -341,9 +349,15 @@
     { id:'compoundToGrams', cat:'weight',
       make: function(used){
         var kg = pickUnused([1,2,3,4,5,6,7,8,9], used);
-        var gRem = 1 + rand(999);
+        /* 一半的題目公克不到 100：這一課最重要的錯誤是把「3 公斤 50 公克」寫成 350（中間的 0 漏掉） */
+        var gRem = rand(2) ? 1 + rand(99) : 100 + rand(900);
         var correct = kg * 1000 + gRem;
-        var m = mixOptsInt(correct, [kg * 100 + gRem, gRem, kg + gRem]);
+        /* 誘答：直接接在一起（3 公斤 50 公克 → 350）、50 當成 500（3500）、把公斤當成 ×100（300 ＋ 50）、忘了加公克（3000）；
+           公克有三位數時「接在一起」就是正解，改放「公斤沒換就加」（3 ＋ 250）。
+           ⚠️ 不放 gRem 本身 —— 那是把題幹的「50 公克」抄回來（§六之三第 4 點）。 */
+        var cands = gRem < 100 ? [Number(String(kg) + String(gRem)), kg * 1000 + gRem * 10, kg * 100 + gRem, kg * 1000]
+                               : [kg * 100 + gRem, kg * 1000, kg + gRem];
+        var m = mixOptsInt(correct, cands, [gRem]);
         return { kg:kg, gRem:gRem, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -363,19 +377,20 @@
       make: function(used){
         var total;
         for (var tries = 0; tries < 30; tries++){
-          total = 1001 + rand(8998);
+          total = 1001 + rand(8898);   /* 最多 9898：誘答 total ＋ 100 才不會超過 9 公斤 999 公克 */
           if (total % 1000 !== 0 && used.indexOf(String(total)) < 0) break;
         }
         used.push(String(total));
         var kg = Math.floor(total / 1000), rem = total % 1000;
-        var wA = kg * 1000 + (total % 100);
+        /* 誘答：百位漏掉（3250 → 3 公斤 50 公克）；百位本來就是 0 的話改成「50 讀成 500」（3050 → 3 公斤 500 公克） */
+        var wA = rem < 100 ? kg * 1000 + rem * 10 : kg * 1000 + (total % 100);
         var wB = (kg - 1) * 1000 + rem; // kg-1 >= 0 恆成立（total>=1001 -> kg>=1）
         var wC = total + 100;
         var m = mixOptsInt(total, [wA, wB, wC]);
         return { total:total, kg:kg, rem:rem, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
-        var unitKg = lang === 'zh' ? '公斤' : ' kg', unitG = lang === 'zh' ? '公克' : ' g';
+        var unitKg = lang === 'zh' ? '公斤' : 'kg', unitG = lang === 'zh' ? '公克' : 'g';
         return {
           stem: d.total + (lang === 'zh' ? ' 公克 ＝ 幾公斤幾公克？' : ' g = how many kilograms and grams?'),
           opts: d.opts.map(function(v){ return fmtKgG(v, unitKg, unitG); }),
@@ -391,11 +406,13 @@
         var gRem1 = 400 + rand(500); // 400~899，容易湊成進位
         var g2 = 300 + rand(600); // 300~899
         var correct = kg1 * 1000 + gRem1 + g2;
-        var m = mixOptsInt(correct, [kg1 * 1000 + gRem1, gRem1 + g2, correct + 100]);
+        /* 誘答：沒有進位（1700 ＋ 500 寫成 1 公斤 200 公克）、忘了公斤、多算 100。
+           ⚠️ 不放 kg1 × 1000 ＋ gRem1 —— 那就是題幹上的雞肉重量，原樣抄回來。 */
+        var m = mixOptsInt(correct, [correct - 1000, gRem1 + g2, correct + 100], [kg1 * 1000, gRem1, g2, kg1 * 1000 + gRem1]);
         return { kg1:kg1, gRem1:gRem1, g2:g2, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
-        var unitKg = lang === 'zh' ? '公斤' : ' kg', unitG = lang === 'zh' ? '公克' : ' g';
+        var unitKg = lang === 'zh' ? '公斤' : 'kg', unitG = lang === 'zh' ? '公克' : 'g';
         return {
           stem: lang === 'zh'
             ? '媽媽買了 ' + d.kg1 + ' 公斤 ' + d.gRem1 + ' 公克的雞肉，又買了 ' + d.g2 + ' 公克的魚，一共是多少公斤多少公克？'
@@ -417,12 +434,13 @@
           bG = 500 + rand(6000);
           if (bG !== aG) break;
         }
+        if (bG === aG) bG = aG + 100;   /* 30 次都抽到一樣重（機率極低）也不可以出「一樣重」也對的題目（codex） */
         var winner = aG > bG ? 0 : 1;
         return { pairIdx:pairIdx, aKg:aKg, aRem:aRem, aG:aG, bG:bG, winner:winner };
       },
       fmt: function(d, lang){
         var names = lang === 'zh' ? NAME_PAIRS[d.pairIdx] : NAME_PAIRS_EN[d.pairIdx];
-        var unitKg = lang === 'zh' ? '公斤' : ' kg', unitG = lang === 'zh' ? '公克' : ' g';
+        var unitKg = lang === 'zh' ? '公斤' : 'kg', unitG = lang === 'zh' ? '公克' : 'g';
         var correctName = names[d.winner];
         var fillerZh = ['一樣重', '沒辦法比較'];
         var fillerEn = ['The same', 'Can’t tell'];
@@ -430,23 +448,24 @@
         return {
           stem: lang === 'zh'
             ? names[0] + '的水壺 ' + fmtKgG(d.aG, unitKg, unitG) + '，' + names[1] + '的水壺 ' + d.bG + ' ' + unitG + '，誰的水壺比較重？'
-            : names[0] + '’s water bottle is ' + fmtKgG(d.aG, unitKg, unitG) + ', and ' + names[1] + '’s is ' + d.bG + unitG + '. Whose is heavier?',
+            : names[0] + '’s water bottle is ' + fmtKgG(d.aG, unitKg, unitG) + ', and ' + names[1] + '’s is ' + d.bG + ' ' + unitG + '. Whose is heavier?',
           opts: m.opts,
           ans: m.ans,
           why: lang === 'zh'
-            ? '先統一單位：' + names[0] + ' ＝ ' + d.aG + ' 公克，' + names[1] + ' ＝ ' + d.bG + ' 公克，' + correctName + '的水壺比較重。'
-            : 'Unify the units first: ' + names[0] + ' = ' + d.aG + ' g, ' + names[1] + ' = ' + d.bG + ' g, so ' + correctName + '’s bottle is heavier.'
+            ? '先統一單位：' + names[0] + '的是 ' + d.aG + ' 公克，' + names[1] + '的是 ' + d.bG + ' 公克，' + correctName + '的水壺比較重。'
+            : 'Unify the units first: ' + names[0] + '’s is ' + d.aG + ' g and ' + names[1] + '’s is ' + d.bG + ' g, so ' + correctName + '’s bottle is heavier.'
         };
       } },
     { id:'remainingCapacity', cat:'weight',
       make: function(used){
         var limitKg = pickUnused([3,4,5,6,7,8,9], used);
         var curKg = 1 + rand(limitKg - 1);
-        var curRem = rand(999);
+        var curRem = 1 + rand(998);   /* 不出「3 公斤 0 公克」 */
         var curTotal = curKg * 1000 + curRem;
         var limitTotal = limitKg * 1000;
         var correct = limitTotal - curTotal;
-        var m = mixOptsInt(correct, [limitTotal - curKg * 1000, correct + 100, curTotal]);
+        /* 誘答：忘了減公克、公克那一欄反過來減（5000 − 3200 算成 2 公斤 200 公克）、少退一位（多 1000） */
+        var m = mixOptsInt(correct, [limitTotal - curKg * 1000, (limitKg - curKg) * 1000 + curRem, correct + 1000], [curRem, curTotal]);   /* codex：6 公斤裝了 3 公斤 200 公克時「反過來減」剛好是 3200 —— 就是籃子裡的量 */
         return { limitKg:limitKg, curKg:curKg, curRem:curRem, curTotal:curTotal, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -479,12 +498,12 @@
           stem: lang === 'zh'
             ? '秤面上，一小格是 ' + d.tickG + ' 公克，指針停在圖上的位置，這是多少公克？'
             : 'On the dial, one small tick is worth ' + d.tickG + ' g. Read the needle in the picture — what is the weight?',
-          pic: buildDialSVG(d.raw),
+          pic: buildDialSVG(d.raw, d.tickG),
           opts: d.opts.map(function(v){ return v + unit; }),
           ans: d.ans,
           why: lang === 'zh'
-            ? '指針過了 ' + large + ' 大格又 ' + small + ' 小格，一大格 ＝ 5 × ' + d.tickG + ' ＝ ' + (5 * d.tickG) + ' 公克，' + large + ' × ' + (5 * d.tickG) + ' ＋ ' + small + ' × ' + d.tickG + ' ＝ ' + d.correct + '。'
-            : 'The needle passed ' + large + ' large ticks and ' + small + ' small ticks. One large tick = 5 × ' + d.tickG + ' = ' + (5 * d.tickG) + ' g. ' + large + ' × ' + (5 * d.tickG) + ' + ' + small + ' × ' + d.tickG + ' = ' + d.correct + '.'
+            ? '指針過了 ' + large + ' 大格又 ' + small + ' 小格，一大格是 5 × ' + d.tickG + ' ＝ ' + (5 * d.tickG) + ' 公克，' + large + ' × ' + (5 * d.tickG) + ' ＋ ' + small + ' × ' + d.tickG + ' ＝ ' + d.correct + '。'
+            : 'The needle passed ' + large + ' large ticks and ' + small + ' small ticks. One large tick is 5 × ' + d.tickG + ' = ' + (5 * d.tickG) + ' g. ' + large + ' × ' + (5 * d.tickG) + ' + ' + small + ' × ' + d.tickG + ' = ' + d.correct + '.'
         };
       } },
     { id:'divideFact', cat:'divide',
@@ -520,7 +539,8 @@
         var f1 = pick([2,3,4,5,6,7,8,9]);
         var f2 = pickUnused([12,13,14,16,17,18,21,23,24,26,27,32,34,36], used);
         var correct = f1 * f2;
-        var m = mixOptsInt(correct, [correct + f1, (f1 - 1) * f2, correct - f2]);
+        /* ⚠️ f1 ＝ 2 時「少算一組」(f1 − 1) × f2 就是題幹上的 f2 —— 改成「多算一組」 */
+        var m = mixOptsInt(correct, [correct + f1, f1 === 2 ? correct + f2 : (f1 - 1) * f2, correct - f1]);
         return { f1:f1, f2:f2, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
