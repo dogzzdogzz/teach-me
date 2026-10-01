@@ -1031,6 +1031,16 @@
   var GAME_ORDER = ['beads', 'group', 'train', 'down', 'hop'];
 
   /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，放在畫板外面
+     （重新開始、換語言換了新畫板也還在）；任何地方的 pointerup／pointercancel 傳到 window 時清掉 ——
+     window 在冒泡的最後一站，畫板先看到、再清（滑鼠的 pointerId 永遠是 1，留著過期的記號會吞掉下一次點目的地）。
+     這是整頁唯一一組常駐的監聽，只掛一次，不會越積越多。（2026-10-01，從 two-digit 移植） */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);   /* 新的一下開始時先清掉（放開落在頁面外時 window 收不到 pointerup）；按在積木上的會馬上再記一次 */
   function makeBoard(W, H){
     var avail = gameStage.clientWidth || W;
     var k = Math.min(1.5, avail / W);
@@ -1049,6 +1059,7 @@
       return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
     };
     board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
       if (e.target.closest && e.target.closest('.gpiece')) return;
       if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
     });
@@ -1098,6 +1109,7 @@
     }
     P.busy = function(){ return !!start; };
     el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
       if (P.locked || gSolved || start) return;
       e.preventDefault();
       pid = e.pointerId;
