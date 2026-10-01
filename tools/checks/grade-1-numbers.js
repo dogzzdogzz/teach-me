@@ -1,7 +1,7 @@
 /* grade-1/math/numbers 的檢查設定（100 以內數：數數、位值、比大小、排隊順序）。
 
    index.html 的語言無關資料不是集中在一段（PV_CHOICES／PILE_PAIRS／NUM_PAIRS／
-   ANIMALS／buildRounds() 都散落在各節的 DOM 程式碼中間，中間夾著會在載入時就執行
+   ANIMALS／GAME_* 題庫都散落在各節的 DOM 程式碼中間，中間夾著會在載入時就執行
    的 document.getElementById(...).addEventListener(...)），沒辦法用一段
    dataStart~dataEnd 一次切出來執行。dataStart~dataEnd 只切「語言無關的小工具」
    （zhNum／enNum／dotsSvg／blocksSvg，這幾個純函式在檔案最前面，不碰 DOM），
@@ -49,11 +49,6 @@ function extractArray(src, varName){
   if (!m) throw new Error('cannot find var ' + varName + ' in source');
   return new Function('return ' + m[1] + ';')();
 }
-function extractRounds(src){
-  const m = src.match(/function buildRounds\(\)\{\s*return (\[[\s\S]*?\]);\s*\}/);
-  if (!m) throw new Error('cannot find buildRounds() in source');
-  return new Function('return ' + m[1] + ';')();
-}
 
 const { gameShuffleProblems } = require('./lib/gameshuffle.js');
 
@@ -64,8 +59,8 @@ module.exports = {
        真實存在的缺陷（選項排成 [count-1, count, count+1, count+2] 照順序畫，
        正解永遠是第二顆），而當時那條「正解不可以在 index 0」的斷言看不到它。 */
     { file:'index', expect:'without shuffle(...)',
-      find:'    shuffle(round.choices).forEach(function(v){',
-      replace:'    round.choices.forEach(function(v){' },
+      find:'    shuffle(items).forEach(function(it, i){ mk(it, x0 + i * step, y); });',
+      replace:'    items.forEach(function(it, i){ mk(it, x0 + i * step, y); });' },
     /* shuffle() 還在被呼叫，但它自己不洗了（交換那兩行變成原地打轉）。
        ⚠️ 只比對「有沒有寫 shuffle(...)」的話這個改壞會一路綠燈；連「定義裡有沒有
        Math.random」也擋不住（codex 第三輪給的反例：`Math.random(); return arr;`）。
@@ -115,12 +110,47 @@ module.exports = {
     { file:'index', expect:'PILE_PAIRS[2] has equal counts',
       find:'  var PILE_PAIRS = [[6, 9], [8, 5], [7, 10], [4, 7], [9, 3]];',
       replace:'  var PILE_PAIRS = [[6, 9], [8, 5], [7, 7], [4, 7], [9, 3]];' },
-    { file:'index', expect:'ROUNDS[1] blocks tens+ones != n',
-      find:"      { kind:'blocks', n:26, tens:2, ones:6, choices:[26, 62, 20, 6, 36, 16] },",
-      replace:"      { kind:'blocks', n:26, tens:2, ones:7, choices:[26, 62, 20, 6, 36, 16] }," },
-    { file:'index', expect:'ROUNDS[0] n not among choices',
-      find:'      { kind:\'dots\', n:14, choices:[14, 15, 13, 41, 17, 10] },',
-      replace:'      { kind:\'dots\', n:99, choices:[14, 15, 13, 41, 17, 10] },' }
+    /* --- 小遊戲（2026-10-01 改成五關五種玩法）：每一條不變量各有一筆，證明它真的會響 --- */
+    /* 百數板：誘答卡就是某一個空格要的數 —— 兩張一樣的卡，其中一張「錯」。 */
+    { file:'index', expect:'decoy 34 equals a blank',
+      find:"    { row:2, col:3, blanks:[[0,4],[1,1],[2,3]], decoys:[72, 64] },",
+      replace:"    { row:2, col:3, blanks:[[0,4],[1,1],[2,3]], decoys:[72, 34] }," },
+    /* 百數板：同一排空兩格 —— 右邊那一格旁邊就沒有看得到的數，「為什麼」那句話會指向空格。 */
+    { file:'index', expect:'needs exactly one blank in each row',
+      find:"    { row:5, col:4, blanks:[[0,2],[1,4],[2,1]], decoys:[86, 46] },",
+      replace:"    { row:5, col:4, blanks:[[0,2],[0,3],[2,1]], decoys:[86, 46] }," },
+    /* 百數板：視窗跑出百數板右邊（個位 7 起算，第 5 格是 11 —— 它其實在下一排的最左邊）。 */
+    { file:'index', expect:'runs off the right edge of the hundred chart',
+      find:"    { row:6, col:6, blanks:[[0,4],[1,2],[2,0]], decoys:[60, 96] }",
+      replace:"    { row:6, col:7, blanks:[[0,4],[1,2],[2,0]], decoys:[60, 96] }" },
+    /* 拼數字：十位和個位一樣，拼反了看不出來。 */
+    { file:'index', expect:'GAME_BUILD 44 has the same tens and ones digit',
+      find:'  var GAME_BUILD = [23, 34, 41, 52, 36, 45, 27, 63];',
+      replace:'  var GAME_BUILD = [23, 34, 41, 52, 36, 45, 27, 44];' },
+    /* 綁一捆：不到 11 個就沒有「剩下的一」。 */
+    { file:'index', expect:'GAME_BUNDLE 10 outside 11~18',
+      find:'  var GAME_BUNDLE = [13, 14, 15, 16, 17, 18];',
+      replace:'  var GAME_BUNDLE = [10, 14, 15, 16, 17, 18];' },
+    /* 排排站：沒有「十位個位對調」的一對。 */
+    { file:'index', expect:'has no digit-swapped pair',
+      find:'  var GAME_SORT = [[38, 83, 35, 53],',
+      replace:'  var GAME_SORT = [[38, 73, 35, 56],' },
+    /* 排隊：第幾個和前面幾隻一樣，點出來的東西分不出位置和數量。 */
+    { file:'index', expect:'nth must differ from first',
+      find:'{ nth:3, first:4 }, { nth:4, first:2 },',
+      replace:'{ nth:3, first:3 }, { nth:4, first:2 },' },
+    /* 百數板：空格的排寫成字串 —— 頁面用 === 比對，找不到空格，那一關解不完。 */
+    { file:'index', expect:'every blank must be [integer row',
+      find:"    { row:2, col:3, blanks:[[0,4],[1,1],[2,3]], decoys:[72, 64] },",
+      replace:"    { row:2, col:3, blanks:[['0',4],['1',1],['2',3]], decoys:[72, 64] }," },
+    /* 托盤卡片間距縮小，卡片疊在一起。 */
+    { file:'index', expect:'tray cards overlap',
+      find:'    var step = 60, x0 = (B.W - (items.length - 1) * step) / 2;',
+      replace:'    var step = 40, x0 = (B.W - (items.length - 1) * step) / 2;' },
+    /* 拼數字托盤裡的「一」縮到手機上不到 44px。 */
+    { file:'index', expect:'under 44',
+      find:"      addPiece(B, { w:46, h:46, cx:236, cy:248,",
+      replace:"      addPiece(B, { w:40, h:40, cx:236, cy:248," }
   ],
 
   sim: {
@@ -310,22 +340,119 @@ module.exports = {
       if (JSON.stringify(ANIMALS_SRC) !== JSON.stringify(ANIMALS))
         fail('index.html ANIMALS no longer matches review.html\'s copy — the ordinalPosition generator in review.html hardcodes its own list and will drift silently: ' + JSON.stringify(ANIMALS_SRC));
 
-      /* --- 小遊戲：數字大搜查 --- */
-      const ROUNDS = extractRounds(src);
-      ROUNDS.forEach((r, i) => {
-        if (r.choices.indexOf(r.n) < 0) fail('ROUNDS[' + i + '] n not among choices');
-        if (new Set(r.choices).size !== r.choices.length) fail('ROUNDS[' + i + '] duplicate choices');
-        if (r.kind === 'blocks' && r.tens * 10 + r.ones !== r.n) fail('ROUNDS[' + i + '] blocks tens+ones != n');
-        if (['dots','blocks','word'].indexOf(r.kind) < 0) fail('ROUNDS[' + i + '] unknown kind ' + r.kind);
-        if (r.kind === 'dots' || r.kind === 'word'){
-          /* dots/word 這兩種沒有 tens/ones，n 只要在合理範圍。dots 用 dotsSvg(n) 畫，
-             太大的 n 會畫不下（round0~round3 都在 30 以內，這裡守住上限）。 */
-          if (r.kind === 'dots' && (r.n < 1 || r.n > 30)) fail('ROUNDS[' + i + '] dots n=' + r.n + ' is impractically large to count by eye');
-        }
+      /* --- 小遊戲：數字大挑戰（五關五種玩法，§六之五）—— 每一條都從「畫面上看得到的東西」重新推 --- */
+      const isInt = v => Number.isInteger(v);
+      const order = (src.match(/var GAME_ORDER = \[([^\]]*)\]/) || [])[1];
+      if (order === undefined) fail('cannot find GAME_ORDER in index.html');
+      else {
+        const types = order.split(',').map(x => x.trim().replace(/^'|'$/g, ''));
+        if (types.join() !== 'bundle,build,chart,sort,line') fail('GAME_ORDER should be bundle,build,chart,sort,line, got ' + types.join());
+        types.forEach(t => {
+          if (!new RegExp('\\n {4}' + t + ': function\\(d\\)\\{').test(src)) fail('GAME_ORDER ' + t + ' has no RENDER.' + t);
+          ['zh','en'].forEach(L => {
+            if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('gAsks.' + t + ' missing in ' + L);
+            if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('gHints.' + t + ' missing in ' + L);
+          });
+        });
+      }
+      /* 綁一捆：放滿 10 個之後一定還剩下「幾個一」；最多 18 個（3 排 × 6 個排得下）。 */
+      extractArray(src, 'GAME_BUNDLE').forEach(n => {
+        if (!isInt(n) || n < 11 || n > 18) fail('GAME_BUNDLE ' + n + ' outside 11~18');
       });
-      /* 小遊戲的選項要洗牌（正解不可以固定在同一個位置）——
-         守的是**畫出來的按鈕**，不是 choices 陣列裡的順序，實作在 lib/gameshuffle.js。 */
-      gameShuffleProblems(src, 1).forEach(fail);
+      /* 拼數字：每一邊最多放 9 個；十位和個位不一樣（拼反了才看得出來）；個位不是 0（一定要用到兩邊）。 */
+      const BUILD = extractArray(src, 'GAME_BUILD');
+      if (new Set(BUILD).size !== BUILD.length) fail('GAME_BUILD has duplicates');
+      BUILD.forEach(n => {
+        if (!isInt(n) || n < 11 || n > 99) return fail('GAME_BUILD ' + n + ' outside 11~99');
+        const t = Math.floor(n / 10), o = n % 10;
+        if (o === 0) fail('GAME_BUILD ' + n + ' has no ones');
+        if (t === o) fail('GAME_BUILD ' + n + ' has the same tens and ones digit');
+      });
+      const trayCounts = [];   /* 每一個托盤要放幾張卡片，下面和托盤排法一起驗 */
+      /* 百數板：自己排一張 1～100 的百數板（10 格一排），從那張板子上讀出視窗，不用頁面的公式。 */
+      const HUNDRED = [];
+      for (let r = 0; r < 10; r++){ HUNDRED.push([]); for (let c = 0; c < 10; c++) HUNDRED[r].push(r * 10 + c + 1); }
+      extractArray(src, 'GAME_CHART').forEach((g, gi) => {
+        const tag = 'GAME_CHART[' + gi + ']';
+        if (!isInt(g.row) || !isInt(g.col) || g.col < 1) return fail(tag + ' row/col must be integers, col >= 1');
+        /* 頁面上第 i 排第 j 格是「個位 col + j」那一欄；它要真的在百數板上同一排 */
+        if (g.col - 1 + 4 > 9) return fail(tag + ' col ' + g.col + ' runs off the right edge of the hundred chart');
+        if (g.row < 0 || g.row + 2 > 9) return fail(tag + ' row ' + g.row + ' runs off the hundred chart');
+        const win = [0, 1, 2].map(i => [0, 1, 2, 3, 4].map(j => HUNDRED[g.row + i][g.col - 1 + j]));
+        const pageVal = (i, j) => (g.row + i) * 10 + g.col + j;
+        win.forEach((row, i) => row.forEach((v, j) => { if (pageVal(i, j) !== v) fail(tag + ' page puts ' + pageVal(i, j) + ' where the hundred chart has ' + v); }));
+        /* 先驗每個空格都是 [整數排, 整數格] —— 頁面用 === 比對，'0' 和 0 對不上，那一關就找不到空格 */
+        if (!Array.isArray(g.blanks) || g.blanks.some(b => !Array.isArray(b) || b.length !== 2 || !isInt(b[0]) || !isInt(b[1]) || b[0] < 0 || b[0] > 2 || b[1] < 0 || b[1] > 4))
+          return fail(tag + ' every blank must be [integer row 0~2, integer column 0~4]: ' + JSON.stringify(g.blanks));
+        const rows = g.blanks.map(b => b[0]).sort().join();
+        if (rows !== '0,1,2') fail(tag + ' needs exactly one blank in each row, got rows ' + rows);
+        const answers = g.blanks.map(b => (win[b[0]] || [])[b[1]]);
+        const visible = [].concat.apply([], win).filter(v => answers.indexOf(v) < 0);
+        if (!g.decoys.length) fail(tag + ' has no decoy');
+        g.decoys.forEach(v => {
+          if (answers.indexOf(v) >= 0) fail(tag + ' decoy ' + v + ' equals a blank');
+          if (visible.indexOf(v) >= 0) fail(tag + ' decoy ' + v + ' is already on the board');
+          if (!isInt(v) || v < 1 || v > 100) fail(tag + ' decoy ' + v + ' outside 1~100');
+        });
+        if (new Set(g.decoys).size !== g.decoys.length) fail(tag + ' duplicate decoys');
+        trayCounts.push(answers.length + g.decoys.length);
+      });
+      /* 排排站：四個不一樣的兩位數；要有一對十位個位對調（23／32）、一對十位一樣（35／38）。 */
+      extractArray(src, 'GAME_SORT').forEach((g, gi) => {
+        const tag = 'GAME_SORT[' + gi + ']';
+        trayCounts.push(g.length);
+        if (g.length !== 4 || new Set(g).size !== 4) return fail(tag + ' needs 4 different numbers');
+        if (g.some(v => !isInt(v) || v < 10 || v > 99)) fail(tag + ' has a number outside 10~99');
+        const swap = v => (v % 10) * 10 + Math.floor(v / 10);
+        if (!g.some(v => v % 10 !== 0 && swap(v) !== v && g.indexOf(swap(v)) >= 0)) fail(tag + ' has no digit-swapped pair');
+        if (!g.some((v, i) => g.some((w, k) => k !== i && Math.floor(v / 10) === Math.floor(w / 10)))) fail(tag + ' has no same-tens pair');
+      });
+      /* 排隊：六隻小動物；第幾個 ≠ 前面幾隻（不然點出來的東西一樣，分不出位置和數量）。 */
+      extractArray(src, 'GAME_LINE').forEach((g, gi) => {
+        const tag = 'GAME_LINE[' + gi + ']';
+        if (!isInt(g.nth) || !isInt(g.first) || g.nth < 1 || g.nth > 6 || g.first < 2 || g.first > 6) fail(tag + ' nth must be 1~6 and first 2~6');
+        if (g.nth === g.first) fail(tag + ' nth must differ from first');
+      });
+      if (!/var animals = shuffle\(ANIMALS\)\.slice\(0, 6\);/.test(src)) fail('line round no longer draws 6 animals from ANIMALS');
+      /* 手機上拿得起來的東西至少 44px：每個 addPiece 的 w/h，以 375px 手機（卡片內寬約 290px）
+         換算 300 寬的畫板。數字從原始碼讀，不在這裡另抄一份。 */
+      const PHONE_INNER = 290;
+      const boards = (src.match(/makeBoard\((\d+), \d+\)/g) || []).map(m => +m.match(/\d+/)[0]);
+      if (boards.length !== 5 || boards.some(W => W !== 300)) fail('expected five 300-wide game boards, got ' + boards.join());
+      const scale = Math.min(1.5, PHONE_INNER / 300);
+      const fc = (src.match(/var FC = (\d+), FP = (\d+)/) || []);
+      const consts = { FC: +fc[1] };
+      if (!fc[1]) fail('cannot read the bundle round dot size (var FC = .., FP = ..)');
+      const pieces = src.match(/addPiece\(B, \{ w:(\w+), h:(\w+),/g) || [];
+      if (pieces.length < 5) fail('expected at least 5 addPiece calls in the game, found ' + pieces.length);
+      pieces.forEach(m => {
+        const [, w, h] = m.match(/w:(\w+), h:(\w+)/);
+        const px = v => /^\d+$/.test(v) ? +v : consts[v];
+        const sz = Math.min(px(w), px(h));
+        if (!(sz * scale >= 44)) fail('a game piece (' + m + ') is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44');
+      });
+      /* 托盤（renderTray）：卡片之間不可以碰到、最多張的那一盤也不可以出界。step 和卡片寬度都從原始碼讀。 */
+      const trayStep = +((src.match(/function renderTray\(B, items, y, mk\)\{\s*var step = (\d+),/) || [])[1]);
+      const cardWs = (src.match(/addPiece\(B, \{ w:(\d+), h:\d+, cx:cx, cy:cy,/g) || []).map(m => +m.match(/w:(\d+)/)[1]);
+      if (!trayStep) fail('cannot read renderTray step');
+      else if (cardWs.length !== 2) fail('expected 2 tray card renderers (chart, sort), found ' + cardWs.length);
+      else {
+        const cw = Math.max.apply(null, cardWs), most = Math.max.apply(null, trayCounts);
+        if (trayStep < cw + 4) fail('tray cards overlap: step ' + trayStep + ' < card width ' + cw + ' + 4');
+        const x0 = (300 - (most - 1) * trayStep) / 2;
+        if (x0 - cw / 2 < 0 || x0 + (most - 1) * trayStep + cw / 2 > 300) fail('a tray of ' + most + ' cards runs off the 300-wide board');
+      }
+      const ac = src.match(/var AC = (\d+), AP = (\d+)/);
+      if (!ac) fail('cannot read the line round animal size');
+      else {
+        if (+ac[1] * scale < 44) fail('line-round animals are ' + (+ac[1] * scale).toFixed(1) + 'px on a 375px phone — under 44');
+        if (+ac[1] > +ac[2]) fail('line-round animals overlap (AC > AP)');
+        if (1 + 5 * +ac[2] + +ac[1] > 300) fail('six line-round animals do not fit the 300 board');
+      }
+      /* 小遊戲的卡片要洗牌（正解不可以固定在同一個位置）——
+         守的是**畫出來的卡片**，實作在 lib/gameshuffle.js。卡片統一由 renderTray() 畫
+         （百數板、排排站兩關共用），所以守的函式是 renderTray。 */
+      gameShuffleProblems(src, 1, { roundFn:'renderTray' }).forEach(fail);
     }
   }
 };
