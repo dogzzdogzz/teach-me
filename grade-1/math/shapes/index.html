@@ -1253,6 +1253,7 @@
     };
     P.home = function(){ P.place(P.homeX, P.homeY, P.homeS); };
     P.lock = function(cx, cy, s){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
       P.locked = true;
       el.classList.add('locked'); el.classList.remove('sel');
       if (B.selected === P) B.selected = null;
@@ -1261,6 +1262,14 @@
     P.home();
     /* 只跟著第一根按下去的手指（pid）；第二根手指碰到同一塊時忽略，不會重設拖拉或誤判成「點一下」 */
     var start = null, orig = null, moved = false, pid = null;
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
     el.addEventListener('pointerdown', function(e){
       if (P.locked || gSolved || start) return;
       e.preventDefault();
@@ -1282,7 +1291,7 @@
       document.removeEventListener('pointerup', onDocEnd);
       document.removeEventListener('pointercancel', onDocEnd);
       el.classList.remove('dragging');
-      if (cancelled){ P.home(); return; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的積木一律放回去，不能再改畫面 */
       if (!moved){ if (B.onTap) B.onTap(P); return; }
       if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
     }
@@ -1303,8 +1312,9 @@
       B.selected = P; P.el.classList.add('sel');
     };
     B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
       P.el.classList.remove('sel'); B.selected = null;
-      tryDrop(P, pt);
+      if (!gSolved) tryDrop(P, pt);
     };
     B.onDrop = tryDrop;
   }
