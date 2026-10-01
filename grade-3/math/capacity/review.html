@@ -155,7 +155,7 @@
       resAll: function(n){ return '全對 ' + n + '/' + n + '！🏆 明天再來一批新題目，讓記憶更牢。'; },
       resSome: function(r, n){ return '答對 ' + r + '/' + n + '。錯的題目看看下面該複習哪裡：'; },
       linkNames: { capacity:'🗂️ 容量 — 速查卡', multiply:'🗂️ 乘法 — 速查卡', divide:'🗂️ 除法 — 速查卡' },
-      fmtLmL: function(L, mL){ return L + '公升' + mL + '毫升'; }
+      fmtLmL: function(L, mL){ return L + ' 公升 ' + mL + ' 毫升'; }
     },
     en: {
       qn: function(i){ return 'Question ' + i; },
@@ -188,10 +188,12 @@
     }
     return a;
   }
-  /* 保證 3 個相異、且不等於正解的整數錯誤選項（皆為正整數） */
-  function makeWrongsInt(correct, candidates){
+  /* 保證 3 個相異、且不等於正解的整數錯誤選項（皆為正整數）。
+     avoid：題幹上的數字，先當成用過了 —— 誘答不可以把題幹的數字抄回來（framework §六之三第 4 點） */
+  function makeWrongsInt(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
       if (!seen[key] && c > 0){ seen[key] = true; out.push(c); }
@@ -205,8 +207,12 @@
     }
     return out.slice(0, 3);
   }
-  function mixOptsNum(correct, candidates){
-    var wrongs = makeWrongsInt(correct, candidates);
+  /* 題幹上的數字，扣掉 keep（刻意拿來當誘答的那一個），其餘都不可以出現在選項裡 */
+  function avoidExcept(stemNums, keep){
+    return stemNums.filter(function(v){ return keep.indexOf(v) < 0; });
+  }
+  function mixOptsNum(correct, candidates, avoid){
+    var wrongs = makeWrongsInt(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -240,14 +246,15 @@
         var ticks = 2 + rand(8); /* 2..9 */
         var amount = ticks * tickValue;
         var candidates = [ticks * 10, ticks * 100, ticks, (ticks - 1) * tickValue, (ticks + 1) * tickValue];
-        var m = mixOptsNum(amount, candidates);
+        /* 刻意的迷思：把「第幾格」當成毫升數（忘了乘一小格）—— 只放行 ticks */
+        var m = mixOptsNum(amount, candidates, avoidExcept([tickValue, ticks], [ticks]));
         return { tickValue:tickValue, ticks:ticks, amount:amount, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
         return {
           stem: lang === 'zh'
-            ? '量杯上，一小格＝' + d.tickValue + '毫升，水位在第 ' + d.ticks + ' 格，是多少毫升？'
-            : 'On a measuring cup, 1 tick = ' + d.tickValue + ' mL, and the water is at tick ' + d.ticks + '. How many mL is that?',
+            ? '量杯上，一小格是 ' + d.tickValue + ' 毫升，水位在第 ' + d.ticks + ' 格，是多少毫升？'
+            : 'On a measuring cup, one tick is ' + d.tickValue + ' mL, and the water is at tick ' + d.ticks + '. How many mL is that?',
           opts: d.opts.map(String), ans: d.ans,
           why: lang === 'zh'
             ? d.ticks + ' × ' + d.tickValue + ' ＝ ' + d.amount + '，水位在第 ' + d.ticks + ' 格就是 ' + d.amount + ' 毫升。'
@@ -259,8 +266,9 @@
         var L = pickUnused([1, 2, 3, 4], used);
         var mL = pick([0, 100, 200, 300, 400, 500, 600, 700, 800, 900]);
         var total = L * 1000 + mL;
-        var candidates = [L * 100 + mL, mL, total + 100, total - 100];
-        var m = mixOptsNum(total, candidates);
+        /* L × 100 ＋ mL：把 1 公升當成 100 毫升；L × 1000 ＋ mL ÷ 10：毫升少寫一個 0（2 公升 400 毫升 → 2040） */
+        var candidates = [L * 100 + mL, L * 1000 + mL / 10, total + 100, total - 100];
+        var m = mixOptsNum(total, candidates, [L, mL]);
         return { L:L, mL:mL, total:total, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -279,7 +287,7 @@
         var total = L * 1000 + mL;
         var candidates = [
           { L: Math.floor(total / 100), mL: total % 100 },
-          { L: L, mL: mL + 100 },
+          { L: L, mL: mL + 100 < 1000 ? mL + 100 : mL - 100 },   /* 950 ＋ 100 會變成「1050 毫升」—— 那不是幾公升幾毫升的寫法 */
           { L: L * 10, mL: Math.floor(mL / 10) }
         ];
         var m = mixOptsMixed(L, mL, candidates);
@@ -303,7 +311,7 @@
         var totalA = aL * 1000 + aML;
         var total = totalA + bML;
         var candidates = [aML + bML, Math.floor(totalA / 10) + bML, total + 100, total - 100];
-        var m = mixOptsNum(total, candidates);
+        var m = mixOptsNum(total, candidates, [aL, aML, bML]);
         return { aL:aL, aML:aML, bML:bML, total:total, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -323,8 +331,9 @@
         var poured = pick([200, 400, 600, 800]);
         while (poured >= capacity) poured = Math.floor(capacity / 2 / 100) * 100;
         var remaining = capacity - poured;
-        var candidates = [poured, capacity, capacity + poured];
-        var m = mixOptsNum(remaining, candidates);
+        /* capacity ＋ poured：該減卻加了；題幹的兩個數字不可以抄回來當選項 */
+        var candidates = [capacity + poured, remaining + 100, remaining - 100];
+        var m = mixOptsNum(remaining, candidates, [capacity, poured]);
         return { capacity:capacity, poured:poured, remaining:remaining, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -348,8 +357,8 @@
         var combo = pick(opts4);
         var major = combo.major, n = combo.n;
         var minor = major / n;
-        var candidates = [major, major * n, minor + n];
-        var m = mixOptsNum(minor, candidates);
+        var candidates = [major * n, minor + n, minor * 2];
+        var m = mixOptsNum(minor, candidates, [major, n]);
         return { major:major, n:n, minor:minor, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -369,7 +378,7 @@
         var n = pick([2, 3, 4, 5, 6]);
         var total = per * n;
         var candidates = [per + n, per * (n - 1), per * (n + 1)];
-        var m = mixOptsNum(total, candidates);
+        var m = mixOptsNum(total, candidates, [per, n]);
         return { per:per, n:n, total:total, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -394,14 +403,15 @@
         var total = choice.total;
         var n = pickUnused(choice.ns, used);
         var share = total / n;
-        var candidates = [total, n, share * 2];
-        var m = mixOptsNum(share, candidates);
+        var candidates = [share * 2, total - share, share / 2];
+        var m = mixOptsNum(share, candidates, [total, n]);
         return { total:total, n:n, share:share, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
         var t = TXT[lang];
-        var totalL = d.total / 1000;
-        var totalLabel = lang === 'zh' ? (totalL + ' 公升') : (totalL + ' L');
+        /* 500 不是整公升：寫成「500 毫升」，不要印出 0.5 公升（這一課沒有小數） */
+        var totalL = d.total / 1000, whole = d.total % 1000 === 0;
+        var totalLabel = lang === 'zh' ? (whole ? totalL + ' 公升' : d.total + ' 毫升') : (whole ? totalL + ' L' : d.total + ' mL');
         return {
           stem: lang === 'zh'
             ? '把 ' + totalLabel + '的果汁平分給 ' + d.n + ' 個人，每人可以分到多少毫升？'
