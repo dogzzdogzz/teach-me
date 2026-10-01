@@ -48,8 +48,16 @@ module.exports = {
        真實存在的缺陷（選項排成 [count-1, count, count+1, count+2] 照順序畫，
        正解永遠是第二顆），而當時那條「正解不可以在 index 0」的斷言看不到它。 */
     { file:'index', expect:'without shuffle(...)',
-      find:'    shuffle(round.choices).forEach(function(v){',
-      replace:'    round.choices.forEach(function(v){' },
+      find:'    shuffle(items).forEach(function(it, i){ mk(it, x0 + i * step, y); });',
+      replace:'    items.forEach(function(it, i){ mk(it, x0 + i * step, y); });' },
+    /* 串珠子：前面看得到的不到兩組，規律推不出來（「圖要決定得了答案」）。 */
+    { file:'index', expect:'fewer than two full groups',
+      find:"    { unit:['🔺','⬜'],      reps:4, len:8, tray:['🔺','⬜','⭐'] },",
+      replace:"    { unit:['🔺','⬜'],      reps:4, len:5, tray:['🔺','⬜','⭐'] }," },
+    /* 數字火車：誘答卡就是空車廂要的數 —— 兩張一樣的卡，其中一張「錯」。 */
+    { file:'index', expect:'decoy equals a number in the train',
+      find:'    { start:2, step:2, n:6, blanks:[3,5], decoys:[9,14] },',
+      replace:'    { start:2, step:2, n:6, blanks:[3,5], decoys:[8,14] },' },
     { file:'review', expect:'nums[3]-nums[2] != step',
       find:'        var nums = [start, start + step, start + 2 * step, start + 3 * step];\n        var next = start + 4 * step;\n        /* 誘答：多跳一步（next + step）、差一（next − 1）。舊的 next − step 就是題幹上最後一個數，\n           那是抄題不是迷思；四個已經印出來的數都不可以出現 */\n        var m = mixOpts(next, [next + step, next - 1], nums);\n        return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };\n      },\n      fmt: function(d, lang){\n        return {\n          stem: lang === \'zh\' ? d.nums.join(\'、\') + \'、<br>下一個是多少？\' : d.nums.join(\', \') + \', …<br>What comes next?\',',
       replace:'        var nums = [start, start + step, start + 2 * step, start + 3 * step + 1];\n        var next = start + 4 * step;\n        /* 誘答：多跳一步（next + step）、差一（next − 1）。舊的 next − step 就是題幹上最後一個數，\n           那是抄題不是迷思；四個已經印出來的數都不可以出現 */\n        var m = mixOpts(next, [next + step, next - 1], nums);\n        return { nums:nums, step:step, next:next, opts:m.opts, ans:m.ans };\n      },\n      fmt: function(d, lang){\n        return {\n          stem: lang === \'zh\' ? d.nums.join(\'、\') + \'、<br>下一個是多少？\' : d.nums.join(\', \') + \', …<br>What comes next?\',' },
@@ -102,9 +110,45 @@ module.exports = {
     { file:'index', expect:'HOP_SETS[0] target exceeds the 0~10 hop grid',
       find:'    { start:3, jump:4 },',
       replace:'    { start:8, jump:4 },' },
-    { file:'index', expect:'ROUNDS[1] num round arithmetic',
-      find:"    { kind:'num',   seq:[1,4,7,10], step:3, dir:'+', correct:13, choices:[13,12,16] },",
-      replace:"    { kind:'num',   seq:[1,4,7,10], step:3, dir:'+', correct:14, choices:[13,12,16] }," }
+    /* 整數欄位：每一條 isInt 分支各有一筆，證明它真的會響。 */
+    { file:'index', expect:'start/step/n must be integers',
+      find:'    { start:5, step:5, n:6, blanks:[2,5], decoys:[16,35] },',
+      replace:'    { start:5, step:2.5, n:6, blanks:[2,5], decoys:[16,35] },' },
+    { file:'index', expect:'needs at least one integer blank',
+      find:'    { start:3, step:3, n:6, blanks:[4,5], decoys:[13,17] },',
+      replace:'    { start:3, step:3, n:6, blanks:[], decoys:[13,17] },' },
+    { file:'index', expect:'GAME_GROUPS[2] reps must be an integer',
+      find:"    { unit:['🟢','🟡'],      reps:3 }",
+      replace:"    { unit:['🟢','🟡'],      reps:2.5 }" },
+    { file:'index', expect:'start/jump must be integers',
+      find:'    { start:6, jump:3 },',
+      replace:'    { start:6, jump:3.5 },' },
+    { file:'index', expect:'reps/len must be integers',
+      find:"    { unit:['🔴','🔵','🔵'], reps:3, len:8, tray:['🔴','🔵','🟨'] }",
+      replace:"    { unit:['🔴','🔵','🔵'], reps:3, len:7.5, tray:['🔴','🔵','🟨'] }" },
+    { file:'index', expect:'start/step/hops must be integers',
+      find:'    { start:15, step:2, hops:3 }',
+      replace:'    { start:15, step:2, hops:1.5 }' },
+    /* reps: Infinity —— 檢查本身不可以卡死（要回報，不是掛住）。 */
+    { file:'index', expect:'GAME_GROUPS[0] reps must be an integer',
+      find:"    { unit:['🔺','⬜','⬜'], reps:2 },",
+      replace:"    { unit:['🔺','⬜','⬜'], reps:Infinity }," },
+    /* 往回跳要點 0 次 —— hopsLeft 會從 0 變 -1，永遠過不了關。 */
+    { file:'index', expect:'hops >= 1',
+      find:'    { start:18, step:4, hops:3 },',
+      replace:'    { start:18, step:4, hops:0 },' },
+    /* 點的珠子縮到手機上不到 44px。 */
+    { file:'index', expect:'under 44',
+      find:'      var C = 46, G = 4, x0 = (300 - (seq.length * C + (seq.length - 1) * G)) / 2, y0 = 24;',
+      replace:'      var C = 40, G = 4, x0 = (300 - (seq.length * C + (seq.length - 1) * G)) / 2, y0 = 24;' },
+    /* 往回跳那一關的畫板縮小，格子板放不下 —— 只改 down，hop 不動，檢查要看得出來是哪一關。 */
+    { file:'index', expect:'down: the 0~20 frog grid does not fit its board',
+      find:"      var B = makeBoard(300, 205);\n      var cells = drawGrid(B);",
+      replace:"      var B = makeBoard(300, 150);\n      var cells = drawGrid(B);" },
+    /* 往回跳的青蛙跳到 0 以下（格子板只有 0～20）。 */
+    { file:'index', expect:'GAME_DOWN[0] hops below 0',
+      find:'    { start:20, step:3, hops:3 },',
+      replace:'    { start:5, step:3, hops:3 },' }
   ],
 
   sim: {
@@ -209,12 +253,14 @@ module.exports = {
     optCount: 3,
     dataStart: '  /* ---------- 語言無關的資料 ---------- */',
     dataEnd: '  /* ---------- i18n ---------- */',
-    dataReturn: '{SHAPE_PATTERNS, INC_PATTERNS, DEC_PATTERNS, HOP_SETS, ROUNDS}',
+    dataReturn: '{SHAPE_PATTERNS, INC_PATTERNS, DEC_PATTERNS, HOP_SETS, GAME_BEADS, GAME_GROUPS, GAME_TRAINS, GAME_DOWN, GAME_HOPS}',
     optionValueMax: 70,
     check: function(data, I18N, fail, src){
       /* 小遊戲的選項要洗牌（正解不可以固定在同一個位置）——
-         守的是**畫出來的按鈕**，不是資料陣列裡的順序，實作在 lib/gameshuffle.js。 */
-      gameShuffleProblems(src, 1).forEach(fail);
+         守的是**畫出來的卡片**，不是資料陣列裡的順序，實作在 lib/gameshuffle.js。
+         2026-10-01 起遊戲改成拖拉，選項卡片統一由 renderTray() 畫（串珠子、數字火車兩關共用），
+         所以守的函式是 renderTray，不是 startRound。 */
+      gameShuffleProblems(src, 1, { roundFn:'renderTray' }).forEach(fail);
       /* --- 範例：圖形規律 --- */
       data.SHAPE_PATTERNS.forEach((p, i) => {
         if (p.unit.indexOf(p.decoy) >= 0) fail('SHAPE_PATTERNS[' + i + '] decoy is also inside its own unit');
@@ -242,27 +288,101 @@ module.exports = {
         });
       });
 
-      /* --- 小遊戲 --- */
-      data.ROUNDS.forEach((r, i) => {
-        if (r.choices.indexOf(r.correct) < 0) fail('ROUNDS[' + i + '] correct not among choices');
-        if (new Set(r.choices).size !== r.choices.length) fail('ROUNDS[' + i + '] duplicate choices');
-        if (r.kind === 'shape'){
-          if (r.unit[0] !== r.correct) fail('ROUNDS[' + i + '] shape round: unit[0] != correct');
-          if (r.seq.length % r.unit.length !== 0) fail('ROUNDS[' + i + '] shape round: seq is not a whole number of repeats');
-        } else if (r.kind === 'num'){
-          const last = r.seq[r.seq.length - 1];
-          const want = r.dir === '+' ? last + r.step : last - r.step;
-          if (want !== r.correct) fail('ROUNDS[' + i + '] num round arithmetic: last=' + last + ' dir=' + r.dir + ' step=' + r.step + ' -> ' + want + ' != correct ' + r.correct);
-          for (let k = 0; k < r.seq.length - 1; k++){
-            const d = r.dir === '+' ? r.seq[k+1] - r.seq[k] : r.seq[k] - r.seq[k+1];
-            if (d !== r.step) fail('ROUNDS[' + i + '] num round: seq step mismatch at index ' + k);
-          }
-        } else {
-          fail('ROUNDS[' + i + '] unknown kind ' + r.kind);
-        }
+      /* --- 小遊戲（五關五種玩法，§六之五）—— 每一條都從「畫面上看得到的東西」重新推，不讀課程算好的答案 --- */
+      const order = (src.match(/var GAME_ORDER = \[([^\]]*)\]/) || [])[1];
+      if (order === undefined) fail('cannot find GAME_ORDER in index.html');
+      else {
+        const types = order.split(',').map(x => x.trim().replace(/^'|'$/g, ''));
+        if (types.join() !== 'beads,group,train,down,hop') fail('GAME_ORDER should be beads,group,train,down,hop, got ' + types.join());
+        types.forEach(t => {
+          if (!new RegExp('\\n {4}' + t + ': function\\(d\\)\\{').test(src)) fail('GAME_ORDER ' + t + ' has no RENDER.' + t);
+          ['zh','en'].forEach(L => {
+            if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('gAsks.' + t + ' missing in ' + L);
+            if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('gHints.' + t + ' missing in ' + L);
+          });
+        });
+      }
+      /* 最短週期：要「至少完整看得到兩輪」才算數（和 shapeAt 同一個道理，但不要求最後一輪完整，
+         因為串珠子是從畫面上看得到的前幾格去推後面空著的格子）。 */
+      const isInt = v => Number.isInteger(v);
+      const minPeriod = seq => { for (let p = 1; 2 * p <= seq.length; p++) if (seq.every((x, i) => x === seq[i % p])) return p; return 0; };
+      const repeatSeq = (unit, reps) => { let q = []; for (let r = 0; r < reps; r++) q = q.concat(unit); return q; };
+      data.GAME_BEADS.forEach((g, i) => {
+        /* 先驗整數、不合格就停 —— reps: Infinity 會讓下面的 repeatSeq 永遠跑不完 */
+        if (!isInt(g.reps) || !isInt(g.len) || g.len < 3 || g.reps < 1 || g.reps > 20) return fail('GAME_BEADS[' + i + '] reps/len must be integers, len >= 3, 1 <= reps <= 20');
+        const seq = repeatSeq(g.unit, g.reps).slice(0, g.len);
+        if (seq.length !== g.len) fail('GAME_BEADS[' + i + '] reps × unit is shorter than len');
+        const shown = seq.slice(0, g.len - 2);
+        if (shown.length < 2 * g.unit.length) return fail('GAME_BEADS[' + i + '] shows fewer than two full groups before the blanks — the picture cannot decide the answer');
+        const p = minPeriod(shown);
+        if (p !== g.unit.length) fail('GAME_BEADS[' + i + '] the visible beads repeat every ' + p + ', not every ' + g.unit.length);
+        [g.len - 2, g.len - 1].forEach(k => {
+          const want = shown[k % p];
+          if (want !== seq[k]) fail('GAME_BEADS[' + i + '] blank ' + k + ' should be ' + want + ' from the visible pattern, page expects ' + seq[k]);
+          if (g.tray.indexOf(want) < 0) fail('GAME_BEADS[' + i + '] tray is missing the answer ' + want);
+        });
+        if (new Set(g.tray).size !== g.tray.length) fail('GAME_BEADS[' + i + '] duplicate tray tiles');
+        if (!g.tray.some(t => g.unit.indexOf(t) < 0)) fail('GAME_BEADS[' + i + '] tray has no decoy outside the unit');
+        if (g.len * 40 - 4 > 320) fail('GAME_BEADS[' + i + '] row is wider than the 320 board');
+        g.tray.concat(g.unit).forEach(t => { if (ALL_SHAPES.indexOf(t) < 0) fail('GAME_BEADS[' + i + '] unknown shape ' + t); });
       });
-      /* 「來源資料裡 choices[0] 剛好是正解」不是缺陷 —— 畫按鈕之前會洗牌。
-         有沒有洗牌由 check() 開頭的 gameShuffleProblems() 守。 */
+      /* 「點」的目標在手機上至少 44px：從原始碼讀出畫板寬度 W 和格子 C，
+         以 375px 手機（卡片內寬約 290px，畫板縮放 290 / W）換算實際大小。 */
+      const PHONE_INNER = 290;
+      /* 每一關的函式本體（從「    名字: function(d){」切到它自己的「\n    }」），regex 只在本體裡找，
+         不會跨到別的關卡去。 */
+      const roundBody = name => {
+        const a = src.indexOf('\n    ' + name + ': function(d){');
+        if (a < 0) return '';
+        const b = src.indexOf('\n    }', a + 1);
+        return b < 0 ? '' : src.slice(a, b);
+      };
+      const gm = roundBody('group').match(/makeBoard\((\d+), \d+\);\s*var C = (\d+), G = (\d+)/);
+      const gw = gm ? { W:+gm[1], C:+gm[2], G:+gm[3] } : {};
+      if (!gm) fail('cannot read the group round board layout (makeBoard(W, H); var C = .., G = ..)');
+      else if (gw.C * Math.min(1.5, PHONE_INNER / gw.W) < 44) fail('group beads are ' + (gw.C * PHONE_INNER / gw.W).toFixed(1) + 'px on a 375px phone — under 44');
+      const gridM = src.match(/var GRID_COLS = (\d+), GRID_CELL = (\d+), GRID_PITCH = (\d+);/);
+      if (!gridM) fail('cannot read the frog grid layout (GRID_COLS / GRID_CELL / GRID_PITCH)');
+      else ['down', 'hop'].forEach(name => {
+        const gridB = roundBody(name).match(/makeBoard\((\d+), (\d+)\);/);
+        if (!gridB) return fail('cannot read the ' + name + ' round board size');
+        const [, cols, cellW, pitch] = gridM.map(Number), W = +gridB[1], H = +gridB[2];
+        if (cellW * Math.min(1.5, PHONE_INNER / W) < 44) fail(name + ': frog grid squares are ' + (cellW * PHONE_INNER / W).toFixed(1) + 'px on a 375px phone — under 44');
+        const rows = Math.ceil(21 / cols);
+        if (2 + (cols - 1) * pitch + cellW > W || 5 + (rows - 1) * pitch + cellW > H) fail(name + ': the 0~20 frog grid does not fit its board');
+      });
+      data.GAME_GROUPS.forEach((g, i) => {
+        if (!isInt(g.reps) || g.reps > 20) return fail('GAME_GROUPS[' + i + '] reps must be an integer (<= 20)');
+        const seq = repeatSeq(g.unit, g.reps);
+        if (g.reps < 2) fail('GAME_GROUPS[' + i + '] reps < 2 — nothing repeats');
+        if (minPeriod(seq) !== g.unit.length) fail('GAME_GROUPS[' + i + '] the shortest repeating group is ' + minPeriod(seq) + ' long, not ' + g.unit.length);
+        if (!(gw.W > 0) || seq.length * gw.C + (seq.length - 1) * gw.G > gw.W) fail('GAME_GROUPS[' + i + '] row of ' + seq.length + ' beads does not fit the ' + gw.W + ' board');
+      });
+      data.GAME_TRAINS.forEach((t, i) => {
+        if (!isInt(t.start) || !isInt(t.step) || t.step < 1 || !isInt(t.n)) fail('GAME_TRAINS[' + i + '] start/step/n must be integers with step >= 1 (this round is the increasing pattern)');
+        if (!Array.isArray(t.blanks) || t.blanks.length < 1 || !t.blanks.every(isInt)) fail('GAME_TRAINS[' + i + '] needs at least one integer blank');
+        const nums = []; for (let k = 0; k < t.n; k++) nums.push(t.start + k * t.step);
+        if (nums.some(v => v < RANGE.incNext[0] || v > RANGE.incNext[1])) fail('GAME_TRAINS[' + i + '] numbers leave ' + RANGE.incNext.join('~') + ': ' + nums.join(','));
+        if (t.blanks.some(b => b < 0 || b >= t.n) || new Set(t.blanks).size !== t.blanks.length) fail('GAME_TRAINS[' + i + '] bad blanks ' + t.blanks.join(','));
+        const shown = nums.map((v, k) => t.blanks.indexOf(k) < 0 ? k : -1).filter(k => k >= 0);
+        if (shown.indexOf(0) < 0 || shown.indexOf(1) < 0 || shown.length < 3) fail('GAME_TRAINS[' + i + '] the first two cars (and a third) must be visible to see the step');
+        t.decoys.forEach(v => { if (nums.indexOf(v) >= 0) fail('GAME_TRAINS[' + i + '] decoy equals a number in the train: ' + v); });
+        if (new Set(t.decoys).size !== t.decoys.length) fail('GAME_TRAINS[' + i + '] duplicate decoys');
+        if (t.blanks.length + t.decoys.length > 5) fail('GAME_TRAINS[' + i + '] more than 5 cards do not fit the tray');
+        if (t.n * 52 - 6 > 320) fail('GAME_TRAINS[' + i + '] train is wider than the 320 board');
+      });
+      data.GAME_DOWN.forEach((t, i) => {
+        if (![t.start, t.step, t.hops].every(isInt) || t.hops < 1) fail('GAME_DOWN[' + i + '] start/step/hops must be integers with hops >= 1');
+        if (t.start > 20) fail('GAME_DOWN[' + i + '] starts beyond the 0~20 grid');
+        /* 青蛙先示範一跳，孩子再點 hops 次 —— 總共 hops + 1 跳 */
+        if (t.start - t.step * (t.hops + 1) < 0) fail('GAME_DOWN[' + i + '] hops below 0');
+        if (t.step < 2) fail('GAME_DOWN[' + i + '] step < 2 is just counting back by ones');
+      });
+      data.GAME_HOPS.forEach((h, i) => {
+        if (!isInt(h.start) || !isInt(h.jump)) fail('GAME_HOPS[' + i + '] start/jump must be integers');
+        if (h.start < 0 || h.start + h.jump > 10) fail('GAME_HOPS[' + i + '] leaves the 0~10 hop range of the lesson');
+        if (h.jump < 1) fail('GAME_HOPS[' + i + '] jump < 1');
+      });
     }
   }
 };
