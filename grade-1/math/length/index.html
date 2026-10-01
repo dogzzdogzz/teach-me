@@ -124,12 +124,60 @@
   }
 
   /* game */
-  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:17px;margin-top:14px}
-  .target{font-size:19px;margin-top:14px}
-  .hint{color:var(--muted);font-size:16px;margin-top:6px;min-height:22px}
-  .gamemsg{margin-top:14px;font-size:18px;min-height:30px}
-  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
-  .collectrow{display:flex;gap:6px;font-size:26px;margin-top:6px;min-height:34px}
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;font-size:17px;margin-top:14px}
+  .collectrow{display:flex;justify-content:center;align-items:center;gap:6px;font-size:26px;margin-top:6px;height:40px;line-height:40px}   /* 固定高度：第一顆星星出現時下面的畫板不會往下跳 */
+  .hint{color:var(--muted);font-size:16px;margin-top:6px;min-height:22px;text-align:center}
+  .gamemsg{margin-top:14px;font-size:18px;min-height:28px;text-align:center}
+  .btnrow{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+  /* ---- 小遊戲：對齊、借繩子、排迴紋針、誰量得準、換單位 ---- */
+  .gstage{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0 }
+  .gask{ font-weight:700; text-align:center; font-size:18px }
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動（不然孩子正要點的位置會移走） */
+  .gtrail{ font-size:20px; font-weight:800; color:var(--ink); text-align:center; line-height:1.3; min-height:52px; display:flex; align-items:center; justify-content:center }
+  .gwrap{ position:relative; margin:0 auto }
+  .gboard{ position:absolute; left:0; top:0; transform-origin:0 0; background:var(--bg); border-radius:16px }
+  .gboard > div{ position:absolute }
+  .gpiece{ left:0; top:0; display:flex; align-items:center; justify-content:center;
+    touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; transition:transform .25s ease; z-index:5 }
+  .gpiece.dragging{ transition:none; cursor:grabbing; z-index:50 !important; filter:drop-shadow(0 6px 8px rgba(70,60,40,.25)) }
+  .gpiece.sel{ outline:3px dashed var(--blue); outline-offset:4px; border-radius:12px }
+  .gpiece.locked{ cursor:default; pointer-events:none }
+  .gcard{ background:var(--card); border:3px solid var(--line); border-radius:12px; font-size:26px; font-weight:800; color:var(--ink) }
+  .gcard.placed{ border-color:var(--green); background:var(--green-soft); color:var(--green) }
+  .gslot{ border:3px dashed var(--line); border-radius:10px; background:var(--card) }
+  /* 遊戲裡的數字用西文字型（中文字照樣退回 PingFang） */
+  .gtrail, .gcard, #gMsg{ font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif }
+  /* 第 1 關：三條緞帶（拿取範圍 48 高，畫出來的長條 30 高）、起點線、三條跑道（第二步點跑道選最長的） */
+  .glane{ border-radius:12px; cursor:pointer }
+  .glane.gwin{ background:var(--green-soft) }
+  .gstartline{ background:var(--ink); border-radius:2px; pointer-events:none }
+  .glinelbl{ display:flex; align-items:center; font-size:14px; font-weight:800; color:var(--ink); pointer-events:none }
+  .gbar{ background-position:center; background-size:100% 30px; background-repeat:no-repeat }
+  .gbar-red{ background-image:linear-gradient(#D64545,#D64545) }
+  .gbar-blue{ background-image:linear-gradient(#3B7DD8,#3B7DD8) }
+  .gbar-orange{ background-image:linear-gradient(#E8871E,#E8871E) }
+  /* 第 2 關：兩樣搬不動的東西、地板、繩子（一捲 → 量好後變成一條直直的繩子） */
+  .gpick{ cursor:pointer; border-radius:14px }
+  .gpick.gwin{ background:var(--green-soft) }
+  .gfloor{ background:#B8AF9C; border-radius:2px; pointer-events:none }
+  .gtower{ border-radius:8px 8px 0 0; pointer-events:none }
+  .gtower0{ background:var(--orange) }
+  .gtower1{ background:var(--blue) }
+  .gobjicon{ display:flex; align-items:center; justify-content:center; font-size:26px; pointer-events:none }
+  .gobjname{ display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:var(--ink); pointer-events:none }
+  .grope{ font-size:36px; line-height:1 }   /* 還沒量：一捲繩子 🪢；量好之後拿掉圖示，變成一條直直的繩子 */
+  .grope.cut{ background:linear-gradient(#9A6431,#9A6431) center / 8px 100% no-repeat }
+  /* 第 3～5 關：緞帶、迴紋針、方塊 */
+  .gribbon{ background:#B565A7; border-radius:6px; pointer-events:none }
+  .gtrack{ border:2px dashed var(--line); border-radius:6px; pointer-events:none }
+  /* 迴紋針：外圈＋內圈兩個圓角框（看起來像迴紋針，而不是一顆橢圓） */
+  .gclipdraw{ position:relative; height:18px; border:3px solid #6B7480; border-radius:9px; box-sizing:border-box; pointer-events:none }
+  .gclipdraw::after{ content:''; position:absolute; left:4px; right:7px; top:2px; bottom:2px; border:2px solid #6B7480; border-radius:5px }
+  .gclip.placed .gclipdraw, .gclip.placed .gclipdraw::after{ border-color:var(--green) }
+  /* 方塊之間的分隔線畫在方塊「裡面」（深色內陰影），不用白色邊框 —— 白邊在米色畫板上看起來就是一道縫（codex 第一輪） */
+  .gcell{ box-sizing:border-box; box-shadow:inset -2px 0 0 rgba(43,42,51,.35); pointer-events:none }
+  .gunitlbl{ display:flex; align-items:center; font-size:14px; font-weight:800; color:var(--muted); pointer-events:none }
+  .gcard.glabel{ font-size:14px; line-height:1.15; text-align:center; padding:0 3px; white-space:pre-line }   /* zh 的牌子刻意分兩行：「✓」一行、字一行，不會在字中間折斷 */
 
   footer{
     margin-top:60px;text-align:center;background:var(--orange-soft);
@@ -259,22 +307,18 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">量量看比一比</h2>
-    <p class="lead" data-i18n="s6lead">看清楚圖片，點一下答案！答對就收集一顆星星 🌟</p>
+    <p class="lead" data-i18n="s6lead">五關、五種玩法：對齊再比、借繩子、排迴紋針、找出量得準的、換一種單位。拖一拖、點一點都可以，放錯會彈回來，再試一次就好！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">收集</span> <b id="gScore">0</b> <span data-i18n="gScoreUnit">顆星星</span></span>
       </div>
       <p class="collectrow" id="gCollect"></p>
-      <p class="target" id="gAskLine">
-        <span id="gAsk"></span>
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:8px 16px;margin-left:10px" data-i18n="gHintBtn">💡 提示</button>
-      </p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div id="gPic" class="qpic" aria-hidden="true"></div>
-      <div class="opts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -406,6 +450,48 @@
     container.appendChild(track);
   }
 
+  /* ============ 語言無關的資料：小遊戲的題庫與版面（tools/checks/grade-1-length.js 直接讀這一段） ============
+     每一關從自己的池子隨機抽一題。長度一律是畫板上的 px（畫板 300 寬）。
+     GAME_LINE：三條緞帶 { c:顏色, w:長度, off:一開始左端離起點線多遠 }。一開始左端都不在起點線上（off > LINE_SNAP），
+       而且「右端最遠的那一條」不是「最長的那一條」—— 不對齊就比，一定會選錯（範例 1 的迷思）。
+     GAME_ROPE：兩樣搬不動的東西 { a, ha, b, hb }（站在同一個地板上的高度，差至少 24，看得出來）。
+     GAME_CLIP：緞帶長 n 個迴紋針（每個 CLIP_U 寬）；托盤另有兩個大小不一樣的迴紋針（decoys 是它們的寬度）。
+     GAME_JUDGE：三排量同一條緞帶 len —— 一排是 n 個一樣大的頭尾相接；一排是 gapK 個一樣大的（len / n）中間留縫；
+       一排是大小不一樣的方塊（mix 是每一塊的寬度，加起來剛好 len）頭尾相接。
+     GAME_UNITS：同一條緞帶 len，小方塊 su 寬、大方塊 su × UNIT_BIG 寬，兩種都剛好排滿。 */
+  var LINE_X = 24, LINE_SNAP = 24, LANE_Y = [62, 132, 202], BAR_H = 48;
+  var GAME_LINE = [
+    { bars:[ { c:'red', w:200, off:36 }, { c:'blue', w:150, off:120 }, { c:'orange', w:110, off:80 } ] },
+    { bars:[ { c:'blue', w:220, off:30 }, { c:'orange', w:170, off:100 }, { c:'red', w:130, off:60 } ] },
+    { bars:[ { c:'orange', w:190, off:40 }, { c:'red', w:160, off:110 }, { c:'blue', w:100, off:150 } ] },
+    { bars:[ { c:'red', w:180, off:34 }, { c:'blue', w:140, off:60 }, { c:'orange', w:120, off:140 } ] },
+    { bars:[ { c:'blue', w:210, off:44 }, { c:'red', w:180, off:92 }, { c:'orange', w:90, off:110 } ] }
+  ];
+  var ROPE_FLOOR = 236, ROPE_TX = [65, 235], ROPE_TW = 62, ROPE_SIDE = 58, ROPE_W = 46;
+  var ROPE_ICON = { wardrobe:'🗄️', door:'🚪', bookshelf:'📚', plant:'🪴' };
+  var GAME_ROPE = [
+    { a:'wardrobe', ha:180, b:'door', hb:150 },
+    { a:'bookshelf', ha:130, b:'plant', hb:160 },
+    { a:'door', ha:170, b:'bookshelf', hb:140 },
+    { a:'plant', ha:120, b:'wardrobe', hb:150 },
+    { a:'bookshelf', ha:175, b:'door', hb:145 }
+  ];
+  var CLIP_U = 40, CLIP_RIB_Y = 30, CLIP_TRACK_Y = 82, CLIP_PAD = 20, CLIP_SNAP = 10;
+  var GAME_CLIP = [
+    { n:4, decoys:[64, 24] }, { n:5, decoys:[60, 26] }, { n:6, decoys:[24, 62] }, { n:5, decoys:[66, 22] }, { n:4, decoys:[26, 58] }
+  ];
+  var JUDGE_X = 6, JUDGE_ROW = 80;
+  var GAME_JUDGE = [
+    { len:200, n:5, gapK:4, mix:[70, 30, 60, 20, 20] },
+    { len:180, n:6, gapK:4, mix:[50, 20, 60, 30, 20] },
+    { len:200, n:4, gapK:3, mix:[30, 80, 40, 50] },
+    { len:210, n:6, gapK:4, mix:[60, 25, 70, 35, 20] }
+  ];
+  var UNIT_BIG = 2, UNIT_X = 8;
+  var GAME_UNITS = [
+    { su:40, len:160 }, { su:30, len:180 }, { su:25, len:200 }, { su:35, len:210 }, { su:50, len:200 }
+  ];
+
   /* ============ i18n ============ */
   var I18N = {
     zh: {
@@ -451,7 +537,7 @@
       cAll:'全對！你已經是量長度小高手 🏆',
       cGood:'很棒！錯的那幾題再看一次說明。',
       cTry:'沒關係，回到上面再玩一次範例教學。',
-      redName:'紅色', blueName:'藍色', rowALabel:'甲排', rowBLabel:'乙排',
+      rowALabel:'甲排', rowBLabel:'乙排',
       wardrobe:'衣櫃', table:'桌子', bed:'床', tv:'電視',
       qs: [
         { stem:'兩枝筆的左邊已經對齊了，誰比較長？', pic:{type:'bars', bars:[{w:170,color:'#D64545',offset:0},{w:120,color:'#3B7DD8',offset:0}]},
@@ -493,20 +579,64 @@
           opts:['對，8 比 4 大','不一定，要先看看兩個人用的單位是不是一樣大'], ans:1,
           why:'單位不一樣大的話，數字不能直接比。要先確認兩人用的積木一樣大，數字比較才有意義。' }
       ],
-      s6h2:'量量看比一比', s6lead:'看清楚圖片，點一下答案！答對就收集一顆星星 🌟',
+      s6h2:'量量看比一比', s6lead:'五關、五種玩法：對齊再比、借繩子、排迴紋針、找出量得準的、換一種單位。拖一拖、點一點都可以，放錯會彈回來，再試一次就好！',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'收集', gScoreUnit:'顆星星',
-      gHintBtn:'💡 提示',
-      gAskCompare:'這兩條，誰比較長？',
-      gAskCount:'頭尾相接、沒有縫隙，一共量出幾個長度單位？',
-      gHintCompare1:'提示 1：先看看兩條的左邊有沒有對齊，再比右邊。',
-      gHintCompare2: function(colorName){ return '提示 2：比較長的那一條，顏色是' + colorName + '喔！'; },
-      gHintCount1:'提示 1：從最左邊開始，一個一個數過去，不要漏掉也不要重複數。',
-      gHintCount2: function(n){ return '提示 2：再仔細數一次，答案在 ' + (n - 1) + ' 跟 ' + (n + 1) + ' 之間。'; },
-      gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrect:'太棒了！答對了，+1 顆星星 🌟',
-      gWrong:'再試試看，你可以的！',
-      gWin: function(score){ return '五關全部完成！一共收集了 ' + score + ' 顆星星 🏆 按「重新開始」再玩一次！'; },
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
       gClear:'按「下一關」繼續！',
+      gWin: function(score){ return '五關全破！一共收集了 ' + score + ' 顆星星 🏆 按「重新開始」再玩一次！'; },
+      gAsks:{
+        line:'第 1 關・對齊再比：把三條緞帶的左端都拖到「起點」線上，再點最長的那一條。',
+        rope:'第 2 關・借繩子：兩樣東西搬不動。把繩子拖到其中一樣旁邊量一量，再拖去另一樣旁邊比，最後點比較高的那一樣。',
+        clip:'第 3 關・排迴紋針：用一樣大的迴紋針量緞帶 —— 從最左邊開始，一個接一個排，中間不留縫。',
+        judge:'第 4 關・誰量得準：三排都在量同一條緞帶。把三張牌子各放到對的那一排。',
+        units:'第 5 關・換單位：同一條緞帶，用小方塊和大方塊各量一次。數一數，把數字卡放進每一排右邊的框框。'
+      },
+      gHints:{
+        line:'提示：比長短之前，左端要先對齊。每一條都拖到「起點」線，再看誰的右端伸得最遠。',
+        rope:'提示：繩子先量一樣東西的高度，再拿去跟另一樣比。',
+        clip:'提示：迴紋針要一樣大；從緞帶的最左邊開始，一個緊接著一個，不留縫隙。',
+        judge:'提示：看兩件事：方塊是不是一樣大？中間有沒有留縫隙？',
+        units:'提示：從左邊一個一個數。方塊越大，量出來的數字越小。'
+      },
+      gColor:{ red:'紅色', blue:'藍色', orange:'橘色' },
+      gStart:'起點',
+      gLineNow: function(k){ return '對齊起點：' + k + ' / 3 條'; },
+      gLineEarly:'還沒對齊，沒辦法公平比：先把每一條的左端拖到「起點」線上。',
+      gLineNext:'三條都對齊了！現在看右端，點最長的那一條。',
+      gLineWrong: function(c){ return '左端都對齊了，' + c + '緞帶的右端沒有伸得最遠：還有比它長的。'; },
+      gLineDone: function(c){ return '對！左端對齊之後，' + c + '緞帶的右端伸得最遠，它最長。'; },
+      gLine2a: function(r){ return '還有 ' + r + ' 條的左端沒有放到起點線上。'; },
+      gLine2b: function(c){ return '右端伸得最遠的是' + c + '緞帶。'; },
+      gObj:{ wardrobe:'衣櫃', door:'門', bookshelf:'書架', plant:'盆栽' },
+      gRopeLabel:'繩子',
+      gRopeT0:'繩子還沒量',
+      gRopeT1: function(m){ return '繩子跟' + m + '一樣高'; },
+      gRopeT2: function(m, o, longer){ return '繩子比' + o + (longer ? '長' : '短'); },
+      gRopeFirst:'搬不動、也還沒量，沒辦法比：先把繩子拖到其中一樣旁邊量一量。',
+      gRopeCarry: function(o){ return '繩子量好了，還沒拿去比：把它拖到' + o + '旁邊。'; },
+      gRopeNext: function(m, o){ return '量好了！繩子跟' + m + '一樣高。現在把繩子拖到' + o + '旁邊比一比。'; },
+      gRopeCmp: function(o, longer){ return '繩子比' + o + (longer ? '長' : '短') + '。哪一樣比較高？點它。'; },
+      gRopeWhy: function(m, o, longer, t){ return '繩子跟' + m + '一樣高，又比' + o + (longer ? '長' : '短') + '，所以' + t + '比較高。'; },
+      gRope2a: function(a){ return '把繩子拖到' + a + '旁邊。'; },
+      gClipLabel:'迴紋針',
+      gClipNow: function(k){ return '排了 ' + k + ' 個迴紋針'; },
+      gClipGap:'要緊接在上一個的右邊（第一個從緞帶的最左邊開始）：不留縫，也不疊在一起。',
+      gClipSize: function(big){ return '這個迴紋針比較' + (big ? '大' : '小') + '，量長度要用一樣大的迴紋針。'; },
+      gClipDone: function(n){ return '量好了！緞帶長 ' + n + ' 個迴紋針。'; },
+      gClip2: function(r, first){ return first ? '從緞帶的最左邊開始排，一共要 ' + r + ' 個一樣大的迴紋針。' : '還要再排 ' + r + ' 個一樣大的迴紋針，緊接在上一個的右邊。'; },
+      gJudgeLbl:{ ok:'✓\n量對了', gap:'✗\n有縫隙', mix:'✗\n大小不一' },
+      gJudgeWhy:{ ok:'這一排的方塊一樣大、頭尾相接、沒有縫隙，是量對的。', gap:'這一排中間留了縫隙，量出來不準。', mix:'這一排的方塊大小不一樣，量出來不準。' },
+      gJudgeNow: function(k){ return '放好了 ' + k + ' / 3 張牌子'; },
+      gJudgeDone:'三排都放好了！方塊一樣大、頭尾相接、不留縫，才量得準。',
+      gJudge2: function(i, lbl){ return '第 ' + i + ' 排（從上面數）要放「' + lbl + '」。'; },
+      gUnitSmall:'用小方塊量', gUnitBig:'用大方塊量',
+      gUnitsNow: function(s, b){ return '小方塊 ' + s + ' 個 · 大方塊 ' + b + ' 個'; },
+      gUnitsFewer: function(v){ return '大方塊比較大，量同一條緞帶用的個數比較少：' + v + ' 個是小方塊的數。'; },
+      gUnitsMore: function(v){ return '小方塊比較小，量同一條緞帶要用比較多個：' + v + ' 個是大方塊的數。'; },
+      gUnitsCount: function(v){ return '從左邊一個一個數數看，這一排不是 ' + v + ' 個。'; },
+      gUnitsRow: function(big, n){ return '對！' + (big ? '大方塊' : '小方塊') + '有 ' + n + ' 個。'; },
+      gUnitsDone: function(s, b){ return '同一條緞帶：小方塊 ' + s + ' 個，大方塊 ' + b + ' 個。方塊越大，數字越小！'; },
+      gUnits2: function(s){ return '小方塊從左邊數是 ' + s + ' 個；大方塊比較大，個數會比 ' + s + ' 少。'; },
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
@@ -556,7 +686,7 @@
       cAll:'Perfect score! You’re a length-measuring star 🏆',
       cGood:'Great job! Re-read the explanations for the ones you missed.',
       cTry:'That’s okay — scroll up and try the examples again.',
-      redName:'Red', blueName:'Blue', rowALabel:'Row A', rowBLabel:'Row B',
+      rowALabel:'Row A', rowBLabel:'Row B',
       wardrobe:'wardrobe', table:'table', bed:'bed', tv:'TV',
       qs: [
         { stem:'The left ends of these two pencils are already lined up. Which one is longer?', pic:{type:'bars', bars:[{w:170,color:'#D64545',offset:0},{w:120,color:'#3B7DD8',offset:0}]},
@@ -598,20 +728,64 @@
           opts:['Yes, 8 is bigger than 4','Not necessarily — check whether they used the same-sized unit first'], ans:1,
           why:'Numbers from different-sized units can’t be compared directly. Check that both used the same-sized blocks before comparing the counts.' }
       ],
-      s6h2:'Measure and Compare', s6lead:'Look carefully at the picture and tap an answer! Get it right and collect a star 🌟',
+      s6h2:'Measure and Compare', s6lead:'Five rounds, five ways to play: line up and compare, borrow a rope, lay paperclips, find the fair measurement, switch units. Drag or tap — a wrong move just bounces back, so try again!',
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Collected', gScoreUnit:'stars',
-      gHintBtn:'💡 Hint',
-      gAskCompare:'Which one of these is longer?',
-      gAskCount:'Laid end to end with no gaps — how many length units is this?',
-      gHintCompare1:'Hint 1: check whether the left ends line up before comparing the right ends.',
-      gHintCompare2: function(colorName){ return 'Hint 2: the longer one is the ' + colorName + ' one!'; },
-      gHintCount1:'Hint 1: start from the very left and count one by one, without skipping or double-counting.',
-      gHintCount2: function(n){ return 'Hint 2: count again carefully — the answer is between ' + (n - 1) + ' and ' + (n + 1) + '.'; },
-      gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrect:'Great job! Correct — +1 star 🌟',
-      gWrong:'Try again, you can do it!',
-      gWin: function(score){ return 'All 5 rounds done! You collected ' + score + ' stars 🏆 Press "Restart" to play again!'; },
-      gClear:'Press "Next round" to continue!',
+      gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Restart',
+      gClear:'Press “Next round” to continue!',
+      gWin: function(score){ return 'All 5 rounds cleared! You collected ' + score + ' stars 🏆 Press “Restart” to play again!'; },
+      gAsks:{
+        line:'Round 1 · Line up, then compare: drag each ribbon so its left end is on the Start line, then tap the longest one.',
+        rope:'Round 2 · Borrow a rope: these two things can’t be moved. Drag the rope next to one of them to measure it, drag it next to the other to compare, then tap the taller one.',
+        clip:'Round 3 · Lay paperclips: measure the ribbon with same-sized paperclips — start at the very left and put them end to end, with no gaps.',
+        judge:'Round 4 · Who measured fairly? All three rows measure the same ribbon. Put each of the three signs on the right row.',
+        units:'Round 5 · Switch units: count the small blocks and the big blocks, then put a number card next to each row.'
+      },
+      gHints:{
+        line:'Hint: before comparing, line up the left ends. Drag every ribbon to the Start line, then see whose right end reaches furthest.',
+        rope:'Hint: first measure one thing’s height with the rope, then carry the rope over to the other thing.',
+        clip:'Hint: the paperclips must all be the same size; start at the very left of the ribbon and put each one right against the last, with no gaps.',
+        judge:'Hint: check two things: are the blocks all the same size? Are there gaps in between?',
+        units:'Hint: count from the left, one by one. The bigger the block, the smaller the number.'
+      },
+      gColor:{ red:'red', blue:'blue', orange:'orange' },
+      gStart:'Start',
+      gLineNow: function(k){ return 'Lined up at Start: ' + k + ' / 3'; },
+      gLineEarly:'They aren’t lined up yet, so we can’t compare fairly — drag each ribbon’s left end to the Start line first.',
+      gLineNext:'All three are lined up! Now look at the right ends and tap the longest ribbon.',
+      gLineWrong: function(c){ return 'The left ends are lined up, and the ' + c + ' ribbon’s right end doesn’t reach the furthest — another ribbon is longer.'; },
+      gLineDone: function(c){ return 'Yes! With the left ends lined up, the ' + c + ' ribbon reaches furthest right, so it is the longest.'; },
+      gLine2a: function(r){ return r + (r === 1 ? ' ribbon still needs its left end' : ' ribbons still need their left ends') + ' on the Start line.'; },
+      gLine2b: function(c){ return 'The ' + c + ' ribbon’s right end reaches furthest.'; },
+      gObj:{ wardrobe:'wardrobe', door:'door', bookshelf:'bookshelf', plant:'plant' },
+      gRopeLabel:'rope',
+      gRopeT0:'Rope: not measured yet',
+      gRopeT1: function(m){ return 'Rope = the ' + m + '’s height'; },
+      gRopeT2: function(m, o, longer){ return 'The rope is ' + (longer ? 'longer' : 'shorter') + ' than the ' + o; },
+      gRopeFirst:'They can’t be moved and nothing is measured yet, so we can’t compare — drag the rope next to one of them first.',
+      gRopeCarry: function(o){ return 'The rope is measured but not compared yet — drag it next to the ' + o + '.'; },
+      gRopeNext: function(m, o){ return 'Measured! The rope is as tall as the ' + m + '. Now drag the rope next to the ' + o + ' to compare.'; },
+      gRopeCmp: function(o, longer){ return 'The rope is ' + (longer ? 'longer' : 'shorter') + ' than the ' + o + '. Which one is taller? Tap it.'; },
+      gRopeWhy: function(m, o, longer, t){ return 'The rope is as tall as the ' + m + ' and ' + (longer ? 'longer' : 'shorter') + ' than the ' + o + ', so the ' + t + ' is taller.'; },
+      gRope2a: function(a){ return 'Drag the rope next to the ' + a + '.'; },
+      gClipLabel:'paperclip',
+      gClipNow: function(k){ return k + (k === 1 ? ' paperclip' : ' paperclips') + ' laid'; },
+      gClipGap:'Put it right against the last one (the first one starts at the very left end of the ribbon) — no gaps and no overlapping.',
+      gClipSize: function(big){ return 'This paperclip is ' + (big ? 'bigger' : 'smaller') + ' — measure with paperclips that are all the same size.'; },
+      gClipDone: function(n){ return 'Done! The ribbon is ' + n + ' paperclips long.'; },
+      gClip2: function(r, first){ return first ? 'Start at the very left of the ribbon — you need ' + r + ' same-sized paperclips in all.' : r + (r === 1 ? ' more same-sized paperclip goes' : ' more same-sized paperclips go') + ' right against the last one.'; },
+      gJudgeLbl:{ ok:'✓ Fair', gap:'✗ Gaps', mix:'✗ Mixed sizes' },
+      gJudgeWhy:{ ok:'In this row the blocks are the same size, end to end, with no gaps — it is measured fairly.', gap:'This row has gaps in between, so its count is not accurate.', mix:'In this row the blocks are different sizes, so its count is not accurate.' },
+      gJudgeNow: function(k){ return 'Signs placed: ' + k + ' / 3'; },
+      gJudgeDone:'All three signs are placed! Same-sized blocks, end to end, no gaps — that’s how to measure fairly.',
+      gJudge2: function(i, lbl){ return 'Row ' + i + ' (counting from the top) gets “' + lbl + '”.'; },
+      gUnitSmall:'Measured with small blocks', gUnitBig:'Measured with big blocks',
+      gUnitsNow: function(s, b){ return 'Small blocks: ' + s + ' · Big blocks: ' + b; },
+      gUnitsFewer: function(v){ return 'Big blocks are bigger, so fewer of them cover the same ribbon — ' + v + ' is the small-block count.'; },
+      gUnitsMore: function(v){ return 'Small blocks are smaller, so it takes more of them to cover the same ribbon — ' + v + ' is the big-block count.'; },
+      gUnitsCount: function(v){ return 'Count from the left, one by one — this row is not ' + v + '.'; },
+      gUnitsRow: function(big, n){ return 'Yes! ' + n + (big ? ' big blocks.' : ' small blocks.'); },
+      gUnitsDone: function(s, b){ return 'The same ribbon: ' + s + ' small blocks, ' + b + ' big blocks. The bigger the block, the smaller the number!'; },
+      gUnits2: function(s){ return 'Counting from the left there are ' + s + ' small blocks; big blocks are bigger, so there are fewer than ' + s + ' of them.'; },
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
@@ -916,40 +1090,28 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：量量看比一比 ---------- */
-  var ROUNDS = [
-    { type:'compare', barA:150, barB:100 },
-    { type:'count', outline:160, unit:40 },
-    { type:'compare', barA:90, barB:130 },
-    { type:'count', outline:210, unit:30 },
-    { type:'compare', barA:160, barB:110 }
-  ];
-  var gRound = 0, gScore = 0;
+  /* ---------- 6. 小遊戲：量量看比一比 —— 五關、五種玩法（對齊、借繩子、排迴紋針、誰量得準、換單位） ----------
+     設計原則見 docs/teaching-framework.md §六之五。一年級：每關過關 +1，不扣分、不會失敗；
+     放到空白處不算錯；每個拖拉也可以「先點東西、再點目的地」。
+     第 1、2 關的最後一步是「點一下」選答案（點跑道／點那一樣東西 —— 點一下本身就是動作，題目有寫）。
+     五關對應範例 1～4：先對齊再比（範例 1）、借繩子間接比（範例 2）、一樣大的單位頭尾相接（範例 3）、
+     縫隙與大小不一的量法不準（範例 3）、單位越大數字越小（範例 4）。 */
+  var gRound = 0, gScore = 0, gSolved = false, gCtx = {};
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
   var gCollect = document.getElementById('gCollect');
-  var gAsk = document.getElementById('gAsk');
-  var gPic = document.getElementById('gPic');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
   var hintLevel = 0;
-  var roundSolved = false;
+  var GAME_ORDER = ['line', 'rope', 'clip', 'judge', 'units'];
 
-  function roundAnswerInfo(round){
-    if (round.type === 'compare'){
-      return { correct: round.barA > round.barB ? 'A' : 'B', count: null };
-    }
-    return { correct: null, count: round.outline / round.unit };
-  }
-
-  /* ⚠️ 數數關卡的選項本來是 [count-1, count, count+1, count+2] 照順序畫出來，
-     所以正解**每一關都是第二顆按鈕** —— 孩子玩兩關就會發現「按第二個就對」，
-     那就不是在數方塊了。和其他一年級課程一樣，畫之前先洗牌。
-     （回傳新陣列，不動原本的順序。） */
+  /* ⚠️ 托盤的卡片一定要洗牌再畫：題庫裡的順序是固定的（正解寫在前面），
+     照順序畫的話孩子玩兩次就會記住位置，遊戲就白玩了。
+     比對用的是「值」，所以洗牌不會動到答案。 */
   function shuffle(arr){
     var a = arr.slice();
     for (var j = a.length - 1; j > 0; j--){
@@ -958,73 +1120,172 @@
     }
     return a;
   }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
-  function startRound(){
-    var round = ROUNDS[gRound];
-    var info = roundAnswerInfo(round);
-    roundSolved = false;
-    elRound.textContent = gRound + 1;
-    gMsg.textContent = '';
-    gNext.disabled = true;
-    hintLevel = 0;
-    gHintBtn.disabled = false;
-    gHintBtn.textContent = L().gHintBtn;
-    elHint.textContent = '';
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = round.type === 'compare' ? L().gHintCompare1 : L().gHintCount1;
-    }
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去（two-digit codex 第一輪）。PIECE_PTR 記「按在積木上的 pointerId」，
+     放在畫板外面；任何地方的 pointerup／pointercancel 傳到 window 時清掉（滑鼠的 pointerId 永遠是 1，
+     留著過期的記號會吞掉下一次點目的地）。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);   /* 新的一下開始時先清掉（放開落在頁面外時 window 收不到 pointerup）；按在積木上的會馬上再記一次 */
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  function inside(pt, R){ return pt.x >= R.x && pt.x <= R.x + R.w && pt.y >= R.y && pt.y <= R.y + R.h; }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  function shrink(P, w, h){ P.w = w; P.h = h; P.el.style.width = w + 'px'; P.el.style.height = h + 'px'; }
 
-    if (round.type === 'compare'){
-      gAsk.textContent = L().gAskCompare;
-      renderBarsPic(gPic, [
-        { w: round.barA, color:'#D64545', offset:0 },
-        { w: round.barB, color:'#3B7DD8', offset:0 }
-      ]);
-      clearEl(gAnswers);
-      [ ['A', L().redName], ['B', L().blueName] ].forEach(function(pair){
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'opt'; b.textContent = pair[1];
-        b.addEventListener('click', function(){ onGameAnswer(b, pair[0] === info.correct); });
-        gAnswers.appendChild(b);
-      });
-    } else {
-      gAsk.textContent = L().gAskCount;
-      var blocks = [];
-      for (var i = 0; i < info.count; i++) blocks.push({ w: round.unit, cls:'u-ok' });
-      renderUnitsPic(gPic, { outline: round.outline, justify:'flex-start', blocks: blocks });
-      clearEl(gAnswers);
-      var choices = [info.count - 1, info.count, info.count + 1, info.count + 2];
-      shuffle(choices).forEach(function(v){
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'opt'; b.textContent = v;
-        b.addEventListener('click', function(){ onGameAnswer(b, v === info.count); });
-        gAnswers.appendChild(b);
-      });
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    P.home();
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
     }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (moved) P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的積木一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, pt);
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 「點一下＝選這一個」的區域（第 1 關的跑道、第 2 關的兩樣東西）。
+     ⚠️ 只認「按下去的時候沒有選起來的東西」的那一下：先點積木、再點這裡當目的地時，
+     同一下的 click 會接著送到這裡，不可以再被當成「選答案」（add-sub codex 第一輪的同一個坑）。 */
+  function tapZone(B, z, fn){
+    var arm = false;
+    B.el.addEventListener('pointerdown', function(){ arm = false; }, true);
+    z.addEventListener('pointerdown', function(){ arm = !B.selected; });
+    z.addEventListener('click', function(){
+      if (!arm || gSolved) return;
+      arm = false;
+      fn();
+    });
+  }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad），整個方框都算，角落也收。
+     相鄰格子放寬之後會重疊 —— 先在「所有」格子裡挑最近的一格（不是陣列裡第一個），
+     最近的那格已經放好了就不收；不可以跳過它、改放進旁邊的空格。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var dd = dx * dx + dy * dy;
+      if (dd < bd){ bd = dd; best = b; }
+    });
+    return best && !best.done ? best : null;
   }
 
-  function onGameAnswer(btn, isGood){
-    if (roundSolved) return;
-    if (isGood){
-      roundSolved = true;
-      var all = gAnswers.querySelectorAll('.opt');
-      for (var i = 0; i < all.length; i++) all[i].disabled = true;
-      btn.classList.add('right');
-      gScore += 1;
-      elScore.textContent = gScore;
-      renderCollect();
-      if (gRound === ROUNDS.length - 1){
-        gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore) + '</span>';
-      } else {
-        gMsg.innerHTML = '<span class="yes">' + L().gCorrect + '</span> ' + L().gClear;
-        gNext.disabled = false;
-      }
-    } else {
-      btn.classList.add('wrong');
-      btn.disabled = true;
-      gMsg.innerHTML = '<span class="no">' + L().gWrong + '</span>';
-    }
+  /* 托盤：選項卡片一律洗牌後排好（正解不可以固定在同一個位置）。cols 張一排，多的往下一排。 */
+  function renderTray(B, items, y, mk, step, cols){
+    step = step || 60; cols = cols || items.length;
+    var x0 = (B.W - (Math.min(cols, items.length) - 1) * step) / 2;
+    shuffle(items).forEach(function(it, i){ mk(it, x0 + (i % cols) * step, y + Math.floor(i / cols) * 56); });
   }
 
   function renderCollect(){
@@ -1032,26 +1293,287 @@
     for (var i = 0; i < gScore; i++) stars += '🌟';
     gCollect.textContent = stars;
   }
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    gScore += 1; elScore.textContent = gScore; renderCollect();
+    gHintBtn.disabled = true;
+    if (gRound === GAME_ORDER.length - 1){
+      gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gWin(gScore) + '</span>';
+    } else {
+      gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gClear + '</span>';
+      gNext.disabled = false;
+    }
+  }
+  /* 第二層提示跟著畫面走（還有幾條沒對齊、還要排幾個……）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){ gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+
+  var RENDER = {
+    /* 第 1 關：對齊再比 —— 三條緞帶的左端一開始都不在起點線上，右端最遠的那條不是最長的。
+       先把每一條拖到起點線（左端離線 LINE_SNAP 以內就吸上去），三條都對齊之後，點最長那一條的跑道。
+       還沒對齊就點跑道 → 說「還沒對齊，沒辦法公平比」。 */
+    line: function(d){
+      var set = pick(GAME_LINE), aligned = 0, phase = 1;
+      var line = trailLine(d.gLineNow(0));
+      var B = makeBoard(300, 244);
+      var bars = [];
+      shuffle(set.bars).forEach(function(b, i){
+        var cy = LANE_Y[i];
+        var lane = addZone(B, 0, cy - 34, 300, 68, 'glane');
+        var P = addPiece(B, { w:b.w, h:BAR_H, cx:LINE_X + b.off + b.w / 2, cy:cy, text:'', cls:'gbar gbar-' + b.c, label:d.gColor[b.c], data:{ b:b, laneY:cy } });
+        bars.push(P);
+        tapZone(B, lane, function(){ choose(P, lane); });
+      });
+      addZone(B, LINE_X - 2, 26, 4, 214, 'gstartline');
+      addZone(B, LINE_X - 8, 2, 120, 22, 'glinelbl', '▼ ' + d.gStart);
+      function longest(){ return bars.reduce(function(m, P){ return P.data.b.w > m.data.b.w ? P : m; }); }
+      gCtx.hint2 = function(){ return phase === 1 ? d.gLine2a(bars.length - aligned) : d.gLine2b(d.gColor[longest().data.b.c]); };
+      function align(P, leftX){
+        if (phase !== 1 || Math.abs(leftX - LINE_X) > LINE_SNAP) return false;
+        P.lock(LINE_X + P.w / 2, P.data.laneY); P.el.classList.add('placed');
+        aligned++;
+        line.textContent = d.gLineNow(aligned);
+        gMsg.textContent = '';
+        if (aligned === bars.length){ phase = 2; roundInfo(d.gLineNext); }
+        refreshHint();
+        return true;
+      }
+      function choose(P, lane){
+        if (phase === 1){ roundMiss(d.gLineEarly); return; }
+        var c = d.gColor[P.data.b.c];
+        if (P !== longest()){ roundMiss(d.gLineWrong(c)); return; }
+        lane.classList.add('gwin');
+        roundSolved(d.gLineDone(c));
+      }
+      /* 點的時候看點下去的位置；拖的時候看緞帶的左端 */
+      useTapSelect(B, function(P, pt){ return align(P, pt.x); });
+      B.onDrop = function(P){ return align(P, P.cx - P.w / 2); };
+    },
+
+    /* 第 2 關：借繩子 —— 兩樣東西站在同一個地板上、搬不動。繩子先拖到其中一樣旁邊：變成跟它一樣高；
+       再拖到另一樣旁邊：看得出繩子比它長還是短；最後點比較高的那一樣。哪一樣先量都可以。 */
+    rope: function(d){
+      var g = pick(GAME_ROPE), phase = 1, meas = null;
+      var line = trailLine(d.gRopeT0);
+      var B = makeBoard(300, 300);
+      var objs = [{ k:g.a, h:g.ha }, { k:g.b, h:g.hb }];
+      objs.forEach(function(o, i){
+        o.i = i; o.x = ROPE_TX[i];
+        o.zone = { x:i ? 170 : 0, y:0, w:130, h:300 };
+        o.ropeX = o.x + (i ? -ROPE_SIDE : ROPE_SIDE);
+        var pickZ = addZone(B, o.zone.x, o.zone.y, o.zone.w, o.zone.h, 'gpick');
+        addZone(B, o.x - ROPE_TW / 2, ROPE_FLOOR - o.h, ROPE_TW, o.h, 'gtower gtower' + i);
+        addZone(B, o.x - 40, ROPE_FLOOR + 8, 80, 30, 'gobjicon', ROPE_ICON[o.k]);
+        addZone(B, o.x - 55, ROPE_FLOOR + 38, 110, 24, 'gobjname', d.gObj[o.k]);
+        tapZone(B, pickZ, function(){ choose(o, pickZ); });
+      });
+      addZone(B, 4, ROPE_FLOOR, 292, 4, 'gfloor');   /* 地板畫在兩塊「點這一樣」的區域上面：過關變綠時地板還看得到 */
+      function name(o){ return d.gObj[o.k]; }
+      function other(o){ return objs[1 - o.i]; }
+      function taller(){ return objs[0].h > objs[1].h ? objs[0] : objs[1]; }
+      addPiece(B, { w:56, h:56, cx:150, cy:60, text:'🪢', cls:'grope', label:d.gRopeLabel });
+      gCtx.hint2 = function(){
+        if (phase === 1) return d.gRope2a(name(objs[0]));
+        var o = other(meas);
+        if (phase === 2) return d.gRope2a(name(o));
+        return d.gRopeWhy(name(meas), name(o), meas.h > o.h, name(taller()));
+      };
+      useTapSelect(B, function(P, pt){
+        var o = inside(pt, objs[0].zone) ? objs[0] : inside(pt, objs[1].zone) ? objs[1] : null;
+        if (!o || phase === 3) return false;
+        if (phase === 1){
+          meas = o; phase = 2;
+          shrink(P, ROPE_W, o.h); P.el.textContent = ''; P.el.classList.add('cut');
+          P.homeX = o.ropeX; P.homeY = ROPE_FLOOR - o.h / 2; P.home();
+          line.textContent = d.gRopeT1(name(o));
+          roundInfo(d.gRopeNext(name(o), name(other(o))));
+          refreshHint();
+          return true;
+        }
+        if (o === meas) return false;      /* 拖回量過的那一樣旁邊：靜靜回去 */
+        phase = 3;
+        var longer = meas.h > o.h;
+        P.lock(o.ropeX, ROPE_FLOOR - meas.h / 2);
+        line.textContent = d.gRopeT2(name(meas), name(o), longer);
+        roundInfo(d.gRopeCmp(name(o), longer));
+        refreshHint();
+        return true;
+      });
+      function choose(o, z){
+        if (phase === 1){ roundMiss(d.gRopeFirst); return; }
+        if (phase === 2){ roundMiss(d.gRopeCarry(name(other(meas)))); return; }
+        var cmp = other(meas), why = d.gRopeWhy(name(meas), name(cmp), meas.h > cmp.h, name(taller()));
+        if (o !== taller()){ roundMiss(why); return; }
+        z.classList.add('gwin');
+        roundSolved(why);
+      }
+    },
+
+    /* 第 3 關：排迴紋針 —— 緞帶長 n 個迴紋針。一樣大的迴紋針一個一個放上去：只收「緊接在上一個右邊」的那一格
+       （第一個從緞帶最左邊開始）；放到更右邊會留縫 → 彈回＋說原因；大小不一樣的迴紋針 → 彈回＋說原因。 */
+    clip: function(d){
+      var g = pick(GAME_CLIP), L = g.n * CLIP_U, x0 = (300 - L) / 2, k = 0, i;
+      var line = trailLine(d.gClipNow(0));
+      var B = makeBoard(300, 252);
+      addZone(B, x0, CLIP_RIB_Y, L, 26, 'gribbon');
+      addZone(B, x0, CLIP_TRACK_Y - 15, L, 30, 'gtrack');
+      gCtx.hint2 = function(){ return d.gClip2(g.n - k, k === 0); };
+      var items = [];
+      for (i = 0; i < g.n; i++) items.push(CLIP_U);
+      g.decoys.forEach(function(w){ items.push(w); });
+      renderTray(B, items, 160, function(w, cx, cy){
+        var P = addPiece(B, { w:Math.max(46, w + 6), h:46, cx:cx, cy:cy, text:'', cls:'gclip', label:d.gClipLabel, data:{ w:w } });
+        var draw = document.createElement('div');
+        draw.className = 'gclipdraw';
+        draw.style.width = w + 'px';
+        P.el.appendChild(draw);
+      }, 74, 4);
+      /* 放下去的位置：點的時候看點在哪一格（點一下＝「放這裡」）；拖的時候看迴紋針本身放在哪裡 ——
+         它的中心離「下一個位置」CLIP_SNAP 以內才收，偏右會留縫、偏左會疊在上一個上面（或超出緞帶左端），都彈回＋說原因；
+         不可以從一整格的範圍吸過去，那樣孩子放得歪歪的、留了縫，畫面卻替他排好了（codex 第一輪）。 */
+      function onRibbon(pt){ return !(pt.x < x0 - CLIP_PAD || pt.x > x0 + L + CLIP_PAD || pt.y < CLIP_RIB_Y - CLIP_PAD || pt.y > CLIP_TRACK_Y + 15 + CLIP_PAD); }
+      function put(P, dx){
+        if (P.data.w !== CLIP_U){ roundMiss(d.gClipSize(P.data.w > CLIP_U)); return false; }
+        if (dx <= -CLIP_U) return false;       /* 放在已經排好的迴紋針上（或緞帶左端外面）：靜靜彈回 */
+        if (Math.abs(dx) > CLIP_SNAP){ roundMiss(d.gClipGap); return false; }
+        shrink(P, CLIP_U, 24);
+        P.lock(x0 + (k + 0.5) * CLIP_U, CLIP_TRACK_Y); P.el.classList.add('placed');
+        k++;
+        line.textContent = d.gClipNow(k);
+        gMsg.textContent = '';
+        if (k === g.n) roundSolved(d.gClipDone(g.n));
+        refreshHint();
+        return true;
+      }
+      function next(){ return x0 + (k + 0.5) * CLIP_U; }
+      /* 點的時候：點在緞帶上的第 j 格（只算緞帶本身，左右兩端外面都不算 —— codex 第二輪：最後一格原本連緞帶右端外面 20 都收） */
+      useTapSelect(B, function(P, pt){
+        if (!onRibbon(pt) || pt.x < x0 || pt.x >= x0 + L) return false;
+        var j = Math.floor((pt.x - x0) / CLIP_U);
+        return put(P, j < k ? -CLIP_U : (j - k) * CLIP_U);
+      });
+      B.onDrop = function(P){ return onRibbon({ x:P.cx, y:P.cy }) ? put(P, P.cx - next()) : false; };
+    },
+
+    /* 第 4 關：誰量得準 —— 三排都在量同一條緞帶（上下順序洗牌）：一樣大頭尾相接、中間留縫、大小不一樣。
+       三張牌子「✓ 量對了」「✗ 有縫隙」「✗ 大小不一」各放到對的那一排；放錯 → 彈回＋說那一排是怎麼量的。 */
+    judge: function(d){
+      var g = pick(GAME_JUDGE), U = g.len / g.n, placed = 0;
+      var line = trailLine(d.gJudgeNow(0));
+      var B = makeBoard(300, 300);
+      function cells(t){
+        var out = [], x = 0, i;
+        if (t === 'ok') for (i = 0; i < g.n; i++) out.push({ x:i * U, w:U });
+        else if (t === 'gap'){
+          var gap = (g.len - g.gapK * U) / (g.gapK - 1);
+          for (i = 0; i < g.gapK; i++) out.push({ x:i * (U + gap), w:U });
+        } else g.mix.forEach(function(w){ out.push({ x:x, w:w }); x += w; });
+        return out;
+      }
+      var rows = shuffle(['ok', 'gap', 'mix']).map(function(t, r){
+        var y = 6 + r * JUDGE_ROW;
+        addZone(B, JUDGE_X, y, g.len, 14, 'gribbon');
+        cells(t).forEach(function(c, i){ addZone(B, JUDGE_X + c.x, y + 20, c.w, 32, 'gcell ' + (i % 2 ? 'u-b' : 'u-a')); });
+        addZone(B, 222, y + 6, 74, 54, 'gslot');
+        return { t:t, r:r, cx:150, cy:y + 33, hw:150, hh:JUDGE_ROW / 2 - 1, sx:259, sy:y + 33, done:false };
+      });
+      gCtx.hint2 = function(){
+        var r = rows.filter(function(x){ return !x.done; })[0];
+        return r ? d.gJudge2(r.r + 1, d.gJudgeLbl[r.t].replace('\n', ' ')) : '';
+      };
+      renderTray(B, ['ok', 'gap', 'mix'], 270, function(t, cx, cy){
+        addPiece(B, { w:74, h:54, cx:cx, cy:cy, text:d.gJudgeLbl[t], cls:'gcard glabel', data:{ t:t } });
+      }, 84);
+      useTapSelect(B, function(P, pt){
+        var hit = nearestOpen(rows, pt, 0);
+        if (!hit) return false;
+        if (hit.t !== P.data.t){ roundMiss(d.gJudgeWhy[hit.t]); return false; }
+        hit.done = true; P.lock(hit.sx, hit.sy); P.el.classList.add('placed');
+        placed++;
+        line.textContent = d.gJudgeNow(placed);
+        if (placed === 3) roundSolved(d.gJudgeDone);
+        else roundInfo(d.gJudgeWhy[hit.t]);
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 5 關：換單位 —— 同一條緞帶，上排用小方塊、下排用大方塊（大方塊 = UNIT_BIG 個小方塊那麼長），都剛好排滿。
+       數字卡：兩排的個數，再加兩張多 1 的誘答；放錯排（把小方塊的數放到大方塊那排）→ 說「方塊越大個數越少」。 */
+    units: function(d){
+      var g = pick(GAME_UNITS), bu = g.su * UNIT_BIG, nS = g.len / g.su, nB = g.len / bu, done = 0, i;
+      var line = trailLine(d.gUnitsNow('?', '?'));
+      var B = makeBoard(300, 246);
+      addZone(B, UNIT_X, 10, g.len, 24, 'gribbon');
+      var rows = [{ big:false, u:g.su, n:nS, y:62, lbl:d.gUnitSmall }, { big:true, u:bu, n:nB, y:128, lbl:d.gUnitBig }];
+      rows.forEach(function(r){
+        addZone(B, UNIT_X, r.y - 20, 214, 18, 'gunitlbl', r.lbl);
+        for (i = 0; i < r.n; i++) addZone(B, UNIT_X + i * r.u, r.y, r.u, 36, 'gcell ' + (r.big ? 'u-blue' : 'u-a'));
+        r.slot = { z:addZone(B, 228, r.y - 7, 64, 50, 'gslot'), cx:260, cy:r.y + 18, hw:32, hh:25, done:false, row:r };
+      });
+      gCtx.hint2 = function(){ return d.gUnits2(nS); };
+      function card(v, cx, cy){ addPiece(B, { w:50, h:50, cx:cx, cy:cy, text:String(v), cls:'gcard', data:{ v:v } }); }
+      renderTray(B, [nS, nB, nS + 1, nB + 1], 214, card, 64);
+      useTapSelect(B, function(P, pt){
+        var hit = nearestOpen([rows[0].slot, rows[1].slot], pt, 6);
+        if (!hit) return false;
+        var r = hit.row, o = rows[r.big ? 0 : 1], v = P.data.v;
+        if (v !== r.n){
+          if (v === o.n) roundMiss(r.big ? d.gUnitsFewer(v) : d.gUnitsMore(v));
+          else roundMiss(d.gUnitsCount(v));
+          return false;
+        }
+        hit.done = true; P.lock(hit.cx, hit.cy); P.el.classList.add('placed');
+        done++;
+        line.textContent = d.gUnitsNow(rows[0].slot.done ? nS : '?', rows[1].slot.done ? nB : '?');
+        if (done === 2) roundSolved(d.gUnitsDone(nS, nB));
+        else roundInfo(d.gUnitsRow(r.big, r.n));
+        refreshHint();
+        return true;
+      });
+    }
+  };
+
+  function startRound(){
+    var d = L();
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gCtx = {};
+    elRound.textContent = gRound + 1;
+    gMsg.textContent = '';
+    gNext.disabled = true;
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }
+  }
+
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
+  }
 
   function restartGame(){
     gRound = 0; gScore = 0; elScore.textContent = '0'; renderCollect(); startRound();
   }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
 
   gHintBtn.addEventListener('click', function(){
-    var round = ROUNDS[gRound];
-    var info = roundAnswerInfo(round);
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = round.type === 'compare' ? L().gHintCompare1 : L().gHintCount1;
-    } else {
-      elHint.textContent = round.type === 'compare' ? L().gHintCompare2(round.barA > round.barB ? L().redName : L().blueName) : L().gHintCount2(info.count);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
