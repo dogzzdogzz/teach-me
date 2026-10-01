@@ -311,9 +311,10 @@
     var optsT = shuffle([correctT].concat(wrongs));
     return { opts: optsT.map(fmtTenths), ans: optsT.indexOf(correctT) };
   }
-  /* 湊 3 個相異、非正解的整數錯誤選項（0 以上） */
-  function mixOptsInt(correct, candidates){
+  /* 湊 3 個相異、非正解的整數錯誤選項（0 以上）。avoid：題幹裡的數字，當成已用過 —— 誘答不可以把題幹抄回來（§六之三第 4 點） */
+  function mixOptsInt(correct, candidates, avoid){
     var seen = {}; seen[correct] = true;
+    (avoid || []).forEach(function(v){ seen[v] = true; });
     var wrongs = [];
     (candidates || []).forEach(function(c){
       if (c >= 0 && !seen[c]){ seen[c] = true; wrongs.push(c); }
@@ -369,7 +370,8 @@
         return { w:w, t:t };
       },
       fmt: function(d, lang){
-        var mix = mixOptsInt(d.t, [d.w, (d.t + 1) % 10, Math.max(0, d.t - 1) === d.t ? d.t + 2 : Math.max(0, d.t - 1)]);
+        /* 誘答都是 0～9 的一個數字（十分位只會是一個數字）：近值不夠時往下補，不讓「湊滿三個」補出 10 */
+        var mix = mixOptsInt(d.t, [d.w, (d.t + 1) % 10, (d.t + 9) % 10, (d.t + 2) % 10]);
         return {
           stem: d.w + '.' + d.t + (lang === 'zh' ? ' 裡面，十分位是多少？' : ' — what is the tenths digit?'),
           opts: mix.opts, ans: mix.ans,
@@ -444,24 +446,25 @@
         var wA = pickUnused([1, 2, 3, 4, 5, 6], used);
         var wB = wA - 1;
         var tA = rand(5); // 0..4
-        var tB = tA + 1 + rand(5); // tA+1 .. tA+5, capped later
-        if (tB > 9) tB = 9;
+        /* tA+1 .. tA+4：差 5 的話，「只算十分位」的誘答 0.5 會剛好等於正解 0.5，一題只剩三個選項 */
+        var tB = tA + 1 + rand(4);
         var a = toTenths(wA, tA), b = toTenths(wB, tB);
         return { wA:wA, wB:wB, tA:tA, tB:tB, a:a, b:b, diff: a - b };
       },
       fmt: function(d, lang){
         var noBorrow = (d.wA - d.wB) + '.' + Math.abs(d.tA - d.tB);
         var justTenths = fmtTenths(Math.abs(d.tA - d.tB));
-        var summed = fmtTenths(d.a + d.b);
-        var mix = mixOptsText(fmtTenths(d.diff), [noBorrow, justTenths, summed]);
+        /* 借了位、個位卻忘了少 1（1.3 − 0.7 寫成 1.6）。原本這一格是 a ＋ b，會出現 10.2 這種超出這一課（沒有十位）的數 */
+        var forgotOnes = fmtTenths(d.diff + 10);
+        var mix = mixOptsText(fmtTenths(d.diff), [noBorrow, justTenths, forgotOnes]);
         return {
           stem: lang === 'zh'
             ? '小明有 ' + fmtTenths(d.a) + ' 公尺長的緞帶，剪掉 ' + fmtTenths(d.b) + ' 公尺，還剩多少公尺？'
             : 'Ming has a ' + fmtTenths(d.a) + ' m ribbon and cuts off ' + fmtTenths(d.b) + ' m. How much is left?',
           opts: mix.opts, ans: mix.ans,
           why: lang === 'zh'
-            ? '個位不夠減，向十分位借：把 ' + fmtTenths(d.a) + ' 看成 ' + d.a + ' 個 0.1，' + d.a + ' － ' + d.b + ' ＝ ' + d.diff + ' 個 0.1，答案是 ' + fmtTenths(d.diff) + '。'
-            : 'The ones digit isn’t enough, so borrow: think of ' + fmtTenths(d.a) + ' as ' + d.a + ' tenths. ' + d.a + ' − ' + d.b + ' = ' + d.diff + ' tenths, so the answer is ' + fmtTenths(d.diff) + '.'
+            ? '十分位不夠減（' + d.tA + ' 比 ' + d.tB + ' 小），要向個位借：把 ' + fmtTenths(d.a) + ' 看成 ' + d.a + ' 個 0.1，' + d.a + ' － ' + d.b + ' ＝ ' + d.diff + ' 個 0.1，答案是 ' + fmtTenths(d.diff) + '。'
+            : 'The tenths digit isn’t enough (' + d.tA + ' is smaller than ' + d.tB + '), so borrow from the ones: think of ' + fmtTenths(d.a) + ' as ' + d.a + ' tenths. ' + d.a + ' − ' + d.b + ' = ' + d.diff + ' tenths, so the answer is ' + fmtTenths(d.diff) + '.'
         };
       } },
     { id:'fracDecimalLink', cat:'decimal',
@@ -471,7 +474,8 @@
       },
       fmt: function(d, lang){
         var correct = d.n + '/10';
-        var mix = mixOptsText(correct, ['10/' + d.n, '1/' + d.n, d.n + '/1']);
+        /* n ＝ 1 時「1/n」和「n/1」都是 1/1：補一個近值誘答，不然一題只剩三個選項 */
+        var mix = mixOptsText(correct, ['10/' + d.n, '1/' + d.n, d.n + '/1', (d.n + 1) + '/10']);
         return {
           stem: lang === 'zh' ? '0.' + d.n + ' 是十分之幾？' : 'How many tenths is 0.' + d.n + '?',
           opts: mix.opts, ans: mix.ans,
@@ -572,7 +576,7 @@
         return { divisor:divisor, quotient:quotient, total:total };
       },
       fmt: function(d, lang){
-        var mix = mixOptsInt(d.quotient, [d.quotient - 1, d.quotient + 1, d.total]);
+        var mix = mixOptsInt(d.quotient, [d.quotient - 1, d.quotient + 1, d.quotient + 2, d.quotient + 3, d.quotient + 4], [d.total, d.divisor]);
         return {
           stem: lang === 'zh'
             ? d.total + ' 顆糖平分給 ' + d.divisor + ' 個人，每人分到幾顆？'
@@ -590,7 +594,7 @@
         return { a:a, b:b, product: a * b };
       },
       fmt: function(d, lang){
-        var mix = mixOptsInt(d.product, [d.a * (d.b - 1), d.a * (d.b + 1), d.a + d.b]);
+        var mix = mixOptsInt(d.product, [d.a * (d.b - 1), d.a * (d.b + 1), d.a + d.b], [d.a, d.b]);
         return {
           stem: d.a + ' × ' + d.b + ' = ?',
           opts: mix.opts, ans: mix.ans,
