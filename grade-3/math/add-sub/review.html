@@ -197,24 +197,26 @@
     for (var j = a.length - 1; j > 0; j--){ var k = rand(j + 1); var t = a[j]; a[j] = a[k]; a[k] = t; }
     return a;
   }
-  function makeWrongs(correct, candidates){
+  /* avoid：題幹上印出來的數字先當成已經用過 —— 誘答不可以把題幹的數字抄回來（framework §六之三第 4 點）。
+     0 和負數不當誘答（這一課的答案都是正整數）。 */
+  function makeWrongs(correct, candidates, avoid){
     var out = []; var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
-      c = Math.max(0, c);
       var key = String(c);
-      if (!seen[key]){ seen[key] = true; out.push(c); }
+      if (c >= 1 && !seen[key]){ seen[key] = true; out.push(c); }
     });
     var step = 1;
     while (out.length < 3){
       var lo = correct - step, hi = correct + step;
-      if (lo >= 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
+      if (lo >= 1 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
       if (out.length < 3 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
       step++;
     }
     return out.slice(0, 3);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -289,7 +291,7 @@
           if (steps.some(function(s){ return s.carryOut > 0; })) break;
         }
         var correct = stepsAddToNumber(steps);
-        var m = mixOpts(correct, [ noCarryAdd(a,b), transposeLastTwo(correct), correct + 10 ]);
+        var m = mixOpts(correct, [ noCarryAdd(a,b), transposeLastTwo(correct), correct + 10 ], [a, b]);
         return { a:a, b:b, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -306,7 +308,7 @@
         var b = (1000 - a) + 1 + rand(60);
         var steps = stepAdd(a, b);
         var correct = stepsAddToNumber(steps);
-        var m = mixOpts(correct, [ noCarryAdd(a,b), correct - 1000, transposeLastTwo(correct) ]);
+        var m = mixOpts(correct, [ noCarryAdd(a,b), correct - 1000, transposeLastTwo(correct) ], [a, b]);
         return { a:a, b:b, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -326,7 +328,7 @@
           if (steps.some(function(s){ return s.borrow; })) break;
         }
         var correct = stepsSubToNumber(steps);
-        var m = mixOpts(correct, [ noBorrowAbsSub(a,b), transposeLastTwo(correct), Math.max(0, correct - 10) ]);
+        var m = mixOpts(correct, [ noBorrowAbsSub(a,b), transposeLastTwo(correct), correct - 10 ], [a, b]);
         return { a:a, b:b, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -348,7 +350,7 @@
         var b = hundredsB * 100 + tensB * 10 + onesB;
         var steps = stepSub(a, b);
         var correct = stepsSubToNumber(steps);
-        var m = mixOpts(correct, [ noBorrowAbsSub(a,b), transposeLastTwo(correct), correct + 10 ]);
+        var m = mixOpts(correct, [ noBorrowAbsSub(a,b), transposeLastTwo(correct), correct + 10 ], [a, b]);
         return { a:a, b:b, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -362,33 +364,28 @@
     { id:'estimate', cat:'addsub',
       make: function(){
         var op = pick(['+','-']);
-        var a, b;
-        if (op === '+'){ a = 110 + rand(780); b = 110 + rand(780); }
-        else { a = 300 + rand(600); b = 110 + rand(a - 200); }
-        var correct = (op === '+') ? a + b : a - b;
-        var roundA = Math.round(a / 100) * 100;
-        var roundB = Math.round(b / 100) * 100;
-        var estimate = (op === '+') ? roundA + roundB : roundA - roundB;
-        var wrongRoundA = roundA + (pick([-100,100]));
-        var wrongRoundB = roundB + (pick([-100,100]));
-        var cand1 = (op === '+') ? wrongRoundA + roundB : Math.max(0, wrongRoundA - roundB);
-        var cand2 = (op === '+') ? roundA + wrongRoundB : Math.max(0, roundA - wrongRoundB);
-        var cand3 = Math.max(0, estimate - 100);
-        var cand4 = estimate + 100;
-        /* 誘答不能等於精確答案——除非精確答案剛好就是估計值本身，那樣兩者本來就相等，不算衝突 */
-        var candidates = [cand1, cand2, cand3, cand4].filter(function(v){ return v !== correct || v === estimate; });
-        var m = mixOpts(estimate, candidates);
-        var opts = m.opts;
-        /* 保險：估計值 ≠ 精確答案時，任何誘答萬一意外等於精確答案，換成安全的填補值，絕不刪掉正解本身 */
-        if (estimate !== correct){
-          for (var oi = 0; oi < opts.length; oi++){
-            if (opts[oi] === correct){
-              var replacement = estimate + 300 + oi * 50;
-              while (opts.indexOf(replacement) >= 0) replacement += 50;
-              opts[oi] = replacement;
-            }
-          }
+        var a, b, roundA, roundB, estimate;
+        function fair(){ return a % 100 !== 50 && b % 100 !== 50 && a % 100 !== 0 && b % 100 !== 0 && estimate >= 100; }
+        /* 個位十位剛好是 50（150、250…）離兩個整百一樣近，「接近哪一個」說不清楚 —— 不出；
+           本來就是整百（300）的也不出（不用估，而且它會和整百的誘答撞在一起）；減法的估計至少 100 */
+        for (var tries = 0; tries < 200; tries++){
+          if (op === '+'){ a = 110 + rand(780); b = 110 + rand(780); }
+          else { a = 300 + rand(600); b = 110 + rand(a - 200); }
+          roundA = Math.round(a / 100) * 100;
+          roundB = Math.round(b / 100) * 100;
+          estimate = (op === '+') ? roundA + roundB : roundA - roundB;
+          if (fair()) break;
         }
+        /* 200 次都抽不到（實際上不會發生）也不可以端出不合格的題目：換成一題固定的 */
+        if (!fair()){
+          op = '+'; a = 486; b = 329; roundA = 500; roundB = 300; estimate = 800;
+        }
+        var correct = (op === '+') ? a + b : a - b;
+        /* 誘答都是「整百」（把其中一個數估錯一個整百、或估錯兩個）：估計題的選項要長得像估計，不可以是 799 這種數。
+           不出 50 的平手時，精確答案離估計一定不到 100，所以這些整百都不會剛好是精確答案。 */
+        var candidates = [estimate - 100, estimate + 100, estimate - 200, estimate + 200, estimate + 300].filter(function(v){ return v > 0; });
+        var m = mixOpts(estimate, candidates, [a, b]);
+        var opts = m.opts;
         var ans = opts.indexOf(estimate);
         return { a:a, b:b, op:op, correct:correct, estimate:estimate, opts:opts, ans:ans };
       },
@@ -411,7 +408,7 @@
           if (steps.some(function(s){ return s.borrow; })) break;
         }
         var c = stepsSubToNumber(steps);
-        var m = mixOpts(a, [ stepsAddToNumber(stepAdd(noCarryAdd(c,b), 0)), a + 10, a - 10 ]);
+        var m = mixOpts(a, [ noCarryAdd(c, b), a + 10, a - 10 ], [b, c]);
         return { a:a, b:b, c:c, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -427,12 +424,16 @@
       } },
     { id:'multiply', cat:'multiply',
       make: function(){
-        var a = 11 + rand(88);
-        var d0 = 2 + rand(8);
+        var a, d0;
+        /* 解釋說「別忘了進位加到十位」：個位乘出來一定要滿十 */
+        d0 = 2 + rand(8);
+        var minOnes = Math.ceil(10 / d0);                     /* 個位乘 d0 至少 10 */
+        a = (1 + rand(9)) * 10 + minOnes + rand(10 - minOnes);
+        if (a === 99) a = 98;                                  /* 和改版前一樣：11 ～ 98 */
         var correct = a * d0;
         var onesA = a % 10, tensA = Math.floor(a / 10);
         var noCarry = ((tensA * d0) % 10) * 10 + ((onesA * d0) % 10);
-        var m = mixOpts(correct, [ noCarry, correct + d0, correct - d0 ]);
+        var m = mixOpts(correct, [ noCarry, correct + d0, correct - d0 ], [a, d0]);
         return { a:a, d:d0, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -445,9 +446,10 @@
       } },
     { id:'divide', cat:'divide',
       make: function(){
+        /* 三年級的除法課只教二位數 ÷ 一位數：被除數不超過 99（商是二位數） */
         var k = 2 + rand(8);
-        var q = 10 + rand(21);
-        var r = rand(k);
+        var q = 10 + rand(Math.floor(99 / k) - 9);
+        var r = rand(Math.min(k, 99 - k * q + 1));
         var dividend = q * k + r;
         var correctStr = lang_pair(q, r);
         var wrong1 = lang_pair(q + 1, r);
@@ -470,17 +472,18 @@
       } },
     { id:'perimeter', cat:'perimeter',
       make: function(){
-        var L = 10 + rand(90), W = 10 + rand(90);
+        var L, W;
+        W = 10 + rand(89); L = W + 1 + rand(99 - W);   /* 長比寬長（一樣長就是正方形了） */
         var correct = 2 * (L + W);
-        var m = mixOpts(correct, [ L + W, 2*L + W, L + 2*W ]);
+        var m = mixOpts(correct, [ L + W, 2*L + W, L + 2*W ], [L, W]);
         return { L:L, W:W, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
         return {
           stem: lang === 'zh' ? '長方形的長是 ' + d.L + ' 公分、寬是 ' + d.W + ' 公分，周長是多少公分？' : 'A rectangle is ' + d.L + ' cm long and ' + d.W + ' cm wide. What is its perimeter?',
           opts: d.opts.map(String), ans: d.ans,
-          why: lang === 'zh' ? '周長 ＝ (長 ＋ 寬) × 2 ＝ (' + d.L + ' + ' + d.W + ') × 2 ＝ ' + d.correct + ' 公分。'
-                              : 'Perimeter = (length + width) × 2 = (' + d.L + ' + ' + d.W + ') × 2 = ' + d.correct + ' cm.'
+          why: lang === 'zh' ? '周長是長加寬、再乘 2：(' + d.L + ' + ' + d.W + ') × 2 ＝ ' + d.correct + ' 公分。'
+                              : 'The perimeter is length plus width, times 2: (' + d.L + ' + ' + d.W + ') × 2 = ' + d.correct + ' cm.'
         };
       } }
   ];
