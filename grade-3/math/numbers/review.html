@@ -187,9 +187,11 @@
     }
     return a;
   }
-  function makeWrongsInt(correct, candidates){
+  /* avoid：題幹上印出來的數字先當成已用過，候選和保底都不會把它抄回來（framework §六之三第 4 點） */
+  function makeWrongsInt(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(a){ seen[String(a)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
       if (c !== correct && c >= 0 && !seen[key]){ seen[key] = true; out.push(c); }
@@ -203,8 +205,8 @@
     }
     return out.slice(0, 3);
   }
-  function mixOptsInt(correct, candidates){
-    var wrongs = makeWrongsInt(correct, candidates);
+  function mixOptsInt(correct, candidates, avoid){
+    var wrongs = makeWrongsInt(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -241,50 +243,27 @@
     if (idx < 0) idx = 1;
     return s.slice(0, idx + 1) + '0' + s.slice(idx + 1);
   }
+  /* 念法的規則只說這個數真的用得到的那幾條：中間有空的樓層（後面還有數字）才說「零」，末尾是 0 才說「末尾不念」 */
+  function numeralRule(n, lang){
+    var s = String(n), mid = /0+[1-9]/.test(s.slice(1)), tail = /0$/.test(s), out = [];
+    if (mid) out.push(lang === 'zh' ? '中間空的樓層（連著幾層都一樣）只念一次「零」' : 'empty floors in the middle are read as one "zero" (Chinese 零), however many there are');
+    if (tail) out.push(lang === 'zh' ? '末尾的 0 不念出來' : 'a 0 at the end is not read out');
+    var t = out.join(lang === 'zh' ? '；' : '; ') + (lang === 'zh' ? '。' : '.');
+    return lang === 'zh' ? t : t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  /* 0 放錯位置的幾種寫法，都留在四位數（一萬以內）：少一個 0、多一個 0、0 跑到最後、最後兩位對調。
+     多一個 0 會變成五位數（3006 → 30006），超出這一課的範圍，也念不成四位數 —— 不放。 */
+  function zeroSlips(str){
+    var d = dropOneZero(str);
+    return [d, addOneZero(str), d === null ? null : d + '0', swapLastTwo(str)]
+      .filter(function(x){ return x !== null && x.length >= 3 && x.length <= 4 && x !== str; }).map(Number);
+  }
   function swapLastTwo(s){
     if (s.length < 2) return s;
     var arr = s.split('');
     var tmp = arr[arr.length - 1]; arr[arr.length - 1] = arr[arr.length - 2]; arr[arr.length - 2] = tmp;
     return arr.join('');
   }
-  function svgNS(tag, attrs){
-    var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-    for (var k in attrs) el.setAttribute(k, attrs[k]);
-    return el;
-  }
-  function numberLineSVG(v){
-    var svg = svgNS('svg', { viewBox:'0 0 640 70', xmlns:'http://www.w3.org/2000/svg' });
-    var x0 = 20, x1 = 620, y = 35;
-    svg.appendChild(svgNS('line', { x1:x0, y1:y, x2:x1, y2:y, stroke:'#2B2A33', 'stroke-width':2 }));
-    for (var t = 0; t <= 10000; t += 2000){
-      var x = x0 + (x1 - x0) * (t / 10000);
-      svg.appendChild(svgNS('line', { x1:x, y1:y - 8, x2:x, y2:y + 8, stroke:'#2B2A33', 'stroke-width':2 }));
-      var lbl = svgNS('text', { x:x, y:y + 24, 'text-anchor':'middle', 'font-size':11, fill:'#6B6875' });
-      lbl.textContent = t;
-      svg.appendChild(lbl);
-    }
-    var mx = x0 + (x1 - x0) * (v / 10000);
-    svg.appendChild(svgNS('polygon', { points:(mx - 7) + ',' + (y - 22) + ' ' + (mx + 7) + ',' + (y - 22) + ' ' + mx + ',' + (y - 9), fill:'#E8871E' }));
-    var mlbl = svgNS('text', { x:mx, y:y - 26, 'text-anchor':'middle', 'font-size':13, 'font-weight':700, fill:'#E8871E' });
-    mlbl.textContent = v;
-    svg.appendChild(mlbl);
-    return svg;
-  }
-  function rectPicSVG(l, w){
-    var maxSide = 220, scale = maxSide / Math.max(l, w, 1);
-    var rw = Math.max(30, l * scale * 0.5), rh = Math.max(30, w * scale * 0.5);
-    var pad = 30;
-    var svg = svgNS('svg', { viewBox:'0 0 ' + (rw + pad * 2) + ' ' + (rh + pad * 2), xmlns:'http://www.w3.org/2000/svg' });
-    svg.appendChild(svgNS('rect', { x:pad, y:pad, width:rw, height:rh, fill:'#FDF0E0', stroke:'#2B2A33', 'stroke-width':2 }));
-    var topLbl = svgNS('text', { x:pad + rw / 2, y:pad - 8, 'text-anchor':'middle', 'font-size':14, 'font-weight':700, fill:'#2B2A33' });
-    topLbl.textContent = l;
-    svg.appendChild(topLbl);
-    var sideLbl = svgNS('text', { x:pad - 8, y:pad + rh / 2, 'text-anchor':'end', 'font-size':14, 'font-weight':700, fill:'#2B2A33' });
-    sideLbl.textContent = w;
-    svg.appendChild(sideLbl);
-    return svg;
-  }
-
   /* ---------- 12 個題目產生器：9 個位值本課 ＋ 3 個交錯（乘法／除法／周長） ---------- */
   var GENS = [
     { id:'digitAtPlace', cat:'numbers', make: function(used){
@@ -321,7 +300,7 @@
       },
       fmt: function(d, lang){
         return {
-          stem: lang === 'zh' ? d.n + ' 里面有幾個「百」？' : 'How many "hundreds" are in ' + d.n + '?',
+          stem: lang === 'zh' ? d.n + ' 裡面有幾個「百」？' : 'How many "hundreds" are in ' + d.n + '?',
           opts: d.opts.map(String), ans: d.ans,
           why: lang === 'zh'
             ? d.n + ' ÷ 100 ＝ ' + d.correct + '（餘 ' + (d.n % 100) + '），所以是 ' + d.correct + ' 個百，不是只看百位數字。'
@@ -336,7 +315,7 @@
       },
       fmt: function(d, lang){
         return {
-          stem: lang === 'zh' ? d.n + ' 里面有幾個「十」？' : 'How many "tens" are in ' + d.n + '?',
+          stem: lang === 'zh' ? d.n + ' 裡面有幾個「十」？' : 'How many "tens" are in ' + d.n + '?',
           opts: d.opts.map(String), ans: d.ans,
           why: lang === 'zh'
             ? d.n + ' ÷ 10 ＝ ' + d.correct + '（餘 ' + (d.n % 10) + '），所以是 ' + d.correct + ' 個十，不是只看十位數字。'
@@ -348,7 +327,7 @@
         var correct = qian * 1000 + bai * 100 + shi * 10 + ge;
         var swap1 = qian * 1000 + shi * 100 + bai * 10 + ge;
         var dropTerm = qian * 1000 + bai * 100 + ge;
-        var plus10 = correct + 10;
+        var plus10 = correct + 10 <= 9999 ? correct + 10 : correct - 10;   /* 不超出一萬以內 */
         var m = mixOptsInt(correct, [swap1, dropTerm, plus10]);
         return { qian:qian, bai:bai, shi:shi, ge:ge, correct:correct, opts:m.opts, ans:m.ans };
       },
@@ -367,8 +346,7 @@
         var pool = [3006,3056,2070,5008,9020,6304,4010,3400,2007,3060,3005,8003];
         var n = pickUnused(pool, used);
         var str = String(n);
-        var candidates = [dropOneZero(str), addOneZero(str), swapLastTwo(str)]
-          .filter(function(x){ return x !== null; }).map(Number);
+        var candidates = zeroSlips(str);
         var m = mixOptsInt(n, candidates);
         return { n:n, words: toChineseNumber(n), opts:m.opts, ans:m.ans };
       },
@@ -377,8 +355,8 @@
           stem: lang === 'zh' ? '「' + d.words + '」寫成數字是多少？' : 'How do you write "' + d.words + '" (a Chinese number reading) as digits?',
           opts: d.opts.map(String), ans: d.ans,
           why: lang === 'zh'
-            ? d.words + ' 就是 ' + d.n + '，中間空的樓層要記得用 0 佔位，位置不能錯放。'
-            : d.words + ' is ' + d.n + ' — an empty floor in the middle must be held with a 0 in the right place.'
+            ? d.words + ' 就是 ' + d.n + '，空的樓層（中間的、末尾的都一樣）要記得用 0 佔位，位置不能錯放。'
+            : d.words + ' is ' + d.n + ' — every empty floor (in the middle or at the end) must be held with a 0 in the right place.'
         };
       } },
     { id:'numeralToChinese', cat:'numbers', make: function(used){
@@ -386,8 +364,7 @@
         var n = pickUnused(pool, used);
         var correct = toChineseNumber(n);
         var str = String(n);
-        var wrongNums = [dropOneZero(str), addOneZero(str), swapLastTwo(str)]
-          .filter(function(x){ return x !== null; }).map(Number).filter(function(x){ return x !== n; });
+        var wrongNums = zeroSlips(str).filter(function(x){ return x !== n; });
         var wrongWords = [];
         var seen = {}; seen[correct] = true;
         wrongNums.forEach(function(x){
@@ -410,8 +387,8 @@
           stem: lang === 'zh' ? d.n + ' 應該怎麼念？' : 'How should ' + d.n + ' be read out loud (in Chinese)?',
           opts: d.opts, ans: d.ans,
           why: lang === 'zh'
-            ? d.n + ' 念作「' + d.correct + '」——中間空的樓層只念一次「零」。'
-            : d.n + ' is read as "' + d.correct + '" — an empty floor in the middle is read as "zero" only once.'
+            ? d.n + ' 念作 <b>' + d.correct + '</b>。' + numeralRule(d.n, 'zh')
+            : d.n + ' is read as <b>' + d.correct + '</b>. ' + numeralRule(d.n, 'en')
         };
       } },
     { id:'compareTwo', cat:'numbers', make: function(used){
@@ -429,6 +406,8 @@
           var seenSet = new Set(vals);
           var guard = 0;
           while (seenSet.size < 4 && guard < 20){ vals[rand(4)] = base + rand(999); seenSet = new Set(vals); guard++; }
+          /* 還是撞號就一個一個往後挪，一定會不一樣（留在 base ～ base + 999） */
+          for (var vi = 1; vi < 4; vi++) while (vals.indexOf(vals[vi]) < vi) vals[vi] = base + (vals[vi] - base + 37) % 1000;
           nums = vals;
         }
         var correct = Math.max.apply(null, nums);
@@ -457,7 +436,7 @@
       fmt: function(d, lang){
         return {
           stem: lang === 'zh' ? '箭頭指的位置大約是多少？' : 'About what value is the arrow pointing to?',
-          opts: d.opts.map(String), ans: d.ans, pic: numberLineSVG(d.v),
+          opts: d.opts.map(String), ans: d.ans, pic: { kind:'line', v:d.v },
           why: lang === 'zh'
             ? '箭頭指的數字是 ' + d.v + '，最靠近的整千是 ' + d.correct + '。'
             : 'The arrow points to ' + d.v + ', and the closest round thousand is ' + d.correct + '.'
@@ -499,7 +478,8 @@
         var quotient = 3 + rand(10);
         var remainder = 1 + rand(divisor - 1);
         var dividend = quotient * divisor + remainder;
-        var m = mixOptsInt(remainder, [divisor - remainder, remainder + 1, quotient]);
+        /* 商是刻意的迷思誘答（把商和餘數搞混）；除數本身不放（餘數 + 1 剛好等於除數時，會把題幹的數字抄回來） */
+        var m = mixOptsInt(remainder, [divisor - remainder, remainder + 1, quotient], [divisor, dividend]);
         return { dividend:dividend, divisor:divisor, quotient:quotient, remainder:remainder, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -512,8 +492,10 @@
         };
       } },
     { id:'perimeterCalc', cat:'perimeter', make: function(used){
-        var l = 5 + rand(35), w = 3 + rand(25);
-        if (l === w) w = w + 1;
+        /* 長一定比寬長（「長 15、寬 23」會讓孩子懷疑自己看錯） */
+        var s1 = 5 + rand(35), s2 = 3 + rand(25);
+        if (s1 === s2) s1++;
+        var l = Math.max(s1, s2), w = Math.min(s1, s2);
         var correct = 2 * (l + w);
         var area = l * w;
         var m = mixOptsInt(correct, [area, l + w, correct + 2]);
@@ -522,7 +504,7 @@
       fmt: function(d, lang){
         return {
           stem: lang === 'zh' ? '長方形長 ' + d.l + '、寬 ' + d.w + '，周長是多少？' : 'A rectangle is ' + d.l + ' long and ' + d.w + ' wide — what is its perimeter?',
-          opts: d.opts.map(String), ans: d.ans, pic: rectPicSVG(d.l, d.w),
+          opts: d.opts.map(String), ans: d.ans, pic: { kind:'rect', l:d.l, w:d.w },
           why: lang === 'zh'
             ? '周長 ＝ （長 + 寬）× 2 ＝ （' + d.l + ' + ' + d.w + '）× 2 ＝ ' + d.correct + '。'
             : 'Perimeter = (length + width) × 2 = (' + d.l + ' + ' + d.w + ') × 2 = ' + d.correct + '.'
@@ -537,6 +519,45 @@
     return shuffle(GENS.slice()).map(function(g){
       return { gen: g, data: g.make(usedByGen[g.id]) };
     });
+  }
+
+  /* ---------- 題目的圖：fmt() 只回傳資料（{kind, …}），在這裡才畫成 SVG —— 上面那一段要能在 Node 裡跑（tools/simgen.js） ---------- */
+  function svgNS(tag, attrs){
+    var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function numberLineSVG(v){
+    var svg = svgNS('svg', { viewBox:'0 0 640 70', xmlns:'http://www.w3.org/2000/svg' });
+    var x0 = 20, x1 = 620, y = 35;
+    svg.appendChild(svgNS('line', { x1:x0, y1:y, x2:x1, y2:y, stroke:'#2B2A33', 'stroke-width':2 }));
+    for (var t = 0; t <= 10000; t += 2000){
+      var x = x0 + (x1 - x0) * (t / 10000);
+      svg.appendChild(svgNS('line', { x1:x, y1:y - 8, x2:x, y2:y + 8, stroke:'#2B2A33', 'stroke-width':2 }));
+      var lbl = svgNS('text', { x:x, y:y + 24, 'text-anchor':'middle', 'font-size':11, fill:'#6B6875' });
+      lbl.textContent = t;
+      svg.appendChild(lbl);
+    }
+    var mx = x0 + (x1 - x0) * (v / 10000);
+    svg.appendChild(svgNS('polygon', { points:(mx - 7) + ',' + (y - 22) + ' ' + (mx + 7) + ',' + (y - 22) + ' ' + mx + ',' + (y - 9), fill:'#E8871E' }));
+    var mlbl = svgNS('text', { x:mx, y:y - 26, 'text-anchor':'middle', 'font-size':13, 'font-weight':700, fill:'#E8871E' });
+    mlbl.textContent = v;
+    svg.appendChild(mlbl);
+    return svg;
+  }
+  function rectPicSVG(l, w){
+    var maxSide = 220, scale = maxSide / Math.max(l, w, 1);
+    var rw = Math.max(30, l * scale * 0.5), rh = Math.max(30, w * scale * 0.5);
+    var pad = 30;
+    var svg = svgNS('svg', { viewBox:'0 0 ' + (rw + pad * 2) + ' ' + (rh + pad * 2), xmlns:'http://www.w3.org/2000/svg' });
+    svg.appendChild(svgNS('rect', { x:pad, y:pad, width:rw, height:rh, fill:'#FDF0E0', stroke:'#2B2A33', 'stroke-width':2 }));
+    var topLbl = svgNS('text', { x:pad + rw / 2, y:pad - 8, 'text-anchor':'middle', 'font-size':14, 'font-weight':700, fill:'#2B2A33' });
+    topLbl.textContent = l;
+    svg.appendChild(topLbl);
+    var sideLbl = svgNS('text', { x:pad - 8, y:pad + rh / 2, 'text-anchor':'end', 'font-size':14, 'font-weight':700, fill:'#2B2A33' });
+    sideLbl.textContent = w;
+    svg.appendChild(sideLbl);
+    return svg;
   }
 
   /* ---------- 渲染 ---------- */
@@ -595,7 +616,7 @@
       if (q.pic){
         var picWrap = document.createElement('div');
         picWrap.className = 'qpic';
-        picWrap.appendChild(q.pic);
+        picWrap.appendChild(q.pic.kind === 'line' ? numberLineSVG(q.pic.v) : rectPicSVG(q.pic.l, q.pic.w));
         box.appendChild(picWrap);
       }
       var opts = document.createElement('div');
