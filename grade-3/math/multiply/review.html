@@ -186,10 +186,12 @@
     }
     return a;
   }
-  /* 保證 3 個相異、且不等於正解、且都 > 0 的錯誤選項 */
-  function makeWrongs(correct, candidates){
+  /* 保證 3 個相異、且不等於正解、且都 > 0 的錯誤選項。
+     avoid：題幹裡已經印出來的數字先當成用過（誘答不可以把題幹的數字抄回來，framework §六之三第 4 點）。 */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
       if (c > 0 && !seen[key]){ seen[key] = true; out.push(c); }
@@ -203,8 +205,8 @@
     }
     return out.slice(0, 3);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -353,7 +355,7 @@
         var d = pickUnused([2,3,4,5,6,7,8,9], used);
         var missing = randBetween(3, 12);
         var p = d * missing;
-        var m = mixOpts(missing, [missing + 1, missing - 1, p]);
+        var m = mixOpts(missing, [p, missing + 1, missing - 1], [d]);   /* p 是刻意的迷思（把乘積當答案）；d 印在題幹上，不當誘答 */
         return { d:d, missing:missing, p:p, opts:m.opts, ans:m.ans };
       },
       fmt: function(x, lang){
