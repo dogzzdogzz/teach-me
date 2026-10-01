@@ -141,11 +141,39 @@
     display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
     border-radius:14px;padding:12px 20px;font-size:16px;
   }
-  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
-  .target{font-size:20px;margin-top:14px;text-align:center}
-  .target b{color:var(--orange);font-size:26px}
-  .hint{color:var(--muted);font-size:15px;margin-top:8px;text-align:center;min-height:22px}
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;font-size:16px;margin-top:14px}
+  .collectrow{display:flex;justify-content:center;align-items:center;gap:6px;font-size:26px;margin-top:6px;height:40px;line-height:40px}   /* 固定高度：第一顆星星出現時下面的畫板不會往下跳 */
+  .hint{color:var(--muted);font-size:15px;margin-top:6px;text-align:center;min-height:22px}
   .gamemsg{margin-top:14px;font-size:18px;min-height:28px;text-align:center}
+  /* ---- 小遊戲：存錢筒、換錢、從大的先數、掛價錢牌、找錢 ---- */
+  .gstage{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0 }
+  .gask{ font-weight:700; text-align:center; font-size:18px }
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{ font-size:20px; font-weight:800; color:var(--ink); text-align:center; line-height:1.3; min-height:52px; display:flex; align-items:center; justify-content:center }
+  .gwrap{ position:relative; margin:0 auto }
+  .gboard{ position:absolute; left:0; top:0; transform-origin:0 0; background:var(--bg); border-radius:16px }
+  .gboard > div{ position:absolute }
+  .gpiece{ left:0; top:0; display:flex; align-items:center; justify-content:center;
+    touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; transition:transform .25s ease; z-index:5 }
+  .gpiece.dragging{ transition:none; cursor:grabbing; z-index:50 !important; filter:drop-shadow(0 6px 8px rgba(70,60,40,.25)) }
+  .gpiece.sel{ outline:3px dashed var(--blue); outline-offset:2px; border-radius:50% }
+  .gpiece.gcard.sel{ border-radius:12px }
+  .gpiece.locked{ cursor:default; pointer-events:none }
+  .gcoin svg, .gcoinpic svg{ display:block }
+  .gcoinpic{ pointer-events:none }
+  .gcard{ background:var(--card); border:3px solid var(--orange); border-radius:12px; font-size:22px; font-weight:800; color:var(--ink) }
+  .gcard.placed{ border-color:var(--green); background:var(--green-soft); color:var(--green) }
+  .gslot{ border:3px dashed var(--line); border-radius:10px; background:var(--card); pointer-events:none }
+  /* 存錢筒（第 1 關）、盤子（第 2、3、5 關）、錢包（第 4 關） */
+  .gjar{ border:3px solid #C9BFA9; border-radius:10px 10px 22px 22px; background:var(--card); pointer-events:none }
+  .gjarlbl{ display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color:var(--ink); pointer-events:none }
+  .gbox{ border:3px dashed #C9BFA9; border-radius:14px; background:var(--card) }
+  .gbanklbl{ display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--muted); pointer-events:none }
+  .gexlbl, .gtop{ display:flex; align-items:center; font-size:17px; font-weight:800; color:var(--ink); line-height:1.25; pointer-events:none }
+  .gexlbl{ justify-content:flex-end }
+  .gpurse{ border:3px solid #C9BFA9; border-radius:22px 22px 14px 14px; background:#F3ECDD; pointer-events:none }
+  /* 遊戲裡的數字用西文字型（中文字照樣退回 PingFang） */
+  .gtrail, .gcard, #gMsg, .gjarlbl, .gexlbl, .gtop{ font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif }
   .yes{color:var(--green);font-weight:700}
   .no{color:var(--red);font-weight:700}
   footer{
@@ -279,15 +307,14 @@
   <section>
     <span class="eyebrow" data-i18n="eb7">小遊戲</span>
     <h2 data-i18n="s7h2">結帳囉</h2>
-    <p class="lead" data-i18n="s7lead">當個小小收銀員，幫忙結帳！</p>
+    <p class="lead" data-i18n="s7lead">五關、五種玩法：存錢筒、換錢、從大的先數、掛價錢牌、找錢。拖一拖、點一點都可以，放錯會彈回來，再試一次就好！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
-        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+        <span><span data-i18n="gScoreLabel">收集</span> <b id="gScore">0</b> <span data-i18n="gScoreUnit">顆星星</span></span>
       </div>
-      <p class="target" id="gAskLine"></p>
-      <div class="coingroup" id="gPile"></div>
-      <div class="opts" id="gAnswers"></div>
+      <p class="collectrow" id="gCollect"></p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
@@ -398,6 +425,74 @@
     { values: QPIC.b1b, total: 50 }
   ]);
 
+  /* ============ 小遊戲的題庫與版面（語言無關；tools/checks/grade-1-money.js 直接讀這一段） ============
+     硬幣是實物：每一個硬幣的身分就是它的面額（v），畫出來的數字就是 v；答案一律用「值」比，不用位置。
+     版面一律是畫板上的 px（畫板 300 寬）。拿得起來的硬幣拿取範圍 GPICK × GPICK，畫出來的大小 GCOIN[v]
+     （和真的硬幣一樣：面額越大、硬幣越大）。
+     GAME_SORT：六個硬幣，四種面額每種至少一個、最多兩個（一個存錢筒放得下兩個）。
+     GAME_EXCHANGE：把 1 個 big 換成小硬幣；硬幣盒 bank 只有比 big 小的面額（拿不完），放進盤子加起來要剛好 big；
+       bank 至少兩種面額（才會有「再放就超過」—— 要學的是加到剛好就停）；big 一定是 bank 裡最小面額的倍數（一定換得完），
+       最多要放 big ÷ 最小面額 個 ≤ EX_CAP（盤子放得下）。（5 元只能換成 1 元、只有一種放法，所以不放進題庫。）
+     GAME_COUNT：一堆 4～5 個硬幣（總數 ≤ 100），至少三種面額；從大的先數。
+     GAME_TAGS：三個錢包（每個 1～4 個硬幣），總數兩兩不同；四張價錢牌 = 三個總數 + 一張誘答 decoy ——
+       decoy 是某一個錢包的「硬幣個數」（把個數當成錢數的迷思），而且不等於任何一個總數；
+       一定有一個錢包硬幣比較多、錢卻比較少。
+     GAME_CHANGE：東西 price 元，客人付了 paid（畫出來的硬幣）；從 price 往上數到 paid，找的錢 = paid − price，
+       收銀機 CH_BANK 拿不完；最多要放 (paid − price) ÷ 1 個 ≤ CH_CAP（盤子放得下）。 */
+  var GPICK = 52;
+  var GCOIN = { 1:40, 5:44, 10:48, 50:50 };
+  var GSMALL = 40;                      /* 放進盤子／錢包裡、畫成固定圖的硬幣 */
+  function sumExpr(list, total){ return list.length > 1 ? list.join(' + ') + ' = ' + total : String(total); }
+
+  var SORT_H = 272, SORT_JAR = { x0:5, step:74, w:68, y:4, h:132, lbl:26 }, SORT_TRAY = { y:186, step:84, cols:3 };
+  var GAME_SORT = [
+    [1, 5, 10, 50, 5, 10],
+    [1, 1, 5, 10, 50, 50],
+    [1, 5, 5, 10, 50, 1],
+    [50, 10, 10, 5, 1, 5],
+    [10, 1, 50, 5, 1, 10]
+  ];
+
+  var EX_H = 268, EX_BIG_Y = 34, EX_BOX = { x:24, y:72, w:252, h:108 }, EX_CELL = 50, EX_COLS = 5, EX_CAP = 10;
+  var EX_BANK = { lblY:188, y:236, step:70 };
+  var GAME_EXCHANGE = [
+    { big:10, bank:[5, 1] },
+    { big:50, bank:[10, 5] }
+  ];
+
+  var CNT_H = 202, CNT_SPOTS = [ {x:60, y:34}, {x:150, y:34}, {x:240, y:34}, {x:60, y:94}, {x:150, y:94}, {x:240, y:94} ];
+  var CNT_ROW = { x:6, y:132, w:288, h:64, pad:30, step:57 };
+  var GAME_COUNT = [
+    [50, 10, 5, 1],
+    [10, 10, 5, 1, 1],
+    [50, 10, 10, 5],
+    [10, 5, 5, 1, 1],
+    [50, 5, 1, 1, 10],
+    [5, 10, 1, 50, 5]
+  ];
+
+  var TAG_H = 216, TAG_PURSE = { x0:4, step:99, w:94, y:4, h:150, dx:22, row1:28, row2:72 };
+  var TAG_SLOT = { w:76, h:52, y:98 }, TAG_CARD = { w:70, h:48 }, TAG_TRAY = { y:186, step:74 };
+  var GAME_TAGS = [
+    { purses:[ [5, 5, 1, 1], [10, 10, 10], [50] ], decoy:4 },
+    { purses:[ [10, 1, 1, 1], [5, 5], [50, 10] ], decoy:4 },
+    { purses:[ [5, 5, 5], [10, 1], [50, 5] ], decoy:3 },
+    { purses:[ [10, 5, 1, 1], [50], [10, 10] ], decoy:4 },
+    { purses:[ [5, 1, 1, 1], [10, 10, 5], [50, 1] ], decoy:4 }
+  ];
+
+  var CH_H = 314, CH_TOP = { x:4, y:4, w:196, h:56 }, CH_PAID = { x:274, y:32, step:48, size:44 };
+  var CH_BOX = { x:24, y:68, w:252, h:158 }, CH_CELL = 50, CH_COLS = 5, CH_CAP = 15;
+  var CH_BANK = [10, 5, 1], CH_BANKPOS = { lblY:234, y:282, step:70 };
+  var GAME_CHANGE = [
+    { price:35, paid:[50] },
+    { price:12, paid:[10, 10] },
+    { price:7, paid:[10] },
+    { price:42, paid:[50] },
+    { price:38, paid:[50] },
+    { price:13, paid:[10, 10] }
+  ];
+
   /* ---------- i18n ---------- */
   var I18N = {
     zh: {
@@ -427,7 +522,7 @@
       changeH:'付 50 元，買 35 元的東西',
       changeP:'50 − 35 = 15，老闆要找你 <strong>15 元</strong>（可以是 1 個 10 元加 1 個 5 元）。',
       s6h2:'來檢查一下', s6lead:'點一下答案，馬上告訴你為什麼。',
-      s7h2:'結帳囉', s7lead:'當個小小收銀員，幫忙結帳！',
+      s7h2:'結帳囉', s7lead:'五關、五種玩法：存錢筒、換錢、從大的先數、掛價錢牌、找錢。拖一拖、點一點都可以，放錯會彈回來，再試一次就好！',
       qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
       qn: function(i){ return '第 ' + i + ' 題'; },
       fbRight: '<b>答對了！</b> ',
@@ -455,19 +550,48 @@
       priceLabel: function(p){ return p + ' 元'; },
       payTooMuch: '超過了，拿掉一個硬幣再試試看。',
       payExact: function(list){ return '太棒了！正好付 ' + list.join('+') + ' 🎉'; },
-      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
-      gAskTotal: '這堆錢幣總共多少元？',
-      gAskPay: function(p){ return '要付 ' + p + ' 元，哪一組正好？'; },
-      gHintBtn: '💡 提示',
-      gHintTotal1: '提示：先數大的硬幣，再數小的。',
-      gHintPay1: '提示：先算出每一組硬幣各是多少元。',
-      gHintTotal2: function(v){ return '提示：先數到 ' + v + ' 元，再加上剩下的。'; },
-      gHintPay2: '提示：先劃掉一個一定不對的選項。',
-      gNextBtn: '下一關', gRestartBtn: '重新開始',
-      gCorrect: function(){ return '答對了！+10 分！'; },
-      gWrong: '再試一次，沒關係！',
-      gClear: '按「下一關」繼續。',
-      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'收集', gScoreUnit:'顆星星',
+      gHintBtn: '💡 提示', gNextBtn: '下一關', gRestartBtn: '重新開始',
+      gClear: '按「下一關」繼續！',
+      gWin: function(score){ return '五關全破！一共收集了 ' + score + ' 顆星星 🏆 按「重新開始」再玩一次！'; },
+      gAsks: {
+        sort: '第 1 關・存錢筒：看硬幣上寫的數字，把每個硬幣放進一樣幾元的存錢筒。',
+        exchange: '第 2 關・換錢：把上面的大硬幣換成小硬幣。從硬幣盒拿硬幣放進盤子，加起來要剛好一樣多。',
+        count: '第 3 關・從大的先數：點一下硬幣（或拖到下面的框）就是數它。從最大的開始數。',
+        tags: '第 4 關・掛價錢牌：把價錢牌放到「裡面剛好是那麼多錢」的錢包下面。有一張牌子用不到。',
+        change: '第 5 關・找錢：你是收銀員！從東西的價錢往上數，數到客人付的錢就停。放進盤子的就是要找的錢。'
+      },
+      gHints: {
+        sort: '提示：硬幣上寫的數字，就是它值幾元。',
+        exchange: '提示：換錢的時候硬幣會變多，可是加起來要一樣多。看上面的讀數，加到剛好就停。',
+        count: '提示：先數最大的硬幣，再數小的。',
+        tags: '提示：把每個錢包裡的硬幣加起來 —— 看的是加起來幾元，不是有幾個硬幣。',
+        change: '提示：從東西的價錢開始，每放一個硬幣，就加上硬幣上寫的數字往上數，數到客人付的錢就停。'
+      },
+      gSortNot: function(v, j){ return '這個硬幣上寫著 ' + v + '，是 ' + v + ' 元，不是 ' + j + ' 元。'; },
+      gSortOk: function(v){ return '對！寫著 ' + v + ' 的就是 ' + v + ' 元。'; },
+      gSortDone: '全部放好了！看硬幣上的數字，就知道它值幾元。',
+      gSort2: function(v){ return '寫著 ' + v + ' 的硬幣，放進「' + v + ' 元」的存錢筒。'; },
+      gBank: '硬幣盒（拿不完）',
+      gExBig: function(big){ return '1 個 ' + big + ' 元'; },
+      gExNow: function(have, big){ return '盤子裡：' + have + ' 元 ／ 要換：' + big + ' 元'; },
+      gExOver: function(have, v, big){ return '盤子裡已經有 ' + have + ' 元，再放 ' + v + ' 元就是 ' + (have + v) + ' 元，比 ' + big + ' 元多了。'; },
+      gExDone: function(big, list){ return '換好了！1 個 ' + big + ' 元 = ' + list.join(' + ') + '，加起來一樣是 ' + big + ' 元。'; },
+      gEx2: function(r){ return '還差 ' + r + ' 元。'; },
+      gCountNow: function(runs){ return runs.length ? '數：' + runs.join(' → ') : '從最大的硬幣開始數'; },
+      gCountBig: function(v, big){ return '這是 ' + v + ' 元。還有 ' + big + ' 元的硬幣還沒數 —— 從大的先數。'; },
+      gCountDone: function(t){ return '數完了！一共 ' + t + ' 元。從大的先數，又快又不會漏。'; },
+      gCount2: function(big){ return '現在最大的是 ' + big + ' 元，先數它。'; },
+      gTagNot: function(coins, total, tag){ return '這個錢包是 ' + sumExpr(coins, total) + ' 元，不是 ' + tag + ' 元。'; },
+      gTagOk: function(total){ return '對！這個錢包剛好 ' + total + ' 元。'; },
+      gTagDone: '價錢牌都掛好了！錢包裡的錢要加起來看，不是數有幾個硬幣。',
+      gTag2: function(coins, total){ return '有一個錢包是 ' + sumExpr(coins, total) + ' 元，「' + total + ' 元」的牌子放它下面。'; },
+      gRegister: '收銀機（拿不完）',
+      gChTop: function(price){ return '東西 ' + price + ' 元，客人付了：'; },
+      gChNow: function(runs){ return '往上數：' + runs.join(' → '); },
+      gChOver: function(v, n, paid){ return '再放 ' + v + ' 元就數到 ' + n + ' 元，比客人付的 ' + paid + ' 元多了。'; },
+      gChDone: function(ch, list, price, paid){ return '找了 ' + sumExpr(list, ch) + ' 元。' + price + ' + ' + ch + ' = ' + paid + '，剛好是客人付的錢！'; },
+      gCh2: function(r, paid){ return '還差 ' + r + ' 元就數到 ' + paid + ' 元。'; },
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1: '🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2: '🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a>。',
@@ -543,7 +667,7 @@
       changeH:'Pay $50 for something that costs $35',
       changeP:'50 − 35 = 15, so you get <strong>$15</strong> back (that could be one $10 coin and one $5 coin).',
       s6h2:'Quick Check', s6lead:'Tap an answer and we’ll tell you why right away.',
-      s7h2:'Checkout Time', s7lead:'Be the little cashier and help ring things up!',
+      s7h2:'Checkout Time', s7lead:'Five rounds, five ways to play: piggy banks, exchange, biggest first, price tags, and making change. Drag or tap — a wrong move just bounces back, so try again!',
       qDoneLabel:'Answered', qRightLabel:'Correct:', qRightUnit:'',
       qn: function(i){ return 'Question ' + i; },
       fbRight: '<b>Correct!</b> ',
@@ -571,19 +695,48 @@
       priceLabel: function(p){ return '$' + p; },
       payTooMuch: 'That’s too much — take a coin back out and try again.',
       payExact: function(list){ return 'Nicely done! ' + list.join('+') + ' is exactly right 🎉'; },
-      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
-      gAskTotal: 'How much is this pile of coins worth?',
-      gAskPay: function(p){ return 'Which group pays exactly $' + p + '?'; },
-      gHintBtn: '💡 Hint',
-      gHintTotal1: 'Hint: count the biggest coins first, then the small ones.',
-      gHintPay1: 'Hint: work out how much each group is worth first.',
-      gHintTotal2: function(v){ return 'Hint: count up to $' + v + ' first, then add what’s left.'; },
-      gHintPay2: 'Hint: one option can be crossed out right away.',
-      gNextBtn: 'Next round', gRestartBtn: 'Restart',
-      gCorrect: function(){ return 'Correct! +10 points!'; },
-      gWrong: 'No worries — try again!',
-      gClear: 'Press “Next round” to continue.',
-      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Stars:', gScoreUnit:'',
+      gHintBtn: '💡 Hint', gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      gClear: 'Press “Next round” to keep going!',
+      gWin: function(score){ return 'All 5 rounds cleared! You collected ' + score + ' stars 🏆 Press “Restart” to play again!'; },
+      gAsks: {
+        sort: 'Round 1 · Piggy banks: read the number on each coin and put it in the piggy bank with the same value.',
+        exchange: 'Round 2 · Exchange: swap the big coin at the top for smaller coins. Take coins from the coin box and put them in the tray until it is worth exactly the same.',
+        count: 'Round 3 · Biggest first: tap a coin (or drag it into the box below) to count it. Start with the biggest one.',
+        tags: 'Round 4 · Price tags: put each price tag under the purse that holds exactly that much money. One tag is left over.',
+        change: 'Round 5 · Change: you are the cashier! Count up from the price to what the customer paid, then stop. The coins in the tray are the change.'
+      },
+      gHints: {
+        sort: 'Hint: the number printed on a coin is how many dollars it is worth.',
+        exchange: 'Hint: when you exchange, you get more coins, but they must add up to the same amount. Watch the line above and stop when it matches.',
+        count: 'Hint: count the biggest coin first, then the smaller ones.',
+        tags: 'Hint: add up the coins in each purse — what matters is how many dollars, not how many coins.',
+        change: 'Hint: start at the price. Each coin you add, count up by the number printed on it. Stop when you reach what the customer paid.'
+      },
+      gSortNot: function(v, j){ return 'This coin says ' + v + ', so it’s $' + v + ', not $' + j + '.'; },
+      gSortOk: function(v){ return 'Yes! The coin that says ' + v + ' is $' + v + '.'; },
+      gSortDone: 'All sorted! The number on a coin tells you what it’s worth.',
+      gSort2: function(v){ return 'The coin that says ' + v + ' goes in the “$' + v + '” piggy bank.'; },
+      gBank: 'Coin box (never runs out)',
+      gExBig: function(big){ return 'One $' + big + ' coin'; },
+      gExNow: function(have, big){ return 'In the tray: $' + have + ' / Need: $' + big; },
+      gExOver: function(have, v, big){ return 'The tray already has $' + have + '. Another $' + v + ' makes $' + (have + v) + ', which is more than $' + big + '.'; },
+      gExDone: function(big, list){ return 'Exchanged! One $' + big + ' coin = ' + list.join(' + ') + ' — still $' + big + ' in total.'; },
+      gEx2: function(r){ return 'You still need $' + r + '.'; },
+      gCountNow: function(runs){ return runs.length ? 'Count: ' + runs.join(' → ') : 'Start with the biggest coin'; },
+      gCountBig: function(v, big){ return 'This is $' + v + '. There is still a $' + big + ' coin to count — biggest first.'; },
+      gCountDone: function(t){ return 'All counted! $' + t + ' in total. Biggest first is quick, and you don’t miss any.'; },
+      gCount2: function(big){ return 'The biggest one left is $' + big + ' — count it next.'; },
+      gTagNot: function(coins, total, tag){ return coins.length > 1 ? 'This purse holds ' + coins.join(' + ') + ' = $' + total + ', not $' + tag + '.' : 'This purse holds $' + total + ', not $' + tag + '.'; },
+      gTagOk: function(total){ return 'Yes! This purse holds exactly $' + total + '.'; },
+      gTagDone: 'All tags are on! Add up the money in a purse — don’t just count the coins.',
+      gTag2: function(coins, total){ return 'One purse holds ' + (coins.length > 1 ? coins.join(' + ') + ' = $' + total : '$' + total) + ' — the “$' + total + '” tag goes under it.'; },
+      gRegister: 'Cash register (never runs out)',
+      gChTop: function(price){ return 'It costs $' + price + '. The customer paid:'; },
+      gChNow: function(runs){ return 'Count up: ' + runs.join(' → '); },
+      gChOver: function(v, n, paid){ return 'Another $' + v + ' counts up to ' + n + ', which is more than the $' + paid + ' the customer paid.'; },
+      gChDone: function(ch, list, price, paid){ return 'Change: ' + (list.length > 1 ? list.join(' + ') + ' = $' + ch : '$' + ch) + '. ' + price + ' + ' + ch + ' = ' + paid + ' — exactly what the customer paid!'; },
+      gCh2: function(r, paid){ return 'Only $' + r + ' more to count up to ' + paid + '.'; },
       ebNext: 'After the lesson', nextH2: 'Three moves that make it stick',
       next1: '🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2: '🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a>.',
@@ -975,140 +1128,408 @@
     });
   }
 
-  /* ---------- 7. 小遊戲：結帳囉 ---------- */
-  var ROUNDS = [
-    { kind:'total', pile:[10,5,1,1], opts:[17,16,15,20], ans:0 },
-    { kind:'pay', price:12, groups:[[10,1,1],[10,5],[5,5,1],[10,1,1,1]], ans:0 },
-    { kind:'total', pile:[50,10,10], opts:[70,60,80,65], ans:0 },
-    { kind:'pay', price:23, groups:[[10,10,1,1,1],[10,5,5,1,1],[10,10,5],[5,5,5,5]], ans:0 },
-    { kind:'total', pile:[5,5,5,10], opts:[25,20,30,15], ans:0 }
-  ];
-  /* 上架前斷言：total 題型的正解真的等於堆的總和；pay 題型只有一組真的等於 price */
-  ROUNDS.forEach(function(r){
-    if (r.kind === 'total'){
-      var s = groupSum(r.pile);
-      if (r.opts[r.ans] !== s) throw new Error('game total mismatch');
-    } else {
-      var hits = r.groups.filter(function(g){ return groupSum(g) === r.price; });
-      if (hits.length !== 1 || groupSum(r.groups[r.ans]) !== r.price) throw new Error('game pay mismatch');
-    }
-  });
-
-  var gRound = 0, gScore = 0, hintLevel = 0;
+  /* ---------- 7. 小遊戲：結帳囉 —— 五關、五種玩法（存錢筒、換錢、從大的先數、掛價錢牌、找錢） ----------
+     設計原則見 docs/teaching-framework.md §六之五。一年級：每關過關 +1，不扣分、不會失敗；
+     放到空白處不算錯；每個拖拉也可以「先點東西、再點目的地」。
+     第 3 關「點一下硬幣＝數它」（點一下本身就是動作，題目有寫；也可以拖到下面的框）。
+     五關對應範例 1～5：看數字認錢幣（範例 1）、一個換很多個總數不變（範例 2）、從大的先數（範例 3）、
+     湊出正好的金額／硬幣多不等於錢多（範例 4 與開頭的提醒）、找錢 —— 從價錢往上數（範例 5）。 */
+  var gRound = 0, gScore = 0, gSolved = false, gCtx = {};
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskLine = document.getElementById('gAskLine');
-  var gPile = document.getElementById('gPile');
-  var gAnswers = document.getElementById('gAnswers');
+  var gCollect = document.getElementById('gCollect');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
-  var gHint = document.getElementById('gHint');
-  var gHintBtn = document.getElementById('gHintBtn');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
-  var gOrder, gDisabledIdx;
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+  var hintLevel = 0;
+  var GAME_ORDER = ['sort', 'exchange', 'count', 'tags', 'change'];
+
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去（two-digit codex 第一輪）。PIECE_PTR 記「按在積木上的 pointerId」，
+     放在畫板外面；任何地方的 pointerup／pointercancel 傳到 window 時清掉（滑鼠的 pointerId 永遠是 1，
+     留著過期的記號會吞掉下一次點目的地）。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);   /* 新的一下開始時先清掉（放開落在頁面外時 window 收不到 pointerup）；按在積木上的會馬上再記一次 */
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  function inside(pt, R){ return pt.x >= R.x && pt.x <= R.x + R.w && pt.y >= R.y && pt.y <= R.y + R.h; }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    P.home();
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (moved) P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的積木一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, pt);
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad），整個方框都算，角落也收。
+     相鄰格子放寬之後會重疊 —— 先在「所有」格子裡挑最近的一格（不是陣列裡第一個），
+     最近的那格已經放好了就不收；不可以跳過它、改放進旁邊的空格。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var dd = dx * dx + dy * dy;
+      if (dd < bd){ bd = dd; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+
+  /* 托盤：選項卡片一律洗牌後排好（正解不可以固定在同一個位置）。cols 張一排，多的往下一排。 */
+  function renderTray(B, items, y, mk, step, cols){
+    step = step || 60; cols = cols || items.length;
+    var x0 = (B.W - (Math.min(cols, items.length) - 1) * step) / 2;
+    shuffle(items).forEach(function(it, i){ mk(it, x0 + (i % cols) * step, y + Math.floor(i / cols) * 56); });
+  }
+
+  /* ---- 硬幣：拿得起來的（拿取範圍 GPICK，畫出來 GCOIN[v]）與畫在盤子／錢包裡的固定圖 ---- */
+  function addCoin(B, v, cx, cy){
+    var P = addPiece(B, { w:GPICK, h:GPICK, cx:cx, cy:cy, text:'', cls:'gcoin', label:L().coinName(v), data:{ v:v } });
+    P.el.innerHTML = coinSVG(v, GCOIN[v]);
+    return P;
+  }
+  function coinPic(B, v, cx, cy, size){
+    var z = addZone(B, cx - size / 2, cy - size / 2, size, size, 'gcoinpic');
+    z.innerHTML = coinSVG(v, size);
+    return z;
+  }
+  function desc(list){ return list.slice().sort(function(a, b){ return b - a; }); }
+
+  function renderCollect(){
+    var stars = '';
+    for (var i = 0; i < gScore; i++) stars += '🌟';
+    gCollect.textContent = stars;
+  }
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });   /* 過關了：不留選起來的外框 */
+    gScore += 1; elScore.textContent = gScore; renderCollect();
+    gHintBtn.disabled = true;
+    if (gRound === GAME_ORDER.length - 1){
+      gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gWin(gScore) + '</span>';
+    } else {
+      gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gClear + '</span>';
+      gNext.disabled = false;
+    }
+  }
+  /* 第二層提示跟著畫面走（還差幾元、下一個該數哪一個……）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){ gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+
+  var RENDER = {
+    /* 第 1 關：存錢筒 —— 六個硬幣，看上面寫的數字，放進一樣幾元的存錢筒（範例 1：看數字就知道值多少）。
+       放錯筒 → 彈回＋「這個硬幣上寫著 v，是 v 元，不是 j 元」。 */
+    sort: function(d){
+      var coins = pick(GAME_SORT), left = coins.length, pieces = [];
+      var B = makeBoard(300, SORT_H);
+      var jars = DENOMS.map(function(v, i){
+        var x = SORT_JAR.x0 + i * SORT_JAR.step;
+        addZone(B, x, SORT_JAR.y, SORT_JAR.w, SORT_JAR.h, 'gjar');
+        addZone(B, x, SORT_JAR.y + 2, SORT_JAR.w, SORT_JAR.lbl, 'gjarlbl', d.coinName(v));
+        return { v:v, n:0, cx:x + SORT_JAR.w / 2, cy:SORT_JAR.y + SORT_JAR.h / 2, hw:SORT_JAR.w / 2, hh:SORT_JAR.h / 2, done:false };
+      });
+      gCtx.hint2 = function(){
+        var P = pieces.filter(function(x){ return !x.locked; })[0];
+        return P ? d.gSort2(P.data.v) : '';
+      };
+      renderTray(B, coins.slice(), SORT_TRAY.y, function(v, cx, cy){ pieces.push(addCoin(B, v, cx, cy)); }, SORT_TRAY.step, SORT_TRAY.cols);
+      useTapSelect(B, function(P, pt){
+        var jar = nearestOpen(jars, pt, 6);
+        if (!jar) return false;
+        var v = P.data.v;
+        if (jar.v !== v){ roundMiss(d.gSortNot(v, jar.v)); return false; }
+        P.lock(jar.cx, SORT_JAR.y + SORT_JAR.lbl + GPICK / 2 + jar.n * GPICK);
+        P.el.classList.add('placed');
+        jar.n++; left--;
+        if (left === 0) roundSolved(d.gSortDone);
+        else { roundInfo(d.gSortOk(v)); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 2 關：換錢 —— 上面 1 個大硬幣；從硬幣盒（只有比它小的面額，拿不完）拿硬幣放進盤子，
+       加起來剛好一樣多就換好了（範例 2：一個換很多個，總數不變）。放了會超過 → 彈回＋算給他看。 */
+    exchange: function(d){
+      var e = pick(GAME_EXCHANGE), got = [], have = 0;
+      var line = trailLine(d.gExNow(0, e.big));
+      var B = makeBoard(300, EX_H);
+      addZone(B, 4, EX_BIG_Y - 20, 116, 40, 'gexlbl', d.gExBig(e.big));
+      coinPic(B, e.big, 150, EX_BIG_Y, GCOIN[e.big]);
+      addZone(B, EX_BOX.x, EX_BOX.y, EX_BOX.w, EX_BOX.h, 'gbox');
+      addZone(B, 0, EX_BANK.lblY, 300, 20, 'gbanklbl', d.gBank);
+      renderTray(B, e.bank.slice(), EX_BANK.y, function(v, cx, cy){ addCoin(B, v, cx, cy); }, EX_BANK.step);
+      gCtx.hint2 = function(){ return d.gEx2(e.big - have); };
+      var R = { x:EX_BOX.x - 8, y:EX_BOX.y - 8, w:EX_BOX.w + 16, h:EX_BOX.h + 16 };
+      useTapSelect(B, function(P, pt){
+        if (!inside(pt, R)) return false;
+        var v = P.data.v;
+        if (have + v > e.big){ roundMiss(d.gExOver(have, v, e.big)); return false; }
+        var k = got.length;
+        coinPic(B, v, EX_BOX.x + 26 + (k % EX_COLS) * EX_CELL, EX_BOX.y + 29 + Math.floor(k / EX_COLS) * EX_CELL, GSMALL);
+        got.push(v); have += v;
+        P.home();             /* 硬幣盒拿不完：放進盤子的是一個新的，盒子裡那一個回原位 */
+        P.el.classList.remove('sel'); if (B.selected === P) B.selected = null;   /* 用掉了：不留藍色外框（另一根手指放進去時也一樣） */
+        line.textContent = d.gExNow(have, e.big);
+        if (have === e.big) roundSolved(d.gExDone(e.big, desc(got)));
+        else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 3 關：從大的先數 —— 點一下硬幣（或拖到下面的框）就是數它；一定要先數還沒數的硬幣裡最大的。
+       上面的讀數一路加上去（50 → 60 → 65 → 66）（範例 3）。先數小的 → 彈回＋「還有 big 元的沒數」。 */
+    count: function(d){
+      var pile = pick(GAME_COUNT), runs = [], total = 0;
+      var line = trailLine(d.gCountNow([]));
+      var B = makeBoard(300, CNT_H);
+      addZone(B, CNT_ROW.x, CNT_ROW.y, CNT_ROW.w, CNT_ROW.h, 'gbox');
+      var spots = shuffle(CNT_SPOTS);
+      var coins = pile.map(function(v, i){ return addCoin(B, v, spots[i].x, spots[i].y); });
+      function biggestLeft(){
+        var m = 0;
+        coins.forEach(function(P){ if (!P.locked && P.data.v > m) m = P.data.v; });
+        return m;
+      }
+      function countIt(P){
+        if (P.locked || gSolved) return false;
+        var big = biggestLeft(), v = P.data.v;
+        if (v < big){ roundMiss(d.gCountBig(v, big)); return false; }
+        P.lock(CNT_ROW.x + CNT_ROW.pad + runs.length * CNT_ROW.step, CNT_ROW.y + CNT_ROW.h / 2);
+        P.el.classList.add('placed');
+        total += v; runs.push(total);
+        line.textContent = d.gCountNow(runs);
+        if (runs.length === coins.length) roundSolved(d.gCountDone(total));
+        else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      }
+      var R = { x:CNT_ROW.x - 6, y:CNT_ROW.y - 6, w:CNT_ROW.w + 12, h:CNT_ROW.h + 12 };
+      B.onTap = function(P){ countIt(P); };
+      B.onDrop = function(P, pt){ return inside(pt, R) ? countIt(P) : false; };
+      gCtx.hint2 = function(){ var big = biggestLeft(); return big ? d.gCount2(big) : ''; };
+    },
+
+    /* 第 4 關：掛價錢牌 —— 三個錢包，四張價錢牌；把牌子放到「剛好是那麼多錢」的錢包下面。
+       多的那一張是某個錢包的「硬幣個數」（把個數當成錢數的迷思）；放錯 → 彈回＋把那個錢包加給他看（範例 4）。 */
+    tags: function(d){
+      var t = pick(GAME_TAGS), left = t.purses.length;
+      var B = makeBoard(300, TAG_H);
+      var purses = shuffle(t.purses).map(function(coins, i){
+        var x = TAG_PURSE.x0 + i * TAG_PURSE.step, cx = x + TAG_PURSE.w / 2;
+        addZone(B, x, TAG_PURSE.y, TAG_PURSE.w, TAG_PURSE.h, 'gpurse');
+        coins.forEach(function(v, k){
+          var dx = coins.length === 1 || (coins.length === 3 && k === 2) ? 0 : (k % 2 ? TAG_PURSE.dx : -TAG_PURSE.dx);
+          coinPic(B, v, cx + dx, TAG_PURSE.y + (k < 2 ? TAG_PURSE.row1 : TAG_PURSE.row2) + (coins.length === 1 ? 22 : 0), GSMALL);
+        });
+        addZone(B, cx - TAG_SLOT.w / 2, TAG_PURSE.y + TAG_SLOT.y, TAG_SLOT.w, TAG_SLOT.h, 'gslot');
+        return { coins:coins, total:groupSum(coins), cx:cx, cy:TAG_PURSE.y + TAG_PURSE.h / 2, hw:TAG_PURSE.w / 2, hh:TAG_PURSE.h / 2,
+                 sy:TAG_PURSE.y + TAG_SLOT.y + TAG_SLOT.h / 2, done:false };
+      });
+      gCtx.hint2 = function(){
+        var p = purses.filter(function(x){ return !x.done; })[0];
+        return p ? d.gTag2(desc(p.coins), p.total) : '';
+      };
+      renderTray(B, purses.map(function(p){ return p.total; }).concat([t.decoy]), TAG_TRAY.y, function(v, cx, cy){
+        addPiece(B, { w:TAG_CARD.w, h:TAG_CARD.h, cx:cx, cy:cy, text:d.coinName(v), cls:'gcard', data:{ v:v } });
+      }, TAG_TRAY.step);
+      useTapSelect(B, function(P, pt){
+        var p = nearestOpen(purses, pt, 4);
+        if (!p) return false;
+        if (P.data.v !== p.total){ roundMiss(d.gTagNot(desc(p.coins), p.total, P.data.v)); return false; }
+        p.done = true; left--;
+        P.lock(p.cx, p.sy); P.el.classList.add('placed');
+        if (left === 0) roundSolved(d.gTagDone);
+        else { roundInfo(d.gTagOk(p.total)); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 5 關：找錢 —— 東西 price 元，客人付了 paid；從 price 往上數（收銀機的硬幣拿不完），
+       數到 paid 就停，放進盤子的就是要找的錢（範例 5）。放了會數超過 → 彈回＋說數到幾。 */
+    change: function(d){
+      var c = pick(GAME_CHANGE), paid = groupSum(c.paid), got = [], have = c.price, runs = [c.price];
+      var line = trailLine(d.gChNow(runs));
+      var B = makeBoard(300, CH_H);
+      addZone(B, CH_TOP.x, CH_TOP.y, CH_TOP.w, CH_TOP.h, 'gtop', d.gChTop(c.price));
+      c.paid.forEach(function(v, k){ coinPic(B, v, CH_PAID.x - k * CH_PAID.step, CH_PAID.y, CH_PAID.size); });
+      addZone(B, CH_BOX.x, CH_BOX.y, CH_BOX.w, CH_BOX.h, 'gbox');
+      addZone(B, 0, CH_BANKPOS.lblY, 300, 20, 'gbanklbl', d.gRegister);
+      renderTray(B, CH_BANK.slice(), CH_BANKPOS.y, function(v, cx, cy){ addCoin(B, v, cx, cy); }, CH_BANKPOS.step);
+      gCtx.hint2 = function(){ return d.gCh2(paid - have, paid); };
+      var R = { x:CH_BOX.x - 8, y:CH_BOX.y - 8, w:CH_BOX.w + 16, h:CH_BOX.h + 16 };
+      useTapSelect(B, function(P, pt){
+        if (!inside(pt, R)) return false;
+        var v = P.data.v;
+        if (have + v > paid){ roundMiss(d.gChOver(v, have + v, paid)); return false; }
+        var k = got.length;
+        coinPic(B, v, CH_BOX.x + 26 + (k % CH_COLS) * CH_CELL, CH_BOX.y + 29 + Math.floor(k / CH_COLS) * CH_CELL, GSMALL);
+        got.push(v); have += v; runs.push(have);
+        P.home();             /* 收銀機的硬幣拿不完 */
+        P.el.classList.remove('sel'); if (B.selected === P) B.selected = null;
+        line.textContent = d.gChNow(runs);
+        if (have === paid) roundSolved(d.gChDone(paid - c.price, desc(got), c.price, paid));
+        else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      });
+    }
+  };
 
   function startRound(){
     var d = L();
-    var r = ROUNDS[gRound];
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gCtx = {};
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
-    gHint.textContent = '';
     gNext.disabled = true;
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gDisabledIdx = -1;
-
-    gPile.textContent = '';
-    gAnswers.textContent = '';
-
-    if (r.kind === 'total'){
-      gAskLine.textContent = d.gAskTotal;
-      gPile.innerHTML = coinGroupHTML(r.pile);
-      /* 選項一定要洗牌再畫（正解不可以固定在同一顆）；寫成 shuffle(...).forEach 的形狀，
-         tools/checks/lib/gameshuffle.js 才切得出來驗 */
-      var totalItems = r.opts.map(function(v, i){ return { v:v, correct:i === r.ans }; });
-      (gOrder = shuffle(totalItems)).forEach(function(o){
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'opt'; b.textContent = o.v;
-        b.addEventListener('click', function(){ onGameAnswer(b, o.correct); });
-        gAnswers.appendChild(b);
-      });
-    } else {
-      gAskLine.textContent = d.gAskPay(r.price);
-      var payItems = r.groups.map(function(g, i){ return { g:g, correct:i === r.ans }; });
-      (gOrder = shuffle(payItems)).forEach(function(o){
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'opt pic';
-        b.innerHTML = coinGroupHTML(o.g, 36);
-        b.addEventListener('click', function(){ onGameAnswer(b, o.correct); });
-        gAnswers.appendChild(b);
-      });
-    }
-
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      var r0 = ROUNDS[gRound];
-      gHint.textContent = r0.kind === 'total' ? L().gHintTotal1 : L().gHintPay1;
-    }
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }
   }
 
-  function onGameAnswer(btn, correct){
-    var d = L();
-    if (btn.disabled) return;
-    var all = gAnswers.querySelectorAll('.opt');
-    if (correct){
-      for (var i = 0; i < all.length; i++) all[i].disabled = true;
-      btn.classList.add('right');
-      gScore += 10;
-      elScore.textContent = gScore;
-      gMsg.innerHTML = '<span class="yes">' + d.gCorrect() + '</span>';
-      gHintBtn.disabled = true;
-      if (gRound === ROUNDS.length - 1){
-        gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
-      } else {
-        gMsg.innerHTML += ' ' + d.gClear;
-        gNext.disabled = false;
-      }
-    } else {
-      btn.disabled = true;
-      btn.classList.add('wrong');
-      gMsg.innerHTML = '<span class="no">' + d.gWrong + '</span>';
-    }
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
   function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+    gRound = 0; gScore = 0; elScore.textContent = '0'; renderCollect(); startRound();
   }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
 
   gHintBtn.addEventListener('click', function(){
-    var d = L();
-    var r = ROUNDS[gRound];
     hintLevel++;
-    if (hintLevel === 1){
-      gHint.textContent = r.kind === 'total' ? d.gHintTotal1 : d.gHintPay1;
-    } else {
-      if (r.kind === 'total'){
-        var sorted = r.pile.slice().sort(function(a, b){ return b - a; });
-        var partial = sorted.slice(0, sorted.length - 1).reduce(function(a, b){ return a + b; }, 0);
-        gHint.textContent = d.gHintTotal2(partial);
-      } else {
-        var wrongIdx = -1;
-        for (var i = 0; i < gOrder.length; i++){
-          if (!gOrder[i].correct && !gAnswers.children[i].disabled){ wrongIdx = i; break; }
-        }
-        if (wrongIdx >= 0){
-          gAnswers.children[wrongIdx].disabled = true;
-          gAnswers.children[wrongIdx].classList.add('wrong');
-        }
-        gHint.textContent = d.gHintPay2;
-      }
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */

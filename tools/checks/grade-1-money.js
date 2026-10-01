@@ -13,7 +13,11 @@
    ⚠️ 兩份 coinSVG 不一樣：index.html（52／60／68／78，內圈 r−6）與 review.html（44／50／56／64，
    內圈 r−5），要各自驗。review 那一份從**磁碟上的** review.html 切出來驗 —— verify_lesson_data
    只拿得到 index 的原始碼，所以 breaktest 對 review 的改壞**看不到**這一條（它改的是暫存目錄裡的
-   副本）。這一條守得到的是「現在磁碟上那一份」，證明不了「改壞會響」。 */
+   副本）。這一條守得到的是「現在磁碟上那一份」，證明不了「改壞會響」。
+
+   小遊戲（2026-10-01 從「結帳囉」五題選擇題改成五關五種玩法）：題庫與版面常數放在 i18n 前面的資料區，
+   由 dataReturn 交給 check()；每個題庫的答案（總數、換錢的窮舉、往上數、硬幣個數）在這裡用自己的算法重算，
+   幾條關鍵規則（放錯筒、超過、先數小的、牌子對不上）用 RENDER 函式本體的原始碼形狀守住。 */
 
 const fs = require('fs');
 const path = require('path');
@@ -70,17 +74,49 @@ const RANGE = {
 module.exports = {
   breaks: [
     /* ---- index.html ---- */
-    /* 小遊戲 startRound() 兩個分支（total／pay）各洗一次牌；拿掉 total 那一次，
-       數量對不上就要響（正解會固定在 opts 的第一顆）。 */
-    { file:'index', expect:'shuffled option render',
-      find:'      (gOrder = shuffle(totalItems)).forEach(function(o){',
-      replace:'      (gOrder = totalItems).forEach(function(o){' },
-    { file:'index', expect:'ROUNDS[0]',
-      find:"    { kind:'total', pile:[10,5,1,1], opts:[17,16,15,20], ans:0 },",
-      replace:"    { kind:'total', pile:[10,5,1,1], opts:[17,16,15,20], ans:1 }," },
-    { file:'index', expect:'ROUNDS[1]',
-      find:"    { kind:'pay', price:12, groups:[[10,1,1],[10,5],[5,5,1],[10,1,1,1]], ans:0 },",
-      replace:"    { kind:'pay', price:12, groups:[[10,1,1],[10,1,1],[5,5,1],[10,1,1,1]], ans:0 }," },
+    /* ---- 小遊戲（2026-10-01 改版）：每一條新的不變量一筆 ---- */
+    { file:'index', expect:'without shuffle(...)',
+      find:"    shuffle(items).forEach(function(it, i){ mk(it, x0 + (i % cols) * step, y + Math.floor(i / cols) * 56); });",
+      replace:"    items.forEach(function(it, i){ mk(it, x0 + (i % cols) * step, y + Math.floor(i / cols) * 56); });" },
+    { file:'index', expect:'is missing the 50 coin', find:'    [1, 5, 10, 50, 5, 10],', replace:'    [1, 5, 10, 10, 5, 10],' },
+    { file:'index', expect:'more than a jar holds', find:'    [1, 1, 5, 10, 50, 50],', replace:'    [1, 1, 5, 10, 50, 1],' },
+    { file:'index', expect:'jar must match', find:'if (jar.v !== v){ roundMiss', replace:'if (jar.v === 0){ roundMiss' },
+    { file:'index', expect:'not smaller than 10', find:'    { big:10, bank:[5, 1] },', replace:'    { big:10, bank:[10, 1] },' },
+    { file:'index', expect:'GAME_COUNT should be a pool', find:'  var GAME_COUNT = [\n', replace:'  var GAME_COUNT = [] || [\n' },
+    { file:'index', expect:'two rows of purse coins overlap', find:'row1:28, row2:72 }', replace:'row1:28, row2:40 }' },
+    { file:'index', expect:'top of the purse', find:'row1:28, row2:72 }', replace:'row1:12, row2:72 }' },
+    { file:'index', expect:'paid coins overlap', find:'CH_PAID = { x:274, y:32, step:48,', replace:'CH_PAID = { x:274, y:32, step:20,' },
+    { file:'index', expect:'only one kind of coin', find:'    { big:50, bank:[10, 5] }\n', replace:'    { big:50, bank:[10] }\n' },
+    { file:'index', expect:'needs up to 10 coins', find:'EX_COLS = 5, EX_CAP = 10;', replace:'EX_COLS = 5, EX_CAP = 9;' },
+    { file:'index', expect:'does not fit inside the tray', find:'EX_BOX = { x:24, y:72, w:252, h:108 }', replace:'EX_BOX = { x:24, y:72, w:252, h:70 }' },
+    { file:'index', expect:'goes past the big coin', find:'if (have + v > e.big){', replace:'if (have + v > e.big + 10){' },
+    { file:'index', expect:'fewer than 3 different values', find:'    [10, 10, 5, 1, 1],', replace:'    [10, 10, 5, 5, 5],' },
+    { file:'index', expect:'over 100', find:'    [50, 10, 10, 5],', replace:'    [50, 50, 10, 5],' },
+    { file:'index', expect:'counting row', find:'{x:60, y:94}, {x:150, y:94}, {x:240, y:94}', replace:'{x:60, y:94}, {x:150, y:94}, {x:240, y:114}' },
+    { file:'index', expect:'counted coins 50 apart overlap', find:'pad:30, step:57 }', replace:'pad:30, step:50 }' },
+    { file:'index', expect:'smaller coin can be counted', find:'if (v < big){ roundMiss', replace:'if (v < 0){ roundMiss' },
+    { file:'index', expect:'equals a purse total', find:"    { purses:[ [5, 5, 1, 1], [10, 10, 10], [50] ], decoy:4 },", replace:"    { purses:[ [5, 5, 1, 1], [10, 10, 10], [50] ], decoy:12 }," },
+    { file:'index', expect:'not the number of coins', find:"    { purses:[ [5, 5, 5], [10, 1], [50, 5] ], decoy:3 },", replace:"    { purses:[ [5, 5, 5], [10, 1], [50, 5] ], decoy:6 }," },
+    { file:'index', expect:'misconception never shows up', find:"    { purses:[ [5, 5, 5], [10, 1], [50, 5] ], decoy:3 },", replace:"    { purses:[ [50, 5, 5], [10, 1], [5] ], decoy:3 }," },
+    { file:'index', expect:'not all different', find:"[ [10, 1, 1, 1], [5, 5], [50, 10] ]", replace:"[ [10, 1, 1, 1], [5, 5, 1, 1, 1], [50, 10] ]" },
+    { file:'index', expect:'more than 4 coins', find:"[ [10, 5, 1, 1], [50], [10, 10] ]", replace:"[ [10, 5, 1, 1, 1], [50], [10, 10] ]" },
+    { file:'index', expect:'different amount', find:'if (P.data.v !== p.total){', replace:'if (P.data.v === 0){' },
+    { file:'index', expect:'needs up to 20 coins', find:'    { price:35, paid:[50] },', replace:'    { price:30, paid:[50] },' },
+    { file:'index', expect:'nothing to give back', find:'    { price:7, paid:[10] },', replace:'    { price:10, paid:[10] },' },
+    { file:'index', expect:'paid has a non-denomination coin', find:'    { price:12, paid:[10, 10] },', replace:'    { price:12, paid:[20] },' },
+    { file:'index', expect:'overlaps the price text', find:'CH_PAID = { x:274,', replace:'CH_PAID = { x:190,' },
+    { file:'index', expect:'counts past what the customer paid', find:'if (have + v > paid){', replace:'if (have + v > paid + 5){' },
+    { file:'index', expect:'does not start at the price', find:'have = c.price, runs = [c.price];', replace:'have = 0, runs = [c.price];' },
+    { file:'index', expect:'under 44', find:'  var GPICK = 52;', replace:'  var GPICK = 40;' },
+    { file:'index', expect:'not drawn bigger than the 10 coin', find:'GCOIN = { 1:40, 5:44, 10:48, 50:50 }', replace:'GCOIN = { 1:40, 5:44, 10:48, 50:46 }' },
+    { file:'index', expect:'sort tray: coins', find:'SORT_TRAY = { y:186, step:84, cols:3 }', replace:'SORT_TRAY = { y:186, step:50, cols:3 }' },
+    { file:'index', expect:'tray reaches into the jars', find:'SORT_TRAY = { y:186, step:84, cols:3 }', replace:'SORT_TRAY = { y:150, step:84, cols:3 }' },
+    { file:'index', expect:'gSortNot en', find:"return 'This coin says ' + v + ', so it", replace:"return 'This coin says ' + j + ', so it" },
+    { file:'index', expect:'gExOver zh', find:"再放 ' + v + ' 元就是 ' + (have + v) + ' 元", replace:"再放 ' + v + ' 元就是 ' + (have) + ' 元" },
+    { file:'index', expect:'sumExpr(', find:"list.join(' + ') + ' = ' + total : String(total); }", replace:"list.join(' + ') + ' = ' + (total + 1) : String(total); }" },
+    { file:'index', expect:'gChDone zh', find:"元。' + price + ' + ' + ch + ' = ' + paid + '，剛好", replace:"元。' + price + ' + ' + ch + ' = ' + (paid + 1) + '，剛好" },
+    { file:'index', expect:'gCountNow', find:"return runs.length ? '數：' + runs.join(' → ')", replace:"return runs.length ? '數：' + runs.slice(1).join(' → ')" },
+    { file:'index', expect:'purse total is not the sum', find:'total:groupSum(coins)', replace:'total:coins.length' },
     { file:'index', expect:'BREAK[10]',
       find:'  var BREAK = { 50:[10,10,10,10,10], 10:[5,5], 5:[1,1,1,1,1] };',
       replace:'  var BREAK = { 50:[10,10,10,10,10], 10:[5,4], 5:[1,1,1,1,1] };' },
@@ -328,11 +364,12 @@ module.exports = {
     optCount: { qs: [2, 4], qsAdv: 4, qsBoost: 2 },
     dataStart: '  /* ---------- 語言無關：硬幣圖 ---------- */',
     dataEnd: '  /* ---------- i18n ---------- */',
-    dataReturn: '{coinSVG, coinGroupHTML, groupSum, QPIC, DENOMS, COIN_SIZE}',
+    dataReturn: '{coinSVG, coinGroupHTML, groupSum, QPIC, DENOMS, COIN_SIZE, sumExpr, GPICK, GCOIN, GSMALL, SORT_H, SORT_JAR, SORT_TRAY, GAME_SORT, EX_H, EX_BIG_Y, EX_BOX, EX_CELL, EX_COLS, EX_CAP, EX_BANK, GAME_EXCHANGE, CNT_H, CNT_SPOTS, CNT_ROW, GAME_COUNT, TAG_H, TAG_PURSE, TAG_SLOT, TAG_CARD, TAG_TRAY, GAME_TAGS, CH_H, CH_TOP, CH_PAID, CH_BOX, CH_CELL, CH_COLS, CH_CAP, CH_BANK, CH_BANKPOS, GAME_CHANGE}',
     optionValueMax: 100,
     check: function(data, I18N, fail, src){
-      /* --- 小遊戲：startRound() 的 total／pay 兩個分支各洗一次牌，畫出來的按鈕不可以固定 --- */
-      gameShuffleProblems(src, 2).forEach(fail);
+      /* --- 小遊戲的卡片／硬幣要洗牌（正解不可以固定在同一個位置）—— 托盤統一由 renderTray() 畫，
+             守的是**畫出來的順序**，實作在 lib/gameshuffle.js。 --- */
+      gameShuffleProblems(src, 1, { roundFn:'renderTray' }).forEach(fail);
 
       /* --- 硬幣圖（index 那一份）：畫在畫布裡、數字在內圈裡；上課頁與小遊戲用的尺寸各驗一次 --- */
       if (data.DENOMS.join(',') !== DENOMS.join(',')) fail('DENOMS is not [1,5,10,50]');
@@ -471,27 +508,258 @@ module.exports = {
         if (!(p >= 1 && p <= 100)) fail('PRICES[' + i + '] ' + p + ' outside 1~100');
       });
 
-      /* --- 小遊戲關卡 --- */
-      const ROUNDS = extractVar(src, 'ROUNDS');
-      if (ROUNDS.length !== 5) fail('ROUNDS should have 5 rounds, got ' + ROUNDS.length);
-      ROUNDS.forEach((r, i) => {
-        if (r.kind === 'total'){
-          if (!allDenoms(r.pile)) fail('ROUNDS[' + i + '] pile has a non-denomination coin');
-          if (r.opts.length !== 4) fail('ROUNDS[' + i + '] total should offer 4 options, got ' + r.opts.length);
-          if (r.opts[r.ans] !== sum(r.pile)) fail('ROUNDS[' + i + '] total: pile sums to ' + sum(r.pile) + ' but opts[ans] is ' + r.opts[r.ans]);
-          if (new Set(r.opts).size !== r.opts.length) fail('ROUNDS[' + i + '] total has duplicate options');
-          if (r.opts.some(o => o > 100)) fail('ROUNDS[' + i + '] total has an option above 100');
-        } else if (r.kind === 'pay'){
-          const sums = r.groups.map(sum);
-          if (r.groups.length !== 4) fail('ROUNDS[' + i + '] pay should offer 4 groups, got ' + r.groups.length);
-          if (!(r.price >= 1 && r.price <= 100)) fail('ROUNDS[' + i + '] pay price ' + r.price + ' outside 1~100');
-          if (sums.some(s => s > 100)) fail('ROUNDS[' + i + '] pay has a group worth more than 100');
-          if (!r.groups.every(allDenoms)) fail('ROUNDS[' + i + '] a group has a non-denomination coin');
-          if (sums.filter(s => s === r.price).length !== 1) fail('ROUNDS[' + i + '] pay: ' + sums.filter(s => s === r.price).length + ' groups pay ' + r.price);
-          if (sums[r.ans] !== r.price) fail('ROUNDS[' + i + '] pay: the marked group does not pay ' + r.price);
-          if (new Set(sums).size !== sums.length) fail('ROUNDS[' + i + '] pay: two groups are worth the same');
-        } else fail('ROUNDS[' + i + '] unknown kind ' + r.kind);
+      /* --- 小遊戲：結帳囉（五關五種玩法，§六之五；2026-10-01 從選擇題改版）——
+             每一題的答案在這裡用設定檔自己的算法重算（總數、換錢、往上數、硬幣個數），不呼叫頁面的答案邏輯；
+             版面數字從 index.html 讀（資料區的常數 + RENDER 函式本體），不在這裡另抄一份。 --- */
+      const isInt = v => Number.isInteger(v);
+      const order = (src.match(/var GAME_ORDER = \[([^\]]*)\]/) || [])[1];
+      const TYPES = ['sort', 'exchange', 'count', 'tags', 'change'];
+      if (order === undefined) fail('cannot find GAME_ORDER in index.html');
+      else {
+        const types = order.split(',').map(x => x.trim().replace(/^'|'$/g, ''));
+        if (types.join() !== TYPES.join()) fail('GAME_ORDER should be ' + TYPES.join() + ', got ' + types.join());
+        types.forEach(t => {
+          if (!new RegExp('\\n {4}' + t + ': function\\(d\\)\\{').test(src)) fail('GAME_ORDER ' + t + ' has no RENDER.' + t);
+          ['zh','en'].forEach(L => {
+            if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('gAsks.' + t + ' missing in ' + L);
+            if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('gHints.' + t + ' missing in ' + L);
+          });
+        });
+      }
+      ['zh','en'].forEach(L => {
+        if (typeof I18N[L].gClear !== 'string' || !I18N[L].gClear) fail('gClear missing in ' + L);
+        if (typeof I18N[L].gWin !== 'function' || !/5/.test(I18N[L].gWin(5))) fail('gWin missing in ' + L);
       });
+      const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+      const B = {}; TYPES.forEach(k => { B[k] = body(k); if (!B[k]) fail('cannot cut RENDER.' + k + ' out of index.html'); });
+      const need = (k, re, what) => { if (!re.test(B[k] || '')) fail(k + ': ' + what); };
+      const box = (o, what, W, H) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail(what + ' is outside the ' + W + '×' + H + ' board'); };
+      const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+      const sq = (cx, cy, s) => ({ x:cx - s / 2, y:cy - s / 2, w:s, h:s });
+      const D = data, G = D.GPICK;
+      /* 手機上至少 44px：375px 手機上卡片內寬約 290px，300 寬的畫板縮成 0.967 倍（實際量測在端對端測試裡） */
+      const scale = Math.min(1.5, 290 / 300);
+      const tooSmall = (what, sz) => { if (!(sz * scale >= 44)) fail(what + ' is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+      tooSmall('a coin (GPICK ' + G + ')', G);
+      tooSmall('a price tag (' + D.TAG_CARD.w + '×' + D.TAG_CARD.h + ')', Math.min(D.TAG_CARD.w, D.TAG_CARD.h));
+      /* 畫出來的硬幣：面額越大、硬幣越大（真的硬幣也是），而且不小於 36（上面的數字要看得清楚）；畫在拿取範圍裡面 */
+      DENOMS.forEach((v, i) => {
+        const s = D.GCOIN[v];
+        if (!(s >= 36 && s <= G)) fail('GCOIN[' + v + '] = ' + s + ' should be 36 ~ GPICK (' + G + ')');
+        if (i && !(s > D.GCOIN[DENOMS[i - 1]])) fail('GCOIN: the ' + v + ' coin is not drawn bigger than the ' + DENOMS[i - 1] + ' coin');
+      });
+      [D.GSMALL, D.CH_PAID.size].forEach(s => { if (!(s >= 36)) fail('a drawn coin of size ' + s + ' is under 36 — the number on it is hard to read'); });
+      [...new Set(DENOMS.map(v => D.GCOIN[v]).concat([D.GSMALL, D.CH_PAID.size]))].forEach(sz => DENOMS.forEach(v => {
+        const svg = data.coinSVG(v, sz), label = 'game coinSVG(' + v + ',' + sz + ')';
+        canvasProblems(svg, { pad: 1 }).forEach(p => fail(label + ': ' + p));
+        coinTextProblems(svg, label).forEach(fail);
+      }));
+      /* 一般字句：sumExpr 自己驗一次 */
+      [[[10, 5, 1], 16, '10 + 5 + 1 = 16'], [[50], 50, '50']].forEach(([l, t, w]) => { if (data.sumExpr(l, t) !== w) fail('sumExpr(' + l.join() + ') should read "' + w + '", got "' + data.sumExpr(l, t) + '"'); });
+      const seq = (where, text, want) => {
+        if (typeof text !== 'string' || /undefined|NaN/.test(text)) return fail(where + ': text has undefined/NaN: ' + text);
+        const got = (text.match(/\d+/g) || []).map(Number).join();
+        if (got !== want.join()) fail(where + ': numbers should read ' + want.join() + ', got ' + got + ' — ' + text);
+      };
+      const has = (where, text, part) => { if (typeof text !== 'string' || text.indexOf(part) < 0) fail(where + ' does not say "' + part + '": ' + text); };
+      ['GAME_SORT', 'GAME_EXCHANGE', 'GAME_COUNT', 'GAME_TAGS', 'GAME_CHANGE'].forEach(k => { if (!Array.isArray(D[k]) || D[k].length < 2) fail(k + ' should be a pool of at least 2 entries (pick() of an empty pool crashes the round)'); });
+      const intList = (a, what) => { if (!Array.isArray(a) || !a.length || !a.every(isInt)) fail(what + ' is not a list of whole numbers'); };
+
+      /* 第 1 關：存錢筒。六個硬幣、每種面額至少一個；一個存錢筒放得下的個數從版面算 */
+      {
+        const J = D.SORT_JAR, cap = Math.floor((J.h - J.lbl) / G);
+        DENOMS.forEach((v, i) => {
+          const r = { x:J.x0 + i * J.step, y:J.y, w:J.w, h:J.h };
+          box(r, 'jar ' + v, 300, D.SORT_H);
+          if (i && hit(r, { x:J.x0 + (i - 1) * J.step, y:J.y, w:J.w, h:J.h })) fail('jars ' + DENOMS[i - 1] + ' and ' + v + ' overlap');
+          if (J.w < G) fail('a jar is narrower than a coin');
+        });
+        const T = D.SORT_TRAY;
+        if (T.step < G + 4) fail('sort tray: coins ' + T.step + ' apart overlap (GPICK ' + G + ')');
+        if (56 < G) fail('sort tray: rows 56 apart overlap');
+        D.GAME_SORT.forEach((s, i) => {
+          const w = 'GAME_SORT[' + i + ']';
+          intList(s, w);
+          if (s.length !== 6) fail(w + ' should have 6 coins');
+          if (!allDenoms(s)) fail(w + ' has a non-denomination coin');
+          DENOMS.forEach(v => {
+            const n = s.filter(x => x === v).length;
+            if (n < 1) fail(w + ' is missing the ' + v + ' coin (every jar gets at least one)');
+            if (n > cap) fail(w + ' has ' + n + ' coins of ' + v + ' — more than a jar holds (' + cap + ')');
+          });
+          const cols = T.cols, x0 = (300 - (Math.min(cols, s.length) - 1) * T.step) / 2;
+          s.forEach((v, k) => {
+            const r = sq(x0 + (k % cols) * T.step, T.y + Math.floor(k / cols) * 56, G);
+            box(r, w + ' tray coin ' + k, 300, D.SORT_H);
+            if (hit(r, { x:0, y:J.y, w:300, h:J.h + 6 })) fail(w + ': the tray reaches into the jars');
+          });
+        });
+        need('sort', /if \(jar\.v !== v\)\{ roundMiss\(d\.gSortNot\(v, jar\.v\)\); return false; \}/, 'a coin goes in any jar (the jar must match the value printed on the coin)');
+        need('sort', /P\.lock\(jar\.cx, SORT_JAR\.y \+ SORT_JAR\.lbl \+ GPICK \/ 2 \+ jar\.n \* GPICK\)/, 'the placed coin is not stacked inside the jar');
+        ['zh','en'].forEach(L => { seq('gSortNot ' + L, I18N[L].gSortNot(5, 10), [5, 5, 10]); seq('gSort2 ' + L, I18N[L].gSort2(50), [50, 50]); });
+      }
+
+      /* 第 2 關：換錢。硬幣盒只有比 big 小的面額；設定檔自己窮舉「放到剛好 big」的每一種放法，
+         一定換得完（任何沒超過的狀態都還放得下一個不超過的硬幣），最多要放幾個 ≤ EX_CAP ≤ 盤子的格子數 */
+      {
+        const X = D.EX_BOX, rows = Math.floor((X.h - 8) / D.EX_CELL);
+        const cm = B.exchange.match(/coinPic\(B, v, EX_BOX\.x \+ (\d+) \+ \(k % EX_COLS\) \* EX_CELL, EX_BOX\.y \+ (\d+) \+ Math\.floor\(k \/ EX_COLS\) \* EX_CELL, GSMALL\)/);
+        if (!cm) fail('exchange: cannot read where the coins in the tray are drawn');
+        else for (let k = 0; k < D.EX_CAP; k++){
+          const r = sq(X.x + +cm[1] + (k % D.EX_COLS) * D.EX_CELL, X.y + +cm[2] + Math.floor(k / D.EX_COLS) * D.EX_CELL, D.GSMALL);
+          if (!(r.x >= X.x && r.y >= X.y && r.x + r.w <= X.x + X.w && r.y + r.h <= X.y + X.h)) fail('exchange: coin #' + (k + 1) + ' of ' + D.EX_CAP + ' does not fit inside the tray');
+        }
+        if (D.EX_CAP > D.EX_COLS * rows) fail('exchange: EX_CAP ' + D.EX_CAP + ' is more than the tray has cells');
+        box(X, 'the exchange tray', 300, D.EX_H);
+        if (D.EX_BANK.y - G / 2 < D.EX_BANK.lblY + 20 || D.EX_BANK.lblY < X.y + X.h + 8) fail('exchange: coin box / its label / the tray overlap');
+        if (D.EX_BANK.y + G / 2 > D.EX_H) fail('exchange: the coin box is below the board');
+        if (D.EX_BANK.step < G + 4) fail('exchange: coin box coins overlap');
+        D.GAME_EXCHANGE.forEach((e, i) => {
+          const w = 'GAME_EXCHANGE[' + i + ']';
+          if (DENOMS.indexOf(e.big) < 0) fail(w + ' big ' + e.big + ' is not a denomination');
+          intList(e.bank, w + '.bank');
+          if (!allDenoms(e.bank)) fail(w + '.bank has a non-denomination coin');
+          if (e.bank.some(v => v >= e.big)) fail(w + '.bank has a coin that is not smaller than ' + e.big + ' (that is not an exchange)');
+          if (new Set(e.bank).size !== e.bank.length) fail(w + '.bank repeats a coin');
+          if (e.bank.length < 2) fail(w + '.bank has only one kind of coin — nothing can go past ' + e.big + ', so "stop at exactly" is never a decision');
+          /* 窮舉：每一個沒超過的總數 s，可以走到的最多個數 */
+          const most = new Map([[0, 0]]), todo = [0];
+          while (todo.length){
+            const s = todo.shift();
+            const nexts = e.bank.filter(v => s + v <= e.big);
+            if (s < e.big && !nexts.length) fail(w + ': stuck at ' + s + ' — no coin fits');
+            nexts.forEach(v => { const t = s + v, c = most.get(s) + 1; if (!most.has(t) || most.get(t) < c){ most.set(t, c); todo.push(t); } });
+          }
+          if (!most.has(e.big)) fail(w + ': ' + e.big + ' cannot be made from ' + e.bank.join(','));
+          else if (most.get(e.big) > D.EX_CAP) fail(w + ' needs up to ' + most.get(e.big) + ' coins, but the tray holds EX_CAP ' + D.EX_CAP);
+          ['zh','en'].forEach(L => {
+            seq(w + ' gExOver ' + L, I18N[L].gExOver(e.big - Math.min(...e.bank), e.big, e.big), [e.big - Math.min(...e.bank), e.big, 2 * e.big - Math.min(...e.bank), e.big]);
+            const list = []; let s = 0; while (s < e.big){ const v = Math.max(...e.bank.filter(x => s + x <= e.big)); list.push(v); s += v; }
+            has(w + ' gExDone ' + L, I18N[L].gExDone(e.big, list), list.join(' + '));
+            seq(w + ' gExNow ' + L, I18N[L].gExNow(0, e.big), [0, e.big]);
+          });
+        });
+        need('exchange', /if \(have \+ v > e\.big\)\{ roundMiss\(d\.gExOver\(have, v, e\.big\)\); return false; \}/, 'a coin that goes past the big coin is not bounced');
+        need('exchange', /if \(have === e\.big\) roundSolved\(d\.gExDone\(e\.big, desc\(got\)\)\);/, 'the round is not solved exactly when the tray equals the big coin');
+        need('exchange', /P\.home\(\);/, 'the coin box coin does not go back (the box must never run out)');
+        ['zh','en'].forEach(L => { if (!/拿不完|never runs out/.test(I18N[L].gBank) || !/拿不完|never runs out/.test(I18N[L].gRegister)) fail('the coin box / register label does not say it never runs out (' + L + ')'); });
+      }
+
+      /* 第 3 關：從大的先數。4～5 個硬幣、至少三種面額、總數 ≤ 100；堆的位置不重疊、數過的那一排放得下 */
+      {
+        const S = D.CNT_SPOTS, Rw = D.CNT_ROW;
+        S.forEach((p, i) => {
+          const r = sq(p.x, p.y, G);
+          box(r, 'count spot ' + i, 300, D.CNT_H);
+          S.slice(0, i).forEach((q, j) => { if (hit(r, sq(q.x, q.y, G))) fail('count spots ' + j + ' and ' + i + ' overlap'); });
+          if (r.y + r.h > Rw.y - 4) fail('count spot ' + i + ' reaches into the counting row');
+        });
+        box(Rw, 'the counting row', 300, D.CNT_H);
+        if (Rw.step < G + 4) fail('count: counted coins ' + Rw.step + ' apart overlap');
+        D.GAME_COUNT.forEach((c, i) => {
+          const w = 'GAME_COUNT[' + i + ']';
+          intList(c, w);
+          if (!allDenoms(c)) fail(w + ' has a non-denomination coin');
+          if (c.length < 4 || c.length > 5) fail(w + ' should have 4~5 coins');
+          if (c.length > S.length) fail(w + ' has more coins than spots');
+          if (new Set(c).size < 3) fail(w + ' has fewer than 3 different values — "biggest first" has nothing to sort');
+          if (sum(c) > 100) fail(w + ' totals ' + sum(c) + ', over 100');
+          if (Rw.x + Rw.pad + (c.length - 1) * Rw.step + G / 2 > Rw.x + Rw.w) fail(w + ': the last counted coin sticks out of the row');
+          const runs = []; let t = 0; c.slice().sort((a, b) => b - a).forEach(v => { t += v; runs.push(t); });
+          ['zh','en'].forEach(L => { seq(w + ' gCountNow ' + L, I18N[L].gCountNow(runs), runs); seq(w + ' gCountDone ' + L, I18N[L].gCountDone(t), [t]); });
+        });
+        need('count', /if \(v < big\)\{ roundMiss\(d\.gCountBig\(v, big\)\); return false; \}/, 'a smaller coin can be counted while a bigger one is left');
+        need('count', /if \(!P\.locked && P\.data\.v > m\) m = P\.data\.v;/, 'biggestLeft() does not look at the uncounted coins');
+        need('count', /total \+= v; runs\.push\(total\);/, 'the running total is not a running sum');
+        ['zh','en'].forEach(L => seq('gCountBig ' + L, I18N[L].gCountBig(5, 50), [5, 50]));
+      }
+
+      /* 第 4 關：掛價錢牌。三個錢包總數兩兩不同；多的那張牌子是某個錢包的硬幣個數，不等於任何總數；
+         一定有一個錢包硬幣比較多、錢卻比較少（迷思要真的出現） */
+      {
+        const P = D.TAG_PURSE, SL = D.TAG_SLOT, C = D.TAG_CARD, TT = D.TAG_TRAY;
+        [0, 1, 2].forEach(i => {
+          const r = { x:P.x0 + i * P.step, y:P.y, w:P.w, h:P.h };
+          box(r, 'purse ' + i, 300, D.TAG_H);
+          if (i && hit(r, { x:P.x0 + (i - 1) * P.step, y:P.y, w:P.w, h:P.h })) fail('purses ' + (i - 1) + ' and ' + i + ' overlap');
+        });
+        if (SL.w < C.w || SL.h < C.h) fail('a tag slot is smaller than a tag');
+        if (P.row2 + D.GSMALL / 2 > SL.y) fail('purse coins reach into the tag slot');
+        if (P.row1 - D.GSMALL / 2 < 2) fail('purse coins stick out of the top of the purse (row1 ' + P.row1 + ')');
+        if (P.row2 - P.row1 < D.GSMALL) fail('the two rows of purse coins overlap (row1 ' + P.row1 + ', row2 ' + P.row2 + ')');
+        if (P.dx * 2 < D.GSMALL) fail('two coins side by side in a purse overlap');
+        if (P.w / 2 - P.dx - D.GSMALL / 2 < 0) fail('purse coins stick out of the purse');
+        if (TT.step < C.w + 2) fail('tags ' + TT.step + ' apart overlap');
+        const x0 = (300 - 3 * TT.step) / 2;
+        if (x0 - C.w / 2 < 0 || x0 + 3 * TT.step + C.w / 2 > 300) fail('the tag tray sticks out of the board');
+        if (TT.y - C.h / 2 < P.y + P.h + 4 || TT.y + C.h / 2 > D.TAG_H) fail('the tag tray overlaps the purses or leaves the board');
+        D.GAME_TAGS.forEach((t, i) => {
+          const w = 'GAME_TAGS[' + i + ']';
+          if (!Array.isArray(t.purses) || t.purses.length !== 3) { fail(w + ' should have 3 purses'); return; }
+          t.purses.forEach((p, k) => { intList(p, w + '.purses[' + k + ']'); if (!allDenoms(p)) fail(w + '.purses[' + k + '] has a non-denomination coin'); if (p.length > 4) fail(w + '.purses[' + k + '] has more than 4 coins (does not fit)'); });
+          const tot = t.purses.map(sum), cnt = t.purses.map(p => p.length);
+          if (new Set(tot).size !== 3) fail(w + ': purse totals are not all different (' + tot.join(',') + ')');
+          if (tot.some(x => x > 100)) fail(w + ': a purse is over 100');
+          if (!isInt(t.decoy) || t.decoy < 1) fail(w + '.decoy is not a positive whole number');
+          if (tot.indexOf(t.decoy) >= 0) fail(w + ': decoy ' + t.decoy + ' equals a purse total — two tags would fit');
+          if (cnt.indexOf(t.decoy) < 0) fail(w + ': decoy ' + t.decoy + ' is not the number of coins in any purse (' + cnt.join(',') + ')');
+          if (!cnt.some((a, x) => cnt.some((b, y) => a > b && tot[x] < tot[y]))) fail(w + ': no purse with more coins but less money — the misconception never shows up');
+          t.purses.forEach((p, k) => ['zh','en'].forEach(L => {
+            const ds = p.slice().sort((a, b) => b - a);
+            seq(w + ' gTagNot ' + L + ' purse ' + k, I18N[L].gTagNot(ds, tot[k], t.decoy), (p.length > 1 ? ds : []).concat([tot[k], t.decoy]));
+            seq(w + ' gTag2 ' + L + ' purse ' + k, I18N[L].gTag2(ds, tot[k]), (p.length > 1 ? ds : []).concat([tot[k], tot[k]]));
+          }));
+        });
+        need('tags', /renderTray\(B, purses\.map\(function\(p\)\{ return p\.total; \}\)\.concat\(\[t\.decoy\]\)/, 'the tags are not the three purse totals plus the decoy');
+        need('tags', /total:groupSum\(coins\)/, 'a purse total is not the sum of the coins drawn in it');
+        need('tags', /if \(P\.data\.v !== p\.total\)\{ roundMiss\(d\.gTagNot\(desc\(p\.coins\), p\.total, P\.data\.v\)\); return false; \}/, 'a tag can hang under a purse that holds a different amount');
+      }
+
+      /* 第 5 關：找錢。客人付的是畫出來的硬幣；找的錢 = 付的 − 價錢 > 0；最多要放 (找的錢 ÷ 收銀機最小面額) 個 ≤ CH_CAP ≤ 盤子格子 */
+      {
+        const X = D.CH_BOX, rows = Math.floor((X.h - 8) / D.CH_CELL);
+        const cm = B.change.match(/coinPic\(B, v, CH_BOX\.x \+ (\d+) \+ \(k % CH_COLS\) \* CH_CELL, CH_BOX\.y \+ (\d+) \+ Math\.floor\(k \/ CH_COLS\) \* CH_CELL, GSMALL\)/);
+        if (!cm) fail('change: cannot read where the coins in the tray are drawn');
+        else for (let k = 0; k < D.CH_CAP; k++){
+          const r = sq(X.x + +cm[1] + (k % D.CH_COLS) * D.CH_CELL, X.y + +cm[2] + Math.floor(k / D.CH_COLS) * D.CH_CELL, D.GSMALL);
+          if (!(r.x >= X.x && r.y >= X.y && r.x + r.w <= X.x + X.w && r.y + r.h <= X.y + X.h)) fail('change: coin #' + (k + 1) + ' of ' + D.CH_CAP + ' does not fit inside the tray');
+        }
+        if (D.CH_CAP > D.CH_COLS * rows) fail('change: CH_CAP is more than the tray has cells');
+        box(X, 'the change tray', 300, D.CH_H);
+        if (!allDenoms(D.CH_BANK)) fail('CH_BANK has a non-denomination coin');
+        if (D.CH_BANKPOS.lblY < X.y + X.h + 4 || D.CH_BANKPOS.y - G / 2 < D.CH_BANKPOS.lblY + 20 || D.CH_BANKPOS.y + G / 2 > D.CH_H) fail('change: register / its label / the tray overlap or leave the board');
+        if (D.CH_BANKPOS.step < G + 4) fail('change: register coins overlap');
+        const minB = Math.min(...D.CH_BANK);
+        D.GAME_CHANGE.forEach((c, i) => {
+          const w = 'GAME_CHANGE[' + i + ']';
+          if (!isInt(c.price) || c.price < 1) fail(w + '.price is not a positive whole number');
+          intList(c.paid, w + '.paid');
+          if (!allDenoms(c.paid)) fail(w + '.paid has a non-denomination coin');
+          if (c.paid.length > 2) fail(w + '.paid draws more than 2 coins');
+          c.paid.forEach((v, k) => {
+            const r = sq(D.CH_PAID.x - k * D.CH_PAID.step, D.CH_PAID.y, D.CH_PAID.size);
+            box(r, w + ' paid coin ' + k, 300, D.CH_H);
+            if (hit(r, D.CH_TOP) || r.y + r.h > X.y) fail(w + ': paid coin ' + k + ' overlaps the price text or the tray');
+          });
+          c.paid.forEach((v, k) => { if (k && hit(sq(D.CH_PAID.x - k * D.CH_PAID.step, D.CH_PAID.y, D.CH_PAID.size), sq(D.CH_PAID.x - (k - 1) * D.CH_PAID.step, D.CH_PAID.y, D.CH_PAID.size))) fail(w + ': the paid coins overlap — two coins could look like one'); });
+          const paid = sum(c.paid), ch = paid - c.price;
+          if (paid > 100) fail(w + ': paid over 100');
+          if (!(ch >= 1)) fail(w + ': price ' + c.price + ' is not less than paid ' + paid + ' — nothing to give back');
+          if (ch % minB) fail(w + ': change ' + ch + ' cannot be made from the register');
+          if (ch / minB > D.CH_CAP) fail(w + ': change ' + ch + ' needs up to ' + (ch / minB) + ' coins, but the tray holds CH_CAP ' + D.CH_CAP);
+          ['zh','en'].forEach(L => {
+            seq(w + ' gChTop ' + L, I18N[L].gChTop(c.price), [c.price]);
+            seq(w + ' gChOver ' + L, I18N[L].gChOver(10, paid - 1 + 10, paid), [10, paid + 9, paid]);
+            const list = []; let s = 0; while (s < ch){ const v = Math.max(...D.CH_BANK.filter(x => s + x <= ch)); list.push(v); s += v; }
+            const txt = I18N[L].gChDone(ch, list, c.price, paid);
+            has(w + ' gChDone ' + L, txt, c.price + ' + ' + ch + ' = ' + paid);
+            has(w + ' gChDone ' + L, txt, data.sumExpr(list, ch).replace(/ = (\d+)$/, L === 'en' ? ' = $$$1' : ' = $1'));
+          });
+        });
+        need('change', /var c = pick\(GAME_CHANGE\), paid = groupSum\(c\.paid\), got = \[\], have = c\.price, runs = \[c\.price\];/, 'counting up does not start at the price');
+        need('change', /if \(have \+ v > paid\)\{ roundMiss\(d\.gChOver\(v, have \+ v, paid\)\); return false; \}/, 'a coin that counts past what the customer paid is not bounced');
+        need('change', /if \(have === paid\) roundSolved\(d\.gChDone\(paid - c\.price, desc\(got\), c\.price, paid\)\);/, 'the round is not solved exactly when counting reaches what was paid');
+      }
     }
   }
 };
