@@ -335,7 +335,10 @@
   function bigShapeSVG(desc, px){
     px = px || 130;
     var cx=100, cy=100, body;
-    if (desc.kind === 'triangle'){
+    if (desc.pts){
+      /* 固定頂點（題目要畫「這一個」形狀，不能每次隨機） */
+      body = '<polygon points="'+desc.pts.map(function(p){ return p.join(','); }).join(' ')+'"></polygon>';
+    } else if (desc.kind === 'triangle'){
       body = '<polygon points="'+ptsAttr(makeTriangle(cx,cy,desc.size||72,desc.rot||0,desc.variant||'normal'))+'"></polygon>';
     } else if (desc.kind === 'square'){
       body = '<polygon points="'+ptsAttr(makeSquare(cx,cy,desc.size||96,desc.rot||0))+'"></polygon>';
@@ -500,6 +503,7 @@
       ],
       qsBoost: [
         { kind:'text', stem:'歪歪扁扁的它，還是三角形嗎？',
+          fig:{kind:'triangle',pts:[[30,160],[175,45],[95,150]]},
           opts:['不是，它長得不像三角形','是，它有 3 個直直的邊'], ans:1,
           why:'只要有 3 個直直的邊、圍成一圈，不管胖瘦歪斜，都是三角形。' },
         { kind:'text', stem:'正方形轉一下，會變成什麼？',
@@ -619,6 +623,7 @@
       ],
       qsBoost: [
         { kind:'text', stem:'A tilted, thin one — is it still a triangle?',
+          fig:{kind:'triangle',pts:[[30,160],[175,45],[95,150]]},
           opts:['No, it doesn’t look like a triangle','Yes, it has 3 straight sides'], ans:1,
           why:'As long as it has 3 straight sides forming a closed shape, it’s a triangle no matter how thin or tilted.' },
         { kind:'text', stem:'What happens when you rotate a square?',
@@ -983,10 +988,12 @@
      triangles make a rectangle or parallelogram, not a square). */
   function composeStemSVG(px){
     px = px || 110;
-    var s = 100;
-    return '<svg viewBox="0 0 '+s+' '+s+'" width="'+px+'" height="'+px+'" class="bigshape">' +
+    /* 兩塊分開放（中間留空隙），讓孩子自己想像「合起來」—— 不要先畫成已經拼好的正方形。
+       右下那塊向右移 gap，兩條斜邊平行、相隔 gap/√2。 */
+    var s = 100, gap = 36, w = s + gap;
+    return '<svg viewBox="-4 -4 '+(w+8)+' '+(s+8)+'" width="'+Math.round(px*(w+8)/(s+8))+'" height="'+px+'" class="bigshape" style="stroke-linejoin:round">' +
       '<polygon points="0,0 '+s+',0 0,'+s+'"></polygon>' +
-      '<polygon points="'+s+',0 '+s+','+s+' 0,'+s+'" style="opacity:.55"></polygon>' +
+      '<polygon points="'+(s+gap)+',0 '+(s+gap)+','+s+' '+gap+','+s+'"></polygon>' +
       '</svg>';
   }
 
@@ -1006,6 +1013,8 @@
       stem.className = 'stem'; stem.textContent = q.stem;
       var stemVisual = document.createElement('div');
       if (q.kind === 'compose') stemVisual.innerHTML = composeStemSVG(110);
+      else if (q.fig) stemVisual.innerHTML = bigShapeSVG(q.fig, 150);
+      if (stemVisual.innerHTML) stemVisual.style.margin = '4px 0 14px';
       var opts = document.createElement('div');
       opts.className = 'opts' + (q.kind === 'text' ? ' textopts' : '');
       var fb = document.createElement('p');
