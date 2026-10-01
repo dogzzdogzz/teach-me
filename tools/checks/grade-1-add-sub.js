@@ -1,6 +1,8 @@
 /* grade-1/math/add-sub 的檢查設定（20 以內加減：情境分類、湊十、拆十）。 */
 
 const arithAS = require('./lib/arith.js').makeArith({});
+/* 小遊戲的結語（「10 + 3 = 13」「8 − 5 = 3」）另外用一個驗算器：試題那一個的覆蓋率摘要不要被遊戲的字串攪動。 */
+const arithGame = require('./lib/arith.js').makeArith({});
 
 const { gameShuffleProblems } = require('./lib/gameshuffle.js');
 
@@ -11,8 +13,8 @@ module.exports = {
        真實存在的缺陷（選項排成 [count-1, count, count+1, count+2] 照順序畫，
        正解永遠是第二顆），而當時那條「正解不可以在 index 0」的斷言看不到它。 */
     { file:'index', expect:'without shuffle(...)',
-      find:'    shuffle(round.opts).forEach(function(v){',
-      replace:'    round.opts.forEach(function(v){' },
+      find:"    shuffle(items).forEach(function(it, i){ mk(it, x0 + (i % cols) * step, y + Math.floor(i / cols) * 56); });",
+      replace:"    items.forEach(function(it, i){ mk(it, x0 + (i % cols) * step, y + Math.floor(i / cols) * 56); });" },
     { file:'review', expect:'a+b != sum',
       find:'        var sum = a + b;\n        /* 誘答刻意放 |a − b|（該加卻減）；它有時剛好等於 a 或 b，那仍是同一個迷思，其餘的加數不可以出現 */\n        var m = mixOpts(sum, [sum - 1, sum + 1, Math.abs(a - b)], avoidExcept([a, b], [Math.abs(a - b)]));',
       replace:'        var sum = a + b + 1;\n        /* 誘答刻意放 |a − b|（該加卻減）；它有時剛好等於 a 或 b，那仍是同一個迷思，其餘的加數不可以出現 */\n        var m = mixOpts(sum, [sum - 1, sum + 1, Math.abs(a - b)], avoidExcept([a, b], [Math.abs(a - b)]));' },
@@ -37,9 +39,6 @@ module.exports = {
     { file:'review', expect:'a+remain != 10',
       find:'        var a = pickUnused([6,7,8,9], used);\n        var remain = 10 - a;',
       replace:'        var a = pickUnused([6,7,8,9], used);\n        var remain = 10 - a + 1;' },
-    { file:'index', expect:'ROUNDS[1] crosses ten but mid=11, expected 10',
-      find:"    { a:9,  b:5, op:'add', ans:14, opts:[14,13,15,4], mid:10 },",
-      replace:"    { a:9,  b:5, op:'add', ans:14, opts:[14,13,15,4], mid:11 }," },
     { file:'index', expect:'REGROUP_UP[0] a+b does not cross ten',
       find:'  var REGROUP_UP = [ {a:8,b:5}, {a:7,b:5}, {a:9,b:4} ];',
       replace:'  var REGROUP_UP = [ {a:8,b:1}, {a:7,b:5}, {a:9,b:4} ];' },
@@ -48,7 +47,88 @@ module.exports = {
       replace:'  var REGROUP_DOWN = [ {total:13,b:2}, {total:12,b:4}, {total:15,b:7} ];' },
     { file:'index', expect:'arithmetic is wrong',
       find:"why:'這是合併：3 + 5 = 8。'",
-      replace:"why:'這是合併：3 + 5 = 9。'" }
+      replace:"why:'這是合併：3 + 5 = 9。'" },
+    /* --- 小遊戲（2026-10-01 改成五關五種玩法）：每一條不變量各有一筆，證明它真的會響 --- */
+    { file:'index', expect:'STORY_OP.compare is +, expected −',
+      find:"  var STORY_OP = { combine:'+', add:'+', remove:'−', compare:'−', totalLeft:'−' };",
+      replace:"  var STORY_OP = { combine:'+', add:'+', remove:'−', compare:'+', totalLeft:'−' };" },
+    { file:'index', expect:'GAME_STORIES[0] needs 2 adding and 2 subtracting stories',
+      find:"    [ { t:'combine', a:3, b:4 }, { t:'add', a:5, b:2 }, { t:'remove', a:8, b:3 },",
+      replace:"    [ { t:'combine', a:3, b:4 }, { t:'add', a:5, b:2 }, { t:'combine', a:8, b:3 }," },
+    { file:'index', expect:'GAME_STORIES[3] compare needs a > b',
+      find:"{ t:'compare', a:11, b:7 }",
+      replace:"{ t:'compare', a:7, b:11 }" },
+    { file:'index', expect:'GAME_STORIES[2] combine 8+16 outside 0..20',
+      find:"    [ { t:'combine', a:8, b:6 },",
+      replace:"    [ { t:'combine', a:8, b:16 }," },
+    { file:'index', expect:'story card text must show a then b',
+      find:"        remove:function(a, b){ return '盤子裡有 ' + a + ' 顆草莓，吃掉 ' + b + ' 顆，還剩幾顆？'; },",
+      replace:"        remove:function(a, b){ return '盤子裡有 ' + b + ' 顆草莓，吃掉 ' + a + ' 顆，還剩幾顆？'; }," },
+    { file:'index', expect:'gStoryNot.totalLeft zh does not say 減法',
+      find:"        totalLeft:'看到「一共」不一定要加：球被拿走了，變少了，要用減法。'",
+      replace:"        totalLeft:'看到「一共」就要用加法。'" },
+    { file:'index', expect:'GAME_COMPARE[0] needs integers with 2 <= b < a <= 10',
+      find:'    { a:8, b:5 }, { a:7, b:4 }, { a:9, b:6 }, { a:6, b:2 }, { a:10, b:7 }, { a:7, b:3 }',
+      replace:'    { a:5, b:8 }, { a:7, b:4 }, { a:9, b:6 }, { a:6, b:2 }, { a:10, b:7 }, { a:7, b:3 }' },
+    { file:'index', expect:'GAME_HOPS[4] lands on -2',
+      find:"{ start:15, hop:7, op:'sub' }",
+      replace:"{ start:5, hop:7, op:'sub' }" },
+    { file:'index', expect:'GAME_HOPS[0] op must be add or sub',
+      find:"    { start:9, hop:5, op:'add' },",
+      replace:"    { start:9, hop:5, op:'plus' }," },
+    { file:'index', expect:'GAME_MAKE10[5] 6+3 does not cross ten',
+      find:'{ a:6, b:5 }, { a:7, b:5 }',
+      replace:'{ a:6, b:3 }, { a:7, b:5 }' },
+    { file:'index', expect:'GAME_MAKE10[3] leaves 6 outside, more than the 5 spots',
+      find:'{ a:9, b:6 }, { a:8, b:7 }',
+      replace:'{ a:9, b:7 }, { a:8, b:7 }' },
+    { file:'index', expect:'GAME_BREAK10[1] b 2 does not exceed the 2 loose ones',
+      find:'{ total:12, b:4 }, { total:15, b:7 },',
+      replace:'{ total:12, b:2 }, { total:15, b:7 },' },
+    { file:'index', expect:'GAME_BREAK10[5] total 17 leaves 7 loose',
+      find:'{ total:15, b:9 }',
+      replace:'{ total:17, b:9 }' },
+    { file:'index', expect:'gM10Done',
+      find:"' 個，10 + ' + r + ' = ' + s + '。所以 '",
+      replace:"' 個，10 + ' + r + ' = ' + (s + 1) + '。所以 '" },
+    /* 散文裡的數（「10 minus 2 leaves 7」）驗算器讀不到 —— 逐個比數字的那一條要響 */
+    { file:'index', expect:'gB10Done: numbers should read',
+      find:"return t + ' minus ' + ones + ' makes 10, then 10 minus ' + rest + ' leaves ' + res + '.",
+      replace:"return t + ' minus ' + ones + ' makes 10, then 10 minus ' + rest + ' leaves ' + (res - 1) + '." },
+    { file:'index', expect:'gCmpDone',
+      find:"return n0 + '比' + n1 + '多 ' + (a - b) + ' 張：' + a + ' − ' + b + ' = ' + (a - b) + '。';",
+      replace:"return n0 + '比' + n1 + '多 ' + (a - b) + ' 張：' + a + ' − ' + b + ' = ' + (a + b) + '。';" },
+    { file:'index', expect:'out-box spots overlap',
+      find:'  function outSpot(i){ return { cx:OUT_BOX.x + 30 + i * 48, cy:OUT_BOX.y + OUT_BOX.h / 2 }; }',
+      replace:'  function outSpot(i){ return { cx:OUT_BOX.x + 30 + i * 40, cy:OUT_BOX.y + OUT_BOX.h / 2 }; }' },
+    { file:'index', expect:'under 44',
+      find:"        addPiece(B, { w:46, h:46, cx:cx, cy:cy, text:'', cls:'gdot',",
+      replace:"        addPiece(B, { w:40, h:46, cx:cx, cy:cy, text:'', cls:'gdot'," },
+    { file:'index', expect:'GRID_CELL',
+      find:'  var GRID_COLS = 6, GRID_CELL = 46, GRID_PITCH = 50;',
+      replace:'  var GRID_COLS = 6, GRID_CELL = 40, GRID_PITCH = 50;' },
+    { file:'index', expect:'FRAME_CELL',
+      find:'  var FRAME_CELL = 46, FRAME_PITCH = 50;',
+      replace:'  var FRAME_CELL = 42, FRAME_PITCH = 50;' },
+    { file:'index', expect:'TW',
+      find:'      var TW = 46, TP = 56, tx0',
+      replace:'      var TW = 40, TP = 56, tx0' },
+    { file:'index', expect:'story cards in the tray overlap',
+      find:"        pieces.push(addPiece(B, { w:288, h:50,",
+      replace:"        pieces.push(addPiece(B, { w:288, h:60," },
+    { file:'index', expect:'the second sorted card sticks out of the box',
+      find:"bx.R.y + 60 + bx.items * 46);",
+      replace:"bx.R.y + 60 + bx.items * 56);" },
+    /* codex 第一輪：外面框的間距只拿 FRAME_CELL 比，湊十拖過去的點點變寬也不會響 */
+    { file:'index', expect:'out-box spots overlap (pitch 48 < dot 50)',
+      find:"        addPiece(B, { w:46, h:46, cx:cx, cy:cy, text:'', cls:'gdot',",
+      replace:"        addPiece(B, { w:50, h:46, cx:cx, cy:cy, text:'', cls:'gdot'," },
+    { file:'index', expect:'inside the borders of its 142-wide box',
+      find:"P.w = 130; P.h = 42; P.el.style.width = '130px';",
+      replace:"P.w = 150; P.h = 42; P.el.style.width = '150px';" },
+    { file:'index', expect:'gClear missing',
+      find:"      gClear:'按「下一關」繼續下一題。',\n      gWin:function(score){ return '五關全破！",
+      replace:"      gWin:function(score){ return '五關全破！" }
   ],
 
   sim: {
@@ -144,7 +224,7 @@ module.exports = {
   data: {
     dataStart: '/* ---------- 語言無關的資料 ---------- */',
     dataEnd: '/* ---------- i18n ---------- */',
-    dataReturn: '{SCENARIOS, LINE_PROBS, REGROUP_UP, REGROUP_DOWN, ROUNDS}',
+    dataReturn: '{SCENARIOS, LINE_PROBS, REGROUP_UP, REGROUP_DOWN, STORY_OP, GAME_STORIES, GAME_COMPARE, GAME_HOPS, GAME_MAKE10, GAME_BREAK10}',
     optionValueMax: 21,
     check: function(data, I18N, fail, src){
       /* --- 範例 1：四種情境類型 --- */
@@ -186,31 +266,174 @@ module.exports = {
         if (r.total - r.b < 0) fail('REGROUP_DOWN[' + i + '] negative result');
       });
 
-      /* --- 小遊戲：小火車過山洞 --- */
-      data.ROUNDS.forEach((r, i) => {
-        const val = r.op === 'add' ? r.a + r.b : r.a - r.b;
-        if (val !== r.ans) fail('ROUNDS[' + i + '] ' + r.a + (r.op === 'add' ? '+' : '-') + r.b + ' != ' + r.ans);
-        if (r.opts.indexOf(r.ans) < 0) fail('ROUNDS[' + i + '] ans not among opts');
-        if (new Set(r.opts).size !== r.opts.length) fail('ROUNDS[' + i + '] duplicate opts');
-        if (r.ans < 0 || r.ans > 20) fail('ROUNDS[' + i + '] ans out of the lesson range');
-        /* 湊十／拆十跨過 10 的那幾關，提示的「中間會經過」一定是 10 —— 不然湊十／
-           拆十的策略提示等於在教別的東西。 */
-        const crosses = r.op === 'add' ? (r.a < 10 && r.a + r.b >= 10) : (r.a >= 10 && r.a - r.b < 10);
-        if (crosses && r.mid !== 10) fail('ROUNDS[' + i + '] crosses ten but mid=' + r.mid + ', expected 10');
-        ['zh','en'].forEach(L => {
-          const ask = I18N[L].gAsk(r.a, r.b, r.op);
-          const h1 = I18N[L].gHint1(r.op);
-          const h2 = I18N[L].gHint2(r.mid);
-          const c1 = I18N[L].gCorrectFirst(r.ans);
-          const c2 = I18N[L].gCorrectRetry(r.ans);
-          [ask, h1, h2, c1, c2].forEach(t => {
-            if (/undefined|NaN/.test(t)) fail('ROUNDS[' + i + '] ' + L + ' text has undefined/NaN: ' + t);
+      /* --- 小遊戲：加減大挑戰（五關五種玩法，§六之五）—— 每一條都從畫面上看得到的東西重新推，
+             不呼叫頁面的答案邏輯；算法、答案、版面數字都在這裡自己算一次。 --- */
+      const isInt = v => Number.isInteger(v);
+      const order = (src.match(/var GAME_ORDER = \[([^\]]*)\]/) || [])[1];
+      if (order === undefined) fail('cannot find GAME_ORDER in index.html');
+      else {
+        const types = order.split(',').map(x => x.trim().replace(/^'|'$/g, ''));
+        if (types.join() !== 'story,compare,hop,make10,break10') fail('GAME_ORDER should be story,compare,hop,make10,break10, got ' + types.join());
+        types.forEach(t => {
+          if (!new RegExp('\\n {4}' + t + ': function\\(d\\)\\{').test(src)) fail('GAME_ORDER ' + t + ' has no RENDER.' + t);
+          ['zh','en'].forEach(L => {
+            if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('gAsks.' + t + ' missing in ' + L);
+            if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('gHints.' + t + ' missing in ' + L);
           });
         });
+      }
+      /* 最後一關與過關的字：兩邊字典一起少的話 check_i18n 看不到（numbers 改版時真的發生過，最後一關會丟錯） */
+      ['zh','en'].forEach(L => {
+        if (typeof I18N[L].gClear !== 'string' || !I18N[L].gClear) fail('gClear missing in ' + L);
+        if (typeof I18N[L].gWin !== 'function' || !/5/.test(I18N[L].gWin(5))) fail('gWin missing in ' + L);
       });
-      /* 小遊戲的選項要洗牌（正解不可以固定在同一個位置）——
-         守的是**畫出來的按鈕**，不是 opts 陣列裡的順序，實作在 lib/gameshuffle.js。 */
-      gameShuffleProblems(src, 1).forEach(fail);
+      /* 結語的數字：照「孩子看到的順序」逐個比 —— 算式用驗算器驗，散文裡的數（「先減 3 變成 10」）用這個比。 */
+      const seq = (where, text, want) => {
+        if (/undefined|NaN/.test(text)) return fail(where + ': text has undefined/NaN: ' + text);
+        const got = (text.match(/\d+/g) || []).map(Number).join();
+        if (got !== want.join()) fail(where + ': numbers should read ' + want.join() + ', got ' + got + ' — ' + text);
+        const r = arithGame(text);
+        r.problems.forEach(p => fail(where + ': ' + p));
+      };
+
+      /* 第 1 關：故事分一分。算法用這裡自己的一份對照（不拿頁面的 STORY_OP 來推），再要求頁面的 STORY_OP 跟它一樣。
+         「錯了」的說明是照種類寫的，所以要對**每一種**都說出正確的算法、而且不提另一種 —— 每一張卡都成立。 */
+      const OP = { combine:'+', add:'+', remove:'−', compare:'−', totalLeft:'−' };
+      Object.keys(OP).forEach(t => { if (data.STORY_OP[t] !== OP[t]) fail('STORY_OP.' + t + ' is ' + data.STORY_OP[t] + ', expected ' + OP[t]); });
+      Object.keys(data.STORY_OP).forEach(t => { if (!(t in OP)) fail('STORY_OP has an unknown story type ' + t); });
+      const OPWORD = { zh:{ '+':'加法', '−':'減法' }, en:{ '+':/\badding\b/i, '−':/\bsubtract/i } };
+      const says = (m, w) => typeof w === 'string' ? m.indexOf(w) >= 0 : w.test(m);
+      Object.keys(OP).forEach(t => {
+        ['zh','en'].forEach(L => {
+          const m = I18N[L].gStoryNot && I18N[L].gStoryNot[t];
+          if (typeof m !== 'string' || !m) return fail('gStoryNot.' + t + ' missing in ' + L);
+          const w = OPWORD[L][OP[t]], other = OPWORD[L][OP[t] === '+' ? '−' : '+'];
+          if (!says(m, w)) fail('gStoryNot.' + t + ' ' + L + ' does not say ' + w);
+          if (says(m, other)) fail('gStoryNot.' + t + ' ' + L + ' names the other operation: ' + m);
+          if (!(I18N[L].gStory2 && typeof I18N[L].gStory2[t] === 'string' && I18N[L].gStory2[t])) fail('gStory2.' + t + ' missing in ' + L);
+        });
+      });
+      ['zh','en'].forEach(L => {
+        const one = I18N[L].gStoryOne;
+        if (typeof one !== 'function') return fail('gStoryOne missing in ' + L);
+        if (!says(one(true), OPWORD[L]['+']) || says(one(true), OPWORD[L]['−'])) fail('gStoryOne(true) ' + L + ' should name adding only');
+        if (!says(one(false), OPWORD[L]['−']) || says(one(false), OPWORD[L]['+'])) fail('gStoryOne(false) ' + L + ' should name subtracting only');
+      });
+      data.GAME_STORIES.forEach((set, i) => {
+        if (!Array.isArray(set) || set.length !== 4) return fail('GAME_STORIES[' + i + '] needs 4 story cards');
+        let nAdd = 0, nSub = 0;
+        set.forEach((c, j) => {
+          if (!(c.t in OP)) return fail('GAME_STORIES[' + i + '][' + j + '] has an unknown type ' + c.t);
+          if (!isInt(c.a) || !isInt(c.b) || c.a < 1 || c.b < 1) return fail('GAME_STORIES[' + i + '][' + j + '] needs positive integers');
+          const op = OP[c.t], r = op === '+' ? c.a + c.b : c.a - c.b;
+          if (op === '+') nAdd++; else nSub++;
+          if (op === '−' && c.a <= c.b) fail('GAME_STORIES[' + i + '] ' + c.t + ' needs a > b, got ' + c.a + ' and ' + c.b);
+          if (c.a > 20 || r < 0 || r > 20) fail('GAME_STORIES[' + i + '] ' + c.t + ' ' + c.a + op + c.b + ' outside 0..20');
+          ['zh','en'].forEach(L => {
+            const f = I18N[L].gStory && I18N[L].gStory[c.t];
+            if (typeof f !== 'function') return fail('gStory.' + c.t + ' missing in ' + L);
+            const txt = f(c.a, c.b), ns = (txt.match(/\d+/g) || []).map(Number);
+            if (ns.join() !== c.a + ',' + c.b) fail('GAME_STORIES[' + i + '][' + j + '] ' + L + ' story card text must show a then b (' + c.a + ', ' + c.b + '): ' + txt);
+          });
+        });
+        if (nAdd !== 2 || nSub !== 2) fail('GAME_STORIES[' + i + '] needs 2 adding and 2 subtracting stories, got ' + nAdd + '/' + nSub);
+        if (new Set(set.map(c => c.t)).size < 3) fail('GAME_STORIES[' + i + '] should mix at least 3 kinds of story');
+      });
+      if (!data.GAME_STORIES.some(set => set.some(c => c.t === 'totalLeft'))) fail('no GAME_STORIES set has the 「一共剩下」 misconception card');
+
+      /* 第 2 關：比一比。小明 a 張（兩排 × 5，最多 10）、小華 b 張（至少 2：說明寫「每一張」），多出來的是 a − b。 */
+      data.GAME_COMPARE.forEach((g, i) => {
+        if (!isInt(g.a) || !isInt(g.b) || g.b < 2 || g.b >= g.a || g.a > 10) return fail('GAME_COMPARE[' + i + '] needs integers with 2 <= b < a <= 10');
+        ['zh','en'].forEach(L => {
+          const n = I18N[L].compareNames;
+          seq('GAME_COMPARE[' + i + '] ' + L + ' gCmpDone', I18N[L].gCmpDone(n[0], n[1], g.a, g.b), [g.a - g.b, g.a, g.b, g.a - g.b]);
+        });
+      });
+
+      /* 第 3 關：數線跳跳。0～20 的格子板；一次跳一格，跳 hop 下，起點和終點都要在板子上。 */
+      data.GAME_HOPS.forEach((h, i) => {
+        if (h.op !== 'add' && h.op !== 'sub') return fail('GAME_HOPS[' + i + '] op must be add or sub');
+        if (!isInt(h.start) || !isInt(h.hop) || h.hop < 2 || h.hop > 9) return fail('GAME_HOPS[' + i + '] start/hop must be integers, hop 2..9');
+        const end = h.op === 'add' ? h.start + h.hop : h.start - h.hop;
+        if (h.start < 0 || h.start > 20 || end < 0 || end > 20) fail('GAME_HOPS[' + i + '] lands on ' + end + ' — outside the 0..20 board');
+      });
+
+      /* 第 4、5 關：「外面」框放得下幾個 —— 框的大小與位置的間距都從原始碼讀，不在這裡另抄一份 */
+      const obM = src.match(/var OUT_BOX = \{ x:(\d+), y:(\d+), w:(\d+), h:(\d+) \};/);
+      const spM = src.match(/function outSpot\(i\)\{ return \{ cx:OUT_BOX\.x \+ (\d+) \+ i \* (\d+), cy:OUT_BOX\.y \+ OUT_BOX\.h \/ 2 \}; \}/);
+      const frM = src.match(/var FRAME_CELL = (\d+), FRAME_PITCH = (\d+);/);
+      let outCap = 0;
+      if (!obM || !spM || !frM) fail('cannot read OUT_BOX / outSpot / FRAME_CELL from index.html');
+      else {
+        const [, , , obW, obH] = obM.map(Number), [, off, pitch] = spM.map(Number), [, fc, fp] = frM.map(Number);
+        /* 外面框裡放兩種東西：湊十拖過去的點點（addPiece 的 w/h）、拆十畫好的散點（FRAME_CELL）。取兩者較大的那個驗。 */
+        const m10 = src.match(/\n {4}make10: function\(d\)\{[\s\S]*?addPiece\(B, \{ w:(\d+), h:(\d+),/);
+        if (!m10) fail('cannot read the make10 dot size');
+        const dotW = Math.max(fc, m10 ? +m10[1] : 0), dotH = Math.max(fc, m10 ? +m10[2] : 0);
+        if (pitch < dotW) fail('out-box spots overlap (pitch ' + pitch + ' < dot ' + dotW + ')');
+        if (fp < fc) fail('ten-frame cells overlap (pitch ' + fp + ' < cell ' + fc + ')');
+        if (off - dotW / 2 < 0 || obH < dotH) fail('out-box spots stick out of the box');
+        while (off + outCap * pitch + dotW / 2 <= obW) outCap++;
+      }
+      data.GAME_MAKE10.forEach((g, i) => {
+        if (!isInt(g.a) || !isInt(g.b) || g.a < 1 || g.a > 9 || g.b < 1 || g.b > 9) return fail('GAME_MAKE10[' + i + '] a and b must be integers 1..9');
+        if (g.a + g.b <= 10) return fail('GAME_MAKE10[' + i + '] ' + g.a + '+' + g.b + ' does not cross ten — nothing to make');
+        const fill = 10 - g.a, out = g.b - fill, s = g.a + g.b;
+        if (out > outCap) fail('GAME_MAKE10[' + i + '] leaves ' + out + ' outside, more than the ' + outCap + ' spots');
+        ['zh','en'].forEach(L => seq('GAME_MAKE10[' + i + '] ' + L + ' gM10Done', I18N[L].gM10Done(g.a, g.b, fill, out, s), [g.a, fill, 10, out, 10, out, s, g.a, g.b, s]));
+      });
+      data.GAME_BREAK10.forEach((g, i) => {
+        if (!isInt(g.total) || !isInt(g.b) || g.total < 11 || g.total > 20 || g.b < 2 || g.b > 9) return fail('GAME_BREAK10[' + i + '] needs integers, total 11..20, b 2..9');
+        const ones = g.total - 10, res = g.total - g.b;
+        if (ones > outCap) fail('GAME_BREAK10[' + i + '] total ' + g.total + ' leaves ' + ones + ' loose, more than the ' + outCap + ' spots');
+        if (g.b <= ones) fail('GAME_BREAK10[' + i + '] b ' + g.b + ' does not exceed the ' + ones + ' loose ones — nothing to break');
+        ['zh','en'].forEach(L => seq('GAME_BREAK10[' + i + '] ' + L + ' gB10Done', I18N[L].gB10Done(g.total, g.b, ones, g.b - ones, res), [g.total, ones, 10, 10, g.b - ones, res, g.total, g.b, res]));
+      });
+
+      /* 手機上拿得起來、點得到的東西至少 44px：以 375px 手機（卡片內寬約 290px）換算 300 寬畫板。
+         實際量測在端對端測試裡（375px 寬再跑一次）。 */
+      const boards = (src.match(/makeBoard\((\d+), \d+\)/g) || []).map(m => +m.match(/\d+/)[0]);
+      if (boards.length !== 5 || boards.some(W => W !== 300)) fail('expected five 300-wide game boards, got ' + boards.join());
+      const scale = Math.min(1.5, 290 / 300);
+      const tooSmall = (what, sz) => { if (sz * scale < 44) fail(what + ' is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+      const pieces = src.match(/addPiece\(B, \{ w:(\d+), h:(\d+),/g) || [];
+      if (pieces.length < 3) fail('expected at least 3 addPiece calls in the game, found ' + pieces.length);
+      pieces.forEach(m => { const [, w, h] = m.match(/w:(\d+), h:(\d+)/); tooSmall('a game piece (' + m + ')', Math.min(+w, +h)); });
+      const grM = src.match(/var GRID_COLS = (\d+), GRID_CELL = (\d+), GRID_PITCH = (\d+);/);
+      if (!grM) fail('cannot read GRID_CELL from index.html');
+      else {
+        tooSmall('a number-line cell (GRID_CELL ' + grM[2] + ')', +grM[2]);
+        if (+grM[3] < +grM[2]) fail('number-line cells overlap (GRID_PITCH < GRID_CELL)');
+        if (2 + (+grM[1] - 1) * (+grM[3]) + (+grM[2]) > 300) fail('number-line board is wider than 300');
+      }
+      if (frM) tooSmall('a ten-frame cell (FRAME_CELL ' + frM[1] + ')', +frM[1]);
+      const tM = src.match(/var TW = (\d+), TP = (\d+), tx0/);
+      if (!tM) fail('cannot read the compare tile size (TW/TP)');
+      else { tooSmall('a compare sticker (TW ' + tM[1] + ')', +tM[1]); if (+tM[2] < +tM[1]) fail('compare stickers overlap (TP < TW)'); }
+      /* 故事卡：托盤一排一張（renderTray 的排距從原始碼讀），卡片不能疊在一起、不能出界；
+         放對之後縮成算式，一個箱子兩張，不能蓋住箱子上的字、不能伸出箱子。 */
+      const storyBody = (src.match(/\n {4}story: function\(d\)\{([\s\S]*?)\n {4}\},\n/) || [])[1] || '';
+      const rowPitch = +((src.match(/y \+ Math\.floor\(i \/ cols\) \* (\d+)\); \}\);/) || [])[1]);
+      const cardM = storyBody.match(/addPiece\(B, \{ w:(\d+), h:(\d+),/);
+      const sbM = storyBody.match(/makeBoard\(300, (\d+)\)/);
+      const stM = storyBody.match(/renderTray\(B, set\.slice\(\), (\d+),/);
+      const bxM = storyBody.match(/var R = \{ x:4 \+ i \* 150, y:(\d+), w:142, h:(\d+) \};/);
+      const chM = storyBody.match(/P\.w = (\d+); P\.h = (\d+);/);
+      const lkM = storyBody.match(/bx\.R\.y \+ (\d+) \+ bx\.items \* (\d+)\)/);
+      if (!rowPitch || !cardM || !sbM || !stM || !bxM || !chM || !lkM) fail('cannot read the story-round layout from index.html');
+      else {
+        const cw = +cardM[1], ch = +cardM[2], H = +sbM[1], y0 = +stM[1], bxY = +bxM[1], bxH = +bxM[2], chipW = +chM[1], chipH = +chM[2], first = +lkM[1], step = +lkM[2];
+        if (ch >= rowPitch) fail('story cards in the tray overlap (card height ' + ch + ' >= row pitch ' + rowPitch + ')');
+        if (cw > 296) fail('story cards are wider than the board');
+        if (y0 - ch / 2 < bxY + bxH) fail('the first story card covers the boxes');
+        if (y0 + 3 * rowPitch + ch / 2 > H) fail('the last story card sticks out of the board');
+        if (step < chipH) fail('the two sorted cards in a box overlap');
+        if (first - chipH / 2 < 34) fail('a sorted card covers the box label');
+        if (first + step + chipH / 2 > bxH) fail('the second sorted card sticks out of the box');
+        if (chipW > 142 - 6) fail('a sorted card (' + chipW + ' wide) is wider than the 136px inside the borders of its 142-wide box');
+      }
+      /* 小遊戲的卡片要洗牌（正解不可以固定在同一個位置）—— 卡片統一由 renderTray() 畫，實作在 lib/gameshuffle.js。 */
+      gameShuffleProblems(src, 1, { roundFn:'renderTray' }).forEach(fail);
 
       /* --- 試題：解釋裡真的寫成算式的那幾條要逐條驗算 --- */
       {
