@@ -20,6 +20,8 @@ const RANGE = {
 };
 
 const { gameShuffleProblems } = require('./lib/gameshuffle.js');
+/* 小遊戲的結語（「十位 3 + 2 = 5」「57 − 25 = 32」）另外用一個驗算器：試題那一個的覆蓋率摘要不要被遊戲的字串攪動。 */
+const arithGame = require('./lib/arith.js').makeArith({});
 
 module.exports = {
   breaks: [
@@ -28,8 +30,8 @@ module.exports = {
        真實存在的缺陷（選項排成 [count-1, count, count+1, count+2] 照順序畫，
        正解永遠是第二顆），而當時那條「正解不可以在 index 0」的斷言看不到它。 */
     { file:'index', expect:'without shuffle(...)',
-      find:'    shuffle(round.choices).forEach(function(v){',
-      replace:'    round.choices.forEach(function(v){' },
+      find:"    shuffle(items).forEach(function(it, i){ mk(it, x0 + (i % cols) * step, y + Math.floor(i / cols) * 56); });",
+      replace:"    items.forEach(function(it, i){ mk(it, x0 + (i % cols) * step, y + Math.floor(i / cols) * 56); });" },
     { file:'review', expect:'ones carry but why says no regroup',
       find:'      if (da.o + db.o <= 9 && da.t + db.t <= 9) return { a:a, b:b, sum:a + b };',
       replace:'      if (da.o + db.o <= 10 && da.t + db.t <= 9) return { a:a, b:b, sum:a + b };' },
@@ -58,12 +60,85 @@ module.exports = {
     { file:'index', expect:'SUB_PAIRS[0] needs a borrow',
       find:'    { a:{t:5,o:7}, b:{t:2,o:3} },  // 57 − 23 = 34',
       replace:'    { a:{t:5,o:7}, b:{t:2,o:9} },  // deliberately broken: 7-9 needs a borrow' },
-    { file:'index', expect:'ROUNDS[0] 32+25 != 58',
-      find:'    { op:\'add\', a:{t:3,o:2}, b:{t:2,o:5}, ans:57, choices:[57,37,75,52] },',
-      replace:'    { op:\'add\', a:{t:3,o:2}, b:{t:2,o:5}, ans:58, choices:[57,37,75,52] },' }
-    /* ⚠️ 資料裡 5 關都把正解放在 choices[0] —— 這**不是**缺陷：畫按鈕之前會
-       shuffle()，所以畫面上的位置和陣列順序無關。真正要守的是「有沒有洗牌」，
-       由 lib/gameshuffle.js 的斷言＋上面那一筆改壞測試負責。 */
+    /* --- 小遊戲（2026-10-01 改成五關五種玩法）：每一條不變量各有一筆，證明它真的會響 --- */
+    { file:'index', expect:'GAME_BANK[0] 35+25 carries',
+      find:'    { a:32, b:25 }, { a:23, b:15 }, { a:41, b:34 },',
+      replace:'    { a:35, b:25 }, { a:23, b:15 }, { a:41, b:34 },' },
+    { file:'index', expect:'GAME_BANK[1] b = 16 needs 1..3 tens and 1..5 ones',
+      find:'    { a:32, b:25 }, { a:23, b:15 }, { a:41, b:34 },',
+      replace:'    { a:32, b:25 }, { a:23, b:16 }, { a:41, b:34 },' },
+    { file:'index', expect:'GAME_ALIGN[4] 72 + 3: the misaligned tens 7 + 3',
+      find:'{ a:62, b:3 }, { a:15, b:2 }',
+      replace:'{ a:72, b:3 }, { a:15, b:2 }' },
+    { file:'index', expect:'GAME_ALIGN[1] digit cards are not 4 different digits',
+      find:'    { a:32, b:5 }, { a:24, b:3 },',
+      replace:'    { a:32, b:5 }, { a:24, b:2 },' },
+    { file:'index', expect:'GAME_SPOT[0] needs exactly 2 not lined up',
+      find:'{ a:41, b:6, ok:true }',
+      replace:'{ a:41, b:2, ok:false }' },
+    { file:'index', expect:'GAME_SPOT[1] 72 + 9 carries in the ones',
+      find:'{ a:72, b:5, ok:true }',
+      replace:'{ a:72, b:9, ok:true }' },
+    { file:'index', expect:'GAME_TAKE[0] 57 − 28 needs a borrow',
+      find:'    { a:57, b:23 }, { a:68, b:24 },',
+      replace:'    { a:57, b:28 }, { a:68, b:24 },' },
+    { file:'index', expect:'GAME_TAKE[1] 78 has 7 tens, more than the 6-stick row',
+      find:'    { a:57, b:23 }, { a:68, b:24 },',
+      replace:'    { a:57, b:23 }, { a:78, b:24 },' },
+    { file:'index', expect:'GAME_CHECK[1] 41 + 39 carries',
+      find:'    { a:32, b:25 }, { a:41, b:36 }, { a:23, b:15 }, { a:52, b:34 },',
+      replace:'    { a:32, b:25 }, { a:41, b:39 }, { a:23, b:15 }, { a:52, b:34 },' },
+    { file:'index', expect:'GAME_CHECK[5] needs two different two-digit numbers',
+      find:'{ a:44, b:13 }',
+      replace:'{ a:44, b:44 }' },
+    { file:'index', expect:'gBankDone: numbers should read',
+      find:"'，個位 ' + aO + ' + ' + bO + ' = ' + (aO + bO) + '，'",
+      replace:"'，個位 ' + aO + ' + ' + bO + ' = ' + (aO + bO + 1) + '，'" },
+    { file:'index', expect:'gTakeDone: numbers should read',
+      find:"'. Ones: ' + aO + ' − ' + bO + ' = ' + (aO - bO) + '. So '",
+      replace:"'. Ones: ' + aO + ' − ' + bO + ' = ' + (aO - bO - 1) + '. So '" },
+    { file:'index', expect:'gAlignResT: numbers should read',
+      find:"'，下面沒有十，所以十位還是 ' + aT + '。'",
+      replace:"'，下面沒有十，所以十位還是 ' + (aT + 1) + '。'" },
+    { file:'index', expect:'gSpotOne: numbers should read',
+      find:"'；對齊個位才對：' + a + ' + ' + b + ' = ' + (a + b) + '。'",
+      replace:"'；對齊個位才對：' + a + ' + ' + b + ' = ' + (a + b * 10) + '。'" },
+    { file:'index', expect:'gChkDone: numbers should read',
+      find:"'：' + s + ' − ' + b + ' = ' + a + '，' + s + ' − ' + a + ' = ' + b + '。減回去都對",
+      replace:"'：' + s + ' − ' + b + ' = ' + b + '，' + s + ' − ' + a + ' = ' + a + '。減回去都對" },
+    { file:'index', expect:'gBankNotTen zh does not name 十位',
+      find:"      gBankNotTen:'這是一條十（10 個一綁在一起），要放進「十位」。',",
+      replace:"      gBankNotTen:'這是一條十（10 個一綁在一起），要放進「個位」。'," },
+    { file:'index', expect:'gAlignTens en does not name the Ones column',
+      find:"' has only one digit — it has no tens — so it goes in the Ones column, under the '",
+      replace:"' has only one digit — so it goes in the Tens column, under the '" },
+    { file:'index', expect:'under 44',
+      find:'  var ROD_W = 46, ROD_H = 96, ONE_W = 46;',
+      replace:'  var ROD_W = 40, ROD_H = 96, ONE_W = 46;' },
+    { file:'index', expect:'align digit card',
+      find:"addPiece(B, { w:50, h:50, cx:cx, cy:cy, text:String(v), cls:'gcard'",
+      replace:"addPiece(B, { w:50, h:40, cx:cx, cy:cy, text:String(v), cls:'gcard'" },
+    { file:'index', expect:'check cards in the tray overlap',
+      find:'      renderTray(B, [g.a, g.a, g.b, g.b], 200, card, 66);',
+      replace:'      renderTray(B, [g.a, g.a, g.b, g.b], 200, card, 50);' },
+    { file:'index', expect:'the 9th banked ten sticks out of the Tens bin',
+      find:'  function rodSpot(i){ return { cx:BIN_T.x + 15 + i * 14, cy:BIN_T.y + 82 }; }',
+      replace:'  function rodSpot(i){ return { cx:BIN_T.x + 15 + i * 16, cy:BIN_T.y + 82 }; }' },
+    { file:'index', expect:'the 9th banked one sticks out of the Ones bin',
+      find:'cy:BIN_O.y + 54 + Math.floor(i / 3) * 28 }; }',
+      replace:'cy:BIN_O.y + 54 + Math.floor(i / 3) * 48 }; }' },
+    { file:'index', expect:'the bank tray rows overlap',
+      find:'      renderTray(B, ones, 292, function(k, cx, cy){',
+      replace:'      renderTray(B, ones, 252, function(k, cx, cy){' },
+    { file:'index', expect:'a misaligned sum draws its one-digit number at x 104',
+      find:"        cell(f.ok ? 104 : 62, 80, 38, 34, String(f.b));",
+      replace:"        cell(f.ok ? 104 : 104, 80, 38, 34, String(f.b));" },
+    { file:'index', expect:'gClear missing',
+      find:"      gClear:'按「下一關」繼續下一題。',\n      gWin:function(score){ return '五關全破！",
+      replace:"      gWin:function(score){ return '五關全破！" },
+    { file:'index', expect:'quiz reveal points',
+      find:"          var hid = stem.querySelectorAll('.sitbox.hide');",
+      replace:"          var hid = [];" }
   ],
 
   sim: {
@@ -175,7 +250,7 @@ module.exports = {
        和三張資料表、ROUNDS 同一段、不碰 DOM，剛好可以一次切出來。 */
     dataStart: '  /* ---------- 語言無關的畫圖工具 ---------- */',
     dataEnd: '  /* ---------- i18n ---------- */',
-    dataReturn: '{blocksSvg, opGroupsHTML, alignPicHTML, ADD_PAIRS, ALIGN_PAIRS, SUB_PAIRS, ROUNDS}',
+    dataReturn: '{blocksSvg, opGroupsHTML, alignPicHTML, ADD_PAIRS, ALIGN_PAIRS, SUB_PAIRS, GAME_BANK, GAME_ALIGN, GAME_SPOT, GAME_TAKE, GAME_CHECK}',
     optionValueMax: 109,
     check: function(data, I18N, fail, src){
       const { canvasProblems } = require('./lib/canvas.js');
@@ -235,27 +310,241 @@ module.exports = {
 
       /* --- 範例 4：加減互逆（重用 ADD_PAIRS，見上面已驗過不進位） --- */
 
-      /* --- 小遊戲 --- */
-      data.ROUNDS.forEach((r, i) => {
-        const aVal = r.a.t * 10 + r.a.o, bVal = r.b.t * 10 + r.b.o;
-        const val = r.op === 'add' ? aVal + bVal : aVal - bVal;
-        if (val !== r.ans) fail('ROUNDS[' + i + '] ' + aVal + (r.op === 'add' ? '+' : '-') + bVal + ' != ' + r.ans);
-        if (r.choices.indexOf(r.ans) < 0) fail('ROUNDS[' + i + '] ans not among choices');
-        if (new Set(r.choices).size !== r.choices.length) fail('ROUNDS[' + i + '] duplicate choices');
+      /* --- 小遊戲：積木銀行（五關五種玩法，§六之五；2026-10-01 從選擇題改版）——
+             每一條都從畫面上看得到的東西重新推，不呼叫頁面的答案邏輯；答案、版面數字都在這裡自己算一次。 --- */
+      const isInt = v => Number.isInteger(v);
+      const dg = n => ({ t: Math.floor(n / 10), o: n % 10 });
+      const two = n => isInt(n) && n >= 10 && n <= 99;
+      const order = (src.match(/var GAME_ORDER = \[([^\]]*)\]/) || [])[1];
+      if (order === undefined) fail('cannot find GAME_ORDER in index.html');
+      else {
+        const types = order.split(',').map(x => x.trim().replace(/^'|'$/g, ''));
+        if (types.join() !== 'bank,align,spot,take,check') fail('GAME_ORDER should be bank,align,spot,take,check, got ' + types.join());
+        types.forEach(t => {
+          if (!new RegExp('\\n {4}' + t + ': function\\(d\\)\\{').test(src)) fail('GAME_ORDER ' + t + ' has no RENDER.' + t);
+          ['zh','en'].forEach(L => {
+            if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('gAsks.' + t + ' missing in ' + L);
+            if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('gHints.' + t + ' missing in ' + L);
+          });
+        });
+      }
+      /* 最後一關與過關的字：兩邊字典一起少的話 check_i18n 看不到（numbers 改版時真的發生過，最後一關會丟錯） */
+      ['zh','en'].forEach(L => {
+        if (typeof I18N[L].gClear !== 'string' || !I18N[L].gClear) fail('gClear missing in ' + L);
+        if (typeof I18N[L].gWin !== 'function' || !/5/.test(I18N[L].gWin(5))) fail('gWin missing in ' + L);
+      });
+      /* 結語的數字：照「孩子看到的順序」逐個比 —— 算式用驗算器驗，散文裡的數用這個比。 */
+      const seq = (where, text, want) => {
+        if (typeof text !== 'string' || /undefined|NaN/.test(text)) return fail(where + ': text has undefined/NaN: ' + text);
+        const got = (text.match(/\d+/g) || []).map(Number).join();
+        if (got !== want.join()) fail(where + ': numbers should read ' + want.join() + ', got ' + got + ' — ' + text);
+        arithGame(text).problems.forEach(p => fail(where + ': ' + p));
+      };
+      /* 「放錯了」的說明要說出**正確的那一位**，而且不提另一位 —— 對每一題都成立（字串不帶題目的數） */
+      const PLACE = { zh:{ t:'十位', o:'個位' }, en:{ t:/\bTens\b/, o:/\bOnes\b/ } };
+      const says = (m, w) => typeof w === 'string' ? m.indexOf(w) >= 0 : w.test(m);
+      const placeOnly = (key, L, m, want) => {
+        if (typeof m !== 'string' || !m) return fail(key + ' missing in ' + L);
+        const other = want === 't' ? 'o' : 't';
+        if (!says(m, PLACE[L][want])) fail(key + ' ' + L + ' does not name ' + (want === 't' ? (L === 'zh' ? '十位' : 'the Tens column') : (L === 'zh' ? '個位' : 'the Ones column')) + ': ' + m);
+        if (says(m, PLACE[L][other])) fail(key + ' ' + L + ' also names the other column: ' + m);
+      };
+      ['zh','en'].forEach(L => {
+        placeOnly('gBankNotTen', L, I18N[L].gBankNotTen, 't');
+        placeOnly('gBankNotOne', L, I18N[L].gBankNotOne, 'o');
+      });
+
+      /* 版面數字一律從 index.html 讀（§六之五 第 6 點），不在這裡另抄一份 */
+      const num = (re, what) => { const m = src.match(re); if (!m) fail('cannot read ' + what + ' from index.html'); return m ? m.slice(1).map(Number) : null; };
+      const pcs = num(/var ROD_W = (\d+), ROD_H = (\d+), ONE_W = (\d+);/, 'ROD_W/ROD_H/ONE_W');
+      const binT = num(/var BIN_T = \{ x:(\d+), y:(\d+), w:(\d+), h:(\d+) \}, BIN_O = \{ x:(\d+), y:(\d+), w:(\d+), h:(\d+) \};/, 'BIN_T/BIN_O');
+      const rodM = num(/function rodSpot\(i\)\{ return \{ cx:BIN_T\.x \+ (\d+) \+ i \* (\d+), cy:BIN_T\.y \+ (\d+) \}; \}/, 'rodSpot');
+      const oneM = num(/function oneSpot\(i\)\{ return \{ cx:BIN_O\.x \+ BIN_O\.w \/ 2 \+ \(i % 3 - 1\) \* (\d+), cy:BIN_O\.y \+ (\d+) \+ Math\.floor\(i \/ 3\) \* (\d+) \}; \}/, 'oneSpot');
+      const shrinkR = num(/s = rodSpot\(nT\); nT\+\+; shrink\(P, (\d+), (\d+)\);/, 'the banked-ten size');
+      const shrinkO = num(/s = oneSpot\(nO\); nO\+\+; shrink\(P, (\d+), (\d+)\);/, 'the banked-one size');
+      /* 手機上拿得起來、點得到的東西至少 44px：以 375px 手機（卡片內寬約 290px）換算 300 寬畫板。
+         實際量測在端對端測試裡（375px 寬再跑一次）。 */
+      const boards = (src.match(/makeBoard\((\d+), \d+\)/g) || []).map(m => +m.match(/\d+/)[0]);
+      if (boards.length !== 5 || boards.some(W => W !== 300)) fail('expected five 300-wide game boards, got ' + boards.join());
+      const scale = Math.min(1.5, 290 / 300);
+      const tooSmall = (what, sz) => { if (!(sz * scale >= 44)) fail(what + ' is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+      if (pcs){ tooSmall('a ten-stick (ROD_W ' + pcs[0] + ')', Math.min(pcs[0], pcs[1])); tooSmall('a one (ONE_W ' + pcs[2] + ')', pcs[2]); }
+      const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+      const B = { bank: body('bank'), align: body('align'), spot: body('spot'), take: body('take'), check: body('check') };
+      Object.keys(B).forEach(k => { if (!B[k]) fail('cannot cut RENDER.' + k + ' out of index.html'); });
+      const boardH = k => +((B[k].match(/makeBoard\(300, (\d+)\)/) || [])[1]);
+
+      /* 第 1 關：存積木。b 的十 1～3 條、一 1～5 個（托盤各一排 5 個）；十位、個位各自不進位；
+         銀行的十位格最多 9 條、個位格最多 9 個 —— 第 9 個放下去也要在格子裡。 */
+      data.GAME_BANK.forEach((g, i) => {
+        const A = dg(g.a), Bd = dg(g.b);
+        if (!two(g.a) || !two(g.b)) return fail('GAME_BANK[' + i + '] a and b must be two-digit integers');
+        if (Bd.t < 1 || Bd.t > 3 || Bd.o < 1 || Bd.o > 5) fail('GAME_BANK[' + i + '] b = ' + g.b + ' needs 1..3 tens and 1..5 ones (one tray row each)');
+        if (A.o + Bd.o > 9 || A.t + Bd.t > 9) fail('GAME_BANK[' + i + '] ' + g.a + '+' + g.b + ' carries');
         ['zh','en'].forEach(L => {
-          const ask = I18N[L].gAsk(aVal, bVal, r.op);
-          const c1 = I18N[L].gCorrectFirst(r.ans), c2 = I18N[L].gCorrectRetry(r.ans);
-          [ask, c1, c2].forEach(t => { if (/undefined|NaN/.test(t)) fail('ROUNDS[' + i + '] ' + L + ' text has undefined/NaN: ' + t); });
+          seq('GAME_BANK[' + i + '] ' + L + ' gBankDone', I18N[L].gBankDone(A.t, Bd.t, A.o, Bd.o, g.a, g.b), [A.t, Bd.t, A.t + Bd.t, A.o, Bd.o, A.o + Bd.o, g.a, g.b, g.a + g.b]);
+          seq('GAME_BANK[' + i + '] ' + L + ' gBankNow', I18N[L].gBankNow(g.a, g.b, A.t, A.o), [g.a, g.b, A.t, A.o]);
         });
       });
-      /* 小遊戲的選項要洗牌（正解不可以固定在同一個位置）——
-         守的是**畫出來的按鈕**，不是 choices 陣列裡的順序，實作在 lib/gameshuffle.js。 */
-      gameShuffleProblems(src, 1).forEach(fail);
+      if (binT && rodM && oneM && shrinkR && shrinkO && pcs){
+        const [tx, ty, tw, th, ox, oy, ow, oh] = binT, [rOff, rPitch, rCy] = rodM, [oPitch, oCy, oRow] = oneM;
+        if (rPitch < shrinkR[0] + 2) fail('banked tens touch each other (pitch ' + rPitch + ')');
+        if (rOff - shrinkR[0] / 2 < 3 || rOff + 8 * rPitch + shrinkR[0] / 2 > tw - 3) fail('the 9th banked ten sticks out of the Tens bin');
+        if (rCy - shrinkR[1] / 2 < 30 || rCy + shrinkR[1] / 2 > th) fail('banked tens cover the bin label or stick out of the bin');
+        if (oPitch < shrinkO[0] + 2 || oRow < shrinkO[1] + 2) fail('banked ones touch each other');
+        if (oCy - shrinkO[1] / 2 < 30 || oCy + 2 * oRow + shrinkO[1] / 2 > oh || ow / 2 + oPitch + shrinkO[0] / 2 > ow) fail('the 9th banked one sticks out of the Ones bin');
+        if (tx + tw > ox || ty !== oy) fail('the Tens and Ones bins overlap');
+        const rT = B.bank.match(/renderTray\(B, rods, (\d+), [\s\S]*?\}, (\d+), 5\);/), oT = B.bank.match(/renderTray\(B, ones, (\d+), [\s\S]*?\}, (\d+), 5\);/);
+        if (!rT || !oT) fail('cannot read the bank tray rows');
+        else {
+          const [ry, rs] = [+rT[1], +rT[2]], [oy2, os] = [+oT[1], +oT[2]];
+          if (rs < pcs[0] || os < pcs[2]) fail('bank tray pieces overlap side by side');
+          if (ry - pcs[1] / 2 < ty + th) fail('the bank tray covers the bins');
+          if (ry + pcs[1] / 2 > oy2 - pcs[2] / 2) fail('the bank tray rows overlap');
+          if (oy2 + pcs[2] / 2 > boardH('bank')) fail('the bank tray sticks out of the board');
+          if ((300 - 4 * os) / 2 - pcs[2] / 2 < 0) fail('a 5-piece bank tray row is wider than the board');
+        }
+      }
 
-      /* 試題和遊戲的結果格不可以直接畫出答案（2026-09-25 Tony 抓到：積木銀行
-         最右邊那格把 57 的積木和數字都畫出來了）。
-         守三件事：hide=true 時結果格真的蓋成「?」且積木／數字在 .sitreal 裡；
-         遊戲的 gPic 和兩題看積木試題都傳 hide=true；答對後會把 .hide 拿掉。 */
+      /* 第 2 關：排直式。b 是一位數；托盤的四張數字卡 aT、aO + b、aT + b、aO 兩兩不同，而且都是一位數。 */
+      data.GAME_ALIGN.forEach((g, i) => {
+        const A = dg(g.a);
+        if (!two(g.a) || !isInt(g.b) || g.b < 1 || g.b > 9) return fail('GAME_ALIGN[' + i + '] needs a two-digit a and a one-digit b');
+        if (A.o + g.b > 9) fail('GAME_ALIGN[' + i + '] ' + g.a + ' + ' + g.b + ' carries in the ones');
+        if (A.t + g.b > 9) fail('GAME_ALIGN[' + i + '] ' + g.a + ' + ' + g.b + ': the misaligned tens ' + A.t + ' + ' + g.b + ' is not one digit');
+        const cards = [A.t, A.o + g.b, A.t + g.b, A.o];
+        if (new Set(cards).size !== 4) fail('GAME_ALIGN[' + i + '] digit cards are not 4 different digits: ' + cards.join());
+        ['zh','en'].forEach(L => {
+          seq('GAME_ALIGN[' + i + '] ' + L + ' gAlignDone', I18N[L].gAlignDone(g.a, g.b), [g.b, g.a, g.b, g.a + g.b]);
+          seq('GAME_ALIGN[' + i + '] ' + L + ' gAlignTens', I18N[L].gAlignTens(g.b, A.o), [g.b, A.o]);
+          placeOnly('gAlignTens', L, I18N[L].gAlignTens(g.b, A.o), 'o');
+          seq('GAME_ALIGN[' + i + '] ' + L + ' gAlignResT', I18N[L].gAlignResT(A.t), [A.t, A.t]);
+          seq('GAME_ALIGN[' + i + '] ' + L + ' gAlignResO', I18N[L].gAlignResO(A.o, g.b), [A.o, g.b, A.o + g.b]);
+        });
+      });
+      {
+        const cM = B.align.match(/addPiece\(B, \{ w:(\d+), h:(\d+), cx:cx, cy:cy, text:String\(v\), cls:'gcard'/);
+        const tM = B.align.match(/renderTray\(B, \[A\.t, r, A\.t \+ g\.b, A\.o\], (\d+), card, (\d+)\);/);
+        const cellM = B.align.match(/var CX = \[(\d+), (\d+)\], CELL = (\d+);/);
+        if (!cM || !tM || !cellM) fail('cannot read the align-round layout');
+        else {
+          tooSmall('an align digit card (' + cM[1] + 'x' + cM[2] + ')', Math.min(+cM[1], +cM[2]));
+          tooSmall('an align box (CELL ' + cellM[3] + ')', +cellM[3]);
+          if (+tM[2] < +cM[1]) fail('align cards in the tray overlap');
+          if (+cellM[2] - +cellM[1] < +cellM[3]) fail('the tens and ones boxes overlap');
+          if ((300 - 3 * +tM[2]) / 2 - +cM[1] / 2 < 0 || +tM[1] + +cM[2] / 2 > boardH('align')) fail('the align tray sticks out of the board');
+        }
+      }
+
+      /* 第 3 關：找錯。每組四個不同的直式，剛好兩個沒對齊；對齊的照 a + b 算，沒對齊的照錯的位子算（十位 aT + b），
+         兩種答案都要是兩位數、不進位，錯的答案和對的不一樣。 */
+      data.GAME_SPOT.forEach((set, i) => {
+        if (!Array.isArray(set) || set.length !== 4) return fail('GAME_SPOT[' + i + '] needs 4 column sums');
+        if (set.filter(f => f.ok === false).length !== 2 || set.some(f => typeof f.ok !== 'boolean')) fail('GAME_SPOT[' + i + '] needs exactly 2 not lined up (ok:false)');
+        if (new Set(set.map(f => f.a + '+' + f.b)).size !== 4) fail('GAME_SPOT[' + i + '] repeats a sum');
+        set.forEach((f, j) => {
+          const A = dg(f.a);
+          if (!two(f.a) || !isInt(f.b) || f.b < 1 || f.b > 9) return fail('GAME_SPOT[' + i + '][' + j + '] needs a two-digit a and a one-digit b');
+          if (A.o + f.b > 9) fail('GAME_SPOT[' + i + '] ' + f.a + ' + ' + f.b + ' carries in the ones');
+          if (!f.ok && A.t + f.b > 9) fail('GAME_SPOT[' + i + '] misaligned ' + f.a + ' + ' + f.b + ' would show a three-digit answer');
+          const w = (A.t + f.b) * 10 + A.o;
+          ['zh','en'].forEach(L => {
+            if (f.ok) seq('GAME_SPOT[' + i + '][' + j + '] ' + L + ' gSpotOk', I18N[L].gSpotOk(f.a, f.b), [f.b, f.a, f.b, f.a + f.b]);
+            else seq('GAME_SPOT[' + i + '][' + j + '] ' + L + ' gSpotOne', I18N[L].gSpotOne(f.a, f.b, w), [f.b, w, f.a, f.b, f.a + f.b]);
+          });
+        });
+      });
+      /* 畫出來的答案要跟數字坐的位子一致：頁面的 res 公式從原始碼切出來，代入每一個直式驗 */
+      {
+        const rM = B.spot.match(/res = f\.ok \? ([^:]+) : ([^,]+), R = digits\(res\)/);
+        if (!rM) fail('cannot read how the spot round works out each sum');
+        else {
+          let fn = null;
+          try { fn = new Function('f', 'A', 'return [' + rM[1] + ', ' + rM[2] + '];'); } catch (e){ fail('spot res formula does not parse: ' + e.message); }
+          if (fn) data.GAME_SPOT.forEach((set, i) => set.forEach(f => {
+            const A = dg(f.a), [okR, badR] = fn(f, A);
+            if (okR !== f.a + f.b) fail('GAME_SPOT[' + i + '] lined-up ' + f.a + ' + ' + f.b + ' is drawn as ' + okR);
+            if (badR !== f.a + 10 * f.b) fail('GAME_SPOT[' + i + '] misaligned ' + f.a + ' + ' + f.b + ' is drawn as ' + badR + ', not as the shifted digits say');
+          }));
+        }
+        /* 一位數 b 畫在哪一欄也要跟 ok 一致（codex 第一輪：只驗 res 公式的話，把 b 一律畫在個位，
+           錯的那兩個看起來就是「對齊了卻算錯」，教的是假的）。十位、個位的 x 從表頭讀。 */
+        const hM = B.spot.match(/cell\((\d+), \d+, \d+, \d+, d\.colTens\); cell\((\d+), \d+, \d+, \d+, d\.colOnes\);/);
+        const aM = B.spot.match(/cell\((\d+), (\d+), \d+, \d+, String\(A\.t\)\); cell\((\d+), (\d+), \d+, \d+, String\(A\.o\)\);/);
+        const bM = B.spot.match(/cell\(f\.ok \? (\d+) : (\d+), \d+, \d+, \d+, String\(f\.b\)\);/);
+        const zM = B.spot.match(/cell\((\d+), (\d+), \d+, \d+, String\(R\.t\)\); cell\((\d+), (\d+), \d+, \d+, String\(R\.o\)\);/);
+        if (!hM || !aM || !bM || !zM) fail('cannot read where the spot round draws each digit');
+        else {
+          const tX = +hM[1], oX = +hM[2];
+          if (tX === oX) fail('spot: the Tens and Ones headers are in the same place');
+          if (+bM[1] !== oX) fail('spot: a lined-up sum draws its one-digit number at x ' + bM[1] + ', not under the Ones header (' + oX + ')');
+          if (+bM[2] !== tX) fail('spot: a misaligned sum draws its one-digit number at x ' + bM[2] + ', not under the Tens header (' + tX + ')');
+          if (+aM[1] !== tX || +aM[3] !== oX || +zM[1] !== tX || +zM[3] !== oX) fail('spot: the top number or the answer is not under the Tens/Ones headers');
+        }
+        const fM = B.spot.match(/addZone\(B, x, y, (\d+), (\d+), 'gform'\)/), pM = B.spot.match(/var x = 4 \+ \(i % 2\) \* (\d+), y = 4 \+ Math\.floor\(i \/ 2\) \* (\d+);/);
+        if (!fM || !pM) fail('cannot read the spot-round layout');
+        else {
+          tooSmall('a spot column sum', Math.min(+fM[1], +fM[2]));
+          if (+pM[1] < +fM[1] || +pM[2] < +fM[2]) fail('spot column sums overlap');
+          if (4 + +pM[1] + +fM[1] > 300 || 4 + +pM[2] + +fM[2] > boardH('spot')) fail('spot column sums stick out of the board');
+        }
+      }
+
+      /* 第 4 關：拿走。a 的十最多 6 條（一排 6 個、間距 50）、一最多 9 個（兩排 × 5）；b 不退位。 */
+      data.GAME_TAKE.forEach((g, i) => {
+        const A = dg(g.a), Bd = dg(g.b);
+        if (!two(g.a) || !two(g.b)) return fail('GAME_TAKE[' + i + '] a and b must be two-digit integers');
+        if (A.t > 6) fail('GAME_TAKE[' + i + '] ' + g.a + ' has ' + A.t + ' tens, more than the 6-stick row');
+        if (Bd.o < 1) fail('GAME_TAKE[' + i + '] b = ' + g.b + ' has no ones to take');
+        if (Bd.o > A.o || Bd.t > A.t) fail('GAME_TAKE[' + i + '] ' + g.a + ' − ' + g.b + ' needs a borrow');
+        ['zh','en'].forEach(L => {
+          seq('GAME_TAKE[' + i + '] ' + L + ' gTakeDone', I18N[L].gTakeDone(A.t, Bd.t, A.o, Bd.o, g.a, g.b), [A.t, Bd.t, A.t - Bd.t, A.o, Bd.o, A.o - Bd.o, g.a, g.b, g.a - g.b]);
+          seq('GAME_TAKE[' + i + '] ' + L + ' gTakeEnoughT', I18N[L].gTakeEnoughT(Bd.t, g.b), [Bd.t, g.b, Bd.t]);
+          seq('GAME_TAKE[' + i + '] ' + L + ' gTakeEnoughO', I18N[L].gTakeEnoughO(Bd.o, g.b), [Bd.o, g.b, Bd.o]);
+        });
+      });
+      if (pcs){
+        const rp = B.take.match(/cx:150 \+ \(i - \(A\.t - 1\) \/ 2\) \* (\d+), cy:(\d+),/), op = B.take.match(/cx:150 \+ \(i % 5 - \(inRow - 1\) \/ 2\) \* (\d+), cy:(\d+) \+ row \* (\d+),/);
+        const bx = B.take.match(/var BOX = \{ x:(\d+), y:(\d+), w:(\d+), h:(\d+) \};/);
+        if (!rp || !op || !bx) fail('cannot read the take-round layout');
+        else {
+          if (+rp[1] < pcs[0] || +op[1] < pcs[2] || +op[3] < pcs[2]) fail('take-round blocks overlap');
+          if (150 + 2.5 * +rp[1] + pcs[0] / 2 > 300 || 150 + 2 * +op[1] + pcs[2] / 2 > 300) fail('a full take-round row is wider than the board');
+          if (+rp[2] + pcs[1] / 2 > +op[2] - pcs[2] / 2 - 20 || +op[2] + +op[3] + pcs[2] / 2 > +bx[2] - 22) fail('take-round rows run into each other or into the Take away box');
+          if (+bx[2] + +bx[4] > boardH('take')) fail('the Take away box sticks out of the board');
+        }
+      }
+
+      /* 第 5 關：驗算。a ≠ b、都是兩位數、不進位（所以 s − b、s − a 也不退位）。 */
+      data.GAME_CHECK.forEach((g, i) => {
+        if (!two(g.a) || !two(g.b) || g.a === g.b) return fail('GAME_CHECK[' + i + '] needs two different two-digit numbers');
+        const A = dg(g.a), Bd = dg(g.b), s = g.a + g.b;
+        if (A.o + Bd.o > 9 || A.t + Bd.t > 9) fail('GAME_CHECK[' + i + '] ' + g.a + ' + ' + g.b + ' carries');
+        ['zh','en'].forEach(L => {
+          seq('GAME_CHECK[' + i + '] ' + L + ' gChkDone', I18N[L].gChkDone(g.a, g.b), [g.a, g.b, s, s, g.b, g.a, s, g.a, g.b]);
+          seq('GAME_CHECK[' + i + '] ' + L + ' gChkRow', I18N[L].gChkRow(s, g.b), [s, g.b, g.a]);
+          seq('GAME_CHECK[' + i + '] ' + L + ' gChkFalse', I18N[L].gChkFalse(s, g.a, g.a), [s, g.a, g.b, g.a]);
+          seq('GAME_CHECK[' + i + '] ' + L + ' gChk2', I18N[L].gChk2(s, g.b), [s, g.b, g.a]);
+        });
+      });
+      {
+        const cM = B.check.match(/addPiece\(B, \{ w:(\d+), h:(\d+), cx:cx, cy:cy, text:String\(v\), cls:'gcard'/);
+        const tM = B.check.match(/renderTray\(B, \[g\.a, g\.a, g\.b, g\.b\], (\d+), card, (\d+)\);/);
+        const yM = B.check.match(/var y = (\d+) \+ k \* (\d+);/);
+        if (!cM || !tM || !yM) fail('cannot read the check-round layout');
+        else {
+          tooSmall('a check card', Math.min(+cM[1], +cM[2]));
+          if (+tM[2] < +cM[1]) fail('check cards in the tray overlap (step ' + tM[2] + ' < card ' + cM[1] + ')');
+          if ((300 - 3 * +tM[2]) / 2 - +cM[1] / 2 < 0 || +tM[1] + +cM[2] / 2 > boardH('check')) fail('the check tray sticks out of the board');
+          if (+tM[1] - +cM[2] / 2 < +yM[1] + +yM[2] + 56) fail('the check tray covers the second row');
+        }
+      }
+      /* 小遊戲的卡片要洗牌（正解不可以固定在同一個位置）—— 卡片統一由 renderTray() 畫，實作在 lib/gameshuffle.js。 */
+      gameShuffleProblems(src, 1, { roundFn:'renderTray' }).forEach(fail);
+
+      /* 試題的結果格不可以直接畫出答案（2026-09-25 Tony 抓到：舊版積木銀行
+         最右邊那格把 57 的積木和數字都畫出來了）。小遊戲 2026-10-01 改版後不再畫 opGroupsHTML，
+         這裡只剩試題：hide=true 時結果格真的蓋成「?」；兩題看積木試題都傳 hide=true；答完才把 .hide 拿掉。 */
       {
         const hidden = data.opGroupsHTML(3, 2, 2, 5, 'add', 5, 7, true);
         const shown = data.opGroupsHTML(3, 2, 2, 5, 'add', 5, 7);
@@ -266,20 +555,11 @@ module.exports = {
         [/\.sitq\{display:none;/, /\.sitbox\.hide \.sitq\{display:block\}/, /\.sitbox\.hide \.sitreal\{display:none\}/].forEach(re => {
           if (!re.test(src)) fail('result-box hide CSS rule missing: ' + re);
         });
-        if (!/gPic\.innerHTML = opGroupsHTML\([^;]*, true\);/.test(src)) fail('Block Bank game renders the result box unhidden');
         const quizCalls = (src.match(/opGroupsHTML\(\d,\d,\d,\d,'(?:add|sub)',\d,\d(,true)?\)/g) || []);
         if (quizCalls.length !== 4 || quizCalls.some(c => !/,true\)$/.test(c)))
           fail('quiz block-picture stems must be exactly 4 opGroupsHTML(...,true) calls, got ' + JSON.stringify(quizCalls));
-        const reveals = (src.match(/querySelectorAll\('\.sitbox\.hide'\)/g) || []).length;
-        if (reveals !== 2) fail('expected 2 reveal points (quiz answer + game correct), found ' + reveals);
-        /* 遊戲只能在答對的分支打開結果格：切出 if (v === round.ans){ … } else { … } 兩段各自檢查 */
-        const gi = src.indexOf('if (v === round.ans){'), ge = gi < 0 ? -1 : src.indexOf('} else {', gi);
-        const gEnd = ge < 0 ? -1 : src.indexOf('elScore.textContent', ge);
-        if (gi < 0 || ge < 0 || gEnd < 0) fail('cannot locate the Block Bank right/wrong branches');
-        else {
-          if (!/gPic\.querySelectorAll\('\.sitbox\.hide'\)/.test(src.slice(gi, ge))) fail('Block Bank does not reveal the result inside the correct-answer branch');
-          if (/sitbox\.hide/.test(src.slice(ge, gEnd))) fail('Block Bank wrong-answer branch touches the hidden result box');
-        }
+        const reveals = (src.match(/stem\.querySelectorAll\('\.sitbox\.hide'\)/g) || []).length;
+        if (reveals !== 1) fail('expected 1 quiz reveal points (inside the answer handler), found ' + reveals);
       }
 
       /* --- 試題：解釋裡真的寫成算式的那幾條要逐條驗算 --- */

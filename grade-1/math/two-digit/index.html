@@ -81,9 +81,44 @@
     display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;background:var(--blue-soft);
     border-radius:14px;padding:14px 20px;font-size:17px;
   }
-  .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:17px;margin-top:14px}
+  .game .stats{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;font-size:17px;margin-top:14px}
   .gamemsg{margin-top:14px;font-size:18px;min-height:28px;text-align:center}
   .hint{color:var(--muted);font-size:16px;margin-top:6px;min-height:22px;text-align:center}
+  /* ---- 小遊戲：存、排、找、拿、驗 ---- */
+  .gstage{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0 }
+  .gask{ font-weight:700; text-align:center; font-size:18px }
+  .gtrail{ font-size:20px; font-weight:800; color:var(--ink); text-align:center; min-height:28px }
+  .gwrap{ position:relative; margin:0 auto }
+  .gboard{ position:absolute; left:0; top:0; transform-origin:0 0; background:var(--bg); border-radius:16px }
+  .gboard > div{ position:absolute }
+  .gpiece{ left:0; top:0; display:flex; align-items:center; justify-content:center;
+    touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; transition:transform .25s ease; z-index:5 }
+  .gpiece.dragging{ transition:none; cursor:grabbing; z-index:50 !important; filter:drop-shadow(0 6px 8px rgba(70,60,40,.25)) }
+  .gpiece.sel{ outline:3px dashed var(--blue); outline-offset:4px; border-radius:12px }
+  .gpiece.locked{ cursor:default; pointer-events:none }
+  .gcard{ background:var(--card); border:3px solid var(--line); border-radius:12px; font-size:26px; font-weight:800; color:var(--ink) }
+  .gcard.placed{ border-color:var(--green); background:var(--green-soft); color:var(--green) }
+  .gbox{ border:3px dashed var(--line); border-radius:14px; background:var(--card) }
+  .gbinlbl{ display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; color:var(--muted) }
+  /* 一條十：十節綠色（畫在 16×86 裡，拿取範圍是整塊 46×96）；放好之後縮成 12×80 */
+  .grod{ background:repeating-linear-gradient(to bottom, var(--green) 0 9%, #1F7A50 9% 10%) center / 16px 86px no-repeat }
+  .grod.placed, .grod.gfix{ background-size:100% 100% }
+  /* 一個一：橘色圓點（和範例的積木圖同色） */
+  .gone{ background:radial-gradient(circle closest-side, var(--orange) 0 90%, transparent 96%) center / 30px 30px no-repeat }
+  .gone.placed, .gone.gfix{ background-size:100% 100%; border-radius:50% }
+  /* 遊戲裡的算式用西文字型：PingFang 的粗體「−」又寬又平，看起來像國字「一」（57 一 23） */
+  .gtrail, .gbig, .gdig, .gform > div, .gcard, #gMsg{ font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif }
+  .gslot{ border:3px dashed var(--line); border-radius:10px; background:var(--card) }
+  .gslot.off{ border-color:transparent; background:transparent }
+  .gdig{ display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:800; color:var(--ink) }
+  .gcolhd{ display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--muted) }
+  .grule{ background:var(--ink); border-radius:2px }
+  .gform{ border:3px solid var(--line); border-radius:14px; background:var(--card); cursor:pointer }
+  .gform > div{ position:absolute; pointer-events:none; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--ink) }
+  .gform.found{ border-color:var(--red); background:var(--red-soft) }
+  .gform .gfx{ color:var(--red); font-size:22px }
+  .gbig{ display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:800; color:var(--ink) }
+  .gmark{ display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:800; color:var(--green) }
   .yes{color:var(--green);font-weight:700}
   .no{color:var(--red);font-weight:700}
   footer{
@@ -238,21 +273,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">積木銀行</h2>
-    <p class="lead" data-i18n="s6lead">看清楚積木，選出正確的答案，存進積木銀行！</p>
+    <p class="lead" data-i18n="s6lead">五關、五種玩法：存積木、排直式、找出沒對齊的、拿走積木、用減法驗算。拖一拖、點一點都可以，放錯會彈回來，再試一次就好！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
-        <span><span data-i18n="gScoreLabel">存款</span> <b id="gScore">0</b></span>
+        <span><span data-i18n="gScoreLabel">存款</span> <b id="gScore">0</b> 🏆</span>
       </div>
-      <div id="gPic"></div>
-      <p class="hopline" id="gAskLine"></p>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
-      </div>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="opts" id="gAnswers" style="margin-top:14px"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -351,12 +382,30 @@
     { a:{t:6,o:9}, b:{t:2,o:4} }   // 69 − 24 = 45
   ];
 
-  var ROUNDS = [
-    { op:'add', a:{t:3,o:2}, b:{t:2,o:5}, ans:57, choices:[57,37,75,52] },
-    { op:'add', a:{t:5,o:4}, b:{t:1,o:3}, ans:67, choices:[67,57,77,64] },
-    { op:'sub', a:{t:6,o:8}, b:{t:2,o:4}, ans:44, choices:[44,34,54,42] },
-    { op:'sub', a:{t:5,o:6}, b:{t:2,o:3}, ans:33, choices:[33,23,43,31] },
-    { op:'add', a:{t:3,o:8}, b:{t:4,o:1}, ans:79, choices:[79,69,89,75] }
+  /* 小遊戲的題庫（每一關從自己的池子隨機抽一題；全部都不進位、不退位，100 以內）。
+     GAME_BANK：銀行裡已經有 a，把 b 的積木（b 的十位 1～3、個位 1～5）存進十位／個位；十位、個位各自加起來都不超過 9。
+     GAME_ALIGN：直式 a + b，b 是一位數。先把 b 放進個位，再填答案的十位（aT）、個位（aO + b）；
+       托盤的四張數字卡 aT、aO + b、aT + b（錯放到十位的迷思）、aO 一定兩兩不同，所以 aT + b 也不超過 9。
+     GAME_SPOT：一組四個直式（a + 一位數 b），ok:false 的把 b 錯寫在十位、答案照錯的位子算（十位 aT + b）；每組剛好兩個錯。
+     GAME_TAKE：銀行裡有 a（十位 1～6 條、個位最多 9 個），拿走 b：十位拿 bT 條、個位拿 bO 個（不退位）。
+     GAME_CHECK：a + b = s（不進位，a ≠ b），用 s − b = a、s − a = b 兩行驗算；數字卡是 a、a、b、b。 */
+  var GAME_BANK = [
+    { a:32, b:25 }, { a:23, b:15 }, { a:41, b:34 }, { a:52, b:23 }, { a:14, b:32 }, { a:63, b:24 }
+  ];
+  var GAME_ALIGN = [
+    { a:32, b:5 }, { a:24, b:3 }, { a:51, b:3 }, { a:23, b:4 }, { a:62, b:3 }, { a:15, b:2 }, { a:34, b:5 }
+  ];
+  var GAME_SPOT = [
+    [ { a:32, b:5, ok:false }, { a:41, b:6, ok:true }, { a:23, b:4, ok:true }, { a:54, b:3, ok:false } ],
+    [ { a:61, b:2, ok:false }, { a:35, b:4, ok:true }, { a:72, b:5, ok:true }, { a:13, b:6, ok:false } ],
+    [ { a:24, b:5, ok:true }, { a:42, b:3, ok:false }, { a:51, b:7, ok:true }, { a:26, b:3, ok:false } ],
+    [ { a:43, b:2, ok:true }, { a:15, b:4, ok:false }, { a:64, b:3, ok:true }, { a:31, b:5, ok:false } ]
+  ];
+  var GAME_TAKE = [
+    { a:57, b:23 }, { a:68, b:24 }, { a:46, b:31 }, { a:59, b:34 }, { a:65, b:41 }, { a:38, b:16 }, { a:49, b:25 }
+  ];
+  var GAME_CHECK = [
+    { a:32, b:25 }, { a:41, b:36 }, { a:23, b:15 }, { a:52, b:34 }, { a:61, b:27 }, { a:44, b:13 }
   ];
 
   /* ---------- i18n ---------- */
@@ -382,7 +431,7 @@
       invBtnStart:'驗算看看', invBtnReset:'再選一組',
       tip:'💡 小提醒：如果個位不夠減，或十位、個位加起來超過 9，就要用到「進位」和「退位」的魔法 —— 那是之後的課才會教喔！',
       s5h2:'檢查一下', s5lead:'點一下答案，馬上知道對不對！',
-      s6h2:'積木銀行', s6lead:'看清楚積木，選出正確的答案，存進積木銀行！',
+      s6h2:'積木銀行', s6lead:'五關、五種玩法：存積木、排直式、找出沒對齊的、拿走積木、用減法驗算。拖一拖、點一點都可以，放錯會彈回來，再試一次就好！',
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a>。',
@@ -454,16 +503,53 @@
       ],
 
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'存款',
-      gAsk:function(aVal,bVal,op){ return aVal + (op === 'add' ? ' + ' : ' − ') + bVal + ' = ?'; },
       gHintBtn:'💡 提示',
-      gHint1:function(op){ return op === 'add' ? '提示：先算十位加十位，再算個位加個位。' : '提示：先算十位減十位，再算個位減個位。'; },
-      gHint2:function(op, tSum, oSum){ return op === 'add' ? '提示：十位算出來是 ' + tSum + '，個位算出來是 ' + oSum + '。' : '提示：十位算出來是 ' + tSum + '，個位算出來是 ' + oSum + '。'; },
       gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:function(ans){ return '存進去了！+20 分！答案是 ' + ans + '。'; },
-      gCorrectRetry:function(ans){ return '存進去了！+10 分。答案是 ' + ans + '。'; },
-      gTryAgain:function(v){ return v + ' 不對喔，再想想！'; },
       gClear:'按「下一關」繼續下一題。',
-      gWin:function(score){ return '五關全破！積木銀行存了 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; }
+      gWin:function(score){ return '五關全破！積木銀行存了 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; },
+      gAsks:{
+        bank:'第 1 關・存積木：把下面的積木存進銀行 —— 一條十放進「十位」，一個一放進「個位」。',
+        align:'第 2 關・排直式：一位數要放在十位還是個位？先把它放好，再填答案的十位和個位。',
+        spot:'第 3 關・找錯：小美寫了四個直式，點出兩個「沒對齊」的。',
+        take:'第 4 關・拿走：把要減掉的積木拖進「拿走」框（也可以先點積木、再點框）。',
+        check:'第 5 關・驗算：用減法檢查加法 —— 把數字卡放進兩個減法算式。'
+      },
+      gHints:{
+        bank:'提示：長長一條是一個十（10 個一綁在一起），小圓點是一個一。十位跟十位放一起，個位跟個位放一起。',
+        align:'提示：一位數只有個位，要和上面那個數的個位（右邊那一欄）對齊；然後十位算十位、個位算個位。',
+        spot:'提示：看第二排的一位數，它應該站在「個位」那一欄（右邊）。',
+        take:'提示：減掉幾個十，就從十位拿走幾條；減掉幾個一，就從個位拿走幾個。',
+        check:'提示：合起來的數，減掉其中一個加數，會回到另一個加數。'
+      },
+      gRodLabel:'一條十', gOneLabel:'一個一',
+      gBankNow:function(a, b, t, o){ return a + ' + ' + b + '：十位 ' + t + ' 個十 · 個位 ' + o + ' 個一'; },
+      gBankNotOne:'這是一個一（一個小圓點），要放進「個位」。',
+      gBankNotTen:'這是一條十（10 個一綁在一起），要放進「十位」。',
+      gBank2:function(t, o){ return '還要把 ' + t + ' 條十放進十位、' + o + ' 個一放進個位。'; },
+      gBankDone:function(aT, bT, aO, bO, a, b){ return '十位 ' + aT + ' + ' + bT + ' = ' + (aT + bT) + '，個位 ' + aO + ' + ' + bO + ' = ' + (aO + bO) + '，' + a + ' + ' + b + ' = ' + (a + b) + '。'; },
+      gAlignTens:function(b, aO){ return b + ' 是一位數，只有個位：要放在「個位」，和上面的 ' + aO + ' 對齊。'; },
+      gAlignNext:'對齊了！現在把答案的十位、個位填上。',
+      gAlignResT:function(aT){ return '十位：上面是 ' + aT + '，下面沒有十，所以十位還是 ' + aT + '。'; },
+      gAlignResO:function(aO, b){ return '個位：' + aO + ' + ' + b + ' = ' + (aO + b) + '。'; },
+      gAlign2a:function(b){ return b + ' 放在右邊「個位」那一格。'; },
+      gAlign2b:function(aT, aO, b){ return '十位寫 ' + aT + '（下面沒有十）；個位 ' + aO + ' + ' + b + ' = ' + (aO + b) + '。'; },
+      gAlignDone:function(a, b){ return b + ' 對齊個位，十位不變：' + a + ' + ' + b + ' = ' + (a + b) + '。'; },
+      gSpotNow:function(k){ return '找到 ' + k + ' / 2 個沒對齊的'; },
+      gSpotOk:function(a, b){ return '這一個的 ' + b + ' 在個位下面，對齊了：' + a + ' + ' + b + ' = ' + (a + b) + ' 是對的。'; },
+      gSpotOne:function(a, b, w){ return '對！' + b + ' 跑到十位去了，算成 ' + w + '；對齊個位才對：' + a + ' + ' + b + ' = ' + (a + b) + '。'; },
+      gSpotDone:'兩個都找到了！一位數要寫在個位下面。',
+      gSpot2:function(k){ return '還有 ' + k + ' 個沒找到：一位數跑到左邊「十位」那一欄的就是。'; },
+      gTakeBox:'拿走',
+      gTakeNow:function(a, b, t, o){ return a + ' − ' + b + '：拿走了 ' + t + ' 個十、' + o + ' 個一'; },
+      gTakeEnoughT:function(bT, b){ return '十位已經拿走 ' + bT + ' 條了：' + b + ' 只有 ' + bT + ' 個十。'; },
+      gTakeEnoughO:function(bO, b){ return '個位已經拿走 ' + bO + ' 個了：' + b + ' 只有 ' + bO + ' 個一。'; },
+      gTake2:function(t, o){ return '還要拿走 ' + t + ' 條十、' + o + ' 個一。'; },
+      gTakeDone:function(aT, bT, aO, bO, a, b){ return '十位 ' + aT + ' − ' + bT + ' = ' + (aT - bT) + '，個位 ' + aO + ' − ' + bO + ' = ' + (aO - bO) + '，' + a + ' − ' + b + ' = ' + (a - b) + '。'; },
+      gChkRow:function(s, x){ return s + ' − ' + x + ' = ' + (s - x) + '，回到另一個加數 ✓'; },
+      gChkFalse:function(s, m, n){ return s + ' − ' + m + ' = ' + (s - m) + '，不是 ' + n + '。'; },
+      gChkSame:function(s, x){ return '另一行已經驗過 ' + s + ' − ' + x + ' 了，這一行換另一個加數來減。'; },
+      gChk2:function(s, x){ return '試試 ' + s + ' − ' + x + ' = ' + (s - x) + '。'; },
+      gChkDone:function(a, b){ var s = a + b; return a + ' + ' + b + ' = ' + s + '：' + s + ' − ' + b + ' = ' + a + '，' + s + ' − ' + a + ' = ' + b + '。減回去都對，加法算對了！'; }
     },
     en: {
       langAria: 'Switch language',
@@ -486,7 +572,7 @@
       invBtnStart:'Check it!', invBtnReset:'Pick another',
       tip:'💡 Tip: when the ones column doesn’t have enough to subtract, or the tens/ones add up past 9, you’ll need the “regrouping” and “borrowing” magic — that’s a later lesson!',
       s5h2:'Quick Check', s5lead:'Tap an answer and find out right away!',
-      s6h2:'Block Bank', s6lead:'Look at the blocks, pick the right answer, and bank it!',
+      s6h2:'Block Bank', s6lead:'Five rounds, five ways to play: bank the blocks, line up a column sum, spot the ones not lined up, take blocks away, check with subtraction. Drag or tap — a wrong move just bounces back, so try again!',
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a>.',
@@ -558,16 +644,53 @@
       ],
 
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Savings',
-      gAsk:function(aVal,bVal,op){ return aVal + (op === 'add' ? ' + ' : ' − ') + bVal + ' = ?'; },
       gHintBtn:'💡 Hint',
-      gHint1:function(op){ return op === 'add' ? 'Hint: add the tens together first, then add the ones together.' : 'Hint: subtract the tens first, then subtract the ones.'; },
-      gHint2:function(op, tSum, oSum){ return 'Hint: the tens come out to ' + tSum + ', and the ones come out to ' + oSum + '.'; },
       gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst:function(ans){ return 'Banked it! +20 points! The answer is ' + ans + '.'; },
-      gCorrectRetry:function(ans){ return 'Banked it! +10 points. The answer is ' + ans + '.'; },
-      gTryAgain:function(v){ return v + ' isn’t it — try again!'; },
       gClear:'Press “Next round” to try the next one.',
-      gWin:function(score){ return 'All 5 rounds cleared! Block Bank total: ' + score + ' points 🏆 Press “Restart” to play again.'; }
+      gWin:function(score){ return 'All 5 rounds cleared! Block Bank total: ' + score + ' points 🏆 Press “Restart” to play again.'; },
+      gAsks:{
+        bank:'Round 1 · Bank the blocks: put the blocks below into the bank — a ten-stick goes in “Tens”, a one goes in “Ones”.',
+        align:'Round 2 · Line it up: which column does the one-digit number go in? Place it, then fill in the tens and ones of the answer.',
+        spot:'Round 3 · Spot the mistake: Mia wrote four column sums. Tap the two that are NOT lined up.',
+        take:'Round 4 · Take away: drag the blocks you subtract into the “Take away” box (or tap a block, then tap the box).',
+        check:'Round 5 · Check it: use subtraction to check the addition — put the number cards into the two subtractions.'
+      },
+      gHints:{
+        bank:'Hint: a long stick is one ten (10 ones bundled together); a small dot is one one. Tens go with tens, ones go with ones.',
+        align:'Hint: a one-digit number has only ones, so it lines up under the ones (the right-hand column). Then work out the tens and the ones separately.',
+        spot:'Hint: look at the one-digit number in the second row — it should stand in the “Ones” column (on the right).',
+        take:'Hint: take away as many sticks from the tens as the tens you subtract, and as many dots from the ones as the ones you subtract.',
+        check:'Hint: take the total, subtract one of the numbers you added, and you get back the other one.'
+      },
+      gRodLabel:'one ten', gOneLabel:'one one',
+      gBankNow:function(a, b, t, o){ return a + ' + ' + b + ': tens ' + t + ' · ones ' + o; },
+      gBankNotOne:'This is a one (a single dot) — it goes in “Ones”.',
+      gBankNotTen:'This is a ten (10 ones bundled together) — it goes in “Tens”.',
+      gBank2:function(t, o){ return 'Still to bank: ' + t + ' ten-sticks into Tens and ' + o + ' ones into Ones.'; },
+      gBankDone:function(aT, bT, aO, bO, a, b){ return 'Tens: ' + aT + ' + ' + bT + ' = ' + (aT + bT) + '. Ones: ' + aO + ' + ' + bO + ' = ' + (aO + bO) + '. So ' + a + ' + ' + b + ' = ' + (a + b) + '.'; },
+      gAlignTens:function(b, aO){ return b + ' has only one digit — it has no tens — so it goes in the Ones column, under the ' + aO + '.'; },
+      gAlignNext:'Lined up! Now fill in the tens and the ones of the answer.',
+      gAlignResT:function(aT){ return 'Tens: the top has ' + aT + ' and the bottom has no tens, so the tens stay ' + aT + '.'; },
+      gAlignResO:function(aO, b){ return 'Ones: ' + aO + ' + ' + b + ' = ' + (aO + b) + '.'; },
+      gAlign2a:function(b){ return 'Put the ' + b + ' in the right-hand box, under Ones.'; },
+      gAlign2b:function(aT, aO, b){ return 'The tens digit is ' + aT + ' (nothing to add below it); the ones are ' + aO + ' + ' + b + ' = ' + (aO + b) + '.'; },
+      gAlignDone:function(a, b){ return b + ' lines up with the ones and the tens stay the same: ' + a + ' + ' + b + ' = ' + (a + b) + '.'; },
+      gSpotNow:function(k){ return 'Found ' + k + ' / 2 not lined up'; },
+      gSpotOk:function(a, b){ return 'In this one the ' + b + ' is under the ones — it’s lined up, and ' + a + ' + ' + b + ' = ' + (a + b) + ' is right.'; },
+      gSpotOne:function(a, b, w){ return 'Yes! The ' + b + ' slid into the tens, so it came out as ' + w + '. Lined up under the ones it’s ' + a + ' + ' + b + ' = ' + (a + b) + '.'; },
+      gSpotDone:'You found both! A one-digit number goes under the ones.',
+      gSpot2:function(k){ return k + ' more to find: look for the one-digit number sitting in the left-hand “Tens” column.'; },
+      gTakeBox:'Take away',
+      gTakeNow:function(a, b, t, o){ return a + ' − ' + b + ': took away ' + t + ' tens, ' + o + ' ones'; },
+      gTakeEnoughT:function(bT, b){ return 'You already took away ' + bT + ' ten-sticks — ' + b + ' has only ' + bT + ' tens.'; },
+      gTakeEnoughO:function(bO, b){ return 'You already took away ' + bO + ' ones — ' + b + ' has only ' + bO + ' ones.'; },
+      gTake2:function(t, o){ return 'Still to take away: ' + t + ' ten-sticks and ' + o + ' ones.'; },
+      gTakeDone:function(aT, bT, aO, bO, a, b){ return 'Tens: ' + aT + ' − ' + bT + ' = ' + (aT - bT) + '. Ones: ' + aO + ' − ' + bO + ' = ' + (aO - bO) + '. So ' + a + ' − ' + b + ' = ' + (a - b) + '.'; },
+      gChkRow:function(s, x){ return s + ' − ' + x + ' = ' + (s - x) + ' — back to the other number ✓'; },
+      gChkFalse:function(s, m, n){ return s + ' − ' + m + ' = ' + (s - m) + ', not ' + n + '.'; },
+      gChkSame:function(s, x){ return 'The other row already checks ' + s + ' − ' + x + ' — subtract the other number in this row.'; },
+      gChk2:function(s, x){ return 'Try ' + s + ' − ' + x + ' = ' + (s - x) + '.'; },
+      gChkDone:function(a, b){ var s = a + b; return a + ' + ' + b + ' = ' + s + ': ' + s + ' − ' + b + ' = ' + a + ' and ' + s + ' − ' + a + ' = ' + b + '. Both checks work, so the addition is right!'; }
     }
   };
 
@@ -816,23 +939,26 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：積木銀行 ---------- */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ---------- 6. 小遊戲：積木銀行 —— 五關、五種玩法（存、排、找、拿、驗） ----------
+     設計原則見 docs/teaching-framework.md §六之五。一年級：每關過關 +1，不扣分、不會失敗；
+     放到空白處不算錯；每個拖拉也可以「先點東西、再點目的地」。
+     第 3 關（找錯）沒有拖拉：點一下＝「這個沒對齊」，那一關的說明有寫。
+     五關對應範例 1～4：十位加十位個位加個位（存）、直式對齊（排、找）、不退位減法（拿）、加減互逆（驗）。 */
+  var gRound = 0, gScore = 0, gSolved = false, gCtx = {};
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gPic = document.getElementById('gPic');
-  var gAskLine = document.getElementById('gAskLine');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
   var hintLevel = 0;
+  var GAME_ORDER = ['bank', 'align', 'spot', 'take', 'check'];
 
-  /* ⚠️ 遊戲選項一定要洗牌再畫：ROUNDS 裡正解都寫在 choices[0]，
-     照順序畫的話每一關按最左邊那顆就對，遊戲就白玩了。
-     比對用的是「值」（v === round.xxx），所以洗牌不會動到答案。 */
+  /* ⚠️ 托盤的卡片一定要洗牌再畫：題庫裡的順序是固定的（正解的數字卡寫在前面），
+     照順序畫的話孩子玩兩次就會記住位置，遊戲就白玩了。
+     比對用的是「值」，所以洗牌不會動到答案。 */
   function shuffle(arr){
     var a = arr.slice();
     for (var j = a.length - 1; j > 0; j--){
@@ -841,75 +967,444 @@
     }
     return a;
   }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function digits(n){ return { t:Math.floor(n / 10), o:n % 10 }; }
+
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去（codex 第一輪）。PIECE_PTR 記「按在積木上的 pointerId」，
+     放在畫板外面（重新開始、換語言換了新畫板也還在）；任何地方的 pointerup／pointercancel 傳到 window 時清掉
+     —— window 在冒泡的最後一站，畫板先看到、再清（codex 第二輪：滑鼠的 pointerId 永遠是 1，留著過期的記號會吞掉下一次點目的地）。
+     這是整頁唯一一個常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);   /* 新的一下開始時先清掉（codex 第三輪：放開落在頁面外時 window 收不到 pointerup）；按在積木上的會馬上再記一次 */
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  function inside(pt, R){ return pt.x >= R.x && pt.x <= R.x + R.w && pt.y >= R.y && pt.y <= R.y + R.h; }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+
+  /* 拿得起來的積木：一條十 46×96（中間畫 16×86 的十節長條）、一個一 46×46（中間畫圓點）。
+     放好之後縮成 12×80 的長條、22×22 的圓點（放好的不能再拿，大小只是畫面）。 */
+  var ROD_W = 46, ROD_H = 96, ONE_W = 46;
+  function shrink(P, w, h){ P.w = w; P.h = h; P.el.style.width = w + 'px'; P.el.style.height = h + 'px'; }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    P.home();
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (moved) P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的積木一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, pt);
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad），整個方框都算，角落也收。
+     相鄰格子放寬之後會重疊 —— 先在「所有」格子裡挑最近的一格（不是陣列裡第一個），
+     最近的那格已經放好了就不收；不可以跳過它、改放進旁邊的空格。
+     每一格記 cx, cy（中心）和 hw, hh（半寬、半高）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var dd = dx * dx + dy * dy;
+      if (dd < bd){ bd = dd; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+
+  /* 托盤：選項卡片一律洗牌後排好（正解不可以固定在同一個位置）。cols 張一排，多的往下一排。 */
+  function renderTray(B, items, y, mk, step, cols){
+    step = step || 60; cols = cols || items.length;
+    var x0 = (B.W - (Math.min(cols, items.length) - 1) * step) / 2;
+    shuffle(items).forEach(function(it, i){ mk(it, x0 + (i % cols) * step, y + Math.floor(i / cols) * 56); });
+  }
+
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    gScore += 1; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    if (gRound === GAME_ORDER.length - 1){
+      gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gWin(gScore) + '</span>';
+    } else {
+      gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gClear + '</span>';
+      gNext.disabled = false;
+    }
+  }
+  /* 第二層提示跟著畫面走（還要放幾條、還要拿走幾個……）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){ gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+
+  /* 銀行的兩個格子（第 1 關）：十位、個位各 142 寬。放好的十排成一排（間距 14，最多 9 條），
+     放好的一排成 3 × 3（間距 28，最多 9 個）。 */
+  var BIN_T = { x:4, y:4, w:142, h:150 }, BIN_O = { x:154, y:4, w:142, h:150 };
+  function rodSpot(i){ return { cx:BIN_T.x + 15 + i * 14, cy:BIN_T.y + 82 }; }
+  function oneSpot(i){ return { cx:BIN_O.x + BIN_O.w / 2 + (i % 3 - 1) * 28, cy:BIN_O.y + 54 + Math.floor(i / 3) * 28 }; }
+
+  var RENDER = {
+    /* 第 1 關：存積木 —— 銀行裡已經有 a（綠色的十、橘色的一），把 b 的十一條一條放進「十位」、
+       一個一個放進「個位」。 */
+    bank: function(d){
+      var g = pick(GAME_BANK), A = digits(g.a), Bd = digits(g.b);
+      var line = trailLine(d.gBankNow(g.a, g.b, A.t, A.o));
+      var B = makeBoard(300, 320);
+      [[BIN_T, d.colTens], [BIN_O, d.colOnes]].forEach(function(p){
+        addZone(B, p[0].x, p[0].y, p[0].w, p[0].h, 'gbox');
+        addZone(B, p[0].x, p[0].y + 4, p[0].w, 26, 'gbinlbl', p[1]);
+      });
+      var i, nT = A.t, nO = A.o;
+      for (i = 0; i < A.t; i++){ var r = rodSpot(i); addZone(B, r.cx - 6, r.cy - 40, 12, 80, 'grod gfix'); }
+      for (i = 0; i < A.o; i++){ var o = oneSpot(i); addZone(B, o.cx - 11, o.cy - 11, 22, 22, 'gone gfix'); }
+      gCtx.hint2 = function(){ return d.gBank2(A.t + Bd.t - nT, A.o + Bd.o - nO); };
+      var rods = [], ones = [];
+      for (i = 0; i < Bd.t; i++) rods.push('t');
+      for (i = 0; i < Bd.o; i++) ones.push('o');
+      renderTray(B, rods, 214, function(k, cx, cy){
+        addPiece(B, { w:ROD_W, h:ROD_H, cx:cx, cy:cy, text:'', cls:'grod', label:d.gRodLabel, data:{ ten:true } });
+      }, 56, 5);
+      renderTray(B, ones, 292, function(k, cx, cy){
+        addPiece(B, { w:ONE_W, h:ONE_W, cx:cx, cy:cy, text:'', cls:'gone', label:d.gOneLabel, data:{ ten:false } });
+      }, 56, 5);
+      useTapSelect(B, function(P, pt){
+        var toT = inside(pt, BIN_T), toO = inside(pt, BIN_O);
+        if (!toT && !toO) return false;
+        if (P.data.ten && toO){ roundMiss(d.gBankNotTen); return false; }
+        if (!P.data.ten && toT){ roundMiss(d.gBankNotOne); return false; }
+        var s;
+        if (P.data.ten){ s = rodSpot(nT); nT++; shrink(P, 12, 80); }
+        else { s = oneSpot(nO); nO++; shrink(P, 22, 22); }
+        P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        line.textContent = d.gBankNow(g.a, g.b, nT, nO);
+        gMsg.textContent = '';
+        if (nT === A.t + Bd.t && nO === A.o + Bd.o){
+          line.textContent = g.a + ' + ' + g.b + ' = ' + (g.a + g.b);
+          roundSolved(d.gBankDone(A.t, Bd.t, A.o, Bd.o, g.a, g.b));
+        }
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 2 關：排直式 —— a 已經寫好；先把一位數 b 放進第二排（只收個位那一格，放到十位會彈回＋說原因），
+       再從四張數字卡裡填答案的十位、個位。 */
+    align: function(d){
+      var g = pick(GAME_ALIGN), A = digits(g.a), r = A.o + g.b;
+      var line = trailLine(g.a + ' + ' + g.b);
+      var B = makeBoard(300, 296);
+      var CX = [125, 195], CELL = 58;
+      CX.forEach(function(cx, c){ addZone(B, cx - 32, 2, 64, 22, 'gcolhd', c ? d.colOnes : d.colTens); });
+      addZone(B, CX[0] - CELL / 2, 28, CELL, CELL, 'gdig', String(A.t));
+      addZone(B, CX[1] - CELL / 2, 28, CELL, CELL, 'gdig', String(A.o));
+      addZone(B, 40, 92, 52, CELL, 'gdig', '+');
+      addZone(B, 86, 156, 148, 4, 'grule');
+      function slot(cx, y){ return { z:addZone(B, cx - CELL / 2, y, CELL, CELL, 'gslot'), cx:cx, cy:y + CELL / 2, hw:CELL / 2, hh:CELL / 2, done:false }; }
+      var bT = slot(CX[0], 92), bO = slot(CX[1], 92), rT = slot(CX[0], 166), rO = slot(CX[1], 166);
+      bT.ten = rT.ten = true;
+      var phase = 1;
+      gCtx.hint2 = function(){ return phase === 1 ? d.gAlign2a(g.b) : d.gAlign2b(A.t, A.o, g.b); };
+      function card(v, cx, cy){ addPiece(B, { w:50, h:50, cx:cx, cy:cy, text:String(v), cls:'gcard', data:{ v:v } }); }
+      renderTray(B, [g.b], 262, card, 60);
+      useTapSelect(B, function(P, pt){
+        var v = P.data.v, hit;
+        if (phase === 1){
+          hit = nearestOpen([bT, bO], pt, 4);
+          if (!hit) return false;
+          if (hit.ten){ roundMiss(d.gAlignTens(g.b, A.o)); return false; }
+          hit.done = true; P.lock(hit.cx, hit.cy); P.el.classList.add('placed');
+          phase = 2;
+          bT.z.classList.add('off');
+          roundInfo(d.gAlignNext);
+          renderTray(B, [A.t, r, A.t + g.b, A.o], 262, card, 60);
+        } else {
+          hit = nearestOpen([rT, rO], pt, 4);
+          if (!hit) return false;
+          if (hit.ten && v !== A.t){ roundMiss(d.gAlignResT(A.t)); return false; }
+          if (!hit.ten && v !== r){ roundMiss(d.gAlignResO(A.o, g.b)); return false; }
+          hit.done = true; P.lock(hit.cx, hit.cy); P.el.classList.add('placed');
+          gMsg.textContent = '';
+          if (rT.done && rO.done){
+            line.textContent = g.a + ' + ' + g.b + ' = ' + (g.a + g.b);
+            roundSolved(d.gAlignDone(g.a, g.b));
+          }
+        }
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 3 關：找錯 —— 四個直式（2 × 2），兩個把一位數錯寫在十位、答案也照錯的位子算。
+       點一下＝「這個沒對齊」（這一關沒有拖拉）；點到對齊的那個 → 說明它為什麼是對的。 */
+    spot: function(d){
+      var set = pick(GAME_SPOT), found = 0;
+      var line = trailLine(d.gSpotNow(0));
+      var B = makeBoard(300, 316);
+      var left = set.filter(function(f){ return !f.ok; }).length;
+      gCtx.hint2 = function(){ return d.gSpot2(left - found); };
+      shuffle(set).forEach(function(f, i){
+        var x = 4 + (i % 2) * 150, y = 4 + Math.floor(i / 2) * 158;
+        var A = digits(f.a), res = f.ok ? f.a + f.b : (A.t + f.b) * 10 + A.o, R = digits(res);
+        var form = addZone(B, x, y, 142, 150, 'gform');
+        function cell(cx, cy, w, h, text, cls){
+          var c = document.createElement('div');
+          c.style.left = (cx - w / 2) + 'px'; c.style.top = (cy - h / 2) + 'px';
+          c.style.width = w + 'px'; c.style.height = h + 'px';
+          if (cls) c.className = cls;
+          c.style.fontSize = h >= 30 ? '26px' : '13px';
+          c.textContent = text;
+          form.appendChild(c);
+        }
+        cell(62, 14, 40, 18, d.colTens); cell(104, 14, 40, 18, d.colOnes);
+        cell(62, 42, 38, 34, String(A.t)); cell(104, 42, 38, 34, String(A.o));
+        cell(24, 80, 30, 34, '+');
+        cell(f.ok ? 104 : 62, 80, 38, 34, String(f.b));
+        var rule = document.createElement('div');
+        rule.className = 'grule';
+        rule.style.left = '40px'; rule.style.top = '100px'; rule.style.width = '86px'; rule.style.height = '3px';
+        form.appendChild(rule);
+        cell(62, 122, 38, 34, String(R.t)); cell(104, 122, 38, 34, String(R.o));
+        var hit = false;
+        form.addEventListener('click', function(){
+          if (gSolved || hit) return;
+          if (f.ok){ roundMiss(d.gSpotOk(f.a, f.b)); return; }
+          hit = true; found++;
+          form.classList.add('found');
+          cell(20, 20, 30, 30, '✗', 'gfx');
+          line.textContent = d.gSpotNow(found);
+          var msg = d.gSpotOne(f.a, f.b, res);
+          if (found === left) roundSolved(msg + ' ' + d.gSpotDone);
+          else roundInfo(msg);
+          refreshHint();
+        });
+      });
+    },
+
+    /* 第 4 關：拿走 —— 銀行裡有 a：上面一排是十（每條拿得起來）、下面是一；
+       把 b 的十和一拖進「拿走」框。十位拿夠了再拿十、個位拿夠了再拿一 → 彈回＋說原因。 */
+    take: function(d){
+      var g = pick(GAME_TAKE), A = digits(g.a), Bd = digits(g.b);
+      var line = trailLine(d.gTakeNow(g.a, g.b, 0, 0));
+      var B = makeBoard(300, 376);
+      var BOX = { x:4, y:270, w:292, h:100 };
+      addZone(B, 0, 2, 300, 20, 'gbinlbl', d.colTens);
+      addZone(B, 0, 122, 300, 20, 'gbinlbl', d.colOnes);
+      addZone(B, BOX.x, BOX.y - 22, 120, 20, 'gbinlbl', d.gTakeBox);
+      addZone(B, BOX.x, BOX.y, BOX.w, BOX.h, 'gbox');
+      var tT = 0, tO = 0, i;
+      gCtx.hint2 = function(){ return d.gTake2(Bd.t - tT, Bd.o - tO); };
+      for (i = 0; i < A.t; i++){
+        addPiece(B, { w:ROD_W, h:ROD_H, cx:150 + (i - (A.t - 1) / 2) * 50, cy:72, text:'', cls:'grod', label:d.gRodLabel, data:{ ten:true } });
+      }
+      for (i = 0; i < A.o; i++){
+        var row = Math.floor(i / 5), inRow = Math.min(5, A.o - row * 5);
+        addPiece(B, { w:ONE_W, h:ONE_W, cx:150 + (i % 5 - (inRow - 1) / 2) * 50, cy:169 + row * 50, text:'', cls:'gone', label:d.gOneLabel, data:{ ten:false } });
+      }
+      useTapSelect(B, function(P, pt){
+        if (!inside(pt, BOX)) return false;
+        var s;
+        if (P.data.ten){
+          if (tT >= Bd.t){ roundMiss(d.gTakeEnoughT(Bd.t, g.b)); return false; }
+          s = { cx:BOX.x + 20 + tT * 18, cy:BOX.y + 50 }; tT++; shrink(P, 12, 80);
+        } else {
+          if (tO >= Bd.o){ roundMiss(d.gTakeEnoughO(Bd.o, g.b)); return false; }
+          s = { cx:BOX.x + 166 + (tO % 5) * 26, cy:BOX.y + 30 + Math.floor(tO / 5) * 34 }; tO++; shrink(P, 22, 22);
+        }
+        P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        line.textContent = d.gTakeNow(g.a, g.b, tT, tO);
+        gMsg.textContent = '';
+        if (tT === Bd.t && tO === Bd.o){
+          line.textContent = g.a + ' − ' + g.b + ' = ' + (g.a - g.b);
+          roundSolved(d.gTakeDone(A.t, Bd.t, A.o, Bd.o, g.a, g.b));
+        }
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 5 關：驗算 —— a + b = s。兩行「s − □ = □」，數字卡 a、a、b、b：
+       一行減 b 回到 a、另一行減 a 回到 b（哪一行先都可以）。每一行一旦放了一張，
+       那一行要減的數就定了（放在結果那格的 y，要減的就是 s − y）；兩行不可以驗同一個。 */
+    check: function(d){
+      var g = pick(GAME_CHECK), s = g.a + g.b;
+      trailLine(g.a + ' + ' + g.b + ' = ' + s);
+      var B = makeBoard(300, 236);
+      var rows = [0, 1].map(function(k){
+        var y = 10 + k * 76;
+        addZone(B, 4, y, 60, 56, 'gbig', String(s));
+        addZone(B, 64, y, 28, 56, 'gbig', '−');
+        addZone(B, 160, y, 28, 56, 'gbig', '=');
+        var row = { k:k, sub:null, mark:addZone(B, 256, y, 40, 56, 'gmark', '') };
+        row.slots = [{ kind:'sub', x:94 }, { kind:'res', x:190 }].map(function(c){
+          return { z:addZone(B, c.x, y, 64, 56, 'gslot'), kind:c.kind, row:row, cx:c.x + 32, cy:y + 28, hw:32, hh:28, done:false };
+        });
+        return row;
+      });
+      var all = rows[0].slots.concat(rows[1].slots), doneRows = 0;
+      gCtx.hint2 = function(){
+        var r = (rows[0].slots[0].done && rows[0].slots[1].done) ? rows[1] : rows[0], o = rows[1 - r.k];
+        var x = r.sub !== null ? r.sub : (o.sub === g.b ? g.a : g.b);
+        return d.gChk2(s, x);
+      };
+      function card(v, cx, cy){ addPiece(B, { w:58, h:50, cx:cx, cy:cy, text:String(v), cls:'gcard', data:{ v:v } }); }
+      renderTray(B, [g.a, g.a, g.b, g.b], 200, card, 66);
+      useTapSelect(B, function(P, pt){
+        var hit = nearestOpen(all, pt, 4);
+        if (!hit) return false;
+        var v = P.data.v, row = hit.row, other = rows[1 - row.k];
+        var x = hit.kind === 'sub' ? v : s - v;     /* 放下去之後，這一行要減的數 */
+        if (row.sub !== null && row.sub !== x){
+          roundMiss(hit.kind === 'sub' ? d.gChkFalse(s, v, s - row.sub) : d.gChkFalse(s, row.sub, v));
+          return false;
+        }
+        if (row.sub === null && other.sub === x){ roundMiss(d.gChkSame(s, x)); return false; }
+        row.sub = x;
+        hit.done = true; P.lock(hit.cx, hit.cy); P.el.classList.add('placed');
+        if (row.slots[0].done && row.slots[1].done){
+          row.mark.textContent = '✓'; doneRows++;
+          if (doneRows === 2) roundSolved(d.gChkDone(g.a, g.b));
+          else roundInfo(d.gChkRow(s, x));
+        } else {
+          gMsg.textContent = '';
+        }
+        refreshHint();
+        return true;
+      });
+    }
+  };
 
   function startRound(){
-    var round = ROUNDS[gRound];
-    var aVal = round.a.t * 10 + round.a.o, bVal = round.b.t * 10 + round.b.o;
-    var rT = round.op === 'add' ? round.a.t + round.b.t : round.a.t - round.b.t;
-    var rO = round.op === 'add' ? round.a.o + round.b.o : round.a.o - round.b.o;
-    gMistake = false;
+    var d = L();
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gCtx = {};
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
-    gPic.innerHTML = opGroupsHTML(round.a.t, round.a.o, round.b.t, round.b.o, round.op, rT, rO, true);
-    gAskLine.innerHTML = '<span style="font-size:26px;font-weight:800">' + L().gAsk(aVal, bVal, round.op) + '</span>';
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = L().gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = L().gHint1(round.op);
-    } else {
-      elHint.textContent = '';
-    }
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }
+  }
 
-    gAnswers.textContent = '';
-    shuffle(round.choices).forEach(function(v){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = String(v);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        if (v === round.ans){
-          var all = gAnswers.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          var hid = gPic.querySelectorAll('.sitbox.hide');
-          for (var h = 0; h < hid.length; h++) hid[h].classList.remove('hide');
-          if (gMistake){
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + L().gCorrectRetry(round.ans) + '</span>';
-          } else {
-            gScore += 20;
-            gMsg.innerHTML = '<span class="yes">' + L().gCorrectFirst(round.ans) + '</span>';
-          }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + L().gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gMsg.innerHTML = '<span class="no">' + L().gTryAgain(v) + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
-
-    gHintBtn.onclick = function(){
-      hintLevel++;
-      if (hintLevel === 1){
-        elHint.textContent = L().gHint1(round.op);
-      } else {
-        elHint.textContent = L().gHint2(round.op, rT, rO);
-        gHintBtn.disabled = true;
-      }
-    };
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
   function restartGame(){
@@ -917,9 +1412,15 @@
   }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
+
+  gHintBtn.addEventListener('click', function(){
+    hintLevel++;
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
+  });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
   function renderAll(){
