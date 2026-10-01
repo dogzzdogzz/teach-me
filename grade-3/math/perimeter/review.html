@@ -471,9 +471,11 @@
     }
     return a;
   }
-  function makeWrongs(correct, candidates){
+  /* avoid：題幹上印出來的數字先當成已用過 —— 誘答不可以把題幹抄回來（framework §六之三第 4 點） */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
       if (!seen[key] && c > 0){ seen[key] = true; out.push(c); }
@@ -487,8 +489,8 @@
     }
     return out.slice(0, 3);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -500,7 +502,8 @@
         var l = pickUnused([4,5,6,7,8,9,10,11,12,13,14], used);
         var w = 2 + rand(10);
         var P = (l + w) * 2;
-        var m = mixOpts(P, [l + w, l * w, P - 2, P + 2]);
+        /* 「算成面積 l × w」是這一課的迷思誘答，但只在三年級算得出來的時候放（有一邊是一位數：二位數 × 一位數） */
+        var m = mixOpts(P, [l + w, Math.min(l, w) <= 9 ? l * w : P + 4, P - 2, P + 2], [l, w]);
         return { l:l, w:w, P:P, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -516,7 +519,7 @@
       make: function(used){
         var s = pickUnused([3,4,5,6,7,8,9,11,12,13], used);
         var P = s * 4;
-        var m = mixOpts(P, [s * 2, s * s, P - 4, P + 4]);
+        var m = mixOpts(P, [s * 2, s <= 9 ? s * s : P + 8, P - 4, P + 4], [s]);
         return { s:s, P:P, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -532,14 +535,14 @@
       make: function(used){
         var s = pickUnused([3,4,5,6,7,8,9,10,11,12], used);
         var P = s * 4;
-        var m = mixOpts(s, [P / 2, s - 1, s + 1]);
+        var m = mixOpts(s, [P / 2, s - 1, s + 1], [P]);
         return { s:s, P:P, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
         var L = I18N[lang];
         return {
           stem: lang === 'zh' ? '正方形的周長是 ' + d.P + ' 公分，邊長是多少？（用除法算）' : 'A square has a perimeter of ' + d.P + ' cm. What is its side length? (use division)',
-          shape: renderShape(squareShape(6, '?')),
+          shape: renderShape(squareShape(d.s, '?')),
           opts: d.opts.map(String), ans: d.ans,
           why: lang === 'zh' ? d.P + ' ÷ 4 = ' + d.s + ' 公分。' : d.P + ' ÷ 4 = ' + d.s + ' cm.'
         };
@@ -550,7 +553,7 @@
         var w = 2 + rand(8);
         var P = (l + w) * 2;
         var half = P / 2;
-        var m = mixOpts(w, [half, P - l, w - 1, w + 1]);
+        var m = mixOpts(w, [half, P - l, w - 1, w + 1], [P, l]);
         return { l:l, w:w, P:P, half:half, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -645,7 +648,7 @@
         var l = pickUnused([6,8,9,10,11,12,14], used);
         var w = 3 + rand(6);
         var P = (l + w) * 2;
-        var m = mixOpts(P, [l + w, l * w, P - 2]);
+        var m = mixOpts(P, [l + w, l * w, P - 2], [l, w]);
         return { l:l, w:w, P:P, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -661,7 +664,7 @@
       make: function(used){
         var s = pickUnused([4,5,6,8,9,10,11], used);
         var P = s * 4;
-        var m = mixOpts(P, [s * 2, s * s, P + 4]);
+        var m = mixOpts(P, [s * 2, s <= 9 ? s * s : P - 4, P + 4], [s]);
         return { s:s, P:P, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
