@@ -282,12 +282,15 @@
     return a;
   }
   /* 從候選字串中湊出 3 個相異、且不等於正解文字的錯誤選項 */
-  function makeWrongTexts(correctText, candidates){
+  /* avoid：題幹上印出來的數（或分數），先當成已用過 —— 誘答不可以把題幹抄回來（framework §六之三第 4 點） */
+  function makeWrongTexts(correctText, candidates, avoid){
     var out = [];
     /* 去重要看「值」不是字串：'2/8' 和 '1/4' 值一樣，兩個都放進去
        孩子看到的其實只有 3 個選項。 */
     var seen = {}; seen[fracKey(correctText)] = true;
+    (avoid || []).forEach(function(v){ seen[fracKey(v)] = true; });
     (candidates || []).forEach(function(c){
+      if (c === null) return;
       var k = fracKey(c);
       if (!seen[k]){ seen[k] = true; out.push(c); }
     });
@@ -300,8 +303,8 @@
     var n = Number(t);
     return (t === '' || isNaN(n)) ? 'S' + t : 'N' + n;
   }
-  function mixTextOpts(correctText, candidates){
-    var wrongs = makeWrongTexts(correctText, candidates);
+  function mixTextOpts(correctText, candidates, avoid){
+    var wrongs = makeWrongTexts(correctText, candidates, avoid);
     /* 保底選項也必須長得像一個答案：舊寫法會生出「2/4·2」這種字串給孩子選 */
     var mm = /^(\d+)\/(\d+)$/.exec(correctText);
     var isInt = /^-?\d+$/.test(correctText);
@@ -314,7 +317,7 @@
       for (var ci = 0; ci < cands.length && wrongs.length < 3; ci++){
         var c = cands[ci];
         if (!c || fracKey(c) === fracKey(correctText)) continue;
-        var dupByValue = false;
+        var dupByValue = (avoid || []).some(function(v){ return fracKey(v) === fracKey(c); });
         for (var wi = 0; wi < wrongs.length; wi++){ if (fracKey(wrongs[wi]) === fracKey(c)) dupByValue = true; }
         if (!dupByValue) wrongs.push(c);
       }
@@ -378,7 +381,7 @@
       },
       fmt:function(d, lang){
         var correct = d.sum + '/' + d.n;
-        var mix = mixTextOpts(correct, [d.sum + '/' + (d.n * 2), d.a + '/' + d.n, d.b + '/' + d.n, (d.sum + 1) + '/' + d.n, d.sum + '/' + (d.n + 1)]);
+        var mix = mixTextOpts(correct, [d.sum + '/' + (d.n * 2), (d.sum + 1) + '/' + d.n, d.sum + '/' + (d.n + 1)], [d.a + '/' + d.n, d.b + '/' + d.n]);
         return {
           stem: (d.a + '/' + d.n) + ' + ' + (d.b + '/' + d.n) + ' = ?',
           pic: { type:'bar', n:d.n, a:d.a, b:d.b },
@@ -397,7 +400,9 @@
       },
       fmt:function(d, lang){
         var correct = d.diff + '/' + d.n;
-        var mix = mixTextOpts(correct, [(d.a + d.b) + '/' + d.n, d.a + '/' + d.n, d.b + '/' + d.n]);
+        /* 「減成了加」只在不超過 1 的時候放（三年級只學真分數）；題幹上的兩個分數不當誘答 */
+        var mix = mixTextOpts(correct, [(d.a + d.b <= d.n) ? (d.a + d.b) + '/' + d.n : null,
+          (d.diff + 1) + '/' + d.n, d.diff + '/' + (d.n + 1)], [d.a + '/' + d.n, d.b + '/' + d.n]);
         return {
           stem: (d.a + '/' + d.n) + ' − ' + (d.b + '/' + d.n) + ' = ?',
           pic: { type:'bar', n:d.n, a:d.a, b:0 },
@@ -495,7 +500,7 @@
           opts: shuffle([correct, wrong1, wrong2, wrong3]),
           get ans(){ return this.opts.indexOf(correct); },
           why: lang === 'zh'
-            ? '分數的前提是「平分」——每一份大小要一樣。這裡的 ' + d.n + ' 塊大小不同，所以不能用幾分之幾來說。'
+            ? '分數的前提是平分 —— 每一份大小要一樣。這裡的 ' + d.n + ' 塊大小不同，所以不能用幾分之幾來說。'
             : 'A fraction requires equal pieces. These ' + d.n + ' pieces are different sizes, so it cannot be described as a fraction.'
         };
       } },
@@ -508,7 +513,8 @@
       },
       fmt:function(d, lang){
         var correct = String(d.quotient);
-        var mix = mixTextOpts(correct, [String(d.quotient - 1), String(d.quotient + 1), String(d.dividend)]);
+        /* 「用減的」（被除數 − 除數）是常見的錯；被除數、除數是題幹上的數，不當誘答 */
+        var mix = mixTextOpts(correct, [String(d.quotient - 1), String(d.quotient + 1), String(d.dividend - d.divisor)], [d.dividend, d.divisor]);
         return {
           stem: lang === 'zh'
             ? d.dividend + ' 顆糖平分給 ' + d.divisor + ' 個小朋友，每人分到幾顆？'
@@ -527,7 +533,7 @@
       },
       fmt:function(d, lang){
         var correct = String(d.product);
-        var mix = mixTextOpts(correct, [String(d.a * (d.b - 1)), String(d.a * (d.b + 1)), String(d.a + d.b)]);
+        var mix = mixTextOpts(correct, [String(d.a * (d.b - 1)), String(d.a * (d.b + 1)), String(d.a + d.b)], [d.a, d.b]);
         return {
           stem: d.a + ' × ' + d.b + ' = ?',
           opts: mix.opts, ans: mix.ans,

@@ -148,6 +148,49 @@
   .laddercol.hi .barwrap{border-color:var(--orange);border-width:3px}
   .modebtn2{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap}
   .modebtn2 button.on{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  /* ---- 小遊戲「蛋糕出貨」：切蛋糕、寫分數、照訂單、排排站、合起來（§六之五） ---- */
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div{position:absolute}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gpiece.gone{visibility:hidden}
+  .gtoken{background:var(--card);border:3px solid var(--orange);border-radius:50%;font-size:26px}
+  .gtoken.sel{border-radius:50%}
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-size:22px;font-weight:800;color:var(--ink)}
+  .gcard.placed{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gfr{flex-direction:column;gap:4px;font-size:21px;line-height:1}
+  .gfr svg{display:block}
+  .gstrip{border-radius:8px}
+  .gstrip svg{display:block}
+  .gart{pointer-events:none}
+  .gart svg{display:block}
+  .gpie svg{display:block}
+  .gwedge{cursor:pointer}
+  .gtick{display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .gtick i{display:block;width:12px;height:12px;border-radius:50%;background:#C9BFA9}
+  .gtick.done i{background:var(--ink)}
+  .gslot{display:flex;align-items:center;justify-content:center;border:3px dashed var(--orange);border-radius:10px;background:var(--orange-soft);
+    font-size:24px;font-weight:800;color:var(--ink);pointer-events:none}
+  .gslot.filled{border-style:solid;border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .grule{border-top:3px solid var(--ink);pointer-events:none}
+  .glbl{display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:var(--muted);pointer-events:none;white-space:nowrap}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
+  .gaction{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .gaction .btn{min-height:48px}
+  .gfrin{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .gfrin .gfrline{display:block;width:76px;border-top:3px solid var(--ink)}
+  .gnum{width:76px;min-height:48px;border:3px solid var(--blue);border-radius:12px;font-size:24px;font-weight:800;text-align:center;color:var(--ink);background:var(--card)}
+  .gnum:disabled{border-color:var(--line);background:var(--bg)}
+  /* 遊戲裡的數字用西文字型（中文字照樣退回 PingFang） */
+  .gtrail, .gcard, .gslot, .glbl, .gnum, #gMsg{font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif}
 </style>
 </head>
 <body>
@@ -335,20 +378,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb7">小遊戲</span>
     <h2 data-i18n="s7h2">蛋糕出貨</h2>
-    <p class="lead" data-i18n="s7lead">顧客訂了蛋糕，照著訂單把正確的分數送出去！</p>
+    <p class="lead" data-i18n="s7lead">五關五種玩法：切蛋糕、寫分數、照訂單、排排站、合起來。放錯只扣一點分，隨時可以再試！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <p class="target" id="gAskLine"><span id="gAskText"></span>
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px;margin-left:10px" data-i18n="gHintBtn">💡 提示</button>
-      </p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="mainstage"><div id="gPic"></div></div>
-      <div class="opts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
-      <div class="btnrow">
+      <div class="btnrow" style="justify-content:center">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -487,6 +527,79 @@
     return '<span class="fnum">' + n + '</span><span class="fden">' + d + '</span>';
   }
 
+  /* ============ 小遊戲「蛋糕出貨」的題庫與版面（語言無關；tools/checks/grade-3-fraction.js 直接讀這一段） ============
+     五關對應五個範例：切蛋糕（範例 1、2：平分才有分數）、寫分數（範例 3：分母＝一共切成幾塊、分子＝塗色幾塊）、
+     照訂單（範例 3 反過來：看到分數，塗出那麼多塊；n/n 就是整個蛋糕）、排排站（範例 4：同分母比分子、單位分數比分母）、
+     合起來（範例 5：同分母加減，分母不變，只加減分子）。
+     版面一律是畫板上的 px（畫板 300 寬），位置一律記中心點。拿得起來的東西至少 GPICK × GPICK。
+     GAME_CUT：平分給 n 人。蛋糕邊上有 CUT_TICKS 個刻度，第一刀已經切在最上面（刻度 0）；刀子只收在
+       「每 CUT_TICKS ÷ n 格」的刻度上（cutOk），切在別的刻度 → 彈回並說為什麼（塊會不一樣大）。n 必須整除 CUT_TICKS。
+     GAME_NAME：蛋糕平分成 n 塊、塗了 m 塊；三張卡 m、n、n − m（沒塗色的塊數 —— 常見的迷思）放進分數的上下兩格：
+       上面（分子）只收 m、下面（分母）只收 n。m ≠ n − m，三張卡的數字都不一樣。
+     GAME_TAKE：訂單 m/n；蛋糕已經平分成 n 塊，點一下塗色（再點一下取消），塗好按「出貨」：塗了剛好 m 塊才收。
+     GAME_SORT：三張分數卡由小排到大。一組裡不是「分母都一樣」就是「分子都是 1」；卡片上畫著同樣長的長條，
+       塗色的長度就是它的大小（每兩張至少差 SORT_GAP px，看得出來）。每一格只收排在那一名的卡。
+     GAME_JOIN：長條平分成 n 格，藍色是 a 格；＋ 是把 b 格的橘色長條拖到空的格子上，− 是把「吃掉 b 格」拖到藍色上。
+       放好之後打出答案（分子、分母兩格）：分母一定還是 n。 */
+  var GPICK = 48;
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  /* 第 1 關：切蛋糕 */
+  var CUT_H = 366, CUT_PIE = { cx:150, cy:150, r:96 }, CUT_TICKS = 12, CUT_RING = 126, CUT_TICK = 46, CUT_KNIFE = { x:150, y:336, size:52 };
+  var GAME_CUT = [ { n:3 }, { n:4 }, { n:6 } ];
+  /* 第 t 個刻度（0 是正上方，順時針）放刀子的位置：在蛋糕外面一圈 */
+  function cutTickXY(t){ var a = t * 2 * Math.PI / CUT_TICKS; return { x:CUT_PIE.cx + CUT_RING * Math.sin(a), y:CUT_PIE.cy - CUT_RING * Math.cos(a) }; }
+  function cutOk(n, t){ return t % (CUT_TICKS / n) === 0; }
+
+  /* 第 2 關：寫分數 */
+  var NAME_H = 290, NAME_PIE = { cx:78, cy:118, r:64 }, NAME_FR = { x:212, num:70, den:166, slot:52, line:118 }, NAME_CARD = 52, NAME_TRAY = { y:252, step:76 };
+  var GAME_NAME = [ { n:5, m:2 }, { n:6, m:1 }, { n:8, m:3 }, { n:7, m:4 }, { n:4, m:3 }, { n:6, m:5 } ];
+
+  /* 第 3 關：照訂單塗色 */
+  var TAKE_H = 260, TAKE_PIE = { cx:150, cy:130, r:118 };
+  var GAME_TAKE = [ { n:5, m:3 }, { n:8, m:5 }, { n:6, m:6 }, { n:4, m:3 }, { n:7, m:2 }, { n:6, m:1 } ];
+
+  /* 第 4 關：排排站（由小到大） */
+  var SORT_H = 300, SORT_LBL = { y:30, h:28 }, SORT_SLOT = { y:110, w:88, h:84, xs:[52, 150, 248] }, SORT_CARD = { w:80, h:76, bar:64, barH:14 };
+  var SORT_TRAY = { y:240, step:95 }, SORT_GAP = 4;
+  var GAME_SORT = [ { fr:[[1, 6], [4, 6], [5, 6]] }, { fr:[[1, 2], [1, 4], [1, 8]] }, { fr:[[2, 8], [5, 8], [7, 8]] },
+                    { fr:[[1, 3], [1, 4], [1, 8]] }, { fr:[[1, 5], [2, 5], [4, 5]] }, { fr:[[1, 2], [1, 3], [1, 6]] } ];
+  function fracVal(f){ return f[0] / f[1]; }
+
+  /* 第 5 關：合起來／拿走 */
+  var JOIN_H = 214, JOIN_BAR = { x:10, y:24, w:280, h:56 }, JOIN_STRIP = { y:156, h:48 }, JOIN_PAD = 6;
+  var GAME_JOIN = [ { op:'+', n:5, a:1, b:2 }, { op:'+', n:6, a:2, b:3 }, { op:'+', n:8, a:3, b:4 }, { op:'+', n:4, a:1, b:3 },
+                    { op:'-', n:6, a:5, b:2 }, { op:'-', n:8, a:7, b:3 }, { op:'-', n:5, a:4, b:1 } ];
+  function joinResult(e){ return e.op === '+' ? e.a + e.b : e.a - e.b; }
+  /* 長條放到哪幾格。收的格子：＋ 是空的格子 [a, n)，− 是藍色的格子 [0, a)。
+     拖的時候看長條**自己蓋住的那 b 格**（左緣對齊最近的格線）—— 不是只看中心點：中心在空格、半條蓋在藍色上也不行（codex 抓到的）；
+     點目的地的時候，點到的那一格當第一格，放不下就往裡面挪。
+     回傳 null（不在長條上、或對齊格線之後有一格落在長條外面：靜靜彈回 —— 同時也蓋到不該蓋的格子時一樣是這個，沒放準的不扣分）、
+     { bad:'blue' | 'empty' }（對齊之後整條都在長條上，卻蓋到了不該蓋的格子）、{ start:s }（蓋住第 s ～ s + b − 1 格）。
+     （掛出去不到半格的，對齊格線時會被收回長條上，照長條上的格子判斷。） */
+  function joinPlace(e, pt){
+    var B = JOIN_BAR, sw = B.w / e.n, lo = e.op === '+' ? e.a : 0, hi = e.op === '+' ? e.n : e.a, start, i;
+    if (Math.abs(pt.y - (B.y + B.h / 2)) > B.h / 2 + JOIN_PAD) return null;
+    if (pt.tap){
+      if (pt.x < B.x || pt.x >= B.x + B.w) return null;
+      var c = Math.floor((pt.x - B.x) / sw);
+      if (c < lo || c >= hi) return { bad:c < e.a ? 'blue' : 'empty' };
+      return { start:Math.min(c, hi - e.b) };
+    }
+    start = Math.round((pt.x - e.b * sw / 2 - B.x) / sw);
+    if (start < 0 || start + e.b > e.n) return null;
+    for (i = start; i < start + e.b; i++) if (i < lo || i >= hi) return { bad:i < e.a ? 'blue' : 'empty' };
+    return { start:start };
+  }
+
   /* ---------- i18n ---------- */
   var I18N = {
     zh: {
@@ -566,7 +679,7 @@
           opts:['1/8','3/8','一樣大','沒辦法比較'], ans:1,
           why:'分母相同（都是切成 8 份）時，分子越大代表拿的份數越多，所以 3/8 比較大。' },
         { stem:'1/5 + 2/5 = ？',
-          opts:['3/5','3/10','2/5','1/10'], ans:0,
+          opts:['3/5','3/10','4/5','1/10'], ans:0,
           why:'分母不變，只把分子相加：1 + 2 = 3，所以答案是 3/5。分母 5 表示每一份的大小，不會因為相加而改變，所以分母不能跟著加起來。' }
       ],
       qsAdv:[
@@ -591,25 +704,80 @@
           opts:['不對，分母越大表示切得越細，每一份反而越小，所以 1/8 比 1/4 小','對，因為 8 比較大','對，因為分子都是 1','沒辦法比較'], ans:0,
           why:'分母表示切成幾份，切得越細每一份就越小。1/8 是切成 8 份中的 1 份，比 1/4（切成 4 份中的 1 份）要小。' }
       ],
-      s7h2:'蛋糕出貨', s7lead:'顧客訂了蛋糕，照著訂單把正確的分數送出去！',
+      s7h2:'蛋糕出貨', s7lead:'五關五種玩法：切蛋糕、寫分數、照訂單、排排站、合起來。放錯只扣一點分，隨時可以再試！',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數', gHintBtn:'💡 提示',
       gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gTaskMatch:'訂單：這塊蛋糕塗色的部分是幾分之幾？',
-      gTaskBigger:'訂單：哪一份比較大？',
-      gTaskSum:'訂單：加起來是多少？',
-      gHint1Match:'提示 1：先看分母（切成幾份），再看分子（塗色幾份）。',
-      gHint2Match:function(n,m){ return '提示 2：切成 ' + n + ' 份，塗了 ' + m + ' 份。'; },
-      gHint1Bigger:'提示 1：分母一樣的時候，比比看誰的分子比較大。',
-      gHint1Ladder:'提示 1：分子一樣的時候要看分母 —— 同樣切一塊，切的份數越多，每一塊反而越小。',
-      gHint2Ladder:function(d1,d2){ var small=Math.min(d1,d2); var big=Math.max(d1,d2); return '提示 2：1/' + d1 + ' 和 1/' + d2 + '，同樣都只拿 1 塊，切成 ' + small + ' 份的每塊比切成 ' + big + ' 份的大，所以 1/' + small + ' 比較大。'; },
-      gHint2Bigger:function(a,b,d){ return '提示 2：' + a + '/' + d + ' 和 ' + b + '/' + d + '，分子比較大的那個就比較大。'; },
-      gHint1Sum:'提示 1：分母不變，只把分子加起來。',
-      gHint2Sum:function(a,b,d){ return '提示 2：' + a + ' + ' + b + ' = ' + (a+b) + '，分母還是 ' + d + '。'; },
-      gCorrectFirst:'答對了！+20 分！',
-      gCorrectRetry:'答對了！+10 分。',
-      gWrong:'不是這個答案，再試一次，－5 分。',
-      gClear:'按「下一關」繼續下一張訂單。',
-      gWin:function(score){ return '五張訂單都出貨成功！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gAsks: {
+        cut:'🔪 切蛋糕：把刀子拖到蛋糕邊上的刻度（或先點刀子、再點刻度），切出一樣大的塊！',
+        name:'✏️ 寫分數：把數字卡放進分數的上下兩格，寫出塗色的部分是幾分之幾。',
+        take:'🧾 照訂單：點蛋糕的每一塊來塗色（再點一下取消），塗好了按「出貨」。',
+        sort:'📏 排排站：把三張分數卡由小排到大（拖過去，或先點卡片、再點格子）。',
+        join:'🧁 合起來：把長條拖到蛋糕上（或先點、再點），再寫出答案。'
+      },
+      gHints: {
+        cut:'提示：平分就是每一塊都一樣大 —— 一圈有 12 格，每兩刀中間要隔一樣多格。',
+        name:'提示：下面的分母是「一共切成幾塊」，上面的分子是「塗色的有幾塊」。',
+        take:'提示：分母告訴你蛋糕切成幾塊，分子告訴你要塗幾塊。',
+        sort:'提示：分母一樣，就比分子；分子都是 1，分母越大、每一塊越小。也可以比卡片上塗色的長條。',
+        join:'提示：分母不變（每一塊還是一樣大），只把分子加起來或減掉。'
+      },
+      gPts: function(p){ return '+' + p + ' 分'; },
+      gMinus:'−5 分',
+      gClear:'按「下一關」繼續下一張訂單！',
+      gWin: function(score){ return '五張訂單都出貨成功！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gCutNow: function(n, c){ return n + ' 個人平分一個蛋糕：切了 ' + c + ' / ' + n + ' 刀'; },
+      gCutKnife:'刀子', gCutTick: function(t){ return '刻度 ' + t; },
+      gCutUneven: function(n, s){ return '切在這裡，蛋糕會分得不一樣大 —— 平分給 ' + n + ' 人，每一塊都要 12 ÷ ' + n + ' ＝ ' + s + ' 格。'; },
+      gCut2: function(n, s){ return '12 ÷ ' + n + ' ＝ ' + s + '：從最上面那一刀開始，每數 ' + s + ' 格切一刀。'; },
+      gCutDone: function(n){ return '平分成 ' + n + ' 塊，每一塊都一樣大：每一塊都是 1/' + n + ' 個蛋糕！'; },
+      gNameNow: function(a, b){ return '塗色的部分是 ' + (a === null ? '□' : a) + '/' + (b === null ? '□' : b); },
+      gNameNumDen: function(n, m){ return n + ' 是一共切成幾塊，要放在下面（分母）；上面的分子是塗色的 ' + m + ' 塊。'; },
+      gNameNumUn: function(u, m){ return u + ' 是沒塗色的塊數；分子要數塗色的：' + m + ' 塊。'; },
+      gNameDenNum: function(m, n){ return m + ' 是塗色的塊數，要放在上面（分子）；下面的分母是一共切成的 ' + n + ' 塊。'; },
+      gNameDenUn: function(u, m, n){ return u + ' 只是沒塗色的；分母要數全部：' + m + ' ＋ ' + u + ' ＝ ' + n + ' 塊。'; },
+      gName2: function(n, m){ return '數一數：一共 ' + n + ' 塊，塗色的有 ' + m + ' 塊。'; },
+      gNameDone: function(m, n){ return '塗色的部分是 ' + m + '/' + n + '：切成 ' + n + ' 塊（分母），塗了 ' + m + ' 塊（分子）。'; },
+      gTakeNow: function(m, n, x){ return '訂單：' + m + '/' + n + ' 個蛋糕 —— 塗了 ' + x + ' 塊'; },
+      gTakeBtn:'📦 出貨',
+      gTakeWedge: function(i){ return '第 ' + i + ' 塊'; },
+      gTakeFew: function(x, m, n){ return '塗了 ' + x + ' 塊，可是訂單 ' + m + '/' + n + ' 要 ' + m + ' 塊 —— 還差 ' + (m - x) + ' 塊。'; },
+      gTakeMany: function(x, m, n){ return '塗了 ' + x + ' 塊，可是訂單 ' + m + '/' + n + ' 只要 ' + m + ' 塊 —— 多了 ' + (x - m) + ' 塊。'; },
+      gTake2: function(m, x){ return '要塗 ' + m + ' 塊，現在塗了 ' + x + ' 塊。'; },
+      gTakeDone: function(m, n){
+        if (m === n) return n + '/' + n + ' 就是 1 個整個蛋糕：' + n + ' 塊全部出貨！';
+        return m + '/' + n + '：切成 ' + n + ' 塊，塗了 ' + m + ' 塊，出貨！';
+      },
+      gSortLo:'最小', gSortHi:'最大',
+      gSortNow: function(k){ return '排好了 ' + k + ' / 3 張'; },
+      gSortWrong: function(a, b, c, d){
+        /* a/b 放進了 c/d 該在的那一格 */
+        var less = a * d < c * b, s = (less ? '小' : '大'), side = (less ? '左邊' : '右邊');
+        if (b === d) return a + '/' + b + ' 比 ' + c + '/' + d + ' ' + s + '：分母一樣（都切成 ' + b + ' 塊），分子 ' + a + ' 比 ' + c + ' ' + s + ' —— 它要排在更' + side + '。';
+        return a + '/' + b + ' 比 ' + c + '/' + d + ' ' + s + '：切成 ' + b + ' 塊的一塊，比切成 ' + d + ' 塊的一塊' + s + ' —— 它要排在更' + side + '。';
+      },
+      gSort2: function(i, a, b){ return '第 ' + i + ' 格（從左邊數）要放 ' + a + '/' + b + '。'; },
+      gSortDone: function(t, same){ return t + '：' + (same ? '分母一樣，分子越大就越大！' : '分子都是 1，分母越大，每一塊反而越小！'); },
+      gJoinNow: function(op, a, b, n){ return a + '/' + n + (op === '+' ? ' ＋ ' : ' − ') + b + '/' + n + ' ＝ ？'; },
+      gJoinAdd: function(b){ return '再放 ' + b + ' 塊'; },
+      gJoinEat: function(b){ return '吃掉 ' + b + ' 塊'; },
+      gJoinLine: function(op, a, b, n){ return a + '/' + n + (op === '+' ? ' ＋ ' : ' − ') + b + '/' + n + ' ＝ ' + (op === '+' ? a + b : a - b) + '/' + n; },
+      gJoin2Add: function(b){ return '把橘色的 ' + b + ' 塊放到藍色右邊、空的格子上。'; },
+      gJoin2Eat: function(b){ return '把「吃掉 ' + b + ' 塊」放到藍色的蛋糕上。'; },
+      gJoinOnTop:'這幾格已經有蛋糕了，疊上去不會變多 —— 放到空的格子上。',
+      gJoinEatEmpty:'空的格子裡沒有蛋糕可以吃 —— 要從藍色的蛋糕拿走。',
+      gJoinType:'放好了！算出答案，把分子、分母打進下面的兩格。',
+      gJoinBtn:'✓ 算好了', gJoinNumAria:'分子', gJoinDenAria:'分母',
+      gJoinEmpty:'上下兩格都要打一個整數，不要有空格、小數點或開頭的 0（例如 3）。',
+      gJoinDenAdd: function(n){ return '分母不能加起來：每一塊還是一樣大，長條還是切成 ' + n + ' 塊 —— 只把分子加起來。'; },
+      gJoinDenSub: function(n){ return '分母不能減：吃掉幾塊，每一塊還是一樣大，長條還是切成 ' + n + ' 塊 —— 只把分子減掉。'; },
+      gJoinDen: function(v, n){ return '數數看長條一共切成幾塊：' + n + ' 塊，所以分母是 ' + n + '，不是 ' + v + '。'; },
+      gJoinNum: function(op, a, b, v){ return '分母對了！分子要數有蛋糕的塊數：' + a + (op === '+' ? ' ＋ ' : ' − ') + b + ' ＝ ' + (op === '+' ? a + b : a - b) + '，不是 ' + v + '。'; },
+      gJoin2: function(op, a, b, n){ return '分子：' + a + (op === '+' ? ' ＋ ' : ' − ') + b + ' ＝ ' + (op === '+' ? a + b : a - b) + '，分母還是 ' + n + '。'; },
+      gJoinDone: function(op, a, b, n){
+        var r = op === '+' ? a + b : a - b;
+        var t = a + '/' + n + (op === '+' ? ' ＋ ' : ' − ') + b + '/' + n + ' ＝ ' + r + '/' + n + '：分母 ' + n + ' 不變，只把分子' + (op === '+' ? '加起來 ' + a + ' ＋ ' + b : '減掉 ' + a + ' − ' + b) + ' ＝ ' + r + '。';
+        return r === n ? t + n + '/' + n + ' 就是 1 個整個蛋糕！' : t;
+      },
       footer:'把整頁縮成一句：<strong>先平分才有分數；分母不變，只加減分子。</strong>'
     },
     en: {
@@ -645,7 +813,7 @@
       numLabel:'Numerator', numDesc:'pieces taken', denLabel:'Denominator', denDesc:'equal pieces in total',
       noteZero:'With zero pieces taken, it isn’t a fraction yet — press “+” to take one piece!',
       noteUnit:function(d){ return 'You took 1 piece out of ' + d + ' — this is a <strong>unit fraction</strong>, a fraction whose numerator is 1.'; },
-      noteProper:function(n, d){ return 'You took ' + n + ' pieces out of ' + d + '. Since the numerator is smaller than the denominator, this is a <strong>proper fraction</strong>.'; },
+      noteProper:function(n, d){ return 'You took ' + n + (n === 1 ? ' piece' : ' pieces') + ' out of ' + d + '. Since the numerator is smaller than the denominator, this is a <strong>proper fraction</strong>.'; },
       noteWhole:function(d){ return 'You took all ' + d + ' pieces — ' + d + '/' + d + ' equals <strong>the whole cake (1)</strong>!'; },
       s4h2:'Comparing Fractions With the Same Denominator', s4lead:'When cakes are cut into the same number of pieces, more shaded pieces means bigger.',
       s4chipTitle:'How many equal pieces are both cakes cut into?',
@@ -689,7 +857,7 @@
           opts:['1/8','3/8','They are equal','Cannot be compared'], ans:1,
           why:'With the same denominator (both cut into 8), a bigger numerator means more pieces taken, so 3/8 is bigger.' },
         { stem:'1/5 + 2/5 = ?',
-          opts:['3/5','3/10','2/5','1/10'], ans:0,
+          opts:['3/5','3/10','4/5','1/10'], ans:0,
           why:'The denominator stays the same; just add the numerators: 1 + 2 = 3, so the answer is 3/5. The denominator 5 describes the size of each piece — it doesn’t change when you add, so you never add the denominators.' }
       ],
       qsAdv:[
@@ -714,25 +882,79 @@
           opts:['No — a bigger denominator means smaller pieces, so 1/8 is smaller than 1/4','Yes, because 8 is bigger','Yes, because both numerators are 1','It can’t be compared'], ans:0,
           why:'The denominator tells you how many pieces the whole was cut into — more pieces means each one is smaller. 1/8 (one piece of 8) is smaller than 1/4 (one piece of 4).' }
       ],
-      s7h2:'Cake Delivery', s7lead:'A customer ordered a cake — send out the correct fraction!',
+      s7h2:'Cake Delivery', s7lead:'Five rounds, five ways to play: cut the cake, write the fraction, fill the order, line them up, put them together. A wrong move only costs a few points — try again anytime!',
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score', gHintBtn:'💡 Hint',
       gNextBtn:'Next round', gRestartBtn:'Restart',
-      gTaskMatch:'Order: what fraction of this cake is shaded?',
-      gTaskBigger:'Order: which piece is bigger?',
-      gTaskSum:'Order: what do they add up to?',
-      gHint1Match:'Hint 1: look at the denominator first (total pieces), then the numerator (shaded pieces).',
-      gHint2Match:function(n,m){ return 'Hint 2: cut into ' + n + ', with ' + m + ' shaded.'; },
-      gHint1Bigger:'Hint 1: with the same denominator, compare the numerators.',
-      gHint1Ladder:'Hint 1: when the numerators match, look at the denominators — cutting the same cake into more pieces makes each piece SMALLER.',
-      gHint2Ladder:function(d1,d2){ var small=Math.min(d1,d2); var big=Math.max(d1,d2); return 'Hint 2: 1/' + d1 + ' vs 1/' + d2 + ' — you take 1 piece either way, and a piece from ' + small + ' pieces is bigger than one from ' + big + ', so 1/' + small + ' is bigger.'; },
-      gHint2Bigger:function(a,b,d){ return 'Hint 2: between ' + a + '/' + d + ' and ' + b + '/' + d + ', the one with the bigger numerator is bigger.'; },
-      gHint1Sum:'Hint 1: the denominator stays the same — just add the numerators.',
-      gHint2Sum:function(a,b,d){ return 'Hint 2: ' + a + ' + ' + b + ' = ' + (a+b) + ', and the denominator is still ' + d + '.'; },
-      gCorrectFirst:'Correct on the first try! +20 points!',
-      gCorrectRetry:'Correct! +10 points.',
-      gWrong:'Not quite — try again. −5 points.',
-      gClear:'Press “Next round” for the next order.',
-      gWin:function(score){ return 'All 5 orders delivered! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gAsks: {
+        cut:'🔪 Cut the cake: drag the knife to a mark on the edge of the cake (or tap the knife, then a mark) — make pieces that are all the same size!',
+        name:'✏️ Write the fraction: put number cards in the top and bottom boxes to write what fraction is shaded.',
+        take:'🧾 Fill the order: tap pieces of the cake to shade them (tap again to undo), then press “Send”.',
+        sort:'📏 Line them up: put the three fraction cards in order from smallest to biggest (drag, or tap a card, then a box).',
+        join:'🧁 Put them together: drag the strip onto the cake bar (or tap, then tap), then write the answer.'
+      },
+      gHints: {
+        cut:'Hint: sharing equally means every piece is the same size — there are 12 marks around, so leave the same number of marks between every two cuts.',
+        name:'Hint: the bottom number (denominator) is how many pieces in all; the top number (numerator) is how many are shaded.',
+        take:'Hint: the denominator tells you how many pieces the cake is cut into; the numerator tells you how many to shade.',
+        sort:'Hint: same denominator — compare the numerators; all numerators 1 — the bigger the denominator, the smaller each piece. You can also compare the shaded strips on the cards.',
+        join:'Hint: the denominator stays the same (each piece is still the same size) — only add or take away the numerators.'
+      },
+      gPts: function(p){ return '+' + p + ' points'; },
+      gMinus:'−5 points',
+      gClear:'Press “Next round” for the next order!',
+      gWin: function(score){ return 'All 5 orders delivered! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gCutNow: function(n, c){ return n + ' people share one cake: ' + c + ' / ' + n + ' cuts made'; },
+      gCutKnife:'knife', gCutTick: function(t){ return 'mark ' + t; },
+      gCutUneven: function(n, s){ return 'A cut here makes pieces of different sizes — to share among ' + n + ' people, every piece needs 12 ÷ ' + n + ' = ' + s + ' marks.'; },
+      gCut2: function(n, s){ return '12 ÷ ' + n + ' = ' + s + ': starting from the cut at the top, make a cut every ' + s + ' marks.'; },
+      gCutDone: function(n){ return 'Cut into ' + n + ' pieces that are all the same size: each piece is 1/' + n + ' of the cake!'; },
+      gNameNow: function(a, b){ return 'The shaded part is ' + (a === null ? '□' : a) + '/' + (b === null ? '□' : b); },
+      gNameNumDen: function(n, m){ return n + ' is how many pieces in all — it goes at the bottom (denominator); the top number (numerator) counts the shaded pieces: ' + m + '.'; },
+      gNameNumUn: function(u, m){ return u + ' counts the pieces that are NOT shaded; the numerator counts the shaded ones: ' + m + '.'; },
+      gNameDenNum: function(m, n){ return m + ' counts the shaded pieces — it goes on top (numerator); the bottom number (denominator) is all ' + n + ' pieces.'; },
+      gNameDenUn: function(u, m, n){ return u + ' counts only the unshaded pieces; the denominator counts them all: ' + m + ' + ' + u + ' = ' + n + '.'; },
+      gName2: function(n, m){ return 'Count: ' + n + ' pieces in all, ' + m + (m === 1 ? ' of them is shaded.' : ' of them shaded.'); },
+      gNameDone: function(m, n){ return 'The shaded part is ' + m + '/' + n + ': cut into ' + n + ' pieces (denominator), ' + m + ' shaded (numerator).'; },
+      gTakeNow: function(m, n, x){ return 'Order: ' + m + '/' + n + ' of a cake — ' + x + ' shaded'; },
+      gTakeBtn:'📦 Send',
+      gTakeWedge: function(i){ return 'piece ' + i; },
+      gTakeFew: function(x, m, n){ return 'You shaded ' + x + ', but the order ' + m + '/' + n + ' needs ' + m + (m === 1 ? ' piece' : ' pieces') + ' — ' + (m - x) + ' more to go.'; },
+      gTakeMany: function(x, m, n){ return 'You shaded ' + x + ', but the order ' + m + '/' + n + ' needs only ' + m + (m === 1 ? ' piece' : ' pieces') + ' — ' + (x - m) + ' too many.'; },
+      gTake2: function(m, x){ return 'Shade ' + m + (m === 1 ? ' piece' : ' pieces') + '; you have shaded ' + x + ' so far.'; },
+      gTakeDone: function(m, n){
+        if (m === n) return n + '/' + n + ' is 1 whole cake: all ' + n + ' pieces sent!';
+        return m + '/' + n + ': cut into ' + n + ' pieces, ' + m + ' shaded — sent!';
+      },
+      gSortLo:'smallest', gSortHi:'biggest',
+      gSortNow: function(k){ return k + ' / 3 cards in place'; },
+      gSortWrong: function(a, b, c, d){
+        var less = a * d < c * b, s = (less ? 'smaller' : 'bigger'), side = (less ? 'left' : 'right');
+        if (b === d) return a + '/' + b + ' is ' + s + ' than ' + c + '/' + d + ': same denominator (both cut into ' + b + '), and the numerator ' + a + ' is ' + s + ' than ' + c + ' — it goes further ' + side + '.';
+        return a + '/' + b + ' is ' + s + ' than ' + c + '/' + d + ': one piece of a cake cut into ' + b + ' is ' + s + ' than one piece of a cake cut into ' + d + ' — it goes further ' + side + '.';
+      },
+      gSort2: function(i, a, b){ return 'Box ' + i + ' (from the left) takes ' + a + '/' + b + '.'; },
+      gSortDone: function(t, same){ return t + ': ' + (same ? 'same denominator — the bigger numerator is bigger!' : 'all numerators are 1 — the bigger the denominator, the SMALLER each piece!'); },
+      gJoinNow: function(op, a, b, n){ return a + '/' + n + (op === '+' ? ' + ' : ' − ') + b + '/' + n + ' = ?'; },
+      gJoinAdd: function(b){ return 'add ' + b; },
+      gJoinEat: function(b){ return 'eat ' + b; },
+      gJoinLine: function(op, a, b, n){ return a + '/' + n + (op === '+' ? ' + ' : ' − ') + b + '/' + n + ' = ' + (op === '+' ? a + b : a - b) + '/' + n; },
+      gJoin2Add: function(b){ return 'Put the ' + b + ' orange pieces on the empty pieces to the right of the blue.'; },
+      gJoin2Eat: function(b){ return 'Put “eat ' + b + '” on the blue cake.'; },
+      gJoinOnTop:'Those pieces already have cake — piling on top does not make more. Put it on the empty pieces.',
+      gJoinEatEmpty:'The empty pieces have no cake to eat — take it from the blue cake.',
+      gJoinType:'In place! Work out the answer and type the numerator and denominator into the two boxes below.',
+      gJoinBtn:'✓ Done', gJoinNumAria:'numerator', gJoinDenAria:'denominator',
+      gJoinEmpty:'Type one whole number in each box — no spaces, decimal points or leading 0 (for example 3).',
+      gJoinDenAdd: function(n){ return 'Don’t add the denominators: each piece is still the same size and the bar is still cut into ' + n + ' — only add the numerators.'; },
+      gJoinDenSub: function(n){ return 'Don’t subtract the denominators: eating some pieces doesn’t change their size, the bar is still cut into ' + n + ' — only subtract the numerators.'; },
+      gJoinDen: function(v, n){ return 'Count how many pieces the bar is cut into: ' + n + ', so the denominator is ' + n + ', not ' + v + '.'; },
+      gJoinNum: function(op, a, b, v){ return 'The denominator is right! The numerator counts the pieces with cake: ' + a + (op === '+' ? ' + ' : ' − ') + b + ' = ' + (op === '+' ? a + b : a - b) + ', not ' + v + '.'; },
+      gJoin2: function(op, a, b, n){ return 'Numerator: ' + a + (op === '+' ? ' + ' : ' − ') + b + ' = ' + (op === '+' ? a + b : a - b) + '; the denominator is still ' + n + '.'; },
+      gJoinDone: function(op, a, b, n){
+        var r = op === '+' ? a + b : a - b;
+        var t = a + '/' + n + (op === '+' ? ' + ' : ' − ') + b + '/' + n + ' = ' + r + '/' + n + ': the denominator ' + n + ' stays, only the numerators ' + (op === '+' ? 'add up: ' + a + ' + ' + b : 'subtract: ' + a + ' − ' + b) + ' = ' + r + '.';
+        return r === n ? t + ' ' + n + '/' + n + ' is 1 whole cake!' : t;
+      },
       footer:'The whole page in one line: <strong>fractions need equal sharing first; the denominator stays put while you add or subtract the numerator.</strong>'
     }
   };
@@ -1102,151 +1324,493 @@
     });
   }
 
-  /* ---------- 7. 小遊戲：蛋糕出貨 ---------- */
-  function buildRounds(){
-    return [
-      { type:'match', n:4, m:1, opts:['1/4','4/1','1/3','1/2'], ans:0 },
-      { type:'match', n:6, m:4, opts:['4/6','6/4','2/6','4/2'], ans:0 },
-      { type:'bigger', d:8, a:3, b:5, opts:['3/8','5/8'], ans:1 },
-      { type:'bigger', d:4, a:1, b:0, isLadder:true, ladderOther:8, opts:['1/4','1/8'], ans:0 },
-      { type:'sum', d:5, a:1, b:2, opts:['3/5','3/10','2/5','1/10'], ans:0 }
-    ];
-  }
-  var ROUNDS = buildRounds();
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 小遊戲：蛋糕出貨（五關五種玩法，§六之五） ===================== */
+  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskText = document.getElementById('gAskText');
-  var gPic = document.getElementById('gPic');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
-  var hintLevel = 0;
+  var GAME_ORDER = ['cut', 'name', 'take', 'sort', 'join'];
+
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，任何地方的 pointerup／pointercancel
+     傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  function svgEl(tag, attrs){
+    var el = document.createElementNS(SVGNS, tag);
+    for (var a in attrs) el.setAttribute(a, attrs[a]);
+    return el;
+  }
+  function svgBox(w, h){ return svgEl('svg', { viewBox:'0 0 ' + w + ' ' + h, width:w, height:h }); }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫板下面的一排：按鈕（出貨）或輸入框（合起來） */
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, onClick){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn'; b.textContent = text;
+    b.addEventListener('click', onClick);
+    row.appendChild(b);
+    return b;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的積木一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 「點刀子、點刻度」之後還要再切下一刀：切好之後，刀子繼續選著，不用每一刀都重點一次 */
+  function keepSelected(B, P){ if (!P.locked){ B.selected = P; P.el.classList.add('sel'); } }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（grade-3 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+  /* 托盤：卡片一律洗牌後排好（正解不可以固定在同一個位置） */
+  function renderTray(B, items, y, mk, step){
+    var x0 = (B.W - (items.length - 1) * step) / 2;
+    shuffle(items).forEach(function(it, i){ mk(it, x0 + i * step, y); });
+  }
+
+  /* 計分（中年級：輕度計分，答錯小扣分但不會結束 —— §三）：這一關沒犯錯 +20、犯過錯 +10；
+     每一次「放錯並說明為什麼」−5（最低 0 分）。放到空白處只是手滑，不扣分。 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「−5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+
+  /* 長條（合起來那一關）：kinds[i] 是第 i 格 —— 'b' 藍色、'o' 橘色（加上去的）、'x' 被吃掉的（淡紅、打叉）、'w' 空的 */
+  function joinBarSVG(n, kinds){
+    var W = JOIN_BAR.w, H = JOIN_BAR.h, sw = W / n, svg = svgBox(W, H);
+    for (var i = 0; i < n; i++){
+      var kind = kinds[i];
+      svg.appendChild(svgEl('rect', { x:(i * sw).toFixed(3), y:1, width:sw.toFixed(3), height:H - 2, stroke:'#2B2A33', 'stroke-width':1.5,
+        fill:kind === 'b' ? '#3B7DD8' : kind === 'o' ? '#E8871E' : kind === 'x' ? '#FBE9E9' : '#FFFFFF', 'class':'gseg gseg-' + kind }));
+      if (kind === 'x'){
+        svg.appendChild(svgEl('line', { x1:i * sw + 8, y1:10, x2:(i + 1) * sw - 8, y2:H - 10, stroke:'#D64545', 'stroke-width':3 }));
+        svg.appendChild(svgEl('line', { x1:(i + 1) * sw - 8, y1:10, x2:i * sw + 8, y2:H - 10, stroke:'#D64545', 'stroke-width':3 }));
+      }
+    }
+    svg.appendChild(svgEl('rect', { x:1, y:1, width:W - 2, height:H - 2, fill:'none', stroke:'#2B2A33', 'stroke-width':2 }));
+    return svg;
+  }
+  /* 拖得動的那一條：＋ 是 b 格橘色；− 是 b 格「吃掉」（淡紅、虛線、打叉）。一格和長條上的一格一樣寬 */
+  function joinStripSVG(op, b, sw, H){
+    var svg = svgBox(b * sw, H);
+    for (var i = 0; i < b; i++){
+      svg.appendChild(svgEl('rect', { x:(i * sw + 1).toFixed(3), y:1, width:(sw - 2).toFixed(3), height:H - 2, rx:4,
+        fill:op === '+' ? '#E8871E' : '#FBE9E9', stroke:op === '+' ? '#2B2A33' : '#D64545', 'stroke-width':2, 'stroke-dasharray':op === '+' ? 'none' : '5 3' }));
+      if (op !== '+'){
+        svg.appendChild(svgEl('line', { x1:i * sw + 10, y1:12, x2:(i + 1) * sw - 10, y2:H - 12, stroke:'#D64545', 'stroke-width':3 }));
+        svg.appendChild(svgEl('line', { x1:(i + 1) * sw - 10, y1:12, x2:i * sw + 10, y2:H - 12, stroke:'#D64545', 'stroke-width':3 }));
+      }
+    }
+    return svg;
+  }
+
+  var RENDER = {
+    /* 第 1 關：切蛋糕 —— 平分給 n 人（範例 1、2）。第一刀已經切在正上方；刀子拖到刻度上就切一刀。
+       只收「每 12 ÷ n 格」的刻度（cutOk）；切在別的刻度 → 彈回＋說為什麼（塊會不一樣大）。已經切過的刻度 → 靜靜彈回。 */
+    cut: function(d){
+      var e = pick(GAME_CUT), C = CUT_PIE, step = CUT_TICKS / e.n, cuts = 0;
+      var line = trailLine(d.gCutNow(e.n, 0));
+      var B = makeBoard(300, CUT_H);
+      var art = svgBox(300, CUT_H);
+      addZone(B, 0, 0, 300, CUT_H, 'gart').appendChild(art);
+      art.appendChild(svgEl('circle', { cx:C.cx, cy:C.cy, r:C.r, fill:'#FFF6E9', stroke:'#2B2A33', 'stroke-width':2 }));
+      var ticks = [];
+      for (var t = 0; t < CUT_TICKS; t++){
+        var a = t * 2 * Math.PI / CUT_TICKS, sx = Math.sin(a), sy = -Math.cos(a), p = cutTickXY(t), h = CUT_TICK / 2;
+        art.appendChild(svgEl('line', { x1:C.cx + C.r * sx, y1:C.cy + C.r * sy, x2:C.cx + (C.r + 9) * sx, y2:C.cy + (C.r + 9) * sy, stroke:'#2B2A33', 'stroke-width':2 }));
+        var z = addZone(B, p.x - h, p.y - h, CUT_TICK, CUT_TICK, 'gtick');
+        z.appendChild(document.createElement('i'));
+        z.setAttribute('aria-label', d.gCutTick(t));
+        ticks.push({ t:t, el:z, cx:p.x, cy:p.y, hw:h, hh:h, done:false });
+      }
+      function drawCut(t){
+        var a = t * 2 * Math.PI / CUT_TICKS;
+        art.appendChild(svgEl('line', { x1:C.cx, y1:C.cy, x2:C.cx + C.r * Math.sin(a), y2:C.cy - C.r * Math.cos(a), stroke:'#2B2A33', 'stroke-width':3, 'class':'gcut', 'data-t':t }));
+        ticks[t].done = true; ticks[t].el.classList.add('done');
+        cuts++;
+      }
+      drawCut(0);   /* 第一刀已經切好：正上方 */
+      line.textContent = d.gCutNow(e.n, cuts);
+      var knife = addPiece(B, { w:CUT_KNIFE.size, h:CUT_KNIFE.size, cx:CUT_KNIFE.x, cy:CUT_KNIFE.y, text:'🔪', cls:'gtoken', label:d.gCutKnife });
+      gCtx.hint2 = function(){ return d.gCut2(e.n, step); };
+      useTapSelect(B, function(P, pt){
+        var tk = nearestOpen(ticks, pt, 6);
+        if (!tk) return false;
+        if (!cutOk(e.n, tk.t)){ roundMiss(d.gCutUneven(e.n, step)); return false; }
+        drawCut(tk.t);
+        line.textContent = d.gCutNow(e.n, cuts);
+        P.home();
+        if (cuts === e.n){
+          /* 平分好了：塗一塊給他看「這就是 1/n」（畫在切線下面） */
+          art.insertBefore(svgEl('path', { d:sectorPath(C.cx, C.cy, C.r, -90, -90 + 360 / e.n), fill:'#E8871E', 'class':'gonepiece' }), art.childNodes[1]);
+          P.lock(P.homeX, P.homeY); P.el.classList.add('gone');
+          roundSolved(d.gCutDone(e.n));
+        } else {
+          gMsg.textContent = ''; refreshHint();
+          if (pt.tap) keepSelected(B, P);
+        }
+        return true;
+      });
+      return knife;
+    },
+
+    /* 第 2 關：寫分數 —— 蛋糕平分成 n 塊、塗了 m 塊（範例 3）。三張卡 m、n、n − m 放進分數的上下兩格：
+       上面（分子）只收 m、下面（分母）只收 n；放錯的每一張卡各有一句為什麼。 */
+    name: function(d){
+      var e = pick(GAME_NAME), u = e.n - e.m, F = NAME_FR, h = F.slot / 2, NP = NAME_PIE, filled = 0;
+      var line = trailLine(d.gNameNow(null, null));
+      var B = makeBoard(300, NAME_H);
+      var pie = makePie(e.n, e.m, 2 * (NP.r + 6));
+      pie.setAttribute('aria-label', d.picAria(e.n, e.m));
+      addZone(B, NP.cx - NP.r - 6, NP.cy - NP.r - 6, 2 * (NP.r + 6), 2 * (NP.r + 6), 'gart').appendChild(pie);
+      var slots = [['num', F.num], ['den', F.den]].map(function(s){
+        var z = addZone(B, F.x - h, s[1] - h, F.slot, F.slot, 'gslot');
+        return { kind:s[0], v:null, el:z, cx:F.x, cy:s[1], hw:h, hh:h, done:false };
+      });
+      addZone(B, F.x - 34, F.line - 1, 68, 3, 'grule');
+      renderTray(B, [e.m, e.n, u], NAME_TRAY.y, function(v, cx, cy){
+        addPiece(B, { w:NAME_CARD, h:NAME_CARD, cx:cx, cy:cy, text:String(v), cls:'gcard', label:String(v), data:{ v:v } });
+      }, NAME_TRAY.step);
+      gCtx.hint2 = function(){ return d.gName2(e.n, e.m); };
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, 4);
+        if (!s) return false;
+        var v = P.data.v;
+        if (s.kind === 'num' && v !== e.m){ roundMiss(v === e.n ? d.gNameNumDen(e.n, e.m) : d.gNameNumUn(u, e.m)); return false; }
+        if (s.kind === 'den' && v !== e.n){ roundMiss(v === e.m ? d.gNameDenNum(e.m, e.n) : d.gNameDenUn(u, e.m, e.n)); return false; }
+        s.done = true; s.v = v; s.el.classList.add('filled');
+        P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        filled++;
+        line.textContent = d.gNameNow(slots[0].v, slots[1].v);
+        if (filled === 2) roundSolved(d.gNameDone(e.m, e.n));
+        else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 3 關：照訂單塗色 —— 訂單 m/n（範例 3 反過來；m ＝ n 就是整個蛋糕）。蛋糕已經平分成 n 塊，
+       點一下塗色、再點一下取消；按「出貨」時塗了剛好 m 塊才收，太少、太多各有一句。 */
+    take: function(d){
+      var e = pick(GAME_TAKE), T = TAKE_PIE, x = 0, S = 2 * T.r + 8, c = S / 2;
+      var line = trailLine(d.gTakeNow(e.m, e.n, 0));
+      var B = makeBoard(300, TAKE_H);
+      var svg = svgBox(S, S);
+      addZone(B, T.cx - c, T.cy - c, S, S, 'gpie').appendChild(svg);
+      svg.appendChild(svgEl('circle', { cx:c, cy:c, r:T.r, fill:'#FFF6E9', stroke:'#2B2A33', 'stroke-width':2 }));
+      for (var i = 0; i < e.n; i++){
+        var w = svgEl('path', { d:sectorPath(c, c, T.r, -90 + i * 360 / e.n, -90 + (i + 1) * 360 / e.n), fill:'#FFF6E9', stroke:'#2B2A33', 'stroke-width':2,
+          'class':'gwedge', role:'button', 'aria-label':d.gTakeWedge(i + 1), 'data-on':'0' });
+        w.addEventListener('click', function(ev){
+          if (gSolved) return;
+          var el = ev.currentTarget, on = el.getAttribute('data-on') === '1';
+          el.setAttribute('data-on', on ? '0' : '1'); el.setAttribute('fill', on ? '#FFF6E9' : '#E8871E');
+          x += on ? -1 : 1;
+          line.textContent = d.gTakeNow(e.m, e.n, x);
+          gMsg.textContent = ''; refreshHint();
+        });
+        svg.appendChild(w);
+      }
+      var row = actionRow();
+      var btn = actionBtn(row, d.gTakeBtn, function(){
+        if (gSolved) return;
+        if (x < e.m){ roundMiss(d.gTakeFew(x, e.m, e.n)); return; }
+        if (x > e.m){ roundMiss(d.gTakeMany(x, e.m, e.n)); return; }
+        btn.disabled = true;
+        roundSolved(d.gTakeDone(e.m, e.n));
+      });
+      gCtx.hint2 = function(){ return d.gTake2(e.m, x); };
+    },
+
+    /* 第 4 關：排排站 —— 三張分數卡由小排到大（範例 4：同分母比分子、單位分數比分母）。
+       卡片上畫著同樣長的長條（塗色的長度就是大小）；每一格只收排在那一名的卡，放錯說「它比那一張大／小」。 */
+    sort: function(d){
+      var e = pick(GAME_SORT), S = SORT_SLOT, C = SORT_CARD, placed = 0;
+      var order = e.fr.slice().sort(function(p, q){ return fracVal(p) - fracVal(q); });
+      var same = e.fr.every(function(f){ return f[1] === e.fr[0][1]; });
+      var line = trailLine(d.gSortNow(0));
+      var B = makeBoard(300, SORT_H);
+      addZone(B, S.xs[0] - S.w / 2, SORT_LBL.y, S.w, SORT_LBL.h, 'glbl', d.gSortLo);
+      addZone(B, S.xs[1] - 30, SORT_LBL.y, 60, SORT_LBL.h, 'glbl', '→');
+      addZone(B, S.xs[2] - S.w / 2, SORT_LBL.y, S.w, SORT_LBL.h, 'glbl', d.gSortHi);
+      var slots = S.xs.map(function(x, i){
+        return { i:i, el:addZone(B, x - S.w / 2, S.y - S.h / 2, S.w, S.h, 'gslot'), cx:x, cy:S.y, hw:S.w / 2, hh:S.h / 2, done:false };
+      });
+      renderTray(B, e.fr, SORT_TRAY.y, function(f, cx, cy){
+        var P = addPiece(B, { w:C.w, h:C.h, cx:cx, cy:cy, cls:'gcard gfr', label:f[0] + '/' + f[1], data:{ f:f } });
+        var t = document.createElement('span'); t.textContent = f[0] + '/' + f[1];
+        P.el.appendChild(t); P.el.appendChild(makeBar(f[1], f[0], 0, C.bar, C.barH));
+      }, SORT_TRAY.step);
+      gCtx.hint2 = function(){
+        for (var i = 0; i < slots.length; i++) if (!slots[i].done) return d.gSort2(i + 1, order[i][0], order[i][1]);
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, 4);
+        if (!s) return false;
+        var f = P.data.f, want = order[s.i];
+        if (f !== want){ roundMiss(d.gSortWrong(f[0], f[1], want[0], want[1])); return false; }
+        s.done = true; s.el.classList.add('filled');
+        P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        placed++;
+        line.textContent = d.gSortNow(placed);
+        if (placed === order.length) roundSolved(d.gSortDone(order.map(function(q){ return q[0] + '/' + q[1]; }).join(' < '), same));
+        else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 5 關：合起來／拿走 —— a/n ＋ b/n 或 a/n − b/n（範例 5）。長條平分成 n 格、藍色 a 格；
+       ＋ 把橘色 b 格放到空的格子上（疊在藍色上 → 彈回＋為什麼）；− 把「吃掉 b 格」放到藍色上（放到空格 → 彈回＋為什麼）。
+       放好之後打出答案：分母一定還是 n；把分母加起來／減掉、分母數錯、分子算錯，各有一句。 */
+    join: function(d){
+      var e = pick(GAME_JOIN), J = JOIN_BAR, sw = J.w / e.n, r = joinResult(e), ready = false, kinds = [];
+      for (var i = 0; i < e.n; i++) kinds.push(i < e.a ? 'b' : 'w');
+      var line = trailLine(d.gJoinNow(e.op, e.a, e.b, e.n));
+      var B = makeBoard(300, JOIN_H);
+      var bar = addZone(B, J.x, J.y, J.w, J.h, 'gart');
+      function drawBar(){ bar.textContent = ''; bar.appendChild(joinBarSVG(e.n, kinds)); }
+      drawBar();
+      var tag = e.op === '+' ? d.gJoinAdd(e.b) : d.gJoinEat(e.b);
+      var strip = addPiece(B, { w:Math.max(GPICK, e.b * sw), h:JOIN_STRIP.h, cx:150, cy:JOIN_STRIP.y, cls:'gstrip', label:tag });
+      strip.el.appendChild(joinStripSVG(e.op, e.b, sw, JOIN_STRIP.h));
+      var tagEl = addZone(B, 0, JOIN_STRIP.y + JOIN_STRIP.h / 2 + 2, 300, 24, 'glbl', tag);
+      var row = actionRow();
+      var fr = document.createElement('div'); fr.className = 'gfrin';
+      function mkIn(aria){
+        var inp = document.createElement('input');
+        inp.type = 'text'; inp.className = 'gnum'; inp.setAttribute('inputmode', 'numeric'); inp.setAttribute('autocomplete', 'off');
+        inp.setAttribute('aria-label', aria); inp.maxLength = 2; inp.disabled = true;
+        inp.addEventListener('keydown', function(ev){ if (ev.key === 'Enter') submit(); });
+        return inp;
+      }
+      var inNum = mkIn(d.gJoinNumAria), inDen = mkIn(d.gJoinDenAria), ln = document.createElement('span');
+      ln.className = 'gfrline';
+      fr.appendChild(inNum); fr.appendChild(ln); fr.appendChild(inDen); row.appendChild(fr);
+      var go = actionBtn(row, d.gJoinBtn, submit);
+      go.disabled = true;
+      /* 只收寫法正常的整數：「3 4」「03」「3.0」、空白都只提醒一句、不算錯 */
+      function canon(t){ t = t.trim(); return /^(0|[1-9]\d*)$/.test(t) ? +t : null; }
+      function submit(){
+        if (gSolved || !ready) return;
+        var a = canon(inNum.value), b = canon(inDen.value);
+        if (a === null || b === null){ gMsg.textContent = d.gJoinEmpty; return; }
+        if (b === e.n && a === r){
+          inNum.disabled = true; inDen.disabled = true; go.disabled = true;
+          line.textContent = d.gJoinLine(e.op, e.a, e.b, e.n);
+          roundSolved(d.gJoinDone(e.op, e.a, e.b, e.n));
+        }
+        else if (e.op === '+' && b === 2 * e.n) roundMiss(d.gJoinDenAdd(e.n));
+        else if (e.op === '-' && b === 0) roundMiss(d.gJoinDenSub(e.n));
+        else if (b !== e.n) roundMiss(d.gJoinDen(b, e.n));
+        else roundMiss(d.gJoinNum(e.op, e.a, e.b, a));
+      }
+      gCtx.hint2 = function(){ return ready ? d.gJoin2(e.op, e.a, e.b, e.n) : (e.op === '+' ? d.gJoin2Add(e.b) : d.gJoin2Eat(e.b)); };
+      useTapSelect(B, function(P, pt){
+        var at = joinPlace(e, pt);
+        if (!at) return false;
+        if (at.bad === 'blue'){ roundMiss(d.gJoinOnTop); return false; }
+        if (at.bad === 'empty'){ roundMiss(d.gJoinEatEmpty); return false; }
+        P.lock(P.homeX, P.homeY); P.el.classList.add('gone'); tagEl.style.visibility = 'hidden';
+        for (var c = at.start; c < at.start + e.b; c++) kinds[c] = e.op === '+' ? 'o' : 'x';
+        drawBar();
+        ready = true; inNum.disabled = false; inDen.disabled = false; go.disabled = false;
+        roundInfo(d.gJoinType); refreshHint();
+        return true;
+      });
+    }
+  };
 
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {};
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
     elHint.textContent = '';
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = hint1For(round);
-    }
-
-    gPic.textContent = '';
-    if (round.type === 'match'){
-      gAskText.textContent = d.gTaskMatch;
-      var svg = makePie(round.n, round.m, 150);
-      svg.setAttribute('aria-label', d.picAria(round.n, round.m));
-      gPic.appendChild(svg);
-    } else if (round.type === 'bigger'){
-      gAskText.textContent = d.gTaskBigger;
-      var wrap = document.createElement('div');
-      wrap.style.display = 'flex'; wrap.style.gap = '16px';
-      if (round.isLadder){
-        var b1 = document.createElement('div'); b1.style.textAlign = 'center';
-        b1.appendChild(makeBar(round.d, 1, 0, 110, 46));
-        var c1 = document.createElement('div'); c1.textContent = '1/' + round.d; b1.appendChild(c1);
-        var b2 = document.createElement('div'); b2.style.textAlign = 'center';
-        b2.appendChild(makeBar(round.ladderOther, 1, 0, 110, 46));
-        var c2 = document.createElement('div'); c2.textContent = '1/' + round.ladderOther; b2.appendChild(c2);
-        wrap.appendChild(b1); wrap.appendChild(b2);
-      } else {
-        var p1 = document.createElement('div'); p1.style.textAlign = 'center';
-        p1.appendChild(makePie(round.d, round.a, 120));
-        var l1 = document.createElement('div'); l1.textContent = round.a + '/' + round.d; p1.appendChild(l1);
-        var p2 = document.createElement('div'); p2.style.textAlign = 'center';
-        p2.appendChild(makePie(round.d, round.b, 120));
-        var l2 = document.createElement('div'); l2.textContent = round.b + '/' + round.d; p2.appendChild(l2);
-        wrap.appendChild(p1); wrap.appendChild(p2);
-      }
-      gPic.appendChild(wrap);
-    } else if (round.type === 'sum'){
-      gAskText.textContent = d.gTaskSum;
-      var bar = makeBar(round.d, round.a, round.b, 260, 50);
-      gPic.appendChild(bar);
-      var cap = document.createElement('div');
-      cap.style.textAlign = 'center'; cap.style.marginTop = '4px';
-      cap.textContent = round.a + '/' + round.d + ' + ' + round.b + '/' + round.d + ' = ?';
-      gPic.appendChild(cap);
-    }
-
-    gAnswers.textContent = '';
-    round.opts.forEach(function(opt, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = opt;
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        var goodPick = (oi === round.ans);
-        if (goodPick){
-          var all = gAnswers.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){ gScore += 10; gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry + '</span>'; }
-          else { gScore += 20; gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst + '</span>'; }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + d.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gScore = Math.max(0, gScore - 5);
-          gMsg.innerHTML = '<span class="no">' + d.gWrong + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function hint1For(round){
-    var d = L();
-    if (round.type === 'match') return d.gHint1Match;
-    if (round.type === 'bigger') return round.isLadder ? d.gHint1Ladder : d.gHint1Bigger;
-    return d.gHint1Sum;
-  }
-  function hint2For(round){
-    var d = L();
-    if (round.type === 'match') return d.gHint2Match(round.n, round.m);
-    if (round.type === 'bigger'){
-      if (round.isLadder) return d.gHint2Ladder(round.d, round.ladderOther);
-      return d.gHint2Bigger(round.a, round.b, round.d);
-    }
-    return d.gHint2Sum(round.a, round.b, round.d);
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
-  }
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
-
   gHintBtn.addEventListener('click', function(){
-    var round = ROUNDS[gRound];
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = hint1For(round);
-    } else {
-      elHint.textContent = hint2For(round);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
