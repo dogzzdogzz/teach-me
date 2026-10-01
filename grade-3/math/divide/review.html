@@ -187,13 +187,16 @@
     }
     return a;
   }
-  /* 保證 3 個相異、且不等於正解的整數錯誤選項 */
-  function makeWrongsInt(correct, candidates){
+  /* 保證 3 個相異、且不等於正解的整數錯誤選項。
+     avoid：題幹上已經印出來、但「不是」刻意迷思誘答的那些數字 —— 先當成已用過，
+     候選與 ±step 保底都不會再端出來（framework §六之三第 4 點）。明寫的候選可以是 0（maxRemainder 的「餘 0」）。 */
+  function makeWrongsInt(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
-      if (!seen[key] && c > 0){ seen[key] = true; out.push(c); }
+      if (!seen[key] && c >= 0){ seen[key] = true; out.push(c); }
     });
     var step = 1;
     while (out.length < 3){
@@ -204,8 +207,12 @@
     }
     return out.slice(0, 3);
   }
-  function mixOptsNum(correct, candidates){
-    var wrongs = makeWrongsInt(correct, candidates);
+  /* 題幹上的數字，扣掉 keep（刻意拿來當誘答的那一個），其餘都不可以出現在選項裡 */
+  function avoidExcept(stemNums, keep){
+    return stemNums.filter(function(v){ return keep.indexOf(v) < 0; });
+  }
+  function mixOptsNum(correct, candidates, avoid){
+    var wrongs = makeWrongsInt(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -217,7 +224,8 @@
         var n = pickUnused([2,3,4,5,6], used);
         var per = pick([3,4,5,6,7,8,9]);
         var total = n * per;
-        var m = mixOptsNum(per, [per - 1, per + 1, total]);
+        /* n（人數）是刻意的迷思誘答：把「分成幾份」當成「每份幾個」—— 等分除和包含除搞混 */
+        var m = mixOptsNum(per, [per - 1, per + 1, n], avoidExcept([total, n], [n]));
         return { n:n, per:per, total:total, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -234,7 +242,8 @@
         var k = pickUnused([2,3,4,5,6], used);
         var bags = pick([3,4,5,6,7,8]);
         var total = k * bags;
-        var m = mixOptsNum(bags, [bags - 1, bags + 1, k]);
+        /* k（每袋幾顆）是刻意的迷思誘答：把「每份幾個」當成「分成幾份」 */
+        var m = mixOptsNum(bags, [bags - 1, bags + 1, k], avoidExcept([total, k], [k]));
         return { k:k, bags:bags, total:total, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -281,7 +290,8 @@
         var q = pick([3,4,5,6]);
         var r = 1 + rand(k - 1);
         var total = k * q + r;
-        var m = mixOptsNum(r, [r + 1, Math.max(1, r - 1), k]);
+        /* k 是刻意的迷思誘答：剩下一整袋（餘數等於除數）也當成剩下的 */
+        var m = mixOptsNum(r, [r + 1, Math.max(1, r - 1), k], avoidExcept([total, k], [k]));
         return { total:total, k:k, q:q, r:r, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -302,7 +312,8 @@
         var r = 1 + rand(k - 1);
         var total = k * q + r;
         var answer = q + 1;
-        var m = mixOptsNum(answer, [q, q + 2, total]);
+        /* q 是刻意的迷思誘答：只寫商、忘了剩下的人也要坐車 */
+        var m = mixOptsNum(answer, [q, q + 2], [total, k]);
         return { total:total, k:k, q:q, r:r, answer:answer, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -322,7 +333,7 @@
         var q = pick([4,5,6,7,8]);
         var r = 1 + rand(k - 1);
         var dividend = k * q + r;
-        var m = mixOptsNum(dividend, [k * q, dividend - 1, dividend + k]);
+        var m = mixOptsNum(dividend, [k * q, dividend - 1, dividend + k], [k, q, r]);
         return { k:k, q:q, r:r, dividend:dividend, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -339,7 +350,9 @@
     { id:'maxRemainder', cat:'divide',
       make: function(used){
         var k = pickUnused([3,4,5,6,7,8,9], used);
-        var m = mixOptsNum(k, [k - 1, Math.max(0, k - 2), 0]);
+        /* 其他三個選項都必須是「真的可能出現的餘數」（0 ～ k − 1）：舊版的 0 被濾掉、保底補上 k + 1，
+           而 k + 1 也不可能是餘數 —— 一題兩個正解（2026-10-01 檢查設定抓到）。k ≥ 3，所以 k − 1、k − 2、0 三個都不一樣。 */
+        var m = mixOptsNum(k, [k - 1, k - 2, 0]);
         return { k:k, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -356,7 +369,7 @@
         var k = pickUnused([3,4,5,6,7,8], used);
         var q = pick([4,5,6,7,8,9]);
         var dividend = k * q;
-        var m = mixOptsNum(dividend, [dividend - k, dividend + k, k + q]);
+        var m = mixOptsNum(dividend, [dividend - k, dividend + k, k + q], [k, q]);
         return { k:k, q:q, dividend:dividend, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
