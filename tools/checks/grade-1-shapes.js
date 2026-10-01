@@ -168,6 +168,18 @@ function extractVar(src, name){
 
 module.exports = {
   breaks: [
+    /* ---- 小遊戲：拿取框縮回原本形狀大小，屋頂只剩 31 高 ---- */
+    { file:'index', expect:'under 44×44 to grab',
+      find:'h:Math.max(s.h, 50 / s.tray), cx:45',
+      replace:'h:Math.max(s.h, 1 / s.tray), cx:45' },
+    /* ---- 小遊戲：托盤間距縮小，積木會互相疊到 ---- */
+    { file:'index', expect:'tray pieces can touch',
+      find:'cx:45 + i * 70, cy:330,',
+      replace:'cx:45 + i * 50, cy:330,' },
+    /* ---- 小遊戲：蓋房子的正方形位置不是正方形 ---- */
+    { file:'index', expect:'square slot is not square',
+      find:"{ kind:'square',    cx:130, cy:200, w:120, h:120,",
+      replace:"{ kind:'square',    cx:130, cy:200, w:130, h:120," },
     /* ---- review.html ---- */
     /* 長方形畫出畫布：把對角線上限放寬到 197，w 129 × h 198 那種長方形又會回來，轉一轉就被切掉。 */
     { file:'review', expect:'leaves the 200×200 canvas',
@@ -484,23 +496,57 @@ module.exports = {
         if (pat.decoys.length !== 2 || pat.decoys.indexOf(pat.next) >= 0 || new Set(pat.decoys).size !== 2) fail('PATTERNS[' + i + '] decoys must be 2 distinct shapes other than next');
         if (pat.decoys.some(k => PLANE.indexOf(k) < 0)) fail('PATTERNS[' + i + '] decoy is not a plane shape: ' + pat.decoys.join(','));
       });
+      /* --- 小遊戲：五關五種玩法 --- */
       const gm = src.match(/function buildGameRounds\(\)\{\s*GAME_ROUNDS = (\[[\s\S]*?\]);/);
       if (!gm) fail('cannot find GAME_ROUNDS in index.html');
       else {
-        const rows = gm[1].split('\n').filter(l => /type:/.test(l));
-        if (rows.length !== 5) fail('GAME_ROUNDS should have 5 rounds, got ' + rows.length);
-        rows.forEach((l, i) => {
-          const fm = l.match(/obj: pick\(OBJECT_POOL\.(\w+)\), fam:'(\w+)'/);
-          if (fm && fm[1] !== fm[2]) fail('GAME_ROUNDS[' + i + '] draws from OBJECT_POOL.' + fm[1] + ' but says fam ' + fm[2]);
-          if (/type:'2d'/.test(l)){
-            const km = l.match(/kind:\s*(?:pick\(\[([^\]]*)\]\)|'([a-z]+)')/);
-            if (!km) fail('GAME_ROUNDS[' + i + '] 2d round has no readable kind');
-            else {
-              const kinds = km[1] !== undefined ? km[1].split(',').map(s => s.trim().replace(/^'|'$/g, '')) : [km[2]];
-              kinds.forEach(k => { if (PLANE.indexOf(k) < 0) fail('GAME_ROUNDS[' + i + '] draws an unknown kind ' + k); });
-            }
-          }
+        const rounds = new Function('return ' + gm[1] + ';')();
+        const types = rounds.map(r => r.type).join(',');
+        if (types !== 'hunt,sort,jigsaw,house,pattern') fail('GAME_ROUNDS should be hunt,sort,jigsaw,house,pattern, got ' + types);
+        rounds.forEach((r, i) => {
+          if (r.type === 'hunt' && PLANE.indexOf(r.target) < 0) fail('GAME_ROUNDS[' + i + '] hunts an unknown kind ' + r.target);
+          if (!new RegExp('\\n {4}' + r.type + ': function\\(round, d\\)\\{').test(src)) fail('GAME_ROUNDS[' + i + '] type ' + r.type + ' has no RENDER.' + r.type);
         });
+      }
+      /* 蓋房子的四個虛線位置：四種平面圖形各一個、形狀名副其實、屋頂坐在牆上、門在牆裡、
+         全部在托盤線（y=288）上方；托盤裡縮小後的積木不能互相重疊（中心相隔 70）。 */
+      const HOUSE = extractVar(src, 'HOUSE_SLOTS');
+      if (HOUSE.map(h => h.kind).sort().join() !== PLANE.slice().sort().join()) fail('HOUSE_SLOTS must use each plane shape exactly once');
+      const hs = {}; HOUSE.forEach(h => { hs[h.kind] = h; });
+      const box = h => ({ l:h.cx - h.w / 2, r:h.cx + h.w / 2, t:h.cy - h.h / 2, b:h.cy + h.h / 2 });
+      HOUSE.forEach(h => {
+        const q = box(h);
+        if (q.l < 0 || q.r > 300 || q.t < 0 || q.b > 288) fail('HOUSE_SLOTS ' + h.kind + ' leaves the board above the tray');
+      });
+      /* 托盤：從 index.html 讀出真正的排法（第一個中心、間距、最小拿取寬度），積木順序是洗牌過的，
+         所以任兩塊相鄰都不能重疊 —— 用最寬的兩塊來驗；也不能超出畫板左右、托盤上下。 */
+      const tm = src.match(/addPiece\(B, \{ w:Math\.max\(s\.w, (\d+) \/ s\.tray\), h:Math\.max\(s\.h, (\d+) \/ s\.tray\), cx:(\d+) \+ i \* (\d+), cy:(\d+), s:s\.tray/);
+      if (!tm) fail('cannot find the house tray layout (addPiece … cx:A + i * B, cy:C) in index.html');
+      else {
+        /* 量的是「縮小後的拿取框」（邏輯 px；手機 375 寬時畫板縮放約 0.97 倍） */
+        const [, grabW, grabH, x0, step, cy] = tm.map(Number);
+        const gw = h => Math.max(h.w, grabW / h.tray) * h.tray, gh = h => Math.max(h.h, grabH / h.tray) * h.tray;
+        const ws = HOUSE.map(gw).sort((a, b) => b - a);
+        if ((ws[0] + ws[1]) / 2 > step - 2) fail('HOUSE tray pieces can touch: widest two are ' + ws[0] + ' and ' + ws[1] + ' with centres ' + step + ' apart');
+        if (x0 - ws[0] / 2 < 0 || x0 + (HOUSE.length - 1) * step + ws[0] / 2 > 300) fail('HOUSE tray runs off the board');
+        HOUSE.forEach(h => {
+          const hh = gh(h);
+          if (cy - hh / 2 < 290 || cy + hh / 2 > 380) fail('HOUSE_SLOTS ' + h.kind + ' does not fit the tray height when scaled by ' + h.tray);
+          if (gw(h) < 44 || hh < 44) fail('HOUSE_SLOTS ' + h.kind + ' is under 44×44 to grab in the tray (' + gw(h) + '×' + hh + ')');
+        });
+      }
+      if (hs.square && hs.square.w !== hs.square.h) fail('HOUSE_SLOTS square slot is not square');
+      if (hs.circle && hs.circle.w !== hs.circle.h) fail('HOUSE_SLOTS circle slot is not round');
+      if (hs.rectangle && Math.max(hs.rectangle.w, hs.rectangle.h) < 1.5 * Math.min(hs.rectangle.w, hs.rectangle.h)) fail('HOUSE_SLOTS rectangle slot is too close to a square');
+      if (hs.triangle && hs.square && box(hs.triangle).b !== box(hs.square).t) fail('HOUSE_SLOTS roof does not sit on the wall');
+      if (hs.rectangle && hs.square){
+        const door = box(hs.rectangle), wall = box(hs.square);
+        if (door.l < wall.l || door.r > wall.r || door.t < wall.t || door.b > wall.b) fail('HOUSE_SLOTS door is not inside the wall');
+        if (!(hs.rectangle.z > hs.square.z)) fail('HOUSE_SLOTS door must stack above the wall');
+      }
+      if (hs.circle && hs.triangle && hs.square){
+        const sun = box(hs.circle);
+        [hs.triangle, hs.square].forEach(o => { const q = box(o); if (sun.l < q.r && sun.r > q.l && sun.t < q.b && sun.b > q.t) fail('HOUSE_SLOTS sun overlaps the ' + o.kind); });
       }
     }
   }
