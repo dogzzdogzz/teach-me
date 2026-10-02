@@ -121,6 +121,53 @@
   .secret .big{font-size:30px}
   .secret h3{font-size:16px;margin:6px 0}
   .secret p{font-size:14px;color:var(--muted)}
+  /* ---- 小遊戲「圓規挑戰」：找點、分一分、拼直徑、張圓規、疊標靶（§六之五） ---- */
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div{position:absolute}
+  /* 畫板上的線條：一張和畫板一樣大的 SVG。⚠️ 故意不給 viewBox —— 頁尾那段「把 viewBox 撐大」的修補
+     只處理 svg[viewBox]；畫得比畫板大的圓（張錯的圓規）要被切掉，不可以把整張圖縮小。 */
+  .gsvg{position:absolute;left:0;top:0;pointer-events:none;overflow:hidden}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gpiece.gone{visibility:hidden}
+  .gtoken{background:var(--card);border:3px solid var(--orange);border-radius:50%;font-size:26px}
+  .gcardc{background:var(--card);border:3px solid var(--orange);border-radius:12px}
+  .gcardc.placed{border-color:var(--green);background:var(--green-soft)}
+  .gcardc svg{display:block}
+  .gstick{flex-direction:column;justify-content:flex-start;padding-top:1px}
+  .gstick span{font-size:14px;font-weight:800;line-height:16px;height:16px;color:var(--ink);white-space:nowrap}
+  .gstick i{display:block;height:12px;margin-top:6px;background:var(--orange);border-radius:6px}
+  .gstick.placed span{color:var(--green)}
+  .gstick.placed i{background:var(--green)}
+  .gtcard{flex-direction:column;background:var(--card);border:3px solid var(--orange);border-radius:12px;line-height:1.15;color:var(--ink)}
+  .gtcard span{font-size:14px;font-weight:700;color:var(--muted)}
+  .gtcard b{font-size:17px;font-weight:800;white-space:nowrap}
+  /* 第 1 關的點：畫出來只有 14px，可是點得到的範圍是 PT_TAP × PT_TAP（§六之五：拿取範圍要比畫的大） */
+  .gpt{display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;z-index:5;
+    user-select:none;-webkit-user-select:none;font-size:15px;font-weight:800;color:var(--muted)}
+  .gpt i{display:block;width:14px;height:14px;border-radius:50%;background:var(--blue)}
+  .gpt.gyes{pointer-events:none}
+  .gpt.gyes i{width:18px;height:18px;background:var(--green);box-shadow:0 0 0 3px var(--green-soft)}
+  .gpt.gno i{background:#C9C4B8}
+  .gbin{border:3px dashed #C9BFA9;border-radius:14px;background:var(--card);pointer-events:none}
+  .gbin .gbl{position:absolute;left:0;right:0;top:2px;text-align:center;font-size:17px;font-weight:800;color:var(--ink)}
+  .glbl{display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:var(--muted);pointer-events:none;white-space:nowrap}
+  .glbl.gfact{color:var(--ink);justify-content:flex-start}
+  .gblink{animation:gblink 1s ease-in-out infinite}
+  @keyframes gblink{50%{box-shadow:0 0 0 7px rgba(59,125,216,.45)}}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
+  .gaction{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .gaction .btn{min-height:48px}
+  /* 遊戲裡的數字用西文字型（中文字照樣退回 PingFang） */
+  .gtrail, .gstick, .gtcard, .gbin, .glbl, .gsvg, #gMsg{font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif}
 </style>
 </head>
 <body>
@@ -258,20 +305,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb7">小遊戲</span>
     <h2 data-i18n="s7h2">圓規挑戰</h2>
-    <p class="lead" data-i18n="s7lead">看清楚圖上標的數字，答對愈快分數愈高！</p>
+    <p class="lead" data-i18n="s7lead">五關五種玩法：找點、分一分、拼直徑、張圓規、疊標靶。放錯只扣一點分，隨時可以再試！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <p class="target" id="gAskLine" style="margin-top:14px;font-size:18px">
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px;margin-left:10px" data-i18n="gHintBtn">💡 提示</button>
-      </p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div id="gPicWrap"></div>
-      <div class="opts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
-      <div class="btnrow">
+      <div class="btnrow" style="justify-content:center">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -299,13 +343,6 @@
 <script>
 (function(){
   "use strict";
-
-  /* ================= 語言 / 模式狀態 ================= */
-  var lang = 'zh';
-  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
-
-  var mode = 'school';
-  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
 
   /* ================= 幾何繪圖工具 ================= */
   var PXCM = 14, PAD = 34;
@@ -487,6 +524,102 @@
     return svg;
   }
 
+  /* ============ 小遊戲「圓規挑戰」的題庫與版面（語言無關；tools/checks/grade-3-circle.js 直接讀這一段） ============
+     五關對應五個範例：找點（範例 1：圓上每一點到圓心都一樣遠）、分一分（範例 2＋3：半徑從圓心到圓上，
+     直徑通過圓心、兩端都在圓上）、拼直徑（範例 3：直徑 ＝ 兩條方向相反、接成一直線的半徑 ＝ 半徑 × 2）、張圓規（範例 4：圓規張開的是半徑）、
+     疊標靶（範例 5：同心圓，半徑 ＝ 直徑 ÷ 2）。
+     版面一律是畫板上的 px（畫板 GW 寬），位置一律記中心點。拿得起來的東西至少 GPICK × GPICK。
+     GAME_POINTS：圓心 O、一條 r 公分的繩子；on 是圓上的點（離 O 剛好 r 公分），inn／out 是離 O r − 1／r + 1 公分的點
+       （角度都在兩個圓上的點正中間，點得到的範圍才不會碰在一起）。圓本身不畫，找齊了才畫出來。str 是繩子一開始指的方向。
+     GAME_SORT：六張卡，每張一個小圓和一條線：半徑兩張、直徑兩張、「都不是」兩張（弦、從圓心出發卻沒碰到圓、
+       穿過圓心卻兩端都沒碰到圓 —— 三種挑兩種）。卡片只收進對的箱子。
+     GAME_JOIN：圓的半徑 r 公分；四根棍子 r、r、r − 1、r + 1 公分，要兩根 r 公分的接成直徑（左右各一半，交接處在圓心）。
+       沒有 2r 那一根 —— 一根 2r 的棍子放上去也是直徑，那不是錯，所以不出。
+     GAME_COMPASS：老師要的圓的直徑 D；圓規的筆尖那一腳只能沿著尺左右拖（1～CMP_MAX 公分），按「畫圓」才算。
+       尺要長到拉得到 D（最常見的錯就是張開 D），所以 CMP_MAX ≥ 每一個 D。
+     GAME_TARGET：三個同心的虛線圈，半徑 rs 公分（從圓心往右的尺上讀）；卡片寫的是直徑 2R，外加一張 decoy
+       （半徑 decoy ÷ 2 不是任何一圈）。相鄰兩圈至少差 2 公分，放下去的地方量的是「到圈線的距離」。
+       每一題都有一張卡的數字剛好是另一圈的半徑（「直徑 6」對上「半徑 6」那一圈）—— 最常見的混淆一定要碰得到。 */
+  var GPICK = 48, GW = 300, SVGNS = 'http://www.w3.org/2000/svg';
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  /* 第 1 關：找圓上的點 */
+  var PT_H = 330, PT_O = { x:150, y:180 }, PT_PX = 20, PT_TAP = 46, PT_LBL = { x:8, y:6, w:120, h:28 };
+  var GAME_POINTS = [
+    { r:5, on:[15, 75, 135, 195, 255, 315], inn:[45, 225], out:[105, 285], str:165 },
+    { r:5, on:[0, 60, 120, 180, 240, 300], inn:[90, 270], out:[30, 210], str:150 },
+    { r:5, on:[30, 90, 150, 210, 270, 330], inn:[0, 240], out:[120, 300], str:180 },
+    { r:4, on:[45, 135, 225, 315], inn:[0, 180], out:[90, 270], str:22 },
+    { r:4, on:[0, 90, 180, 270], inn:[135, 315], out:[45, 225], str:112 }
+  ];
+  /* 離圓心 rc 公分、角度 a（0° 朝右、逆時針）的點在畫板上的中心點 */
+  function ptXY(rc, a){
+    var rad = a * Math.PI / 180;
+    return { x:PT_O.x + rc * PT_PX * Math.cos(rad), y:PT_O.y - rc * PT_PX * Math.sin(rad) };
+  }
+
+  /* 第 2 關：分一分 */
+  var SORT_H = 334, SORT_CARD = 64, SORT_R = 24, SORT_PAD = 10;
+  var SORT_BIN = { y:6, w:92, h:168, gap:12, top:28, step:70 }, SORT_TRAY = { y:220, dx:84, dy:76 };
+  var SORT_BINS = ['r', 'd', 'n'];
+  var SORT_BIN_OF = { rad:'r', dia:'d', chord:'n', half:'n', thru:'n' };
+  var SORT_NONE = ['chord', 'half', 'thru'];
+  var SORT_ANG = [20, 65, 110, 155, 200, 245, 290, 335], SORT_GAP = [80, 100], SORT_SHORT = 0.55;
+  function sortBinX(i){ return GW / 2 + (i - 1) * (SORT_BIN.w + SORT_BIN.gap); }
+  /* 箱子裡第 j 張（0 起算）的中心點 */
+  function sortSlotXY(i, j){ return { x:sortBinX(i), y:SORT_BIN.y + SORT_BIN.top + SORT_CARD / 2 + j * SORT_BIN.step }; }
+  function sortTrayXY(i){ return { x:GW / 2 + ((i % 3) - 1) * SORT_TRAY.dx, y:SORT_TRAY.y + Math.floor(i / 3) * SORT_TRAY.dy }; }
+  /* 卡片上那一條線的兩端（卡片框線裡面的座標：框線 3px，裡面 SORT_CARD − 6 見方，小圓的圓心在正中間）：
+     rad 圓心 → 圓上；dia 圓上 → 經過圓心 → 圓上；chord 圓上兩點、相差 gap 度（不經過圓心）；
+     half 圓心 → 只走到半徑的 SORT_SHORT 倍；thru 穿過圓心、兩端都只到 SORT_SHORT 倍。 */
+  function sortSeg(kind, a, gap){
+    var c = (SORT_CARD - 6) / 2, R = SORT_R;
+    function at(rr, deg){ var t = deg * Math.PI / 180; return { x:c + rr * Math.cos(t), y:c - rr * Math.sin(t) }; }
+    var p, q;
+    if (kind === 'rad'){ p = at(0, a); q = at(R, a); }
+    else if (kind === 'dia'){ p = at(R, a + 180); q = at(R, a); }
+    else if (kind === 'chord'){ p = at(R, a); q = at(R, a + gap); }
+    else if (kind === 'half'){ p = at(0, a); q = at(R * SORT_SHORT, a); }
+    else { p = at(R * SORT_SHORT, a + 180); q = at(R * SORT_SHORT, a); }
+    return { x1:p.x, y1:p.y, x2:q.x, y2:q.y };
+  }
+
+  /* 第 3 關：拼直徑 */
+  var JOIN_H = 352, JOIN_O = { x:150, y:124 }, JOIN_PX = 16, JOIN_SLOT_H = 28, JOIN_PAD = 10;
+  /* 棍子：JOIN_STICK_H 高；上面 1px 留白＋16px 的字＋6px 間隔，下面才是 JOIN_BAR 高的條 ——
+     條的中心在棍子中心點下面 JOIN_BAR_DY ＝ 1 ＋ 16 ＋ 6 ＋ 12 ÷ 2 − 48 ÷ 2 ＝ 5（和 .gstick 的 CSS 一起改） */
+  var JOIN_TRAY = { y:268, dy:58, x:[80, 220] }, JOIN_BAR = 12, JOIN_STICK_H = 48, JOIN_BAR_DY = 5;
+  var GAME_JOIN = [3, 4, 5, 6];
+  function joinSticks(r){ return [r, r, r - 1, r + 1]; }
+  /* 兩個半邊的虛線框：左半從圓周到圓心、右半從圓心到圓周 */
+  function joinSlots(r){
+    var h = r * JOIN_PX / 2;
+    return [ { side:'L', cx:JOIN_O.x - h, cy:JOIN_O.y, hw:h, hh:JOIN_SLOT_H / 2 },
+             { side:'R', cx:JOIN_O.x + h, cy:JOIN_O.y, hw:h, hh:JOIN_SLOT_H / 2 } ];
+  }
+  function joinTrayXY(i){ return { x:JOIN_TRAY.x[i % 2], y:JOIN_TRAY.y + Math.floor(i / 2) * JOIN_TRAY.dy }; }
+  function joinStickW(L){ return Math.max(GPICK, L * JOIN_PX + 8); }
+
+  /* 第 4 關：張圓規 */
+  var CMP_H = 268, CMP_O = { x:84, y:156 }, CMP_PX = 16, CMP_MAX = 12, CMP_HINGE = 72, CMP_START = 1;
+  var CMP_RULER = { y:166, h:30 }, CMP_PEN_DY = -26, CMP_TAPY = 50, CMP_GOAL = { x:6, y:4, w:210, h:30 };
+  var GAME_COMPASS = [6, 8, 10];
+  function cmpTipX(k){ return CMP_O.x + k * CMP_PX; }
+
+  /* 第 5 關：疊標靶 */
+  var TGT_H = 296, TGT_O = { x:120, y:112 }, TGT_PX = 14, TGT_BAND = 23, TGT_RULER = 7;
+  var TGT_CARD = { w:70, h:56 }, TGT_TRAY = { y:256, step:74 };
+  var GAME_TARGET = [ { rs:[2, 4, 6], decoy:6 }, { rs:[1, 4, 6], decoy:4 }, { rs:[1, 3, 6], decoy:4 }, { rs:[2, 4, 6], decoy:10 } ];
+  function tgtTrayXY(i){ return { x:GW / 2 + (i - 1.5) * TGT_TRAY.step, y:TGT_TRAY.y }; }
+
   /* ================= i18n ================= */
   var I18N = {
     zh: {
@@ -603,32 +736,78 @@
           why:'半徑 8 公分的圓，直徑是 16 公分；直徑 8 公分的圓，半徑只有 4 公分。半徑 8 公分的那個圓比較大。' }
       ],
       qsBoost:[
-        { kind:'misconceptionA', d:10, aria:'一個圓，半徑標示5公分',
+        { kind:'misconceptionA', d:10, aria:'一個圓（圖上沒有標數字）',
           stem:'老師說「用圓規畫一個直徑 10 公分的圓」，圓規應該張開多少公分？',
           opts:['15','10','20','5'], ans:3,
           why:'圓規張開的距離是半徑，不是直徑。半徑 ＝ 直徑 ÷ 2 ＝ 10 ÷ 2 ＝ 5 公分。' },
-        { kind:'misconceptionB', shortR:3, aria:'一個圓裡有一條比較短但通過圓心的線段，跟一條比較長但沒通過圓心的線段',
-          stem:'這個圓裡有兩條線段：一條比較短，但通過圓心；一條比較長，但沒有通過圓心。哪一條才是直徑？',
-          opts:['兩條都是','比較長、沒通過圓心的那條','比較短、通過圓心的那條','兩條都不是'], ans:2,
-          why:'判斷直徑不是看線段長不長，而是看它有沒有通過圓心。通過圓心的那條才是直徑，即使它看起來比較短。' }
+        { kind:'misconceptionB', shortR:3, aria:'一個圓裡有兩條線段：藍色的通過圓心但兩端沒有碰到圓，紅色的兩端在圓上但沒有通過圓心',
+          stem:'這個圓裡有兩條線段：藍色的通過圓心，可是兩端沒有碰到圓；紅色的兩端都在圓上，可是沒有通過圓心。哪一條是直徑？',
+          opts:['兩條都不是','紅色的那條','藍色的那條','兩條都是'], ans:0,
+          why:'直徑要同時做到兩件事：通過圓心，而且兩端都在圓上。藍色的沒有碰到圓，紅色的沒有通過圓心，所以兩條都不是直徑。' }
       ],
-      s7h2:'圓規挑戰', s7lead:'看清楚圖上標的數字，答對愈快分數愈高！',
+      s7h2:'圓規挑戰', s7lead:'五關五種玩法：找點、分一分、拼直徑、張圓規、疊標靶。放錯只扣一點分，隨時可以再試！',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
-      gAskRToD:function(r){ return '這個圓的半徑是 ' + r + ' 公分，直徑是多少？'; },
-      gAskDToR:function(d){ return '這個圓的直徑是 ' + d + ' 公分，半徑是多少？'; },
-      gAskWhich:'哪一條線段才是這個圓的直徑？',
-      gSegOpt:function(letter){ return '線段 ' + letter; },
-      gHintBtn:'💡 提示',
-      gHint1RtoD:'提示 1：直徑 ＝ 半徑 × 2。',
-      gHint1DtoR:'提示 1：半徑 ＝ 直徑 ÷ 2。',
-      gHint1Which:'提示 1：直徑一定要通過圓心，長短不是重點。',
-      gHint2:function(v){ return '提示 2：答案是 ' + v + '。'; },
-      gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:function(v){ return '答對了！正確答案是 ' + v + '，+20 分！'; },
-      gCorrectRetry:function(v){ return '答對了！正確答案是 ' + v + '，+10 分。'; },
-      gWrong:function(v){ return v + ' 不對，再試一次，−5 分。'; },
-      gClear:'按「下一關」繼續下一組。',
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gAsks:{
+        points:'用繩子量一量：點出所有到圓心 O 剛好一條繩子那麼遠的點。在空白的地方點一下（或拖一拖），繩子就會轉過去。',
+        sort:'把每一張卡片放進對的箱子：這條線是半徑、直徑，還是都不是？',
+        join:'用兩根棍子拼出這個圓的直徑：左半邊、右半邊各放一根，接在圓心。',
+        compass:'把圓規筆尖那一腳沿著尺拖到該張開的地方（也可以先點筆尖、再點尺），再按「畫圓」。',
+        target:'做一個同心圓標靶：卡片寫的是直徑，把每一張放到半徑對的那一圈上（看尺上的數字）。'
+      },
+      gHints:{
+        points:'提示 1：圓上的每一點到圓心都一樣遠 —— 都剛好是繩子那麼長。把繩子轉過去比一比。',
+        sort:'提示 1：半徑從圓心走到圓上；直徑通過圓心，兩端都碰到圓。兩樣都不是的放「都不是」。',
+        join:'提示 1：直徑是兩條方向相反的半徑，在圓心接成一直線 —— 每一半都和半徑一樣長。',
+        compass:'提示 1：圓規張開的是半徑，不是直徑。',
+        target:'提示 1：卡片寫的是直徑，半徑 ＝ 直徑 ÷ 2。'
+      },
+      gPts:function(p){ return '+' + p + ' 分'; },
+      gMinus:'−5 分',
+      gClear:'按「下一關」繼續。',
       gWin:function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gPtString:function(r){ return '繩子長 ' + r + ' 公分'; },
+      gPtAria:'一個點',
+      gPtNow:function(f, n){ return '找到 ' + f + ' / ' + n + ' 個圓上的點'; },
+      gPtIn:function(c, r){ return '這個點離圓心 ' + c + ' 公分，比繩子（' + r + ' 公分）短 —— 它在圓的裡面，不在圓上。'; },
+      gPtOut:function(c, r){ return '這個點離圓心 ' + c + ' 公分，比繩子（' + r + ' 公分）長 —— 它在圓的外面，不在圓上。'; },
+      gPtDone:function(n, r){ return '這 ' + n + ' 個點到圓心都是 ' + r + ' 公分 —— 它們都在半徑 ' + r + ' 公分的圓上！'; },
+      gPt2:function(left){ return '提示 2：還有 ' + left + ' 個沒找到，閃一閃的那個點就在圓上。'; },
+      gSortBins:{ r:'半徑', d:'直徑', n:'都不是' },
+      gSortCard:'一張畫了一條線的圓形卡片',
+      gSortNow:function(s, n){ return '分好了 ' + s + ' / ' + n + ' 張'; },
+      gSortNo:{
+        rad:{ d:'這條線只從圓心走到圓上，是直徑的一半 —— 它是半徑。', n:'這條線從圓心連到圓上的一點，這就是半徑。' },
+        dia:{ r:'這條線通過圓心，兩端都碰到圓 —— 它是直徑（兩條方向相反的半徑接成一直線）。', n:'這條線通過圓心，兩端都碰到圓 —— 它是直徑。' },
+        chord:{ r:'這條線沒有從圓心出發，不是半徑。', d:'這條線兩端都在圓上，可是沒有通過圓心 —— 不是直徑。' },
+        half:{ r:'這條線從圓心出發，可是另一端沒有碰到圓 —— 半徑要一直連到圓上。', d:'這條線一端在圓心，另一端沒有碰到圓 —— 直徑要通過圓心、兩端都碰到圓。' },
+        thru:{ r:'這條線穿過圓心，可是兩端都沒有碰到圓 —— 半徑要從圓心連到圓上。', d:'這條線通過圓心，可是兩端都沒有碰到圓 —— 直徑的兩端要在圓上。' }
+      },
+      gSortDone:'全部分對了：半徑從圓心到圓上；直徑通過圓心、兩端都在圓上。',
+      gSort2:function(bin){ return '提示 2：閃一閃的那一張要放進「' + bin + '」。'; },
+      gJoinR:function(r){ return '半徑 ' + r + ' 公分'; },
+      gJoinStick:function(n){ return n + ' 公分'; },
+      gJoinNow:function(placed, r){ return placed === 0 ? '直徑 ＝ ？ ＋ ？' : (placed === 1 ? '直徑 ＝ ' + r + ' ＋ ？' : '直徑 ＝ ' + r + ' ＋ ' + r + ' ＝ ' + (r * 2) + ' 公分'); },
+      gJoinShort:function(n, r){ return '這根是 ' + n + ' 公分，比半徑 ' + r + ' 公分短：一頭在圓心，另一頭碰不到圓。'; },
+      gJoinLong:function(n, r){ return '這根是 ' + n + ' 公分，比半徑 ' + r + ' 公分長：一頭在圓心，另一頭會伸到圓外面。'; },
+      gJoinDone:function(r){ return '直徑 ＝ ' + r + ' ＋ ' + r + ' ＝ ' + r + ' × 2 ＝ ' + (r * 2) + ' 公分：直徑是兩條方向相反的半徑在圓心接成一直線，所以一定經過圓心。'; },
+      gJoin2:function(r){ return '提示 2：每一半都放一根 ' + r + ' 公分的棍子（和半徑一樣長）。'; },
+      gCmpGoal:function(D){ return '要畫：直徑 ' + D + ' 公分'; },
+      gCmpNow:function(k){ return '圓規張開 ' + k + ' 公分'; },
+      gCmpUnit:'公分',
+      gCmpPen:'圓規的筆尖',
+      gCmpBtn:'✏️ 畫圓',
+      gCmpFirst:'先把圓規張開：拖一拖筆尖那一腳。',
+      gCmpIsD:function(D){ return '張開 ' + D + ' 公分是直徑的長度。圓規張開的是半徑，這樣畫出來的圓，直徑是 ' + D + ' × 2 ＝ ' + (D * 2) + ' 公分 —— 太大了。'; },
+      gCmpWrong:function(k, D){ return '張開 ' + k + ' 公分，畫出來的圓直徑是 ' + k + ' × 2 ＝ ' + (k * 2) + ' 公分，比 ' + D + ' 公分' + (k * 2 > D ? '大' : '小') + '。'; },
+      gCmpDone:function(r, D){ return '張開 ' + r + ' 公分就是半徑：畫出來的圓，直徑是 ' + r + ' × 2 ＝ ' + D + ' 公分。'; },
+      gCmp2:function(D, r){ return '提示 2：半徑 ＝ ' + D + ' ÷ 2 ＝ ' + r + ' 公分，把筆尖拖到尺上的 ' + r + '。'; },
+      gTgtCardTop:'直徑',
+      gTgtCardNum:function(dd){ return dd + ' 公分'; },
+      gTgtNow:function(p, n){ return '放好了 ' + p + ' / ' + n + ' 圈'; },
+      gTgtNo:function(dd, R){ return '直徑 ' + dd + ' 公分的圓，半徑是 ' + dd + ' ÷ 2 ＝ ' + (dd / 2) + ' 公分，不是 ' + R + ' 公分。'; },
+      gTgtDone:function(rs){ return '三個圓的圓心都是 O，半徑 ' + rs.join('、') + ' 公分不一樣 —— 這就是同心圓，像標靶一樣！'; },
+      gTgt2:function(R){ return '提示 2：尺上 ' + R + ' 的那一圈，要找直徑 ' + R + ' × 2 ＝ ' + (R * 2) + ' 公分的卡片。'; },
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
@@ -749,32 +928,78 @@
           why:'A circle with radius 8 cm has a diameter of 16 cm; a circle with diameter 8 cm has a radius of only 4 cm. So the radius-8-cm circle is bigger.' }
       ],
       qsBoost:[
-        { kind:'misconceptionA', d:10, aria:'A circle with its radius labeled 5 cm',
+        { kind:'misconceptionA', d:10, aria:'A circle (no numbers marked)',
           stem:'The teacher says "use a compass to draw a circle with a diameter of 10 cm." How wide should the compass be opened?',
           opts:['15','10','20','5'], ans:3,
           why:'The compass opens to the radius, not the diameter. Radius = diameter ÷ 2 = 10 ÷ 2 = 5 cm.' },
-        { kind:'misconceptionB', shortR:3, aria:'A circle with a shorter segment through the center and a longer segment not through the center',
-          stem:'This circle has two segments: a shorter one that passes through the center, and a longer one that does not. Which one is the diameter?',
-          opts:['Both','The longer one, not through the center','The shorter one, through the center','Neither'], ans:2,
-          why:'What makes a diameter isn’t its length — it’s whether it passes through the center. The one through the center is the diameter, even though it looks shorter.' }
+        { kind:'misconceptionB', shortR:3, aria:'A circle with two segments: the blue one passes through the center but its ends do not reach the circle; the red one has both ends on the circle but misses the center',
+          stem:'This circle has two segments: the blue one passes through the center, but its ends don’t reach the circle; the red one has both ends on the circle, but doesn’t pass through the center. Which one is the diameter?',
+          opts:['Neither','The red one','The blue one','Both'], ans:0,
+          why:'A diameter has to do two things at once: pass through the center AND have both ends on the circle. The blue one doesn’t reach the circle and the red one misses the center, so neither is a diameter.' }
       ],
-      s7h2:'Compass Challenge', s7lead:'Look carefully at the numbers in the picture — the faster you answer, the more points you score!',
+      s7h2:'Compass Challenge', s7lead:'Five rounds, five ways to play: find the points, sort, build a diameter, open the compass, stack a target. A wrong move only costs a few points — try again any time!',
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
-      gAskRToD:function(r){ return 'This circle has a radius of ' + r + ' cm. What is its diameter?'; },
-      gAskDToR:function(d){ return 'This circle has a diameter of ' + d + ' cm. What is its radius?'; },
-      gAskWhich:'Which segment is the diameter of this circle?',
-      gSegOpt:function(letter){ return 'Segment ' + letter; },
-      gHintBtn:'💡 Hint',
-      gHint1RtoD:'Hint 1: diameter = radius × 2.',
-      gHint1DtoR:'Hint 1: radius = diameter ÷ 2.',
-      gHint1Which:'Hint 1: a diameter must pass through the center — length doesn’t matter.',
-      gHint2:function(v){ return 'Hint 2: the answer is ' + v + '.'; },
-      gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst:function(v){ return 'Correct on the first try! The answer is ' + v + ' — +20 points!'; },
-      gCorrectRetry:function(v){ return 'Correct! The answer is ' + v + ' — +10 points.'; },
-      gWrong:function(v){ return v + ' isn’t right — try again. −5 points.'; },
-      gClear:'Press “Next round” to try the next one.',
+      gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Restart',
+      gAsks:{
+        points:'Measure with the string: tap every point that is exactly one string-length from the center O. Tap (or drag) on an empty spot and the string swings there.',
+        sort:'Put each card in the right box: is the line a radius, a diameter, or neither?',
+        join:'Build this circle’s diameter from two sticks: one on the left half, one on the right half, meeting at the center.',
+        compass:'Drag the compass’s pencil leg along the ruler to the right opening (or tap the pencil, then tap the ruler), then press “Draw”.',
+        target:'Make a target of concentric circles: each card gives a diameter — put it on the ring with the matching radius (read the ruler).'
+      },
+      gHints:{
+        points:'Hint 1: every point on a circle is the same distance from the center — exactly one string-length. Swing the string over and compare.',
+        sort:'Hint 1: a radius goes from the center to the circle; a diameter passes through the center with both ends on the circle. Anything else goes in “Neither”.',
+        join:'Hint 1: a diameter is two opposite radii joined in one straight line at the center — each half is as long as the radius.',
+        compass:'Hint 1: a compass opens to the radius, not the diameter.',
+        target:'Hint 1: the cards give diameters; radius = diameter ÷ 2.'
+      },
+      gPts:function(p){ return '+' + p + ' points'; },
+      gMinus:'−5 points',
+      gClear:'Press “Next round” to go on.',
       gWin:function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gPtString:function(r){ return 'String: ' + r + ' cm'; },
+      gPtAria:'a point',
+      gPtNow:function(f, n){ return 'Found ' + f + ' / ' + n + ' points on the circle'; },
+      gPtIn:function(c, r){ return 'This point is ' + c + ' cm from the center — shorter than the string (' + r + ' cm), so it is inside the circle, not on it.'; },
+      gPtOut:function(c, r){ return 'This point is ' + c + ' cm from the center — longer than the string (' + r + ' cm), so it is outside the circle, not on it.'; },
+      gPtDone:function(n, r){ return 'All ' + n + ' points are ' + r + ' cm from the center — they all lie on the circle with radius ' + r + ' cm!'; },
+      gPt2:function(left){ return 'Hint 2: ' + left + ' still to find — the blinking point is on the circle.'; },
+      gSortBins:{ r:'Radius', d:'Diameter', n:'Neither' },
+      gSortCard:'a circle card with one line on it',
+      gSortNow:function(s, n){ return 'Sorted ' + s + ' / ' + n + ' cards'; },
+      gSortNo:{
+        rad:{ d:'This line only goes from the center to the circle — half a diameter. It is a radius.', n:'This line joins the center to a point on the circle — that is a radius.' },
+        dia:{ r:'This line passes through the center with both ends on the circle — it is a diameter (two opposite radii in one straight line).', n:'This line passes through the center with both ends on the circle — it is a diameter.' },
+        chord:{ r:'This line does not start at the center, so it is not a radius.', d:'Both ends are on the circle, but it does not pass through the center — not a diameter.' },
+        half:{ r:'It starts at the center, but its other end does not reach the circle — a radius goes all the way to the circle.', d:'One end is at the center and the other does not reach the circle — a diameter passes through the center with both ends on the circle.' },
+        thru:{ r:'It crosses the center, but neither end reaches the circle — a radius goes from the center to the circle.', d:'It passes through the center, but neither end reaches the circle — a diameter’s ends are on the circle.' }
+      },
+      gSortDone:'All sorted: a radius goes from the center to the circle; a diameter passes through the center with both ends on the circle.',
+      gSort2:function(bin){ return 'Hint 2: the blinking card goes in “' + bin + '”.'; },
+      gJoinR:function(r){ return 'radius ' + r + ' cm'; },
+      gJoinStick:function(n){ return n + ' cm'; },
+      gJoinNow:function(placed, r){ return placed === 0 ? 'Diameter = ? + ?' : (placed === 1 ? 'Diameter = ' + r + ' + ?' : 'Diameter = ' + r + ' + ' + r + ' = ' + (r * 2) + ' cm'); },
+      gJoinShort:function(n, r){ return 'This stick is ' + n + ' cm, shorter than the radius (' + r + ' cm): one end at the center, the other cannot reach the circle.'; },
+      gJoinLong:function(n, r){ return 'This stick is ' + n + ' cm, longer than the radius (' + r + ' cm): one end at the center, the other sticks out past the circle.'; },
+      gJoinDone:function(r){ return 'Diameter = ' + r + ' + ' + r + ' = ' + r + ' × 2 = ' + (r * 2) + ' cm: a diameter is two opposite radii joined in one straight line at the center, so it always passes through the center.'; },
+      gJoin2:function(r){ return 'Hint 2: put a ' + r + ' cm stick on each half (as long as the radius).'; },
+      gCmpGoal:function(D){ return 'Draw: diameter ' + D + ' cm'; },
+      gCmpNow:function(k){ return 'Compass open ' + k + ' cm'; },
+      gCmpUnit:'cm',
+      gCmpPen:'the compass pencil',
+      gCmpBtn:'✏️ Draw',
+      gCmpFirst:'First open the compass: drag the pencil leg.',
+      gCmpIsD:function(D){ return 'Opening ' + D + ' cm uses the diameter. A compass opens to the radius — this circle’s diameter is ' + D + ' × 2 = ' + (D * 2) + ' cm, far too big.'; },
+      gCmpWrong:function(k, D){ return 'Opened ' + k + ' cm, the circle’s diameter is ' + k + ' × 2 = ' + (k * 2) + ' cm — ' + (k * 2 > D ? 'bigger' : 'smaller') + ' than ' + D + ' cm.'; },
+      gCmpDone:function(r, D){ return 'Opening ' + r + ' cm is the radius: the circle’s diameter is ' + r + ' × 2 = ' + D + ' cm.'; },
+      gCmp2:function(D, r){ return 'Hint 2: radius = ' + D + ' ÷ 2 = ' + r + ' cm — drag the pencil to ' + r + ' on the ruler.'; },
+      gTgtCardTop:'diameter',
+      gTgtCardNum:function(dd){ return dd + ' cm'; },
+      gTgtNow:function(p, n){ return 'Placed ' + p + ' / ' + n + ' rings'; },
+      gTgtNo:function(dd, R){ return 'A circle with diameter ' + dd + ' cm has radius ' + dd + ' ÷ 2 = ' + (dd / 2) + ' cm, not ' + R + ' cm.'; },
+      gTgtDone:function(rs){ return 'All three circles share the center O, with different radii ' + rs.join(', ') + ' cm — concentric circles, just like a target!'; },
+      gTgt2:function(R){ return 'Hint 2: for the ring at ' + R + ' on the ruler, find the card with diameter ' + R + ' × 2 = ' + (R * 2) + ' cm.'; },
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
@@ -782,6 +1007,13 @@
       footer:'The whole page in one line: <strong>every point on a circle is the same distance from the center — a diameter is twice the radius, and a compass opens to the radius.</strong>'
     }
   };
+
+  /* ================= 語言 / 模式狀態（放在 I18N 後面：tools/verify_lesson_data.js 以 I18N 到這一行為字典的範圍） ================= */
+  var lang = 'zh';
+  try { if (localStorage.getItem('teachme-lang') === 'en') lang = 'en'; } catch(e){}
+
+  var mode = 'school';
+  try { var m0 = localStorage.getItem('teachme-mode'); if (m0 === 'ahead' || m0 === 'boost') mode = m0; } catch(e){}
 
   var lang2 = lang; // keep readable alias
   function L(){ return I18N[lang2]; }
@@ -1141,7 +1373,10 @@
       return circleFig({ circles: [{ r: q.d / 2, color: '#E8871E', width: 2 }], showCenter: true, centerLabel: 'O', aria: q.aria });
     }
     if (q.kind === 'misconceptionB'){
-      var longA = [ -70, 40 ]; // difference 110, not 180 -> not a diameter, drawn longer visually via bigger r
+      /* 藍色：通過圓心、兩端只到半徑 shortR（碰不到半徑 6 的圓）；紅色：圓上兩點、相差 110°（是弦，不經過圓心）。
+         ⚠️ 舊版問「比較短但通過圓心的才是直徑」—— 藍色那條兩端根本不在圓上，照範例 2 的定義它不是直徑；
+         而且同一個圓裡，弦不可能比直徑長，「比較長、沒通過圓心」的那條本來就不存在。 */
+      var longA = [ -70, 40 ];
       return circleFig({ circles: [{ r: 6, color: '#E8871E', width: 2 }],
         segs: [
           { a1: 0, a2: 180, r: q.shortR, color: '#3B7DD8', width: 4, label: null },
@@ -1220,170 +1455,522 @@
     });
   }
 
-  /* ---------- 7. 小遊戲：圓規挑戰 ---------- */
-  var ROUNDS = [
-    { type: 'rToD', r: 3, d: 6, choices: [6, 3, 12, 9] },
-    { type: 'dToR', d: 14, r: 7, choices: [7, 14, 28, 21] },
-    { type: 'which', r: 4, a1: 0, a2: 180, b1: 55, b2: 160, correctLetter: 'A' },
-    { type: 'rToD', r: 8, d: 16, choices: [16, 8, 4, 24] },
-    { type: 'dToR', d: 20, r: 10, choices: [10, 20, 5, 15] }
-  ];
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 小遊戲：圓規挑戰（五關五種玩法，§六之五） ===================== */
+  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gPicWrap = document.getElementById('gPicWrap');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
-  var gAskLine = document.getElementById('gAskLine');
-  var hintLevel = 0;
+  var GAME_ORDER = ['points', 'sort', 'join', 'compass', 'target'];
 
-  function roundAskText(round){
-    var d = L();
-    if (round.type === 'rToD') return d.gAskRToD(round.r);
-    if (round.type === 'dToR') return d.gAskDToR(round.d);
-    return d.gAskWhich;
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，任何地方的 pointerup／pointercancel
+     傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 畫板上的線條（見 .gsvg 的說明：不給 viewBox） */
+  function addSvg(B){
+    var s = document.createElementNS(SVGNS, 'svg');
+    s.setAttribute('class', 'gsvg'); s.setAttribute('width', B.W); s.setAttribute('height', B.H);
+    s.setAttribute('aria-hidden', 'true');
+    B.el.appendChild(s);
+    return s;
+  }
+  function sv(parent, tag, attrs, text){
+    var el = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    if (text !== undefined) el.textContent = text;
+    parent.appendChild(el);
+    return el;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫板下面的一排按鈕（張圓規的「畫圓」） */
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, onClick){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn'; b.textContent = text;
+    b.addEventListener('click', onClick);
+    row.appendChild(b);
+    return b;
   }
 
-  function roundHint1(round){
-    var d = L();
-    if (round.type === 'rToD') return d.gHint1RtoD;
-    if (round.type === 'dToR') return d.gHint1DtoR;
-    return d.gHint1Which;
-  }
-
-  function roundAnswerValue(round){
-    if (round.type === 'rToD') return round.d;
-    if (round.type === 'dToR') return round.r;
-    return round.correctLetter;
-  }
-
-  function roundPic(round){
-    var d = L();
-    if (round.type === 'rToD'){
-      return circleFig({ circles: [{ r: round.r, color: '#E8871E', width: 2 }],
-        segs: [{ a1: 30, a2: null, r: round.r, color: '#2F9E69', width: 4, label: d.unit(round.r), dy: -10 }],
-        showCenter: true, centerLabel: 'O' });
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ----
+     o.axis === 'x'：只能左右拖（圓規的筆尖沿著尺）。o.onPlace：每次位置改變都呼叫（圓規的兩隻腳跟著畫）。 */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.html !== undefined) el.innerHTML = o.html;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+      if (o.onPlace) o.onPlace(P);
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
     }
-    if (round.type === 'dToR'){
-      var r = round.d / 2;
-      return circleFig({ circles: [{ r: r, color: '#E8871E', width: 2 }],
-        segs: [{ a1: 20, a2: 200, r: r, color: '#E8871E', width: 4, label: d.unit(round.d), dy: -10 }],
-        showCenter: true, centerLabel: 'O' });
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      /* 「有沒有在拖」看手指真的走了多遠（兩個方向都算）；只能左右拖的那一塊，放的位置才只用 dx */
+      if (!moved && dx * dx + dy * dy > 36){
+        moved = true; el.classList.add('dragging');
+        /* 拖起另一塊時，先前「點一下選起來」的那一塊取消選取 —— 不然之後點目的地會把它放出去 */
+        if (B.selected && B.selected !== P){ B.selected.el.classList.remove('sel'); B.selected = null; }
+      }
+      if (!moved) return;
+      P.place(orig.x + dx, o.axis === 'x' ? orig.y : orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的積木一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
     }
-    return circleFig({ circles: [{ r: round.r, color: '#E8871E', width: 2 }],
-      segs: [
-        { a1: round.a1, a2: round.a2, r: round.r, color: '#3B7DD8', width: 4, label: 'A', dy: -10 },
-        { a1: round.b1, a2: round.b2, r: round.r, color: '#D64545', width: 4, label: 'B', dy: -10 }
-      ], showCenter: true, centerLabel: 'O' });
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（grade-3 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+  /* 同心圓的圈：放下去的點離圓心 o 的距離，和哪一圈的半徑（px）最接近；差超過 band 就哪一圈都不是。
+     最近的那一圈已經放好了就不收（不可以跳過它、改放進隔壁那一圈）。 */
+  function nearestRing(rings, o, pt, band){
+    var dist = Math.sqrt((pt.x - o.x) * (pt.x - o.x) + (pt.y - o.y) * (pt.y - o.y));
+    var best = null, bd = Infinity;
+    rings.forEach(function(g){
+      var gap = Math.abs(dist - g.rp);
+      if (gap <= band && gap < bd){ bd = gap; best = g; }
+    });
+    return best && !best.done ? best : null;
+  }
+  /* 托盤：卡片／棍子一律洗牌後排好（正解不可以固定在同一個位置） */
+  function renderTray(B, items, mk, xy){
+    shuffle(items).forEach(function(it, i){ var p = xy(i); mk(it, p.x, p.y); });
+  }
+  /* 第二層提示的「閃一閃」：一次只閃一個 */
+  function blink(el){
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.gblink'), function(x){ x.classList.remove('gblink'); });
+    if (el) el.classList.add('gblink');
   }
 
-  function roundChoices(round){
-    var d = L();
-    if (round.type === 'which') return [d.gSegOpt('A'), d.gSegOpt('B')];
-    return round.choices.map(String);
+  /* 計分（中年級：輕度計分，答錯小扣分但不會結束 —— §三）：這一關沒犯錯 +20、犯過錯 +10；
+     每一次「放錯並說明為什麼」−5（最低 0 分）。放到空白處只是手滑，不扣分。 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    blink(null);
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「−5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
   }
 
-  /* 遊戲選項每回合重新洗牌，正確答案不固定在第一個 */
-  function shuffle(arr){
-    var a = arr.slice();
-    for (var j = a.length - 1; j > 0; j--){
-      var k = Math.floor(Math.random() * (j + 1));
-      var t = a[j]; a[j] = a[k]; a[k] = t;
+  var RENDER = {
+    /* 第 1 關：找點 —— 圓心 O、一條 r 公分的繩子；點出所有離 O 剛好 r 公分的點（範例 1：圓上每一點到圓心都一樣遠）。
+       圓不畫：要靠繩子比。點在空白的地方（或在那裡拖），繩子就轉過去 —— 不算錯。點到離 O r ± 1 公分的點 → 說它在圓裡面／外面。 */
+    points: function(d){
+      var e = pick(GAME_POINTS), O = PT_O, n = e.on.length, found = 0, rp = e.r * PT_PX;
+      var line = trailLine(d.gPtNow(0, n));
+      var B = makeBoard(GW, PT_H), svg = addSvg(B);
+      addZone(B, PT_LBL.x, PT_LBL.y, PT_LBL.w, PT_LBL.h, 'glbl gfact', d.gPtString(e.r));
+      var ring = sv(svg, 'circle', { cx:O.x, cy:O.y, r:rp, fill:'none', stroke:'#2F9E69', 'stroke-width':3, opacity:0 });
+      var str = sv(svg, 'line', { x1:O.x, y1:O.y, x2:O.x, y2:O.y, stroke:'#E8871E', 'stroke-width':4, 'stroke-linecap':'round' });
+      var knob = sv(svg, 'circle', { cx:O.x, cy:O.y, r:6, fill:'#E8871E' });
+      sv(svg, 'circle', { cx:O.x, cy:O.y, r:5, fill:'#2B2A33' });
+      sv(svg, 'text', { x:O.x - 9, y:O.y + 20, 'font-size':15, 'font-weight':700, fill:'#2B2A33', 'text-anchor':'middle' }, 'O');
+      function aim(deg){
+        var t = deg * Math.PI / 180, x = O.x + rp * Math.cos(t), y = O.y - rp * Math.sin(t);
+        str.setAttribute('x2', x); str.setAttribute('y2', y); knob.setAttribute('cx', x); knob.setAttribute('cy', y);
+      }
+      function aimAt(p){ if (p.x !== O.x || p.y !== O.y) aim(Math.atan2(O.y - p.y, p.x - O.x) * 180 / Math.PI); }
+      aim(e.str);
+      var pts = [];
+      [['on', 0], ['inn', -1], ['out', 1]].forEach(function(g){
+        e[g[0]].forEach(function(a){ pts.push({ a:a, rc:e.r + g[1], on:g[1] === 0 }); });
+      });
+      pts.forEach(function(p){
+        var c = ptXY(p.rc, p.a);
+        p.el = addZone(B, c.x - PT_TAP / 2, c.y - PT_TAP / 2, PT_TAP, PT_TAP, 'gpt');
+        p.el.appendChild(document.createElement('i'));
+        p.el.setAttribute('role', 'button'); p.el.setAttribute('aria-label', d.gPtAria);
+        p.el.addEventListener('click', function(){
+          if (gSolved || p.found) return;
+          if (p.on){
+            p.found = true; found++;
+            p.el.classList.add('gyes'); aim(p.a);
+            line.textContent = d.gPtNow(found, n);
+            if (found === n){ ring.setAttribute('opacity', 1); roundSolved(d.gPtDone(n, e.r)); }
+            else { gMsg.textContent = ''; refreshHint(); }
+            return;
+          }
+          if (p.bad) return;   /* 已經說過它不在圓上（點旁邊打了 ✗）：再點一次不重複扣分 */
+          p.bad = true;
+          p.el.classList.add('gno'); p.el.textContent = '✗';
+          aim(p.a);
+          roundMiss(p.rc < e.r ? d.gPtIn(p.rc, e.r) : d.gPtOut(p.rc, e.r));
+        });
+      });
+      /* 在空白的地方點一下或拖：繩子轉過去（只跟著第一根手指；放開、取消、capture 遺失都結束） */
+      var spin = null;
+      function spinEnd(ev){ if (spin !== null && ev.pointerId === spin) spin = null; }
+      B.el.addEventListener('pointerdown', function(ev){
+        if (spin !== null || gSolved || (ev.target.closest && ev.target.closest('.gpt'))) return;
+        spin = ev.pointerId;
+        try { B.el.setPointerCapture(ev.pointerId); } catch(err){}
+        aimAt(B.toBoard(ev));
+      });
+      B.el.addEventListener('pointermove', function(ev){ if (spin !== null && ev.pointerId === spin && !gSolved) aimAt(B.toBoard(ev)); });
+      B.el.addEventListener('pointerup', spinEnd);
+      B.el.addEventListener('pointercancel', spinEnd);
+      B.el.addEventListener('lostpointercapture', spinEnd);
+      gCtx.hint2 = function(){ return d.gPt2(n - found); };
+      gCtx.blink = function(){ var p = pts.filter(function(q){ return q.on && !q.found; })[0]; blink(p ? p.el : null); };
+    },
+
+    /* 第 2 關：分一分 —— 六張卡拖進「半徑／直徑／都不是」三個箱子（範例 2＋3）。
+       放錯的箱子 → 彈回＋說這條線為什麼不是（半徑要從圓心連到圓上；直徑要通過圓心、兩端都在圓上）。 */
+    sort: function(d){
+      var kinds = ['rad', 'rad', 'dia', 'dia'].concat(shuffle(SORT_NONE).slice(0, 2)), angs = shuffle(SORT_ANG);
+      var n = kinds.length, sorted = 0, SB = SORT_BIN, cards = [];
+      var line = trailLine(d.gSortNow(0, n));
+      var B = makeBoard(GW, SORT_H);
+      var bins = SORT_BINS.map(function(key, i){
+        var cx = sortBinX(i), z = addZone(B, cx - SB.w / 2, SB.y, SB.w, SB.h, 'gbin');
+        var t = document.createElement('span'); t.className = 'gbl'; t.textContent = d.gSortBins[key]; z.appendChild(t);
+        return { key:key, i:i, n:0, cx:cx, cy:SB.y + SB.h / 2, hw:SB.w / 2, hh:SB.h / 2, done:false };
+      });
+      function cardSvg(it){
+        var s = sortSeg(it.kind, it.ang, it.gap), c = (SORT_CARD - 6) / 2, w = SORT_CARD - 6;
+        return '<svg width="' + w + '" height="' + w + '" aria-hidden="true">' +
+          '<circle cx="' + c + '" cy="' + c + '" r="' + SORT_R + '" fill="none" stroke="#E8871E" stroke-width="2"/>' +
+          '<line x1="' + s.x1.toFixed(1) + '" y1="' + s.y1.toFixed(1) + '" x2="' + s.x2.toFixed(1) + '" y2="' + s.y2.toFixed(1) +
+          '" stroke="#3B7DD8" stroke-width="3" stroke-linecap="round"/>' +
+          '<circle cx="' + c + '" cy="' + c + '" r="2.6" fill="#2B2A33"/></svg>';
+      }
+      renderTray(B, kinds.map(function(k, i){ return { kind:k, ang:angs[i], gap:pick(SORT_GAP) }; }), function(it, x, y){
+        cards.push(addPiece(B, { w:SORT_CARD, h:SORT_CARD, cx:x, cy:y, html:cardSvg(it), cls:'gcardc', label:d.gSortCard, data:it }));
+      }, sortTrayXY);
+      gCtx.hint2 = function(){ var c = cards.filter(function(P){ return !P.locked; })[0]; return c ? d.gSort2(d.gSortBins[SORT_BIN_OF[c.data.kind]]) : ''; };
+      gCtx.blink = function(){ var c = cards.filter(function(P){ return !P.locked; })[0]; blink(c ? c.el : null); };
+      useTapSelect(B, function(P, pt){
+        var bin = nearestOpen(bins, pt, SORT_PAD);
+        if (!bin) return false;
+        var want = SORT_BIN_OF[P.data.kind];
+        if (bin.key !== want){ roundMiss(d.gSortNo[P.data.kind][bin.key]); return false; }
+        var s = sortSlotXY(bin.i, bin.n);
+        bin.n++; sorted++;
+        P.lock(s.x, s.y); P.el.classList.add('placed'); P.el.classList.remove('gblink');
+        line.textContent = d.gSortNow(sorted, n);
+        if (sorted === n) roundSolved(d.gSortDone);
+        else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 3 關：拼直徑 —— 圓的半徑 r 公分；四根棍子 r、r、r − 1、r + 1 公分。
+       左右兩個半邊各放一根，交接處就是圓心（範例 3：直徑 ＝ 兩條方向相反、接成一直線的半徑 ＝ 半徑 × 2）。
+       太短 → 碰不到圓；太長 → 伸出圓外。兩根都放好才寫出 r ＋ r ＝ r × 2。 */
+    join: function(d){
+      var r = pick(GAME_JOIN), O = JOIN_O, rp = r * JOIN_PX, placed = 0;
+      var line = trailLine(d.gJoinNow(0, r));
+      var B = makeBoard(GW, JOIN_H), svg = addSvg(B);
+      sv(svg, 'circle', { cx:O.x, cy:O.y, r:rp, fill:'none', stroke:'#E8871E', 'stroke-width':3 });
+      sv(svg, 'line', { x1:O.x - rp, y1:O.y, x2:O.x + rp, y2:O.y, stroke:'#B9AE95', 'stroke-width':2, 'stroke-dasharray':'6,5' });
+      [O.x - rp, O.x, O.x + rp].forEach(function(x){ sv(svg, 'line', { x1:x, y1:O.y - 9, x2:x, y2:O.y + 9, stroke:'#B9AE95', 'stroke-width':2 }); });
+      sv(svg, 'line', { x1:O.x, y1:O.y, x2:O.x, y2:O.y - rp, stroke:'#2F9E69', 'stroke-width':4, 'stroke-linecap':'round' });
+      /* 半徑的字放在半徑外端的上面（圓的外面）：放在半徑旁邊會壓到圓周 */
+      sv(svg, 'text', { x:O.x, y:O.y - rp - 8, 'font-size':15, 'font-weight':800, fill:'#2F9E69', 'text-anchor':'middle' }, d.gJoinR(r));
+      sv(svg, 'circle', { cx:O.x, cy:O.y, r:5, fill:'#2B2A33' });
+      sv(svg, 'text', { x:O.x - 12, y:O.y + 24, 'font-size':15, 'font-weight':700, fill:'#2B2A33', 'text-anchor':'middle' }, 'O');
+      var slots = joinSlots(r).map(function(s){ s.done = false; return s; });
+      renderTray(B, joinSticks(r), function(Lc, x, y){
+        addPiece(B, { w:joinStickW(Lc), h:JOIN_STICK_H, cx:x, cy:y, cls:'gstick', label:d.gJoinStick(Lc), data:{ L:Lc },
+                      html:'<span>' + d.gJoinStick(Lc) + '</span><i style="width:' + (Lc * JOIN_PX) + 'px"></i>' });
+      }, joinTrayXY);
+      gCtx.hint2 = function(){ return d.gJoin2(r); };
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, JOIN_PAD);
+        if (!s) return false;
+        var Lc = P.data.L;
+        if (Lc < r){ roundMiss(d.gJoinShort(Lc, r)); return false; }
+        if (Lc > r){ roundMiss(d.gJoinLong(Lc, r)); return false; }
+        s.done = true; placed++;
+        /* 放好時讓「條」落在虛線上：條在棍子中心點下面 JOIN_BAR_DY（上面 16px 是字、隔 6px 才是條，見 .gstick） */
+        P.lock(s.cx, O.y - JOIN_BAR_DY); P.el.classList.add('placed');
+        line.textContent = d.gJoinNow(placed, r);
+        if (placed === 2){
+          sv(svg, 'circle', { cx:O.x, cy:O.y, r:6, fill:'#2B2A33' });
+          roundSolved(d.gJoinDone(r));
+        } else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 4 關：張圓規 —— 老師要直徑 D 公分的圓；筆尖那一腳沿著尺左右拖（或點筆尖、再點尺），按「畫圓」（範例 4）。
+       張開 r ＝ D ÷ 2 才對；張開 D（把直徑當成張開的距離）或別的長度 → 畫出那個圓、說它的直徑是幾公分。
+       還沒動過圓規就按「畫圓」只提醒、不算錯。 */
+    compass: function(d){
+      var D = pick(GAME_COMPASS), r = D / 2, k = CMP_START, moved = false, O = CMP_O;
+      var line = trailLine(d.gCmpNow(k));
+      var B = makeBoard(GW, CMP_H), svg = addSvg(B);
+      addZone(B, CMP_GOAL.x, CMP_GOAL.y, CMP_GOAL.w, CMP_GOAL.h, 'glbl gfact', d.gCmpGoal(D));
+      var drawn = sv(svg, 'g', {});
+      var RU = CMP_RULER, x0 = O.x - 8, x1 = cmpTipX(CMP_MAX) + 8;
+      sv(svg, 'rect', { x:x0, y:RU.y, width:x1 - x0, height:RU.h, rx:4, fill:'#FFF6DE', stroke:'#C9BFA9', 'stroke-width':1.5 });
+      for (var t = 0; t <= CMP_MAX; t++){
+        sv(svg, 'line', { x1:cmpTipX(t), y1:RU.y, x2:cmpTipX(t), y2:RU.y + 8, stroke:'#6B6875', 'stroke-width':1.5 });
+        sv(svg, 'text', { x:cmpTipX(t), y:RU.y + 23, 'font-size':12, 'font-weight':700, fill:'#2B2A33', 'text-anchor':'middle' }, String(t));
+      }
+      sv(svg, 'text', { x:x1 - 2, y:RU.y + RU.h + 14, 'font-size':12, fill:'#6B6875', 'text-anchor':'end' }, d.gCmpUnit);
+      var hingeY = O.y - CMP_HINGE;
+      var needle = sv(svg, 'line', { x1:O.x, y1:hingeY, x2:O.x, y2:O.y, stroke:'#6B6875', 'stroke-width':4, 'stroke-linecap':'round' });
+      var leg = sv(svg, 'line', { x1:O.x, y1:hingeY, x2:O.x, y2:O.y, stroke:'#3B7DD8', 'stroke-width':4, 'stroke-linecap':'round' });
+      var hinge = sv(svg, 'circle', { cx:O.x, cy:hingeY, r:6, fill:'#6B6875' });
+      sv(svg, 'circle', { cx:O.x, cy:O.y, r:4, fill:'#2B2A33' });
+      sv(svg, 'text', { x:O.x - 12, y:O.y - 4, 'font-size':15, 'font-weight':700, fill:'#2B2A33', 'text-anchor':'middle' }, 'O');
+      function legs(P){
+        var hx = (O.x + P.cx) / 2;
+        needle.setAttribute('x1', hx); leg.setAttribute('x1', hx); hinge.setAttribute('cx', hx);
+        leg.setAttribute('x2', P.cx);
+      }
+      var pen = addPiece(B, { w:GPICK, h:GPICK, cx:cmpTipX(k), cy:O.y + CMP_PEN_DY, text:'✏️', cls:'gtoken', label:d.gCmpPen, axis:'x', onPlace:legs });
+      function drawCircle(kk, good){
+        drawn.textContent = '';
+        sv(drawn, 'circle', { cx:O.x, cy:O.y, r:kk * CMP_PX, fill:'none', stroke:good ? '#2F9E69' : '#D64545', 'stroke-width':3, 'stroke-dasharray':good ? '' : '7,5' });
+        /* 畫對了：把直徑也畫出來 —— 一定經過圓心（針腳那一點），兩端在圓上；長度寫在訊息裡 */
+        if (good) sv(drawn, 'line', { x1:O.x - kk * CMP_PX, y1:O.y, x2:O.x + kk * CMP_PX, y2:O.y, stroke:'#2F9E69', 'stroke-width':3, 'stroke-dasharray':'5,4' });
+      }
+      var row = actionRow();
+      var draw = actionBtn(row, d.gCmpBtn, function(){
+        if (gSolved || pen.busy()) return;   /* 另一根手指還拿著筆尖：先放開再畫 */
+        if (!moved){ gMsg.textContent = d.gCmpFirst; return; }
+        if (k === r){
+          drawCircle(k, true);
+          pen.lock(pen.homeX, pen.homeY); draw.disabled = true;
+          roundSolved(d.gCmpDone(r, D));
+          return;
+        }
+        drawCircle(k, false);
+        roundMiss(k === D ? d.gCmpIsD(D) : d.gCmpWrong(k, D));
+      });
+      gCtx.hint2 = function(){ return d.gCmp2(D, r); };
+      useTapSelect(B, function(P, pt){
+        if (pt.tap && Math.abs(pt.y - O.y) > CMP_TAPY) return false;   /* 點得離尺太遠：不算數 */
+        var nk = Math.round((pt.x - O.x) / CMP_PX);
+        if (nk < 1 || nk > CMP_MAX) return false;
+        k = nk; moved = true;
+        P.homeX = cmpTipX(k); P.home();
+        drawn.textContent = '';
+        line.textContent = d.gCmpNow(k);
+        gMsg.textContent = '';
+        return true;
+      });
+    },
+
+    /* 第 5 關：疊標靶 —— 三個同心的虛線圈（半徑從圓心往右的尺上讀）；卡片寫的是直徑，放到半徑對的那一圈（範例 5＋3）。
+       放到半徑不對的圈 → 彈回＋算給他看「直徑 d 的圓，半徑是 d ÷ 2」。多一張卡（decoy）哪一圈都不是，用不到。 */
+    target: function(d){
+      var e = pick(GAME_TARGET), O = TGT_O, placed = 0;
+      var rings = e.rs.map(function(R){ return { R:R, rp:R * TGT_PX, done:false }; });
+      var line = trailLine(d.gTgtNow(0, rings.length));
+      var B = makeBoard(GW, TGT_H), svg = addSvg(B);
+      rings.forEach(function(g){ g.el = sv(svg, 'circle', { cx:O.x, cy:O.y, r:g.rp, fill:'none', stroke:'#B9AE95', 'stroke-width':2.5, 'stroke-dasharray':'6,5' }); });
+      sv(svg, 'line', { x1:O.x, y1:O.y, x2:O.x + TGT_RULER * TGT_PX, y2:O.y, stroke:'#6B6875', 'stroke-width':1.5 });
+      for (var t = 0; t <= TGT_RULER; t++){
+        var tx = O.x + t * TGT_PX;
+        sv(svg, 'line', { x1:tx, y1:O.y, x2:tx, y2:O.y + 6, stroke:'#6B6875', 'stroke-width':1.5 });
+        if (t > 0){
+          sv(svg, 'rect', { x:tx - 5.5, y:O.y + 8, width:11, height:13, rx:2, fill:'#FAF7F0' });
+          sv(svg, 'text', { x:tx, y:O.y + 19, 'font-size':11, 'font-weight':700, fill:'#2B2A33', 'text-anchor':'middle' }, String(t));
+        }
+      }
+      sv(svg, 'text', { x:O.x + TGT_RULER * TGT_PX + 6, y:O.y + 19, 'font-size':12, fill:'#6B6875' }, d.gCmpUnit);
+      sv(svg, 'circle', { cx:O.x, cy:O.y, r:4, fill:'#2B2A33' });
+      sv(svg, 'text', { x:O.x - 10, y:O.y - 6, 'font-size':14, 'font-weight':700, fill:'#2B2A33', 'text-anchor':'middle' }, 'O');
+      renderTray(B, e.rs.map(function(R){ return R * 2; }).concat([e.decoy]), function(dd, x, y){
+        addPiece(B, { w:TGT_CARD.w, h:TGT_CARD.h, cx:x, cy:y, cls:'gtcard', label:d.gTgtCardTop + ' ' + d.gTgtCardNum(dd), data:{ d:dd },
+                      html:'<span>' + d.gTgtCardTop + '</span><b>' + d.gTgtCardNum(dd) + '</b>' });
+      }, tgtTrayXY);
+      function open(){ return rings.filter(function(g){ return !g.done; })[0]; }
+      gCtx.hint2 = function(){ var g = open(); return g ? d.gTgt2(g.R) : ''; };
+      useTapSelect(B, function(P, pt){
+        var g = nearestRing(rings, O, pt, TGT_BAND);
+        if (!g) return false;
+        if (P.data.d !== g.R * 2){ roundMiss(d.gTgtNo(P.data.d, g.R)); return false; }
+        g.done = true; placed++;
+        g.el.setAttribute('stroke', '#2F9E69'); g.el.setAttribute('stroke-dasharray', ''); g.el.setAttribute('stroke-width', 4);
+        P.lock(P.homeX, P.homeY); P.el.classList.add('gone');
+        line.textContent = d.gTgtNow(placed, rings.length);
+        if (placed === rings.length) roundSolved(d.gTgtDone(e.rs));
+        else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      });
     }
-    return a;
-  }
+  };
 
   function startRound(){
-    var round = ROUNDS[gRound];
     var d = L();
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {};
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
     elHint.textContent = '';
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = roundHint1(round);
-    }
-
-    gAskLine.textContent = '';
-    var askSpan = document.createElement('span');
-    askSpan.textContent = roundAskText(round);
-    gAskLine.appendChild(askSpan);
-    gAskLine.appendChild(gHintBtn);
-
-    gPicWrap.innerHTML = roundPic(round);
-
-    var answer = roundAnswerValue(round);
-    gAnswers.textContent = '';
-    var choices = roundChoices(round);
-    shuffle(choices.map(function(c, i){ return i; })).forEach(function(idx){
-      var label = choices[idx];
-      var val = (round.type === 'which') ? (idx === 0 ? 'A' : 'B') : label;
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = label;
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        if (String(val) === String(answer)){
-          var all = gAnswers.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          var showVal = (round.type === 'which') ? d.gSegOpt(answer) : answer;
-          if (gMistake){
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry(showVal) + '</span>';
-          } else {
-            gScore += 20;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst(showVal) + '</span>';
-          }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + d.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gScore = Math.max(0, gScore - 5);
-          gMsg.innerHTML = '<span class="no">' + d.gWrong(label) + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕）；有「閃一閃」的關卡，第二層也讓下一個目標閃 */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
+    if (hintLevel >= 2 && gCtx.blink) gCtx.blink();
   }
+
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
-
   gHintBtn.addEventListener('click', function(){
-    var round = ROUNDS[gRound];
-    var d = L();
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = roundHint1(round);
-    } else {
-      var v = roundAnswerValue(round);
-      var showVal = (round.type === 'which') ? d.gSegOpt(v) : v;
-      elHint.textContent = d.gHint2(showVal);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
