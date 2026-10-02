@@ -137,6 +137,748 @@ const arithLength = require('./lib/arith.js').makeArith({
 
 const { canvasProblems } = require('./lib/canvas.js');
 
+/* ---------- 小遊戲「量長度大挑戰」（§六之五：五關五種玩法，2026-10-02 改版）----------
+   推到 0（一端要對準 0）、數格子（數的是格子不是線）、接成 1 公尺（m 公尺 c 公分換成公分）、剪一刀（剪掉用減的）、
+   排長短（單位不一樣先換成公分）。做法照 grade-2-numbers.js／grade-3-divide.js：
+   - 每一關**照遊戲的規則把每一題玩一遍**（自己的規則實作），證明一定解得完、而且只有對的做法收得進去；
+   - 頁面的純函式（zeroTickX／countTickX／cutX／lenCm／rankWhy）拿整個題庫去呼叫，再和自己的公式比；
+   - nearestOpen()、roundSolved()、roundMiss()、shuffle() 從原始碼切出來**真的跑**；
+   - 每一句說明逐個比數字（兩種語言、每一題、每一種放錯），而且那句話說的事要成立（剪在 x，右邊真的是 s − x）；
+   - 版面與觸控 ≥ 44px 從 index.html 的常數讀（不在這裡另抄一份數字）。
+   已知極限：RENDER 函式本體裡的規則是字面掃描（need()：證明那一行寫著，證明不了它被執行）；拖拉、點選、兩根手指、
+   capture 遺失、畫板不跳動、375px 的實際尺寸由 teaching-workspace/game-harness/g2-length 的端對端測試驗。 */
+const { gameShuffleProblems, extractFunction } = require('./lib/gameshuffle.js');
+
+function gameCheck(D, I18N, fail, src){
+  const LANGS = ['zh', 'en'];
+  const nums = t => (String(t).match(/\d+/g) || []).map(Number);
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+  const seq = (where, text, want) => {
+    if (typeof text !== 'string' || /undefined|NaN|null/.test(text)) return fail(where + ': text has undefined/NaN/null: ' + text);
+    if (nums(text).join() !== want.join()) fail(where + ': numbers should read ' + want.join() + ', got ' + nums(text).join() + ' — ' + text);
+  };
+  const has = (where, text, re) => { if (!re.test(String(text))) fail(where + ': should say ' + re + ' — ' + text); };
+  const box = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w, h });
+  const inside = (o, what, W, H) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail(what + ' is outside the ' + W + '×' + H + ' board (' + JSON.stringify(o) + ')'); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return fail(what + ' ' + i + ' and ' + j + ' overlap'); };
+  const pad = (R, p) => ({ x:R.x - p, y:R.y - p, w:R.w + 2 * p, h:R.h + 2 * p });
+  const W = D.GAME_W;
+  /* 自己的長度表示法（不呼叫頁面的 len()）：{m, c} → 公分 */
+  const cmOf = v => (v.m || 0) * 100 + (v.c || 0);
+
+  /* --- 順序、每一關的題目與提示 --- */
+  const TYPES = ['zero', 'count', 'build', 'cut', 'rank'];
+  if (D.GAME_ORDER.join() !== TYPES.join()) fail('GAME_ORDER should be ' + TYPES.join() + ', got ' + D.GAME_ORDER.join());
+  const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+  const B = {};
+  TYPES.forEach(t => {
+    B[t] = body(t); if (!B[t]) fail('cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      ['gAsks', 'gHints'].forEach(k => { if (!(I18N[L][k] && typeof I18N[L][k][t] === 'string' && I18N[L][k][t].length > 4)) fail(k + '.' + t + ' missing in ' + L); });
+    });
+    if (!/gCtx\.hint2 = function\(\)\{/.test(B[t])) fail(t + ': no second-level hint (gCtx.hint2)');
+    if (/\broundSolved\(/.test(B[t].replace(/\/\*[\s\S]*?\*\//g, '')) !== true) fail(t + ': the round never calls roundSolved()');
+  });
+  const need = (k, re, what) => { if (!re.test(B[k] || '')) fail(k + ': ' + what); };
+  /* 第 2 關沒有拖拉，說明要寫出「這一關用點的」（§六之五第 4 點的例外）；其他四關要寫出「先點、再點」 */
+  if (!/用點的/.test(I18N.zh.gAsks.count) || !/all taps/.test(I18N.en.gAsks.count)) fail('count: the round has no drag — its instructions must say it is all taps');
+  ['zero', 'build', 'cut', 'rank'].forEach(t => {
+    if (!/也可以先點/.test(I18N.zh.gAsks[t]) || !/Or tap/.test(I18N.en.gAsks[t])) fail(t + ': the instructions do not mention the tap-then-tap way');
+  });
+  gameShuffleProblems(src, 1, { roundFn:'renderTray' }).forEach(fail);
+  if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(src)) fail('ahead mode does not show hint level 1 automatically');
+  if (!/if \(hintLevel >= 2\) gHintBtn\.disabled = true;/.test(src)) fail('the hint button is not disabled after the second level');
+  if (!/el\.classList\.remove\('dragging'\);\s*if \(gen !== gGen\) return;(?:\s*\/\*[\s\S]*?\*\/)*\s*if \(moved && B\.selected === P\)\{ el\.classList\.remove\('sel'\); B\.selected = null; \}\s*if \(cancelled \|\| gSolved\)\{ P\.home\(\); return; \}/.test(src))
+    fail('a piece that was tapped and then dragged stays selected — a later tap would drop it again');
+  if (!/el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/.test(src)) fail('lost pointer capture does not put the piece back');
+  if (!/if \(P\.locked \|\| gSolved \|\| start\) return;/.test(src)) fail('a second finger on a piece that is already being dragged is not ignored');
+  if (!/var start = null, orig = null, moved = false, pid = null, gen = gGen;/.test(src) || !/el\.classList\.remove\('dragging'\);\s*if \(gen !== gGen\) return;/.test(src) || !/gCtx = \{\}; gGen\+\+;/.test(extractFunction(src, 'startRound') || ''))
+    fail('a piece still held when the board is rebuilt (Restart, language switch) can still drop onto the new round — codex round 1');
+  if (!/gameStage\.textContent = '';/.test(extractFunction(src, 'startRound') || '')) fail('startRound() does not clear the stage before rendering');
+
+  /* --- 觸控：375px 手機上畫板能用的寬度從頁面的 CSS 算（.wrap 左右 padding、.card 的 padding 與邊框、.gstage 左右 padding），
+     不在這裡寫死（codex 第一輪）。300 寬的畫板縮成 avail / 300 倍 --- */
+  const cssPx = (sel, re) => { const m = src.match(new RegExp('\\n\\s*' + sel.replace('.', '\\.') + '\\{([^}]*)\\}')); const v = m && m[1].match(re); return v ? v.slice(1).map(Number) : null; };
+  const wrapPad = cssPx('.wrap', /padding:(\d+)px (\d+)px/), cardPad = cssPx('.card', /padding:(\d+)px/), cardBorder = cssPx('.card', /border:(\d+)px/), stagePad = cssPx('.gstage', /padding:\s*(\d+)px (\d+)/);
+  if (!wrapPad || !cardPad || !cardBorder || !stagePad) fail('touch: cannot read .wrap / .card / .gstage padding from the CSS');
+  const avail = 375 - 2 * ((wrapPad || [0, 0])[1] + (cardPad || [0])[0] + (cardBorder || [0])[0] + (stagePad || [0, 0])[1]);
+  const scale = Math.min(1.5, avail / W);
+  const small = (what, sz) => { if (!(sz * scale >= 44)) fail(what + ' is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+  small('GPICK', D.GPICK);
+  small('the pencil (height)', D.ZERO_PEN.h);
+  small('a space on the counting ruler (' + D.COUNT_RULER.unit + '×' + D.COUNT_RULER.h + ')', Math.min(D.COUNT_RULER.unit, D.COUNT_RULER.h));
+  small('a stick/cube source (' + D.BUILD_TOK.w + '×' + D.BUILD_TOK.h + ')', Math.min(D.BUILD_TOK.w, D.BUILD_TOK.h));
+  small('the scissors', D.CUT_SCI.size);
+  small('a length card (' + D.RANK_CARD.w + '×' + D.RANK_CARD.h + ')', Math.min(D.RANK_CARD.w, D.RANK_CARD.h));
+  small('a rank box', Math.min(D.RANK_SLOT.w, D.RANK_SLOT.h));
+  [D.ZERO_PEN.h, D.BUILD_TOK.w, D.BUILD_TOK.h, D.CUT_SCI.size, D.RANK_CARD.w, D.RANK_CARD.h].forEach(s => { if (s < D.GPICK) fail('a piece side of ' + s + ' is smaller than GPICK ' + D.GPICK); });
+  { const m = src.match(/\.btn\{[^}]*min-height:(\d+)px/); if (!m || +m[1] < 46) fail('build: the Done button (.btn) is not at least 46px tall'); }
+  need('zero', /var pen = addPiece\(B, \{ w:w, h:Pn\.h, cx:zeroTickX\(e\.from\) \+ w \/ 2, cy:Pn\.y,/, 'the pencil is not len × ZERO_PEN.h with its left end on from');
+  need('count', /c\.style\.left = countTickX\(k - 1\) \+ 'px'; c\.style\.top = R\.y \+ 'px'; c\.style\.width = R\.unit \+ 'px'; c\.style\.height = R\.h \+ 'px';/, 'a space button is not exactly one space (unit × ruler height)');
+  need('build', /addPiece\(B, \{ w:BUILD_TOK\.w, h:BUILD_TOK\.h, cx:GAME_W \/ 2 \+ \(i - 0\.5\) \* BUILD_TOK\.step, cy:BUILD_TOK\.y,/, 'cannot read where the stick/cube sources are drawn');
+  need('cut', /addPiece\(B, \{ w:CUT_SCI\.size, h:CUT_SCI\.size, cx:GAME_W \/ 2, cy:CUT_SCI\.y,/, 'the scissors are not CUT_SCI.size at (GAME_W / 2, CUT_SCI.y)');
+  need('rank', /addPiece\(B, \{ w:RANK_CARD\.w, h:RANK_CARD\.h, cx:cx, cy:cy,/, 'the length cards are not RANK_CARD.w × RANK_CARD.h');
+
+  /* --- 星星：低年級不扣分（§三、§六之五第 3 點）。roundSolved()／roundMiss() 從原始碼切出來真的跑 --- */
+  {
+    const fs = extractFunction(src, 'roundSolved'), fm = extractFunction(src, 'roundMiss');
+    if (!fs || !fm) fail('stars: cannot find roundSolved()/roundMiss() in index.html');
+    else {
+      const env = 'var gSolved = false, gScore = S0, gMistakes = 0, gRound = 0, GAME_ORDER = [1,2,3,4,5], elScore = {}, gMsg = {}, gNext = {}, gHintBtn = {};' +
+        'var gameStage = { querySelectorAll: function(){ return []; } }; function L(){ return { gStars:function(n){ return "@" + n; }, gWin:function(s){ return "W" + s; }, gClear:"C" }; }\n';
+      const run = (s0, misses, solves) => new Function(env.replace('S0', s0) + fm + '\n' + fs + '\nfor (var i = 0; i < ' + misses + '; i++) roundMiss("why");' +
+        'var afterMiss = gScore;\nfor (var j = 0; j < ' + solves + '; j++) roundSolved("ok");\nreturn { s:gScore, afterMiss:afterMiss, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistakes };')();
+      try {
+        [[0, 0, 2], [3, 0, 2], [3, 1, 1], [0, 4, 1]].forEach(([s0, misses, want]) => {
+          const r = run(s0, misses, 1);
+          if (r.afterMiss !== s0) fail('stars: a mistake changed the score ' + s0 + ' → ' + r.afterMiss + ' (low grades never lose points)');
+          if (r.s !== s0 + want || String(r.shown) !== String(s0 + want)) fail('stars: a round with ' + misses + ' mistake(s) gives ' + (r.s - s0) + ' stars, should be ' + want);
+          if (r.html.indexOf('@' + want) < 0) fail('stars: the message does not say ⭐ +' + want);
+          if (misses && r.m !== misses) fail('stars: roundMiss() does not record the mistake');
+        });
+        if (run(0, 0, 2).s !== 2) fail('stars: a round can be scored twice');
+      } catch (e){ fail('stars: roundSolved()/roundMiss() could not run: ' + e.message); }
+    }
+  }
+  LANGS.forEach(L => {
+    const d = I18N[L];
+    seq('gStars ' + L, d.gStars(2), [2]);
+    if (nums(d.gWin(7)).indexOf(7) < 0) fail('gWin ' + L + ' does not show the stars: ' + d.gWin(7));
+    if (typeof d.gClear !== 'string' || !d.gClear || /\d/.test(d.gClear)) fail('gClear ' + L + ' missing or has a number in it');
+  });
+
+  /* --- nearestOpen()：從原始碼切出來真的跑 --- */
+  let nearestOpen = null;
+  {
+    const fsrc = extractFunction(src, 'nearestOpen');
+    if (!fsrc) fail('cannot find nearestOpen() in index.html');
+    else { try { nearestOpen = new Function(fsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('nearestOpen() could not be evaluated: ' + e.message); } }
+  }
+
+  /* ================= 第 1 關：推到 0（範例 2：一端要對準 0） ================= */
+  {
+    const R = D.ZERO_RULER, Pn = D.ZERO_PEN, H = D.ZERO_H, P = D.ZERO_PAD;
+    for (let k = 0; k <= R.max; k++) if (!near(D.zeroTickX(k), R.x0 + k * R.unit)) fail('zeroTickX(' + k + ') should be ' + (R.x0 + k * R.unit));
+    if (!near(D.zeroEdgeX(), R.x0 - R.edge)) fail('zeroEdgeX() should be ' + (R.x0 - R.edge));
+    inside({ x:R.x0 - R.edge, y:R.y, w:R.max * R.unit + 2 * R.edge, h:R.h }, 'zero: the ruler', W, H);
+    for (let k = 0; k <= R.max; k++) inside({ x:R.x0 + k * R.unit - R.numW / 2, y:R.numY, w:R.numW, h:18 }, 'zero: ruler number ' + k, W, H);
+    if (!(R.numY >= R.y + 16 && R.numY + 18 <= R.y + R.h)) fail('zero: the ruler numbers are not inside the ruler, under the ticks');
+    if (!(R.numW <= R.unit + 8)) fail('zero: ruler numbers ' + R.numW + ' wide on a ' + R.unit + 'px space would run into each other');
+    /* 尺的邊緣離 0 只有 R.edge：比 2 × ZERO_PAD 小，吸附範圍刻意重疊（不然端對端測試的「重疊區挑最近」無從驗起） */
+    if (!(R.edge < 2 * P)) fail('zero: the ruler edge is ' + R.edge + ' from 0 — the drop pads (' + P + ') no longer overlap, the nearest-line rule is never exercised');
+    if (!(R.unit > P)) fail('zero: ticks ' + R.unit + ' apart with pads of ' + P + ' — one drop would reach three lines');
+    /* 鉛筆的兩條虛線（.gguide）從長條底下拉到尺的刻度：top ＝ 長條底、height 到刻度的下端 */
+    {
+      const m = src.match(/\.gguide\{[^}]*top:(\d+)px; height:(\d+)px/), bar = +((src.match(/\.gpen\{[^}]*center \/ 100% (\d+)px/) || [])[1]);
+      if (!m || !bar) fail('zero: cannot read .gguide top/height or the pencil bar height from the CSS');
+      else {
+        const top = +m[1], h = +m[2], barBottom = (Pn.h + bar) / 2;
+        if (top !== barBottom) fail('zero: the guide lines start at ' + top + ', the pencil bar ends at ' + barBottom);
+        if (Pn.y - Pn.h / 2 + top + h !== R.y + 16) fail('zero: the guide lines end at ' + (Pn.y - Pn.h / 2 + top + h) + ', the ruler ticks end at ' + (R.y + 16));
+      }
+    }
+    if (!(Pn.y + Pn.h / 2 <= R.y)) fail('zero: the pencil sits on top of the ruler');
+    const top = Pn.y - Pn.band, bot = R.y + R.h, mid = (top + bot) / 2, hh = (bot - top) / 2;
+    if (!(top - P > 0)) fail('zero: the drop band starts at ' + (top - P) + ' — there is no empty space above the pencil on the board');
+    const marks = [{ cx:R.x0 - R.edge, cy:mid, hw:0, hh, k:-1, done:false }];
+    for (let k = 0; k <= R.max; k++) marks.push({ cx:R.x0 + k * R.unit, cy:mid, hw:0, hh, k, done:false });
+    need('zero', /var top = Pn\.y - Pn\.band, bot = R\.y \+ R\.h, mid = \(top \+ bot\) \/ 2, hh = \(bot - top\) \/ 2;\s*var marks = \[\{ cx:zeroEdgeX\(\), cy:mid, hw:0, hh:hh, k:-1, done:false \}\];\s*for \(var k = 0; k <= R\.max; k\+\+\) marks\.push\(\{ cx:zeroTickX\(k\), cy:mid, hw:0, hh:hh, k:k, done:false \}\);/,
+      'the drop targets are not [ruler edge, line 0 … line max] over the pencil band and the ruler');
+    need('zero', /var left = pt\.tap \? pt\.x : pt\.x - P\.w \/ 2;\s*var m = nearestOpen\(marks, \{ x:left, y:pt\.y \}, ZERO_PAD\);\s*if \(!m \|\| m\.k === e\.from\) return false;/, 'the drop is not judged by the pencil\'s LEFT end (drag: centre − half the length; tap: the tapped line), or empty space / a drop back on its own line is not silent');
+    need('zero', /if \(m\.k < 0\)\{ roundMiss\(d\.gZeroEdge\); return false; \}/, 'the edge of the ruler is accepted as 0');
+    need('zero', /if \(m\.k > 0\)\{ roundMiss\(d\.gZeroTick\(m\.k\)\); return false; \}/, 'a left end on another line is accepted');
+    need('zero', /P\.lock\(zeroTickX\(0\) \+ P\.w \/ 2, Pn\.y\);[\s\S]*?roundSolved\(d\.gZeroDone\(e\.from, to, e\.len\)\);/, 'the pencil is not locked with its left end on 0, or the round is not solved there');
+    need('zero', /var e = pick\(GAME_ZERO\), to = e\.from \+ e\.len,/, 'the right end is not from + len');
+    /* 每一個左端的位置：只有 0 那一條線（而且比邊緣近）收；其他都說得出是邊緣還是哪一條線 */
+    if (nearestOpen){
+      let acc = 0, bad = 0;
+      for (let x = R.x0 - R.edge - P - 3; x <= R.x0 + R.max * R.unit + P + 3; x += 0.25){
+        const g = nearestOpen(marks, { x, y:Pn.y }, P);
+        const dE = Math.abs(x - (R.x0 - R.edge)), d0 = Math.abs(x - R.x0);
+        let want = null, bd = Infinity;
+        marks.forEach(m => { const dd = Math.abs(x - m.cx); if (dd <= P && dd < bd){ bd = dd; want = m.k; } });
+        if ((g ? g.k : null) !== want) bad++;
+        if (g && g.k === 0){ acc++; if (!(d0 <= P && d0 <= dE)) bad++; }
+      }
+      if (bad) fail('zero: nearestOpen() gives ' + bad + ' left-end positions to the wrong line (or the edge) — it must pick the nearest');
+      if (!acc) fail('zero: no left-end position is ever accepted as 0');
+      if (nearestOpen(marks, { x:R.x0, y:top - P - 2 }, P) !== null) fail('zero: a pencil dropped above the band still counts');
+      if (nearestOpen(marks, { x:R.x0 - R.edge - P - 1, y:Pn.y }, P) !== null) fail('zero: a left end left of the ruler edge still counts');
+    }
+    if (!(D.GAME_ZERO.length >= 4)) fail('GAME_ZERO should have at least 4 entries');
+    D.GAME_ZERO.forEach((e, i) => {
+      const w = 'GAME_ZERO[' + i + ']', to = e.from + e.len;
+      if (![e.from, e.len].every(Number.isInteger)) return fail(w + ' is not whole numbers');
+      if (e.from < 2) fail(w + ': the pencil starts at ' + e.from + ' — it must start away from 0 (and away from 1, whose miss says "on 1")');
+      if (e.len < 5) fail(w + ': only ' + e.len + ' cm long');
+      if (to > R.max) fail(w + ': runs off the 0~' + R.max + ' ruler (to ' + to + ')');
+      if (!e.icon) fail(w + ': no icon');
+      const home = box(R.x0 + e.from * R.unit + e.len * R.unit / 2, Pn.y, e.len * R.unit, Pn.h);
+      inside(home, w + ' the pencil at home', W, H);
+      inside(box(R.x0 + e.len * R.unit / 2, Pn.y, e.len * R.unit, Pn.h), w + ' the pencil on 0', W, H);
+      /* 照遊戲的規則玩一遍：從家往左推，左端每經過一個位置 —— 只有到 0 才收 */
+      if (nearestOpen){
+        let got = null;
+        for (let x = R.x0 + e.from * R.unit; x >= R.x0 - R.edge - P - 2; x -= 0.5){ const g = nearestOpen(marks, { x, y:Pn.y }, P); if (g && g.k === 0){ got = x; break; } }
+        if (got === null) fail(w + ': pushing the pencil left never reaches 0');
+        const atHome = nearestOpen(marks, { x:R.x0 + e.from * R.unit, y:Pn.y }, P);
+        if (!atHome || atHome.k !== e.from) fail(w + ': dropped back at home, the left end should read ' + e.from);
+      }
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        seq(w + ' gZeroDone ' + L, d.gZeroDone(e.from, to, e.len), [0, e.len, to, e.from, e.len]);
+        has(w + ' gZeroDone ' + L, d.gZeroDone(e.from, to, e.len), L === 'zh' ? /－/ : /−/);
+        seq(w + ' gZeroNow ' + L, d.gZeroNow(e.len), [0, e.len, e.len]);
+        seq(w + ' gZero2 ' + L, d.gZero2(e.from), [e.from, e.from]);
+      });
+    });
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      for (let k = 1; k <= R.max; k++) seq('gZeroTick(' + k + ') ' + L, d.gZeroTick(k), [k, 0, 0]);
+      seq('gZeroEdge ' + L, d.gZeroEdge, [0, 0]);
+      has('gZeroEdge ' + L, d.gZeroEdge, L === 'zh' ? /邊緣/ : /edge/);
+      seq('gZeroAsk ' + L, d.gZeroAsk, []);
+    });
+  }
+
+  /* ================= 第 2 關：數格子（範例 1：一大格 1 公分；範例 2：沒對準 0） ================= */
+  {
+    const R = D.COUNT_RULER, H = D.COUNT_H, RB = D.COUNT_RIB;
+    for (let k = 0; k <= R.max; k++) if (!near(D.countTickX(k), R.x0 + k * R.unit)) fail('countTickX(' + k + ') should be ' + (R.x0 + k * R.unit));
+    inside({ x:R.x0 - R.edge, y:R.y, w:R.max * R.unit + 2 * R.edge, h:R.h }, 'count: the ruler', W, H);
+    for (let k = 0; k <= R.max; k++) inside({ x:R.x0 + k * R.unit - R.numW / 2, y:R.numY, w:R.numW, h:18 }, 'count: ruler number ' + k, W, H);
+    if (!(R.numY >= R.y + 16 && R.numY + 18 <= R.y + R.h)) fail('count: the ruler numbers are not inside the ruler');
+    if (!(RB.y >= 0 && RB.y + RB.h < R.y)) fail('count: the ribbon is not above the ruler');
+    const cells = [];
+    for (let k = 1; k <= R.max; k++){ const c = { x:R.x0 + (k - 1) * R.unit, y:R.y, w:R.unit, h:R.h }; inside(c, 'count: space ' + k, W, H); cells.push(c); }
+    noHits(cells, 'count: space buttons');
+    need('count', /if \(gSolved \|\| c\.classList\.contains\('counted'\)\) return;/, 'a counted space can be counted twice (or counting goes on after the round)');
+    need('count', /if \(k <= e\.a \|\| k > e\.b\)\{ roundMiss\(d\.gCountOut\); return; \}/, 'a space outside the ribbon is counted');
+    need('count', /seen\+\+;\s*c\.classList\.add\('counted'\);/, 'a tap inside the ribbon does not count one more');
+    need('count', /if \(seen === n\)\{ line\.textContent = d\.gCountNow\(n\) \+ ' → ' \+ d\.cm\(n\); roundSolved\(d\.gCountDone\(e\.a, e\.b, n\)\); \}/, 'the round is not solved exactly when every space under the ribbon is counted');
+    need('count', /var e = pick\(GAME_COUNT\), n = e\.b - e\.a,/, 'the count is not b − a');
+    need('count', /addZone\(B, countTickX\(e\.a\), COUNT_RIB\.y, n \* R\.unit, COUNT_RIB\.h, 'gribbon'\);/, 'the ribbon is not drawn from a to b');
+    need('count', /for \(var k = 1; k <= R\.max; k\+\+\)/, 'not every space of the ruler is a button');
+    if (!(D.GAME_COUNT.length >= 4)) fail('GAME_COUNT should have at least 4 entries');
+    D.GAME_COUNT.forEach((e, i) => {
+      const w = 'GAME_COUNT[' + i + ']', n = e.b - e.a;
+      if (!(Number.isInteger(e.a) && Number.isInteger(e.b))) return fail(w + ' is not whole numbers');
+      if (e.a < 1) fail(w + ': the ribbon starts on 0 — this round is about a ribbon that does NOT start at 0');
+      if (e.b > R.max) fail(w + ': the ribbon runs off the 0~' + R.max + ' ruler');
+      if (n < 2) fail(w + ': only ' + n + ' space(s) to count');
+      /* 照遊戲的規則：點每一格；只有 a < k ≤ b 的格子算 —— 數完就是 b − a */
+      let seen = 0, outside = 0;
+      for (let k = 1; k <= R.max; k++){ if (k <= e.a || k > e.b) outside++; else seen++; }
+      if (seen !== n) fail(w + ': ' + seen + ' spaces under the ribbon, should be ' + n);
+      if (!outside) fail(w + ': every space is under the ribbon');
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        seq(w + ' gCountDone ' + L, d.gCountDone(e.a, e.b, n), [e.a, e.b, n, e.b, e.a, n, n + 1]);
+        for (let left = 1; left <= n; left++) seq(w + ' gCount2 ' + L, d.gCount2(e.a, e.b, left), [e.a, e.b, left]);
+      });
+    });
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      for (let m = 0; m <= R.max; m++) seq('gCountNow(' + m + ') ' + L, d.gCountNow(m), [m]);
+      seq('gCountOut ' + L, d.gCountOut, []);
+    });
+    if (I18N.en.gCountNow(1) !== 'Counted 1 space' || I18N.en.gCountNow(2) !== 'Counted 2 spaces') fail('en: "1 space" must be singular, others plural');
+    if (!/ 1 space /.test(I18N.en.gCount2(1, 4, 1) + ' ') || !/ 2 spaces /.test(I18N.en.gCount2(1, 4, 2) + ' ')) fail('en gCount2: "1 space" must be singular, others plural');
+  }
+
+  /* ================= 第 3 關：接成 1 公尺（範例 3：100 公分接成 1 公尺） ================= */
+  {
+    const Tr = D.BUILD_TRACK, H = D.BUILD_H, K = D.BUILD_TOK;
+    if (D.BUILD_PIECES.join() !== '10,1') fail('build: the pieces should be a 10 cm stick and a 1 cm cube, got ' + D.BUILD_PIECES.join());
+    inside({ x:Tr.x, y:Tr.y, w:Tr.w, h:Tr.h }, 'build: the frame', W, H);
+    if (!(D.BUILD_BAR <= Tr.h - 6)) fail('build: the built bar (' + D.BUILD_BAR + ') does not fit in the frame');
+    const toks = D.BUILD_PIECES.map((p, i) => box(W / 2 + (i - 0.5) * K.step, K.y, K.w, K.h));
+    toks.forEach((t, i) => { inside(t, 'build: source ' + i, W, H); if (hit(t, pad({ x:Tr.x, y:Tr.y, w:Tr.w, h:Tr.h }, D.GPAD))) fail('build: source ' + i + ' sits inside the frame\'s drop zone'); });
+    noHits(toks, 'build: sources');
+    if (!(Tr.y + Tr.h + 6 + 18 <= K.y - K.h / 2)) fail('build: the "100" label runs into the sources');
+    need('build', /var e = pick\(GAME_BUILD\), T = e\.m \* 100 \+ e\.c,/, 'the target is not m × 100 + c');
+    need('build', /if \(!nearestOpen\(\[track\], pt, GPAD\)\) return false;/, 'a drop outside the frame is not silent');
+    need('build', /var p = P\.data\.p, n = now\(\);\s*if \(n \+ p > T\)\{ roundMiss\(d\.gBuildOver\(n, p, T\)\); return false; \}/, 'a piece that makes it longer than the target is accepted');
+    need('build', /if \(p === 10\) sticks\+\+; else cubes\+\+;/, 'a placed piece does not add its length');
+    need('build', /function now\(\)\{ return sticks \* 10 \+ cubes; \}/, 'the length is not 10 × sticks + cubes');
+    need('build', /meters = Math\.floor\(sticks \/ 10\), i;\s*for \(i = 0; i < meters; i\+\+\)\{ segs\.push\(addZone\(B, x, y, 100 \* Tr\.px, BUILD_BAR, 'gmeter', d\.gMeterLbl\)\);/, 'ten sticks are not drawn as one metre bar');
+    need('build', /if \(p === 10 && sticks === 10\) roundInfo\(d\.gBuildMeter\);/, 'the tenth stick does not say 100 cm = 1 m');
+    need('build', /if \(n === 0\)\{ gMsg\.textContent = d\.gBuildEmpty; return; \}/, 'Done with nothing built is treated as a mistake (it should only remind)');
+    need('build', /if \(n < T\)\{ roundMiss\(d\.gBuildShort\(n, e\.m, e\.c, T\)\); return; \}\s*doneBtn\.disabled = true;\s*roundSolved\(d\.gBuildDone\(e\.m, e\.c, T\)\);/, 'Done is accepted before the ribbon is the full length');
+    need('build', /P\.home\(\);/, 'a source does not go back after a drop (it must never run out)');
+    /* 拼到剛好也不會自己過關：要自己按「做好了」（停在哪裡就是這一關要孩子決定的事） */
+    { const drop = (B.build.match(/useTapSelect\(B, function\(P, pt\)\{([\s\S]*?)\n {6}\}\);/) || [])[1];
+      if (!drop) fail('build: cannot cut the drop handler'); else if (/roundSolved/.test(drop)) fail('build: the round is solved by a drop — the child must press Done'); }
+    const px = Tr.px;
+    let sawSmall = false, sawBig = false;
+    if (!(D.GAME_BUILD.length >= 4)) fail('GAME_BUILD should have at least 4 entries');
+    D.GAME_BUILD.forEach((e, i) => {
+      const w = 'GAME_BUILD[' + i + ']', T = cmOf(e);
+      if (e.m !== 1) fail(w + ': ' + e.m + ' m — the frame holds 1 m and a bit');
+      if (!(e.c >= 1 && e.c <= 39)) fail(w + ': ' + e.c + ' cm on top of the metre');
+      if (e.c < 10) sawSmall = true; else sawBig = true;
+      if (!(Tr.pad + T * px <= Tr.w - Tr.pad / 2)) fail(w + ': ' + T + ' cm (' + T * px + 'px) does not fit in the frame');
+      /* 照遊戲的規則玩一遍：先放 10 公分、放不下了再放 1 公分；每一步都不能超過，到 T 才按「做好了」 */
+      let sticks = 0, cubes = 0, guard = 0;
+      const now = () => sticks * 10 + cubes;
+      while (now() < T && guard++ < 200){ if (now() + 10 <= T) sticks++; else if (now() + 1 <= T) cubes++; }
+      if (now() !== T) fail(w + ': the greedy build ends at ' + now() + ', not ' + T);
+      if (sticks < 10) fail(w + ': never reaches the metre');
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        seq(w + ' gBuildOrder ' + L, d.gBuildOrder(e.m, e.c), [e.m, e.c]);
+        seq(w + ' gBuildDone ' + L, d.gBuildDone(e.m, e.c, T), [e.m, e.c, e.m * 100, e.c, T]);
+        for (let n = 1; n < T; n++){
+          seq(w + ' gBuildShort(' + n + ') ' + L, d.gBuildShort(n, e.m, e.c, T), [n, e.m, e.c, e.m * 100, e.c, T, T - n]);
+          seq(w + ' gBuild2(' + n + ') ' + L, d.gBuild2(e.m, e.c, T, n), [e.m, e.c, T, n, T - n]);
+        }
+        for (let n = T - 9; n <= T; n++) seq(w + ' gBuildOver ' + L, d.gBuildOver(n, 10, T), [10, n + 10, T]);
+        seq(w + ' gBuildOver ' + L, d.gBuildOver(T, 1, T), [1, T + 1, T]);
+      });
+    });
+    if (!sawSmall) fail('GAME_BUILD needs a "1 m and a few cm" entry (the 1 m 5 cm → 15 cm mistake)');
+    if (!sawBig) fail('GAME_BUILD needs a "1 m and tens of cm" entry');
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      seq('gBuildMeter ' + L, d.gBuildMeter, [10, 10, 100, 1]);
+      for (let n = 0; n <= 139; n++) seq('gBuildNow ' + L, d.gBuildNow(n), [n]);
+      seq('gMeterLbl ' + L, d.gMeterLbl, [1]);
+      if (/\d/.test(d.gBuildBtn)) fail('gBuildBtn ' + L + ' has a number');
+    });
+  }
+
+  /* ================= 第 4 關：剪一刀（範例 4：剪掉用減的；1 公尺先換成 100 公分） ================= */
+  {
+    const C = D.CUT_ROPE, H = D.CUT_H, P = D.CUT_PAD, S = D.CUT_SCI;
+    for (let cm = 0; cm <= 100; cm += 10) if (!near(D.cutX(cm), C.x + cm * C.px)) fail('cutX(' + cm + ') should be ' + (C.x + cm * C.px));
+    const pitch = 10 * C.px;
+    if (!(pitch < 2 * P)) fail('cut: notches ' + pitch + ' apart with pads of ' + P + ' — the pads no longer overlap, the nearest-notch rule is never exercised');
+    if (!(pitch >= P)) fail('cut: notches too close for the pad');
+    if (!(28 <= pitch + 4)) fail('cut: notch labels (28 wide) run into each other at ' + pitch + 'px');
+    const cy = C.y + C.h / 2;
+    if (!(S.y - S.size / 2 > cy + C.band + P)) fail('cut: the scissors start inside the cutting band');
+    if (!(C.numY >= C.y + C.h + 6)) fail('cut: the notch numbers sit on the string');
+    if (!(C.offY > C.numY + 16)) fail('cut: the piece that falls off lands on the numbers');
+    if (!(S.placed <= S.size)) fail('cut: the placed scissors should not grow');
+    if (!(cy - S.placed / 2 >= 60 && cy + S.placed / 2 <= C.numY + 2)) fail('cut: the placed scissors cover the task or the numbers');
+    need('cut', /if \(k > 0 && k < e\.s \/ 10\) marks\.push\(\{ cx:x, cy:cy, hw:0, hh:C\.band, at:k \* 10, done:false \}\);/, 'the targets are not the inner notches (the two ends cut nothing)');
+    need('cut', /var m = nearestOpen\(marks, pt, CUT_PAD\);\s*if \(!m\) return false;/, 'a drop away from the notches is not silent');
+    need('cut', /if \(m\.at !== keep\)\{ roundMiss\(d\.gCutWrong\(m\.at, e\.s, e\.c\)\); return false; \}/, 'a cut at the wrong notch is accepted');
+    need('cut', /var e = pick\(GAME_CUT\), C = CUT_ROPE, keep = e\.s - e\.c,/, 'the cut is not at s − c');
+    need('cut', /P\.lock\(m\.cx, cy\);[\s\S]*?roundSolved\(d\.gCutDone\(e\.s, e\.c\)\);/, 'the scissors are not locked on the notch, or the round is not solved there');
+    need('cut', /rope\.style\.width = \(keep \* C\.px\) \+ 'px';\s*addZone\(B, cutX\(keep\) \+ 6, C\.offY, e\.c \* C\.px, C\.h, 'grope off'\);/, 'the drawn string is not cut into keep and c');
+    if (!(D.GAME_CUT.length >= 4)) fail('GAME_CUT should have at least 4 entries');
+    let saw100 = false;
+    D.GAME_CUT.forEach((e, i) => {
+      const w = 'GAME_CUT[' + i + ']', keep = e.s - e.c;
+      if (!(e.s % 10 === 0 && e.c % 10 === 0 && e.s <= 100 && e.s >= 50)) return fail(w + ': the string and the cut must be whole tens, string 50~100 cm');
+      if (e.s === 100) saw100 = true;
+      if (!(e.c >= 20 && keep >= 20)) fail(w + ': cut ' + e.c + ' leaves ' + keep + ' — both pieces need at least two notches (and keep − 10 must be a notch for the overlap test)');
+      if (e.c === keep) fail(w + ': cutting at ' + e.c + ' is also right — the "cut from the wrong end" mistake cannot happen');
+      inside({ x:C.x, y:C.y, w:e.s * C.px, h:C.h }, w + ' the string', W, H);
+      inside({ x:C.x + keep * C.px + 6, y:C.offY, w:Math.max(e.c * C.px, 90), h:C.h + 20 }, w + ' the piece that falls off + its label', W, H);
+      for (let k = 0; k <= e.s / 10; k++) inside({ x:C.x + k * pitch - 14, y:C.numY, w:28, h:16 }, w + ' notch number ' + k * 10, W, H);
+      /* 照遊戲的規則：把剪刀沿著繩子放在每一個位置 —— 收得下的只有 s − c，其他每一刀說的「右邊剪掉的」都是真的 */
+      const marks = [];
+      for (let k = 1; k < e.s / 10; k++) marks.push({ cx:C.x + k * pitch, cy, hw:0, hh:C.band, at:k * 10, done:false });
+      if (nearestOpen){
+        let ok = 0, bad = 0;
+        for (let x = C.x - P - 2; x <= C.x + e.s * C.px + P + 2; x += 0.25){
+          const g = nearestOpen(marks, { x, y:cy }, P);
+          let want = null, bd = Infinity;
+          marks.forEach(m => { const dd = Math.abs(x - m.cx); if (dd <= P && dd < bd){ bd = dd; want = m.at; } });
+          if ((g ? g.at : null) !== want) bad++;
+          if (g && g.at === keep) ok++;
+        }
+        if (bad) fail(w + ': nearestOpen() gives ' + bad + ' positions to the wrong notch — it must pick the nearest');
+        if (!ok) fail(w + ': no position cuts at ' + keep);
+        if (nearestOpen(marks, { x:C.x + keep * C.px, y:S.y }, P) !== null) fail(w + ': the scissors at home already count as a cut');
+      }
+      marks.forEach(m => {
+        if (m.at === keep) return;
+        if (e.s - m.at === e.c) fail(w + ': cutting at ' + m.at + ' also takes off ' + e.c);
+        LANGS.forEach(L => seq(w + ' gCutWrong(' + m.at + ') ' + L, I18N[L].gCutWrong(m.at, e.s, e.c), [m.at, e.s - m.at, e.c]));
+      });
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        seq(w + ' gCutTask ' + L, d.gCutTask(e.s, e.c), e.s === 100 ? [1, e.c] : [e.s, e.c]);
+        if (e.s === 100) has(w + ' gCutTask ' + L, d.gCutTask(e.s, e.c), L === 'zh' ? /1 公尺/ : /1 m /);
+        seq(w + ' gCutDone ' + L, d.gCutDone(e.s, e.c), (e.s === 100 ? [1, 100] : []).concat([e.c, e.s, e.c, keep, keep]));
+        seq(w + ' gCutNow ' + L, d.gCutNow(e.s, e.c), [e.s, e.c, keep]);
+        seq(w + ' gCut2 ' + L, d.gCut2(e.s, e.c), [e.c / 10, keep]);
+        seq(w + ' gCutOff ' + L, d.gCutOff(e.c), [e.c]);
+      });
+    });
+    if (!saw100) fail('GAME_CUT needs a 1 m string (the metre has to be turned into 100 cm)');
+    seq('gCutAsk zh', I18N.zh.gCutAsk, []); seq('gCutAsk en', I18N.en.gCutAsk, []);
+    if (!/1 piece/.test(I18N.en.gCut2(100, 10)) || !/3 pieces/.test(I18N.en.gCut2(100, 30))) fail('en gCut2: "1 piece" singular, others plural');
+  }
+
+  /* ================= 第 5 關：排長短（單位不一樣先換成公分） ================= */
+  {
+    const S = D.RANK_SLOT, Cd = D.RANK_CARD, H = D.RANK_H;
+    const slots = S.x.map(x => ({ x:x - S.w / 2, y:S.y - S.h / 2, w:S.w, h:S.h }));
+    slots.forEach((r, k) => inside(r, 'rank: box ' + (k + 1), W, H));
+    noHits(slots, 'rank: boxes');
+    const x0 = (W - 3 * Cd.step) / 2, cards = [0, 1, 2, 3].map(i => box(x0 + i * Cd.step, Cd.y, Cd.w, Cd.h));
+    cards.forEach((r, i) => { inside(r, 'rank: card ' + (i + 1), W, H); slots.forEach(sl => { if (hit(r, pad(sl, D.GPAD))) fail('rank: card ' + (i + 1) + ' sits inside a drop zone'); }); });
+    noHits(cards, 'rank: cards');
+    need('rank', /order = set\.slice\(\)\.sort\(function\(a, b\)\{ return lenCm\(a\) - lenCm\(b\); \}\)/, 'the target order is not shortest first by centimetres');
+    need('rank', /var s = nearestOpen\(slots, pt, GPAD\), v = P\.data\.v;\s*if \(!s\) return false;\s*var c = order\[s\.k\];/, 'a box is not picked as the nearest, or box k does not want the k-th shortest');
+    need('rank', /if \(v !== c\)\{ roundMiss\(lenCm\(v\) > lenCm\(c\) \? d\.gRankBig\(v, c\) : d\.gRankSmall\(v, c\)\); return false; \}/, 'a card is accepted in the wrong box, or the reason compares the wrong way round');
+    need('rank', /s\.done = true; P\.lock\(s\.cx, s\.cy\);/, 'a card in its box is not marked done');
+    need('rank', /if \(slots\.every\(function\(x\)\{ return x\.done; \}\)\) roundSolved\(d\.gRankDone\(order\)\);/, 'the round is not solved exactly when all four boxes are filled');
+    need('rank', /renderTray\(B, set\.map\(lenCm\), RANK_CARD\.y,/, 'the cards are not shuffled by their centimetres (objects cannot be compared, so the not-in-order guard would never fire)');
+    /* 卡片上的字放得下：CSS 的 .glen 字級；中文字 1 em、數字與英文字母約 0.6 em、空白約 0.3 em */
+    const fs = +((src.match(/\.glen\{ font-size:(\d+)px/) || [])[1]);
+    if (!fs) fail('rank: cannot read the .glen font size');
+    const textW = t => [...t].reduce((s, ch) => s + (/[一-鿿]/.test(ch) ? 1 : ch === ' ' ? 0.3 : 0.6) * fs, 0);
+    /* nearestOpen() 在四格上：格子裡判給那一格、縫裡判給比較近的那一格 */
+    if (nearestOpen){
+      const list = slots.map((r, i) => ({ id:i, cx:r.x + r.w / 2, cy:r.y + r.h / 2, hw:r.w / 2, hh:r.h / 2, done:false }));
+      let bad = 0, gapBad = 0;
+      list.forEach((b, i) => {
+        for (let x = b.cx - b.hw + 0.5; x < b.cx + b.hw; x += 1.5) for (let y = b.cy - b.hh + 0.5; y < b.cy + b.hh; y += 3){ const g = nearestOpen(list, { x, y }, D.GPAD); if (!g || g.id !== i) bad++; }
+        if (i + 1 < list.length){
+          const r = slots[i].x + slots[i].w, l = slots[i + 1].x;
+          if (!(l - r < 2 * D.GPAD)) fail('rank: the boxes are ' + (l - r) + ' apart — the drop pads no longer overlap, the nearest-box rule is never exercised');
+          for (let x = r + 0.25; x < l; x += 0.5){ const want = x - r < l - x ? i : i + 1, g = nearestOpen(list, { x, y:b.cy }, D.GPAD); if (x - r !== l - x && (!g || g.id !== want)) gapBad++; }
+        }
+      });
+      if (bad) fail('rank: nearestOpen() gives ' + bad + ' points inside a box to another box');
+      if (gapBad) fail('rank: nearestOpen() gives ' + gapBad + ' points between two boxes to the farther box');
+      const done = list.map((b, i) => Object.assign({}, b, { done:i === 1 }));
+      if (nearestOpen(done, { x:done[1].cx + done[1].hw - 0.5, y:done[1].cy }, D.GPAD) !== null) fail('rank: a drop on a filled box is moved into its neighbour');
+    }
+    if (!(D.GAME_RANK.length >= 4)) fail('GAME_RANK should have at least 4 entries');
+    D.GAME_RANK.forEach((set, i) => {
+      const w = 'GAME_RANK[' + i + ']';
+      if (set.length !== 4) return fail(w + ' should have 4 lengths');
+      const cms = set.map(cmOf);
+      cms.forEach((v, j) => { if (!near(D.lenCm(set[j]), v)) fail(w + ': lenCm() of item ' + j + ' is ' + D.lenCm(set[j]) + ', should be ' + v); });
+      if (new Set(cms).size !== 4) fail(w + ': two lengths are the same (' + cms.join(',') + ')');
+      if (!cms.every(v => v >= 1 && v <= 300)) fail(w + ': a length outside 1~300 cm (' + cms.join(',') + ')');
+      set.forEach((v, j) => { if ((v.c !== undefined && !(v.c >= 1 && v.c <= 299)) || (v.m !== undefined && !(v.m >= 1 && v.m <= 3)) || (v.m && v.c >= 100)) fail(w + ': item ' + j + ' is not a proper length ' + JSON.stringify(v)); });
+      if (!set.some(v => v.m && v.c)) fail(w + ': no "m and cm" card');
+      if (!set.some(v => v.m && !v.c)) fail(w + ': no whole-metre card (2 m, 1 m …)');
+      /* 這一關要擋的迷思：只比數字。要有一張「公分的數字比某一張公尺的數字大、其實比較短」 */
+      const trap = set.some(a => !a.m && set.some(b => b.m && a.c > b.m && cmOf(a) < cmOf(b)));
+      if (!trap) fail(w + ': no card whose centimetre number is bigger but which is shorter — comparing the numbers alone would still sort it right');
+      /* 只比「第一個數字」的排法一定要排錯 —— 不然這一組沒有在教 */
+      const naive = set.slice().sort((a, b) => (a.m || a.c) - (b.m || b.c)).map(cmOf), order = cms.slice().sort((a, b) => a - b);
+      if (naive.join() === order.join()) fail(w + ': sorting by the first number already gives the right order');
+      /* 照遊戲的規則：第 k 格只收第 k 短的；每一張放進每一個錯的格子，說的話逐個比數字、而且說得對 */
+      const ord = set.slice().sort((a, b) => cmOf(a) - cmOf(b));
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        set.forEach(v => {
+          const lines = d.lenCard(v).split('\n');
+          lines.forEach(t => { if (textW(t) > Cd.w - 6) fail(w + ' ' + L + ': card line "' + t + '" is about ' + textW(t).toFixed(0) + 'px, the card is ' + Cd.w); });
+          if (cmOf(v) !== (() => { const t = d.len(v); const m = t.match(L === 'zh' ? /(\d+) 公尺/ : /(\d+) m\b/), c = t.match(L === 'zh' ? /(\d+) 公分/ : /(\d+) cm\b/); return (m ? +m[1] * 100 : 0) + (c ? +c[1] : 0); })()) fail(w + ' ' + L + ': len() writes ' + d.len(v) + ' for ' + JSON.stringify(v));
+          if (d.lenCard(v).replace('\n', ' ') !== d.len(v)) fail(w + ' ' + L + ': the card text and len() differ');
+        });
+        const conv = v => v.m ? [v.m].concat(v.c ? [v.c] : []).concat([cmOf(v)]) : [];
+        ord.forEach((want, k) => set.forEach(v => {
+          if (v === want) return;
+          const longer = cmOf(v) > cmOf(want);
+          const t = longer ? d.gRankBig(v, want) : d.gRankSmall(v, want);
+          const L1 = longer ? v : want, S1 = longer ? want : v;
+          seq(w + ' ' + L + ' put ' + cmOf(v) + ' in box ' + (k + 1), t, conv(L1).concat(conv(S1)).concat([cmOf(L1), cmOf(S1)]));
+          has(w + ' ' + L + ' put ' + cmOf(v) + ' in box ' + (k + 1), t, longer ? (L === 'zh' ? /比較短的/ : /shorter/) : (L === 'zh' ? /比較長的/ : /longer/));
+          has(w + ' ' + L + ' put ' + cmOf(v) + ' in box ' + (k + 1), t, L === 'zh' ? /公分比 \d+ 公分長/ : /cm is longer than \d+ cm/);
+          /* 有公尺的那一張一定要先換成公分（自己的寫法，不呼叫頁面的 len()） */
+          [L1, S1].filter(x => x.m).forEach(x => {
+            const own = L === 'zh' ? (x.c ? x.m + ' 公尺 ' + x.c + ' 公分' : x.m + ' 公尺') + ' 是 ' + cmOf(x) + ' 公分' : (x.c ? x.m + ' m ' + x.c + ' cm' : x.m + ' m') + ' is ' + cmOf(x) + ' cm';
+            if (t.indexOf(own) < 0) fail(w + ' ' + L + ': rankWhy omitted metre conversion "' + own + '" — ' + t);
+          });
+        }));
+        seq(w + ' gRankDone ' + L, d.gRankDone(ord), [].concat.apply([], ord.map(v => [v.m, v.c].filter(x => x))));
+        ord.forEach((v, k) => seq(w + ' gRank2 ' + L, d.gRank2(k, v), [k + 1, k + 1].concat([v.m, v.c].filter(x => x)).concat(v.m ? [cmOf(v)] : [])));
+      });
+    });
+    /* shuffle()：托盤一開始不可以已經由短排到長（四張有 1/24 的機會）。用「一定洗回原樣」的假亂數跑每一組，再用真亂數跑 2000 次 */
+    {
+      const fsrc = extractFunction(src, 'shuffle');
+      if (!fsrc) fail('cannot find shuffle() in index.html');
+      else {
+        try {
+          const fake = Object.create(Math); fake.random = () => 0.999999;
+          const forced = new Function('Math', fsrc + '\nreturn shuffle;')(fake);
+          const real = new Function(fsrc + '\nreturn shuffle;')();
+          const up = a => a.every((v, j) => j === 0 || a[j - 1] < v);
+          D.GAME_RANK.forEach((set, i) => {
+            const sorted = set.map(cmOf).sort((a, b) => a - b);
+            const out = forced(sorted);
+            if (up(out) || out.slice().sort((a, b) => a - b).join() !== sorted.join()) fail('GAME_RANK[' + i + ']: shuffle() of an already sorted tray leaves it sorted (' + out.join(',') + ')');
+            for (let r = 0; r < 2000; r++){ const o = real(set.map(cmOf)); if (up(o)){ fail('GAME_RANK[' + i + ']: shuffle() produced a tray already in order'); break; } }
+          });
+        } catch (e){ fail('shuffle() could not run: ' + e.message); }
+      }
+    }
+    LANGS.forEach(L => { seq('gRankArrow ' + L, I18N[L].gRankArrow, []); });
+  }
+
+
+  /* ================= 每一關的 RENDER 函式本體「真的跑」（codex 第一輪：need() 只證明那一行寫著）=================
+     把 RENDER.<關> 的原始碼切出來，放進一個假的 DOM 裡執行：makeBoard／addZone／addPiece／useTapSelect／actionButton
+     換成記錄用的替身，target()／drawRuler()／nearestOpen()／renderTray()／shuffle() 用頁面自己的原始碼。
+     然後照遊戲的規則對每一題做每一種動作（每一個放開的位置、每一格、每一張卡），看頁面自己的程式收不收、說什麼、
+     畫板開多高、什麼時候過關。 */
+  const EXEC = (() => {
+    const fns = ['target', 'drawRuler', 'nearestOpen', 'renderTray', 'shuffle'].map(n => {
+      const f = extractFunction(src, n); if (!f) fail('exec: cannot cut ' + n + '() out of index.html'); return f || '';
+    }).join('\n');
+    const decl = Object.keys(D).map(k => 'var ' + k + ' = D.' + k + ';').join('\n');
+    const stub = `
+      var LOG = { miss:[], solved:[], info:[], zones:[], pieces:[], created:[], board:null, line:null, drop:null, action:null, kept:0 };
+      function el(){ var o = { style:{}, textContent:'', innerHTML:'', children:[], disabled:false, cls:{},
+        classList:{ add:function(c){ o.cls[c] = true; }, remove:function(c){ delete o.cls[c]; }, contains:function(c){ return !!o.cls[c]; } },
+        appendChild:function(x){ o.children.push(x); return x; }, setAttribute:function(){}, remove:function(){ o.removed = true; },
+        addEventListener:function(t, f){ o['on' + t] = f; } }; return o; }
+      var document = { createElement:function(tag){ var e = el(); e.tag = tag; LOG.created.push(e); return e; } };
+      var gameStage = el(), gMsg = el(), gSolved = false, gCtx = {}, gMistakes = 0;
+      function pick(arr){ return arr[PICK]; }
+      function makeBoard(W, H){ LOG.board = { W:W, H:H }; return { el:el(), W:W, k:1, selected:null }; }
+      function addZone(B, x, y, w, h, cls, text){ var z = el(); z.x = x; z.y = y; z.w = w; z.h = h; z.className = cls; if (text !== undefined) z.textContent = text; LOG.zones.push(z); return z; }
+      function trailLine(text){ LOG.line = el(); LOG.line.textContent = text; return LOG.line; }
+      function addPiece(B, o){ var P = { el:el(), w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {}, text:o.text, cls:o.cls };
+        P.place = function(x, y){ P.cx = x; P.cy = y; }; P.home = function(){ P.place(P.homeX, P.homeY); }; P.lock = function(x, y){ P.locked = true; P.place(x, y); };
+        P.busy = function(){ return false; }; LOG.pieces.push(P); return P; }
+      function useTapSelect(B, fn){ LOG.drop = fn; }
+      function keepSelected(B, P){ LOG.kept++; }
+      function roundMiss(t){ gMistakes++; LOG.miss.push(t); }
+      function roundSolved(t){ if (gSolved) return; gSolved = true; LOG.solved.push(t); }
+      function roundInfo(t){ LOG.info.push(t); }
+      function refreshHint(){}
+      function actionButton(text, f){ var b = el(); b.textContent = text; LOG.action = { b:b, f:f }; return b; }
+    `;
+    return (type, pickIdx, d) => {
+      const code = decl + '\nvar PICK = ' + pickIdx + ';\n' + stub + fns + '\n(function(d){' + B[type] + '\n})(d);\nreturn { LOG:LOG, solved:function(){ return gSolved; }, misses:function(){ return gMistakes; }, msg:function(){ return gMsg.textContent; } };';
+      try { return new Function('D', 'd', code)(D, d); }
+      catch (e){ fail('exec: RENDER.' + type + ' could not run in the stub DOM: ' + e.message); return null; }
+    };
+  })();
+  const live = z => !z.removed;
+  /* 每一關一開始：畫板的高度就是那一關的 <TYPE>_H（版面檢查量的就是那個高度） */
+  [['zero', 'ZERO_H'], ['count', 'COUNT_H'], ['build', 'BUILD_H'], ['cut', 'CUT_H'], ['rank', 'RANK_H']].forEach(([t, h]) => {
+    const r = EXEC(t, 0, I18N.zh);
+    if (r && !(r.LOG.board && r.LOG.board.W === W && r.LOG.board.H === D[h])) fail('exec: RENDER.' + t + ' opens a board of ' + JSON.stringify(r.LOG.board) + ', should be ' + W + ' × ' + h + ' (' + D[h] + ')');
+  });
+
+  /* --- 第 1 關（跑起來）：每一個左端的位置 --- */
+  D.GAME_ZERO.forEach((e, i) => LANGS.forEach(L => {
+    const d = I18N[L], R = D.ZERO_RULER, Pn = D.ZERO_PEN, P = D.ZERO_PAD, w = 'exec zero[' + i + '] ' + L, to = e.from + e.len;
+    const lines = [{ x:R.x0 - R.edge, k:-1 }].concat(Array.from({ length:R.max + 1 }, (_, k) => ({ x:R.x0 + k * R.unit, k })));
+    let r = EXEC('zero', i, d); if (!r) return;
+    const pen0 = r.LOG.pieces[0];
+    if (!pen0 || pen0.w !== e.len * R.unit || pen0.cx - pen0.w / 2 !== R.x0 + e.from * R.unit || pen0.cy !== Pn.y) return fail(w + ': the pencil is not drawn ' + e.len + ' cm long with its left end on ' + e.from);
+    if (r.LOG.line.textContent !== d.gZeroAsk) fail(w + ': the line should ask, not answer: ' + r.LOG.line.textContent);
+    let accepted = 0, bad = [];
+    for (let x = R.x0 - R.edge - P - 3; x <= R.x0 + R.max * R.unit + P + 3; x += 0.5){
+      let best = null, bd = Infinity;
+      lines.forEach(l => { const dd = Math.abs(x - l.x); if (dd <= P && dd < bd){ bd = dd; best = l.k; } });
+      const pen = r.LOG.pieces[0], m0 = r.LOG.miss.length;
+      const got = r.LOG.drop(pen, { x:x + pen.w / 2, y:Pn.y });
+      const said = r.LOG.miss.slice(m0);
+      let want;
+      if (best === null || best === e.from) want = { ok:false, said:[] };
+      else if (best < 0) want = { ok:false, said:[d.gZeroEdge] };
+      else if (best > 0) want = { ok:false, said:[d.gZeroTick(best)] };
+      else want = { ok:true, said:[] };
+      if (!!got !== want.ok || said.join('|') !== want.said.join('|')) bad.push(x + ' → ' + (got ? 'accepted' : 'bounced') + ' ' + JSON.stringify(said));
+      if (got){
+        accepted++;
+        if (!(pen.locked && pen.cx - pen.w / 2 === R.x0)) bad.push('accepted at ' + x + ' but the left end is locked at ' + (pen.cx - pen.w / 2));
+        if (r.LOG.solved.join() !== d.gZeroDone(e.from, to, e.len)) bad.push('solved with ' + JSON.stringify(r.LOG.solved));
+        if (r.LOG.line.textContent !== d.gZeroNow(e.len)) bad.push('line ' + r.LOG.line.textContent);
+        r = EXEC('zero', i, d);
+      } else if (pen.locked || r.solved()) bad.push(x + ': bounced but the pencil is locked / the round solved');
+    }
+    if (bad.length) fail(w + ': ' + bad.length + ' left-end positions behave wrongly, e.g. ' + bad.slice(0, 3).join('; '));
+    if (!accepted) fail(w + ': no left-end position is accepted');
+    /* 點目的地：點的位置就是左端要去的地方；點在鉛筆帶的上面 → 不算 */
+    r = EXEC('zero', i, d);
+    if (r.LOG.drop(r.LOG.pieces[0], { x:R.x0 + 1, y:R.y + R.h / 2, tap:true }) !== true) fail(w + ': tap-then-tap on the 0 line (on the ruler) is not accepted');
+    r = EXEC('zero', i, d);
+    if (r.LOG.drop(r.LOG.pieces[0], { x:R.x0, y:Pn.y - Pn.band - P - 2, tap:true }) !== false || r.LOG.miss.length) fail(w + ': a tap above the pencil band is not silent');
+    if (r.LOG.drop(r.LOG.pieces[0], { x:R.x0 + e.from * R.unit, y:Pn.y, tap:true }) !== false || r.LOG.miss.length) fail(w + ': a tap on the pencil\'s own starting line is not silent');
+  }));
+
+  /* --- 第 2 關（跑起來）：每一格點一下、點兩下、亂序點 --- */
+  D.GAME_COUNT.forEach((e, i) => LANGS.forEach(L => {
+    const d = I18N[L], R = D.COUNT_RULER, n = e.b - e.a, w = 'exec count[' + i + '] ' + L;
+    const orders = [];
+    const inside = []; for (let k = e.a + 1; k <= e.b; k++) inside.push(k);
+    orders.push(inside.slice(), inside.slice().reverse(), inside.slice(1).concat(inside.slice(0, 1)));
+    orders.forEach((ord, oi) => {
+      const r = EXEC('count', i, d); if (!r) return;
+      const cells = r.LOG.created.filter(c => c.tag === 'button' && typeof c.onclick === 'function');
+      if (cells.length !== R.max) return fail(w + ': ' + cells.length + ' space buttons, should be ' + R.max);
+      cells.forEach((c, j) => { if (c.style.left !== (R.x0 + j * R.unit) + 'px' || c.style.width !== R.unit + 'px') fail(w + ': space button ' + (j + 1) + ' is not at space ' + (j + 1)); });
+      const rib = r.LOG.zones.filter(z => z.className === 'gribbon')[0];
+      if (!rib || rib.x !== R.x0 + e.a * R.unit || rib.w !== n * R.unit) fail(w + ': the ribbon is not drawn from ' + e.a + ' to ' + e.b);
+      /* 先點緞帶外面的每一格：每一下都說為什麼、什麼都不數 */
+      for (let k = 1; k <= R.max; k++) if (k <= e.a || k > e.b){
+        const m0 = r.LOG.miss.length; cells[k - 1].onclick();
+        if (r.LOG.miss.length !== m0 + 1 || r.LOG.miss[m0] !== d.gCountOut) fail(w + ': tapping space ' + k + ' (outside) does not say why');
+        if (cells[k - 1].classList.contains('counted') || r.LOG.line.textContent !== d.gCountNow(0)) fail(w + ': tapping space ' + k + ' (outside) counts something');
+      }
+      ord.forEach((k, j) => {
+        const m0 = r.LOG.miss.length;
+        cells[k - 1].onclick();
+        if (r.LOG.miss.length !== m0) fail(w + ': tapping space ' + k + ' (under the ribbon) is a mistake');
+        if (j < n - 1){
+          if (r.LOG.line.textContent !== d.gCountNow(j + 1) || r.solved()) fail(w + ' order ' + oi + ': after ' + (j + 1) + ' taps the line says ' + r.LOG.line.textContent + (r.solved() ? ' and the round is solved' : ''));
+          cells[k - 1].onclick();
+          if (r.LOG.miss.length !== m0 || r.LOG.line.textContent !== d.gCountNow(j + 1)) fail(w + ': tapping a counted space again changes something');
+        }
+      });
+      if (!r.solved() || r.LOG.solved.join() !== d.gCountDone(e.a, e.b, n)) fail(w + ' order ' + oi + ': not solved with gCountDone after the ' + n + ' spaces');
+      if (r.LOG.line.textContent !== d.gCountNow(n) + ' → ' + d.cm(n)) fail(w + ': final line ' + r.LOG.line.textContent);
+      const m1 = r.LOG.miss.length; cells.forEach(c => c.onclick());
+      if (r.LOG.miss.length !== m1 || r.LOG.solved.length !== 1) fail(w + ': taps after the round is solved still do something');
+    });
+  }));
+
+  /* --- 第 3 關（跑起來）：每一個長度 n、每一種棒子、每一次按「做好了」 --- */
+  D.GAME_BUILD.forEach((e, i) => LANGS.forEach(L => {
+    const d = I18N[L], Tr = D.BUILD_TRACK, T = cmOf(e), w = 'exec build[' + i + '] ' + L;
+    const r = EXEC('build', i, d); if (!r) return;
+    const tok = p => r.LOG.pieces.filter(P => P.data.p === p)[0];
+    if (!tok(10) || !tok(1) || r.LOG.pieces.length !== 2) return fail(w + ': the sources are not one 10 cm and one 1 cm');
+    if (tok(10).text !== d.cm(10) || tok(1).text !== d.cm(1)) fail(w + ': the source labels do not say 10 / 1 cm');
+    if (!r.LOG.action) return fail(w + ': no Done button');
+    const mid = { x:Tr.x + Tr.w / 2, y:Tr.y + Tr.h / 2 };
+    const drawn = () => r.LOG.zones.filter(z => live(z) && /^(gmeter|gstick|gcubes)$/.test(z.className)).reduce((s, z) => s + z.w, 0) / Tr.px;
+    /* 什麼都沒放就按：只提醒、不算錯 */
+    r.LOG.action.f();
+    if (r.LOG.miss.length || r.solved() || r.msg() !== d.gBuildEmpty) fail(w + ': Done with nothing built should only remind (got miss ' + r.LOG.miss.length + ', msg ' + r.msg() + ')');
+    /* 框外面放開：不收、不算錯 */
+    if (r.LOG.drop(tok(10), { x:Tr.x + Tr.w / 2, y:Tr.y + Tr.h + D.GPAD + 2 }) !== false || r.LOG.miss.length) fail(w + ': a drop below the frame is not silent');
+    let n = 0, guard = 0, meterSaid = 0;
+    while (n < T && guard++ < 300){
+      /* 每一步：先試會超過的那一種（說為什麼、長度不變），再按一次「做好了」（還不夠：說還差多少），再放對的那一種 */
+      [10, 1].forEach(p => { if (n + p > T){ const m0 = r.LOG.miss.length; if (r.LOG.drop(tok(p), Object.assign({}, mid)) !== false || r.LOG.miss[m0] !== d.gBuildOver(n, p, T) || drawn() !== n) fail(w + ': at ' + n + ' cm a ' + p + ' cm piece is not refused with gBuildOver'); } });
+      if (n > 0){ const m0 = r.LOG.miss.length; r.LOG.action.f(); if (r.solved() || r.LOG.miss[m0] !== d.gBuildShort(n, e.m, e.c, T)) fail(w + ': Done at ' + n + ' cm is not refused with gBuildShort'); }
+      const p = n + 10 <= T ? 10 : 1, tap = guard % 3 === 0, k0 = r.LOG.kept, i0 = r.LOG.info.length;
+      if (r.LOG.drop(tok(p), Object.assign({ tap:tap }, mid)) !== true) { fail(w + ': at ' + n + ' cm a ' + p + ' cm piece is refused'); break; }
+      n += p;
+      if (r.solved()) fail(w + ': a drop solved the round at ' + n + ' cm (Done must be pressed)');
+      if (drawn() !== n) fail(w + ': at ' + n + ' cm the drawn bar is ' + drawn() + ' cm');
+      if (r.LOG.line.textContent !== d.gBuildNow(n)) fail(w + ': the line says ' + r.LOG.line.textContent + ' at ' + n + ' cm');
+      if (tap && r.LOG.kept !== k0 + 1) fail(w + ': a tap placement does not keep the source selected');
+      if (!tap && r.LOG.kept !== k0) fail(w + ': a drag placement keeps the source selected');
+      if (r.LOG.info.length > i0){ meterSaid++; if (n !== 100 || r.LOG.info[i0] !== d.gBuildMeter) fail(w + ': at ' + n + ' cm it says ' + r.LOG.info[i0]); }
+      const meters = r.LOG.zones.filter(z => live(z) && z.className === 'gmeter').length, sticks = r.LOG.zones.filter(z => live(z) && z.className === 'gstick').length;
+      if (meters !== Math.floor(Math.floor(n / 10) / 10) || sticks !== Math.floor(n / 10) % 10) fail(w + ': at ' + n + ' cm the bar shows ' + meters + ' metre(s) and ' + sticks + ' stick(s)');
+    }
+    if (meterSaid !== 1) fail(w + ': "100 cm = 1 m" was said ' + meterSaid + ' times');
+    /* 每一個長度 n（0～T）各開一局重來：先拼到 n，再分別試 1 公分、10 公分、「做好了」（codex 第二輪：上面那一條路只走貪心的一條） */
+    const reach = n => {
+      const q = EXEC('build', i, d); if (!q) return null;
+      const t = p => q.LOG.pieces.filter(P => P.data.p === p)[0];
+      for (let k = 0; k < Math.floor(n / 10); k++) q.LOG.drop(t(10), Object.assign({}, mid));
+      for (let k = 0; k < n % 10; k++) q.LOG.drop(t(1), Object.assign({}, mid));
+      return { q, t };
+    };
+    for (let n0 = 0; n0 <= T; n0++){
+      const now = q => q.LOG.zones.filter(z => live(z) && /^(gmeter|gstick|gcubes)$/.test(z.className)).reduce((s, z) => s + z.w, 0) / Tr.px;
+      [1, 10].forEach(p => {
+        const h = reach(n0); if (!h) return;
+        if (now(h.q) !== n0 || h.q.LOG.miss.length) return fail(w + ': could not build ' + n0 + ' cm');
+        const got = h.q.LOG.drop(h.t(p), Object.assign({}, mid));
+        if (n0 + p <= T){ if (got !== true || now(h.q) !== n0 + p || h.q.LOG.miss.length || h.q.solved()) fail(w + ': at ' + n0 + ' cm a ' + p + ' cm piece is not simply added'); }
+        else if (got !== false || now(h.q) !== n0 || h.q.LOG.miss.join() !== d.gBuildOver(n0, p, T)) fail(w + ': at ' + n0 + ' cm a ' + p + ' cm piece is not refused with gBuildOver');
+      });
+      const h = reach(n0); if (!h) continue;
+      h.q.LOG.action.f();
+      if (n0 === 0){ if (h.q.LOG.miss.length || h.q.solved() || h.q.msg() !== d.gBuildEmpty) fail(w + ': Done at 0 cm does not just remind'); }
+      else if (n0 < T){ if (h.q.solved() || h.q.LOG.miss.join() !== d.gBuildShort(n0, e.m, e.c, T)) fail(w + ': Done at ' + n0 + ' cm is not refused with gBuildShort'); }
+      else if (!h.q.solved() || h.q.LOG.solved.join() !== d.gBuildDone(e.m, e.c, T) || h.q.LOG.miss.length) fail(w + ': Done at ' + T + ' cm does not solve the round');
+    }
+    if (n !== T) return fail(w + ': the build ended at ' + n);
+    [10, 1].forEach(p => { const m0 = r.LOG.miss.length; if (r.LOG.drop(tok(p), Object.assign({}, mid)) !== false || r.LOG.miss[m0] !== d.gBuildOver(T, p, T)) fail(w + ': at the target a ' + p + ' cm piece is accepted'); });
+    r.LOG.action.f();
+    if (!r.solved() || r.LOG.solved.join() !== d.gBuildDone(e.m, e.c, T) || !r.LOG.action.b.disabled) fail(w + ': Done at ' + T + ' cm does not solve the round with gBuildDone');
+  }));
+
+  /* --- 第 4 關（跑起來）：剪刀放在繩子的每一個位置 --- */
+  D.GAME_CUT.forEach((e, i) => LANGS.forEach(L => {
+    const d = I18N[L], C = D.CUT_ROPE, P = D.CUT_PAD, keep = e.s - e.c, w = 'exec cut[' + i + '] ' + L, cy = C.y + C.h / 2;
+    let r = EXEC('cut', i, d); if (!r) return;
+    const task = r.LOG.zones.filter(z => z.className === 'gorder')[0];
+    if (!task || task.textContent !== d.gCutTask(e.s, e.c)) fail(w + ': the task does not say gCutTask');
+    const labels = r.LOG.zones.filter(z => z.className === 'gnum').map(z => +z.textContent);
+    if (labels.join() !== Array.from({ length:e.s / 10 + 1 }, (_, k) => k * 10).join()) fail(w + ': the notch numbers read ' + labels.join());
+    let ok = 0; const bad = [];
+    for (let x = C.x - P - 3; x <= C.x + e.s * C.px + P + 3; x += 0.5){
+      let best = null, bd = Infinity;
+      for (let k = 1; k < e.s / 10; k++){ const dd = Math.abs(x - (C.x + k * 10 * C.px)); if (dd <= P && dd < bd){ bd = dd; best = k * 10; } }
+      const sci = r.LOG.pieces[0], m0 = r.LOG.miss.length;
+      const got = r.LOG.drop(sci, { x, y:cy });
+      const said = r.LOG.miss.slice(m0).join('|');
+      const want = best === null ? '' : best === keep ? '' : d.gCutWrong(best, e.s, e.c);
+      if (!!got !== (best === keep) || said !== want) bad.push(x + ' → ' + (got ? 'cut' : 'bounced') + ' ' + said);
+      if (got){
+        ok++;
+        const rope = r.LOG.zones.filter(z => z.className === 'grope')[0], off = r.LOG.zones.filter(z => z.className === 'grope off')[0];
+        if (!(sci.locked && Math.abs(sci.cx - (C.x + keep * C.px)) < 1e-9 && rope.style.width === (keep * C.px) + 'px' && off && off.w === e.c * C.px)) bad.push('cut at ' + x + ' does not leave ' + keep + ' + ' + e.c);
+        if (r.LOG.solved.join() !== d.gCutDone(e.s, e.c) || r.LOG.line.textContent !== d.gCutNow(e.s, e.c)) bad.push('solved/line text wrong');
+        r = EXEC('cut', i, d);
+      }
+    }
+    if (bad.length) fail(w + ': ' + bad.length + ' positions behave wrongly, e.g. ' + bad.slice(0, 3).join('; '));
+    if (!ok) fail(w + ': no position cuts at ' + keep);
+    r = EXEC('cut', i, d);
+    if (r.LOG.drop(r.LOG.pieces[0], { x:C.x + keep * C.px, y:cy + C.band + P + 2, tap:true }) !== false || r.LOG.miss.length) fail(w + ': a tap below the cutting band is not silent');
+  }));
+
+  /* --- 第 5 關（跑起來）：每一張卡放進每一格 --- */
+  D.GAME_RANK.forEach((set, i) => LANGS.forEach(L => {
+    const d = I18N[L], S = D.RANK_SLOT, w = 'exec rank[' + i + '] ' + L;
+    const r = EXEC('rank', i, d); if (!r) return;
+    const cards = r.LOG.pieces, ord = set.slice().sort((a, b) => cmOf(a) - cmOf(b));
+    if (cards.length !== 4 || cards.map(P => cmOf(P.data.v)).sort((a, b) => a - b).join() !== ord.map(cmOf).join()) return fail(w + ': the tray does not hold the four lengths');
+    cards.forEach(P => { if (P.text !== d.lenCard(P.data.v)) fail(w + ': a card reads ' + JSON.stringify(P.text)); });
+    /* 每一張卡 × 每一格，各開一局重來（四格都還空著）：只有第 k 短的收進第 k 格（codex 第二輪：依序放的話後面的格子試到的錯卡越來越少） */
+    ord.forEach((want, k) => set.forEach(v => {
+      const q = EXEC('rank', i, d); if (!q) return;
+      const P = q.LOG.pieces.filter(x => x.data.v === v)[0];
+      if (!P) return fail(w + ': no card ' + JSON.stringify(v));
+      const got = q.LOG.drop(P, { x:S.x[k], y:S.y });
+      if (v === want){ if (got !== true || !P.locked || q.LOG.miss.length) fail(w + ': ' + cmOf(v) + ' is refused in an empty box ' + (k + 1)); }
+      else {
+        const why = cmOf(v) > cmOf(want) ? d.gRankBig(v, want) : d.gRankSmall(v, want);
+        if (got !== false || P.locked || q.LOG.miss.join() !== why) fail(w + ': ' + cmOf(v) + ' in the empty box ' + (k + 1) + ' is not refused with the right reason');
+      }
+    }));
+    const trayOrder = cards.slice().sort((a, b) => a.homeX - b.homeX).map(P => cmOf(P.data.v));
+    if (trayOrder.every((v, j) => j === 0 || trayOrder[j - 1] < v)) fail(w + ': the tray starts already in order');
+    S.x.forEach((x, k) => {
+      cards.forEach(P => {
+        if (P.locked || P.data.v === ord[k]) return;
+        const m0 = r.LOG.miss.length, want = cmOf(P.data.v) > cmOf(ord[k]) ? d.gRankBig(P.data.v, ord[k]) : d.gRankSmall(P.data.v, ord[k]);
+        if (r.LOG.drop(P, { x, y:S.y }) !== false || r.LOG.miss[m0] !== want) fail(w + ': ' + cmOf(P.data.v) + ' in box ' + (k + 1) + ' is not refused with the right reason');
+      });
+      const right = cards.filter(P => P.data.v === ord[k])[0];
+      if (!right) return fail(w + ': no card in the tray is ' + JSON.stringify(ord[k]));
+      if (r.LOG.drop(right, { x, y:S.y }) !== true || !right.locked) fail(w + ': ' + cmOf(ord[k]) + ' is refused in box ' + (k + 1));
+      if (k < 3 && r.solved()) fail(w + ': solved after only ' + (k + 1) + ' boxes');
+      /* 放在已經放好的格子上：不收、不算錯（§六之五第 3 點：放到已經放好的位置也是靜靜彈回） */
+      const other = cards.filter(P => !P.locked)[0];
+      if (other){ const m1 = r.LOG.miss.length; if (r.LOG.drop(other, { x, y:S.y }) !== false || r.LOG.miss.length !== m1) fail(w + ': a drop on the filled box ' + (k + 1) + ' is not silent'); }
+    });
+    if (!r.solved() || r.LOG.solved.join() !== d.gRankDone(ord)) fail(w + ': not solved with gRankDone after four boxes');
+    if (r.LOG.line.textContent !== ord.map(v => d.len(v)).join(' < ')) fail(w + ': the line says ' + r.LOG.line.textContent);
+  }));
+
+  /* --- 每一關的狀態前進：讓這一關往前走的那一行（改掉就玩不完，但上面的字面掃描未必看得到） --- */
+  need('zero', /P\.el\.classList\.add\('placed'\);\s*line\.textContent = d\.gZeroNow\(e\.len\);/, 'the line does not show the reading after the pencil is on 0');
+  need('cut', /line\.textContent = d\.gCutNow\(e\.s, e\.c\);/, 'the line does not show s − c after the cut');
+  need('rank', /line\.textContent = shown\(\);/, 'the line does not show the boxes filled so far');
+}
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-2/math/length */
   breaks: [
@@ -195,9 +937,6 @@ module.exports = {
       find:"            : 'Left end on 0, right end at ' + d.to + ' → ' + (d.to - d.from) + ' cm.'",
       replace:"            : 'Left end on 0, right end at ' + d.to + ' → ' + (d.to - d.from) + ' cm..'" },
     /* --- index.html：範例資料、題庫與遊戲關卡 --- */
-    { file:'index', expect:'opts[ans] does not equal to-from',
-      find:"    { from:2, to:9,  icon:'🖊️', opts:[9, 7, 11],   ans:1 },",
-      replace:"    { from:2, to:9,  icon:'🖊️', opts:[9, 7, 11],   ans:0 }," },
     { file:'index', expect:'the ruler drawn in the stem',
       find:"        { stem:'這枝鉛筆有多長？' + rulerSVG({ from:0, to:8, icon:'✏️', mark0:true }),\n          opts:['7 公分','9 公分','8 公分','8 公尺'], ans:2,",
       replace:"        { stem:'這枝鉛筆有多長？' + rulerSVG({ from:0, to:9, icon:'✏️', mark0:true }),\n          opts:['7 公分','9 公分','8 公分','8 公尺'], ans:2," },
@@ -210,9 +949,6 @@ module.exports = {
     { file:'index', expect:'ZERO_CASES needs a case that starts at 0',
       find:"    { from:0, to:9,  icon:'✏️' },",
       replace:"    { from:1, to:9,  icon:'✏️' }," },
-    { file:'index', expect:'gWhys',
-      find:"        '左邊對著 2，不是 0：9 － 2 ＝ 7 公分。',",
-      replace:"        '左邊對著 2，不是 0：9 － 2 ＝ 8 公分。'," },
     /* --- 新加的守門條件也要各有一筆改壞版本（C2-7） --- */
     { file:'review', expect:'correct != a - b',
       find:'        var rest = a - b;',
@@ -251,9 +987,6 @@ module.exports = {
     { file:'index', expect:'does not know about',
       find:"        { stem:'1 公尺是幾公分？',",
       replace:"        { stem:'1 公尺是幾公分？' + rulerSVG({ from:0, to:5 })," },
-    { file:'index', expect:'gHints2',
-      find:"        '提示：左邊對著 4、右邊對著 13，要用減的。',",
-      replace:"        '提示：左邊對著 4、右邊對著 12，要用減的。'," },
     { file:'index', expect:"arithmetic is wrong",
       find:"why:'接起來要用加的：8 ＋ 5 ＝ 13 公分。'",
       replace:"why:'接起來要用加的：8 ＋ 5 ＝ 14 公分。'" },
@@ -265,7 +998,211 @@ module.exports = {
       replace:"    var h = 1;" },
     { file:'index', expect:"px wide but",
       find:"    var w = padL + max * unit + padR;",
-      replace:"    var w = padL + max * unit;" }
+      replace:"    var w = padL + max * unit;" },
+    /* --- 小遊戲（§六之五，2026-10-02 改版）：每一條規則、每一句說明、每一個版面常數都要有一筆改壞版本 --- */
+    { file:'index', expect:"must pick the nearest",
+      find:"if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"if (!best){ bd = dd; bc = dc; best = b; }" },
+    { file:'index', expect:"low grades never lose points",
+      find:"function roundMiss(text){ gMistakes++; gMsg.innerHTML",
+      replace:"function roundMiss(text){ gMistakes++; gScore = Math.max(0, gScore - 1); gMsg.innerHTML" },
+    { file:'index', expect:"should be 1",
+      find:"var stars = gMistakes === 0 ? 2 : 1;",
+      replace:"var stars = 2;" },
+    { file:'index', expect:"ahead mode does not show hint level 1",
+      find:"if (mode === 'ahead'){ hintLevel = 1; showHint(); }",
+      replace:"" },
+    { file:'index', expect:"disabled after the second level",
+      find:"if (hintLevel >= 2) gHintBtn.disabled = true;",
+      replace:"" },
+    { file:'index', expect:"tapped and then dragged",
+      find:"      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }\n",
+      replace:"" },
+    { file:'index', expect:"lost pointer capture does not put the piece back",
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+      replace:"" },
+    { file:'index', expect:"second finger",
+      find:"if (P.locked || gSolved || start) return;",
+      replace:"if (P.locked || gSolved) return;" },
+    { file:'index', expect:"leaves it sorted",
+      find:"    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }\n",
+      replace:"" },
+    { file:'index', expect:"does not clear the stage",
+      find:"    elHint.textContent = '';\n    gameStage.textContent = '';\n",
+      replace:"    elHint.textContent = '';\n" },
+    { file:'index', expect:"edge of the ruler is accepted as 0",
+      find:"if (m.k < 0){ roundMiss(d.gZeroEdge); return false; }",
+      replace:"if (m.k < -1){ roundMiss(d.gZeroEdge); return false; }" },
+    { file:'index', expect:"a left end on another line is accepted",
+      find:"if (m.k > 0){ roundMiss(d.gZeroTick(m.k)); return false; }",
+      replace:"if (m.k > 99){ roundMiss(d.gZeroTick(m.k)); return false; }" },
+    { file:'index', expect:"LEFT end",
+      find:"var left = pt.tap ? pt.x : pt.x - P.w / 2;",
+      replace:"var left = pt.x;" },
+    { file:'index', expect:"the drop pads (10) no longer overlap",
+      find:"var ZERO_RULER = { x0:30, unit:20, max:12, edge:14,",
+      replace:"var ZERO_RULER = { x0:30, unit:20, max:12, edge:22," },
+    { file:'index', expect:"must start away from 0",
+      find:"{ from:3, len:8, icon:'✏️' }",
+      replace:"{ from:1, len:8, icon:'✏️' }" },
+    { file:'index', expect:"runs off the 0~12 ruler",
+      find:"{ from:2, len:10, icon:'✏️' }",
+      replace:"{ from:3, len:10, icon:'✏️' }" },
+    { file:'index', expect:"gZeroDone zh",
+      find:"' 公分。原本是 ' + to + ' － ' + from + ' ＝ ' + len + '，一樣長！'",
+      replace:"' 公分。原本是 ' + to + ' － ' + from + ' ＝ ' + (len + 1) + '，一樣長！'" },
+    { file:'index', expect:"gZeroTick(",
+      find:"return 'The left end is at ' + k + ', not 0.",
+      replace:"return 'The left end is at ' + (k + 1) + ', not 0." },
+    { file:'index', expect:"the guide lines end at",
+      find:".gguide{ position:absolute; top:39px; height:45px;",
+      replace:".gguide{ position:absolute; top:39px; height:40px;" },
+    { file:'index', expect:"left end on 0, or the round is not solved there",
+      find:"P.lock(zeroTickX(0) + P.w / 2, Pn.y);",
+      replace:"P.lock(zeroTickX(1) + P.w / 2, Pn.y);" },
+    { file:'index', expect:"a drop back on its own line is not silent",
+      find:"if (!m || m.k === e.from) return false;",
+      replace:"if (!m) return false;" },
+    { file:'index', expect:"the drop targets are not [ruler edge",
+      find:"var marks = [{ cx:zeroEdgeX(), cy:mid, hw:0, hh:hh, k:-1, done:false }];",
+      replace:"var marks = [];" },
+    { file:'index', expect:"outside the ribbon is counted",
+      find:"if (k <= e.a || k > e.b){ roundMiss(d.gCountOut); return; }",
+      replace:"if (k < e.a || k > e.b){ roundMiss(d.gCountOut); return; }" },
+    { file:'index', expect:"counted twice",
+      find:"if (gSolved || c.classList.contains('counted')) return;",
+      replace:"if (gSolved) return;" },
+    { file:'index', expect:"the ribbon starts on 0",
+      find:"{ a:1, b:5 }, { a:2, b:6 }",
+      replace:"{ a:0, b:5 }, { a:2, b:6 }" },
+    { file:'index', expect:"gCountDone zh",
+      find:"'。刻度線有 ' + (n + 1) + ' 條，數的是格子。'",
+      replace:"'。刻度線有 ' + n + ' 條，數的是格子。'" },
+    { file:'index', expect:"must be singular",
+      find:"return n === 1 ? 'Counted 1 space' : ",
+      replace:"return n === 0 ? 'Counted 1 space' : " },
+    { file:'index', expect:"under 44",
+      find:"var COUNT_RULER = { x0:12, unit:46,",
+      replace:"var COUNT_RULER = { x0:12, unit:44," },
+    { file:'index', expect:"solved exactly when every space",
+      find:"if (seen === n){ line.textContent",
+      replace:"if (seen === n - 1){ line.textContent" },
+    { file:'index', expect:"longer than the target is accepted",
+      find:"if (n + p > T){ roundMiss(d.gBuildOver(n, p, T)); return false; }",
+      replace:"if (n + p > T + 10){ roundMiss(d.gBuildOver(n, p, T)); return false; }" },
+    { file:'index', expect:"Done is accepted before",
+      find:"if (n < T){ roundMiss(d.gBuildShort(n, e.m, e.c, T)); return; }",
+      replace:"if (n < T - 10){ roundMiss(d.gBuildShort(n, e.m, e.c, T)); return; }" },
+    { file:'index', expect:"should only remind",
+      find:"if (n === 0){ gMsg.textContent = d.gBuildEmpty; return; }",
+      replace:"if (n === 0){ roundMiss(d.gBuildEmpty); return; }" },
+    { file:'index', expect:"solved by a drop",
+      find:"        line.textContent = d.gBuildNow(now());\n",
+      replace:"        line.textContent = d.gBuildNow(now());\n        if (now() === T) roundSolved(d.gBuildDone(e.m, e.c, T));\n" },
+    { file:'index', expect:"not m × 100 + c",
+      find:"T = e.m * 100 + e.c,",
+      replace:"T = e.m * 10 + e.c," },
+    { file:'index', expect:"gBuildShort(",
+      find:"'現在 ' + n + ' 公分。' + m + ' 公尺 ' + c + ' 公分 ＝ ' + (m * 100) + ' ＋ '",
+      replace:"'現在 ' + n + ' 公分。' + m + ' 公尺 ' + c + ' 公分 ＝ ' + (m * 10) + ' ＋ '" },
+    { file:'index', expect:"cm on top of the metre",
+      find:"{ m:1, c:5 }, { m:1, c:8 }",
+      replace:"{ m:1, c:45 }, { m:1, c:8 }" },
+    { file:'index', expect:"gBuildMeter zh",
+      find:"gBuildMeter:'10 根 10 公分接起來：100 公分 ＝ 1 公尺！'",
+      replace:"gBuildMeter:'10 根 10 公分接起來：100 公分 ＝ 10 公尺！'" },
+    { file:'index', expect:"never run out",
+      find:"        draw();\n        P.home();\n",
+      replace:"        draw();\n" },
+    { file:'index', expect:"does not add its length",
+      find:"if (p === 10) sticks++; else cubes++;",
+      replace:"if (p === 10) sticks++; else sticks++;" },
+    { file:'index', expect:"wrong notch is accepted",
+      find:"if (m.at !== keep){",
+      replace:"if (m.at !== keep && m.at !== e.c){" },
+    { file:'index', expect:"inner notches",
+      find:"if (k > 0 && k < e.s / 10) marks.push(",
+      replace:"if (k >= 0 && k <= e.s / 10) marks.push(" },
+    { file:'index', expect:"the pads no longer overlap",
+      find:"var CUT_H = 244, CUT_PAD = 13;",
+      replace:"var CUT_H = 244, CUT_PAD = 11;" },
+    { file:'index', expect:"gCutWrong(",
+      find:"'Cutting at ' + x + ' takes ' + (s - x) + ' cm off",
+      replace:"'Cutting at ' + x + ' takes ' + (s - x + 10) + ' cm off" },
+    { file:'index', expect:"is also right",
+      find:"{ s:80, c:30 }",
+      replace:"{ s:80, c:40 }" },
+    { file:'index', expect:"the cut is not at s − c",
+      find:"keep = e.s - e.c, cy",
+      replace:"keep = e.c, cy" },
+    { file:'index', expect:"gCutDone zh",
+      find:"return (s === 100 ? '1 公尺 ＝ 100 公分，' : '') + '剪掉 '",
+      replace:"return '剪掉 '" },
+    { file:'index', expect:"is not cut into keep and c",
+      find:"rope.style.width = (keep * C.px) + 'px';",
+      replace:"rope.style.width = (e.s * C.px) + 'px';" },
+    { file:'index', expect:"accepted in the wrong box",
+      find:"if (v !== c){ roundMiss(",
+      replace:"if (v !== c && false){ roundMiss(" },
+    { file:'index', expect:"shuffled by their centimetres",
+      find:"renderTray(B, set.map(lenCm), RANK_CARD.y,",
+      replace:"renderTray(B, set.map(lenCm).sort(function(a, b){ return a - b; }), RANK_CARD.y," },
+    { file:'index', expect:"wrong way round",
+      find:"lenCm(v) > lenCm(c) ? d.gRankBig(v, c) : d.gRankSmall(v, c)",
+      replace:"lenCm(v) < lenCm(c) ? d.gRankBig(v, c) : d.gRankSmall(v, c)" },
+    { file:'index', expect:"rankWhy omitted metre conversion",
+      find:"return (conv.length ? conv.join(D.gRankSep) + D.gRankColon : '') + D.gRankLonger(a, b);",
+      replace:"return D.gRankLonger(a, b);" },
+    { file:'index', expect:"no card whose centimetre number is bigger",
+      find:"[ { m:2, c:5 }, { c:150 }, { c:60 }, { m:1 } ]",
+      replace:"[ { m:1 }, { m:1, c:5 }, { c:150 }, { c:180 } ]" },
+    { file:'index', expect:"card line",
+      find:"RANK_CARD = { y:170, w:72, h:64, step:74 };",
+      replace:"RANK_CARD = { y:170, w:62, h:64, step:74 };" },
+    { file:'index', expect:"len() writes",
+      find:"return v.m && v.c ? v.m + ' m ' + v.c + ' cm' : v.m ? v.m + ' m' : v.c + ' cm';",
+      replace:"return v.m && v.c ? v.m + ' m ' + v.c + 'cm' : v.m ? v.m + ' m' : v.c + ' cm';" },
+    { file:'index', expect:"two lengths are the same",
+      find:"[ { m:1, c:20 }, { c:99 }, { m:2 }, { c:110 } ]",
+      replace:"[ { m:1, c:20 }, { c:99 }, { m:2 }, { c:120 } ]" },
+    { file:'index', expect:"sorting by the first number already gives the right order",
+      find:"[ { c:40 }, { m:1, c:4 }, { c:140 }, { m:2 } ]",
+      replace:"[ { m:1, c:4 }, { m:2 }, { c:240 }, { c:290 } ]" },
+    /* --- codex 第一輪之後補的：跑起來的關卡、畫板高度、從 CSS 算的手機寬度、整數公尺卡、舊畫板的積木 --- */
+    { file:'index', expect:"taps the line says",
+      find:"          if (k <= e.a || k > e.b){ roundMiss(d.gCountOut); return; }",
+      replace:"          seen++;\n          if (k <= e.a || k > e.b){ roundMiss(d.gCountOut); return; }" },
+    { file:'index', expect:"opens a board of",
+      find:"var B = makeBoard(GAME_W, ZERO_H);",
+      replace:"var B = makeBoard(GAME_W, 20);" },
+    { file:'index', expect:"under 44",
+      find:"    padding:22px;margin-top:16px;",
+      replace:"    padding:80px;margin-top:16px;" },
+    { file:'index', expect:"no whole-metre card",
+      find:"[ { c:80 }, { m:2 }, { m:1, c:5 }, { c:120 } ]",
+      replace:"[ { c:80 }, { m:2, c:1 }, { m:1, c:5 }, { c:120 } ]" },
+    { file:'index', expect:"still held when the board is rebuilt",
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */\n",
+      replace:"" },
+    { file:'index', expect:"a drag placement keeps the source selected",
+      find:"if (pt.tap) keepSelected(B, P);",
+      replace:"keepSelected(B, P);" },
+    { file:'index', expect:"a drop on the filled box",
+      find:"return best && !best.done ? best : null;",
+      replace:"return best;" },
+    { file:'index', expect:"taps after the round is solved",
+      find:"if (gSolved || c.classList.contains('counted')) return;",
+      replace:"if (c.classList.contains('counted')) return;" },
+    /* --- codex 第二輪：只走貪心那一條路／依序放卡時碰不到的缺陷 --- */
+    { file:'index', expect:"is not simply added",
+      find:"if (n + p > T){ roundMiss(d.gBuildOver(n, p, T)); return false; }",
+      replace:"if (n + p > T || (p === 1 && n < 100)){ roundMiss(d.gBuildOver(n, p, T)); return false; }" },
+    { file:'index', expect:"Done at 55 cm is not refused",
+      find:"if (n < T){ roundMiss(d.gBuildShort(n, e.m, e.c, T)); return; }",
+      replace:"if (n < T && n !== 55){ roundMiss(d.gBuildShort(n, e.m, e.c, T)); return; }" },
+    { file:'index', expect:"in the empty box 4 is not refused",
+      find:"        var c = order[s.k];\n",
+      replace:"        var c = s.k === 3 ? v : order[s.k];\n" }
   ],
 
   sim: {
@@ -432,8 +1369,11 @@ module.exports = {
   data: {
     dataStart: '/* ---------- 語言無關的資料 ---------- */',
     dataEnd: '/* ---------- i18n ---------- */',
-    dataReturn: '{RULER_MAX, RULER_TARGET, ZERO_CASES, METER_STEP, METER_MAX, CALC_CASES, ROUNDS, rulerSVG}',
-    check: function(data, I18N, fail){
+    dataReturn: '{RULER_MAX, RULER_TARGET, ZERO_CASES, METER_STEP, METER_MAX, CALC_CASES, rulerSVG, GAME_W, GPICK, GPAD, GAME_ORDER, ' +
+      'GAME_ZERO, ZERO_H, ZERO_PAD, ZERO_RULER, ZERO_PEN, zeroTickX, zeroEdgeX, GAME_COUNT, COUNT_H, COUNT_RULER, COUNT_RIB, countTickX, ' +
+      'GAME_BUILD, BUILD_H, BUILD_PIECES, BUILD_BAR, BUILD_TRACK, BUILD_TOK, GAME_CUT, CUT_H, CUT_PAD, CUT_ROPE, CUT_SCI, cutX, ' +
+      'GAME_RANK, RANK_H, RANK_SLOT, RANK_CARD, lenCm, rankWhy}',
+    check: function(data, I18N, fail, src){
       /* --- 這一課的常數：釘死，不然改了也沒人會發現 --- */
       if (data.RULER_MAX !== 15) fail(`RULER_MAX is ${data.RULER_MAX}; this lesson's ruler is 0~15 cm`);
       if (data.METER_STEP !== 10) fail(`METER_STEP is ${data.METER_STEP}; example 3 is built from 10 cm blocks`);
@@ -512,36 +1452,8 @@ module.exports = {
       if (!sawMinus) fail('CALC_CASES needs a subtraction case');
       if (!sawMeter) fail('CALC_CASES needs a case whose first length is written in metres');
 
-      /* --- 遊戲關卡 --- */
-      data.ROUNDS.forEach((r, i) => {
-        const len = r.to - r.from;
-        if (r.from < 0 || r.to > data.RULER_MAX) fail(`ROUND ${i+1} runs off the 0~${data.RULER_MAX} ruler`);
-        if (len < 1) fail(`ROUND ${i+1} has no length`);
-        if (r.opts.length !== 3) fail(`ROUND ${i+1} should offer 3 options, has ${r.opts.length}`);
-        if (new Set(r.opts).size !== r.opts.length) fail(`ROUND ${i+1} has duplicate options`);
-        if (r.opts[r.ans] !== len) fail(`ROUND ${i+1}: opts[ans] does not equal to-from (${r.opts[r.ans]} vs ${len})`);
-        /* 一關裡最大的合理誘答只有兩種：多數一格（to+1）或頭尾相加（from+to）。
-           給一個固定的 30 等於沒有上限。 */
-        const optMax = Math.max(r.to + 1, r.from + r.to);
-        r.opts.forEach(o => {
-          if (!(o >= 1 && o <= optMax)) fail(`ROUND ${i+1}: option ${o} is outside 1~${optMax} cm`);
-        });
-        ['zh','en'].forEach(L => {
-          const why = I18N[L].gWhys[i], hint = I18N[L].gHints2[i];
-          if (!why || !hint){ fail(`ROUND ${i+1}: missing ${L} hint/why`); return; }
-          const unit = L === 'zh' ? ' 公分' : ' cm';
-          if (why.indexOf(len + unit) < 0) fail(`ROUND ${i+1} ${L}: gWhys never states the answer "${len}${unit}"`);
-          if (why.indexOf(String(r.to)) < 0) fail(`ROUND ${i+1} ${L}: gWhys never mentions the end number ${r.to}`);
-          if (r.from > 0){
-            if (why.indexOf(String(r.from)) < 0) fail(`ROUND ${i+1} ${L}: gWhys never mentions the start number ${r.from}`);
-            if (hint.indexOf(String(r.from)) < 0) fail(`ROUND ${i+1} ${L}: gHints2 never mentions the start number ${r.from}`);
-            if (hint.indexOf(String(r.to)) < 0) fail(`ROUND ${i+1} ${L}: gHints2 never mentions the end number ${r.to}`);
-          }
-        });
-      });
-      if (data.ROUNDS.map(r => r.ans).every(x => x === 0)) fail('every game round has the answer first');
-      if (!data.ROUNDS.some(r => r.from === 0)) fail('ROUNDS needs at least one round that starts at 0');
-      if (!data.ROUNDS.some(r => r.from > 0)) fail('ROUNDS needs at least one round that does NOT start at 0');
+      /* --- 遊戲：五關五種玩法（§六之五） --- */
+      gameCheck(data, I18N, fail, src);
 
       /* --- 三層題庫：選項一律是長度，換算成公分之後不可以有兩個一樣 --- */
       ['qs','qsAdv','qsBoost'].forEach(bank => {
@@ -682,7 +1594,6 @@ module.exports = {
               for (let from = 0; from < to; from++) shots.push([`from${from}-to${to}`, { from:from, to:to, icon:'🖍️' }]);
             }
             shots.push(['max8-unit34', { max:8, unit:34 }]);
-            data.ROUNDS.forEach((r, i) => shots.push([`round${i+1}`, { from:r.from, to:r.to, icon:r.icon, mark0:true }]));
             shots.forEach(([label, o]) => {
               canvasProblems(data.rulerSVG(o)).forEach(m => fail(`rulerSVG(${label}): ${m}`));
             });
