@@ -278,7 +278,7 @@
       fbWrong: function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
       resAll: function(n){ return 'Perfect ' + n + '/' + n + '! 🏆 Come back tomorrow for a fresh batch.'; },
       resSome: function(r, n){ return 'You got ' + r + '/' + n + '. For the ones you missed, revisit:'; },
-      linkNames: { angle:'📖 Angles — The Angle Hunt', perimeter:'📖 Perimeter — Once Around the Edge', multiply:'📖 Multiply — The Long-Multiplication Factory', divide:'📖 Divide — Loading the Truck' },
+      linkNames: { angle:'📖 Angles — The Angle Hunt', perimeter:'📖 Perimeter — Once Around the Edge', multiply:'📖 Multiply — The Column Multiplication Factory', divide:'📖 Divide — The Sharing Squad' },
       acuteWord:'Acute', rightWord:'Right', obtuseWord:'Obtuse', cannotWord:'Can’t tell',
       choiceA:'A is bigger', choiceB:'B is bigger', sameWord:'The same'
     }
@@ -384,7 +384,7 @@
       } },
     { id:'compareOverlay', cat:'angle',
       make: function(used){
-        var pair = randComparablePair(20, 150, 15);
+        var pair = randComparablePair(20, 150, 25);   /* 疊在一起的兩個字母 A、B 要分得開：差 25° 以上，最短的邊 70 也保證兩個字的方框不重疊 */
         var dir1 = rand(360);
         var rA = 70 + rand(60), rB = 70 + rand(60);
         return { dir1:dir1, angleA:pair.a, angleB:pair.b, rA:rA, rB:rB, bigger: pair.a > pair.b ? 'A' : 'B' };
@@ -401,37 +401,44 @@
         };
       } },
     { id:'rotationTrueFalse', cat:'angle',
+      /* 題幹說「兩個角都放上了檢查角」，圖上就要真的畫出檢查角（原本畫的是沒有檢查角的兩個角）；
+         說對的人每一批隨機（原本永遠是小華，而且正解永遠是第二個選項） */
       make: function(used){
         var dir1a = rand(360);
         var dir1b = pickUnused([30,80,140,190,250,310], used);
-        return { dir1a:dir1a, dir1b:dir1b };
+        return { dir1a:dir1a, dir1b:dir1b, miaRight: rand(2) === 0, order: shuffle([0, 1, 2, 3]) };
       },
       fmt: function(d, lang){
-        var opts = lang === 'zh'
-          ? ['小美對','小華對','兩人都對','兩人都不對']
-          : ['Mia is right','Jay is right','Both are right','Neither is right'];
+        var names = lang === 'zh' ? ['小美', '小華'] : ['Mia', 'Jay'];
+        var right = d.miaRight ? 0 : 1, wrong = 1 - right;
+        var base = lang === 'zh'
+          ? [names[right] + '對', names[wrong] + '對', '兩人都對', '兩人都不對']
+          : [names[right] + ' is right', names[wrong] + ' is right', 'Both are right', 'Neither is right'];
+        var opts = d.order.map(function(i){ return base[i]; });
+        var say = function(i){ return i === right
+          ? (lang === 'zh' ? '「角轉個方向，角度不會變。」' : 'rotating an angle doesn’t change its size')
+          : (lang === 'zh' ? '「角轉個方向，角度就會變。」' : 'rotating an angle changes its size'); };
         return {
           stem: lang === 'zh'
-            ? '這兩個角都放上了檢查角，都剛好貼合。小美說：「角轉個方向，角度就會變。」小華說：「角轉個方向，角度不會變。」誰說的對？'
-            : 'The checker corner lines up exactly on both of these angles. Mia says rotating an angle changes its size; Jay says it doesn’t. Who is right?',
-          shape: twoApartSVG({ dir1:d.dir1a, angleDeg:90, r:110 }, { dir1:d.dir1b, angleDeg:90, r:110 }, 'gen-rot'),
-          opts: opts, ans: 1,
-          why: lang === 'zh' ? '兩個角不管畫成哪個方向，都剛好是直角，角度沒有改變，所以小華說的對。'
-            : 'Both angles are exactly right angles no matter which direction they’re drawn in — the size hasn’t changed, so Jay is right.'
+            ? '這兩個角都放上了檢查角，都剛好貼合。小美說：' + say(0) + '小華說：' + say(1) + '誰說的對？'
+            : 'The checker corner lines up exactly on both of these angles. Mia says ' + say(0) + '; Jay says ' + say(1) + '. Who is right?',
+          shape: threeCheckerSVG([ { dir1:d.dir1a, angleDeg:90, r:110, checkerR:62 }, { dir1:d.dir1b, angleDeg:90, r:110, checkerR:62 } ], 'gen-rot'),
+          opts: opts, ans: d.order.indexOf(0),
+          why: lang === 'zh' ? '兩個角不管畫成哪個方向，都剛好是直角，角度沒有改變，所以' + names[right] + '說的對。'
+            : 'Both angles are exactly right angles no matter which direction they’re drawn in — the size hasn’t changed, so ' + names[right] + ' is right.'
         };
       } },
     { id:'chordTrap', cat:'angle',
       make: function(used){
-        var angleA, angleB, rA, rB, chordA, chordB, tries;
-        for (tries = 0; tries < 40; tries++){
-          angleA = 15 + rand(21); // 15..35
-          angleB = 85 + rand(56); // 85..140
-          rA = 170 + rand(41); // 170..210
-          rB = 25 + rand(21); // 25..45
-          chordA = 2 * rA * Math.sin(angleA * Math.PI / 360);
-          chordB = 2 * rB * Math.sin(angleB * Math.PI / 360);
-          if (chordA > chordB) break;
-        }
+        /* 陷阱一定要成立：A 的兩個端點離得比 B 遠（原本試 40 次、試不到就照樣出題，解釋卻說「不要看端點」）。
+           先定兩個角，B 的邊長只取到「A 用最長的 210 也還比得過」的長度，A 的邊長再取到剛好比過、至少 170。 */
+        var angleA = 15 + rand(21); // 15..35
+        var angleB = 85 + rand(56); // 85..140
+        var sA = 2 * Math.sin(angleA * Math.PI / 360), sB = 2 * Math.sin(angleB * Math.PI / 360);
+        var rBmax = Math.min(45, Math.floor(0.9 * 210 * sA / sB));
+        var rB = 25 + rand(rBmax - 25 + 1); // 25..rBmax
+        var rA = Math.max(170, Math.ceil(rB * sB / sA) + 5);
+        rA = rA + rand(210 - rA + 1); // rA..210
         var dir1 = rand(360);
         return { dir1:dir1, angleA:angleA, angleB:angleB, rA:rA, rB:rB, bigger: angleA > angleB ? 'A' : 'B' };
       },
@@ -449,13 +456,10 @@
     { id:'lifeCompare', cat:'angle',
       make: function(used){
         var scenes = lang0Scenes();
-        var a = pick(scenes), b, tries;
-        b = a;
-        for (tries = 0; tries < 40; tries++){
-          var cand = pick(scenes);
-          if (cand.id !== a.id && Math.abs(a.angleDeg - cand.angleDeg) >= 15){ b = cand; break; }
-        }
-        if (b.id === a.id){ b = scenes[(scenes.indexOf(a) + 1) % scenes.length]; }
+        /* B 只從「和 A 差 20° 以上」的場景裡挑（原本試 40 次、試不到就拿下一個場景，可能一樣大卻標成 B 比較大）。
+           20° 讓疊起來的兩個字母 A、B 分得開。門 ≥ 95°、剪刀 ≤ 54°：A ≤ 75° 時門一定合格、A ≥ 74° 時剪刀一定合格，所以永遠挑得到。 */
+        var a = pick(scenes);
+        var b = pick(scenes.filter(function(c){ return c.id !== a.id && Math.abs(a.angleDeg - c.angleDeg) >= 20; }));
         var dir1 = rand(360);
         return { dir1:dir1, a:a, b:b, bigger: a.angleDeg > b.angleDeg ? 'A' : 'B' };
       },
@@ -478,9 +482,11 @@
         var dir1 = rand(360);
         var angleDeg = 40 + rand(90);
         var r = 110 + rand(30);
-        return { dir1:dir1, angleDeg:angleDeg, r:r };
+        /* 四個點的字母每一批重排：頂點不會永遠是 P、正解也不會永遠是第一個選項 */
+        return { dir1:dir1, angleDeg:angleDeg, r:r, letters: shuffle(['P','Q','R','S']) };
       },
       fmt: function(d, lang){
+        var Lt = d.letters;   /* Lt[0] 頂點、Lt[1] Lt[2] 在邊上、Lt[3] 在開口裡面 */
         var size = 300, cx = size / 2, cy = size / 2;
         var v = { x:cx, y:cy };
         var p1 = polar(cx, cy, d.dir1, d.r), p2 = polar(cx, cy, d.dir1 + d.angleDeg, d.r);
@@ -491,7 +497,7 @@
         var svg = svgOpen(size);
         svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p1.x.toFixed(1) + '" y2="' + p1.y.toFixed(1) + '" stroke="#2B2A33" stroke-width="5" stroke-linecap="round"/>';
         svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) + '" stroke="#2B2A33" stroke-width="5" stroke-linecap="round"/>';
-        [ ['P', v], ['Q', Q], ['R', R], ['S', S] ].forEach(function(item){
+        [ [Lt[0], v], [Lt[1], Q], [Lt[2], R], [Lt[3], S] ].forEach(function(item){
           svg += '<circle cx="' + item[1].x.toFixed(1) + '" cy="' + item[1].y.toFixed(1) + '" r="6" fill="#E8871E"/>';
           svg += '<text x="' + (item[1].x + 10).toFixed(1) + '" y="' + (item[1].y - 8).toFixed(1) + '" font-size="18" font-weight="700" fill="#2B2A33">' + item[0] + '</text>';
         });
@@ -499,9 +505,9 @@
         return {
           stem: lang === 'zh' ? '圖裡的 P、Q、R、S 四個點，哪一個是這個角的頂點？' : 'Which of the points P, Q, R and S is the vertex of this angle?',
           shape: svg,
-          opts: ['P','Q','R','S'], ans: 0,
-          why: lang === 'zh' ? 'P 是兩條邊交會的那一點，是頂點；Q、R 在邊上，S 在開口裡面，都不是頂點。'
-            : 'P is where the two sides meet — that’s the vertex. Q and R sit on the sides, and S sits inside the opening.'
+          opts: ['P','Q','R','S'], ans: ['P','Q','R','S'].indexOf(Lt[0]),
+          why: lang === 'zh' ? Lt[0] + ' 是兩條邊交會的那一點，是頂點；' + Lt[1] + '、' + Lt[2] + ' 在邊上，' + Lt[3] + ' 在開口裡面，都不是頂點。'
+            : Lt[0] + ' is where the two sides meet — that’s the vertex. ' + Lt[1] + ' and ' + Lt[2] + ' sit on the sides, and ' + Lt[3] + ' sits inside the opening.'
         };
       } },
     { id:'pickCategoryAmongThree', cat:'angle',
