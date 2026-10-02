@@ -440,6 +440,808 @@ const SHAPES = {
   }
 };
 
+/* ---------- 小遊戲「圖形分類大挑戰」（§六之五：五關五種玩法，2026-10-02 改版）----------
+   圍一圈（吸管是邊、黏土球是頂點）、繞一圈（從一個頂點出發數邊）、黏頂點（轉彎才是頂點）、
+   分家族（三角形／四邊形／圓）、找四邊形（4 條直的邊、圍一圈、不交叉）。做法照 grade-2-two-step.js／grade-2-length.js：
+   - 每一關「收不收」的規則都是頁面資料區的純函式（loopRule／loopDone／walkStep／isTurn／clayDrop／clayLeft／familyOf／findWhy），
+     這裡拿**每一題、每一種動作**去呼叫，結果和設定檔自己的第二套規則比，證明一定解得完、而且只有對的做法收得進去；
+   - 那句說明說的事要成立：「穿過中間會交叉」→ 把 n 顆球每一種圍法都列出來，不交叉的只有沿著外面那一種；
+     「直直接下去的算同一條邊」→ 自己數一數直線段，真的是 n 條；
+   - nearestOpen()／nearestSeg()／roundSolved()／roundMiss()／shuffle() 從原始碼切出來**真的跑**；
+   - 每一句說明逐個比數字（兩種語言、每一題、每一種放錯）與單複數；
+   - 版面與觸控 ≥ 44px 從 index.html 的常數與 CSS 讀（不在這裡另抄一份數字）。
+   已知極限：RENDER 函式本體（畫面那一層）只用 need() 字面掃描守住「它呼叫了哪一個規則、拿回來的結果怎麼用」；
+   拖拉、點選、兩根手指、capture 遺失、畫板不跳動、375px 的實際尺寸由
+   teaching-workspace/game-harness/g2-shapes 的端對端測試驗。 */
+const { extractFunction } = require('./lib/gameshuffle.js');
+
+function gameCheck(D, I18N, fail, src){
+  const LANGS = ['zh', 'en'];
+  const nums = t => (String(t).match(/\d+/g) || []).map(Number);
+  const seq = (where, text, want) => {
+    if (typeof text !== 'string' || /undefined|NaN|null/.test(text)) return fail(where + ': text has undefined/NaN/null: ' + text);
+    if (nums(text).join() !== want.join()) fail(where + ': numbers should read ' + want.join() + ', got ' + nums(text).join() + ' — ' + text);
+  };
+  const has = (where, text, re) => { if (!re.test(String(text))) fail(where + ': should say ' + re + ' — ' + text); };
+  const hasNot = (where, text, re) => { if (re.test(String(text))) fail(where + ': must not say ' + re + ' — ' + text); };
+  const box = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w, h });
+  const inside = (o, what, W, H) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail(what + ' is outside the ' + W + '×' + H + ' board (' + JSON.stringify(o) + ')'); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return fail(what + ' ' + i + ' and ' + j + ' overlap'); };
+  const grow = (R, p) => ({ x:R.x - p, y:R.y - p, w:R.w + 2 * p, h:R.h + 2 * p });
+  const W = D.GAME_W, PAD = D.GPAD;
+  const name = (k, L) => NAME_TRUTH[k][L];
+  /* 自己的「邊數 → 名字」那一句（不讀頁面）：3 三角形、4 四邊形、其他「比 4 條多，都不是」 */
+  const tailOk = (where, text, n, L) => {
+    if (n === 3) has(where, text, L === 'zh' ? /三角形/ : /\btriangle\b/);
+    else if (n === 4) has(where, text, L === 'zh' ? /四邊形/ : /\bquadrilateral\b/);
+    else has(where, text, L === 'zh' ? /比 4 條多，不是三角形也不是四邊形/ : /more than 4, so it is neither a triangle nor a quadrilateral/);
+  };
+  const plural = (where, text, n, sing, plur) => {
+    const re = new RegExp('(?<![0-9])' + n + ' (' + sing + '|' + plur + ')\\b');
+    const m = String(text).match(re);
+    if (!m) return fail(where + ': cannot find "' + n + ' ' + sing + '/' + plur + '" in "' + text + '"');
+    if ((n === 1) !== (m[1] === sing)) fail(where + ': "' + n + ' ' + m[1] + '" — singular/plural is wrong');
+  };
+  const vec = (a, b) => [b[0] - a[0], b[1] - a[1]];
+  const crs = (u, v) => u[0] * v[1] - u[1] * v[0];
+  /* 自己的「兩條線段真的交叉」（端點相碰不算） */
+  const properCross = (p1, p2, p3, p4) => {
+    const o = (a, b, c) => crs(vec(a, b), vec(a, c));
+    return o(p1, p2, p3) * o(p1, p2, p4) < 0 && o(p3, p4, p1) * o(p3, p4, p2) < 0;
+  };
+  const polySimple = p => {
+    const n = p.length;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++){
+      if (j === i + 1 || (i === 0 && j === n - 1)) continue;
+      if (properCross(p[i], p[(i + 1) % n], p[j], p[(j + 1) % n])) return false;
+    }
+    return true;
+  };
+
+  /* --- 順序、每一關的題目與提示 --- */
+  const TYPES = ['loop', 'walk', 'clay', 'sort', 'find'];
+  if (D.GAME_ORDER.join() !== TYPES.join()) fail('GAME_ORDER should be ' + TYPES.join() + ', got ' + D.GAME_ORDER.join());
+  const body = nm => (src.match(new RegExp('\\n {4}' + nm + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+  const B = {};
+  TYPES.forEach(t => {
+    B[t] = body(t); if (!B[t]) fail('cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      ['gAsks', 'gHints'].forEach(k => { if (!(I18N[L][k] && typeof I18N[L][k][t] === 'string' && I18N[L][k][t].length > 4)) fail(k + '.' + t + ' missing in ' + L); });
+      if (/\d/.test((I18N[L].gHints || {})[t] || '') && t !== 'sort' && t !== 'find') fail('gHints.' + t + ' ' + L + ' gives a number away at level 1');
+    });
+    if (!/gCtx\.hint2 = function\(\)\{/.test(B[t])) fail(t + ': no second-level hint (gCtx.hint2)');
+    if (!/glow\(/.test(B[t])) fail(t + ': the second-level hint does not make the next target glow (glow())');
+    if (!/\broundSolved\(/.test(B[t].replace(/\/\*[\s\S]*?\*\//g, ''))) fail(t + ': the round never calls roundSolved()');
+  });
+  const need = (k, re, what) => { if (!re.test(B[k] || '')) fail(k + ': ' + what); };
+  /* 第 5 關沒有拖拉，說明要寫出「這一關用點的」（§六之五第 4 點的例外）；其他四關要寫出「先點、再點」 */
+  if (!/這一關用點的/.test(I18N.zh.gAsks.find) || !/all taps/.test(I18N.en.gAsks.find)) fail('find: the round has no drag — its instructions must say it is all taps');
+  ['loop', 'walk', 'clay', 'sort'].forEach(t => {
+    if (!/也可以先點/.test(I18N.zh.gAsks[t]) || !/Or tap/.test(I18N.en.gAsks[t])) fail(t + ': the instructions do not mention the tap-then-tap way');
+  });
+  if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(extractFunction(src, 'startRound') || '')) fail('ahead mode does not show hint level 1 automatically');
+  if (!/if \(hintLevel >= 2\) gHintBtn\.disabled = true;/.test(src)) fail('the hint button is not disabled after the second level');
+  if (!/el\.classList\.remove\('dragging'\);\s*if \(gen !== gGen\) return;(?:\s*\/\*[\s\S]*?\*\/)*\s*if \(moved && B\.selected === P\)\{ el\.classList\.remove\('sel'\); B\.selected = null; \}\s*if \(cancelled \|\| gSolved\)\{ P\.home\(\); return; \}/.test(src))
+    fail('a piece that was tapped and then dragged stays selected — a later tap would drop it again');
+  if (!/el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/.test(src)) fail('lost pointer capture does not put the piece back');
+  if (!/if \(P\.locked \|\| gSolved \|\| start\) return;/.test(src)) fail('a second finger on a piece that is already being dragged is not ignored');
+  if (!/el\.addEventListener\('pointermove', function\(e\)\{\s*if \(!start \|\| e\.pointerId !== pid\) return;/.test(src)) fail('a move from another finger drags the piece (first pointer only)');
+  if (!/function end\(e, cancelled\)\{\s*if \(!start \|\| e\.pointerId !== pid\) return;/.test(src)) fail('a release from another finger ends the drag (first pointer only)');
+  if (!/var start = null, orig = null, moved = false, pid = null, gen = gGen;/.test(src) || !/el\.classList\.remove\('dragging'\);\s*if \(gen !== gGen\) return;/.test(src) || !/gCtx = \{\}; gGen\+\+;/.test(extractFunction(src, 'startRound') || ''))
+    fail('a piece still held when the board is rebuilt (Restart, language switch) can still drop onto the new round');
+  if (!/gameStage\.textContent = '';/.test(extractFunction(src, 'startRound') || '')) fail('startRound() does not clear the stage before rendering');
+  if (/\bmouse(down|up|move)\b|\btouch(start|end|move)\b/.test(src)) fail('the game must use pointer events only (found mouse/touch listeners)');
+
+  /* --- 觸控：375px 手機上畫板能用的寬度從頁面的 CSS 算（.wrap 左右 padding、.card 的 padding 與邊框、.gstage 左右 padding） --- */
+  const cssPx = (sel, re) => { const m = src.match(new RegExp('\\n\\s*' + sel.replace('.', '\\.') + '\\{([^}]*)\\}')); const v = m && m[1].match(re); return v ? v.slice(1).map(Number) : null; };
+  const wrapPad = cssPx('.wrap', /padding:(\d+)px (\d+)px/), cardPad = cssPx('.card', /padding:(\d+)px/), cardBorder = cssPx('.card', /border:(\d+)px/), stagePad = cssPx('.gstage', /padding:\s*(\d+)px (\d+)/);
+  if (!wrapPad || !cardPad || !cardBorder || !stagePad) fail('touch: cannot read .wrap / .card / .gstage padding from the CSS');
+  const avail = 375 - 2 * ((wrapPad || [0, 0])[1] + (cardPad || [0])[0] + (cardBorder || [0])[0] + (stagePad || [0, 0])[1]);
+  const scale = Math.min(1.5, avail / W);
+  const small = (what, sz) => { if (!(sz * scale >= 44)) fail(what + ' is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+  small('GPICK (the ant)', D.GPICK);
+  small('the straw (' + D.LOOP_SRC.w + '×' + D.LOOP_SRC.h + ')', Math.min(D.LOOP_SRC.w, D.LOOP_SRC.h));
+  small('the clay', D.CLAY_SRC.size);
+  small('a shape card (' + D.SORT_CARD.w + '×' + D.SORT_CARD.h + ')', Math.min(D.SORT_CARD.w, D.SORT_CARD.h));
+  small('a find-the-quadrilateral shape', D.FIND_CELL.size);
+  small('a basket', Math.min(D.SORT_BIN.w, D.SORT_BIN.h));
+  [D.LOOP_SRC.w, D.LOOP_SRC.h, D.CLAY_SRC.size, D.SORT_CARD.w, D.SORT_CARD.h].forEach(s => { if (s < D.GPICK) fail('a piece side of ' + s + ' is smaller than GPICK ' + D.GPICK); });
+  { const m = src.match(/\.btn\{[^}]*min-height:(\d+)px/); if (!m || +m[1] < 46) fail('loop: the Loop-done button (.btn) is not at least 46px tall'); }
+  need('loop', /addPiece\(B, \{ w:LOOP_SRC\.w, h:LOOP_SRC\.h, cx:GAME_W \/ 2, cy:LOOP_SRC\.y, cls:'gstrawsrc'/, 'the straw is not LOOP_SRC.w × LOOP_SRC.h at (GAME_W / 2, LOOP_SRC.y)');
+  need('walk', /addPiece\(B, \{ w:GPICK, h:GPICK, cx:s0\[0\], cy:s0\[1\], text:'🐜'/, 'the ant is not GPICK × GPICK on the ★ corner');
+  need('clay', /addPiece\(B, \{ w:CLAY_SRC\.size, h:CLAY_SRC\.size, cx:GAME_W \/ 2, cy:CLAY_SRC\.y, cls:'gclaysrc'/, 'the clay is not CLAY_SRC.size at (GAME_W / 2, CLAY_SRC.y)');
+  need('sort', /addPiece\(B, \{ w:C\.w, h:C\.h, cx:C\.xs\[c % 3\], cy:C\.ys\[Math\.floor\(c \/ 3\)\], html:figSVG\(ids\[i\]\)/, 'the cards are not SORT_CARD.w × h on the SORT_CARD grid, drawn with figSVG');
+  need('find', /b\.style\.left = \(F\.xs\[c % 3\] - F\.size \/ 2\) \+ 'px'; b\.style\.top = \(F\.ys\[Math\.floor\(c \/ 3\)\] - F\.size \/ 2\) \+ 'px';\s*b\.style\.width = b\.style\.height = F\.size \+ 'px';/, 'the shapes are not FIND_CELL.size on the FIND_CELL grid');
+
+  /* --- 星星：低年級不扣分（§三、§六之五第 3 點）。roundSolved()／roundMiss() 從原始碼切出來真的跑 --- */
+  {
+    const fs = extractFunction(src, 'roundSolved'), fm = extractFunction(src, 'roundMiss');
+    if (!fs || !fm) fail('stars: cannot find roundSolved()/roundMiss() in index.html');
+    else {
+      const env = 'var gSolved = false, gScore = S0, gMistakes = 0, gRound = 0, GAME_ORDER = [1,2,3,4,5], elScore = {}, gMsg = {}, gNext = {}, gHintBtn = {};' +
+        'var gameStage = { querySelectorAll: function(){ return []; } }; function L(){ return { gStars:function(n){ return "@" + n; }, gWin:function(s){ return "W" + s; }, gClear:"C" }; }\n';
+      const run = (s0, misses, solves) => new Function(env.replace('S0', s0) + fm + '\n' + fs + '\nfor (var i = 0; i < ' + misses + '; i++) roundMiss("why");' +
+        'var afterMiss = gScore;\nfor (var j = 0; j < ' + solves + '; j++) roundSolved("ok");\nreturn { s:gScore, afterMiss:afterMiss, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistakes };')();
+      try {
+        [[0, 0, 2], [3, 0, 2], [3, 1, 1], [0, 4, 1]].forEach(([s0, misses, want]) => {
+          const r = run(s0, misses, 1);
+          if (r.afterMiss !== s0) fail('stars: a mistake changed the score ' + s0 + ' → ' + r.afterMiss + ' (low grades never lose points)');
+          if (r.s !== s0 + want || String(r.shown) !== String(s0 + want)) fail('stars: a round with ' + misses + ' mistake(s) gives ' + (r.s - s0) + ' stars, should be ' + want);
+          if (r.html.indexOf('@' + want) < 0) fail('stars: the message does not say ⭐ +' + want);
+          if (misses && r.m !== misses) fail('stars: roundMiss() does not record the mistake');
+        });
+        if (run(0, 0, 2).s !== 2) fail('stars: a round can be scored twice');
+      } catch (e){ fail('stars: roundSolved()/roundMiss() could not run: ' + e.message); }
+    }
+  }
+  LANGS.forEach(L => {
+    const d = I18N[L];
+    seq('gStars ' + L, d.gStars(2), [2]);
+    seq('gStars ' + L, d.gStars(1), [1]);
+    if (nums(d.gWin(7)).indexOf(7) < 0) fail('gWin ' + L + ' does not show the stars: ' + d.gWin(7));
+    if (typeof d.gClear !== 'string' || !d.gClear || /\d/.test(d.gClear)) fail('gClear ' + L + ' missing or has a number in it');
+  });
+
+  /* --- shuffle()：從原始碼切出來真的跑。「一定洗回原樣」的假亂數也不可以照資料的順序排（第 4 關三角形永遠排最前面）；
+     真亂數 2000 次一定是原陣列的排列 --- */
+  let shuffle = null;
+  {
+    const f = extractFunction(src, 'shuffle');
+    if (!f) fail('cannot find shuffle() in index.html');
+    else {
+      try {
+        const mk = rnd => new Function('Math', f + '\nreturn shuffle;')(Object.assign(Object.create(Math), { random:rnd }));
+        const same = mk(() => 0.999999), real = mk(Math.random.bind(Math));
+        [2, 3, 6, 9].forEach(n => {
+          const a = Array.from({ length:n }, (_, i) => i), r = same(a);
+          if (r.every((v, i) => v === i)) fail('shuffle(): an rng that never moves anything leaves ' + n + ' items in data order — the tray would start in the answer order');
+          if (r.slice().sort((x, y) => x - y).join() !== a.join()) fail('shuffle(): the result is not a permutation');
+        });
+        for (let t = 0; t < 2000; t++){
+          const a = [0, 1, 2, 3, 4, 5], r = real(a);
+          if (r.slice().sort().join() !== a.join() || r.join() === a.join()) { fail('shuffle(): bad result ' + r.join()); break; }
+        }
+        shuffle = real;
+      } catch (e){ fail('shuffle() could not run: ' + e.message); }
+    }
+  }
+  need('sort', /shuffle\(order\(ids\.length\)\)\.forEach\(function\(i, c\)\{/, 'the cards are not dealt in shuffled order');
+  need('find', /shuffle\(order\(items\.length\)\)\.forEach\(function\(i, c\)\{/, 'the shapes are not laid out in shuffled order');
+  if (!/function pickN\(arr, n\)\{ return shuffle\(arr\)\.slice\(0, n\); \}/.test(src)) fail('pickN() does not draw from a shuffled pool');
+
+  /* --- nearestOpen()／nearestSeg()：從原始碼切出來真的跑 --- */
+  let nearestOpen = null, nearestSeg = null;
+  {
+    const f1 = extractFunction(src, 'nearestOpen'), f2 = extractFunction(src, 'nearestSeg');
+    if (!f1) fail('cannot find nearestOpen() in index.html');
+    else { try { nearestOpen = new Function(f1 + '\nreturn nearestOpen;')(); } catch (e){ fail('nearestOpen() could not be evaluated: ' + e.message); } }
+    if (!f2) fail('cannot find nearestSeg() in index.html');
+    else { try { nearestSeg = new Function('SEG_END', f2 + '\nreturn nearestSeg;')(D.SEG_END); } catch (e){ fail('nearestSeg() could not be evaluated: ' + e.message); } }
+  }
+  /* 自己的「最近的方框」：到方框的距離（框裡是 0），一樣近比到中心；最近的那一個已經放好就不收 */
+  const ownNearestBox = (list, pt, pad) => {
+    let best = null, bd = Infinity, bc = Infinity;
+    list.forEach(b => {
+      const dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      const ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh), dd = Math.hypot(ex, ey), dc = Math.hypot(dx, dy);
+      if (dd < bd - 1e-9 || (Math.abs(dd - bd) <= 1e-9 && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  };
+  const sweepBoxes = (list, H, what, step) => {
+    if (!nearestOpen) return;
+    let bad = 0, first = '';
+    for (let x = -4; x <= W + 4; x += step) for (let y = -4; y <= H + 4; y += step){
+      const a = nearestOpen(list, { x, y }, PAD), b = ownNearestBox(list, { x, y }, PAD);
+      if (a !== b){ bad++; if (!first) first = '(' + x + ',' + y + ')'; }
+    }
+    if (bad) fail(what + ': nearestOpen() disagrees with the nearest-box rule at ' + bad + ' points, first ' + first);
+  };
+
+  /* --- 每一個池子裡不可以有重複的題目（重複的話 pickN() 會發出兩張一樣的卡；codex 第一輪） --- */
+  [['GAME_LOOP', D.GAME_LOOP], ['GAME_WALK', D.GAME_WALK], ['SORT_TRI', D.SORT_TRI], ['SORT_QUAD', D.SORT_QUAD], ['FIND_QUAD', D.FIND_QUAD], ['FIND_OTHER', D.FIND_OTHER],
+   ['GAME_CLAY', D.GAME_CLAY.map(e => JSON.stringify(e.pts))]].forEach(([nm, list]) => {
+    if (new Set(list).size !== list.length) fail(nm + ' has a repeated entry: ' + list.join(' | '));
+  });
+  if (new Set(D.SORT_TRI.concat(D.SORT_QUAD, ['square', 'circle'])).size !== D.SORT_TRI.length + D.SORT_QUAD.length + 2) fail('sort: a card is in two pools');
+  if (new Set(D.FIND_QUAD.concat(D.FIND_OTHER, ['square'])).size !== D.FIND_QUAD.length + D.FIND_OTHER.length + 1) fail('find: a shape is in two pools');
+
+  /* ================= 第 1 關：圍一圈（範例 1：吸管是邊、黏土球是頂點） ================= */
+  {
+    const F = D.LOOP_FIG, H = D.LOOP_H;
+    const S = D.LOOP_SRC, srcBox = box(W / 2, S.y, S.w, S.h);
+    inside(srcBox, 'loop: the straw', W, H);
+    if (!(D.SEG_END > 0.1 && D.SEG_END < 0.4)) fail('loop: SEG_END ' + D.SEG_END + ' — a drop on a clay ball must be silent and the middle of a straw must count');
+    need('loop', /var id = pick\(GAME_LOOP\), n = FIGS\[id\]\.pts\.length, k = 0;/, 'the round is not one of GAME_LOOP with n = its corner count');
+    need('loop', /var p = figXY\(id, i, LOOP_FIG\);\s*balls\.push\(addZone\(B, p\[0\] - LOOP_BALL \/ 2, p\[1\] - LOOP_BALL \/ 2, LOOP_BALL, LOOP_BALL, 'gball'\)\);/, 'the clay balls are not drawn at figXY(id, i, LOOP_FIG)');
+    need('loop', /var segs = loopSegs\(id\), balls = \[\];/, 'the drop targets are not loopSegs(id)');
+    need('loop', /var s = nearestSeg\(segs, pt, LOOP_PAD\), r = loopRule\(s\);\s*if \(r === 'none'\) return false;\s*if \(r === 'cross'\)\{ roundMiss\(d\.gLoopCross\); return false; \}\s*s\.done = true; k\+\+;/, 'a straw is not judged by nearestSeg() + loopRule() (silent / cross-with-a-reason / put)');
+    need('loop', /return svgLine\(\[s\.ax, s\.ay\], \[s\.bx, s\.by\], '#E8871E', 9, ' class="gstraw"'\);/, 'a placed straw is not drawn from ball centre to ball centre');
+    need('loop', /var r = loopDone\(n, k\);\s*if \(r === 'empty'\)\{ gMsg\.textContent = d\.gLoopEmpty; return; \}\s*if \(r === 'gap'\)\{ roundMiss\(d\.gLoopGap\(n - k\)\); return; \}\s*doneBtn\.disabled = true;\s*roundSolved\(d\.gLoopDone\(n\)\);/, '"Loop done" is not judged by loopDone() (empty = reminder, gap = mistake with the gap count, ok = solved)');
+    need('loop', /P\.home\(\);\s*line\.textContent = d\.gLoopNow\(k\);/, 'the straw does not go back to its place after a drop (it must never run out)');
+    if (D.GAME_LOOP.length < 3) fail('loop: GAME_LOOP needs at least 3 figures');
+    D.GAME_LOOP.forEach(id => {
+      let anyOverlap = false;
+      const f = D.FIGS[id];
+      if (!f || f.kind === 'circle' || !(f.pts.length >= 4 && f.pts.length <= 5)){ fail('loop: GAME_LOOP figure ' + id + ' must have 4 or 5 corners (a triangle has no wrong straw to block)'); return; }
+      const n = f.pts.length, P = f.pts.map(q => [F.x + q[0] * F.s, F.y + q[1] * F.s]);
+      P.forEach((p, i) => {
+        const xy = D.figXY(id, i, F);
+        if (Math.abs(xy[0] - p[0]) > 1e-9 || Math.abs(xy[1] - p[1]) > 1e-9) fail('loop ' + id + ': figXY(' + i + ') is ' + xy + ', should be ' + p);
+        inside(box(p[0], p[1], D.LOOP_BALL, D.LOOP_BALL), 'loop ' + id + ': clay ball ' + i, W, H);
+        if (hit(box(p[0], p[1], D.LOOP_BALL, D.LOOP_BALL), grow(srcBox, 4))) fail('loop ' + id + ': clay ball ' + i + ' touches the straw');
+      });
+      noHits(P.map(p => box(p[0], p[1], D.LOOP_BALL + 20, D.LOOP_BALL + 20)), 'loop ' + id + ': clay balls');
+      /* 凸的：每三個相鄰的頂點都往同一邊轉 */
+      const turns = P.map((p, i) => crs(vec(P[(i + n - 1) % n], p), vec(p, P[(i + 1) % n])));
+      if (!(turns.every(t => t > 0) || turns.every(t => t < 0))) fail('loop ' + id + ': the balls are not in convex position — "next to each other" would not decide the loop');
+      /* 說明「穿過中間會交叉」與「只有沿著外面圍一圈」：把 n 顆球的每一種圍法（哈密頓迴圈）列出來 */
+      const perms = [], rest = Array.from({ length:n - 1 }, (_, i) => i + 1);
+      const permute = (a, k) => { if (k === a.length){ if (a[0] < a[a.length - 1]) perms.push([0].concat(a)); return; } for (let i = k; i < a.length; i++){ [a[k], a[i]] = [a[i], a[k]]; permute(a, k + 1); [a[k], a[i]] = [a[i], a[k]]; } };
+      permute(rest.slice(), 0);
+      const good = perms.filter(cyc => polySimple(cyc.map(v => P[v])));
+      const isBoundary = cyc => cyc.every((v, i) => { const w = cyc[(i + 1) % n], d = (w - v + n) % n; return d === 1 || d === n - 1; });
+      if (good.length !== 1 || !isBoundary(good[0])) fail('loop ' + id + ': ' + good.length + ' non-crossing loops through the balls — the only one must go round the outside');
+      perms.filter(c => !isBoundary(c)).forEach(c => { if (polySimple(c.map(v => P[v]))) fail('loop ' + id + ': the loop ' + c.join('-') + ' uses a diagonal and does not cross — gLoopCross would be false'); });
+      /* loopSegs()：每兩顆球一條，邊 n 條、對角線 n(n−3)/2 條，對角線排在前面 */
+      const segs = D.loopSegs(id);
+      const nd = n * (n - 3) / 2;
+      if (segs.length !== n + nd) fail('loop ' + id + ': loopSegs() has ' + segs.length + ' lines, should be ' + (n + nd));
+      segs.forEach((s, k) => {
+        const d = (s.j - s.i + n) % n, edge = d === 1 || d === n - 1;
+        if (s.edge !== edge) fail('loop ' + id + ': ' + s.i + '-' + s.j + ' is marked edge=' + s.edge + ', should be ' + edge);
+        if (Math.hypot(s.ax - P[s.i][0], s.ay - P[s.i][1]) > 1e-9 || Math.hypot(s.bx - P[s.j][0], s.by - P[s.j][1]) > 1e-9) fail('loop ' + id + ': line ' + s.i + '-' + s.j + ' does not join the two ball centres');
+        if ((k < nd) !== !edge) fail('loop ' + id + ': the diagonals are not listed before the edges (the e2e overlap test relies on it)');
+        if (s.done) fail('loop ' + id + ': a line starts as already done');
+        if (D.loopRule(s) !== (edge ? 'put' : 'cross')) fail('loop ' + id + ': loopRule(' + s.i + '-' + s.j + ') is ' + D.loopRule(s));
+      });
+      if (D.loopRule(null) !== 'none') fail('loop: loopRule(null) must be none (silent)');
+      for (let k = 0; k <= n; k++){ const want = k === 0 ? 'empty' : (k < n ? 'gap' : 'ok'); if (D.loopDone(n, k) !== want) fail('loop ' + id + ': loopDone(' + n + ', ' + k + ') is ' + D.loopDone(n, k) + ', should be ' + want); }
+      /* nearestSeg()：畫板上每 1px 一點，和自己的規則比；兩條線一樣近時，頁面挑先列的那一條（同樣是那一種線就不影響結果） */
+      if (nearestSeg){
+        const own = (list, pt) => {
+          let best = null, bd = Infinity;
+          list.forEach(s => {
+            const vx = s.bx - s.ax, vy = s.by - s.ay, t = ((pt.x - s.ax) * vx + (pt.y - s.ay) * vy) / (vx * vx + vy * vy);
+            if (t < D.SEG_END || t > 1 - D.SEG_END) return;
+            const dd = Math.hypot(s.ax + t * vx - pt.x, s.ay + t * vy - pt.y);
+            if (dd <= D.LOOP_PAD && dd < bd){ bd = dd; best = s; }
+          });
+          return best && !best.done ? best : null;
+        };
+        const ownAll = (list, pt) => list.filter(s => {
+          const vx = s.bx - s.ax, vy = s.by - s.ay, t = ((pt.x - s.ax) * vx + (pt.y - s.ay) * vy) / (vx * vx + vy * vy);
+          return t >= D.SEG_END && t <= 1 - D.SEG_END && Math.hypot(s.ax + t * vx - pt.x, s.ay + t * vy - pt.y) <= D.LOOP_PAD;
+        });
+        [[], [segs.length - 1], segs.map((_, k) => k).filter(k => segs[k].edge && k % 2)].forEach(doneSet => {
+          const L2 = segs.map((s, k) => Object.assign({}, s, { done:doneSet.indexOf(k) >= 0 }));
+          let bad = 0, first = '';
+          for (let x = 0; x <= W; x += 1) for (let y = 0; y <= H; y += 1){
+            const a = nearestSeg(L2, { x, y }, D.LOOP_PAD), b = own(L2, { x, y });
+            if ((a && a.i + '-' + a.j) !== (b && b.i + '-' + b.j)){ bad++; if (!first) first = '(' + x + ',' + y + ')'; }
+            if (!doneSet.length && !anyOverlap){
+              const all = ownAll(L2, { x, y });
+              if (all.some(s => s.edge) && all.some(s => !s.edge)) anyOverlap = true;
+            }
+          }
+          if (bad) fail('loop ' + id + ': nearestSeg() disagrees with the nearest-line rule at ' + bad + ' points (done ' + doneSet.join(',') + '), first ' + first);
+        });
+        /* 吸管放回原位（沒有拖到哪裡）一定是靜靜的 */
+        if (nearestSeg(segs, { x:W / 2, y:S.y }, D.LOOP_PAD)) fail('loop ' + id + ': the straw\'s own place is inside a drop zone — putting it back would place a straw');
+        /* 每一顆球的正上方：分不出要接哪兩顆，一定是靜靜的 */
+        P.forEach((p, i) => { if (nearestSeg(segs, { x:p[0], y:p[1] }, D.LOOP_PAD)) fail('loop ' + id + ': a drop right on clay ball ' + i + ' places a straw'); });
+        if (!anyOverlap) fail('loop ' + id + ': no point is within reach of both a diagonal and an edge — the nearest-line rule is never exercised (the e2e overlap test needs one)');
+      }
+      /* 照遊戲的規則玩一遍：先試每一條對角線（都彈回），再照任意順序放邊；放完 n 條才 ok */
+      const put = {};
+      let k = 0;
+      segs.forEach(s => { if (!s.edge && D.loopRule(s) !== 'cross') fail('loop ' + id + ': diagonal accepted'); });
+      segs.filter(s => s.edge).reverse().forEach(s => {
+        if (D.loopDone(n, k) === 'ok') fail('loop ' + id + ': "Loop done" is accepted with only ' + k + ' straws');
+        if (put[s.i + '-' + s.j]) fail('loop ' + id + ': the same edge twice'); put[s.i + '-' + s.j] = true; k++;
+      });
+      if (k !== n || D.loopDone(n, k) !== 'ok') fail('loop ' + id + ': ' + n + ' edges do not close the loop');
+    });
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      [d.gLoopCross, d.gLoopEmpty, d.gLoopBtn, d.gStrawLabel].forEach((t, i) => { if (typeof t !== 'string' || !t || /\d/.test(t)) fail('loop ' + L + ': string ' + i + ' missing or has a number: ' + t); });
+      has('loop ' + L + ' gLoopCross', d.gLoopCross, L === 'zh' ? /交叉/ : /cross/);
+      for (let n = 3; n <= 6; n++){
+        seq('loop ' + L + ' gLoopDone(' + n + ')', d.gLoopDone(n), [n, n, n].concat(n > 4 ? [4] : []));
+        tailOk('loop ' + L + ' gLoopDone(' + n + ')', d.gLoopDone(n), n, L);
+        for (let k = 0; k <= n; k++){
+          seq('loop ' + L + ' gLoopNow(' + k + ')', d.gLoopNow(k), [k]);
+          if (L === 'en') plural('loop en gLoopNow(' + k + ')', d.gLoopNow(k), k, 'straw', 'straws');
+        }
+        for (let g = 1; g < n; g++){
+          seq('loop ' + L + ' gLoopGap(' + g + ')', d.gLoopGap(g), [g]);
+          seq('loop ' + L + ' gLoop2(' + g + ')', d.gLoop2(g), [g]);
+          if (L === 'en'){ plural('loop en gLoopGap(' + g + ')', d.gLoopGap(g), g, 'gap', 'gaps'); plural('loop en gLoop2(' + g + ')', d.gLoop2(g), g, 'gap', 'gaps'); has('loop en gLoopGap', d.gLoopGap(g), g === 1 ? /there is still 1 gap/ : /there are still \d+ gaps/); }
+        }
+      }
+      if (typeof d.gLoopReady !== 'string' || /\d/.test(d.gLoopReady) || d.gLoopReady.indexOf(d.gLoopBtn) < 0) fail('loop ' + L + ': gLoopReady (the hint once the loop is closed) must tell the child to press "' + d.gLoopBtn + '" and give no number: ' + d.gLoopReady);
+      has('loop ' + L + ' gLoopDone(4)', d.gLoopDone(4), L === 'zh' ? /4 條邊、4 個頂點，一樣多/ : /4 sides and 4 corners — the same number of each/);
+    });
+  }
+
+  /* ================= 第 2 關：繞一圈（範例 2：從一個頂點開始，繞一圈回到原點） ================= */
+  {
+    const F = D.WALK_FIG, H = D.WALK_H, G = D.GPICK, BG = D.WALK_BADGE;
+    need('walk', /var id = pick\(GAME_WALK\), n = FIGS\[id\]\.pts\.length, path = \[WALK_STAR\];/, 'the walk does not start at WALK_STAR with n = the corner count');
+    need('walk', /var corners = xy\.map\(function\(p, i\)\{ return target\(B, p\[0\] - GPICK \/ 2, p\[1\] - GPICK \/ 2, GPICK, GPICK, 'gcorner', \{ v:i \}\); \}\);/, 'the corner targets are not GPICK boxes on figXY(id, i, WALK_FIG)');
+    need('walk', /var xy = order\(n\)\.map\(function\(i\)\{ return figXY\(id, i, WALK_FIG\); \}\);/, 'the corners are not figXY(id, i, WALK_FIG)');
+    need('walk', /var c = nearestOpen\(corners, pt, GPAD\);\s*if \(!c\) return false;\s*var r = walkStep\(n, path, c\.v\);\s*if \(r === 'stay'\) return false;\s*if \(r === 'skip'\)\{ roundMiss\(d\.gWalkSkip\); return false; \}\s*if \(r === 'back'\)\{ roundMiss\(d\.gWalkBack\); return false; \}\s*path\.push\(c\.v\);/, 'a move is not judged by walkStep() (stay silent / skip and back with a reason / step)');
+    need('walk', /if \(r === 'home'\)\{\s*P\.lock\(c\.cx, c\.cy\);\s*line\.textContent = d\.gWalkTotal\(n\);\s*roundSolved\(d\.gWalkDone\(n\)\);/, 'the walk is not solved exactly when walkStep() says home');
+    need('walk', /P\.homeX = c\.cx; P\.homeY = c\.cy; P\.home\(\);/, 'the ant does not stay on the corner it walked to');
+    need('walk', /out \+= svgLine\(a, b, '#E8871E', 8, ' class="gwalked"'\);/, 'a walked side is not drawn from corner to corner');
+    if (!(D.WALK_STAR === 0)) fail('walk: WALK_STAR should be corner 0');
+    D.GAME_WALK.forEach(id => {
+      const f = D.FIGS[id];
+      if (!f || f.kind === 'circle' || f.pts.length < 3){ fail('walk: GAME_WALK figure ' + id + ' must be a polygon'); return; }
+      const n = f.pts.length, P = f.pts.map(q => [F.x + q[0] * F.s, F.y + q[1] * F.s]);
+      P.forEach((p, i) => inside(box(p[0], p[1], G, G), 'walk ' + id + ': corner ' + i, W, H));
+      noHits(P.map(p => grow(box(p[0], p[1], G, G), PAD)), 'walk ' + id + ': padded corner targets');
+      const s0 = P[D.WALK_STAR], badge = box(s0[0] + BG.dx, s0[1] + BG.dy, BG.size, BG.size);
+      inside(badge, 'walk ' + id + ': the ★ badge', W, H);
+      P.forEach((p, i) => { if (i !== D.WALK_STAR && hit(badge, box(p[0], p[1], G, G))) fail('walk ' + id + ': the ★ badge sits on corner ' + i); });
+      if (Math.hypot(BG.dx, BG.dy) > 45) fail('walk: the ★ badge is too far from its corner');
+      if (!polySimple(P)) fail('walk ' + id + ': the drawn shape crosses itself');
+      if (nearestOpen){
+        const list = P.map((p, i) => ({ cx:p[0], cy:p[1], hw:G / 2, hh:G / 2, v:i, done:false }));
+        sweepBoxes(list, H, 'walk ' + id, 1);
+        let cx = 0, cy = 0; P.forEach(p => { cx += p[0] / n; cy += p[1] / n; });
+        if (nearestOpen(list, { x:cx, y:cy }, PAD)) fail('walk ' + id + ': the middle of the shape is a corner target — "cut across the middle" could not be dropped on empty space');
+      }
+      /* 照遊戲的規則把每一條走法都走一遍（DFS，每一步試每一個頂點），和自己的規則比 */
+      const ownStep = (path, to) => {
+        const cur = path[path.length - 1];
+        if (to === cur) return 'stay';
+        const dd = (to - cur + n) % n;
+        if (dd !== 1 && dd !== n - 1) return 'skip';
+        for (let i = 1; i < path.length; i++){ const a = path[i - 1], b = path[i]; if ((a === cur && b === to) || (a === to && b === cur)) return 'back'; }
+        return to === path[0] && path.length === n ? 'home' : 'step';
+      };
+      let homes = 0, states = 0, bad = 0;
+      const dfs = path => {
+        states++;
+        if (states > 5000) return;
+        for (let to = 0; to < n; to++){
+          const before = path.join();
+          const r = D.walkStep(n, path, to), w = ownStep(path, to);
+          if (path.join() !== before) { fail('walk ' + id + ': walkStep() changed the path it was given'); return; }
+          if (r !== w){ if (bad++ < 3) fail('walk ' + id + ': walkStep(' + path.join('>') + ' → ' + to + ') is ' + r + ', should be ' + w); continue; }
+          if (r === 'home'){
+            homes++;
+            const done = path.concat([to]);
+            const edges = new Set(); for (let i = 1; i < done.length; i++){ const a = done[i - 1], b = done[i]; edges.add(Math.min(a, b) + '-' + Math.max(a, b)); }
+            if (done.length !== n + 1 || edges.size !== n) fail('walk ' + id + ': "home" after ' + (done.length - 1) + ' steps / ' + edges.size + ' sides — it must be exactly ' + n);
+          } else if (r === 'step') dfs(path.concat([to]));
+        }
+      };
+      dfs([D.WALK_STAR]);
+      if (homes !== 2) fail('walk ' + id + ': ' + homes + ' ways to finish the walk — there must be exactly 2 (one each way round)');
+    });
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      [d.gWalkSkip, d.gWalkBack, d.gAntLabel].forEach((t, i) => { if (typeof t !== 'string' || !t || /\d/.test(t)) fail('walk ' + L + ': string ' + i + ' missing or has a number: ' + t); });
+      has('walk ' + L + ' gWalkSkip', d.gWalkSkip, L === 'zh' ? /旁邊的頂點/ : /next to you/);
+      has('walk ' + L + ' gWalkBack', d.gWalkBack, L === 'zh' ? /已經數過/ : /already counted/);
+      seq('walk ' + L + ' gWalkNow(0)', d.gWalkNow(0), []);
+      has('walk ' + L + ' gWalkNow(0)', d.gWalkNow(0), /★/);
+      for (let n = 3; n <= 6; n++){
+        seq('walk ' + L + ' gWalkDone(' + n + ')', d.gWalkDone(n), [n].concat(n > 4 ? [4] : []));
+        tailOk('walk ' + L + ' gWalkDone(' + n + ')', d.gWalkDone(n), n, L);
+        seq('walk ' + L + ' gWalkTotal(' + n + ')', d.gWalkTotal(n), [n]);
+        for (let k = 1; k <= n; k++) seq('walk ' + L + ' gWalkNow(' + k + ')', d.gWalkNow(k), [k]);
+        for (let r = 1; r <= n; r++){ seq('walk ' + L + ' gWalk2(' + r + ')', d.gWalk2(r), [r]); if (L === 'en') plural('walk en gWalk2(' + r + ')', d.gWalk2(r), r, 'side is', 'sides are'); }
+      }
+    });
+  }
+
+  /* ================= 第 3 關：黏頂點（範例 3 ＋ 速查卡「直直接下去不算轉彎，那兩段是同一條邊」） ================= */
+  {
+    const H = D.CLAY_H, J = D.CLAY_JOINT, srcBox = box(W / 2, D.CLAY_SRC.y, D.CLAY_SRC.size, D.CLAY_SRC.size);
+    inside(srcBox, 'clay: the clay', W, H);
+    need('clay', /var e = pick\(GAME_CLAY\), pts = e\.pts, m = pts\.length, filled = \{\}, k = 0;/, 'the round is not one of GAME_CLAY');
+    need('clay', /var joints = pts\.map\(function\(p, j\)\{ return target\(B, p\[0\] - CLAY_JOINT \/ 2, p\[1\] - CLAY_JOINT \/ 2, CLAY_JOINT, CLAY_JOINT, 'gjoint', \{ j:j \}\); \}\);/, 'the joint targets are not CLAY_JOINT boxes on every join');
+    need('clay', /var t = nearestOpen\(joints, pt, GPAD\), r = clayDrop\(pts, filled, t \? t\.j : null\);\s*if \(r === 'none' \|\| r === 'dup'\) return false;\s*if \(r === 'straight'\)\{ roundMiss\(d\.gClayStraight\); return false; \}\s*filled\[t\.j\] = true; t\.done = true; k\+\+;/, 'a drop is not judged by clayDrop() (none/dup silent, straight with a reason, put)');
+    need('clay', /if \(clayLeft\(pts, filled\) === 0\)\{ roundSolved\(d\.gClayDone\(k, m\)\); return true; \}/, 'the round is not solved exactly when clayLeft() is 0, or the message is not gClayDone(corners, straws)');
+    need('clay', /out \+= svgLine\(\[a\[0\] \+ ux, a\[1\] \+ uy\], \[b\[0\] - ux, b\[1\] - uy\], i % 2 \? '#F2B36B' : '#E8871E', 9, ' class="gstraw"'\);/, 'the straws are not drawn joint to joint');
+    if (D.GAME_CLAY.length < 4) fail('clay: GAME_CLAY needs at least 4 figures');
+    const cornerCounts = new Set();
+    D.GAME_CLAY.forEach((e, q) => {
+      const p = e.pts, m = p.length;
+      const own = p.map((b, j) => crs(vec(p[(j + m - 1) % m], b), vec(b, p[(j + 1) % m])) !== 0);
+      p.forEach((b, j) => {
+        if (D.isTurn(p, j) !== own[j]) fail('clay #' + q + ': isTurn(' + j + ') is ' + D.isTurn(p, j) + ', the joint ' + (own[j] ? 'turns' : 'goes straight on'));
+        inside(box(b[0], b[1], J, J), 'clay #' + q + ': joint ' + j, W, H);
+        if (hit(grow(box(b[0], b[1], J, J), PAD), srcBox)) fail('clay #' + q + ': joint ' + j + ' reaches the clay — putting the clay back would stick it');
+      });
+      noHits(p.map(b => grow(box(b[0], b[1], J, J), PAD)), 'clay #' + q + ': padded joint targets');
+      if (!polySimple(p)) fail('clay #' + q + ': the straws cross each other');
+      const n = own.filter(Boolean).length, flat = m - n;
+      if (n < 3) fail('clay #' + q + ': only ' + n + ' corners');
+      if (flat < 1) fail('clay #' + q + ': no straight join — the round never asks "is this a corner?"');
+      /* 兩個直直接下去的接點不可以相鄰：那會是三根吸管連成一條，畫面上分不出來（也不需要） */
+      own.forEach((t, j) => { if (!t && !own[(j + 1) % m]) fail('clay #' + q + ': two straight joins in a row'); });
+      /* 吸管不可以往回折（180°）、不可以疊在別的吸管上、接點不可以落在別的吸管上 —— 只擋「真的交叉」的話，
+         [[40,50],[260,50],[150,50],…] 這種往回折、疊在一起的圖照樣通過（codex 第一輪） */
+      p.forEach((b, j) => {
+        const u = vec(p[(j + m - 1) % m], b), v = vec(b, p[(j + 1) % m]);
+        if (crs(u, v) === 0 && u[0] * v[0] + u[1] * v[1] <= 0) fail('clay #' + q + ': the straws fold back on themselves at joint ' + j);
+      });
+      const onSeg = (r, a, c) => crs(vec(a, c), vec(a, r)) === 0 && Math.min(a[0], c[0]) <= r[0] && r[0] <= Math.max(a[0], c[0]) && Math.min(a[1], c[1]) <= r[1] && r[1] <= Math.max(a[1], c[1]);
+      for (let i = 0; i < m; i++) for (let j = 0; j < m; j++){
+        if (j === i || j === (i + 1) % m) continue;
+        if (onSeg(p[j], p[i], p[(i + 1) % m])) fail('clay #' + q + ': joint ' + j + ' lies on straw ' + i);
+      }
+      /* 「直直接下去的接點，兩邊的吸管算同一條邊，所以一共 n 條邊」：自己把同方向、相連的吸管併成一段來數，不從轉彎數推 */
+      const dirKey = j => { const v = vec(p[j], p[(j + 1) % m]), g = (x, y) => y ? g(y, x % y) : Math.abs(x), k = g(v[0], v[1]); return (v[0] / k) + ',' + (v[1] / k); };
+      let runs = 0;
+      for (let j = 0; j < m; j++) if (dirKey(j) !== dirKey((j + m - 1) % m)) runs++;
+      if (runs !== n) fail('clay #' + q + ': the straws make ' + runs + ' straight sides but there are ' + n + ' corners');
+      cornerCounts.add(n);
+      /* 照遊戲的規則玩：每一個接點先試一次（直的要彈回），再把轉彎的照任意順序黏完 */
+      const filled = {};
+      if (D.clayDrop(p, filled, null) !== 'none' || D.clayDrop(p, filled, undefined) !== 'none') fail('clay #' + q + ': a drop on no joint is not silent');
+      p.forEach((b, j) => { const r = D.clayDrop(p, filled, j); if (r !== (own[j] ? 'put' : 'straight')) fail('clay #' + q + ': clayDrop(joint ' + j + ') is ' + r); });
+      if (D.clayLeft(p, filled) !== n) fail('clay #' + q + ': clayLeft() at the start is ' + D.clayLeft(p, filled) + ', should be ' + n);
+      own.map((t, j) => t ? j : -1).filter(j => j >= 0).reverse().forEach((j, i) => {
+        filled[j] = true;
+        if (D.clayLeft(p, filled) !== n - i - 1) fail('clay #' + q + ': clayLeft() is ' + D.clayLeft(p, filled) + ' after ' + (i + 1) + ' corners');
+        if (D.clayDrop(p, filled, j) !== 'dup') fail('clay #' + q + ': a second clay ball on joint ' + j + ' is not "dup"');
+        own.forEach((t, s) => { if (!t && D.clayDrop(p, filled, s) !== 'straight') fail('clay #' + q + ': the straight join ' + s + ' is accepted later on'); });
+      });
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        seq('clay #' + q + ' ' + L + ' gClayDone', d.gClayDone(n, m), [n, n, m, n]);
+        for (let k = 0; k <= n; k++){ seq('clay ' + L + ' gClayNow(' + k + ')', d.gClayNow(k), [k]); if (L === 'en') plural('clay en gClayNow(' + k + ')', d.gClayNow(k), k, 'clay ball', 'clay balls'); }
+        for (let r = 1; r <= n; r++){ seq('clay ' + L + ' gClay2(' + r + ')', d.gClay2(r), [r]); if (L === 'en') plural('clay en gClay2(' + r + ')', d.gClay2(r), r, 'turn still has', 'turns still have'); }
+      });
+    });
+    if (cornerCounts.size < 2) fail('clay: every figure has the same number of corners');
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      if (typeof d.gClayStraight !== 'string' || /\d/.test(d.gClayStraight)) fail('clay ' + L + ': gClayStraight missing or has a number');
+      has('clay ' + L + ' gClayStraight', d.gClayStraight, L === 'zh' ? /一直線[\s\S]*沒有轉彎[\s\S]*不是頂點[\s\S]*同一條邊/ : /straight on[\s\S]*not a corner[\s\S]*one side/);
+      has('clay ' + L + ' gClayDone', d.gClayDone(4, 6), L === 'zh' ? /直直接下去的接點，兩邊的吸管算同一條邊/ : /at each join that goes straight on, the two straws are one side/);
+    });
+  }
+
+  /* ================= 第 4 關：分家族（範例 4：長得不一樣沒關係，數邊就知道） ================= */
+  {
+    const S = D.SORT_BIN, C = D.SORT_CARD, H = D.SORT_H;
+    const ownFam = id => { const s = FIG_SIDES[id]; return s === 0 ? 'circle' : (s === 3 ? 'tri' : (s === 4 ? 'quad' : null)); };
+    Object.keys(D.FIGS).forEach(id => { if (D.familyOf(id) !== ownFam(id)) fail('sort: familyOf(' + id + ') is ' + D.familyOf(id) + ', should be ' + ownFam(id)); });
+    if (D.SORT_BINS.join() !== 'tri,quad,circle') fail('sort: SORT_BINS should be tri, quad, circle — got ' + D.SORT_BINS.join());
+    D.SORT_TRI.forEach(id => { if (ownFam(id) !== 'tri') fail('sort: SORT_TRI has ' + id + ', which is not a triangle'); });
+    D.SORT_QUAD.forEach(id => { if (ownFam(id) !== 'quad') fail('sort: SORT_QUAD has ' + id + ', which is not a quadrilateral'); if (id === 'square') fail('sort: square is dealt on its own — it must not also be in SORT_QUAD'); });
+    if (D.SORT_TRI.length < 2 || D.SORT_QUAD.length < 2) fail('sort: the pools are too small to deal 2 + 2');
+    /* 正方形一定在：「正方形也是四邊形」是這一課最貴的迷思（家長頁 s1p2）。從座標驗它真的是正方形 */
+    { const p = D.FIGS.square.pts; if (p.length !== 4) fail('sort: FIGS.square does not have 4 corners'); else { const L4 = p.map((a, i) => Math.hypot(...vec(a, p[(i + 1) % 4]))), dots = p.map((a, i) => { const u = vec(p[(i + 3) % 4], a), v = vec(a, p[(i + 1) % 4]); return u[0] * v[0] + u[1] * v[1]; });
+      if (!(L4.every(l => Math.abs(l - L4[0]) < 1e-9) && dots.every(x => x === 0))) fail('sort: FIGS.square is not a square'); } }
+    need('sort', /var ids = pickN\(SORT_TRI, 2\)\.concat\(\['square'\], pickN\(SORT_QUAD, 2\), \['circle'\]\)/, 'the deal is not 2 triangles + the square + 2 quadrilaterals + the circle');
+    need('sort', /var t = target\(B, S\.x\[b\], S\.y, S\.w, S\.h, 'gbin', \{ key:key, b:b, n:0 \}\);\s*addZone\(B, S\.x\[b\], S\.y \+ 6, S\.w, 26, 'glbl', d\.names\[key\]\);/, 'the baskets are not SORT_BIN boxes labelled with d.names');
+    need('sort', /var b = nearestOpen\(bins, pt, GPAD\), id = P\.data\.id;\s*if \(!b\) return false;\s*if \(b\.key !== familyOf\(id\)\)\{ roundMiss\(d\.gSortWrong\(sidesOf\(id\), familyOf\(id\)\)\); return false; \}/, 'a card is not judged by familyOf() (empty silent, wrong basket with a reason)');
+    need('sort', /var at = sortSlotXY\(b\.b, b\.n\); b\.n\+\+;[\s\S]*?P\.lock\(at\[0\], at\[1\]\);/, 'a sorted card is not put at sortSlotXY() inside its basket');
+    need('sort', /if \(placed === ids\.length\) roundSolved\(d\.gSortDone\);/, 'the round is not solved when every card is sorted');
+    const bins = S.x.map(x => ({ x, y:S.y, w:S.w, h:S.h }));
+    if (S.x.length !== 3) fail('sort: there must be 3 baskets');
+    bins.forEach((b, i) => inside(b, 'sort: basket ' + i, W, H));
+    noHits(bins, 'sort: baskets');
+    for (let i = 0; i + 1 < bins.length; i++){
+      const gap = bins[i + 1].x - (bins[i].x + bins[i].w);
+      if (!(gap > 0 && gap < 2 * PAD)) fail('sort: baskets ' + i + ' and ' + (i + 1) + ' are ' + gap + 'px apart — the drop pads (' + PAD + ') no longer overlap, the nearest-basket rule is never exercised');
+    }
+    const cells = []; C.ys.forEach(y => C.xs.forEach(x => cells.push(box(x, y, C.w, C.h))));
+    if (cells.length !== 6) fail('sort: the tray has ' + cells.length + ' places for 6 cards');
+    cells.forEach((c, i) => { inside(c, 'sort: tray place ' + i, W, H); bins.forEach((b, j) => { if (hit(c, grow(b, PAD))) fail('sort: tray place ' + i + ' is inside basket ' + j + '\'s drop zone — a card would be sorted without moving'); }); });
+    noHits(cells, 'sort: tray places');
+    /* 放好的卡：每一家最多 3 張（四邊形），排在籃子裡、在標籤下面、不互相蓋住 */
+    bins.forEach((b, j) => {
+      const slots = [0, 1, 2].map(i => { const xy = D.sortSlotXY(j, i); return box(xy[0], xy[1], C.small, C.small); });
+      slots.forEach((s, i) => { if (!(s.x >= b.x && s.y >= b.y + 32 && s.x + s.w <= b.x + b.w && s.y + s.h <= b.y + b.h)) fail('sort: basket ' + j + ' place ' + i + ' is not inside the basket under its label (' + JSON.stringify(s) + ')'); });
+      noHits(slots, 'sort: basket ' + j + ' places');
+    });
+    if (nearestOpen){
+      const list = bins.map((b, i) => ({ cx:b.x + b.w / 2, cy:b.y + b.h / 2, hw:b.w / 2, hh:b.h / 2, key:D.SORT_BINS[i], done:false }));
+      sweepBoxes(list, H, 'sort', 0.5);
+      /* 第 1、2 個籃子之間的縫、離第 2 個比較近：一定進第 2 個（第 1 個排在清單前面） */
+      const gx = bins[0].x + bins[0].w + (bins[1].x - bins[0].x - bins[0].w) * 0.75, gy = S.y + S.h / 2;
+      const g = nearestOpen(list, { x:gx, y:gy }, PAD);
+      if (!g || g.key !== 'quad') fail('sort: a drop in the gap nearer the quadrilateral basket goes to ' + (g && g.key));
+    }
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      D.SORT_BINS.forEach(k => { if (d.names[k] !== name(k, L)) fail('sort ' + L + ': basket label ' + k + ' is ' + d.names[k]); });
+      Object.keys(D.FIGS).forEach(id => {
+        const f = ownFam(id); if (!f) return;
+        const n = FIG_SIDES[id], t = d.gSortWrong(n, f);
+        if (f === 'circle'){ seq('sort ' + L + ' gSortWrong(circle)', t, []); has('sort ' + L + ' gSortWrong(circle)', t, L === 'zh' ? /沒有直的邊/ : /no straight sides/); }
+        else { seq('sort ' + L + ' gSortWrong(' + id + ')', t, [n]); if (!says(t, name(f, L), L)) fail('sort ' + L + ': gSortWrong(' + id + ') does not name the ' + name(f, L)); }
+      });
+      for (let k = 0; k <= 6; k++) seq('sort ' + L + ' gSortNow(' + k + ')', d.gSortNow(k, 6), [k, 6]);
+      [3, 4].forEach(n => seq('sort ' + L + ' gSort2(' + n + ')', d.gSort2(n), [n]));
+      seq('sort ' + L + ' gSort2(0)', d.gSort2(0), []);
+      has('sort ' + L + ' gSort2(0)', d.gSort2(0), L === 'zh' ? /沒有直的邊/ : /no straight sides/);
+      seq('sort ' + L + ' gSortDone', d.gSortDone, []);
+      if (typeof d.gCardLabel !== 'string' || /三角|四邊|圓|triangle|quadrilateral|circle/i.test(d.gCardLabel)) fail('sort ' + L + ': the card label must not name the shape (it would give the answer away to a screen reader): ' + d.gCardLabel);
+    });
+  }
+
+  /* ================= 第 5 關：找四邊形（範例 4 第 3 步：直的邊圍一圈、不交叉，4 條就是四邊形） ================= */
+  {
+    const F = D.FIND_CELL, H = D.FIND_H;
+    /* 自己的分類：圓／沒有圍成一圈／交叉／邊數 */
+    const ownWhy = it => {
+      const f = it.src === 'odd' ? D.GAME_ODD[it.id] : D.FIGS[it.id];
+      if (!f) return 'missing';
+      if (f.kind === 'circle') return 'circle';
+      const closed = it.src === 'odd' ? f.closed : true;
+      if (!closed) return 'open';
+      if (!polySimple(f.pts)) return 'cross';
+      return f.pts.length === 4 ? 'ok' : 'count';
+    };
+    Object.keys(D.FIGS).forEach(id => { const it = { src:'fig', id }; if (D.findWhy(it) !== ownWhy(it)) fail('find: findWhy(' + id + ') is ' + D.findWhy(it) + ', should be ' + ownWhy(it)); });
+    Object.keys(D.GAME_ODD).forEach(id => { const it = { src:'odd', id }; if (D.findWhy(it) !== ownWhy(it)) fail('find: findWhy(odd ' + id + ') is ' + D.findWhy(it) + ', should be ' + ownWhy(it)); });
+    const gap = D.GAME_ODD.gap, crossing = D.GAME_ODD.cross;
+    if (!gap || ownWhy({ src:'odd', id:'gap' }) !== 'open' || gap.pts.length !== 5 || Math.hypot(...vec(gap.pts[0], gap.pts[4])) < 20) fail('find: the gap shape must be 4 straight lines (5 points) whose ends do not meet');
+    if (!crossing || ownWhy({ src:'odd', id:'cross' }) !== 'cross' || crossing.pts.length !== 4) fail('find: the crossing shape must be 4 straight lines that cross');
+    D.FIND_QUAD.forEach(id => { if (ownWhy({ src:'fig', id }) !== 'ok') fail('find: FIND_QUAD has ' + id + ', which is not a quadrilateral'); if (id === 'square') fail('find: square is added on its own'); });
+    D.FIND_OTHER.forEach(id => { if (ownWhy({ src:'fig', id }) === 'ok') fail('find: FIND_OTHER has ' + id + ', which IS a quadrilateral'); });
+    if (D.FIND_QUAD.length < 3 || D.FIND_OTHER.length < 3) fail('find: the pools are too small to deal 3 + 3');
+    need('find', /var items = \[fig\('square'\)\]\.concat\(pickN\(FIND_QUAD, 3\)\.map\(fig\), \[\{ src:'odd', id:'gap' \}, \{ src:'odd', id:'cross' \}\], pickN\(FIND_OTHER, 3\)\.map\(fig\)\);/, 'the nine shapes are not the square + 3 quadrilaterals + the gap + the crossing + 3 others');
+    need('find', /var total = items\.filter\(function\(it\)\{ return findWhy\(it\) === 'ok'; \}\)\.length, found = 0,/, 'the number to find is not counted with findWhy()');
+    need('find', /if \(gSolved \|\| b\.classList\.contains\('found'\) \|\| b\.classList\.contains\('nope'\)\) return;\s*if \(why !== 'ok'\)\{\s*b\.classList\.add\('nope'\); b\.classList\.remove\('ghint'\);\s*roundMiss\(d\.gFindWhy\(why, it\.src === 'odd' \? GAME_ODD\[it\.id\]\.pts\.length : sidesOf\(it\.id\)\)\);\s*return;\s*\}/, 'a tap is not judged by findWhy() (a shape tapped before does nothing; a wrong one says why once)');
+    need('find', /if \(found === total\) roundSolved\(d\.gFindDone\(total\)\);/, 'the round is not solved when every quadrilateral is found');
+    need('find', /var it = items\[i\], why = findWhy\(it\);/, 'each shape is not classified with findWhy()');
+    need('find', /b\.innerHTML = it\.src === 'odd' \? oddSVG\(it\.id\) : figSVG\(it\.id\);/, 'the shapes are not drawn with oddSVG()/figSVG()');
+    const cells = []; F.ys.forEach(y => F.xs.forEach(x => cells.push(box(x, y, F.size, F.size))));
+    if (cells.length !== 9) fail('find: the grid has ' + cells.length + ' places for 9 shapes');
+    cells.forEach((c, i) => inside(c, 'find: place ' + i, W, H));
+    noHits(cells, 'find: places');
+    /* 兩個「不是四邊形」的畫：畫布容得下（自己從 points 算右緣與下緣，含半個線寬） */
+    Object.keys(D.GAME_ODD).forEach(id => {
+      const svg = D.oddSVG(id), w = +(svg.match(/<svg[^>]*\bwidth="(\d+)"/) || [])[1], h = +(svg.match(/<svg[^>]*\bheight="(\d+)"/) || [])[1];
+      const pts = ((svg.match(/points="([^"]+)"/) || [])[1] || '').trim().split(/\s+/).map(t => t.split(',').map(Number));
+      const sw = +(svg.match(/stroke-width="(\d+)"/) || [])[1];
+      if (!w || !h || !sw || pts.length !== D.GAME_ODD[id].pts.length) fail('find: cannot read oddSVG(' + id + ')');
+      else pts.forEach(p => { if (p[0] - sw / 2 < 0 || p[1] - sw / 2 < 0 || p[0] + sw / 2 > w || p[1] + sw / 2 > h) fail('find: oddSVG(' + id + ') draws ' + p + ' outside its ' + w + '×' + h + ' canvas'); });
+      if (D.GAME_ODD[id].closed !== /<polygon/.test(svg)) fail('find: oddSVG(' + id + ') draws ' + (D.GAME_ODD[id].closed ? 'an open line' : 'a closed shape') + ' — the picture must show what closed says');
+    });
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      [3, 5, 6].forEach(n => { const t = d.gFindWhy('count', n); seq('find ' + L + ' gFindWhy(count ' + n + ')', t, [n, 4]); });
+      seq('find ' + L + ' gFindWhy(circle)', d.gFindWhy('circle', 0), []);
+      has('find ' + L + ' gFindWhy(circle)', d.gFindWhy('circle', 0), L === 'zh' ? /沒有直的邊/ : /no straight sides/);
+      seq('find ' + L + ' gFindWhy(open)', d.gFindWhy('open', 5), [4]);
+      has('find ' + L + ' gFindWhy(open)', d.gFindWhy('open', 5), L === 'zh' ? /沒有圍成一圈/ : /do not make a loop/);
+      seq('find ' + L + ' gFindWhy(cross)', d.gFindWhy('cross', 4), [4]);
+      has('find ' + L + ' gFindWhy(cross)', d.gFindWhy('cross', 4), L === 'zh' ? /交叉/ : /cross/);
+      seq('find ' + L + ' gFindDone(4)', d.gFindDone(4), [4, 4]);
+      for (let x = 0; x <= 4; x++) seq('find ' + L + ' gFindNow(' + x + ')', d.gFindNow(x, 4), [x, 4]);
+      for (let r = 1; r <= 4; r++){ seq('find ' + L + ' gFind2(' + r + ')', d.gFind2(r), [r]); if (L === 'en') plural('find en gFind2(' + r + ')', d.gFind2(r), r, 'quadrilateral is', 'quadrilaterals are'); }
+      for (let k = 1; k <= 9; k++){
+        seq('find ' + L + ' gShapeLabel(' + k + ')', d.gShapeLabel(k), [k]);
+        hasNot('find ' + L + ' gShapeLabel(' + k + ')', d.gShapeLabel(k), /三角|四邊|圓|邊|頂點|triangle|quadrilateral|circle|side|corner/i);
+      }
+    });
+  }
+}
+
+/* ---------- RENDER 的五個函式本體真的跑一次（codex 第一輪：need() 只證明那一行寫著，`find: function(d){ return;` 照樣全綠）----------
+   把頁面的資料區、RENDER 物件和它用到的純函式（target／svgLayer／setSVG／svgLine／nearestOpen／shuffle／pickN／order）
+   原封不動切出來，放進一個假的 DOM：makeBoard／addZone／addPiece／useTapSelect／actionButton／trailLine／glow／roundMiss／roundSolved
+   換成記錄用的替身。pick() 換成「依序挑」，每一題都跑到。然後照孩子會做的事去呼叫頁面自己的 tryDrop／按鈕／點擊，
+   看頁面自己的程式收不收、說哪一句、畫了什麼、什麼時候過關。 */
+function renderRun(D, I18N, fail, src){
+  const cut = (a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i + 1); return i >= 0 && j > i ? src.slice(i, j) : null; };
+  const dataSrc = cut('/* ---------- 語言無關的資料 ---------- */', '/* ---------- i18n ---------- */');
+  const renderSrc = cut('  var RENDER = {', '\n  function startRound(){');
+  const fns = ['target', 'svgLayer', 'setSVG', 'svgLine', 'nearestOpen', 'shuffle', 'pickN', 'order'].map(n => extractFunction(src, n));
+  if (!dataSrc || !renderSrc || fns.some(f => !f)) return fail('render: cannot cut the data block / RENDER / its helpers out of index.html');
+  const STUB = `
+    var LOG, PICK = 0, gSolved = false, gCtx = {}, GEN = null;
+    function pick(arr){ return arr[PICK % arr.length]; }
+    function mkEl(){
+      var e = { style:{}, cls:{}, listeners:{}, kids:[], html:'', text:'' };
+      e.classList = { add:function(c){ e.cls[c] = 1; }, remove:function(c){ delete e.cls[c]; }, contains:function(c){ return !!e.cls[c]; },
+                      toggle:function(c, on){ if (on) e.cls[c] = 1; else delete e.cls[c]; } };
+      e.setAttribute = function(){}; e.addEventListener = function(t, f){ e.listeners[t] = f; }; e.remove = function(){ e.removed = true; };
+      e.appendChild = function(c){ e.kids.push(c); };
+      Object.defineProperty(e, 'innerHTML', { set:function(v){ e.html = String(v); }, get:function(){ return e.html; } });
+      Object.defineProperty(e, 'textContent', { set:function(v){ e.text = String(v); e.html = String(v); }, get:function(){ return e.text; } });
+      Object.defineProperty(e, 'className', { set:function(v){ String(v).split(/\\s+/).forEach(function(c){ if (c) e.cls[c] = 1; }); }, get:function(){ return Object.keys(e.cls).join(' '); } });
+      return e;
+    }
+    var document = { createElement:function(){ return mkEl(); } };
+    var gMsg = mkEl();
+    function trailLine(t){ var e = mkEl(); e.textContent = t; LOG.line = e; return e; }
+    function makeBoard(W, H){ var B = { el:mkEl(), W:W, H:H, selected:null }; LOG.B = B; LOG.H = H; return B; }
+    function addZone(B, x, y, w, h, cls, text){ var z = mkEl(); z.className = cls; z.box = { x:x, y:y, w:w, h:h }; if (text !== undefined) z.textContent = text; B.el.appendChild(z); LOG.zones.push(z); return z; }
+    function addPiece(B, o){
+      var P = { el:mkEl(), o:o, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+      P.el.className = 'gpiece ' + (o.cls || '');
+      P.home = function(){ P.cx = P.homeX; P.cy = P.homeY; };
+      P.lock = function(x, y){ P.locked = true; P.cx = x; P.cy = y; };
+      LOG.pieces.push(P); return P;
+    }
+    function useTapSelect(B, f){ LOG.drop = f; }
+    function keepSelected(){}
+    function glow(els){ LOG.glow = els; }
+    function refreshHint(){}
+    function actionButton(text, f){ var b = mkEl(); b.textContent = text; b.press = f; LOG.action = b; return b; }
+    function roundMiss(t){ LOG.miss.push(t); gMsg.innerHTML = t; }
+    function roundSolved(t){ if (gSolved) return; gSolved = true; LOG.solved.push(t); }
+  `;
+  /* sort／find 的發牌是隨機的：用固定種子的亂數（每一次都一樣、可以重現），並且記下發過哪些卡 ——
+     每一張卡都要至少被發到一次，不然那一張的畫法／判斷從來沒有跑過（codex 第二輪） */
+  let seed = 20261002;
+  const SEEDED = Object.create(Math);
+  SEEDED.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const seenSort = new Set(), seenFind = new Set();
+  let RUN;
+  try {
+    RUN = new Function('MathR', 'var Math = MathR;\n' + dataSrc + '\n' + STUB + '\n' + fns.join('\n') + '\n' + renderSrc + `
+      return function(type, d, k){
+        LOG = { miss:[], solved:[], zones:[], pieces:[], line:null, B:null, H:0, drop:null, action:null, glow:null };
+        PICK = k; gSolved = false; gCtx = {}; gMsg.innerHTML = '';
+        RENDER[type](d);
+        LOG.ctx = gCtx; LOG.msg = function(){ return gMsg.innerHTML; }; LOG.solvedNow = function(){ return gSolved; };
+        return LOG;
+      };`)(SEEDED);
+  } catch (e){ return fail('render: the RENDER block could not be evaluated: ' + e.message); }
+  const play = (type, d, k) => { try { return RUN(type, d, k); } catch (e){ fail('render ' + type + ' #' + k + ': threw ' + e.message); return null; } };
+  const H = { loop:D.LOOP_H, walk:D.WALK_H, clay:D.CLAY_H, sort:D.SORT_H, find:D.FIND_H };
+  const hint2 = (r, w) => { try { return r.ctx.hint2(); } catch (e){ fail(w + ': hint 2 threw ' + e.message); return null; } };
+  const count = (html, cls) => (String(html).match(new RegExp('class="' + cls + '"', 'g')) || []).length;
+  ['zh', 'en'].forEach(L => {
+    const d = I18N[L];
+    /* --- 第 1 關 --- */
+    D.GAME_LOOP.forEach((id, k) => {
+      const r = play('loop', d, k); if (!r) return;
+      const w = 'render loop ' + id + ' ' + L;
+      if (r.H !== H.loop) fail(w + ': the board is ' + r.H + ' high, LOOP_H is ' + H.loop);
+      const n = D.FIGS[id].pts.length, segs = D.loopSegs(id), P = r.pieces[0], svg = r.zones.filter(z => z.cls.gsvg)[0];
+      const balls = r.zones.filter(z => z.cls.gball);
+      if (balls.length !== n || !P || !svg || !r.action || !r.drop) return fail(w + ': not drawn as ' + n + ' balls + the straw + "Loop done"');
+      balls.forEach((b, i) => { const xy = D.figXY(id, i, D.LOOP_FIG); if (Math.abs(b.box.x + b.box.w / 2 - xy[0]) > 1e-6 || Math.abs(b.box.y + b.box.h / 2 - xy[1]) > 1e-6) fail(w + ': clay ball ' + i + ' is not on corner ' + i); });
+      const mid = s => ({ x:(s.ax + s.bx) / 2, y:(s.ay + s.by) / 2 });
+      r.action.press();
+      if (r.miss.length || r.msg() !== d.gLoopEmpty || r.solvedNow()) fail(w + ': "Loop done" with nothing placed must only remind');
+      if (r.drop(P, { x:4, y:4 }) !== false || r.miss.length) fail(w + ': a drop on empty space must bounce silently');
+      segs.filter(s => !s.edge).forEach(s => { const m0 = r.miss.length; if (r.drop(P, mid(s)) !== false || r.miss.length !== m0 + 1 || r.miss[m0] !== d.gLoopCross) fail(w + ': the diagonal ' + s.i + '-' + s.j + ' is not bounced with gLoopCross'); });
+      if (count(svg.innerHTML, 'gstraw') !== 0) fail(w + ': a bounced straw was drawn');
+      const edges = segs.filter(s => s.edge);
+      edges.forEach((s, i) => {
+        if (r.drop(P, i % 2 ? Object.assign(mid(s), { tap:true }) : mid(s)) !== true) fail(w + ': the edge ' + s.i + '-' + s.j + ' is not accepted');
+        if (P.cx !== P.homeX || P.cy !== P.homeY) fail(w + ': the straw does not go back home (it never runs out)');
+        if (r.line.textContent !== d.gLoopNow(i + 1)) fail(w + ': the line reads "' + r.line.textContent + '" after ' + (i + 1) + ' straws');
+        if (count(svg.innerHTML, 'gstraw') !== i + 1) fail(w + ': ' + count(svg.innerHTML, 'gstraw') + ' straws drawn after ' + (i + 1));
+        if (i === 0){ const m0 = r.miss.length; r.action.press(); if (r.miss.length !== m0 + 1 || r.miss[m0] !== d.gLoopGap(n - 1) || r.solvedNow()) fail(w + ': "Loop done" with gaps is not a mistake with the gap count'); }
+        if (i < n - 1){ const h = hint2(r, w); if (h !== d.gLoop2(n - i - 1) || !r.glow || r.glow.length !== 2) fail(w + ': hint 2 after ' + (i + 1) + ' straws is "' + h + '" / ' + (r.glow && r.glow.length) + ' glowing'); }
+      });
+      if (r.drop(P, mid(edges[0])) !== false || r.miss.length !== 1 + segs.length - n) fail(w + ': a straw on a side that already has one is not silent');
+      if (hint2(r, w) !== d.gLoopReady || !r.glow || r.glow[0] !== r.action) fail(w + ': once closed, hint 2 does not point at "Loop done"');
+      if (r.solvedNow()) fail(w + ': the round solved itself without "Loop done"');
+      r.action.press();
+      if (!r.solvedNow() || r.solved[0] !== d.gLoopDone(n)) fail(w + ': "Loop done" on a closed loop does not solve with gLoopDone(' + n + ')');
+    });
+    /* --- 第 2 關 --- */
+    D.GAME_WALK.forEach((id, k) => {
+      const r = play('walk', d, k); if (!r) return;
+      const w = 'render walk ' + id + ' ' + L, n = D.FIGS[id].pts.length, P = r.pieces[0], svg = r.zones.filter(z => z.cls.gsvg)[0];
+      if (r.H !== H.walk) fail(w + ': the board is ' + r.H + ' high, WALK_H is ' + H.walk);
+      const V = Array.from({ length:n }, (_, i) => { const xy = D.figXY(id, i, D.WALK_FIG); return { x:xy[0], y:xy[1] }; });
+      if (!P || P.cx !== V[0].x || P.cy !== V[0].y || P.o.text !== '🐜') return fail(w + ': the ant does not start on corner 0');
+      if (r.zones.filter(z => z.cls.gcorner).length !== n) fail(w + ': not one ring per corner');
+      const star = r.zones.filter(z => z.cls.gstar)[0]; if (!star || star.textContent !== '★') fail(w + ': no ★ badge');
+      if (n > 3){ if (r.drop(P, V[2]) !== false || r.miss.slice(-1)[0] !== d.gWalkSkip) fail(w + ': cutting across to corner 2 is not bounced with gWalkSkip'); }
+      if (r.drop(P, { x:V[0].x + 3, y:V[0].y + 3 }) !== false || r.miss.length !== (n > 3 ? 1 : 0)) fail(w + ': putting the ant back on its own corner is not silent');
+      { const h = hint2(r, w); if (!r.glow || r.glow.length !== 1 || h !== d.gWalk2(n)) fail(w + ': hint 2 at the start must make ONE corner glow and say ' + n + ' sides to go'); }
+      for (let i = 1; i <= n; i++){
+        const to = i % n;
+        if (r.drop(P, i % 2 ? V[to] : Object.assign({}, V[to], { tap:true })) !== true) { fail(w + ': step ' + i + ' to corner ' + to + ' is not accepted'); return; }
+        if (count(svg.innerHTML, 'gwalked') !== i) fail(w + ': ' + count(svg.innerHTML, 'gwalked') + ' sides lit after ' + i + ' steps');
+        if (i === 1){ const m0 = r.miss.length; if (r.drop(P, V[0]) !== false || r.miss.length !== m0 + 1 || r.miss[m0] !== d.gWalkBack) fail(w + ': walking back to ★ is not bounced with gWalkBack'); }
+        if (i < n){
+          if (P.cx !== V[to].x || P.cy !== V[to].y || P.locked) fail(w + ': the ant does not stand on corner ' + to);
+          if (r.line.textContent !== d.gWalkNow(i)) fail(w + ': the line reads "' + r.line.textContent + '" after ' + i + ' sides');
+          if (r.solvedNow()) fail(w + ': solved after only ' + i + ' sides');
+        }
+      }
+      if (!r.solvedNow() || r.solved[0] !== d.gWalkDone(n) || !P.locked || r.line.textContent !== d.gWalkTotal(n)) fail(w + ': back at ★ after ' + n + ' sides does not solve with gWalkDone(' + n + ')');
+    });
+    /* --- 第 3 關 --- */
+    D.GAME_CLAY.forEach((e, k) => {
+      const r = play('clay', d, k); if (!r) return;
+      const w = 'render clay #' + k + ' ' + L, p = e.pts, m = p.length, P = r.pieces[0], svg = r.zones.filter(z => z.cls.gsvg)[0];
+      if (r.H !== H.clay) fail(w + ': the board is ' + r.H + ' high, CLAY_H is ' + H.clay);
+      if (!P || count(svg && svg.innerHTML, 'gstraw') !== m || r.zones.filter(z => z.cls.gjoint).length !== m) return fail(w + ': not drawn as ' + m + ' straws with a ring on every joint');
+      const turn = p.map((_, j) => D.isTurn(p, j)), n = turn.filter(Boolean).length;
+      p.forEach((b, j) => { if (!turn[j]){ const m0 = r.miss.length; if (r.drop(P, { x:b[0], y:b[1] }) !== false || r.miss.length !== m0 + 1 || r.miss[m0] !== d.gClayStraight) fail(w + ': the straight joint ' + j + ' is not bounced with gClayStraight'); } });
+      if (r.drop(P, { x:150, y:130 }) !== false) fail(w + ': a drop in the middle is not silent');
+      let c = 0;
+      p.forEach((b, j) => {
+        if (!turn[j]) return;
+        c++;
+        if (r.drop(P, c % 2 ? { x:b[0], y:b[1] } : { x:b[0], y:b[1], tap:true }) !== true) fail(w + ': the corner ' + j + ' is not accepted');
+        if (c < n){
+          if (r.solvedNow() || r.line.textContent !== d.gClayNow(c)) fail(w + ': after ' + c + ' corners: solved=' + r.solvedNow() + ', line "' + r.line.textContent + '"');
+          const m0 = r.miss.length; if (r.drop(P, { x:b[0], y:b[1] }) !== false || r.miss.length !== m0) fail(w + ': clay on a filled corner is not silent');
+        }
+      });
+      if (!r.solvedNow() || r.solved[0] !== d.gClayDone(n, m)) fail(w + ': all ' + n + ' corners filled does not solve with gClayDone(' + n + ', ' + m + ')');
+      if (r.zones.filter(z => z.cls.gjoint && z.cls.filled).length !== n) fail(w + ': ' + n + ' corners are not drawn as filled');
+    });
+    /* --- 第 4 關（發牌用固定種子的亂數：每種語言 30 次，兩種語言共 60 次） --- */
+    for (let t = 0; t < 30; t++){
+      const r = play('sort', d, 0); if (!r) break;
+      const w = 'render sort ' + L;
+      if (r.H !== H.sort) fail(w + ': the board is ' + r.H + ' high, SORT_H is ' + H.sort);
+      const S = D.SORT_BIN, ctr = b => ({ x:S.x[b] + S.w / 2, y:S.y + S.h / 2 }), fam = id => D.familyOf(id);
+      const ids = r.pieces.map(P => P.data.id);
+      const tally = f => ids.filter(id => fam(id) === f).length;
+      ids.forEach(id => seenSort.add(id));
+      if (r.pieces.length !== 6 || tally('tri') !== 2 || tally('quad') !== 3 || tally('circle') !== 1 || ids.indexOf('square') < 0 || new Set(ids).size !== 6) { fail(w + ': the deal is ' + ids.join(',')); break; }
+      if (new Set(r.pieces.map(P => P.cx + ',' + P.cy)).size !== 6) fail(w + ': two cards are dealt onto the same place');
+      if (r.drop(r.pieces[0], { x:150, y:186 }) !== false || r.miss.length) fail(w + ': a drop between the baskets and the tray is not silent');
+      r.pieces.forEach((P, i) => {
+        D.SORT_BINS.forEach((key, b) => {
+          if (key === fam(P.data.id)) return;
+          const m0 = r.miss.length;
+          if (r.drop(P, ctr(b)) !== false || r.miss.length !== m0 + 1 || r.miss[m0] !== d.gSortWrong(D.sidesOf(P.data.id), fam(P.data.id))) fail(w + ': ' + P.data.id + ' in the ' + key + ' basket is not bounced with gSortWrong');
+        });
+        const b = D.SORT_BINS.indexOf(fam(P.data.id));
+        if (r.drop(P, i % 2 ? Object.assign(ctr(b), { tap:true }) : ctr(b)) !== true || !P.locked) fail(w + ': ' + P.data.id + ' is not accepted by its own basket');
+        if (!(P.cx >= S.x[b] && P.cx <= S.x[b] + S.w && P.cy >= S.y && P.cy <= S.y + S.h)) fail(w + ': ' + P.data.id + ' is locked outside its basket');
+        if (i < 5 && (r.solvedNow() || r.line.textContent !== d.gSortNow(i + 1, 6))) fail(w + ': after ' + (i + 1) + ' cards: solved=' + r.solvedNow() + ', line "' + r.line.textContent + '"');
+      });
+      if (!r.solvedNow() || r.solved[0] !== d.gSortDone) fail(w + ': six sorted cards do not solve with gSortDone');
+      if (new Set(r.pieces.map(P => P.cx + ',' + P.cy)).size !== 6) fail(w + ': two sorted cards sit on the same place');
+    }
+    /* --- 第 5 關（同上，固定種子，共 60 次） --- */
+    const oddHtml = {}; Object.keys(D.GAME_ODD).forEach(id => { oddHtml[D.oddSVG(id)] = { src:'odd', id }; });
+    const figHtml = {}; Object.keys(D.FIGS).forEach(id => { figHtml[D.figSVG(id)] = { src:'fig', id }; });
+    for (let t = 0; t < 30; t++){
+      const r = play('find', d, 0); if (!r) break;
+      const w = 'render find ' + L;
+      if (r.H !== H.find) fail(w + ': the board is ' + r.H + ' high, FIND_H is ' + H.find);
+      if (!r.B) { fail(w + ': no board was drawn'); break; }
+      const btns = r.B.el.kids.filter(b => b.cls.gfind);
+      const items = btns.map(b => oddHtml[b.innerHTML] || figHtml[b.innerHTML]);
+      if (btns.length !== 9 || items.some(x => !x)) { fail(w + ': not 9 recognisable shapes'); break; }
+      items.forEach(it => seenFind.add(it.src + ':' + it.id));
+      const whys = items.map(it => D.findWhy(it)), quads = whys.filter(x => x === 'ok').length;
+      if (quads !== 4 || whys.indexOf('open') < 0 || whys.indexOf('cross') < 0 || items.filter(it => it.id === 'square').length !== 1) { fail(w + ': the nine are ' + items.map(it => it.id).join(',')); break; }
+      if (r.line.textContent !== d.gFindNow(0, 4)) fail(w + ': the line reads "' + r.line.textContent + '"');
+      let found = 0;
+      btns.forEach((b, i) => {
+        const why = whys[i], it = items[i];
+        if (why === 'ok') return;
+        const m0 = r.miss.length;
+        b.listeners.click();
+        const want = d.gFindWhy(why, it.src === 'odd' ? D.GAME_ODD[it.id].pts.length : D.sidesOf(it.id));
+        if (r.miss.length !== m0 + 1 || r.miss[m0] !== want || !b.classList.contains('nope')) fail(w + ': tapping ' + it.id + ' is not one mistake with "' + want + '"');
+        b.listeners.click();
+        if (r.miss.length !== m0 + 1) fail(w + ': tapping ' + it.id + ' again counts another mistake');
+      });
+      btns.forEach((b, i) => {
+        if (whys[i] !== 'ok') return;
+        b.listeners.click(); found++;
+        if (!b.classList.contains('found') || r.line.textContent !== d.gFindNow(found, 4)) fail(w + ': tapping ' + items[i].id + ' does not count it (' + r.line.textContent + ')');
+        if (found < 4 && r.solvedNow()) fail(w + ': solved after ' + found + ' quadrilaterals');
+        if (found < 4){ const m0 = r.miss.length; b.listeners.click(); if (r.miss.length !== m0 || r.line.textContent !== d.gFindNow(found, 4)) fail(w + ': tapping a found one again changes something'); }
+      });
+      if (!r.solvedNow() || r.solved[0] !== d.gFindDone(4)) fail(w + ': four found does not solve with gFindDone(4)');
+    }
+  });
+  D.SORT_TRI.concat(D.SORT_QUAD, ['square', 'circle']).forEach(id => { if (!seenSort.has(id)) fail('render sort: the card ' + id + ' was never dealt in 60 seeded deals — its drawing and judgement never ran'); });
+  D.FIND_QUAD.concat(D.FIND_OTHER, ['square']).map(id => 'fig:' + id).concat(Object.keys(D.GAME_ODD).map(id => 'odd:' + id)).forEach(k => { if (!seenFind.has(k)) fail('render find: the shape ' + k + ' was never dealt in 60 seeded deals'); });
+}
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-2/math/shapes */
   breaks: [
@@ -565,12 +1367,6 @@ module.exports = {
     { file:'index', expect:'has 3 sides but the row is for 4',
       find:"    { key:'quad',   sides:4, figs:['square','rect','trap','wonky'] },",
       replace:"    { key:'quad',   sides:4, figs:['square','rect','trap','tri'] }," },
-    { file:'index', expect:'ROUNDS must cover all three baskets',
-      find:"    { fig:'circle' },",
-      replace:"    { fig:'trap' }," },
-    { file:'index', expect:'has no basket in this game',
-      find:"    { fig:'diamond' },",
-      replace:"    { fig:'penta' }," },
     { file:'index', expect:'SIDE_FIGS needs a 3-sided and a 4-sided figure',
       find:"  var SIDE_FIGS = ['tri', 'square', 'trap', 'penta'];",
       replace:"  var SIDE_FIGS = ['square', 'trap', 'wonky', 'penta'];" },
@@ -603,12 +1399,6 @@ module.exports = {
     { file:'index', expect:'must say, in these exact words',
       find:"        return '直的邊圍一圈、不交叉，每個接點都轉彎。<br>4 條這樣的邊，就叫<strong>四邊形</strong>。正方形、長方形、梯形都是四邊形。';",
       replace:"        return '4 條直的邊圍一圈、不交叉，就叫<strong>四邊形</strong>。';" },
-    { file:'index', expect:'gWhy for the circle must not count straight sides',
-      find:"        if (sides === 0) return '它沒有直的邊，也沒有頂點。不是三角形，也不是四邊形 —— 它是圓。';",
-      replace:"        if (sides === 0) return '它有 0 條直的邊，所以是圓。';" },
-    { file:'index', expect:'gHint2 never gives the side count',
-      find:"        return '提示：它有 ' + sides + ' 條直的邊、' + sides + ' 個頂點。';",
-      replace:"        return '提示：仔細看一看。';" },
 
     /* --- index.html：三層題庫 --- */
     { file:'index', expect:'marked answer is',
@@ -710,11 +1500,11 @@ module.exports = {
       replace:"            ? ('一條邊配一個角：' + d.n + ' 條邊就有 ' + d.n + ' 個角。')" },
     /* C5：換成「多少」與 "the number of sides" 的問法。 */
     { file:'index', expect:'asks how many sides a circle has',
-      find:"      gAsk:'這個圖形要放進哪一個籃子？',",
-      replace:"      gAsk:'圓有多少條邊？'," },
+      find:"        find:'點出所有的四邊形。這一關用點的。'",
+      replace:"        find:'圓有多少條邊？點出所有的四邊形。這一關用點的。'" },
     { file:'index', expect:'asks how many sides a circle has',
-      find:"      gAsk:'Which basket does this shape belong in?',",
-      replace:"      gAsk:'What is the number of sides on a circle?'," },
+      find:"        find:'Tap every quadrilateral. This round is all taps.'",
+      replace:"        find:'What is the number of sides on a circle? Tap every quadrilateral. This round is all taps.'" },
     /* C6：不帶數量詞的錯誤宣稱。 */
     { file:'index', expect:'asserts that a circle HAS',
       find:"        if (key === 'circle') return '圓是彎彎的一圈，<strong>沒有直的邊</strong>。';",
@@ -739,9 +1529,6 @@ module.exports = {
       find:"      body += '<line x1=\"' + a[0] + '\" y1=\"' + a[1] + '\" x2=\"' + b[0] + '\" y2=\"' + b[1] +\n              '\" stroke=\"#E8871E\" stroke-width=\"9\" stroke-linecap=\"round\"/>';",
       replace:"      body += '<line x1=\"' + a[0] + '\" y1=\"' + a[1] + '\" y2=\"' + b[1] +\n              '\" stroke=\"#E8871E\" stroke-width=\"9\" stroke-linecap=\"round\"/>';" },
     /* C11：籃子清單長度不對時要乾淨地停下來，不可以丟 TypeError。 */
-    { file:'index', expect:'BASKETS should be tri, quad, circle',
-      find:"  var BASKETS = ['tri', 'quad', 'circle'];",
-      replace:"  var BASKETS = ['tri', 'quad'];" },
     /* G1：拿掉「不共用吸管」，9 根吸管排成三角網格真的做得出 4 個三角形。 */
     { file:'review', expect:'stem drops the no-sharing premise',
       find:"<br>每個圖形都分開做，不共用吸管。<br>可以做幾個",
@@ -785,8 +1572,8 @@ module.exports = {
       replace:"        if (key === 'circle') return '圓<strong>沒有頂點</strong>，也<strong>沒有角</strong>。其實圓有一個頂點。';" },
     /* 問句的指涉放在問號的另一邊 —— 舊的鄰近判準抓不到。 */
     { file:'index', expect:'asks how many sides a circle has',
-      find:"      gAsk:'這個圖形要放進哪一個籃子？',",
-      replace:"      gAsk:'這個圖形有幾條邊？它是圓。'," },
+      find:"        sort:'數一數直的邊，把圖形放進它的家族。也可以先點圖形、再點籃子。',",
+      replace:"        sort:'這個圖形有幾條邊？它是圓。數一數直的邊，把圖形放進它的家族。也可以先點圖形、再點籃子。'," },
     /* 整頁掃描原本只叫 p2End(n,'tri')，square/trap/penta 三條分支完全沒掃到。 */
     { file:'index', expect:'asks how many sides a circle has',
       find:"        var tail = (n === 3) ? '有 3 條直的邊，所以它是<strong>三角形</strong>。'\n                 : (n === 4) ? '有 4 條直的邊，所以它是<strong>四邊形</strong>。'",
@@ -865,7 +1652,298 @@ module.exports = {
       replace:"        { stem:'圓有幾條邊？'," },
     { file:'index', expect:'never ask how many sides a circle has',
       find:"        { stem:'How many straight sides does a quadrilateral have?',",
-      replace:"        { stem:'A circle: how many sides does it have?'," }
+      replace:"        { stem:'A circle: how many sides does it have?'," },
+    /* --- index.html：小遊戲（§六之五，2026-10-02 改版）。每一筆只改壞一條規則 --- */
+    /* 第 1 關：挑第一條符合的線，不是最近的（對角線排在前面，靠近邊放下去會被判成交叉） */
+    { file:'index', expect:"nearestSeg() disagrees",
+      find:"      if (dd <= pad && dd < bd){ bd = dd; best = s; }",
+      replace:"      if (dd <= pad && !best){ bd = dd; best = s; }" },
+    /* 挑第一個符合的籃子，不是最近的 */
+    { file:'index', expect:"nearestOpen() disagrees",
+      find:"      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"      if (!best){ bd = dd; bc = dc; best = b; }" },
+    /* 放在黏土球上面也算接了一根（分不出要接哪兩顆） */
+    { file:'index', expect:"a drop right on clay ball",
+      find:"      if (t < SEG_END || t > 1 - SEG_END) return;",
+      replace:"      if (t < 0 || t > 1) return;" },
+    /* 對角線（穿過中間、會交叉）也收 */
+    { file:'index', expect:"diagonal accepted",
+      find:"  function loopRule(seg){ return !seg ? 'none' : (seg.edge ? 'put' : 'cross'); }",
+      replace:"  function loopRule(seg){ return !seg ? 'none' : 'put'; }" },
+    /* 還有一個缺口就按「圍好了」也過關 */
+    { file:'index', expect:"is accepted with only",
+      find:"  function loopDone(n, k){ return k === 0 ? 'empty' : (k < n ? 'gap' : 'ok'); }",
+      replace:"  function loopDone(n, k){ return k === 0 ? 'empty' : (k < n - 1 ? 'gap' : 'ok'); }" },
+    /* 一根都沒放就按「圍好了」算成犯錯（應該只提醒） */
+    { file:'index', expect:"loopDone(4, 0) is gap",
+      find:"  function loopDone(n, k){ return k === 0 ? 'empty' : (k < n ? 'gap' : 'ok'); }",
+      replace:"  function loopDone(n, k){ return k < n ? 'gap' : 'ok'; }" },
+    { file:'index', expect:"the diagonals are not listed before the edges",
+      find:"    return diag.concat(edge);",
+      replace:"    return edge.concat(diag);" },
+    /* 第 2 關：穿過中間走到不相鄰的頂點也收 */
+    { file:'index', expect:"should be skip",
+      find:"    if (d !== 1 && d !== n - 1) return 'skip';",
+      replace:"    if (d === 0) return 'skip';" },
+    /* 走回頭路也收 */
+    { file:'index', expect:"should be back",
+      find:"      if ((a === cur && b === to) || (a === to && b === cur)) return 'back';",
+      replace:"      if (false) return 'back';" },
+    /* 回到 ★ 的那一步算錯了（走完一圈也不會過關） */
+    { file:'index', expect:"ways to finish the walk",
+      find:"    return (to === path[0] && path.length === n) ? 'home' : 'step';",
+      replace:"    return (to === path[0] && path.length === n - 1) ? 'home' : 'step';" },
+    /* 第 3 關：轉不轉彎看錯了 */
+    { file:'index', expect:"the joint goes straight on",
+      find:"    return (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) !== 0;",
+      replace:"    return (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) >= 0;" },
+    /* 直直接下去的接點也收黏土 */
+    { file:'index', expect:"clayDrop(joint",
+      find:"    return isTurn(pts, j) ? 'put' : 'straight';",
+      replace:"    return 'put';" },
+    /* 直直接下去的接點也要黏才過關（永遠過不了） */
+    { file:'index', expect:"clayLeft() at the start is",
+      find:"    for (var j = 0; j < pts.length; j++) if (isTurn(pts, j) && !filled[j]) left++;",
+      replace:"    for (var j = 0; j < pts.length; j++) if (!filled[j]) left++;" },
+    /* 同一個接點黏兩次 */
+    { file:'index', expect:"is not \"dup\"",
+      find:"    if (filled[j]) return 'dup';\n",
+      replace:"" },
+    /* 第 4 關：五邊形也算四邊形 */
+    { file:'index', expect:"familyOf(penta)",
+      find:"    return s === 0 ? 'circle' : (s === 3 ? 'tri' : (s === 4 ? 'quad' : null));",
+      replace:"    return s === 0 ? 'circle' : (s === 3 ? 'tri' : (s >= 4 ? 'quad' : null));" },
+    /* 第 5 關：交叉的 4 條線也算四邊形 */
+    { file:'index', expect:"findWhy(odd cross) is",
+      find:"      if (segCrossAt(p[i], p[(i + 1) % n], p[j], p[(j + 1) % n])) return 'cross';",
+      replace:"      if (false) return 'cross';" },
+    /* 沒有圍成一圈也不管 */
+    { file:'index', expect:"findWhy(odd gap) is",
+      find:"    if (!closed) return 'open';",
+      replace:"    if (false) return 'open';" },
+    /* 缺口那一個寫成圍好的 */
+    { file:'index', expect:"the gap shape must be 4 straight lines",
+      find:"    gap:   { pts:[[34,20],[108,20],[108,108],[20,108],[20,44]], closed:false },",
+      replace:"    gap:   { pts:[[34,20],[108,20],[108,108],[20,108],[20,44]], closed:true }," },
+    /* 缺口小到看不出來（畫面決定不了答案） */
+    { file:'index', expect:"the gap shape must be 4 straight lines",
+      find:"    gap:   { pts:[[34,20],[108,20],[108,108],[20,108],[20,44]], closed:false },",
+      replace:"    gap:   { pts:[[22,20],[108,20],[108,108],[20,108],[20,24]], closed:false }," },
+    { file:'index', expect:"FIND_OTHER has rect, which IS a quadrilateral",
+      find:"FIND_OTHER = ['tri', 'triThin', 'penta', 'hexa', 'circle'];",
+      replace:"FIND_OTHER = ['tri', 'triThin', 'penta', 'rect', 'circle'];" },
+    { file:'index', expect:"SORT_QUAD has tri",
+      find:"  var SORT_TRI = ['tri', 'triTilt', 'triThin'], SORT_QUAD = ['rect', 'trap', 'diamond', 'wonky'];",
+      replace:"  var SORT_TRI = ['tri', 'triTilt', 'triThin'], SORT_QUAD = ['rect', 'trap', 'diamond', 'tri'];" },
+    /* 三角形沒有對角線：那一題沒有任何錯的放法可以擋 */
+    { file:'index', expect:"GAME_LOOP figure triTilt must have 4 or 5 corners",
+      find:"  var GAME_LOOP = ['square', 'rect', 'trap', 'diamond', 'wonky', 'penta'];",
+      replace:"  var GAME_LOOP = ['square', 'rect', 'trap', 'diamond', 'wonky', 'triTilt'];" },
+    { file:'index', expect:"GAME_WALK figure circle must be a polygon",
+      find:"  var GAME_WALK = ['triTilt', 'trap', 'wonky', 'rect', 'penta', 'hexa'];",
+      replace:"  var GAME_WALK = ['triTilt', 'trap', 'wonky', 'rect', 'penta', 'circle'];" },
+    /* 第 3 關的一題沒有直直接下去的接點 */
+    { file:'index', expect:"no straight join",
+      find:"    { pts:[[150,26],[262,214],[150,214],[38,214]] },",
+      replace:"    { pts:[[150,26],[262,214],[150,222],[38,214]] }," },
+    { file:'index', expect:"two straight joins in a row",
+      find:"    { pts:[[40,50],[150,50],[260,50],[260,200],[150,200],[40,200]] },",
+      replace:"    { pts:[[40,50],[150,50],[200,50],[260,50],[260,200],[40,200]] }," },
+    /* 放好的卡全部疊在籃子裡同一個位置 */
+    { file:'index', expect:"a sorted card is not put at sortSlotXY",
+      find:"        var at = sortSlotXY(b.b, b.n); b.n++;",
+      replace:"        var at = sortSlotXY(b.b, 0); b.n++;" },
+    { file:'index', expect:"places 0 and 1 overlap",
+      find:"  function sortSlotXY(b, i){ return [SORT_BIN.x[b] + 23 + (i % 2) * 46, SORT_BIN.y + 54 + Math.floor(i / 2) * 46]; }",
+      replace:"  function sortSlotXY(b, i){ return [SORT_BIN.x[b] + 23 + (i % 2) * 30, SORT_BIN.y + 54 + Math.floor(i / 2) * 46]; }" },
+    /* 籃子之間的縫太寬：「挑最近的籃子」那一條規則永遠用不到 */
+    { file:'index', expect:"the drop pads (6) no longer overlap",
+      find:"  var SORT_H = 330, SORT_BIN = { x:[8, 104, 200], y:10, w:92, h:150 };",
+      replace:"  var SORT_H = 330, SORT_BIN = { x:[8, 110, 212], y:10, w:80, h:150 };" },
+    /* 第 4 關不一定有正方形 */
+    { file:'index', expect:"the deal is not 2 triangles + the square",
+      find:"      var ids = pickN(SORT_TRI, 2).concat(['square'], pickN(SORT_QUAD, 2), ['circle'])",
+      replace:"      var ids = pickN(SORT_TRI, 2).concat(pickN(SORT_QUAD, 3), ['circle'])" },
+    /* 第 5 關少了交叉的那一個 */
+    { file:'index', expect:"the nine shapes are not the square",
+      find:"      var items = [fig('square')].concat(pickN(FIND_QUAD, 3).map(fig), [{ src:'odd', id:'gap' }, { src:'odd', id:'cross' }], pickN(FIND_OTHER, 3).map(fig));",
+      replace:"      var items = [fig('square')].concat(pickN(FIND_QUAD, 3).map(fig), [{ src:'odd', id:'gap' }], pickN(FIND_OTHER, 4).map(fig));" },
+    /* 點錯的那一個再點一次又算一次錯 */
+    { file:'index', expect:"a tap is not judged by findWhy()",
+      find:"          if (gSolved || b.classList.contains('found') || b.classList.contains('nope')) return;",
+      replace:"          if (gSolved || b.classList.contains('found')) return;" },
+    /* 螞蟻放回原來的頂點（等於沒走）算成犯錯 */
+    { file:'index', expect:"a move is not judged by walkStep()",
+      find:"        if (r === 'stay') return false;\n        if (r === 'skip')",
+      replace:"        if (r === 'stay'){ roundMiss(d.gWalkBack); return false; }\n        if (r === 'skip')" },
+    /* 黏在已經黏好的接點算成犯錯 */
+    { file:'index', expect:"a drop is not judged by clayDrop()",
+      find:"        if (r === 'none' || r === 'dup') return false;",
+      replace:"        if (r === 'none') return false;\n        if (r === 'dup'){ roundMiss(d.gClayStraight); return false; }" },
+    /* 四邊形的籃子什麼都收 */
+    { file:'index', expect:"a card is not judged by familyOf()",
+      find:"        if (b.key !== familyOf(id)){ roundMiss(d.gSortWrong(sidesOf(id), familyOf(id))); return false; }",
+      replace:"        if (b.key !== familyOf(id) && b.key !== 'quad'){ roundMiss(d.gSortWrong(sidesOf(id), familyOf(id))); return false; }" },
+    /* 有缺口按「圍好了」說了為什麼，還是過關 */
+    { file:'index', expect:"\"Loop done\" is not judged by loopDone()",
+      find:"        if (r === 'gap'){ roundMiss(d.gLoopGap(n - k)); return; }",
+      replace:"        if (r === 'gap'){ roundMiss(d.gLoopGap(n - k)); }" },
+    { file:'index', expect:"GPICK (the ant) is",
+      find:"  var GAME_W = 300, GPICK = 48, GPAD = 6;",
+      replace:"  var GAME_W = 300, GPICK = 40, GPAD = 6;" },
+    { file:'index', expect:"the straw (80×36)",
+      find:"  var LOOP_SRC = { y:274, w:80, h:GPICK };",
+      replace:"  var LOOP_SRC = { y:274, w:80, h:36 };" },
+    { file:'index', expect:"a shape card (40×40)",
+      find:"  var SORT_CARD = { w:70, h:70, xs:[54, 150, 246], ys:[212, 290], small:40 };",
+      replace:"  var SORT_CARD = { w:40, h:40, xs:[54, 150, 246], ys:[212, 290], small:40 };" },
+    { file:'index', expect:"a find-the-quadrilateral shape is",
+      find:"  var FIND_H = 296, FIND_CELL = { size:88, xs:[54, 150, 246], ys:[50, 148, 246] };",
+      replace:"  var FIND_H = 296, FIND_CELL = { size:40, xs:[54, 150, 246], ys:[50, 148, 246] };" },
+    /* 吸管放在最下面那顆黏土球上 */
+    { file:'index', expect:"touches the straw",
+      find:"  var LOOP_SRC = { y:274, w:80, h:GPICK };",
+      replace:"  var LOOP_SRC = { y:248, w:80, h:GPICK };" },
+    { file:'index', expect:"places 0 and 1 overlap",
+      find:"  var FIND_H = 296, FIND_CELL = { size:88, xs:[54, 150, 246], ys:[50, 148, 246] };",
+      replace:"  var FIND_H = 296, FIND_CELL = { size:88, xs:[54, 120, 246], ys:[50, 148, 246] };" },
+    { file:'index', expect:"the ★ badge",
+      find:"  var WALK_H = 276, WALK_FIG = { x:28, y:22, s:1.9 }, WALK_STAR = 0, WALK_BADGE = { dx:-30, dy:-24, size:24 };",
+      replace:"  var WALK_H = 276, WALK_FIG = { x:28, y:22, s:1.9 }, WALK_STAR = 0, WALK_BADGE = { dx:-30, dy:44, size:24 };" },
+    /* 低年級不扣分 */
+    { file:'index', expect:"a mistake changed the score",
+      find:"  function roundMiss(text){ gMistakes++; gMsg.innerHTML",
+      replace:"  function roundMiss(text){ gMistakes++; gScore = Math.max(0, gScore - 1); elScore.textContent = gScore; gMsg.innerHTML" },
+    { file:'index', expect:"stars: a round with 1 mistake(s) gives 2 stars",
+      find:"    var stars = gMistakes === 0 ? 2 : 1;",
+      replace:"    var stars = 2;" },
+    /* 舊畫板的積木替新的一關過關 */
+    { file:'index', expect:"can still drop onto the new round",
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */\n",
+      replace:"" },
+    { file:'index', expect:"lost pointer capture does not put the piece back",
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+      replace:"" },
+    { file:'index', expect:"ahead mode does not show hint level 1",
+      find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }\n  }",
+      replace:"  }" },
+    /* 托盤可能照資料的順序排 */
+    { file:'index', expect:"an rng that never moves anything leaves",
+      find:"    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }\n",
+      replace:"" },
+    { file:'index', expect:"stays selected",
+      find:"      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }\n",
+      replace:"" },
+    /* 另一根手指的移動也拖得動 */
+    { file:'index', expect:"(first pointer only)",
+      find:"      if (!start || e.pointerId !== pid) return;\n      var p = B.toBoard(e)",
+      replace:"      if (!start) return;\n      var p = B.toBoard(e)" },
+    { file:'index', expect:"gLoopDone(4): numbers should read 4,4,4",
+      find:"        return n + ' 根吸管圍成一圈：' + n + ' 條邊、' + n + ' 個頂點，一樣多。' + tail;",
+      replace:"        return n + ' 根吸管圍成一圈：' + (n - 1) + ' 條邊、' + n + ' 個頂點，一樣多。' + tail;" },
+    { file:'index', expect:"singular/plural is wrong",
+      find:"      gLoopGap:function(g){ return 'Not a loop yet: ' + (g === 1 ? 'there is still 1 gap.' : ('there are still ' + g + ' gaps.')); },",
+      replace:"      gLoopGap:function(g){ return 'Not a loop yet: there are still ' + g + ' gaps.'; }," },
+    /* 第 3 關說「吸管幾根就是幾條邊」（這一關要擋的迷思） */
+    { file:'index', expect:"gClayDone: numbers should read",
+      find:"所以一共 ' + n + ' 條邊。';",
+      replace:"所以一共 ' + m + ' 條邊。';" },
+    { file:'index', expect:"gWalkDone(5): numbers should read 5,4",
+      find:"        return 'Back at ★! That is ' + n + ' sides in all. ' + tail;",
+      replace:"        return 'Back at ★! That is ' + (n + 1) + ' sides in all. ' + tail;" },
+    /* 圓不數「幾條邊」 */
+    { file:'index', expect:"gSortWrong(circle): numbers should read",
+      find:"        if (n === 0) return '它沒有直的邊，也沒有頂點，是圓。';",
+      replace:"        if (n === 0) return '它有 0 條直的邊，是圓。';" },
+    { file:'index', expect:"does not name the quadrilateral",
+      find:"        return 'It has ' + n + ' straight sides, so it is a ' + this.names[key] + '.';",
+      replace:"        return 'It has ' + n + ' straight sides.';" },
+    { file:'index', expect:"gFindWhy(count 3): numbers should read 3,4",
+      find:"        return '它有 ' + n + ' 條直的邊，不是 4 條。';",
+      replace:"        return '它有 ' + n + ' 條直的邊。';" },
+    { file:'index', expect:"gFindWhy(open)",
+      find:"        if (why === 'open') return '4 條直的線沒有圍成一圈，有一個缺口，不是四邊形。';",
+      replace:"        if (why === 'open') return '4 條直的線，不是四邊形。';" },
+    { file:'index', expect:"gClayStraight",
+      find:"      gClayStraight:'這裡兩根吸管接成一直線，沒有轉彎 —— 不是頂點。這兩根是同一條邊。',",
+      replace:"      gClayStraight:'這裡不是頂點。'," },
+    { file:'index', expect:"the round has no drag",
+      find:"        find:'點出所有的四邊形。這一關用點的。'",
+      replace:"        find:'點出所有的四邊形。'" },
+    { file:'index', expect:"do not mention the tap-then-tap way",
+      find:"        clay:'Stick a clay ball on every corner. Drag the clay onto a join. Or tap the clay, then tap the join.',",
+      replace:"        clay:'Stick a clay ball on every corner. Drag the clay onto a join.'," },
+    { file:'index', expect:"the card label must not name the shape",
+      find:"gCardLabel:'圖形卡',",
+      replace:"gCardLabel:'三角形卡'," },
+    { file:'index', expect:"gives a number away at level 1",
+      find:"        walk:'一次只走到旁邊的頂點，沿著邊走。',",
+      replace:"        walk:'一次只走到旁邊的頂點，沿著邊走，一共 5 條。'," },
+    /* 吸附範圍小到邊和對角線從不重疊：「挑最近的線」永遠用不到，端對端的重疊測試也無從驗起 */
+    { file:'index', expect:"the nearest-line rule is never exercised",
+      find:"  var LOOP_H = 304, LOOP_FIG = { x:28, y:8, s:1.9 }, LOOP_BALL = 26, LOOP_PAD = 22, SEG_END = 0.2;",
+      replace:"  var LOOP_H = 304, LOOP_FIG = { x:28, y:8, s:1.9 }, LOOP_BALL = 26, LOOP_PAD = 8, SEG_END = 0.2;" },
+    /* codex 第一輪：RENDER 本體一開始就 return，need() 的字面掃描照樣全綠 —— 只有真的跑起來才抓得到 */
+    { file:'index', expect:"render find zh: the board is 0 high",
+      find:"    find: function(d){\n",
+      replace:"    find: function(d){ return;\n" },
+    /* 第 1 關一開始就把外框畫好了（畫面洩漏答案） */
+    { file:'index', expect:"straws drawn after",
+      find:"        setSVG(svg, LOOP_H, segs.filter(function(s){ return s.done; }).map(function(s){",
+      replace:"        setSVG(svg, LOOP_H, segs.filter(function(s){ return s.edge; }).map(function(s){" },
+    { file:'index', expect:"sides lit after",
+      find:"          out += svgLine(a, b, '#E8871E', 8, ' class=\"gwalked\"');",
+      replace:"          out += svgLine(a, a, '#E8871E', 8, ' class=\"gwalk\"');" },
+    { file:'index', expect:"the line reads",
+      find:"        line.textContent = d.gWalkNow(path.length - 1);",
+      replace:"        line.textContent = d.gWalkNow(path.length);" },
+    { file:'index', expect:"corners are not drawn as filled",
+      find:"        t.z.classList.add('filled'); t.z.classList.remove('ghint');",
+      replace:"        t.z.classList.remove('ghint');" },
+    { file:'index', expect:"render sort",
+      find:"        placed++;\n        line.textContent = d.gSortNow(placed, ids.length);",
+      replace:"        placed += 2;\n        line.textContent = d.gSortNow(placed, ids.length);" },
+    { file:'index', expect:"render find",
+      find:"          b.classList.add('found'); b.classList.remove('ghint'); found++;",
+      replace:"          b.classList.add('found'); b.classList.remove('ghint'); found += 2;" },
+    /* codex 第一輪：圍好了還說「還有 0 個缺口」 */
+    { file:'index', expect:"hint 2 threw",
+      find:"        if (!g.length){ glow([doneBtn]); return d.gLoopReady; }\n",
+      replace:"" },
+    /* codex 第一輪：說「那一個」卻亮兩個 */
+    { file:'index', expect:"must make ONE corner glow",
+      find:"}).slice(0, 1).map(function(c){ return c.z; }));",
+      replace:"}).map(function(c){ return c.z; }));" },
+    { file:'index', expect:"is not bounced with gClayStraight",
+      find:"        if (r === 'straight'){ roundMiss(d.gClayStraight); return false; }",
+      replace:"        if (r === 'straight'){ roundMiss(d.gClayStraight); return true; }" },
+    /* codex 第一輪：池子裡重複的題目 */
+    { file:'index', expect:"GAME_CLAY has a repeated entry",
+      find:"    { pts:[[150,26],[206,120],[262,214],[38,214]] },",
+      replace:"    { pts:[[150,26],[262,214],[150,214],[38,214]] }," },
+    /* codex 第一輪：重複的卡 */
+    { file:'index', expect:"SORT_TRI has a repeated entry",
+      find:"  var SORT_TRI = ['tri', 'triTilt', 'triThin'],",
+      replace:"  var SORT_TRI = ['tri', 'tri', 'triThin']," },
+    /* codex 第一輪：吸管往回折、疊在一起 */
+    { file:'index', expect:"fold back on themselves",
+      find:"    { pts:[[40,50],[150,50],[260,50],[260,200],[150,200],[40,200]] },",
+      replace:"    { pts:[[40,50],[260,50],[150,50],[260,200],[150,200],[40,200]] }," },
+    /* codex 第一輪：一顆星的那一句沒有人驗 */
+    { file:'index', expect:"gStars zh: numbers should read 1",
+      find:"      gStars:function(n){ return '⭐ +' + n; },\n      gClear:'按「下一關」繼續。',",
+      replace:"      gStars:function(n){ return '⭐ +' + (n === 1 ? 2 : n); },\n      gClear:'按「下一關」繼續。'," },
+    /* codex 第一輪：第 9 格的無障礙標籤洩漏答案 */
+    { file:'index', expect:"gShapeLabel(9)",
+      find:"      gShapeLabel:function(k){ return 'shape ' + k; },",
+      replace:"      gShapeLabel:function(k){ return k === 9 ? 'quadrilateral 9' : ('shape ' + k); }," },
+    { file:'index', expect:"gLoopReady",
+      find:"      gLoopReady:'已經圍成一圈了，按「圍好了」。',",
+      replace:"      gLoopReady:'已經圍成一圈了。'," },
+    /* codex 第二輪：池子最後一張永遠發不到 —— 那一張的畫法與判斷從來沒跑過 */
+    { file:'index', expect:"was never dealt",
+      find:"  function pickN(arr, n){ return shuffle(arr).slice(0, n); }",
+      replace:"  function pickN(arr, n){ return shuffle(arr.slice(0, n + 1)).slice(0, n); }" }
   ],
 
   sim: {
@@ -1065,8 +2143,8 @@ module.exports = {
   data: {
     dataStart: '/* ---------- 語言無關的資料 ---------- */',
     dataEnd: '/* ---------- i18n ---------- */',
-    dataReturn: '{FIGS, STRAW_STEPS, SIDE_FIGS, VERT_FIGS, TABLE_ROWS, ROUNDS, BASKETS, figSVG, strawSVG, sidesOf, kindIndex}',
-    check: function(data, I18N, fail){
+    dataReturn: '{FIGS, STRAW_STEPS, SIDE_FIGS, VERT_FIGS, TABLE_ROWS, figSVG, strawSVG, sidesOf, GAME_W, GPICK, GPAD, GAME_ORDER, figXY, familyOf, GAME_LOOP, LOOP_H, LOOP_FIG, LOOP_BALL, LOOP_PAD, SEG_END, LOOP_SRC, loopSegs, nearestSeg, loopRule, loopDone, GAME_WALK, WALK_H, WALK_FIG, WALK_STAR, WALK_BADGE, walkStep, GAME_CLAY, CLAY_H, CLAY_JOINT, CLAY_SRC, isTurn, clayDrop, clayLeft, SORT_TRI, SORT_QUAD, SORT_BINS, SORT_H, SORT_BIN, SORT_CARD, sortSlotXY, GAME_ODD, FIND_QUAD, FIND_OTHER, FIND_H, FIND_CELL, findWhy, oddSVG}',
+    check: function(data, I18N, fail, src){
       const LANGS = ['zh','en'];
 
       /* 名字字典是後面每一條渲染檢查的前提（gOpt 直接讀它）。缺了就先報出來再停 ——
@@ -1506,56 +2584,9 @@ module.exports = {
         });
       });
 
-      /* --- 遊戲關卡 --- */
-      const rounds = data.ROUNDS;
-      if (rounds.length !== 5) fail(`ROUNDS should have 5 rounds, has ${rounds.length}`);
-      if (data.BASKETS.join(',') !== 'tri,quad,circle'){
-        /* 這裡一定要 return。繼續往下跑的話 BASKETS[2] 會是 undefined，
-           nameWord(undefined) 直接丟 TypeError，整份報告變成 stack trace。 */
-        fail(`BASKETS should be tri, quad, circle — got ${data.BASKETS.join(', ')}`);
-        return;
-      }
-      const seenBasket = {};
-      rounds.forEach((r, idx) => {
-        const i = idx + 1;
-        const want = FIG_SIDES[r.fig];
-        if (want === undefined){ fail(`ROUND ${i} uses unknown figure ${r.fig}`); return; }
-        const wantIdx = want === 0 ? 2 : (want === 3 ? 0 : (want === 4 ? 1 : -1));
-        if (wantIdx < 0){
-          /* 這裡一定要 return。繼續往下跑的話 BASKETS[-1] 是 undefined，
-             NAME_TRUTH[undefined] 直接丟 TypeError，整份報告變成 stack trace，
-             真正的錯誤訊息反而看不到。 */
-          fail(`ROUND ${i}: a ${want}-sided figure has no basket in this game`);
-          return;
-        }
-        if (data.kindIndex(r.fig) !== wantIdx){
-          fail(`ROUND ${i}: kindIndex("${r.fig}") is ${data.kindIndex(r.fig)}, the checker expects ${wantIdx}`);
-        }
-        seenBasket[wantIdx] = true;
-        LANGS.forEach(L => {
-          const d = I18N[L];
-          const opt = d.gOpt(data.BASKETS[wantIdx]);
-          const h2 = d.gHint2(want), why = d.gWhy(want, data.BASKETS[wantIdx]);
-          [d.gAsk, d.gHint1, h2, why, opt].forEach(s => {
-            if (/undefined|NaN/.test(s)) fail(`ROUND ${i} ${L}: ${s}`);
-          });
-          if (opt !== nameWord(data.BASKETS[wantIdx], L)){
-            fail(`ROUND ${i} ${L}: the basket label is "${opt}", the checker expects "${nameWord(data.BASKETS[wantIdx], L)}"`);
-          }
-          if (!says(why, opt, L)) fail(`ROUND ${i} ${L}: gWhy never names the answer "${opt}"`);
-          if (want === 0){
-            /* 圓那一關的提示與解說都不可以出現數字（同上：不去碰「圓有幾個邊」）。 */
-            if (/\d/.test(h2)) fail(`ROUND ${i} ${L}: gHint2 for the circle must not count straight sides`);
-            if (/\d/.test(why)) fail(`ROUND ${i} ${L}: gWhy for the circle must not count straight sides`);
-          } else {
-            if (h2.indexOf(String(want)) < 0) fail(`ROUND ${i} ${L}: gHint2 never gives the side count ${want}`);
-            if (why.indexOf(String(want)) < 0) fail(`ROUND ${i} ${L}: gWhy never gives the side count ${want}`);
-          }
-        });
-      });
-      if (Object.keys(seenBasket).length !== 3) fail('ROUNDS must cover all three baskets at least once');
-      const ansIdx = rounds.map(r => data.kindIndex(r.fig));
-      if (new Set(ansIdx).size < 2) fail('every game round has the same answer position');
+      /* --- 小遊戲（§六之五：五關五種玩法）--- */
+      try { gameCheck(data, I18N, fail, src); } catch (e){ fail('game: the check could not finish (' + e.message + ')'); }
+      try { renderRun(data, I18N, fail, src); } catch (e){ fail('render: the check could not finish (' + e.message + ')'); }
 
       /* --- 整頁掃描：任何一個字典字串都不可以問「圓有幾個邊」 ---
          只掃題庫的話，把那句話搬到 lead、footer、提示或解說就溜過去了。
@@ -1578,7 +2609,6 @@ module.exports = {
            少列一個函式或少列一組參數，那條路徑上的字就完全沒被掃到
            （原本只叫了 p2End(n,'tri')，square/trap/penta 三條分支整個沒掃）。 */
         const figIds = Object.keys(data.FIGS);
-        const sideCounts = [...new Set(figIds.map(id => FIG_SIDES[id]))];
         data.STRAW_STEPS.forEach(n => push(d.p1Line(n)));
         data.SIDE_FIGS.forEach(id => { push(d.sideChip(id, FIG_SIDES[id])); push(d.p2End(FIG_SIDES[id], id)); });
         data.VERT_FIGS.forEach(id => { push(d.vertChip(id, FIG_SIDES[id])); push(d.p3End(FIG_SIDES[id])); });
@@ -1588,12 +2618,17 @@ module.exports = {
           push(d.tabChip(row.key));
           push(d.t1(row.key, row.sides)); push(d.t2(row.key, row.sides)); push(d.t3(row.key, row.sides));
         });
-        data.BASKETS.forEach(k => push(d.gOpt(k)));
-        sideCounts.forEach(n => {
-          push(d.gHint2(n));
-          data.BASKETS.forEach(k => push(d.gWhy(n, k)));
-        });
-        [d.p2Start, d.p3Start, d.t0, d.gAsk, d.gHint1].forEach(push);
+        /* 小遊戲：每一關的說明、提示，和每一個函式在這一課到得了的每一組參數 */
+        data.GAME_ORDER.forEach(t => { push(d.gAsks[t]); push(d.gHints[t]); });
+        data.SORT_BINS.forEach(k => push(d.names[k]));
+        [3, 4, 5, 6].forEach(n => { push(d.gLoopDone(n)); push(d.gWalkDone(n)); push(d.gWalkTotal(n)); push(d.gFindWhy('count', n)); });
+        [0, 1, 2, 3, 4, 5, 6].forEach(k => { push(d.gLoopNow(k)); push(d.gLoopGap(k)); push(d.gLoop2(k)); push(d.gWalkNow(k)); push(d.gWalk2(k));
+          push(d.gClayNow(k)); push(d.gClay2(k)); push(d.gSortNow(k, 6)); push(d.gSort2(k)); push(d.gFindNow(k, 4)); push(d.gFind2(k)); });
+        data.GAME_CLAY.forEach(e => { const m = e.pts.length, n = e.pts.filter((_, j) => data.isTurn(e.pts, j)).length; push(d.gClayDone(n, m)); });
+        figIds.forEach(id => { const f = data.familyOf(id); if (f) push(d.gSortWrong(FIG_SIDES[id], f)); });
+        ['circle', 'open', 'cross'].forEach(w => push(d.gFindWhy(w, 4)));
+        [d.gLoopCross, d.gLoopEmpty, d.gLoopBtn, d.gWalkSkip, d.gWalkBack, d.gClayStraight, d.gSortDone, d.gFindDone(4), d.gClear, d.gWin(10)].forEach(push);
+        [d.p2Start, d.p3Start, d.t0].forEach(push);
         const flat = t => String(t).replace(/<svg[\s\S]*?<\/svg>/g, ' ').replace(/<[^>]+>/g, ' ');
         strings.concat(candidates).forEach(t => {
           if (asksCircleSides(flat(t), L)){

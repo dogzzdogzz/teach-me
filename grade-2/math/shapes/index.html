@@ -112,15 +112,55 @@
   }
   .cnum.on{color:var(--orange);border-color:var(--orange);background:var(--orange-soft)}
   .bigans{font-size:26px;font-weight:800;color:var(--green)}
-  .gopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
-  .gopt{
-    border:3px solid var(--line);background:var(--card);border-radius:16px;padding:16px 10px;
-    font-size:21px;font-weight:800;color:var(--ink);cursor:pointer;min-height:60px;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .gopt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
-  .gopt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
-  .gopt:disabled{cursor:default;opacity:.9}
+
+  /* ---- 小遊戲：圍一圈、繞一圈數邊、黏頂點、分家族、找四邊形（§六之五） ---- */
+  .gamemsg{text-align:center}
+  .game .hint{text-align:center}
+  .gstage{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0 }
+  .gask{ font-weight:700; text-align:center; font-size:18px }
+  .gtrail{ font-size:20px; font-weight:800; color:var(--ink); text-align:center; line-height:1.3; min-height:2.6em;
+    display:flex; align-items:center; justify-content:center }
+  .gwrap{ position:relative; margin:0 auto }
+  .gboard{ position:absolute; left:0; top:0; transform-origin:0 0; background:var(--bg); border-radius:16px }
+  .gboard > div, .gboard > button{ position:absolute }
+  .gpiece{ left:0; top:0; display:flex; align-items:center; justify-content:center;
+    touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; transition:transform .25s ease; z-index:5 }
+  .gpiece.dragging{ transition:none; cursor:grabbing; z-index:50 !important; filter:drop-shadow(0 6px 8px rgba(70,60,40,.25)) }
+  .gpiece.sel{ outline:3px dashed var(--blue); outline-offset:4px; border-radius:12px }
+  .gpiece.locked{ cursor:default; pointer-events:none }
+  .gsvg{ pointer-events:none }
+  .gsvg svg{ display:block }
+  .glbl{ display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--muted); pointer-events:none }
+  /* 第二層提示：還沒做到的那一個一閃一閃 */
+  .ghint{ animation:gpulse 1s ease-in-out infinite }
+  @keyframes gpulse{ 50%{ box-shadow:0 0 0 7px rgba(59,125,216,.5) } }
+  /* 第 1 關：黏土球（拿不起來）與吸管（拿不完的來源） */
+  .gball{ border-radius:50%; background:#8A5A2B; pointer-events:none }
+  .gstrawsrc{ border:3px solid var(--line); border-radius:14px;
+    background:var(--card) linear-gradient(#E8871E, #E8871E) center / 60px 10px no-repeat }
+  /* 第 2 關：頂點的圈圈、起點的星星、小螞蟻 */
+  .gcorner, .gjoint{ border-radius:50%; border:3px dashed #9C9689; pointer-events:none }
+  .gcorner.seen{ border-style:solid; border-color:var(--orange) }
+  .gstar{ display:flex; align-items:center; justify-content:center; font-size:22px; color:#D99A00; pointer-events:none }
+  .gant{ font-size:30px; border-radius:50% }
+  /* 第 3 關：接點與黏土 */
+  .gjoint.filled{ border:3px solid #5E3B17; background:#8A5A2B }
+  .gclaysrc{ border:3px solid var(--line); border-radius:14px;
+    background:var(--card) radial-gradient(circle, #8A5A2B 0 12px, transparent 13px) }
+  /* 第 4 關：籃子與圖形卡 */
+  .gbin{ border:3px dashed var(--line); border-radius:14px; background:var(--card) }
+  .gcard{ background:var(--card); border:3px solid var(--line); border-radius:12px }
+  .gcard.placed{ border-color:var(--green); background:var(--green-soft) }
+  .gfig svg{ width:56px; height:56px }
+  .gfig.placed svg{ width:28px; height:28px }
+  /* 第 5 關：點一下的圖形 */
+  .gfind{ border:3px solid var(--line); border-radius:14px; background:var(--card); padding:0; cursor:pointer;
+    display:flex; align-items:center; justify-content:center }
+  .gfind svg{ width:66px; height:66px }
+  .gfind.found{ border-color:var(--green); background:var(--green-soft) }
+  .gfind.nope{ border-color:var(--red); background:var(--red-soft); opacity:.75 }
+  .gaction{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap }
+  .gtrail, .glbl, #gMsg{ font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif }
 </style>
 </head>
 <body>
@@ -235,21 +275,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">圖形分類大挑戰</h2>
-    <p class="lead" data-i18n="s6lead">先數邊，再決定它要放進哪一個籃子！</p>
+    <p class="lead" data-i18n="s6lead">圍一圈、繞一圈數邊、黏頂點、分家族、找四邊形 —— 五關都過就是圖形小偵探！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
-        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+        <span><span data-i18n="gScoreLabel">星星</span> <b id="gScore">0</b> ⭐</span>
       </div>
-      <p class="hopline" id="gAskLine"></p>
-      <div class="picwrap" id="gPic"></div>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
-      </div>
-      <div class="gopts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -402,27 +438,151 @@
     { key:'quad',   sides:4, figs:['square','rect','trap','wonky'] },
     { key:'circle', sides:0, figs:['circle'] }
   ];
-  /* 遊戲五關：三角形／四邊形／圓各出現過，而且都不是「正正方方」的標準樣子。
-     正解的位置由圖形自己算出來（見 kindIndex），不是手寫的。 */
-  var ROUNDS = [
-    { fig:'triTilt' },
-    { fig:'trap' },
-    { fig:'circle' },
-    { fig:'diamond' },
-    { fig:'triThin' }
-  ];
-  /* 三個籃子的順序。正解索引 ＝ 圖形的邊數決定的那一個。 */
-  var BASKETS = ['tri', 'quad', 'circle'];
   function sidesOf(figId){
     var f = FIGS[figId];
     return f.kind === 'circle' ? 0 : f.pts.length;
   }
-  function kindIndex(figId){
-    var s = sidesOf(figId);
-    if (s === 0) return 2;
-    if (s === 3) return 0;
-    if (s === 4) return 1;
-    return -1;
+
+  /* ---------- 小遊戲「圖形分類大挑戰」的題庫與版面（§六之五：五關五種玩法） ----------
+     版面一律是畫板上的 px（畫板寬 GAME_W），位置一律記「中心點」。拿得起來的東西至少 GPICK × GPICK
+     （375px 手機上畫板能用 289px 寬，縮成約 0.963 倍，48 → 46.2）。GPAD：放開的點離格子的方框多遠還算放進去。
+     每一關從自己的池子隨機抽一題。會決定「收不收」的規則都寫成這裡的純函式，畫面那一層只負責畫 ——
+     檢查設定檔拿每一題、每一種動作去呼叫它們。 */
+  var GAME_W = 300, GPICK = 48, GPAD = 6;
+  var GAME_ORDER = ['loop', 'walk', 'clay', 'sort', 'find'];
+  /* 第 1、2 關把 FIGS 的座標放大 F.s 倍、平移到 (F.x, F.y) 畫在畫板上 */
+  function figXY(id, i, F){ var q = FIGS[id].pts[i]; return [F.x + q[0] * F.s, F.y + q[1] * F.s]; }
+  /* 三角形、四邊形、圓三個家族；其他邊數（五邊形、六邊形）不屬於任何一家 */
+  function familyOf(id){
+    var s = sidesOf(id);
+    return s === 0 ? 'circle' : (s === 3 ? 'tri' : (s === 4 ? 'quad' : null));
+  }
+
+  /* 第 1 關 圍一圈（範例 1：吸管是邊、黏土球是頂點）：畫面上只有 n 顆黏土球（沒有畫外框）。
+     把吸管放到兩顆黏土球中間就接上一根；接在「旁邊的兩顆」才收，穿過中間的（對角線）會交叉 → 彈回＋說為什麼。
+     池子裡都是凸的圖形：凸的 n 顆球只有一種不交叉的圍法 —— 就是沿著外面一圈（檢查設定檔把每一種圍法都列出來驗）。
+     圍好了要自己按「圍好了」：還有缺口 → 說還有幾個缺口（算一次錯）；一根都沒放 → 只提醒、不算錯。 */
+  var GAME_LOOP = ['square', 'rect', 'trap', 'diamond', 'wonky', 'penta'];
+  var LOOP_H = 304, LOOP_FIG = { x:28, y:8, s:1.9 }, LOOP_BALL = 26, LOOP_PAD = 22, SEG_END = 0.2;
+  var LOOP_SRC = { y:274, w:80, h:GPICK };
+  /* 每兩顆球一條「可以放吸管的線」。對角線排在前面、邊排在後面 —— 靠近頂點的地方兩種的吸附範圍會重疊，
+     要靠「最近」挑，不可以挑第一個符合的（不然靠近邊放下去會被判成對角線、判成錯）。 */
+  function loopSegs(id){
+    var n = FIGS[id].pts.length, diag = [], edge = [], i, j;
+    for (i = 0; i < n; i++) for (j = i + 1; j < n; j++){
+      var a = figXY(id, i, LOOP_FIG), b = figXY(id, j, LOOP_FIG);
+      var isEdge = (j - i === 1) || (i === 0 && j === n - 1);
+      (isEdge ? edge : diag).push({ i:i, j:j, edge:isEdge, ax:a[0], ay:a[1], bx:b[0], by:b[1], done:false });
+    }
+    return diag.concat(edge);
+  }
+  /* 放開的點離哪一條線最近（點到線段的距離 ≤ pad），而且要落在線段的中間那一段（離兩端各 SEG_END 以上 ——
+     放在黏土球上面分不出要接哪兩顆，靜靜彈回）。最近的那一條已經放好了就不收，不可以改放旁邊那一條。 */
+  function nearestSeg(list, pt, pad){
+    var best = null, bd = Infinity;
+    list.forEach(function(s){
+      var vx = s.bx - s.ax, vy = s.by - s.ay, L2 = vx * vx + vy * vy;
+      var t = ((pt.x - s.ax) * vx + (pt.y - s.ay) * vy) / L2;
+      if (t < SEG_END || t > 1 - SEG_END) return;
+      var qx = s.ax + t * vx - pt.x, qy = s.ay + t * vy - pt.y, dd = Math.sqrt(qx * qx + qy * qy);
+      if (dd <= pad && dd < bd){ bd = dd; best = s; }
+    });
+    return best && !best.done ? best : null;
+  }
+  function loopRule(seg){ return !seg ? 'none' : (seg.edge ? 'put' : 'cross'); }
+  function loopDone(n, k){ return k === 0 ? 'empty' : (k < n ? 'gap' : 'ok'); }
+
+  /* 第 2 關 繞一圈（範例 2：從一個頂點開始，繞一圈回到原點）：小螞蟻從 ★（第 0 個頂點）出發，
+     一次走到「旁邊的」頂點，走過的邊亮起來、標上第幾條。穿過中間走到不相鄰的頂點、或走回頭路 → 彈回＋為什麼；
+     放回原來的頂點等於沒走，靜靜放回去。走完 n 條邊回到 ★ 才過關。 */
+  var GAME_WALK = ['triTilt', 'trap', 'wonky', 'rect', 'penta', 'hexa'];
+  var WALK_H = 276, WALK_FIG = { x:28, y:22, s:1.9 }, WALK_STAR = 0, WALK_BADGE = { dx:-30, dy:-24, size:24 };
+  function walkStep(n, path, to){
+    var cur = path[path.length - 1];
+    if (to === cur) return 'stay';
+    var d = (to - cur + n) % n;
+    if (d !== 1 && d !== n - 1) return 'skip';
+    for (var i = 1; i < path.length; i++){
+      var a = path[i - 1], b = path[i];
+      if ((a === cur && b === to) || (a === to && b === cur)) return 'back';
+    }
+    return (to === path[0] && path.length === n) ? 'home' : 'step';
+  }
+
+  /* 第 3 關 黏頂點（範例 3 ＋ 速查卡「直直接下去不算轉彎，那兩段是同一條邊」）：一個用吸管接成的圖形，
+     有些接點是「直直接下去」的。在每一個轉彎的接點黏一顆黏土（拿不完）；黏在直直接下去的接點 → 彈回＋為什麼。
+     轉不轉彎由座標算（isTurn），不另外寫旗標。轉彎的接點都黏好了就過關。 */
+  var GAME_CLAY = [
+    { pts:[[150,26],[262,214],[150,214],[38,214]] },
+    { pts:[[150,26],[206,120],[262,214],[38,214]] },
+    { pts:[[40,50],[150,50],[260,50],[260,200],[150,200],[40,200]] },
+    { pts:[[60,30],[240,30],[240,210],[60,210],[60,120]] },
+    { pts:[[100,40],[200,40],[270,210],[150,210],[30,210]] },
+    { pts:[[150,26],[262,106],[222,214],[150,214],[78,214],[38,106]] }
+  ];
+  var CLAY_H = 296, CLAY_JOINT = 44, CLAY_SRC = { y:266, size:GPICK };
+  function isTurn(pts, j){
+    var n = pts.length, a = pts[(j + n - 1) % n], b = pts[j], c = pts[(j + 1) % n];
+    return (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) !== 0;
+  }
+  function clayDrop(pts, filled, j){
+    if (j === null || j === undefined) return 'none';
+    if (filled[j]) return 'dup';
+    return isTurn(pts, j) ? 'put' : 'straight';
+  }
+  function clayLeft(pts, filled){
+    var left = 0;
+    for (var j = 0; j < pts.length; j++) if (isTurn(pts, j) && !filled[j]) left++;
+    return left;
+  }
+
+  /* 第 4 關 分家族（範例 4：長得不一樣沒關係，數邊就知道）：六張圖形卡 —— 兩個三角形、三個四邊形（一定有正方形）、
+     一個圓 —— 放進三個籃子。放錯 → 彈回，說它有幾條直的邊、是哪一家。 */
+  var SORT_TRI = ['tri', 'triTilt', 'triThin'], SORT_QUAD = ['rect', 'trap', 'diamond', 'wonky'];
+  var SORT_BINS = ['tri', 'quad', 'circle'];
+  var SORT_H = 330, SORT_BIN = { x:[8, 104, 200], y:10, w:92, h:150 };
+  var SORT_CARD = { w:70, h:70, xs:[54, 150, 246], ys:[212, 290], small:40 };
+  /* 放好的卡縮小，排在籃子裡（兩欄） */
+  function sortSlotXY(b, i){ return [SORT_BIN.x[b] + 23 + (i % 2) * 46, SORT_BIN.y + 54 + Math.floor(i / 2) * 46]; }
+
+  /* 第 5 關 找四邊形（範例 4 第 3 步：直的邊圍一圈、不交叉，4 條就是四邊形）：九個圖形，點出所有的四邊形。
+     不是的那幾個各有一個理由：邊數不是 4、圓、4 條直的線沒有圍成一圈（缺口）、4 條直的線交叉。
+     這一關沒有拖拉（點一下就是選它），說明有寫。 */
+  var GAME_ODD = {
+    gap:   { pts:[[34,20],[108,20],[108,108],[20,108],[20,44]], closed:false },
+    cross: { pts:[[20,20],[108,108],[108,20],[20,108]], closed:true }
+  };
+  var FIND_QUAD = ['rect', 'trap', 'diamond', 'wonky'], FIND_OTHER = ['tri', 'triThin', 'penta', 'hexa', 'circle'];
+  var FIND_H = 296, FIND_CELL = { size:88, xs:[54, 150, 246], ys:[50, 148, 246] };
+  function segCrossAt(p1, p2, p3, p4){
+    function o(a, b, c){ return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]); }
+    return o(p1, p2, p3) * o(p1, p2, p4) < 0 && o(p3, p4, p1) * o(p3, p4, p2) < 0;
+  }
+  /* 第 5 關每一個圖形「是不是四邊形」、不是的話為什麼 —— 從座標算 */
+  function findWhy(it){
+    var f = it.src === 'odd' ? GAME_ODD[it.id] : FIGS[it.id];
+    if (f.kind === 'circle') return 'circle';
+    var p = f.pts, n = p.length, closed = it.src === 'odd' ? f.closed : true, i, j;
+    if (!closed) return 'open';
+    for (i = 0; i < n; i++) for (j = i + 1; j < n; j++){
+      if (j === i + 1 || (i === 0 && j === n - 1)) continue;
+      if (segCrossAt(p[i], p[(i + 1) % n], p[j], p[(j + 1) % n])) return 'cross';
+    }
+    return n === 4 ? 'ok' : 'count';
+  }
+  /* 第 5 關的兩個「不是四邊形」：畫法和 figSVG 一樣（同樣的位移、線寬、顏色） */
+  function oddSVG(id){
+    var o = GAME_ODD[id], maxX = 0, maxY = 0, pstr = [];
+    o.pts.forEach(function(q){
+      var x = q[0] + OFF, y = q[1] + OFF;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+      pstr.push(x + ',' + y);
+    });
+    var body = o.closed
+      ? '<polygon points="' + pstr.join(' ') + '" fill="#E3F4EB" stroke="#2F9E69" stroke-width="' + STROKE + '" stroke-linejoin="round"/>'
+      : '<polyline points="' + pstr.join(' ') + '" fill="none" stroke="#2F9E69" stroke-width="' + STROKE + '" stroke-linejoin="round" stroke-linecap="round"/>';
+    return wrapSVG(body, maxX + STROKE / 2, maxY + STROKE / 2, o.pts.length, o.pts.length);
   }
 
   /* ---------- i18n ---------- */
@@ -446,7 +606,7 @@
       s3h2:'一個一個數頂點', s3lead:'兩段直線相接又轉彎，才是一個頂點。那裡也張開一個角。',
       s4h2:'三角形、四邊形和圓', s4lead:'長得不一樣沒關係。數邊和頂點就知道。',
       s5h2:'檢查一下', s5lead:'點一下答案，馬上知道對不對！',
-      s6h2:'圖形分類大挑戰', s6lead:'先數邊，再決定它要放進哪一個籃子！',
+      s6h2:'圖形分類大挑戰', s6lead:'圍一圈、繞一圈數邊、黏頂點、分家族、找四邊形 —— 五關都過就是圖形小偵探！',
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a>。',
@@ -555,25 +715,69 @@
           why:'圓的線是彎的，不是直的，也沒有兩條邊碰在一起的地方，所以沒有頂點、沒有角。' }
       ],
 
-      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
-      gAsk:'這個圖形要放進哪一個籃子？',
-      gOpt:function(key){ return this.names[key]; },
-      gHintBtn:'💡 提示',
-      gHint1:'先數數看：它有幾條直的邊？',
-      gHint2:function(sides){
-        if (sides === 0) return '提示：它是彎彎的一圈，沒有直的邊，也沒有頂點。';
-        return '提示：它有 ' + sides + ' 條直的邊、' + sides + ' 個頂點。';
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'星星',
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gAsks:{
+        loop:'用吸管把黏土球圍成一圈，圍好了按「圍好了」。把吸管拖到兩顆黏土球中間；也可以先點吸管、再點那裡。',
+        walk:'小螞蟻從 ★ 出發，沿著邊走一圈回到 ★。把螞蟻拖到旁邊的頂點；也可以先點螞蟻、再點頂點。',
+        clay:'在每一個頂點黏一顆黏土。把黏土拖到接點上；也可以先點黏土、再點接點。',
+        sort:'數一數直的邊，把圖形放進它的家族。也可以先點圖形、再點籃子。',
+        find:'點出所有的四邊形。這一關用點的。'
       },
-      gWhy:function(sides, key){
-        if (sides === 0) return '它沒有直的邊，也沒有頂點。不是三角形，也不是四邊形 —— 它是圓。';
-        return '它有 ' + sides + ' 條直的邊、' + sides + ' 個頂點，所以是' + this.names[key] + '。';
+      gHints:{
+        loop:'吸管要接在旁邊的兩顆黏土球中間，沿著外面圍一圈。',
+        walk:'一次只走到旁邊的頂點，沿著邊走。',
+        clay:'沿著吸管看：轉彎的接點才是頂點，直直接下去的不是。',
+        sort:'數直的邊：3 條是三角形，4 條是四邊形，沒有直的邊是圓。',
+        find:'四邊形：4 條直的邊，圍成一圈、不交叉。'
       },
-      gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:function(v){ return '答對了！＋20 分！它是' + v + '。'; },
-      gCorrectRetry:function(v){ return '答對了！＋10 分。它是' + v + '。'; },
-      gTryAgain:'再數一次：它有幾條直的邊？',
-      gClear:'按「下一關」繼續分類。',
-      gWin:function(score){ return '五關全過！最後得分 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; }
+      gStrawLabel:'吸管', gAntLabel:'小螞蟻', gClayLabel:'黏土', gCardLabel:'圖形卡',
+      gShapeLabel:function(k){ return '第 ' + k + ' 個圖形'; },
+      gLoopBtn:'圍好了',
+      gLoopNow:function(k){ return '吸管 ' + k + ' 根'; },
+      gLoopCross:'這根吸管穿過中間，會和別的吸管交叉。吸管要接在旁邊的兩顆黏土球中間。',
+      gLoopEmpty:'先放一根吸管。',
+      gLoopGap:function(g){ return '還沒圍成一圈：還有 ' + g + ' 個缺口。'; },
+      gLoopDone:function(n){
+        var tail = n === 3 ? '它是三角形。' : (n === 4 ? '它是四邊形。' : '比 4 條多，不是三角形也不是四邊形。');
+        return n + ' 根吸管圍成一圈：' + n + ' 條邊、' + n + ' 個頂點，一樣多。' + tail;
+      },
+      gLoop2:function(g){ return '還有 ' + g + ' 個缺口，看一閃一閃的兩顆黏土球。'; },
+      gLoopReady:'已經圍成一圈了，按「圍好了」。',
+      gWalkNow:function(k){ return k === 0 ? '從 ★ 出發' : ('數到第 ' + k + ' 條邊'); },
+      gWalkTotal:function(n){ return '一共 ' + n + ' 條邊'; },
+      gWalkSkip:'要沿著邊走到旁邊的頂點，不可以從中間穿過去。',
+      gWalkBack:'這一條邊已經數過了，往另一邊走。',
+      gWalkDone:function(n){
+        var tail = n === 3 ? '它是三角形。' : (n === 4 ? '它是四邊形。' : '比 4 條多，不是三角形也不是四邊形。');
+        return '繞回 ★ 了！一共 ' + n + ' 條邊。' + tail;
+      },
+      gWalk2:function(r){ return '下一步走到一閃一閃的頂點。還有 ' + r + ' 條邊沒走。'; },
+      gClayNow:function(k){ return '黏了 ' + k + ' 顆黏土'; },
+      gClayStraight:'這裡兩根吸管接成一直線，沒有轉彎 —— 不是頂點。這兩根是同一條邊。',
+      gClayDone:function(n, m){
+        return '轉彎的地方都黏好了：' + n + ' 個頂點，也有 ' + n + ' 個角。' + m + ' 根吸管：直直接下去的接點，兩邊的吸管算同一條邊，所以一共 ' + n + ' 條邊。';
+      },
+      gClay2:function(r){ return '還有 ' + r + ' 個轉彎的地方沒黏，看一閃一閃的那一個。'; },
+      gSortNow:function(k, t){ return '分好了 ' + k + ' / ' + t + ' 張'; },
+      gSortWrong:function(n, key){
+        if (n === 0) return '它沒有直的邊，也沒有頂點，是圓。';
+        return '它有 ' + n + ' 條直的邊，是' + this.names[key] + '。';
+      },
+      gSortDone:'都分好了！長得不一樣沒關係，數直的邊就知道是哪一家。',
+      gSort2:function(n){ return n === 0 ? '一閃一閃的那一張沒有直的邊。' : ('一閃一閃的那一張有 ' + n + ' 條直的邊。'); },
+      gFindNow:function(x, t){ return '找到 ' + x + ' / ' + t + ' 個'; },
+      gFindWhy:function(why, n){
+        if (why === 'circle') return '圓沒有直的邊，不是四邊形。';
+        if (why === 'open') return '4 條直的線沒有圍成一圈，有一個缺口，不是四邊形。';
+        if (why === 'cross') return '4 條直的線交叉了。四邊形的邊不可以交叉。';
+        return '它有 ' + n + ' 條直的邊，不是 4 條。';
+      },
+      gFindDone:function(t){ return t + ' 個四邊形都找到了！每一個都是 4 條直的邊圍一圈、不交叉。'; },
+      gFind2:function(r){ return '還有 ' + r + ' 個四邊形沒找到，看一閃一閃的那些。'; },
+      gStars:function(n){ return '⭐ +' + n; },
+      gClear:'按「下一關」繼續。',
+      gWin:function(s){ return '五關全過！一共 ' + s + ' 顆星星 🏆 按「重新開始」再玩一次。'; }
     },
     en: {
       langAria:'Switch language',
@@ -594,7 +798,7 @@
       s3h2:'Count the Corners One by One', s3lead:'A corner is where straight sides meet and change direction. An angle opens up right there.',
       s4h2:'Triangles, Quadrilaterals and Circles', s4lead:'Shapes in the same family can look very different. Count the straight sides and corners.',
       s5h2:'Quick Check', s5lead:'Tap an answer and find out right away!',
-      s6h2:'Shape Sorting Challenge', s6lead:'Count the sides first, then choose the basket it belongs in!',
+      s6h2:'Shape Sorting Challenge', s6lead:'Close a loop, walk round counting sides, stick on the corners, sort the families, find the quadrilaterals — clear all five to become a shape detective!',
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a>.',
@@ -702,25 +906,69 @@
           why:'The line of a circle is curved, not straight, and nowhere do two sides meet — so it has no corners and no angles.' }
       ],
 
-      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
-      gAsk:'Which basket does this shape belong in?',
-      gOpt:function(key){ return this.names[key]; },
-      gHintBtn:'💡 Hint',
-      gHint1:'Count first: how many straight sides does it have?',
-      gHint2:function(sides){
-        if (sides === 0) return 'Hint: it is one curved loop, with no straight sides and no corners.';
-        return 'Hint: it has ' + sides + ' straight sides and ' + sides + ' corners.';
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Stars',
+      gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Restart',
+      gAsks:{
+        loop:'Join the clay balls into a loop with straws, then press “Loop done”. Drag the straw between two clay balls. Or tap the straw, then tap there.',
+        walk:'The ant starts at ★. Walk it along the sides, all the way round, back to ★. Drag the ant to the next corner. Or tap the ant, then tap the corner.',
+        clay:'Stick a clay ball on every corner. Drag the clay onto a join. Or tap the clay, then tap the join.',
+        sort:'Count the straight sides and put each shape in its family. Or tap a shape, then tap a basket.',
+        find:'Tap every quadrilateral. This round is all taps.'
       },
-      gWhy:function(sides, key){
-        if (sides === 0) return 'It has no straight sides and no corners. That rules out a triangle and a quadrilateral — it is a circle.';
-        return 'It has ' + sides + ' straight sides and ' + sides + ' corners, so it is a ' + this.names[key] + '.';
+      gHints:{
+        loop:'A straw joins two clay balls that are next to each other, going round the outside.',
+        walk:'Only walk to a corner next to you, along a side.',
+        clay:'Follow the straws: a join where they change direction is a corner; a join where they go straight on is not.',
+        sort:'Count the straight sides: 3 is a triangle, 4 is a quadrilateral, none at all is a circle.',
+        find:'A quadrilateral has 4 straight sides in one loop that never crosses.'
       },
-      gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst:function(v){ return 'Correct on the first try! +20 points! It is a ' + v + '.'; },
-      gCorrectRetry:function(v){ return 'Correct! +10 points. It is a ' + v + '.'; },
-      gTryAgain:'Count once more: how many straight sides does it have?',
-      gClear:'Press “Next round” to keep sorting.',
-      gWin:function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; }
+      gStrawLabel:'straw', gAntLabel:'ant', gClayLabel:'clay', gCardLabel:'shape card',
+      gShapeLabel:function(k){ return 'shape ' + k; },
+      gLoopBtn:'Loop done',
+      gLoopNow:function(k){ return k + (k === 1 ? ' straw' : ' straws'); },
+      gLoopCross:'That straw cuts across the middle and would cross another straw. A straw joins two clay balls that are next to each other.',
+      gLoopEmpty:'Put a straw down first.',
+      gLoopGap:function(g){ return 'Not a loop yet: ' + (g === 1 ? 'there is still 1 gap.' : ('there are still ' + g + ' gaps.')); },
+      gLoopDone:function(n){
+        var tail = n === 3 ? 'It is a triangle.' : (n === 4 ? 'It is a quadrilateral.' : 'That is more than 4, so it is neither a triangle nor a quadrilateral.');
+        return n + ' straws in a loop: ' + n + ' sides and ' + n + ' corners — the same number of each. ' + tail;
+      },
+      gLoop2:function(g){ return (g === 1 ? 'There is still 1 gap' : ('There are still ' + g + ' gaps')) + ' — look at the two glowing clay balls.'; },
+      gLoopReady:'The loop is closed — press “Loop done”.',
+      gWalkNow:function(k){ return k === 0 ? 'Start at ★' : ('Side number ' + k); },
+      gWalkTotal:function(n){ return n + ' sides in all'; },
+      gWalkSkip:'Walk along a side to a corner next to you — no cutting across the middle.',
+      gWalkBack:'That side is already counted. Go the other way.',
+      gWalkDone:function(n){
+        var tail = n === 3 ? 'It is a triangle.' : (n === 4 ? 'It is a quadrilateral.' : 'That is more than 4, so it is neither a triangle nor a quadrilateral.');
+        return 'Back at ★! That is ' + n + ' sides in all. ' + tail;
+      },
+      gWalk2:function(r){ return 'Walk to the glowing corner next. ' + (r === 1 ? '1 side is' : (r + ' sides are')) + ' still to walk.'; },
+      gClayNow:function(k){ return k + (k === 1 ? ' clay ball' : ' clay balls'); },
+      gClayStraight:'Here the two straws go straight on — no change of direction, so it is not a corner. Those two straws make one side.',
+      gClayDone:function(n, m){
+        return 'Every turn has clay: ' + n + ' corners, and ' + n + ' angles too. ' + m + ' straws: at each join that goes straight on, the two straws are one side — so there are ' + n + ' sides.';
+      },
+      gClay2:function(r){ return (r === 1 ? '1 turn still has' : (r + ' turns still have')) + ' no clay — look at the glowing one.'; },
+      gSortNow:function(k, t){ return 'Sorted ' + k + ' / ' + t; },
+      gSortWrong:function(n, key){
+        if (n === 0) return 'It has no straight sides and no corners — it is a circle.';
+        return 'It has ' + n + ' straight sides, so it is a ' + this.names[key] + '.';
+      },
+      gSortDone:'All sorted! Shapes can look very different — count the straight sides and you know the family.',
+      gSort2:function(n){ return n === 0 ? 'The glowing card has no straight sides.' : ('The glowing card has ' + n + ' straight sides.'); },
+      gFindNow:function(x, t){ return 'Found ' + x + ' / ' + t; },
+      gFindWhy:function(why, n){
+        if (why === 'circle') return 'A circle has no straight sides — not a quadrilateral.';
+        if (why === 'open') return 'These 4 straight lines do not make a loop — there is a gap, so it is not a quadrilateral.';
+        if (why === 'cross') return 'These 4 straight lines cross each other. The sides of a quadrilateral never cross.';
+        return 'It has ' + n + ' straight sides, not 4.';
+      },
+      gFindDone:function(t){ return 'All ' + t + ' quadrilaterals found! Each one is 4 straight sides in one loop that never crosses.'; },
+      gFind2:function(r){ return (r === 1 ? '1 quadrilateral is' : (r + ' quadrilaterals are')) + ' still hidden — look at the glowing ones.'; },
+      gStars:function(n){ return '⭐ +' + n; },
+      gClear:'Press “Next round” to keep going.',
+      gWin:function(s){ return 'All 5 rounds cleared! ' + s + ' stars in all 🏆 Press “Restart” to play again.'; }
     }
   };
 
@@ -977,13 +1225,19 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：圖形分類大挑戰 ---------- */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ---------- 6. 小遊戲：圖形分類大挑戰 —— 五關、五種玩法（圍、走、黏、分、找） ----------
+     設計原則見 docs/teaching-framework.md §六之五。二年級是低年級（§三）：不扣分、不會失敗。
+     放錯（概念錯）→ 彈回原位＋一句為什麼，算一次錯；放到空白處 → 靜靜彈回，不算錯。
+     星星：這一關沒犯錯 2 顆、犯過錯 1 顆（只是少拿，從不倒扣）。
+     每個拖拉也可以「先點東西、再點目的地」；第 5 關（找四邊形）沒有拖拉：點一下圖形就是選它，
+     那一關的說明有寫。題庫、版面常數與規則的純函式在 i18n 前面的資料區。 */
+  var gRound = 0, gScore = 0, gMistakes = 0, gSolved = false, gCtx = {};
+  /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加星星）。 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskLine = document.getElementById('gAskLine');
-  var gPic = document.getElementById('gPic');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
@@ -991,65 +1245,466 @@
   var elHint = document.getElementById('gHint');
   var hintLevel = 0;
 
+  /* ⚠️ 托盤一定要洗牌再畫：題庫裡的順序是固定的，照順序畫的話孩子玩兩次就會記住位置。
+     洗出來剛好由小到大的話，把前兩個對調（三年級 numbers 同一個做法）：這一課洗的是索引，
+     由小到大＝照資料的順序（第 4 關會是三角形永遠排在最前面）。用對調不用重洗：一定會結束。 */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    var up = a.length > 1;
+    for (var i = 1; i < a.length; i++) if (!(a[i - 1] < a[i])) up = false;
+    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function pickN(arr, n){ return shuffle(arr).slice(0, n); }
+  function order(n){ var a = []; for (var i = 0; i < n; i++) a.push(i); return a; }
+
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，任何地方的 pointerup／pointercancel
+     傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 格子（吸附目標）：記中心點與半寬、半高，給 nearestOpen() 用 */
+  function target(B, x, y, w, h, cls, more){
+    var t = { z:addZone(B, x, y, w, h, cls), cx:x + w / 2, cy:y + h / 2, hw:w / 2, hh:h / 2, done:false };
+    for (var key in more) t[key] = more[key];
+    return t;
+  }
+  /* 整塊畫板大小的 SVG 圖層（線條：吸管、邊、走過的路）。拿不起來、也擋不到點擊。 */
+  function svgLayer(B, H){ return addZone(B, 0, 0, GAME_W, H, 'gsvg'); }
+  function setSVG(z, H, inner){
+    z.innerHTML = '<svg width="' + GAME_W + '" height="' + H + '" viewBox="0 0 ' + GAME_W + ' ' + H +
+                  '" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' + inner + '</svg>';
+  }
+  function svgLine(a, b, color, width, extra){
+    return '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="' + color +
+           '" stroke-width="' + width + '" stroke-linecap="round"' + (extra || '') + '/>';
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 第二層提示的「一閃一閃」：先把上一次的拿掉，再標這一次的 */
+  function glow(els){
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.ghint'), function(x){ x.classList.remove('ghint'); });
+    els.forEach(function(x){ x.classList.add('ghint'); });
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.html !== undefined) el.innerHTML = o.html;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (moved) P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */
+      /* 先點選、後來又直接拖走的那一塊：拖完（放好、彈回、capture 遺失都一樣）就不再是「選起來」的，
+         不然下一次點格子會多放一次（二年級 numbers 的 codex 第一、二輪） */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      /* 放在哪裡看那一塊的中心點（§六之五：位置一律記中心點），不是手指的位置 */
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 拿不完的東西（吸管、黏土）與小螞蟻：點一下放好之後繼續選著，不用每一次都重點一次 */
+  function keepSelected(B, P){ if (!P.locked && !gSolved){ B.selected = P; P.el.classList.add('sel'); } }
+  /* 放進哪一格：放開時那一塊的中心點（點目的地時是點的位置）落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+
+  /* 星星（低年級：純收集、不扣分 —— §三、§六之五第 3 點）：這一關沒犯錯 2 顆、犯過錯 1 顆 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel, .ghint'), function(x){ x.classList.remove('sel'); x.classList.remove('ghint'); });
+    var stars = gMistakes === 0 ? 2 : 1;
+    gScore += stars; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var last = gRound === GAME_ORDER.length - 1;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gStars(stars) + '</span> ' + (last ? L().gWin(gScore) : L().gClear);
+    if (!last) gNext.disabled = false;
+  }
+  /* 放錯：說為什麼、記一次錯（只影響這一關拿 2 顆還是 1 顆），分數不動 */
+  function roundMiss(text){ gMistakes++; gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  /* 第二層提示跟著畫面走：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  /* 按鈕列（第 1 關的「圍好了」）：放在畫板下面，不在畫板裡 */
+  function actionButton(text, onClick){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn'; b.textContent = text;
+    b.addEventListener('click', onClick);
+    row.appendChild(b);
+    gameStage.appendChild(row);
+    return b;
+  }
+
+  var RENDER = {
+    /* 第 1 關：圍一圈 —— n 顆黏土球（沒有外框）；把吸管放到兩顆球中間就接上一根。
+       接在旁邊的兩顆才收；穿過中間的會交叉 → 彈回＋為什麼。自己按「圍好了」：有缺口 → 說還有幾個（算一次錯）。 */
+    loop: function(d){
+      var id = pick(GAME_LOOP), n = FIGS[id].pts.length, k = 0;
+      var line = trailLine(d.gLoopNow(0));
+      var B = makeBoard(GAME_W, LOOP_H);
+      var svg = svgLayer(B, LOOP_H);
+      var segs = loopSegs(id), balls = [];
+      for (var i = 0; i < n; i++){
+        var p = figXY(id, i, LOOP_FIG);
+        balls.push(addZone(B, p[0] - LOOP_BALL / 2, p[1] - LOOP_BALL / 2, LOOP_BALL, LOOP_BALL, 'gball'));
+      }
+      function draw(){
+        setSVG(svg, LOOP_H, segs.filter(function(s){ return s.done; }).map(function(s){
+          return svgLine([s.ax, s.ay], [s.bx, s.by], '#E8871E', 9, ' class="gstraw"');
+        }).join(''));
+      }
+      draw();
+      gCtx.hint2 = function(){
+        var g = segs.filter(function(s){ return s.edge && !s.done; });
+        /* 圍好了還沒按：提示改成「按『圍好了』」，讓那顆按鈕一閃一閃（codex 第一輪：原本會說「還有 0 個缺口」） */
+        if (!g.length){ glow([doneBtn]); return d.gLoopReady; }
+        glow([balls[g[0].i], balls[g[0].j]]);
+        return d.gLoop2(n - k);
+      };
+      addPiece(B, { w:LOOP_SRC.w, h:LOOP_SRC.h, cx:GAME_W / 2, cy:LOOP_SRC.y, cls:'gstrawsrc', label:d.gStrawLabel });
+      useTapSelect(B, function(P, pt){
+        var s = nearestSeg(segs, pt, LOOP_PAD), r = loopRule(s);
+        if (r === 'none') return false;
+        if (r === 'cross'){ roundMiss(d.gLoopCross); return false; }
+        s.done = true; k++;
+        draw();
+        P.home();
+        line.textContent = d.gLoopNow(k);
+        gMsg.textContent = '';
+        if (pt.tap) keepSelected(B, P);
+        refreshHint();
+        return true;
+      });
+      var doneBtn = actionButton(d.gLoopBtn, function(){
+        if (gSolved) return;
+        var r = loopDone(n, k);
+        if (r === 'empty'){ gMsg.textContent = d.gLoopEmpty; return; }
+        if (r === 'gap'){ roundMiss(d.gLoopGap(n - k)); return; }
+        doneBtn.disabled = true;
+        roundSolved(d.gLoopDone(n));
+      });
+    },
+
+    /* 第 2 關：繞一圈 —— 小螞蟻從 ★ 出發，一次走到旁邊的頂點；走過的邊亮起來、標上第幾條。
+       穿過中間、走回頭路 → 彈回＋為什麼；放回原來的頂點 → 靜靜放回去。走完 n 條邊回到 ★ 才過關。 */
+    walk: function(d){
+      var id = pick(GAME_WALK), n = FIGS[id].pts.length, path = [WALK_STAR];
+      var line = trailLine(d.gWalkNow(0));
+      var B = makeBoard(GAME_W, WALK_H);
+      var svg = svgLayer(B, WALK_H);
+      var xy = order(n).map(function(i){ return figXY(id, i, WALK_FIG); });
+      var corners = xy.map(function(p, i){ return target(B, p[0] - GPICK / 2, p[1] - GPICK / 2, GPICK, GPICK, 'gcorner', { v:i }); });
+      var s0 = xy[WALK_STAR];
+      addZone(B, s0[0] + WALK_BADGE.dx - WALK_BADGE.size / 2, s0[1] + WALK_BADGE.dy - WALK_BADGE.size / 2, WALK_BADGE.size, WALK_BADGE.size, 'gstar', '★');
+      function draw(){
+        var cx = 0, cy = 0;
+        xy.forEach(function(p){ cx += p[0] / n; cy += p[1] / n; });
+        var out = '<polygon points="' + xy.map(function(p){ return p[0] + ',' + p[1]; }).join(' ') +
+                  '" fill="#E3F4EB" stroke="#2F9E69" stroke-width="5" stroke-linejoin="round"/>';
+        for (var i = 1; i < path.length; i++){
+          var a = xy[path[i - 1]], b = xy[path[i]], mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+          out += svgLine(a, b, '#E8871E', 8, ' class="gwalked"');
+          out += '<text x="' + Math.round(mx + (cx - mx) * 0.2) + '" y="' + Math.round(my + (cy - my) * 0.2 + 6) +
+                 '" font-size="18" text-anchor="middle" fill="#E8871E" font-weight="800">' + i + '</text>';
+        }
+        setSVG(svg, WALK_H, out);
+        corners.forEach(function(c){ c.z.classList.toggle('seen', path.indexOf(c.v) >= 0); });
+      }
+      draw();
+      gCtx.hint2 = function(){
+        /* 只亮一個（出發時兩個鄰居都可以走，提示選其中一個；codex 第一輪：說「那一個」卻亮兩個） */
+        glow(corners.filter(function(c){ var r = walkStep(n, path, c.v); return r === 'step' || r === 'home'; }).slice(0, 1).map(function(c){ return c.z; }));
+        return d.gWalk2(n - (path.length - 1));
+      };
+      addPiece(B, { w:GPICK, h:GPICK, cx:s0[0], cy:s0[1], text:'🐜', cls:'gant', label:d.gAntLabel });
+      useTapSelect(B, function(P, pt){
+        var c = nearestOpen(corners, pt, GPAD);
+        if (!c) return false;
+        var r = walkStep(n, path, c.v);
+        if (r === 'stay') return false;
+        if (r === 'skip'){ roundMiss(d.gWalkSkip); return false; }
+        if (r === 'back'){ roundMiss(d.gWalkBack); return false; }
+        path.push(c.v);
+        draw();
+        P.homeX = c.cx; P.homeY = c.cy; P.home();
+        gMsg.textContent = '';
+        if (r === 'home'){
+          P.lock(c.cx, c.cy);
+          line.textContent = d.gWalkTotal(n);
+          roundSolved(d.gWalkDone(n));
+          return true;
+        }
+        line.textContent = d.gWalkNow(path.length - 1);
+        if (pt.tap) keepSelected(B, P);
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 3 關：黏頂點 —— 吸管接成的圖形，有些接點直直接下去。把黏土（拿不完）黏在轉彎的接點；
+       黏在直直接下去的接點 → 彈回＋為什麼。轉彎的接點都黏好了就過關。 */
+    clay: function(d){
+      var e = pick(GAME_CLAY), pts = e.pts, m = pts.length, filled = {}, k = 0;
+      var line = trailLine(d.gClayNow(0));
+      var B = makeBoard(GAME_W, CLAY_H);
+      var svg = svgLayer(B, CLAY_H), out = '';
+      /* 每一根吸管兩端各縮 7px：接點那裡看得出是兩根吸管接起來的，也看得出有沒有轉彎 */
+      for (var i = 0; i < m; i++){
+        var a = pts[i], b = pts[(i + 1) % m], L0 = Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]));
+        var ux = (b[0] - a[0]) / L0 * 7, uy = (b[1] - a[1]) / L0 * 7;
+        out += svgLine([a[0] + ux, a[1] + uy], [b[0] - ux, b[1] - uy], i % 2 ? '#F2B36B' : '#E8871E', 9, ' class="gstraw"');
+      }
+      setSVG(svg, CLAY_H, out);
+      var joints = pts.map(function(p, j){ return target(B, p[0] - CLAY_JOINT / 2, p[1] - CLAY_JOINT / 2, CLAY_JOINT, CLAY_JOINT, 'gjoint', { j:j }); });
+      gCtx.hint2 = function(){
+        var t = joints.filter(function(x){ return isTurn(pts, x.j) && !filled[x.j]; });
+        glow(t.length ? [t[0].z] : []);
+        return d.gClay2(clayLeft(pts, filled));
+      };
+      addPiece(B, { w:CLAY_SRC.size, h:CLAY_SRC.size, cx:GAME_W / 2, cy:CLAY_SRC.y, cls:'gclaysrc', label:d.gClayLabel });
+      useTapSelect(B, function(P, pt){
+        var t = nearestOpen(joints, pt, GPAD), r = clayDrop(pts, filled, t ? t.j : null);
+        if (r === 'none' || r === 'dup') return false;
+        if (r === 'straight'){ roundMiss(d.gClayStraight); return false; }
+        filled[t.j] = true; t.done = true; k++;
+        t.z.classList.add('filled'); t.z.classList.remove('ghint');
+        P.home();
+        line.textContent = d.gClayNow(k);
+        gMsg.textContent = '';
+        if (clayLeft(pts, filled) === 0){ roundSolved(d.gClayDone(k, m)); return true; }
+        if (pt.tap) keepSelected(B, P);
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 4 關：分家族 —— 六張圖形卡放進三個籃子；放錯 → 彈回，說它有幾條直的邊、是哪一家。 */
+    sort: function(d){
+      var ids = pickN(SORT_TRI, 2).concat(['square'], pickN(SORT_QUAD, 2), ['circle']), S = SORT_BIN, C = SORT_CARD, placed = 0;
+      var line = trailLine(d.gSortNow(0, ids.length));
+      var B = makeBoard(GAME_W, SORT_H);
+      var bins = SORT_BINS.map(function(key, b){
+        var t = target(B, S.x[b], S.y, S.w, S.h, 'gbin', { key:key, b:b, n:0 });
+        addZone(B, S.x[b], S.y + 6, S.w, 26, 'glbl', d.names[key]);
+        return t;
+      });
+      var cards = [];
+      shuffle(order(ids.length)).forEach(function(i, c){
+        cards.push(addPiece(B, { w:C.w, h:C.h, cx:C.xs[c % 3], cy:C.ys[Math.floor(c / 3)], html:figSVG(ids[i]), cls:'gcard gfig', label:d.gCardLabel, data:{ id:ids[i] } }));
+      });
+      gCtx.hint2 = function(){
+        var left = cards.filter(function(P){ return !P.locked; });
+        glow(left.length ? [left[0].el] : []);
+        return left.length ? d.gSort2(sidesOf(left[0].data.id)) : '';
+      };
+      useTapSelect(B, function(P, pt){
+        var b = nearestOpen(bins, pt, GPAD), id = P.data.id;
+        if (!b) return false;
+        if (b.key !== familyOf(id)){ roundMiss(d.gSortWrong(sidesOf(id), familyOf(id))); return false; }
+        var at = sortSlotXY(b.b, b.n); b.n++;
+        P.el.style.width = P.el.style.height = C.small + 'px'; P.w = P.h = C.small;
+        P.lock(at[0], at[1]); P.el.classList.add('placed'); P.el.classList.remove('ghint');
+        placed++;
+        line.textContent = d.gSortNow(placed, ids.length);
+        gMsg.textContent = '';
+        if (placed === ids.length) roundSolved(d.gSortDone);
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 5 關：找四邊形 —— 九個圖形，點出所有的四邊形（這一關沒有拖拉）。
+       點到不是的 → 標成紅色＋為什麼（算一次錯）；點過的再點不動。全部找到就過關。 */
+    find: function(d){
+      var fig = function(id){ return { src:'fig', id:id }; };
+      var items = [fig('square')].concat(pickN(FIND_QUAD, 3).map(fig), [{ src:'odd', id:'gap' }, { src:'odd', id:'cross' }], pickN(FIND_OTHER, 3).map(fig));
+      var total = items.filter(function(it){ return findWhy(it) === 'ok'; }).length, found = 0, F = FIND_CELL;
+      var line = trailLine(d.gFindNow(0, total));
+      var B = makeBoard(GAME_W, FIND_H);
+      var cells = [];
+      shuffle(order(items.length)).forEach(function(i, c){
+        var it = items[i], why = findWhy(it);
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'gfind';
+        b.style.left = (F.xs[c % 3] - F.size / 2) + 'px'; b.style.top = (F.ys[Math.floor(c / 3)] - F.size / 2) + 'px';
+        b.style.width = b.style.height = F.size + 'px';
+        b.innerHTML = it.src === 'odd' ? oddSVG(it.id) : figSVG(it.id);
+        b.setAttribute('aria-label', d.gShapeLabel(c + 1));
+        b.addEventListener('click', function(){
+          if (gSolved || b.classList.contains('found') || b.classList.contains('nope')) return;
+          if (why !== 'ok'){
+            b.classList.add('nope'); b.classList.remove('ghint');
+            roundMiss(d.gFindWhy(why, it.src === 'odd' ? GAME_ODD[it.id].pts.length : sidesOf(it.id)));
+            return;
+          }
+          b.classList.add('found'); b.classList.remove('ghint'); found++;
+          line.textContent = d.gFindNow(found, total);
+          gMsg.textContent = '';
+          if (found === total) roundSolved(d.gFindDone(total));
+          refreshHint();
+        });
+        B.el.appendChild(b);
+        cells.push({ b:b, why:why });
+      });
+      gCtx.hint2 = function(){
+        glow(cells.filter(function(x){ return x.why === 'ok' && !x.b.classList.contains('found'); }).map(function(x){ return x.b; }));
+        return d.gFind2(total - found);
+      };
+    }
+  };
+
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    var sides = sidesOf(round.fig);
-    var ansIdx = kindIndex(round.fig);
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistakes = 0; gCtx = {}; gGen++;
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-    gAskLine.innerHTML = '<span style="font-size:20px;font-weight:800">' + d.gAsk + '</span>';
-    gPic.innerHTML = figSVG(round.fig);
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = d.gHint1;
-    } else {
-      elHint.textContent = '';
-    }
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }
+  }
 
-    gAnswers.textContent = '';
-    BASKETS.forEach(function(key, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'gopt';
-      b.textContent = d.gOpt(key);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        var dd = L();
-        var lbl = dd.gOpt(BASKETS[ansIdx]);
-        if (oi === ansIdx){
-          var all = gAnswers.querySelectorAll('.gopt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gRound === ROUNDS.length - 1){
-            gScore += gMistake ? 10 : 20;
-            gMsg.innerHTML = '<span class="yes">' + dd.gWin(gScore) + '</span> ' + dd.gWhy(sides, BASKETS[ansIdx]);
-          } else {
-            if (gMistake){
-              gScore += 10;
-              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectRetry(lbl) + '</span> ' + dd.gWhy(sides, BASKETS[ansIdx]);
-            } else {
-              gScore += 20;
-              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectFirst(lbl) + '</span> ' + dd.gWhy(sides, BASKETS[ansIdx]);
-            }
-            gMsg.innerHTML += ' ' + dd.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gMsg.innerHTML = '<span class="no">' + dd.gTryAgain + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕）；第二層會讓還沒做到的那一個一閃一閃 */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
   function restartGame(){
@@ -1057,18 +1712,15 @@
   }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
 
   gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2) return;
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = L().gHint1;
-    } else {
-      elHint.textContent = L().gHint2(sidesOf(ROUNDS[gRound].fig));
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
