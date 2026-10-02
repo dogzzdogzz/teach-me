@@ -136,6 +136,52 @@
   .cmpcell.now{border-color:var(--orange);background:var(--orange-soft);color:var(--orange)}
   .cmpcell.past{opacity:.45}
   .cmpcell.blank{background:var(--bg);border-style:dashed}
+
+  /* ---- 小遊戲：裝、寫、備、排、開（§六之五） ---- */
+  .gamemsg{text-align:center}
+  .game .hint{text-align:center}
+  .gstage{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0 }
+  .gask{ font-weight:700; text-align:center; font-size:18px }
+  /* 兩行高：英文的「2 hundreds, 3 tens, 5 ones = 235」在手機上會換行，畫板不可以因此往下跳 */
+  .gtrail{ font-size:20px; font-weight:800; color:var(--ink); text-align:center; line-height:1.3; min-height:2.6em;
+    display:flex; align-items:center; justify-content:center }
+  .gwrap{ position:relative; margin:0 auto }
+  .gboard{ position:absolute; left:0; top:0; transform-origin:0 0; background:var(--bg); border-radius:16px }
+  .gboard > div{ position:absolute }
+  .gpiece{ left:0; top:0; display:flex; align-items:center; justify-content:center;
+    touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; transition:transform .25s ease; z-index:5 }
+  .gpiece.dragging{ transition:none; cursor:grabbing; z-index:50 !important; filter:drop-shadow(0 6px 8px rgba(70,60,40,.25)) }
+  .gpiece.sel{ outline:3px dashed var(--blue); outline-offset:4px; border-radius:12px }
+  .gpiece.locked{ cursor:default; pointer-events:none }
+  .gpiece.gone{ visibility:hidden }
+  .gcard{ background:var(--card); border:3px solid var(--line); border-radius:12px; font-size:26px; font-weight:800; color:var(--ink) }
+  .gcard.placed{ border-color:var(--green); background:var(--green-soft); color:var(--green) }
+  .gbox{ border:3px dashed var(--line); border-radius:14px; background:var(--card) }
+  .gcrate{ border:3px solid #B96C11; border-radius:10px; background:var(--orange-soft) }
+  .gcrate.full{ border-color:var(--green); background:var(--green-soft) }
+  .gpicbox{ border:2px solid var(--line); border-radius:12px; background:var(--card); pointer-events:none }
+  .gcolhd, .glbl{ display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:var(--muted); pointer-events:none }
+  .gorder{ display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:800; color:var(--ink); pointer-events:none }
+  .gcnt{ display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:var(--ink); pointer-events:none }
+  .gslot{ display:flex; align-items:center; justify-content:center; border:3px dashed var(--line); border-radius:10px; background:var(--card);
+    font-size:30px; font-weight:800; color:var(--green) }
+  .gslot.filled{ border-style:solid; border-color:var(--green); background:var(--green-soft) }
+  /* 板上畫的積木（拿不起來）：和範例的積木同色 —— 百綠、十橘、一藍 */
+  .gblk{ pointer-events:none; border-radius:3px }
+  .gb-h{ background:var(--green); border:2px solid #1F7A4F; border-radius:4px }
+  .gb-t{ background:repeating-linear-gradient(to bottom, var(--orange) 0 3px, #B96C11 3px 4px); border:1px solid #B96C11 }
+  .gb-o{ background:var(--blue); border:2px solid #2A5FA8 }
+  /* 拿得起來的積木：拿取範圍是整塊（≥ GPICK），畫的形狀在中間 */
+  .gten{ background:repeating-linear-gradient(to bottom, var(--orange) 0 4px, #B96C11 4px 5.2px) center / 14px 52px no-repeat }
+  .gten.placed{ background-size:100% 100%; border-radius:3px }
+  .ghun{ background:linear-gradient(var(--green), var(--green)) center / 38px 38px no-repeat; }
+  .ghun::after{ content:''; width:38px; height:38px; border:2px solid #1F7A4F; border-radius:4px; box-sizing:border-box }
+  .gone1{ background:linear-gradient(var(--blue), var(--blue)) center / 16px 16px no-repeat }
+  .gtok{ border:3px solid var(--line); border-radius:14px; background-color:var(--card) }
+  .gaction{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap }
+  .gaction .btn{ min-width:84px; font-size:22px }
+  /* 遊戲裡的數字用西文字型：PingFang 的粗體「−」又寬又平 */
+  .gtrail, .gcard, .gslot, .gorder, .gcnt, #gMsg{ font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif }
 </style>
 </head>
 <body>
@@ -231,21 +277,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb5">小遊戲</span>
     <h2 data-i18n="s5h2">倉庫點貨</h2>
-    <p class="lead" data-i18n="s5lead">數對了，這一車就可以出發！</p>
+    <p class="lead" data-i18n="s5lead">裝箱、寫數字、備貨、排隊、開貨車 —— 五關都過就出貨！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
-        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+        <span><span data-i18n="gScoreLabel">星星</span> <b id="gScore">0</b> ⭐</span>
       </div>
-      <div class="blkwrap" id="gPic"></div>
-      <p class="hopline" id="gAskLine"></p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
-      </div>
-      <div class="opts" id="gAnswers" style="margin-top:14px"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -286,17 +328,66 @@
     { a:89,  b:105 }
   ];
 
-  /* 遊戲：看積木說出數字。正解刻意不固定在第一個選項。 */
-  var ROUNDS = [
-    { h:2, t:3,  o:4, ans:234, opts:[243, 234, 2304] },
-    { h:1, t:0,  o:5, ans:105, opts:[105, 150, 15] },
-    { h:4, t:7,  o:0, ans:470, opts:[47, 407, 470] },
-    { h:5, t:6,  o:3, ans:563, opts:[536, 563, 5063] },
-    { h:0, t:12, o:0, ans:120, opts:[12, 102, 120] }
-  ];
-
   function cmpNameZh(k){ return ['百位','十位','個位'][k]; }
   function cmpNameEn(k){ return ['hundreds','tens','ones'][k]; }
+  /* 積木的名字（遊戲的說明用）：k = 0 百、1 十、2 一 */
+  function kindNameZh(k){ return ['大方塊','長條','小方塊'][k]; }
+  function kindNameEn(k, n){ return (n === 1 ? ['big square','bar','little cube'] : ['big squares','bars','little cubes'])[k]; }
+  function unitZh(k){ return ['百','十','一'][k]; }
+  /* 英文的「1 hundred、13 tens、1 one」：1 要用單數 */
+  function unitEn(k, n){ return (n === 1 ? ['hundred','ten','one'] : ['hundreds','tens','ones'])[k]; }
+  function htoEn(h, t, o){ return h + ' ' + unitEn(0, h) + ', ' + t + ' ' + unitEn(1, t) + ', ' + o + ' ' + unitEn(2, o); }
+
+  /* ---------- 小遊戲「倉庫點貨」的題庫與版面（§六之五：五關五種玩法） ----------
+     版面一律是畫板上的 px（畫板寬 GAME_W），位置一律記「中心點」。拿得起來的東西至少 GPICK × GPICK
+     （375px 手機上畫板縮成約 0.967 倍，48 → 46）。GPAD：放開的點離格子的方框多遠還算放進去。
+     每一關從自己的池子隨機抽一題。 */
+  var GAME_W = 300, GPICK = 48, GPAD = 6;
+  var GAME_ORDER = ['pack', 'write', 'build', 'sort', 'hop'];
+
+  /* 板上畫的積木（拿不起來，只是畫面）：百 26×26、十 10×40、一 12×12。
+     blockXY(kind, i, cx, top)：第 i 個的中心點。百 3 個一排、十 5 條一排、一 3 個一排；
+     每一種最多 9 個，都放得進 94 寬、86 高的一欄。 */
+  var BLK = { h:{ w:26, h:26, per:3, sx:30, sy:30 }, t:{ w:10, h:40, per:5, sx:14, sy:46 }, o:{ w:12, h:12, per:3, sx:18, sy:18 } };
+  function blockXY(kind, i, cx, top){
+    var b = BLK[kind];
+    return { x:cx + (i % b.per - (b.per - 1) / 2) * b.sx, y:top + b.h / 2 + Math.floor(i / b.per) * b.sy };
+  }
+
+  /* 第 1 關 裝一箱（範例 1：10 個十換 1 個百）：倉庫裡有 h 個百、t 條十（11～14）、o 個一。
+     把十一條一條放進「百箱」，裝滿 10 條就換成 1 個百。放進「百」那一欄（一條十還不是百）或
+     「一」那一欄 → 彈回＋說為什麼。「百」那一欄和箱子只隔 8，比 PACK_PAD 小 —— 吸附範圍刻意重疊，挑最近的。 */
+  var GAME_PACK = [ { h:1, t:13, o:5 }, { h:2, t:12, o:4 }, { h:3, t:11, o:7 }, { h:1, t:14, o:2 }, { h:4, t:12, o:0 }, { h:2, t:13, o:8 } ];
+  var PACK_H = 420, PACK_PAD = 10;
+  var PACK_CRATE = { x:8, y:28, w:284, h:74, step:26, barW:14, barH:52, lblY:4 };
+  var PACK_HCOL = { x:8, y:110, w:140, h:112 }, PACK_OCOL = { x:156, y:110, w:136, h:112 }, PACK_COLTOP = 24;
+  var PACK_PILE = { y:266, step:50, rowStep:60, perRow:6, w:GPICK, h:56, lblY:218 };
+  function crateSlotXY(i){ return { x:PACK_CRATE.x + PACK_CRATE.w / 2 + (i - 4.5) * PACK_CRATE.step, y:PACK_CRATE.y + PACK_CRATE.h / 2 }; }
+  function packPileXY(i, n){
+    var P = PACK_PILE, row = Math.floor(i / P.perRow), inRow = Math.min(P.perRow, n - row * P.perRow);
+    return { x:GAME_W / 2 + (i % P.perRow - (inRow - 1) / 2) * P.step, y:P.y + row * P.rowStep };
+  }
+
+  /* 第 2 關 寫數字（範例 2：位值表，0 要佔位子）：畫出 h 個百、t 條十、o 個一（每一題都有一位是 0），
+     用數字卡 0～9（拿不完）寫進百位／十位／個位三格。格子 56 寬、只隔 4，比 2 × GPAD 小 —— 吸附範圍重疊。 */
+  var GAME_WRITE = [ { h:4, t:0, o:7 }, { h:3, t:6, o:0 }, { h:2, t:0, o:5 }, { h:8, t:3, o:0 }, { h:5, t:0, o:9 }, { h:6, t:0, o:0 } ];
+  var WRITE_H = 322, WRITE_PIC = { top:8, x:[52, 150, 248] };
+  var WRITE_SLOT = { y:150, size:56, x:[90, 150, 210], hdY:102 }, WRITE_KEYS = { y:232, step:56, rowStep:58, size:GPICK };
+
+  /* 第 3 關 備貨（範例 2：數字站的位子決定它有多大）：照訂單上的數放積木。三欄（百／十／一）並排、只隔 5；
+     每一題都有一位是 0。百、十、一三個積木源洗牌排（不和欄位對齊），拖一個（或點積木源、再點欄位）就多一個。 */
+  var GAME_BUILD = [306, 250, 403, 520, 702, 140];
+  var BUILD_H = 290, BUILD_COL = { y:44, w:94, h:150, x:[4, 103, 202], top:26 }, BUILD_TOK = { y:250, size:60, step:96 };
+
+  /* 第 4 關 排排站（範例 3：先看位數，再從百位比）：四箱貨由小排到大。每一組都有一個兩位數、
+     一對百位一樣的數（十位決定）。四格只隔 6，比 2 × GPAD 小 —— 吸附範圍重疊。 */
+  var GAME_SORT = [ [89, 307, 370, 215], [458, 485, 96, 520], [105, 99, 150, 510], [624, 642, 79, 246], [731, 713, 88, 317], [263, 236, 92, 326] ];
+  var SORT_H = 224, SORT_SLOT = { y:72, w:66, h:56, x:[42, 114, 186, 258] }, SORT_CARD = { y:184, w:64, h:52, step:72 };
+
+  /* 第 5 關 開貨車（範例 1 的 +1／+10，加上 +100）：從 from 開到 to，點一下 +100／+10／+1 就往前開那麼多；
+     開過頭 → 不動＋說為什麼。每一題都會跨過一個十（個位滿十換十）。 */
+  var GAME_HOP = [ { from:296, to:315 }, { from:387, to:405 }, { from:195, to:322 }, { from:478, to:503 }, { from:592, to:611 }, { from:268, to:384 } ];
+  var HOP_H = 146, HOP_PIC = { top:28, x:[52, 150, 248] }, HOP_STEPS = [100, 10, 1];
 
   /* ---------- i18n ---------- */
   var I18N = {
@@ -318,7 +409,7 @@
       s2h2:'每個數字的位子', s2lead:'選一個數，把它拆開看。',
       s3h2:'誰比較大', s3lead:'從百位開始，一位一位比。',
       s4h2:'檢查一下', s4lead:'點一下答案，馬上知道對不對！',
-      s5h2:'倉庫點貨', s5lead:'數對了，這一車就可以出發！',
+      s5h2:'倉庫點貨', s5lead:'裝箱、寫數字、備貨、排隊、開貨車 —— 五關都過就出貨！',
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a>。',
@@ -377,18 +468,59 @@
         { stem:'530 的 3 表示多少？', opts:['3 個百','3 個十','3 個一','5 個十'], ans:1, why:'3 站在十位，表示 3 個十，也就是 30。' }
       ],
 
-      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
-      gAsk:'這一車有多少？',
-      gAria:function(n){ return '積木表示 ' + n; },
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'星星',
       gHintBtn:'💡 提示',
-      gHint1:'先數大方塊（百），再數長條（十），最後數小方塊（一）。',
-      gHint2:function(h, t, o){ return '提示：' + h + ' 個百、' + t + ' 個十、' + o + ' 個一。'; },
       gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:function(ans){ return '答對了！+20 分！這一車是 ' + ans + '。'; },
-      gCorrectRetry:function(ans){ return '答對了！+10 分。這一車是 ' + ans + '。'; },
-      gTryAgain:function(v){ return v + ' 不對喔，再數一次！'; },
+      gAsks:{
+        pack:'把長條（十）一條一條裝進百箱，裝滿 10 條就換成 1 個百！',
+        write:'數一數積木，把數字卡放進百位、十位、個位。',
+        build:'照訂單備貨：要幾個百、幾個十、幾個一？',
+        sort:'把四箱貨由小排到大。',
+        hop:'點 +100、+10、+1，貨車就往前開那麼多（這一關用點的）。開到終點 🏁！'
+      },
+      gHints:{
+        pack:'提示：10 個十換成 1 個百 —— 箱子要裝滿 10 條。',
+        write:'提示：大方塊幾個寫在百位，長條幾條寫在十位，小方塊幾個寫在個位；沒有就寫 0。',
+        build:'提示：訂單的百位是幾，就放幾個百；十位、個位也一樣，是 0 就不放。',
+        sort:'提示：先看位數，三位數比兩位數大；位數一樣，從百位開始比。',
+        hop:'提示：先用 +100、+10 開近一點，最後用 +1。'
+      },
+      gStars:function(n){ return '⭐ +' + n; },
       gClear:'按「下一關」繼續點貨。',
-      gWin:function(score){ return '五關全過！最後得分 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; }
+      gWin:function(s){ return '五關全過！一共 ' + s + ' 顆星星 🏆 按「重新開始」再玩一次。'; },
+      gTenLabel:'一條十', gHunLabel:'一個百', gOneLabel:'一個一',
+      gPackCrate:function(k){ return '百箱：' + k + '／10 條十'; },
+      gPackPile:'還沒裝箱的十',
+      gPackNow:function(h, t, o){ return h + ' 個百、' + t + ' 個十、' + o + ' 個一'; },
+      gPackNotH:'一條十還不是一個百：裝滿 10 條十，才換成 1 個百。',
+      gPackNotO:'長條是十，不是一 —— 十要裝進百箱。',
+      gPack2:function(k){ return '箱子還差 ' + k + ' 條十。'; },
+      gPackDone:function(h, t, o, n){ return '10 個十換成 1 個百！' + h + ' 個百、' + t + ' 個十、' + o + ' 個一，就是 ' + (h + 1) + ' 個百、' + (t - 10) + ' 個十、' + o + ' 個一，是 ' + n + '。'; },
+      gWriteZero:function(k){ return '圖上沒有' + kindNameZh(k) + '：' + cmpNameZh(k) + '要寫 0 佔位子，不能空著。'; },
+      gWriteSwap:function(v, j, k){ return v + ' 是' + kindNameZh(j) + '的個數，要寫在' + cmpNameZh(j) + '。' + cmpNameZh(k) + '寫' + kindNameZh(k) + '有幾個。'; },
+      gWriteCount:function(k){ return cmpNameZh(k) + '寫' + kindNameZh(k) + '有幾個 —— 再數一次' + kindNameZh(k) + '。'; },
+      gWrite2:function(k, c){ return c === 0 ? cmpNameZh(k) + '：沒有' + kindNameZh(k) + '，寫 0。' : cmpNameZh(k) + '：' + kindNameZh(k) + '有 ' + c + ' 個。'; },
+      gWriteDone:function(h, t, o, n){ return h + ' 個百、' + t + ' 個十、' + o + ' 個一，寫成 ' + n + '：0 要佔位子！'; },
+      gBuildOrder:function(n){ return '訂單：' + n; },
+      gBuildNow:function(a, b, c){ return '已經放：' + a + ' 個百、' + b + ' 個十、' + c + ' 個一'; },
+      gBuildCol:function(k){ return kindNameZh(k) + '是' + unitZh(k) + '，要放在「' + cmpNameZh(k) + '」那一欄。'; },
+      gBuildEnough:function(n, k, w){ return n + ' 的' + cmpNameZh(k) + '是 ' + w + '：' + w + ' 個' + unitZh(k) + '就夠了。'; },
+      gBuildZero:function(n, k){ return n + ' 的' + cmpNameZh(k) + '是 0：一個' + unitZh(k) + '都不用放。'; },
+      gBuild2:function(a, b, c){ return '還要放 ' + a + ' 個百、' + b + ' 個十、' + c + ' 個一。'; },
+      gBuildDone:function(h, t, o, n){ return h + ' 個百、' + t + ' 個十、' + o + ' 個一，就是 ' + n + '。'; },
+      gSortArrow:'小 ⟶ 大',
+      gSortWhyLen:function(big, small){ return big + ' 是三位數，' + small + ' 是兩位數'; },
+      gSortWhyPlace:function(p, a, b){ return ['', '百位一樣，', '百位、十位都一樣，'][p] + cmpNameZh(p) + ' ' + a + ' 比 ' + b + ' 大'; },
+      gSortBig:function(v, c, why){ return v + ' 比 ' + c + ' 大（' + why + '），這一格還輪不到它。'; },
+      gSortSmall:function(v, c, why){ return v + ' 比 ' + c + ' 小（' + why + '），要排在更前面。'; },
+      gSort2:function(k, c){ return '第 ' + (k + 1) + ' 格放 ' + c + '。'; },
+      gSortDone:function(list){ return list.join(' < ') + '，由小排到大！'; },
+      gHopNow:function(cur, to){ return cur + ' ⟶ 🏁 ' + to; },
+      gHopOver:function(cur, k, res, to){ return cur + ' + ' + k + ' = ' + res + '，開過頭了（終點是 ' + to + '）。'; },
+      gHopCarry10:'滿 10 個一，換成 1 個十！',
+      gHopCarry100:'滿 10 個十，換成 1 個百！',
+      gHop2:function(diff, a, b, c){ return '還差 ' + diff + '，就是 ' + a + ' 個百、' + b + ' 個十、' + c + ' 個一。'; },
+      gHopDone:function(from, to){ return '從 ' + from + ' 開到 ' + to + '，到站了！'; }
     },
     en: {
       langAria:'Switch language',
@@ -408,7 +540,7 @@
       s2h2:'Where Each Digit Stands', s2lead:'Pick a number and pull it apart.',
       s3h2:'Which One Is Bigger', s3lead:'Start at the hundreds and compare one place at a time.',
       s4h2:'Quick Check', s4lead:'Tap an answer and find out right away!',
-      s5h2:'Warehouse Count', s5lead:'Count it right and the truck rolls out!',
+      s5h2:'Warehouse Count', s5lead:'Pack, write, fill the order, line up, drive — clear all five and the truck rolls out!',
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a>.',
@@ -419,7 +551,7 @@
       blkChip:function(n){ return 'start at ' + n; },
       s1Btn1:'Add 1', s1Btn10:'Add 10', s1BtnReset:'Start over',
       blkPrompt:function(n){ return 'We are at ' + n + '. Tap a button to add.'; },
-      blkSay:function(h, t, o){ return h + ' hundreds, ' + t + ' tens, ' + o + ' ones.'; },
+      blkSay:function(h, t, o){ return htoEn(h, t, o) + '.'; },
       blkCarry10:'Ten ones! They swap for 1 ten.',
       blkCarry100:'Ten tens! They swap for 1 hundred.',
       blkFull:'That is plenty — tap “Start over”.',
@@ -428,7 +560,7 @@
       plcChip:function(n){ return String(n); },
       s2BtnOpen:'Pull it apart', s2BtnClose:'Put it back',
       plcPrompt:function(n){ return 'Tap “Pull it apart” to split ' + n + ' into three pieces.'; },
-      plcSay:function(h, t, o){ return h + ' hundreds, ' + t + ' tens, ' + o + ' ones.'; },
+      plcSay:function(h, t, o){ return htoEn(h, t, o) + '.'; },
       plcRead:function(w){ return 'You say: ' + w; },
       reads:{ 345:'three hundred forty-five', 508:'five hundred eight', 470:'four hundred seventy', 906:'nine hundred six' },
 
@@ -467,18 +599,59 @@
         { stem:'In 530, what does the 3 stand for?', opts:['3 hundreds','3 tens','3 ones','5 tens'], ans:1, why:'The 3 stands in the tens place, so it means 3 tens — that is 30.' }
       ],
 
-      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
-      gAsk:'How much is on this truck?',
-      gAria:function(n){ return 'blocks showing ' + n; },
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Stars',
       gHintBtn:'💡 Hint',
-      gHint1:'Count the big squares (hundreds) first, then the bars (tens), then the little cubes (ones).',
-      gHint2:function(h, t, o){ return 'Hint: ' + h + ' hundreds, ' + t + ' tens, ' + o + ' ones.'; },
       gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst:function(ans){ return 'Correct on the first try! +20 points! The truck holds ' + ans + '.'; },
-      gCorrectRetry:function(ans){ return 'Correct! +10 points. The truck holds ' + ans + '.'; },
-      gTryAgain:function(v){ return v + ' isn’t it — count once more!'; },
+      gAsks:{
+        pack:'Put the bars (tens) into the hundred crate one by one — 10 of them swap for 1 hundred!',
+        write:'Count the blocks and put digit cards in the hundreds, tens and ones boxes.',
+        build:'Pack the order: how many hundreds, tens and ones?',
+        sort:'Put the four crates in order from smallest to biggest.',
+        hop:'Tap +100, +10 or +1 and the truck drives that far (this round is all taps). Reach the finish 🏁!'
+      },
+      gHints:{
+        pack:'Hint: 10 tens swap for 1 hundred — the crate needs 10 bars.',
+        write:'Hint: big squares go in the hundreds box, bars in the tens box, little cubes in the ones box; none means 0.',
+        build:'Hint: the hundreds digit says how many hundreds to add; the same for tens and ones — a 0 means none.',
+        sort:'Hint: count the digits first — three digits beat two. Same number of digits? Start at the hundreds.',
+        hop:'Hint: use +100 and +10 to get close, then finish with +1.'
+      },
+      gStars:function(n){ return '⭐ +' + n; },
       gClear:'Press “Next round” to keep counting.',
-      gWin:function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; }
+      gWin:function(s){ return 'All 5 rounds cleared! ' + s + ' stars in total 🏆 Press “Restart” to play again.'; },
+      gTenLabel:'a ten', gHunLabel:'a hundred', gOneLabel:'a one',
+      gPackCrate:function(k){ return 'Hundred crate: ' + k + '/10 tens'; },
+      gPackPile:'Tens not packed yet',
+      gPackNow:function(h, t, o){ return htoEn(h, t, o); },
+      gPackNotH:'One bar is not a hundred yet: fill the crate with 10 tens, then they swap for 1 hundred.',
+      gPackNotO:'A bar is a ten, not a one — tens go into the hundred crate.',
+      gPack2:function(k){ return 'The crate needs ' + k + ' more ' + unitEn(1, k) + '.'; },
+      gPackDone:function(h, t, o, n){ return '10 tens swap for 1 hundred! ' + htoEn(h, t, o) + ' is the same as ' + htoEn(h + 1, t - 10, o) + ' — that is ' + n + '.'; },
+      gWriteZero:function(k){ return 'There are no ' + kindNameEn(k, 0) + ' — write 0 in the ' + cmpNameEn(k) + ' box to hold the place.'; },
+      gWriteSwap:function(v, j, k){ return v + ' is how many ' + kindNameEn(j, 0) + ' there are — it goes in the ' + cmpNameEn(j) + ' box. The ' + cmpNameEn(k) + ' box counts the ' + kindNameEn(k, 0) + '.'; },
+      gWriteCount:function(k){ return 'The ' + cmpNameEn(k) + ' box counts the ' + kindNameEn(k, 0) + ' — count the ' + kindNameEn(k, 0) + ' again.'; },
+      gWrite2:function(k, c){ return c === 0 ? 'The ' + cmpNameEn(k) + ' box: no ' + kindNameEn(k, 0) + ', so write 0.' : 'The ' + cmpNameEn(k) + ' box: there ' + (c === 1 ? 'is ' : 'are ') + c + ' ' + kindNameEn(k, c) + '.'; },
+      gWriteDone:function(h, t, o, n){ return htoEn(h, t, o) + ' is written ' + n + ' — the 0 holds its place!'; },
+      gBuildOrder:function(n){ return 'Order: ' + n; },
+      gBuildNow:function(a, b, c){ return 'Packed so far: ' + htoEn(a, b, c); },
+      gBuildCol:function(k){ return 'A ' + kindNameEn(k, 1) + ' is a ' + unitEn(k, 1) + ' — it goes in the “' + unitEn(k, 0) + '” column.'; },
+      gBuildEnough:function(n, k, w){ return 'The ' + cmpNameEn(k) + ' digit of ' + n + ' is ' + w + ', so ' + w + ' ' + unitEn(k, w) + ' is enough.'; },
+      gBuildZero:function(n, k){ return 'The ' + cmpNameEn(k) + ' digit of ' + n + ' is 0 — no ' + unitEn(k, 0) + ' at all.'; },
+      gBuild2:function(a, b, c){ return 'Still to add: ' + htoEn(a, b, c) + '.'; },
+      gBuildDone:function(h, t, o, n){ return htoEn(h, t, o) + ' make ' + n + '.'; },
+      gSortArrow:'smallest ⟶ biggest',
+      gSortWhyLen:function(big, small){ return big + ' has three digits, ' + small + ' has two'; },
+      gSortWhyPlace:function(p, a, b){ return ['', 'same hundreds; ', 'same hundreds and tens; '][p] + cmpNameEn(p) + ': ' + a + ' beats ' + b; },
+      gSortBig:function(v, c, why){ return v + ' is bigger than ' + c + ' (' + why + ') — it is not its turn yet.'; },
+      gSortSmall:function(v, c, why){ return v + ' is smaller than ' + c + ' (' + why + ') — it goes further left.'; },
+      gSort2:function(k, c){ return 'Box ' + (k + 1) + ' gets ' + c + '.'; },
+      gSortDone:function(list){ return list.join(' < ') + ' — smallest to biggest!'; },
+      gHopNow:function(cur, to){ return cur + ' ⟶ 🏁 ' + to; },
+      gHopOver:function(cur, k, res, to){ return cur + ' + ' + k + ' = ' + res + ' — that drives past the finish (' + to + ').'; },
+      gHopCarry10:'Ten ones! They swap for 1 ten.',
+      gHopCarry100:'Ten tens! They swap for 1 hundred.',
+      gHop2:function(diff, a, b, c){ return diff + ' to go — that is ' + htoEn(a, b, c) + '.'; },
+      gHopDone:function(from, to){ return 'From ' + from + ' to ' + to + ' — delivered!'; }
     }
   };
 
@@ -838,13 +1011,16 @@
     });
   }
 
-  /* ---------- 5. 小遊戲：倉庫點貨 ---------- */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ---------- 5. 小遊戲：倉庫點貨 —— 五關、五種玩法（裝、寫、備、排、開） ----------
+     設計原則見 docs/teaching-framework.md §六之五。二年級是低年級（§三）：不扣分、不會失敗。
+     放錯（概念錯）→ 彈回原位＋一句為什麼，算一次錯；放到空白處 → 靜靜彈回，不算錯。
+     星星：這一關沒犯錯 2 顆、犯過錯 1 顆（只是少拿，從不倒扣）。
+     每個拖拉也可以「先點東西、再點目的地」；第 5 關（開貨車）沒有拖拉：點一下 +100／+10／+1
+     就是往前開那麼多，那一關的說明有寫。題庫與版面常數在 i18n 前面的資料區。 */
+  var gRound = 0, gScore = 0, gMistakes = 0, gSolved = false, gCtx = {};
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gPic = document.getElementById('gPic');
-  var gAskLine = document.getElementById('gAskLine');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
@@ -852,61 +1028,452 @@
   var elHint = document.getElementById('gHint');
   var hintLevel = 0;
 
+  /* ⚠️ 托盤一定要洗牌再畫：題庫裡的順序是固定的，照順序畫的話孩子玩兩次就會記住位置。
+     洗出來剛好由小到大的話，把前兩張對調（三年級 numbers 同一個做法）：排排站要的就是由小到大，托盤一開始就排好等於不用排
+     （四張有 1/24 的機會）；備貨的三個積木源 [0, 1, 2] 由小到大就是百、十、一，剛好排在自己那一欄下面。
+     用對調不用重洗：一定會結束，而且由小到大時前兩張一定不一樣，對調之後就不是由小到大。 */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    var up = a.length > 1;
+    for (var i = 1; i < a.length; i++) if (!(a[i - 1] < a[i])) up = false;
+    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function digits3(n){ return [Math.floor(n / 100), Math.floor(n / 10) % 10, n % 10]; }
+
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，任何地方的 pointerup／pointercancel
+     傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 板上畫的積木（拿不起來）：kind 'h'／'t'／'o'，p 是中心點 */
+  function addBlock(B, kind, p){
+    var b = BLK[kind];
+    return addZone(B, p.x - b.w / 2, p.y - b.h / 2, b.w, b.h, 'gblk gb-' + kind);
+  }
+  /* 格子（吸附目標）：記中心點與半寬、半高，給 nearestOpen() 用 */
+  function target(B, x, y, w, h, cls, more){
+    var t = { z:addZone(B, x, y, w, h, cls), cx:x + w / 2, cy:y + h / 2, hw:w / 2, hh:h / 2, done:false };
+    for (var key in more) t[key] = more[key];
+    return t;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (moved) P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      /* 先點選、後來又直接拖走的那一塊：拖完（放好、彈回、capture 遺失都一樣）就不再是「選起來」的，
+         不然下一次點格子會多放一次（codex 第一、二輪） */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的積木一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      /* 放在哪裡看積木的中心點（§六之五：位置一律記中心點），不是手指的位置 */
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  function shrink(P, w, h){ P.w = w; P.h = h; P.el.style.width = w + 'px'; P.el.style.height = h + 'px'; }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 積木源（第 3 關）點一下放好之後，同一個積木源繼續選著，不用每一個都重點一次 */
+  function keepSelected(B, P){ if (!P.locked && !gSolved){ B.selected = P; P.el.classList.add('sel'); } }
+  /* 放進哪一格：放開時積木的中心點（點目的地時是點的位置）落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離
+     （箱子 284 寬、「百」那一欄 140 寬：量中心的話，箱子左下角會被判給「百」那一欄）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+  /* 托盤：一律洗牌後排成一排（正解不可以固定在同一個位置） */
+  function renderTray(B, items, y, mk, step){
+    var x0 = (B.W - (items.length - 1) * step) / 2;
+    shuffle(items).forEach(function(it, i){ mk(it, x0 + i * step, y); });
+  }
+
+  /* 星星（低年級：純收集、不扣分 —— §三、§六之五第 3 點）：這一關沒犯錯 2 顆、犯過錯 1 顆 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var stars = gMistakes === 0 ? 2 : 1;
+    gScore += stars; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var last = gRound === GAME_ORDER.length - 1;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gStars(stars) + '</span> ' + (last ? L().gWin(gScore) : L().gClear);
+    if (!last) gNext.disabled = false;
+  }
+  /* 放錯：說為什麼、記一次錯（只影響這一關拿 2 顆還是 1 顆），分數不動 */
+  function roundMiss(text){ gMistakes++; gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 第二層提示跟著畫面走：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  /* 三欄積木圖（第 2、5 關）：cnt = [百, 十, 一]，xs = 三欄的中心 x */
+  function drawColumns(B, cnt, xs, top){
+    var out = [];
+    ['h', 't', 'o'].forEach(function(kind, c){
+      for (var i = 0; i < cnt[c]; i++) out.push(addBlock(B, kind, blockXY(kind, i, xs[c], top)));
+    });
+    return out;
+  }
+
+  var RENDER = {
+    /* 第 1 關：裝一箱 —— 倉庫裡有 h 個百、t 條十、o 個一。把十一條一條放進百箱，裝滿 10 條換成 1 個百
+       （箱子變成「百」那一欄裡多出來的一個百）。放進「百」那一欄（一條十還不是百）、「一」那一欄 → 彈回＋為什麼。 */
+    pack: function(d){
+      var e = pick(GAME_PACK), n = (e.h + 1) * 100 + (e.t - 10) * 10 + e.o, inCrate = 0, C = PACK_CRATE;
+      var line = trailLine(d.gPackNow(e.h, e.t, e.o));
+      var B = makeBoard(GAME_W, PACK_H);
+      var lbl = addZone(B, C.x, C.lblY, C.w, 22, 'glbl', d.gPackCrate(0));
+      var hcol = target(B, PACK_HCOL.x, PACK_HCOL.y, PACK_HCOL.w, PACK_HCOL.h, 'gbox', { kind:'h' });
+      var ocol = target(B, PACK_OCOL.x, PACK_OCOL.y, PACK_OCOL.w, PACK_OCOL.h, 'gbox', { kind:'o' });
+      var crate = target(B, C.x, C.y, C.w, C.h, 'gcrate', { kind:'crate' });
+      /* 欄名寫「百位／個位」，不寫「百／一」：粗體的「一」單獨放著看起來就是減號（一年級 numbers 的教訓） */
+      addZone(B, PACK_HCOL.x, PACK_HCOL.y + 2, PACK_HCOL.w, 20, 'gcolhd', d.cmpDigits(0));
+      addZone(B, PACK_OCOL.x, PACK_OCOL.y + 2, PACK_OCOL.w, 20, 'gcolhd', d.cmpDigits(2));
+      var hx = PACK_HCOL.x + PACK_HCOL.w / 2, ox = PACK_OCOL.x + PACK_OCOL.w / 2, top = PACK_HCOL.y + PACK_COLTOP, i;
+      for (i = 0; i < e.h; i++) addBlock(B, 'h', blockXY('h', i, hx, top));
+      for (i = 0; i < e.o; i++) addBlock(B, 'o', blockXY('o', i, ox, top));
+      addZone(B, 0, PACK_PILE.lblY, GAME_W, 18, 'glbl', d.gPackPile);
+      gCtx.hint2 = function(){ return d.gPack2(10 - inCrate); };
+      var bars = [];
+      for (i = 0; i < e.t; i++){
+        var p = packPileXY(i, e.t);
+        addPiece(B, { w:PACK_PILE.w, h:PACK_PILE.h, cx:p.x, cy:p.y, cls:'gten', label:d.gTenLabel });
+      }
+      /* 箱子排在最後：吸附範圍重疊時要靠「最近」挑，不是靠陣列裡誰先 */
+      var zones = [hcol, ocol, crate];
+      useTapSelect(B, function(P, pt){
+        var z = nearestOpen(zones, pt, PACK_PAD);
+        if (!z) return false;
+        if (z === hcol){ roundMiss(d.gPackNotH); return false; }
+        if (z === ocol){ roundMiss(d.gPackNotO); return false; }
+        var s = crateSlotXY(inCrate); inCrate++;
+        shrink(P, C.barW, C.barH); P.lock(s.x, s.y); P.el.classList.add('placed');
+        bars.push(P);
+        lbl.textContent = d.gPackCrate(inCrate);
+        if (inCrate === 10){
+          /* 滿 10 條：箱子裡的十拿走，「百」那一欄多一個百 */
+          bars.forEach(function(b){ b.el.classList.add('gone'); });
+          crate.z.classList.add('full');
+          addBlock(B, 'h', blockXY('h', e.h, hx, top));
+          line.textContent = d.gPackNow(e.h + 1, e.t - 10, e.o) + ' = ' + n;
+          roundSolved(d.gPackDone(e.h, e.t, e.o, n));
+        } else gMsg.textContent = '';
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 2 關：寫數字 —— 畫出 h 個百、t 條十、o 個一；數字卡 0～9（拿不完）寫進百位／十位／個位。
+       一格只收「那一種積木的個數」；0 也要寫（不能空著）。 */
+    write: function(d){
+      var e = pick(GAME_WRITE), cnt = [e.h, e.t, e.o], n = e.h * 100 + e.t * 10 + e.o, S = WRITE_SLOT;
+      var line = trailLine('□ □ □');
+      var B = makeBoard(GAME_W, WRITE_H);
+      /* 三欄都框起來（沒有標名字 —— 哪一種積木寫在哪一位，正是這一關要孩子做的事）：0 的那一欄看得出是空的 */
+      WRITE_PIC.x.forEach(function(x){ addZone(B, x - 47, WRITE_PIC.top - 4, 94, 94, 'gpicbox'); });
+      drawColumns(B, cnt, WRITE_PIC.x, WRITE_PIC.top);
+      var slots = S.x.map(function(x, k){
+        addZone(B, x - 32, S.hdY, 64, 18, 'gcolhd', d.cmpDigits(k));
+        return target(B, x - S.size / 2, S.y - S.size / 2, S.size, S.size, 'gslot', { k:k });
+      });
+      function written(){ return slots.map(function(s){ return s.done ? String(s.v) : '□'; }).join(' '); }
+      gCtx.hint2 = function(){
+        for (var k = 0; k < 3; k++) if (!slots[k].done) return d.gWrite2(k, cnt[k]);
+        return '';
+      };
+      for (var v = 0; v <= 9; v++){
+        addPiece(B, { w:WRITE_KEYS.size, h:WRITE_KEYS.size, cx:GAME_W / 2 + ((v % 5) - 2) * WRITE_KEYS.step,
+          cy:WRITE_KEYS.y + Math.floor(v / 5) * WRITE_KEYS.rowStep, text:String(v), cls:'gcard', data:{ v:v } });
+      }
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, GPAD), v = P.data.v;
+        if (!s) return false;
+        if (v !== cnt[s.k]){
+          var j = cnt.indexOf(v);
+          if (cnt[s.k] === 0) roundMiss(d.gWriteZero(s.k));
+          else if (j >= 0 && cnt[j] !== 0) roundMiss(d.gWriteSwap(v, j, s.k));
+          else roundMiss(d.gWriteCount(s.k));
+          return false;
+        }
+        s.done = true; s.v = v; s.z.textContent = String(v); s.z.classList.add('filled');
+        P.home();
+        line.textContent = written();
+        gMsg.textContent = '';
+        if (slots.every(function(x){ return x.done; })){
+          line.textContent = d.gPackNow(e.h, e.t, e.o) + ' = ' + n;
+          roundSolved(d.gWriteDone(e.h, e.t, e.o, n));
+        }
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 3 關：備貨 —— 照訂單上的數放積木。百、十、一三個積木源（洗牌排，不和欄位對齊）；
+       放錯欄 → 彈回＋為什麼；那一位已經夠了（或那一位是 0）→ 彈回＋為什麼。 */
+    build: function(d){
+      var n = pick(GAME_BUILD), want = digits3(n), have = [0, 0, 0], C = BUILD_COL;
+      var line = trailLine(d.gBuildNow(0, 0, 0));
+      var B = makeBoard(GAME_W, BUILD_H);
+      addZone(B, 0, 4, GAME_W, 36, 'gorder', d.gBuildOrder(n));
+      var kinds = ['h', 't', 'o'];
+      var cols = C.x.map(function(x, k){
+        var t = target(B, x, C.y, C.w, C.h, 'gbox', { k:k });
+        addZone(B, x, C.y + 2, C.w, 20, 'gcolhd', d.cmpDigits(k));
+        t.cnt = addZone(B, x, C.y + C.h - 30, C.w, 26, 'gcnt', '0');
+        return t;
+      });
+      gCtx.hint2 = function(){ return d.gBuild2(want[0] - have[0], want[1] - have[1], want[2] - have[2]); };
+      var labels = [d.gHunLabel, d.gTenLabel, d.gOneLabel], cls = ['ghun', 'gten', 'gone1'];
+      renderTray(B, [0, 1, 2], BUILD_TOK.y, function(k, cx, cy){
+        addPiece(B, { w:BUILD_TOK.size, h:BUILD_TOK.size, cx:cx, cy:cy, cls:'gtok ' + cls[k], label:labels[k], data:{ k:k } });
+      }, BUILD_TOK.step);
+      useTapSelect(B, function(P, pt){
+        var c = nearestOpen(cols, pt, GPAD), k = P.data.k;
+        if (!c) return false;
+        if (c.k !== k){ roundMiss(d.gBuildCol(k)); return false; }
+        if (have[k] >= want[k]){ roundMiss(want[k] === 0 ? d.gBuildZero(n, k) : d.gBuildEnough(n, k, want[k])); return false; }
+        addBlock(B, kinds[k], blockXY(kinds[k], have[k], c.cx, C.y + C.top));
+        have[k]++; c.cnt.textContent = String(have[k]);
+        line.textContent = d.gBuildNow(have[0], have[1], have[2]);
+        P.home();
+        gMsg.textContent = '';
+        if (have.join() === want.join()) roundSolved(d.gBuildDone(want[0], want[1], want[2], n));
+        else if (pt.tap) keepSelected(B, P);
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 4 關：排排站 —— 四箱貨放進四格，由小排到大。第 k 格只收第 k 小的那一個；
+       放錯 → 彈回，說出它和那一格該放的數誰大、是哪一位決定的。 */
+    sort: function(d){
+      var set = pick(GAME_SORT), order = set.slice().sort(function(a, b){ return a - b; }), S = SORT_SLOT;
+      var line = trailLine('□ < □ < □ < □');
+      var B = makeBoard(GAME_W, SORT_H);
+      addZone(B, 8, 18, GAME_W - 16, 26, 'glbl', d.gSortArrow);
+      var slots = S.x.map(function(x, k){ return target(B, x - S.w / 2, S.y - S.h / 2, S.w, S.h, 'gslot', { k:k }); });
+      function shown(){ return slots.map(function(s){ return s.done ? String(order[s.k]) : '□'; }).join(' < '); }
+      gCtx.hint2 = function(){
+        for (var k = 0; k < 4; k++) if (!slots[k].done) return d.gSort2(k, order[k]);
+        return '';
+      };
+      /* 兩個數 a > b：為什麼 a 比較大（位數，或第一個不一樣的那一位） */
+      function why(a, b){
+        var sa = String(a), sb = String(b);
+        if (sa.length !== sb.length) return d.gSortWhyLen(a, b);
+        for (var p = 0; p < 3; p++) if (sa.charAt(p) !== sb.charAt(p)) return d.gSortWhyPlace(p, +sa.charAt(p), +sb.charAt(p));
+        return '';
+      }
+      renderTray(B, set, SORT_CARD.y, function(v, cx, cy){
+        addPiece(B, { w:SORT_CARD.w, h:SORT_CARD.h, cx:cx, cy:cy, text:String(v), cls:'gcard', data:{ v:v } });
+      }, SORT_CARD.step);
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, GPAD), v = P.data.v;
+        if (!s) return false;
+        var c = order[s.k];
+        if (v !== c){ roundMiss(v > c ? d.gSortBig(v, c, why(v, c)) : d.gSortSmall(v, c, why(c, v))); return false; }
+        s.done = true; P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        line.textContent = shown();
+        gMsg.textContent = '';
+        if (slots.every(function(x){ return x.done; })) roundSolved(d.gSortDone(order));
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 5 關：開貨車 —— 從 from 開到 to。點一下 +100／+10／+1 就往前開那麼多（這一關沒有拖拉）；
+       開過頭 → 不動＋說為什麼。跨過十或百的時候說「滿 10 個…換成 1 個…」。 */
+    hop: function(d){
+      var e = pick(GAME_HOP), cur = e.from;
+      var line = trailLine(d.gHopNow(cur, e.to));
+      var B = makeBoard(GAME_W, HOP_H);
+      HOP_PIC.x.forEach(function(x, c){ addZone(B, x - 47, 4, 94, HOP_H - 8, 'gpicbox'); addZone(B, x - 47, 4, 94, 20, 'gcolhd', d.cmpDigits(c)); });
+      var drawn = [], cnts = HOP_PIC.x.map(function(x){ return addZone(B, x - 47, HOP_H - 28, 94, 24, 'gcnt', ''); });
+      function draw(){
+        drawn.forEach(function(z){ z.remove(); });
+        var c3 = digits3(cur);
+        drawn = drawColumns(B, c3, HOP_PIC.x, HOP_PIC.top);
+        cnts.forEach(function(z, c){ z.textContent = String(c3[c]); });
+      }
+      draw();
+      gCtx.hint2 = function(){ var r = e.to - cur, r3 = digits3(r); return d.gHop2(r, r3[0], r3[1], r3[2]); };
+      var row = document.createElement('div');
+      row.className = 'gaction';
+      gameStage.appendChild(row);
+      var btns = HOP_STEPS.map(function(k){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn'; b.textContent = '+' + k;
+        b.addEventListener('click', function(){
+          if (gSolved) return;
+          var to = cur + k;
+          if (to > e.to){ roundMiss(d.gHopOver(cur, k, to, e.to)); return; }
+          var before = cur, say = [];
+          cur = to;
+          draw();
+          line.textContent = d.gHopNow(cur, e.to);
+          if (k === 1 && before % 10 === 9) say.push(d.gHopCarry10);
+          if (k !== 100 && Math.floor(cur / 100) > Math.floor(before / 100)) say.push(d.gHopCarry100);
+          if (cur === e.to){
+            btns.forEach(function(x){ x.disabled = true; });
+            roundSolved((say.length ? say.join(' ') + ' ' : '') + d.gHopDone(e.from, e.to));
+          } else if (say.length) roundInfo(say.join(' '));
+          else gMsg.textContent = '';
+          refreshHint();
+        });
+        row.appendChild(b);
+        return b;
+      });
+    }
+  };
+
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistakes = 0; gCtx = {};
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-    buildBlocks(gPic, round.h, round.t, round.o);
-    gPic.setAttribute('aria-label', d.gAria(round.ans));
-    gAskLine.innerHTML = '<span style="font-size:22px;font-weight:800">' + d.gAsk + '</span>';
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = d.gHint1;
-    } else {
-      elHint.textContent = '';
-    }
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }
+  }
 
-    gAnswers.textContent = '';
-    round.opts.forEach(function(v){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = String(v);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        var dd = L();
-        if (v === round.ans){
-          var all = gAnswers.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + dd.gCorrectRetry(round.ans) + '</span>';
-          } else {
-            gScore += 20;
-            gMsg.innerHTML = '<span class="yes">' + dd.gCorrectFirst(round.ans) + '</span>';
-          }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + dd.gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + dd.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gMsg.innerHTML = '<span class="no">' + dd.gTryAgain(v) + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
   function restartGame(){
@@ -914,19 +1481,15 @@
   }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
 
   gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2) return;
     hintLevel++;
-    var round = ROUNDS[gRound];
-    if (hintLevel === 1){
-      elHint.textContent = L().gHint1;
-    } else {
-      elHint.textContent = L().gHint2(round.h, round.t, round.o);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
