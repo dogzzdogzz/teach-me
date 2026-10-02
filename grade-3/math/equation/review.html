@@ -186,25 +186,33 @@
     }
     return a;
   }
-  /* 保證 3 個相異、且不等於正解的錯誤選項；優先用「常見錯誤」候選，不夠再往外補 */
-  function makeWrongs(correct, candidates){
+  /* 保證 3 個相異、且不等於正解的錯誤選項；優先用「常見錯誤」候選，不夠再往外補。
+     avoid：題幹上印出來的數字先當成用過了（§六之三第 4 點：誘答不可以把題幹的數字抄回來）；
+     刻意的迷思誘答由產生器用 avoidExcept() 只放行那一個值。候選與保底都擋在 MAX_OPT 以內。 */
+  var MAX_OPT = 999;
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
-      if (c > 0 && !seen[key]){ seen[key] = true; out.push(c); }
+      if (c > 0 && c <= MAX_OPT && !seen[key]){ seen[key] = true; out.push(c); }
     });
     var step = 1;
-    while (out.length < 3){
+    while (out.length < 3 && step < 60){
       var lo = correct - step, hi = correct + step;
       if (lo > 0 && !seen[String(lo)]){ seen[String(lo)] = true; out.push(lo); }
-      if (out.length < 3 && hi > 0 && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
+      if (out.length < 3 && hi <= MAX_OPT && !seen[String(hi)]){ seen[String(hi)] = true; out.push(hi); }
       step++;
     }
     return out.slice(0, 3);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  /* 題幹上的數字，扣掉 keep（刻意拿來當誘答的那一個），其餘都不可以出現在選項裡 */
+  function avoidExcept(stemNums, keep){
+    return stemNums.filter(function(v){ return keep.indexOf(v) < 0; });
+  }
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -217,12 +225,12 @@
         var ans = randRange(3, 40);
         var c = ans + b;
         var wrongSameOp = c + b; // 誤把加號再加一次
-        var m = mixOpts(ans, [wrongSameOp, b, c]);
+        var m = mixOpts(ans, [wrongSameOp], [b, c]);
         return { b:b, ans:ans, c:c, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
         return {
-          stem: lang === 'zh' ? '（　）＋ ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(  ) + ' + d.b + ' = ' + d.c + '. What should (  ) be?',
+          stem: lang === 'zh' ? '（　）＋ ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(\u00a0\u00a0) + ' + d.b + ' = ' + d.c + '. What should (\u00a0\u00a0) be?',
           opts: d.opts.map(String), ans: d.ansIdx,
           why: lang === 'zh'
             ? '逆運算：' + d.c + ' － ' + d.b + ' ＝ ' + d.ans + '。代回去：' + d.ans + ' ＋ ' + d.b + ' ＝ ' + d.c + '，正確。'
@@ -236,16 +244,16 @@
         var c = ansTotal - b;
         var ans = ansTotal;
         var wrongSameOp = Math.abs(c - b); // 誤把加號改成再減一次
-        var m = mixOpts(ans, [wrongSameOp, b, c]);
+        var m = mixOpts(ans, [wrongSameOp], [b, c]);
         return { b:b, ans:ans, c:c, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
         return {
-          stem: lang === 'zh' ? '（　）－ ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(  ) − ' + d.b + ' = ' + d.c + '. What should (  ) be?',
+          stem: lang === 'zh' ? '（　）－ ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(\u00a0\u00a0) − ' + d.b + ' = ' + d.c + '. What should (\u00a0\u00a0) be?',
           opts: d.opts.map(String), ans: d.ansIdx,
           why: lang === 'zh'
             ? '（　）在前面，逆運算是加回去：' + d.c + ' ＋ ' + d.b + ' ＝ ' + d.ans + '。代回去：' + d.ans + ' － ' + d.b + ' ＝ ' + d.c + '，正確。'
-            : '(  ) is first, so add it back: ' + d.c + ' + ' + d.b + ' = ' + d.ans + '. Check: ' + d.ans + ' − ' + d.b + ' = ' + d.c + ', correct.'
+            : '(\u00a0\u00a0) is first, so add it back: ' + d.c + ' + ' + d.b + ' = ' + d.ans + '. Check: ' + d.ans + ' − ' + d.b + ' = ' + d.c + ', correct.'
         };
       } },
     { id:'subSecond', cat:'equation',
@@ -254,16 +262,16 @@
         var c = randRange(1, a - 1);
         var ans = a - c;
         var wrongInverse = a + c; // 誤把 a、c 加起來
-        var m = mixOpts(ans, [wrongInverse, a, c]);
+        var m = mixOpts(ans, [wrongInverse], [a, c]);
         return { a:a, c:c, ans:ans, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
         return {
-          stem: lang === 'zh' ? d.a + ' － （　）＝ ' + d.c + '，（　）應該填多少？' : d.a + ' − (  ) = ' + d.c + '. What should (  ) be?',
+          stem: lang === 'zh' ? d.a + ' － （　）＝ ' + d.c + '，（　）應該填多少？' : d.a + ' − (\u00a0\u00a0) = ' + d.c + '. What should (\u00a0\u00a0) be?',
           opts: d.opts.map(String), ans: d.ansIdx,
           why: lang === 'zh'
             ? '（　）在中間，不能用加的：' + d.a + ' － ' + d.c + ' ＝ ' + d.ans + '。代回去：' + d.a + ' － ' + d.ans + ' ＝ ' + d.c + '，正確。'
-            : '(  ) is in the middle, so don’t add: ' + d.a + ' − ' + d.c + ' = ' + d.ans + '. Check: ' + d.a + ' − ' + d.ans + ' = ' + d.c + ', correct.'
+            : '(\u00a0\u00a0) is in the middle, so don’t add: ' + d.a + ' − ' + d.c + ' = ' + d.ans + '. Check: ' + d.a + ' − ' + d.ans + ' = ' + d.c + ', correct.'
         };
       } },
     { id:'mulFirst', cat:'equation',
@@ -272,12 +280,12 @@
         var ans = randRange(2, 12);
         var c = ans * b;
         var wrongSameOp = c * b;
-        var m = mixOpts(ans, [wrongSameOp, b, c]);
+        var m = mixOpts(ans, [wrongSameOp], [b, c]);
         return { b:b, ans:ans, c:c, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
         return {
-          stem: lang === 'zh' ? '（　）× ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(  ) × ' + d.b + ' = ' + d.c + '. What should (  ) be?',
+          stem: lang === 'zh' ? '（　）× ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(\u00a0\u00a0) × ' + d.b + ' = ' + d.c + '. What should (\u00a0\u00a0) be?',
           opts: d.opts.map(String), ans: d.ansIdx,
           why: lang === 'zh'
             ? '逆運算：' + d.c + ' ÷ ' + d.b + ' ＝ ' + d.ans + '。代回去：' + d.ans + ' × ' + d.b + ' ＝ ' + d.c + '，正確。'
@@ -290,12 +298,12 @@
         var c = randRange(2, 12);
         var ans = c * b;
         var wrongAdd = b + c;
-        var m = mixOpts(ans, [wrongAdd, b, c]);
+        var m = mixOpts(ans, [wrongAdd], [b, c]);
         return { b:b, c:c, ans:ans, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
         return {
-          stem: lang === 'zh' ? '（　）÷ ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(  ) ÷ ' + d.b + ' = ' + d.c + '. What should (  ) be?',
+          stem: lang === 'zh' ? '（　）÷ ' + d.b + ' ＝ ' + d.c + '，（　）應該填多少？' : '(\u00a0\u00a0) ÷ ' + d.b + ' = ' + d.c + '. What should (\u00a0\u00a0) be?',
           opts: d.opts.map(String), ans: d.ansIdx,
           why: lang === 'zh'
             ? '逆運算：' + d.c + ' × ' + d.b + ' ＝ ' + d.ans + '。代回去：' + d.ans + ' ÷ ' + d.b + ' ＝ ' + d.c + '，正確。'
@@ -308,16 +316,16 @@
         var c = randRange(2, 9);
         var a = ans * c;
         var wrongInverse = a * c;
-        var m = mixOpts(ans, [wrongInverse, a, c]);
+        var m = mixOpts(ans, [wrongInverse], [a, c]);
         return { a:a, c:c, ans:ans, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
         return {
-          stem: lang === 'zh' ? d.a + ' ÷ （　）＝ ' + d.c + '，（　）應該填多少？' : d.a + ' ÷ (  ) = ' + d.c + '. What should (  ) be?',
+          stem: lang === 'zh' ? d.a + ' ÷ （　）＝ ' + d.c + '，（　）應該填多少？' : d.a + ' ÷ (\u00a0\u00a0) = ' + d.c + '. What should (\u00a0\u00a0) be?',
           opts: d.opts.map(String), ans: d.ansIdx,
           why: lang === 'zh'
             ? '（　）在中間，用被除數 ÷ 商：' + d.a + ' ÷ ' + d.c + ' ＝ ' + d.ans + '。代回去：' + d.a + ' ÷ ' + d.ans + ' ＝ ' + d.c + '，正確。'
-            : '(  ) is in the middle: dividend ÷ quotient = ' + d.a + ' ÷ ' + d.c + ' = ' + d.ans + '. Check: ' + d.a + ' ÷ ' + d.ans + ' = ' + d.c + ', correct.'
+            : '(\u00a0\u00a0) is in the middle: dividend ÷ quotient = ' + d.a + ' ÷ ' + d.c + ' = ' + d.ans + '. Check: ' + d.a + ' ÷ ' + d.ans + ' = ' + d.c + ', correct.'
         };
       } },
     { id:'wordAdd', cat:'equation',
@@ -326,7 +334,7 @@
         var ans = randRange(3, 30);
         var c = ans + b;
         var wrongSameOp = b + c;
-        var m = mixOpts(ans, [wrongSameOp, b, c]);
+        var m = mixOpts(ans, [wrongSameOp], [b, c]);
         return { b:b, ans:ans, c:c, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
@@ -337,7 +345,7 @@
           opts: d.opts.map(String), ans: d.ansIdx,
           why: lang === 'zh'
             ? '列式：（　）＋ ' + d.b + ' ＝ ' + d.c + '，逆運算：' + d.c + ' － ' + d.b + ' ＝ ' + d.ans + '。'
-            : 'Equation: (  ) + ' + d.b + ' = ' + d.c + '. Inverse: ' + d.c + ' − ' + d.b + ' = ' + d.ans + '.'
+            : 'Equation: (\u00a0\u00a0) + ' + d.b + ' = ' + d.c + '. Inverse: ' + d.c + ' − ' + d.b + ' = ' + d.ans + '.'
         };
       } },
     { id:'wordSub', cat:'equation',
@@ -347,18 +355,18 @@
         var c = ansTotal - b;
         var ans = ansTotal;
         var wrongSameOp = Math.abs(c - b);
-        var m = mixOpts(ans, [wrongSameOp, b, c]);
+        var m = mixOpts(ans, [wrongSameOp], [b, c]);
         return { b:b, ans:ans, c:c, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
         return {
           stem: lang === 'zh'
             ? '一盒餅乾原本有（　）片，吃掉 ' + d.b + ' 片後剩下 ' + d.c + ' 片，這盒餅乾原本有幾片？'
-            : 'A box of cookies had (  ) pieces. After eating ' + d.b + ', ' + d.c + ' are left. How many were there originally?',
+            : 'A box of cookies had (\u00a0\u00a0) pieces. After eating ' + d.b + ', ' + d.c + ' are left. How many were there originally?',
           opts: d.opts.map(String), ans: d.ansIdx,
           why: lang === 'zh'
             ? '列式：（　）－ ' + d.b + ' ＝ ' + d.c + '，逆運算：' + d.c + ' ＋ ' + d.b + ' ＝ ' + d.ans + '。'
-            : 'Equation: (  ) − ' + d.b + ' = ' + d.c + '. Inverse: ' + d.c + ' + ' + d.b + ' = ' + d.ans + '.'
+            : 'Equation: (\u00a0\u00a0) − ' + d.b + ' = ' + d.c + '. Inverse: ' + d.c + ' + ' + d.b + ' = ' + d.ans + '.'
         };
       } },
     { id:'sibDivide', cat:'divide',
@@ -366,7 +374,8 @@
         var M = pickUnused([2,3,4,5,6,7,8,9], used);
         var k = randRange(2, 9);
         var N = M * k;
-        var m = mixOpts(k, [k - 1, k + 1, M]);
+        /* 刻意的迷思誘答：把「每份幾個」M 當成「幾份」（divide 那一課的核心迷思）；只放行 M */
+        var m = mixOpts(k, [k - 1, k + 1, M], avoidExcept([N, M], [M]));
         return { N:N, M:M, k:k, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
@@ -382,7 +391,7 @@
         var b = randRange(1, Math.min(a, 20));
         var c = randRange(1, 30);
         var ans = a - b + c;
-        var m = mixOpts(ans, [a - b - c, a + b - c, a - b]);
+        var m = mixOpts(ans, [a - b - c, a + b - c, a - b], [a, b, c]);
         return { a:a, b:b, c:c, ans:ans, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
@@ -401,7 +410,7 @@
         var a = pickUnused([23,34,45,56,67,78,25,36,47,58], used);
         var b = randRange(10, 90);
         var ans = a + b;
-        var m = mixOpts(ans, [ans - 10, ans + 10, a - b < 0 ? ans + 1 : Math.abs(a - b)]);
+        var m = mixOpts(ans, [ans - 10, ans + 10, a - b < 0 ? ans + 1 : Math.abs(a - b)], [a, b]);
         return { a:a, b:b, ans:ans, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
