@@ -129,15 +129,54 @@
   table.stat tr.total td{background:var(--green-soft);color:var(--green);font-weight:800}
   .bigeq{font-size:26px;font-weight:800;color:var(--green);letter-spacing:1px}
   .bigans{font-size:26px;font-weight:800;color:var(--green)}
-  .gopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
-  .gopt{
-    border:3px solid var(--line);background:var(--card);border-radius:16px;padding:16px 10px;
-    font-size:20px;font-weight:800;color:var(--ink);cursor:pointer;min-height:60px;
-    display:flex;align-items:center;justify-content:center;text-align:center;
-  }
-  .gopt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
-  .gopt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
-  .gopt:disabled{cursor:default;opacity:.9}
+  /* ---- 小遊戲：分一分、畫一筆、填數量、排名次、列算式（§六之五） ---- */
+  .gamemsg{text-align:center}
+  .game .hint{text-align:center}
+  .gstage{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0 }
+  .gask{ font-weight:700; text-align:center; font-size:18px }
+  .gtrail{ font-size:20px; font-weight:800; color:var(--ink); text-align:center; line-height:1.3; min-height:2.6em;
+    display:flex; align-items:center; justify-content:center }
+  .gwrap{ position:relative; margin:0 auto }
+  .gboard{ position:absolute; left:0; top:0; transform-origin:0 0; background:var(--bg); border-radius:16px }
+  .gboard > div, .gboard > button{ position:absolute }
+  .gpiece{ left:0; top:0; display:flex; align-items:center; justify-content:center;
+    touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; transition:transform .25s ease; z-index:5 }
+  .gpiece.dragging{ transition:none; cursor:grabbing; z-index:50 !important; filter:drop-shadow(0 6px 8px rgba(70,60,40,.25)) }
+  .gpiece.sel{ outline:3px dashed var(--blue); outline-offset:4px; border-radius:12px }
+  .gpiece.locked{ cursor:default; pointer-events:none }
+  .gcard{ background:var(--card); border:3px solid var(--line); border-radius:12px; font-size:24px; font-weight:800; color:var(--ink) }
+  .gcard.placed{ border-color:var(--green); background:var(--green-soft); color:var(--green) }
+  .gcard.mini{ border-width:2px; border-radius:8px; font-size:17px }
+  .gsortc{ font-size:32px }
+  .gcatc{ flex-direction:column; font-size:13px; line-height:1.15; text-align:center; padding:2px 4px }
+  .gcatc .gico{ font-size:24px; line-height:1.1 }
+  .gorder{ display:flex; align-items:center; justify-content:center; text-align:center; font-size:20px; font-weight:800; color:var(--ink); line-height:1.2; pointer-events:none }
+  .glbl{ display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:var(--muted); pointer-events:none }
+  .gslot{ display:flex; align-items:center; justify-content:center; border:3px dashed var(--line); border-radius:10px; background:var(--card) }
+  .gslot.filled{ border-color:transparent; background:transparent }   /* 填好就把空格的框藏起來，不然卡片外面還有一圈虛線 */
+  /* 第 1 關的兩個籃子：籃名在上、張數在下，放好的卡片縮小排在中間 */
+  .gbin{ border:3px dashed var(--blue); background:var(--blue-soft); border-radius:16px }
+  .gbinh, .gbinn{ display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--blue); pointer-events:none }
+  .gbinh{ font-size:17px }
+  .gbinn{ font-size:15px }
+  /* 第 2 關：一個一個進來的東西（亮的是現在這一個），和三列畫記（每一列是一個按鈕） */
+  .gchip{ display:flex; align-items:center; justify-content:center; font-size:15px; line-height:1; border:2px solid var(--line);
+    border-radius:6px; background:var(--card); pointer-events:none }
+  .gchip.done{ opacity:.28 }
+  .gchip.on{ border-color:var(--orange); background:var(--orange-soft); box-shadow:0 0 0 2px var(--orange) }
+  .grow{ display:flex; align-items:center; gap:4px; border:2px solid var(--line); border-radius:12px; background:var(--card);
+    padding:0 8px; cursor:pointer; font:inherit; color:var(--ink); text-align:left }
+  .grown{ flex:none; font-size:15px; font-weight:700; line-height:1.2 }
+  .growt{ display:flex; align-items:center }
+  /* 第 3～5 關的統計表：和範例的表同色 */
+  .gth{ display:flex; align-items:center; justify-content:center; background:var(--blue-soft); color:var(--blue); font-size:14px; font-weight:800;
+    border:1px solid var(--line); pointer-events:none }
+  .gtd{ display:flex; align-items:center; justify-content:center; background:var(--card); border:1px solid var(--line); pointer-events:none }
+  .gname{ justify-content:flex-start; padding:0 6px; font-size:14px; font-weight:700; line-height:1.2 }
+  .gcnt{ font-size:20px; font-weight:800 }
+  .gtot{ background:var(--green-soft); color:var(--green); font-weight:800 }
+  /* 遊戲裡的數字用西文字型：PingFang 的粗體「−」又寬又平 */
+  .gtrail, .gcard, .gslot, .gorder, .gcnt, #gMsg{ font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif }
 </style>
 </head>
 <body>
@@ -251,22 +290,18 @@
   <!-- 6. 小遊戲 -->
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
-    <h2 data-i18n="s6h2">讀表大挑戰</h2>
-    <p class="lead" data-i18n="s6lead">一類一類數，別漏掉也別數兩次！</p>
+    <h2 data-i18n="s6h2">分類整理大挑戰</h2>
+    <p class="lead" data-i18n="s6lead">五關五種玩法：分一分、畫一筆、填數量、排名次、列算式。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
-        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+        <span><span data-i18n="gScoreLabel">星星</span> <b id="gScore">0</b> ⭐</span>
       </div>
-      <p class="hopline" id="gAskLine"></p>
-      <div class="picwrap" id="gPic"></div>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
-      </div>
-      <div class="gopts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -325,34 +360,6 @@
      不然「哪一類最多」根本沒有唯一答案。 */
   var READ_EX = { wi:2, cats:[0,1,2], counts:[6,4,3] };
 
-  /* 遊戲五關：五種讀表問題。cats 與 counts 索引對齊、長度一定相同；
-     opts 對 most／least 存的是「cats 的索引」，對其他 kind 存的是數量。
-     誘答都是真的會犯的錯：讀錯一列、只加兩類、把兩類加起來當成相差。 */
-  var ROUNDS = [
-    { kind:'count', wi:0, cats:[0,1,2], counts:[4,2,5], t:0,        opts:[4,5,2],  ans:0 },
-    { kind:'most',  wi:1, cats:[0,1,2], counts:[3,6,2],             opts:[0,2,1],  ans:2 },
-    { kind:'total', wi:2, cats:[0,1,2], counts:[2,3,4],             opts:[7,5,9],  ans:2 },
-    { kind:'diff',  wi:0, cats:[1,2,3], counts:[6,2,3], a:0, b:1,   opts:[8,4,2],  ans:1 },
-    { kind:'least', wi:1, cats:[0,2,3], counts:[5,2,4],             opts:[0,2,1],  ans:2 }
-  ];
-
-  /* 一堆散落的東西：一個一個畫出來，每列最多 10 個。
-     data-count 讓檢查腳本驗「畫出來的數量等於資料說的數量」，不必從像素反推。 */
-  function itemsSVG(icons){
-    var size = 26, perRow = 10, n = icons.length;
-    var cols = Math.min(n, perRow) || 1;
-    var rows = Math.ceil(n / perRow) || 1;
-    var w = cols * size + 12, h = rows * size + 10;
-    var s = '<svg data-count="' + n + '" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h +
-            '" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
-    for (var i = 0; i < n; i++){
-      s += '<text x="' + (6 + (i % perRow) * size) + '" y="' + (5 + Math.floor(i / perRow) * size + size - 7) +
-           '" font-size="20">' + icons[i] + '</text>';
-    }
-    s += '</svg>';
-    return s;
-  }
-
   /* 畫記：一個東西畫一筆，五筆一組。
      中文一組寫成一個「正」字（五畫），英文一組畫成五槓的柵欄。
      只用 <line>，不用 <text> —— 畫記本身是筆畫，不是字。
@@ -403,24 +410,108 @@
     return s;
   }
 
-  /* 把各類的東西輪流排開（不是一類一類擺在一起）—— 混在一起才需要真的分類數。 */
-  function mixIcons(wi, cats, counts){
-    var left = counts.slice(), out = [], any = true;
-    while (any){
-      any = false;
-      for (var i = 0; i < cats.length; i++){
-        if (left[i] > 0){ out.push(WORLDS[wi].icons[cats[i]]); left[i]--; any = true; }
-      }
-    }
-    return out;
-  }
-
   /* 從 records 數出每一類的數量（只數前 upto 筆）。數量是算出來的，不是寫死的。 */
   function countsUpTo(ex, upto){
     var c = ex.cats.map(function(){ return 0; });
     for (var i = 0; i < upto && i < ex.records.length; i++) c[ex.records[i]]++;
     return c;
   }
+
+  /* ---------- 小遊戲「分類整理大挑戰」的題庫與版面（§六之五：五關五種玩法） ----------
+     版面一律是畫板上的 px（畫板寬 GAME_W），位置一律記「中心點」。拿得起來的東西至少 GPICK × GPICK
+     （300 寬的畫板在 375px 的手機上縮成 289px：48 → 46px，還是 ≥ 44）。五關對應範例 1、2、3、4（最多／最少）、4（多幾個）。 */
+  var GAME_W = 300, GPICK = 48, GPAD = 6;
+  var GAME_ORDER = ['sort', 'tally', 'fill', 'rank', 'eq'];
+
+  /* 第 1 關：分一分（範例 1）。卡片代碼 0＝🔴 1＝🟥 2＝🔵 3＝🟦：顏色 ＝ code >> 1（0 紅、1 藍），
+     形狀 ＝ code & 1（0 圓、1 方），和 CARD_ICONS[顏色][形狀] 是同一張表。rule 0＝照顏色分、1＝照形狀分；
+     左邊的籃子是 0（紅色／圓形）、右邊是 1（藍色／方形）。每一題四種卡都有 —— 照錯特徵分的話，
+     一定有卡片會放進另一個籃子（🟥 是紅色、也是方形）。 */
+  var GAME_SORT = [
+    { rule:0, cards:[0,3,1,2,0,1,3] },
+    { rule:1, cards:[2,1,0,3,1,2,1] },
+    { rule:0, cards:[1,2,3,0,2,3,1,2] },
+    { rule:1, cards:[3,0,1,2,0,3,0] },
+    { rule:0, cards:[2,0,3,1,0,2,3] },
+    { rule:1, cards:[1,0,3,2,1,3,0,1] }
+  ];
+  function cardCol(c){ return c >> 1; }
+  function cardShp(c){ return c & 1; }
+  function sortBin(rule, c){ return rule === 0 ? cardCol(c) : cardShp(c); }
+  var SORT_H = 350;
+  /* 兩個籃子之間只隔 8px、吸附範圍各放寬 GPAD ＝ 6 —— 中間 4px 兩邊都碰得到，要挑「最近」的 */
+  var SORT_BIN = { x:[6, 154], y:40, w:140, h:150, mini:30, miniStep:35, miniX:18, miniY:[52, 88] };
+  var SORT_CARD = { size:56, step:70, y:250, rowStep:64, perRow:4 };
+
+  /* 第 2 關：畫一筆（範例 2）。records 是一個一個進來的順序（值 ＝ cats 的索引），每一類的數量由它數出來、不寫死。
+     每一題都有一類到 6 筆以上（寫完一個正字還要接著畫），也有不到 5 筆的類。 */
+  var GAME_TALLY = [
+    { wi:0, cats:[0,1,2], records:[0,1,0,2,0,0,1,2,0,1,0] },
+    { wi:1, cats:[0,1,3], records:[1,0,1,1,2,1,0,1,2,1] },
+    { wi:2, cats:[0,1,2], records:[2,2,0,2,1,2,0,2,2,1,0] },
+    { wi:0, cats:[1,2,3], records:[0,2,0,1,0,2,0,0,1,0,2,0] },
+    { wi:1, cats:[0,2,3], records:[2,1,2,0,2,2,1,2,0,2] },
+    { wi:2, cats:[1,2,3], records:[1,0,1,2,1,1,0,1,1,2,0] }
+  ];
+  var TALLY_H = 242;
+  var TALLY_CHIP = { y:22, step:24, size:22 };
+  var TALLY_ROW = { x:6, w:288, h:56, y:48, step:62, nameW:124 };
+  var TALLY_ZOOM = 1.5;
+
+  /* 第 3 關：填數量（範例 3）。每一列畫出 counts 那麼多筆，「數量」空著；數字卡 ＝ 三列的數量、總數，
+     加上兩張真的會犯的錯：把一個正字當成 1 筆（最多那一列：正字的個數 ＋ 剩下的筆數）、總數漏加最後一列。
+     六張卡兩兩不同，所以每一張卡剛好只有一格收、兩張陷阱卡哪一格都不收。 */
+  var GAME_FILL = [
+    { wi:1, cats:[0,1,2], counts:[7,4,2] },
+    { wi:2, cats:[0,1,2], counts:[3,6,4] },
+    { wi:0, cats:[0,1,3], counts:[5,2,8] },
+    { wi:1, cats:[0,2,3], counts:[2,9,3] },
+    { wi:2, cats:[1,2,3], counts:[6,3,5] },
+    { wi:0, cats:[1,2,3], counts:[4,7,2] }
+  ];
+  function fillGateDecoy(n){ return Math.floor(n / 5) + n % 5; }   /* 一個正字當成 1 筆：7 → 1 ＋ 2 ＝ 3 */
+  function fillCards(e){
+    var total = 0, big = 0;
+    e.counts.forEach(function(n, i){ total += n; if (n > e.counts[big]) big = i; });
+    var out = e.counts.map(function(n){ return n; });
+    out.push(total, fillGateDecoy(e.counts[big]), total - e.counts[e.counts.length - 1]);
+    return out;
+  }
+  var FILL_H = 344;
+  /* 一列 58 高、空格 50 高：上下兩格只隔 8px，吸附範圍一樣會重疊 */
+  var FILL_TAB = { x:4, y:4, w:292, headH:28, rowH:58, nameW:100, tallyW:128, zoom:1.4, slotW:56, slotH:50 };
+  var FILL_CARD = { w:GPICK, h:52, step:50, y:312 };
+
+  /* 第 4 關：排名次（範例 4：哪一類最多、最少）。三類的數量兩兩不同（不然「最多」不只一個），
+     而且表上的順序不是已經由多到少。 */
+  var GAME_RANK = [
+    { wi:1, cats:[0,1,2], counts:[3,7,5] },
+    { wi:2, cats:[0,1,3], counts:[6,2,4] },
+    { wi:0, cats:[0,2,3], counts:[4,8,6] },
+    { wi:1, cats:[1,2,3], counts:[5,3,9] },
+    { wi:2, cats:[0,2,3], counts:[5,2,7] },
+    { wi:0, cats:[1,2,3], counts:[2,6,4] }
+  ];
+  var RANK_H = 322;
+  var RANK_TAB = { x:4, y:4, w:292, headH:26, rowH:36, nameW:150, tallyW:82, zoom:1 };
+  var RANK_SLOT = { x:[50, 150, 250], y:200, w:94, h:64, labelY:146 };
+  var RANK_CARD = { w:94, h:64, step:100, y:282 };
+
+  /* 第 5 關：列算式（範例 4：多幾個）。題目問「a 比 b 多幾個」，counts[a] > counts[b]；
+     □ ○ □ ＝ □ —— 第一格只收 a、第二格只收 b、○ 只收減號、答案只收 counts[a] − counts[b]。
+     陷阱：第三類那一張、加號、加起來的和。差與和都不等於表上的任何一個數量。 */
+  var GAME_EQ = [
+    { wi:2, cats:[0,1,2], counts:[7,4,2], a:0, b:2 },
+    { wi:0, cats:[0,1,3], counts:[3,8,4], a:1, b:0 },
+    { wi:1, cats:[0,2,3], counts:[6,2,5], a:2, b:1 },
+    { wi:2, cats:[1,2,3], counts:[4,9,6], a:1, b:2 },
+    { wi:0, cats:[1,2,3], counts:[8,5,2], a:0, b:1 },
+    { wi:1, cats:[0,1,2], counts:[2,7,3], a:1, b:2 }
+  ];
+  var EQ_H = 350;
+  var EQ_SLOT = { y:180, h:56, s0:{ cx:41, w:70 }, op:{ cx:108, w:48 }, s2:{ cx:175, w:70 }, eqX:222, ans:{ cx:264, w:56 } };
+  var EQ_ROWCARD = { w:70, h:52, step:80, y:252 };
+  var EQ_SMALL = { w:GPICK, h:52, step:60, y:316 };
 
   /* ---------- i18n ---------- */
   var I18N = {
@@ -443,7 +534,7 @@
       s3h2:'填成一張統計表', s3lead:'數畫記，把數量填進去。加起來要等於總數。',
       s4h2:'讀表回答問題', s4lead:'答案都藏在數量欄裡。',
       s5h2:'檢查一下', s5lead:'點一下答案，馬上知道對不對！',
-      s6h2:'讀表大挑戰', s6lead:'一類一類數，別漏掉也別數兩次！',
+      s6h2:'分類整理大挑戰', s6lead:'五關五種玩法：分一分、畫一筆、填數量、排名次、列算式。',
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a>。',
@@ -580,50 +671,110 @@
           why:'各類加起來要等於總數：5 ＋ 4 ＋ 2 ＝ 11，比 12 少 1，表格一定有地方錯了，要回去一筆一筆對過。' }
       ],
 
-      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
-      gAsk:function(r){
-        var head = '看一看這一堆' + this.thingName(r.wi) + '。<br>';
-        if (r.kind === 'count') return head + this.catName(r.wi, r.cats[r.t]) + '有幾' + this.unitName(r.wi) + '？';
-        if (r.kind === 'most')  return head + '哪一類最多？';
-        if (r.kind === 'least') return head + '哪一類最少？';
-        if (r.kind === 'total') return head + '全部一共有幾' + this.unitName(r.wi) + '？';
-        return head + this.catName(r.wi, r.cats[r.a]) + '比' + this.catName(r.wi, r.cats[r.b]) +
-               '多幾' + this.unitName(r.wi) + '？';
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'星星',
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gAsks:{
+        sort:'照上面寫的標準，把每一張卡片拖進它的籃子。也可以先點卡片、再點籃子。',
+        tally:'這一關用點的：亮起來的是哪一類，就點那一類的那一列，畫一筆。',
+        fill:'數一數每一列的畫記，把數字卡拖進「數量」那一格，最後填總數。也可以先點卡片、再點格子。',
+        rank:'看數量，把類別卡從最多排到最少。也可以先點卡片、再點格子。',
+        eq:'用表上的數量排出算式，再放答案。也可以先點卡片、再點格子。'
       },
-      gOpt:function(r, o){
-        return (r.kind === 'most' || r.kind === 'least') ? this.catName(r.wi, r.cats[o]) : this.qty(r.wi, o);
+      gHints:{
+        sort:'先看上面的標準：這一關只看那一個特徵，另一個不用管。',
+        tally:'看亮起來的那一個是哪一類，就在那一類的那一列畫一筆。',
+        fill:'一個正字是 5 筆，再數後面還有幾筆。總數是三列加起來。',
+        rank:'比數量欄的數字：最大的放「最多」，最小的放「最少」。',
+        eq:'問「多幾個」要用減的：大的減小的。'
       },
-      gHintBtn:'💡 提示',
-      gHint1:function(r){
-        return '一類一類數，數過的先畫一筆記起來。';
+      gStars:function(n){ return '⭐ +' + n; },
+      gWin:function(s){ return '五關全過！一共 ' + s + ' 顆星星 🏆 按「重新開始」再玩一次。'; },
+      gClear:'按「下一關」繼續。',
+      opPlus:'＋', opMinus:'－', eqSign:'＝',
+      sortFeat:[['紅色', '藍色'], ['圓形', '方形']],
+
+      /* 第 1 關：分一分。籃子的名字就是那張卡的特徵（「🟥 是紅色的」「🟥 是方形的」） */
+      gSortRule:function(rule){ return rule === 0 ? '🎨 照顏色分' : '🔷 照形狀分'; },
+      gSortNow:function(rule, a, b){
+        return this.sortCats[rule][0] + ' ' + this.cardQty(a) + '、' + this.sortCats[rule][1] + ' ' + this.cardQty(b);
       },
-      gHint2:function(r){
-        var self = this;
-        return '提示：' + r.cats.map(function(ci, i){
-          return self.catName(r.wi, ci) + ' ' + self.qty(r.wi, r.counts[i]);
-        }).join('、') + '。';
+      gSortWrong:function(rule, icon, b){
+        return icon + ' 是' + this.sortFeat[rule][b] + '的，要放進「' + this.sortCats[rule][b] + '」。這一關只看' + (rule === 0 ? '顏色，不看形狀' : '形狀，不看顏色') + '。';
       },
-      gWhy:function(r){
-        var t = r.counts.reduce(function(a, b){ return a + b; }, 0);
-        if (r.kind === 'count') return '數出來' + this.catName(r.wi, r.cats[r.t]) + '有 ' + this.qty(r.wi, r.counts[r.t]) + '。';
-        if (r.kind === 'most'){
-          var mi = r.counts.indexOf(Math.max.apply(null, r.counts));
-          return r.counts[mi] + ' 最大，所以' + this.catName(r.wi, r.cats[mi]) + '最多。';
-        }
-        if (r.kind === 'least'){
-          var li = r.counts.indexOf(Math.min.apply(null, r.counts));
-          return r.counts[li] + ' 最小，所以' + this.catName(r.wi, r.cats[li]) + '最少。';
-        }
-        if (r.kind === 'total') return r.counts.join(' ＋ ') + ' ＝ ' + t + '，全部一共 ' + this.qty(r.wi, t) + '。';
-        return r.counts[r.a] + ' － ' + r.counts[r.b] + ' ＝ ' + (r.counts[r.a] - r.counts[r.b]) + '，多 ' +
-               this.qty(r.wi, r.counts[r.a] - r.counts[r.b]) + '。';
+      gSortDone:function(rule, a, b, n){
+        return '每一張都剛好進一個籃子：' + a + ' ＋ ' + b + ' ＝ ' + this.cardQty(n) + '。';
       },
-      gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:function(v){ return '答對了！＋20 分！答案就是 ' + v + '。'; },
-      gCorrectRetry:function(v){ return '答對了！＋10 分。答案就是 ' + v + '。'; },
-      gTryAgain:'再數一次：一類一類數，別漏掉也別數兩次。',
-      gClear:'按「下一關」繼續讀表。',
-      gWin:function(score){ return '五關全過！最後得分 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; }
+      gSort2:function(rule, icon, b){
+        return '下一張 ' + icon + ' 是' + this.sortFeat[rule][b] + '的 → 放進「' + this.sortCats[rule][b] + '」。';
+      },
+
+      /* 第 2 關：畫一筆 */
+      gTallyNow:function(wi, k, n){
+        return k >= n ? '全部 ' + this.qty(wi, n) + '都記好了' : '記好 ' + this.qty(wi, k) + '，還有 ' + this.qty(wi, n - k);
+      },
+      gTallyWrong:function(wi, ci, icon){
+        return '這一個是 ' + icon + ' ' + this.catName(wi, ci) + '，要畫在「' + this.catName(wi, ci) + '」那一列。';
+      },
+      gTallyDone:function(wi, counts, n){
+        return '一個一筆、五筆一個正字：' + counts.join(' ＋ ') + ' ＝ ' + n + '，和全部的 ' + this.qty(wi, n) + '一樣多。';
+      },
+      gTally2:function(wi, ci, icon){
+        return '現在亮的是 ' + icon + ' → 點「' + this.catName(wi, ci) + '」那一列。';
+      },
+
+      /* 第 3 關：填數量 */
+      gFillNow:function(k){ return '填好 ' + k + ' / 4 格'; },
+      gFillGate:'一個正字算 5 筆，不是算 1 筆！再數一次。',
+      gFillRow:function(v, n){
+        if (n > 5) return '一個正字是 5 筆，再加上後面的幾筆：這一列不是 ' + v + ' 筆。';
+        if (n === 5) return '一個寫滿的正字就是 5 筆：這一列不是 ' + v + ' 筆。';
+        return '一筆一筆數：這一列不是 ' + v + ' 筆。';
+      },
+      gFillTotal:function(v){ return '總數要把三列都加起來：不是 ' + v + '。'; },
+      gFillSkip:'漏加了一列：總數要把三列都加起來。',
+      gFillDone:function(counts, total){
+        return counts.join(' ＋ ') + ' ＝ ' + total + '：各類加起來就是總數。';
+      },
+      gFill2:function(wi, ci, n){
+        var head = this.catName(wi, ci) + '那一列：';
+        if (n === 5) return head + '剛好一個正字 → 5。';
+        if (n > 5) return head + '一個正字 5 筆，再 ' + (n - 5) + ' 筆 → 5 ＋ ' + (n - 5) + ' ＝ ' + n + '。';
+        return head + '一筆一筆數 → ' + n + '。';
+      },
+      gFill2Total:function(counts, total){ return '總數：' + counts.join(' ＋ ') + ' ＝ ' + total + '。'; },
+
+      /* 第 4 關：排名次 */
+      gRankSlots:['最多', '第二多', '最少'],
+      gRankNow:function(k){ return '排好 ' + k + ' / 3 張'; },
+      gRankSmall:function(wi, cv, a, cw, b){
+        return this.catName(wi, cv) + '有 ' + this.qty(wi, a) + '，' + this.catName(wi, cw) + '有 ' + this.qty(wi, b) + '：' +
+               b + ' 比 ' + a + ' 大，這一格要放比較多的。';
+      },
+      gRankBig:function(wi, cv, a, cw, b){
+        return this.catName(wi, cv) + '有 ' + this.qty(wi, a) + '，比' + this.catName(wi, cw) + '的 ' + this.qty(wi, b) + '多，要排在更前面。';
+      },
+      gRankDone:function(wi, cats, counts){
+        return '最多的是' + this.catName(wi, cats[0]) + '（' + counts[0] + '），最少的是' + this.catName(wi, cats[2]) + '（' + counts[2] + '）：' +
+               counts.join(' ＞ ') + '。';
+      },
+      gRank2:function(k, wi, ci, icon, n){
+        return '「' + this.gRankSlots[k] + '」要放 ' + icon + ' ' + this.catName(wi, ci) + '（' + this.qty(wi, n) + '）。';
+      },
+
+      /* 第 5 關：列算式 */
+      gEqAsk:function(wi, ca, cb){ return this.catName(wi, ca) + '比' + this.catName(wi, cb) + '多幾' + this.unitName(wi) + '？'; },
+      gEqOther:function(wi, ca, cb){ return '題目問的是' + this.catName(wi, ca) + '和' + this.catName(wi, cb) + '，不是這一類。'; },
+      gEqOrder:function(na, nb){ return '大的放前面、小的放後面：' + na + ' 比 ' + nb + ' 大。'; },
+      gEqPlus:'問「多幾個」要用減的；用加的，算出來的是兩類一共有幾個。',
+      gEqSum:function(na, nb, s){ return na + ' ＋ ' + nb + ' ＝ ' + s + ' 是兩類一共，不是多幾個。'; },
+      gEqWait:'先把算式排好，再放答案。',
+      gEqLine:function(na, nb, dd){ return na + ' － ' + nb + ' ＝ ' + dd; },
+      gEqDone:function(wi, ca, cb, na, nb, dd){
+        return na + ' － ' + nb + ' ＝ ' + dd + '：' + this.catName(wi, ca) + '比' + this.catName(wi, cb) + '多 ' + this.qty(wi, dd) + '。';
+      },
+      gEq2:function(wi, ca, na, cb, nb){
+        return this.catName(wi, ca) + ' ' + na + '、' + this.catName(wi, cb) + ' ' + nb + ' → 排成 ' + na + ' － ' + nb + '，再算算看。';
+      }
     },
     en: {
       langAria:'Switch language',
@@ -644,7 +795,7 @@
       s3h2:'Fill In the Table', s3lead:'Count the strokes and write the number. The rows must add up to the total.',
       s4h2:'Read the Table to Answer', s4lead:'Every answer is hiding in the count column.',
       s5h2:'Quick Check', s5lead:'Tap an answer and find out right away!',
-      s6h2:'Table Reading Challenge', s6lead:'Count one kind at a time — miss none, count none twice!',
+      s6h2:'Sort & Tally Challenge', s6lead:'Five rounds, five ways to play: sort, tally, fill in, rank, and work it out.',
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a>.',
@@ -776,50 +927,106 @@
           why:'All the counts must add up to the total: 5 + 4 + 2 = 11, one short of 12 — so something in the table is wrong and needs checking again.' }
       ],
 
-      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
-      gAsk:function(r){
-        var head = 'Look at this pile of ' + this.thingName(r.wi) + '.<br>';
-        if (r.kind === 'count') return head + 'How many ' + this.catName(r.wi, r.cats[r.t]) + ' are there?';
-        if (r.kind === 'most')  return head + 'Which kind has the most?';
-        if (r.kind === 'least') return head + 'Which kind has the fewest?';
-        if (r.kind === 'total') return head + 'How many ' + this.unitName(r.wi) + ' are there in total?';
-        return head + 'How many more ' + this.catName(r.wi, r.cats[r.a]) + ' are there than ' +
-               this.catName(r.wi, r.cats[r.b]) + '?';
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Stars',
+      gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Restart',
+      gAsks:{
+        sort:'Follow the rule written at the top: drag each card into its basket. Or tap a card, then tap a basket.',
+        tally:'This round is all taps: see what lights up, then tap that kind’s row to add one stroke.',
+        fill:'Count the strokes on each row and drag a number card into its “Count” box, then fill in the total. Or tap a card, then tap a box.',
+        rank:'Read the counts and put the kind cards in order from most to fewest. Or tap a card, then tap a box.',
+        eq:'Use the counts in the table to build the number sentence, then add the answer. Or tap a card, then tap a box.'
       },
-      gOpt:function(r, o){
-        return (r.kind === 'most' || r.kind === 'least') ? this.catName(r.wi, r.cats[o]) : this.qty(r.wi, o);
+      gHints:{
+        sort:'Read the rule at the top first: this round looks at that one feature only, never the other one.',
+        tally:'Look at which kind the lit-up one is, and add a stroke on that kind’s row.',
+        fill:'A full gate is 5 strokes, then count the ones after it. The total is all three rows added together.',
+        rank:'Compare the numbers in the count column: the biggest goes in “Most”, the smallest in “Fewest”.',
+        eq:'“How many more” means subtract: the bigger number minus the smaller one.'
       },
-      gHintBtn:'💡 Hint',
-      gHint1:function(r){
-        return 'Count one kind at a time, and mark each one as you count it.';
+      gStars:function(n){ return '⭐ +' + n; },
+      gWin:function(s){ return 'All 5 rounds cleared! ' + s + ' stars in all 🏆 Press “Restart” to play again.'; },
+      gClear:'Press “Next round” to go on.',
+      opPlus:'+', opMinus:'−', eqSign:'=',
+      sortFeat:[['red', 'blue'], ['a circle', 'a square']],
+
+      gSortRule:function(rule){ return rule === 0 ? '🎨 Sort by colour' : '🔷 Sort by shape'; },
+      gSortNow:function(rule, a, b){
+        return this.sortCats[rule][0] + ': ' + this.cardQty(a) + ' · ' + this.sortCats[rule][1] + ': ' + this.cardQty(b);
       },
-      gHint2:function(r){
-        var self = this;
-        return 'Hint: ' + r.cats.map(function(ci, i){
-          return self.catName(r.wi, ci) + ' ' + r.counts[i];
-        }).join(', ') + '.';
+      gSortWrong:function(rule, icon, b){
+        return icon + ' is ' + this.sortFeat[rule][b] + ', so it goes in “' + this.sortCats[rule][b] + '”. This round looks only at ' +
+               (rule === 0 ? 'colour, not shape' : 'shape, not colour') + '.';
       },
-      gWhy:function(r){
-        var t = r.counts.reduce(function(a, b){ return a + b; }, 0);
-        if (r.kind === 'count') return 'The ' + this.catName(r.wi, r.cats[r.t]) + ' row comes to ' + this.qty(r.wi, r.counts[r.t]) + '.';
-        if (r.kind === 'most'){
-          var mi = r.counts.indexOf(Math.max.apply(null, r.counts));
-          return r.counts[mi] + ' is the biggest, so ' + this.catName(r.wi, r.cats[mi]) + ' win.';
-        }
-        if (r.kind === 'least'){
-          var li = r.counts.indexOf(Math.min.apply(null, r.counts));
-          return r.counts[li] + ' is the smallest, so ' + this.catName(r.wi, r.cats[li]) + ' come last.';
-        }
-        if (r.kind === 'total') return r.counts.join(' + ') + ' = ' + t + ', so ' + this.qty(r.wi, t) + ' in total.';
-        return r.counts[r.a] + ' − ' + r.counts[r.b] + ' = ' + (r.counts[r.a] - r.counts[r.b]) +
-               ', so the difference is ' + this.qty(r.wi, r.counts[r.a] - r.counts[r.b]) + '.';
+      gSortDone:function(rule, a, b, n){
+        return 'Every card landed in exactly one basket: ' + a + ' + ' + b + ' = ' + this.cardQty(n) + '.';
       },
-      gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst:function(v){ return 'Correct on the first try! +20 points! The answer is ' + v + '.'; },
-      gCorrectRetry:function(v){ return 'Correct! +10 points. The answer is ' + v + '.'; },
-      gTryAgain:'Count again: one kind at a time, miss none and count none twice.',
-      gClear:'Press “Next round” to keep reading tables.',
-      gWin:function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; }
+      gSort2:function(rule, icon, b){
+        return 'Next: ' + icon + ' is ' + this.sortFeat[rule][b] + ' → it goes in “' + this.sortCats[rule][b] + '”.';
+      },
+
+      gTallyNow:function(wi, k, n){
+        return k >= n ? 'All ' + this.qty(wi, n) + ' tallied' : this.qty(wi, k) + ' tallied, ' + (n - k) + ' to go';
+      },
+      gTallyWrong:function(wi, ci, icon){
+        return 'This one is ' + icon + ', so its stroke goes on the “' + this.catName(wi, ci) + '” row.';
+      },
+      gTallyDone:function(wi, counts, n){
+        return 'One stroke each, five to a gate: ' + counts.join(' + ') + ' = ' + n + ', the same as all ' + this.qty(wi, n) + '.';
+      },
+      gTally2:function(wi, ci, icon){
+        return 'The one lit up now is ' + icon + ' → tap the “' + this.catName(wi, ci) + '” row.';
+      },
+
+      gFillNow:function(k){ return k + ' of 4 boxes filled'; },
+      gFillGate:'A full gate counts as 5 strokes, not as 1! Count again.',
+      gFillRow:function(v, n){
+        if (n > 5) return 'A full gate is 5 strokes, then add the ones after it: this row is not ' + v + '.';
+        if (n === 5) return 'One full gate is exactly 5 strokes: this row is not ' + v + '.';
+        return 'Count the strokes one by one: this row is not ' + v + '.';
+      },
+      gFillTotal:function(v){ return 'The total is all three rows added together: not ' + v + '.'; },
+      gFillSkip:'One row was left out: the total adds up all three rows.',
+      gFillDone:function(counts, total){
+        return counts.join(' + ') + ' = ' + total + ': the counts add up to the total.';
+      },
+      gFill2:function(wi, ci, n){
+        var head = 'The ' + this.catName(wi, ci) + ' row: ';
+        if (n === 5) return head + 'exactly one full gate → 5.';
+        if (n > 5) return head + 'one full gate is 5, plus ' + (n - 5) + ' more → 5 + ' + (n - 5) + ' = ' + n + '.';
+        return head + 'count them one by one → ' + n + '.';
+      },
+      gFill2Total:function(counts, total){ return 'Total: ' + counts.join(' + ') + ' = ' + total + '.'; },
+
+      gRankSlots:['Most', 'Second', 'Fewest'],
+      gRankNow:function(k){ return k + ' of 3 placed'; },
+      gRankSmall:function(wi, cv, a, cw, b){
+        return 'There are ' + a + ' ' + this.catName(wi, cv) + ' and ' + b + ' ' + this.catName(wi, cw) + ': ' +
+               b + ' is more than ' + a + ', so this box needs the one with more.';
+      },
+      gRankBig:function(wi, cv, a, cw, b){
+        return 'There are ' + a + ' ' + this.catName(wi, cv) + ', more than the ' + b + ' ' + this.catName(wi, cw) + ', so they go further forward.';
+      },
+      gRankDone:function(wi, cats, counts){
+        return 'Most: ' + this.catName(wi, cats[0]) + ' (' + counts[0] + '); fewest: ' + this.catName(wi, cats[2]) + ' (' + counts[2] + '): ' +
+               counts.join(' > ') + '.';
+      },
+      gRank2:function(k, wi, ci, icon, n){
+        return '“' + this.gRankSlots[k] + '” takes ' + icon + ' ' + this.catName(wi, ci) + ' (' + n + ').';
+      },
+
+      gEqAsk:function(wi, ca, cb){ return 'How many more ' + this.catName(wi, ca) + ' than ' + this.catName(wi, cb) + '?'; },
+      gEqOther:function(wi, ca, cb){ return 'The question is about ' + this.catName(wi, ca) + ' and ' + this.catName(wi, cb) + ', not this kind.'; },
+      gEqOrder:function(na, nb){ return 'Bigger first, smaller second: ' + na + ' is bigger than ' + nb + '.'; },
+      gEqPlus:'To find how many more, subtract. Adding gives how many there are of the two kinds altogether.',
+      gEqSum:function(na, nb, s){ return na + ' + ' + nb + ' = ' + s + ' is how many altogether, not how many more.'; },
+      gEqWait:'Build the number sentence first, then the answer.',
+      gEqLine:function(na, nb, dd){ return na + ' − ' + nb + ' = ' + dd; },
+      gEqDone:function(wi, ca, cb, na, nb, dd){
+        return na + ' − ' + nb + ' = ' + dd + ': there are ' + dd + ' more ' + this.catName(wi, ca) + ' than ' + this.catName(wi, cb) + '.';
+      },
+      gEq2:function(wi, ca, na, cb, nb){
+        return this.catName(wi, ca) + ' ' + na + ', ' + this.catName(wi, cb) + ' ' + nb + ' → build ' + na + ' − ' + nb + ', then work it out.';
+      }
     }
   };
 
@@ -1168,13 +1375,19 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：讀表大挑戰 ---------- */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ---------- 6. 小遊戲：分類整理大挑戰 —— 五關、五種玩法（分、畫、填、排、算） ----------
+     設計原則見 docs/teaching-framework.md §六之五。二年級是低年級（§三）：不扣分、不會失敗。
+     放錯（概念錯）→ 彈回原位＋一句為什麼，算一次錯；放到空白處 → 靜靜彈回，不算錯。
+     星星：這一關沒犯錯 2 顆、犯過錯 1 顆（只是少拿，從不倒扣）。
+     每個拖拉也可以「先點東西、再點目的地」；第 2 關（畫一筆）沒有拖拉：點一下那一列就是畫一筆，
+     那一關的說明有寫。題庫與版面常數在 i18n 前面的資料區。拖拉引擎沿用二年級 length。 */
+  var gRound = 0, gScore = 0, gMistakes = 0, gSolved = false, gCtx = {};
+  /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加星星）。 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskLine = document.getElementById('gAskLine');
-  var gPic = document.getElementById('gPic');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
@@ -1182,63 +1395,482 @@
   var elHint = document.getElementById('gHint');
   var hintLevel = 0;
 
+  /* ⚠️ 托盤一定要洗牌再畫：題庫裡的順序是固定的，照順序畫的話孩子玩兩次就會記住位置。
+     洗出來剛好由小到大的話，把前兩張對調（三年級 numbers 同一個做法）：排名次洗的是「名次」（0＝最多），
+     托盤一開始就是 0、1、2 等於不用排（三張有 1/6 的機會）。用對調不用重洗：一定會結束，
+     而且由小到大時前兩張一定不一樣，對調之後就不是由小到大。 */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    var up = a.length > 1;
+    for (var i = 1; i < a.length; i++) if (!(a[i - 1] < a[i])) up = false;
+    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，任何地方的 pointerup／pointercancel
+     傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 格子（吸附目標）：記中心點與半寬、半高，給 nearestOpen() 用 */
+  function target(B, x, y, w, h, cls, more){
+    var t = { z:addZone(B, x, y, w, h, cls), cx:x + w / 2, cy:y + h / 2, hw:w / 2, hh:h / 2, done:false };
+    for (var key in more) t[key] = more[key];
+    return t;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫記放大：tallySVG 有 viewBox，只要把寬高乘上倍數，筆畫的相對位置一點都不變 */
+  function zoomSVG(svg, k){
+    if (!svg || !svg.getAttribute) return;
+    svg.setAttribute('width', Number(svg.getAttribute('width')) * k);
+    svg.setAttribute('height', Number(svg.getAttribute('height')) * k);
+  }
+  /* 第 3～5 關的統計表（和範例 3、4 同一張表：類別｜畫記｜數量）。mode 'count' 寫出數量；
+     'slot' 的數量欄空著、最後多一列「總數」—— 空格由呼叫的人自己放。回傳每一列中心的 y。 */
+  function drawTable(B, T, e, d, mode){
+    var cw = T.w - T.nameW - T.tallyW;
+    var xs = [T.x, T.x + T.nameW, T.x + T.nameW + T.tallyW], ws = [T.nameW, T.tallyW, cw];
+    d.tabHead.forEach(function(h, j){ addZone(B, xs[j], T.y, ws[j], T.headH, 'gth', h); });
+    var ys = [], n = e.cats.length + (mode === 'slot' ? 1 : 0);
+    for (var i = 0; i < n; i++){
+      var y = T.y + T.headH + i * T.rowH, tot = (i === e.cats.length), more = tot ? ' gtot' : '';
+      addZone(B, xs[0], y, ws[0], T.rowH, 'gtd gname' + more, tot ? d.totalRow : WORLDS[e.wi].icons[e.cats[i]] + ' ' + d.catName(e.wi, e.cats[i]));
+      var tz = addZone(B, xs[1], y, ws[1], T.rowH, 'gtd gtly' + more);
+      if (!tot){ tz.innerHTML = tallySVG(e.counts[i], tallyForm()); zoomSVG(tz.firstChild, T.zoom); }
+      addZone(B, xs[2], y, ws[2], T.rowH, 'gtd gcnt' + more, (mode === 'count') ? String(e.counts[i]) : '');
+      ys.push(y + T.rowH / 2);
+    }
+    return ys;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 放進籃子之後縮小（第 1 關）：拿取範圍只對「拿得起來」的東西有要求，放好的已經 pointer-events:none */
+    P.shrink = function(s){
+      P.w = s; P.h = s; el.style.width = s + 'px'; el.style.height = s + 'px';
+      el.classList.add('mini'); P.place(P.cx, P.cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (moved) P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */
+      /* 先點選、後來又直接拖走的那一塊：拖完（放好、彈回、capture 遺失都一樣）就不再是「選起來」的，
+         不然下一次點格子會多放一次（二年級 numbers 的 codex 第一、二輪） */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      /* 放在哪裡看那一塊的中心點（§六之五：位置一律記中心點），不是手指的位置 */
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開時那一塊的中心點（點目的地時是點的位置）落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+  /* 托盤：一律洗牌後排開，每一排最多 perRow 個、置中（正解不可以固定在同一個位置） */
+  function renderTray(B, items, y, mk, step, perRow, rowStep){
+    var n = items.length, per = perRow || n;
+    shuffle(items).forEach(function(it, i){
+      var row = Math.floor(i / per), inRow = Math.min(per, n - row * per);
+      var x0 = (B.W - (inRow - 1) * step) / 2;
+      mk(it, x0 + (i % per) * step, y + row * (rowStep || 0));
+    });
+  }
+
+  /* 星星（低年級：純收集、不扣分 —— §三、§六之五第 3 點）：這一關沒犯錯 2 顆、犯過錯 1 顆 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var stars = gMistakes === 0 ? 2 : 1;
+    gScore += stars; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var last = gRound === GAME_ORDER.length - 1;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gStars(stars) + '</span> ' + (last ? L().gWin(gScore) : L().gClear);
+    if (!last) gNext.disabled = false;
+  }
+  /* 放錯：說為什麼、記一次錯（只影響這一關拿 2 顆還是 1 顆），分數不動 */
+  function roundMiss(text){ gMistakes++; gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 第二層提示跟著畫面走：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+
+  var RENDER = {
+    /* 第 1 關：分一分 —— 上面寫著這一關的標準（照顏色／照形狀），左右兩個籃子。
+       卡片只收進「照這個標準」它該去的籃子；放錯 → 彈回，說它是什麼顏色（形狀）、這一關只看哪一個特徵。 */
+    sort: function(d){
+      var e = pick(GAME_SORT), S = SORT_BIN, C = SORT_CARD, placed = [0, 0];
+      var line = trailLine(d.gSortNow(e.rule, 0, 0));
+      var B = makeBoard(GAME_W, SORT_H);
+      addZone(B, 0, 4, GAME_W, 30, 'gorder', d.gSortRule(e.rule));
+      var bins = S.x.map(function(x, b){
+        var t = target(B, x, S.y, S.w, S.h, 'gbin', { b:b });
+        addZone(B, x, S.y + 4, S.w, 22, 'gbinh', d.sortCats[e.rule][b]);
+        t.cnt = addZone(B, x, S.y + S.h - 28, S.w, 22, 'gbinn', d.cardQty(0));
+        return t;
+      });
+      var cards = [];
+      renderTray(B, e.cards, C.y, function(c, cx, cy){
+        cards.push(addPiece(B, { w:C.size, h:C.size, cx:cx, cy:cy, text:CARD_ICONS[cardCol(c)][cardShp(c)], cls:'gcard gsortc', data:{ c:c } }));
+      }, C.step, C.perRow, C.rowStep);
+      gCtx.hint2 = function(){
+        for (var i = 0; i < cards.length; i++){
+          var c = cards[i].data.c;
+          if (!cards[i].locked) return d.gSort2(e.rule, CARD_ICONS[cardCol(c)][cardShp(c)], sortBin(e.rule, c));
+        }
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var t = nearestOpen(bins, pt, GPAD), c = P.data.c, want = sortBin(e.rule, c);
+        if (!t) return false;
+        if (t.b !== want){ roundMiss(d.gSortWrong(e.rule, CARD_ICONS[cardCol(c)][cardShp(c)], want)); return false; }
+        var j = placed[want]++;
+        P.lock(S.x[want] + S.miniX + (j % 4) * S.miniStep, S.y + S.miniY[Math.floor(j / 4)]);
+        P.shrink(S.mini);
+        t.cnt.textContent = d.cardQty(placed[want]);
+        line.textContent = d.gSortNow(e.rule, placed[0], placed[1]);
+        gMsg.textContent = '';
+        if (placed[0] + placed[1] === e.cards.length) roundSolved(d.gSortDone(e.rule, placed[0], placed[1], e.cards.length));
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 2 關：畫一筆 —— 東西一個一個亮起來；點它那一類的那一列，那一列就多一筆（畫記照筆順長、五筆一個正字）。
+       點錯列 → 說它是哪一類、要畫在哪一列。這一關沒有拖拉：點一下那一列本身就是「畫一筆」。 */
+    tally: function(d){
+      var e = pick(GAME_TALLY), C = TALLY_CHIP, R = TALLY_ROW, n = e.records.length, pos = 0;
+      var counts = e.cats.map(function(){ return 0; });
+      var line = trailLine(d.gTallyNow(e.wi, 0, n));
+      var B = makeBoard(GAME_W, TALLY_H);
+      var x0 = (GAME_W - (n - 1) * C.step) / 2;
+      var chips = e.records.map(function(ri, i){
+        return addZone(B, x0 + i * C.step - C.size / 2, C.y - C.size / 2, C.size, C.size, 'gchip', WORLDS[e.wi].icons[e.cats[ri]]);
+      });
+      function paintChips(){ chips.forEach(function(z, i){ z.className = 'gchip' + (i < pos ? ' done' : (i === pos ? ' on' : '')); }); }
+      var rows = e.cats.map(function(ci, i){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'grow';
+        b.style.left = R.x + 'px'; b.style.top = (R.y + i * R.step) + 'px'; b.style.width = R.w + 'px'; b.style.height = R.h + 'px';
+        var nm = document.createElement('span');
+        nm.className = 'grown'; nm.style.width = R.nameW + 'px';
+        nm.textContent = WORLDS[e.wi].icons[ci] + ' ' + d.catName(e.wi, ci);
+        var tl = document.createElement('span');
+        tl.className = 'growt';
+        b.appendChild(nm); b.appendChild(tl);
+        b.addEventListener('click', function(){ tapRow(i); });
+        B.el.appendChild(b);
+        return { b:b, tl:tl };
+      });
+      function drawRow(i){ rows[i].tl.innerHTML = tallySVG(counts[i], tallyForm()); zoomSVG(rows[i].tl.firstChild, TALLY_ZOOM); }
+      rows.forEach(function(_, i){ drawRow(i); });
+      paintChips();
+      gCtx.hint2 = function(){
+        if (pos >= n) return '';
+        var ci = e.cats[e.records[pos]];
+        return d.gTally2(e.wi, ci, WORLDS[e.wi].icons[ci]);
+      };
+      function tapRow(i){
+        if (gSolved || pos >= n) return;
+        var ri = e.records[pos];
+        if (i !== ri){ roundMiss(d.gTallyWrong(e.wi, e.cats[ri], WORLDS[e.wi].icons[e.cats[ri]])); return; }
+        counts[i]++; pos++;
+        drawRow(i); paintChips();
+        line.textContent = d.gTallyNow(e.wi, pos, n);
+        gMsg.textContent = '';
+        if (pos === n) roundSolved(d.gTallyDone(e.wi, counts, n));
+        refreshHint();
+      }
+    },
+
+    /* 第 3 關：填數量 —— 表上畫好每一列的畫記、數量空著；數字卡拖進它真的等於的那一格（三列＋總數）。
+       放錯 → 一個正字當成 1 筆、一列數錯、總數漏加一列、總數不對，各有一句。 */
+    fill: function(d){
+      var e = pick(GAME_FILL), T = FILL_TAB, Cd = FILL_CARD, filled = 0;
+      var total = e.counts.reduce(function(a, b){ return a + b; }, 0), last = e.counts[e.counts.length - 1];
+      var line = trailLine(d.gFillNow(0));
+      var B = makeBoard(GAME_W, FILL_H);
+      var ys = drawTable(B, T, e, d, 'slot');
+      var sx = T.x + T.nameW + T.tallyW + (T.w - T.nameW - T.tallyW) / 2;
+      var slots = ys.map(function(cy, i){
+        return target(B, sx - T.slotW / 2, cy - T.slotH / 2, T.slotW, T.slotH, 'gslot', { k:i, want:(i < e.counts.length) ? e.counts[i] : total });
+      });
+      renderTray(B, fillCards(e), Cd.y, function(v, cx, cy){
+        addPiece(B, { w:Cd.w, h:Cd.h, cx:cx, cy:cy, text:String(v), cls:'gcard', data:{ v:v } });
+      }, Cd.step);
+      gCtx.hint2 = function(){
+        for (var k = 0; k < slots.length; k++) if (!slots[k].done){
+          return (k < e.counts.length) ? d.gFill2(e.wi, e.cats[k], e.counts[k]) : d.gFill2Total(e.counts, total);
+        }
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, GPAD), v = P.data.v;
+        if (!s) return false;
+        if (v !== s.want){
+          if (s.k === e.counts.length) roundMiss(v === total - last ? d.gFillSkip : d.gFillTotal(v));
+          else if (e.counts[s.k] >= 5 && v === fillGateDecoy(e.counts[s.k])) roundMiss(d.gFillGate);
+          else roundMiss(d.gFillRow(v, e.counts[s.k]));
+          return false;
+        }
+        s.done = true; s.z.classList.add('filled'); P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        filled++;
+        line.textContent = d.gFillNow(filled);
+        gMsg.textContent = '';
+        if (filled === slots.length) roundSolved(d.gFillDone(e.counts, total));
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 4 關：排名次 —— 表上寫著數量；三張類別卡放進「最多／第二多／最少」。第 k 格只收第 k 多的那一類；
+       放錯 → 說出兩類各有幾個、誰比較多。 */
+    rank: function(d){
+      var e = pick(GAME_RANK), T = RANK_TAB, S = RANK_SLOT, Cd = RANK_CARD, placedN = 0;
+      var order = e.counts.map(function(_, i){ return i; }).sort(function(a, b){ return e.counts[b] - e.counts[a]; });
+      var line = trailLine(d.gRankNow(0));
+      var B = makeBoard(GAME_W, RANK_H);
+      drawTable(B, T, e, d, 'count');
+      var slots = S.x.map(function(x, k){
+        addZone(B, x - S.w / 2, S.labelY, S.w, 20, 'glbl', d.gRankSlots[k]);
+        return target(B, x - S.w / 2, S.y - S.h / 2, S.w, S.h, 'gslot', { k:k });
+      });
+      gCtx.hint2 = function(){
+        for (var k = 0; k < slots.length; k++) if (!slots[k].done){
+          var ci = e.cats[order[k]];
+          return d.gRank2(k, e.wi, ci, WORLDS[e.wi].icons[ci], e.counts[order[k]]);
+        }
+        return '';
+      };
+      /* 洗牌的是「名次」（0＝最多）：shuffle() 保證托盤一開始不是 0、1、2，也就是不是已經由多排到少 */
+      renderTray(B, order.map(function(_, k){ return k; }), Cd.y, function(rk, cx, cy){
+        var ri = order[rk], ci = e.cats[ri];
+        var P = addPiece(B, { w:Cd.w, h:Cd.h, cx:cx, cy:cy, text:WORLDS[e.wi].icons[ci] + '\n' + d.catName(e.wi, ci), cls:'gcard gcatc', data:{ ri:ri } });
+        /* 圖案大一點、名字在下面：拆成兩個 span。名字前面留一個空白（直排時看不到），
+           讀出來的文字還是「圖案 名字」，不會黏成一個字串（codex 第二輪） */
+        P.el.textContent = '';
+        P.el.setAttribute('aria-label', WORLDS[e.wi].icons[ci] + ' ' + d.catName(e.wi, ci));
+        [['gico', WORLDS[e.wi].icons[ci]], ['gnm', ' ' + d.catName(e.wi, ci)]].forEach(function(x){
+          var sp = document.createElement('span'); sp.className = x[0]; sp.textContent = x[1]; P.el.appendChild(sp);
+        });
+      }, Cd.step);
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, GPAD);
+        if (!s) return false;
+        var ri = P.data.ri, want = order[s.k];
+        if (ri !== want){
+          var a = e.counts[ri], b = e.counts[want];
+          roundMiss(a < b ? d.gRankSmall(e.wi, e.cats[ri], a, e.cats[want], b) : d.gRankBig(e.wi, e.cats[ri], a, e.cats[want], b));
+          return false;
+        }
+        s.done = true; s.z.classList.add('filled'); P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        placedN++;
+        line.textContent = d.gRankNow(placedN);
+        gMsg.textContent = '';
+        if (placedN === slots.length){
+          roundSolved(d.gRankDone(e.wi, order.map(function(i){ return e.cats[i]; }), order.map(function(i){ return e.counts[i]; })));
+        }
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 5 關：列算式 —— 「a 比 b 多幾個？」□ ○ □ ＝ □：第一格只收 a、第二格只收 b、○ 只收減號，
+       排好算式才收答案，答案只收差。放錯 → 第三類、大小放反、用加號、拿和當答案，各有一句；
+       卡片放進別種格子（數字放進 ○）→ 靜靜彈回、不算錯。 */
+    eq: function(d){
+      var e = pick(GAME_EQ), S = EQ_SLOT, Rc = EQ_ROWCARD, Sm = EQ_SMALL;
+      var na = e.counts[e.a], nb = e.counts[e.b], diff = na - nb, sum = na + nb;
+      var line = trailLine(d.gEqAsk(e.wi, e.cats[e.a], e.cats[e.b]));
+      var B = makeBoard(GAME_W, EQ_H);
+      drawTable(B, RANK_TAB, e, d, 'count');
+      function slot(o, more){ return target(B, o.cx - o.w / 2, S.y - S.h / 2, o.w, S.h, 'gslot', more); }
+      var s0 = slot(S.s0, { kind:'row', want:e.a }), op = slot(S.op, { kind:'op' }), s2 = slot(S.s2, { kind:'row', want:e.b });
+      addZone(B, S.eqX - 12, S.y - S.h / 2, 24, S.h, 'gorder', d.eqSign);
+      var ans = slot(S.ans, { kind:'ans' });
+      var slots = [s0, op, s2, ans];
+      renderTray(B, e.counts.map(function(_, i){ return i; }), Rc.y, function(ri, cx, cy){
+        addPiece(B, { w:Rc.w, h:Rc.h, cx:cx, cy:cy, text:WORLDS[e.wi].icons[e.cats[ri]] + ' ' + e.counts[ri], cls:'gcard', data:{ kind:'row', ri:ri } });
+      }, Rc.step);
+      renderTray(B, [{ kind:'op', op:'-' }, { kind:'op', op:'+' }, { kind:'ans', v:diff }, { kind:'ans', v:sum }], Sm.y, function(c, cx, cy){
+        var text = (c.kind === 'op') ? (c.op === '-' ? d.opMinus : d.opPlus) : String(c.v);
+        addPiece(B, { w:Sm.w, h:Sm.h, cx:cx, cy:cy, text:text, cls:'gcard', data:c });
+      }, Sm.step);
+      gCtx.hint2 = function(){ return d.gEq2(e.wi, e.cats[e.a], na, e.cats[e.b], nb); };
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, GPAD), c = P.data;
+        if (!s || s.kind !== c.kind) return false;
+        if (s.kind === 'row' && c.ri !== s.want){
+          roundMiss((c.ri !== e.a && c.ri !== e.b) ? d.gEqOther(e.wi, e.cats[e.a], e.cats[e.b]) : d.gEqOrder(na, nb));
+          return false;
+        }
+        if (s.kind === 'op' && c.op !== '-'){ roundMiss(d.gEqPlus); return false; }
+        if (s.kind === 'ans'){
+          if (!(s0.done && op.done && s2.done)){ roundInfo(d.gEqWait); return false; }   /* 只提醒、不算錯 */
+          if (c.v !== diff){ roundMiss(d.gEqSum(na, nb, sum)); return false; }
+        }
+        s.done = true; s.z.classList.add('filled'); P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        gMsg.textContent = '';
+        if (ans.done){
+          line.textContent = d.gEqLine(na, nb, diff);
+          roundSolved(d.gEqDone(e.wi, e.cats[e.a], e.cats[e.b], na, nb, diff));
+        }
+        refreshHint();
+        return true;
+      });
+    }
+  };
+
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistakes = 0; gCtx = {}; gGen++;
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-    gAskLine.innerHTML = '<span style="font-size:20px;font-weight:800">' + d.gAsk(round) + '</span>';
-    gPic.innerHTML = itemsSVG(mixIcons(round.wi, round.cats, round.counts));
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = d.gHint1(round);
-    } else {
-      elHint.textContent = '';
-    }
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }
+  }
 
-    gAnswers.textContent = '';
-    round.opts.forEach(function(o, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'gopt';
-      b.textContent = d.gOpt(round, o);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        var dd = L();
-        var lbl = dd.gOpt(round, round.opts[round.ans]);
-        if (oi === round.ans){
-          var all = gAnswers.querySelectorAll('.gopt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gRound === ROUNDS.length - 1){
-            gScore += gMistake ? 10 : 20;
-            gMsg.innerHTML = '<span class="yes">' + dd.gWin(gScore) + '</span> ' + dd.gWhy(round);
-          } else {
-            if (gMistake){
-              gScore += 10;
-              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectRetry(lbl) + '</span> ' + dd.gWhy(round);
-            } else {
-              gScore += 20;
-              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectFirst(lbl) + '</span> ' + dd.gWhy(round);
-            }
-            gMsg.innerHTML += ' ' + dd.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gMsg.innerHTML = '<span class="no">' + dd.gTryAgain + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
   function restartGame(){
@@ -1246,18 +1878,15 @@
   }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
 
   gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2) return;
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = L().gHint1(ROUNDS[gRound]);
-    } else {
-      elHint.textContent = L().gHint2(ROUNDS[gRound]);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
