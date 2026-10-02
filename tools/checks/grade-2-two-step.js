@@ -412,6 +412,567 @@ const SHAPES = {
   }
 };
 
+/* ---------- 小遊戲「兩步驟接力賽」（§六之五：五關五種玩法，2026-10-02 改版）----------
+   演一次（範例 1）、中間那一格（範例 2）、接力（範例 3）、排先後（範例 3 第 3 題）、交卷（範例 4）。
+   做法照 grade-3-divide.js／grade-2-numbers.js：
+   - 每一關**照遊戲的規則把每一題玩一遍**（這裡自己寫的規則：所有放法、所有按法都走過），
+     證明一定解得完、解完一定是對的答案、擋掉的每一個動作真的是錯的；
+   - 頁面的純函式（plateXY／eatXY／hopXY／flowDecoy）拿整個題庫去呼叫，再和自己的公式比；
+   - nearestOpen()、roundSolved()、roundMiss()、shuffle() 從原始碼切出來**真的跑**；
+   - 每一句說明逐個比數字（兩種語言、每一題、每一種放錯），而且那句話說的事要成立；
+   - 版面與觸控 ≥ 44px 從 index.html 的常數讀（不在這裡另抄一份數字）。
+   已知極限：RENDER 函式本體裡的規則是字面掃描（need()：證明那一行寫著，證明不了它被執行）；拖拉、點選、兩根手指、
+   capture 遺失、畫板不跳動、375px 的實際尺寸由 teaching-workspace/game-harness/g2-two-step 的端對端測試驗。 */
+const { gameShuffleProblems, extractFunction } = require('./lib/gameshuffle.js');
+
+function gameCheck(D, I18N, fail, src, stepOk, eqText){
+  const LANGS = ['zh', 'en'];
+  const nums = t => (String(t).match(/\d+/g) || []).map(Number);
+  const calc = (x, op, y) => op === '+' ? x + y : x - y;
+  const seq = (where, text, want) => {
+    if (typeof text !== 'string' || /undefined|NaN|null/.test(text)) return fail(where + ': text has undefined/NaN/null: ' + text);
+    if (nums(text).join() !== want.join()) fail(where + ': numbers should read ' + want.join() + ', got ' + nums(text).join() + ' — ' + text);
+  };
+  const has = (where, text, words) => words.forEach(w => { if (String(text).indexOf(w) < 0) fail(where + ': should say "' + w + '" — ' + text); });
+  const box = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w, h });
+  const inside = (o, what, W, H) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail(what + ' is outside the ' + W + '×' + H + ' board'); };
+  const within = (o, R, what) => { if (!(o.x >= R.x && o.y >= R.y && o.x + o.w <= R.x + R.w && o.y + o.h <= R.y + R.h)) fail(what + ' sticks out of its frame'); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return fail(what + ' ' + i + ' and ' + j + ' overlap'); };
+  const W = D.GAME_W;
+  const opZh = o => o === '+' ? '＋' : '－', opEn = o => o === '+' ? '+' : '−';
+
+  /* --- 順序、每一關的題目與提示 --- */
+  const TYPES = ['plate', 'flow', 'relay', 'seq', 'hop'];
+  if (D.GAME_ORDER.join() !== TYPES.join()) fail('GAME_ORDER should be ' + TYPES.join() + ', got ' + D.GAME_ORDER.join());
+  const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+  const B = {};
+  TYPES.forEach(t => {
+    B[t] = body(t); if (!B[t]) fail('cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      ['gAsks', 'gHints'].forEach(k => { if (!(I18N[L][k] && typeof I18N[L][k][t] === 'string' && I18N[L][k][t].length > 4)) fail(k + '.' + t + ' missing in ' + L); });
+    });
+    if (!/gCtx\.hint2 = function\(\)\{/.test(B[t])) fail(t + ': no second-level hint (gCtx.hint2)');
+  });
+  const need = (k, re, what) => { if (!re.test(B[k] || '')) fail(k + ': ' + what); };
+  /* 第 5 關沒有拖拉，說明要寫出「這一關用點的」（§六之五第 4 點的例外） */
+  if (!/用點的/.test(I18N.zh.gAsks.hop) || !/all tapping/.test(I18N.en.gAsks.hop)) fail('hop: the round has no drag — its instructions must say it is all taps');
+  gameShuffleProblems(src, 1, { roundFn:'renderTray' }).forEach(fail);
+  if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(src)) fail('ahead mode does not show hint level 1 automatically');
+  if (!/if \(hintLevel >= 2\) gHintBtn\.disabled = true;/.test(src)) fail('the hint button is not disabled after the second level');
+
+  /* --- 觸控：375px 手機上卡片內寬約 290px，300 寬的畫板縮成 0.967 倍 --- */
+  const scale = Math.min(1.5, 290 / W);
+  const small = (what, sz) => { if (!(sz * scale >= 44)) fail(what + ' is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+  small('GPICK', D.GPICK);
+  small('the "take from here" piece', D.PLATE_JAR.size);
+  small('a flow card (' + D.FLOW_TRAY.w + '×' + D.FLOW_TRAY.h + ')', Math.min(D.FLOW_TRAY.w, D.FLOW_TRAY.h));
+  small('a flow box', Math.min(D.FLOW_BOX.w, D.FLOW_BOX.h));
+  small('a relay card', D.RELAY_TRAY.size);
+  small('a relay box', D.RELAY_EQ.slot);
+  small('a sentence card (' + D.SEQ_CARD.w + '×' + D.SEQ_CARD.h + ')', Math.min(D.SEQ_CARD.w, D.SEQ_CARD.h));
+  small('a sentence box', D.SEQ_SLOT.h);
+  [D.PLATE_JAR.size, D.FLOW_TRAY.w, D.FLOW_TRAY.h, D.RELAY_TRAY.size, D.SEQ_CARD.w, D.SEQ_CARD.h].forEach(s => { if (s < D.GPICK) fail('a piece side of ' + s + ' is smaller than GPICK ' + D.GPICK); });
+  { const m = src.match(/\.btn\{[^}]*min-height:(\d+)px/); if (!m || +m[1] < 46) fail('hop: the −10/−1/+1/+10 buttons (.btn) are not at least 46px tall'); }
+  need('plate', /addPiece\(B, \{ w:GPICK, h:GPICK, cx:p\.x, cy:p\.y, text:icon, cls:'gitem'/, 'the items on the plate are not GPICK × GPICK at plateXY()');
+  need('plate', /addPiece\(B, \{ w:J\.size, h:J\.size, cx:J\.x \+ J\.w \/ 2, cy:J\.y \+ J\.h \/ 2 \+ 10,/, 'cannot read where the "take from here" piece is drawn');
+  need('flow', /addPiece\(B, \{ w:FLOW_TRAY\.w, h:FLOW_TRAY\.h, cx:cx, cy:cy,/, 'the flow cards are not FLOW_TRAY.w × FLOW_TRAY.h');
+  need('relay', /addPiece\(B, \{ w:RELAY_TRAY\.size, h:RELAY_TRAY\.size, cx:cx, cy:cy,/, 'the relay cards are not RELAY_TRAY.size');
+  need('relay', /addPiece\(B, \{ w:RELAY_TRAY\.size, h:RELAY_TRAY\.size, cx:EQ\.res\.x, cy:EQ\.y\[0\],/, 'the middle-number card is not RELAY_TRAY.size at the first answer box');
+  need('seq', /addPiece\(B, \{ w:C\.w, h:C\.h, cx:GAME_W \/ 2, cy:C\.y\[i\],/, 'the sentence cards are not SEQ_CARD.w × SEQ_CARD.h at SEQ_CARD.y');
+
+  /* --- 星星：低年級不扣分（§三、§六之五第 3 點）。roundSolved()／roundMiss() 從原始碼切出來真的跑 --- */
+  {
+    const fs = extractFunction(src, 'roundSolved'), fm = extractFunction(src, 'roundMiss');
+    if (!fs || !fm) fail('stars: cannot find roundSolved()/roundMiss() in index.html');
+    else {
+      const env = 'var gSolved = false, gScore = S0, gMistakes = 0, gRound = 0, GAME_ORDER = [1,2,3,4,5], elScore = {}, gMsg = {}, gNext = {}, gHintBtn = {};' +
+        'var gameStage = { querySelectorAll: function(){ return []; } }; function L(){ return { gStars:function(n){ return "@" + n; }, gWin:function(s){ return "W" + s; }, gClear:"C" }; }\n';
+      const run = (s0, misses, solves) => new Function(env.replace('S0', s0) + fm + '\n' + fs + '\nfor (var i = 0; i < ' + misses + '; i++) roundMiss("why");' +
+        'var afterMiss = gScore;\nfor (var j = 0; j < ' + solves + '; j++) roundSolved("ok");\nreturn { s:gScore, afterMiss:afterMiss, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistakes };')();
+      try {
+        [[0, 0, 2], [3, 0, 2], [3, 1, 1], [0, 4, 1]].forEach(([s0, misses, want]) => {
+          const r = run(s0, misses, 1);
+          if (r.afterMiss !== s0) fail('stars: a mistake changed the score ' + s0 + ' → ' + r.afterMiss + ' (low grades never lose points)');
+          if (r.s !== s0 + want || String(r.shown) !== String(s0 + want)) fail('stars: a round with ' + misses + ' mistake(s) gives ' + (r.s - s0) + ' stars, should be ' + want);
+          if (r.html.indexOf('@' + want) < 0) fail('stars: the message does not say ⭐ +' + want);
+          if (misses && r.m !== misses) fail('stars: roundMiss() does not record the mistake');
+        });
+        if (run(0, 0, 2).s !== 2) fail('stars: a round can be scored twice');
+      } catch (e){ fail('stars: roundSolved()/roundMiss() could not run: ' + e.message); }
+    }
+  }
+  LANGS.forEach(L => {
+    const d = I18N[L];
+    seq('gStars ' + L, d.gStars(2), [2]);
+    if (nums(d.gWin(7)).indexOf(7) < 0) fail('gWin ' + L + ' does not show the stars: ' + d.gWin(7));
+    if (typeof d.gClear !== 'string' || !d.gClear || /\d/.test(d.gClear)) fail('gClear ' + L + ' is missing or has a number in it');
+  });
+
+  /* --- nearestOpen()：從原始碼切出來真的跑 --- */
+  let nearestOpen = null;
+  {
+    const fsrc = extractFunction(src, 'nearestOpen');
+    if (!fsrc) fail('cannot find nearestOpen() in index.html');
+    else { try { nearestOpen = new Function(fsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('nearestOpen() could not be evaluated: ' + e.message); } }
+  }
+  const tgt = (R, id) => ({ id, cx:R.x + R.w / 2, cy:R.y + R.h / 2, hw:R.w / 2, hh:R.h / 2, done:false });
+  const boxDist = (pt, R) => Math.hypot(Math.max(0, R.x - pt.x, pt.x - R.x - R.w), Math.max(0, R.y - pt.y, pt.y - R.y - R.h));
+  /* 一組格子：格子裡每一點判給那一格；格子外、在某個吸附範圍裡的點判給**到方框**最近的那一格（一樣近不管）；
+     每一對相鄰的格子吸附範圍要真的重疊（不然「挑最近」從來沒被用到）；放在已經放好的格子上不可以改塞進旁邊 */
+  const zoneCheck = (rects, p, what, pairs) => {
+    if (!nearestOpen) return;
+    const list = rects.map(tgt);
+    let bad = 0, gapBad = 0, xs = Infinity, xe = -Infinity, ys = Infinity, ye = -Infinity;
+    rects.forEach(R => { xs = Math.min(xs, R.x - p); xe = Math.max(xe, R.x + R.w + p); ys = Math.min(ys, R.y - p); ye = Math.max(ye, R.y + R.h + p); });
+    for (let x = xs + 0.25; x < xe; x += 0.75) for (let y = ys + 0.25; y < ye; y += 0.75){
+      const ds = rects.map(R => boxDist({ x, y }, R)), dmin = Math.min.apply(null, ds);
+      const g = nearestOpen(list, { x, y }, p);
+      if (dmin === 0){ if (!g || g.id !== ds.indexOf(0)) bad++; continue; }
+      const inPad = rects.map(R => x >= R.x - p && x <= R.x + R.w + p && y >= R.y - p && y <= R.y + R.h + p);
+      if (!inPad.some(Boolean)){ if (g) gapBad++; continue; }
+      const cands = ds.map((dv, i) => inPad[i] ? dv : Infinity), best = Math.min.apply(null, cands);
+      if (cands.filter(dv => Math.abs(dv - best) < 1e-9).length > 1) continue;
+      if (!g || g.id !== cands.indexOf(best)) gapBad++;
+    }
+    if (bad) fail('nearestOpen(): ' + bad + ' points inside a ' + what + ' are given to another target (or none)');
+    if (gapBad) fail('nearestOpen(): ' + gapBad + ' points near a ' + what + ' go to the farther target (or a drop outside every pad is accepted) — it must measure to the box, not take the first match or the centre');
+    pairs.forEach(([i, j]) => {
+      const a = rects[i], b = rects[j];
+      const gx = Math.max(b.x - a.x - a.w, a.x - b.x - b.w), gy = Math.max(b.y - a.y - a.h, a.y - b.y - b.h);
+      if (!(Math.max(gx, gy) < 2 * p)) fail(what + ' ' + i + ' and ' + j + ' are ' + Math.max(gx, gy) + ' apart — the drop pads (' + p + ') no longer overlap, so the nearest rule is never exercised');
+    });
+    const done = list.map((b, i) => Object.assign({}, b, { done:i === 0 }));
+    if (nearestOpen(done, { x:done[0].cx, y:done[0].cy }, p) !== null) fail('nearestOpen(): a drop on a finished ' + what + ' is moved into a neighbour');
+  };
+
+  /* --- shuffle()：托盤不可以一開始就是答案的順序（排先後的三句話用 0、1、2 洗） ---
+     Math.random 換成「一定洗回原樣」的假亂數，每一組（已經排好的）都必須被打亂；真亂數跑 2000 次也一次都不可以是排好的 */
+  {
+    const fsrc = extractFunction(src, 'shuffle');
+    const up = a => a.every((v, i) => i === 0 || a[i - 1] < v);
+    if (!fsrc) fail('cannot find shuffle() in index.html');
+    else {
+      try {
+        const fake = { floor:Math.floor, random:() => 0.999999 };   /* k = j：每一步都和自己交換 = 原樣 */
+        const forced = new Function('Math', fsrc + '\nreturn shuffle;')(fake);
+        const real = new Function(fsrc + '\nreturn shuffle;')();
+        [[0, 1, 2], [5, 20, 31]].forEach(a => {
+          const out = forced(a);
+          if (out.slice().sort((x, y) => x - y).join() !== a.join()) fail('shuffle() changed the set ' + a.join());
+          if (up(out)) fail('shuffle() can leave the tray already in order (' + out.join() + ') — the sentence round is solved before it starts');
+          for (let i = 0; i < 2000; i++) if (up(real(a))){ fail('shuffle() returned ' + a.join() + ' already in order with a real Math.random'); break; }
+        });
+      } catch (e){ fail('shuffle() could not run: ' + e.message); }
+    }
+    need('seq', /shuffle\(\[0, 1, 2\]\)\.forEach\(function\(t, i\)\{/, 'the sentence cards are not shuffled by time order 0, 1, 2');
+  }
+
+  /* 共用：每一題的基本約束（stepOk 是 data.check 的那一份）、四個數兩兩不同 */
+  const entry = (where, e, mixed) => {
+    const v = stepOk(where, e, 100);
+    if (!v) return null;
+    if (mixed && e.o1 === e.o2) fail(where + ': this round needs one change that adds and one that takes away (' + e.o1 + e.o2 + ')');
+    const four = [e.a, e.b, e.c, v.mid];
+    if (new Set(four).size !== 4) fail(where + ': a, b, c and the middle number must all differ (' + four.join(', ') + ') — the same number would mean two things on screen');
+    if (D.midOf(e) !== v.mid || D.ansOf(e) !== v.ans) fail(where + ': midOf/ansOf disagree with the checker');
+    return v;
+  };
+  const shapesOf = pool => pool.map(e => e.o1 + e.o2);
+
+  /* ============ 第 1 關：演一次 ============ */
+  {
+    const P0 = D.PLATE_BOX, J = D.PLATE_JAR, E = D.PLATE_EAT;
+    if (D.GAME_PLATE.length < 4) fail('GAME_PLATE needs at least 4 entries');
+    const sh = shapesOf(D.GAME_PLATE);
+    if (sh.indexOf('+-') < 0 || sh.indexOf('-+') < 0) fail('GAME_PLATE must have both an add-first and a take-first story');
+    /* 版面：盤子 15 格、右下角 10 格，兩兩不碰、都在框裡；框都在畫板裡；盤子和右下角的吸附範圍重疊 */
+    const plateR = { x:P0.x, y:P0.y, w:P0.w, h:P0.h }, eatR = { x:E.x, y:E.y, w:E.w, h:E.h }, jarR = { x:J.x, y:J.y, w:J.w, h:J.h };
+    [plateR, eatR, jarR].forEach((R, i) => inside(R, 'plate frame ' + i, W, D.PLATE_H));
+    noHits([plateR, eatR, jarR], 'plate frame');
+    const cells = [];
+    for (let i = 0; i < P0.max; i++){
+      const p = D.plateXY(i), mine = { x:P0.x + P0.w / 2 + (i % P0.per - (P0.per - 1) / 2) * P0.step, y:P0.y + P0.top + Math.floor(i / P0.per) * P0.step };
+      if (Math.abs(p.x - mine.x) > 1e-9 || Math.abs(p.y - mine.y) > 1e-9) fail('plateXY(' + i + ') is ' + p.x + ',' + p.y + '; the checker gets ' + mine.x + ',' + mine.y);
+      cells.push(box(p.x, p.y, D.GPICK, D.GPICK)); within(cells[i], plateR, 'plate item ' + i);
+    }
+    noHits(cells, 'plate item');
+    if (P0.max !== P0.per * 3) fail('PLATE_BOX.max should be three rows of ' + P0.per);
+    const ate = [];
+    for (let i = 0; i < E.max; i++){ const q = D.eatXY(i); ate.push(box(q.x, q.y, E.size, E.size)); within(ate[i], eatR, 'eaten item ' + i); }
+    noHits(ate, 'eaten item');
+    const jar = box(J.x + J.w / 2, J.y + J.h / 2 + 10, J.size, J.size);
+    within(jar, jarR, 'the "take from here" piece');
+    if (!(jar.y >= J.y + 4 + 22)) fail('the "take from here" piece covers its label');
+    if (!(eatXY0Top(D) >= E.y + 4 + 22)) fail('the eaten items cover the take-away label');
+    zoneCheck([plateR, eatR], D.PLATE_PAD, 'plate/take-away box', [[0, 1]]);
+    /* 題庫：照遊戲的規則把每一題玩一遍 —— 每一個狀態都試四種動作（左下角→盤子、左下角→右下角、盤子→右下角、盤子→盤子） */
+    D.GAME_PLATE.forEach((e, i) => {
+      const where = 'GAME_PLATE[' + i + ']', v = entry(where, e, true);
+      if (!v) return;
+      const steps = [[e.o1, e.b], [e.o2, e.c]], pSteps = [{ op:e.o1, n:e.b }, { op:e.o2, n:e.c }];
+      let count = e.a, eaten = 0, maxOn = count, wrong = 0;
+      const S = { st:0, did:0, count:e.a };
+      /* 這一份規則是設定檔自己的：只有「這一步的方向」收；放回盤子上靜靜彈回；左下角→右下角在拿走的那一步說「從盤子上拿」 */
+      const myRule = (op, from, to) => (from === 'item' && to === 'plate') ? 'silent'
+        : (from === 'jar' && to === 'eat') ? (op === '-' ? 'fromPlate' : 'way')
+        : ((from === 'jar') === (op === '+')) ? 'ok' : 'way';
+      steps.forEach(([op, n], si) => {
+        for (let k = 0; k < n; k++){
+          /* 四種動作都拿頁面的 plateMove() 跑一次（在複本上），結果和狀態變化都要和自己的規則一樣 */
+          [['jar', 'plate'], ['jar', 'eat'], ['item', 'eat'], ['item', 'plate']].forEach(([from, to]) => {
+            const want = myRule(op, from, to), copy = Object.assign({}, S), got = D.plateMove(copy, pSteps, from, to);
+            if (got !== want) fail(where + ': plateMove(step ' + (si + 1) + ', ' + k + ' done, ' + from + '→' + to + ') returns ' + got + ', the rule says ' + want);
+            if (want !== 'ok' && JSON.stringify(copy) !== JSON.stringify(S)) fail(where + ': plateMove() changed the state on a ' + want + ' move');
+            if (want !== 'ok' && want !== 'silent') wrong++;
+            if (from === 'item' && count < 1 && to === 'eat') fail(where + ': the plate is empty while something still has to be taken away');
+          });
+          const mv = D.plateMove(S, pSteps, op === '+' ? 'jar' : 'item', op === '+' ? 'plate' : 'eat');
+          if (op === '+'){ count++; maxOn = Math.max(maxOn, count); } else { count--; eaten++; }
+          const wantSt = k + 1 === n ? { st:si + 1, did:0 } : { st:si, did:k + 1 };
+          if (mv !== 'ok' || S.count !== count || S.st !== wantSt.st || S.did !== wantSt.did) fail(where + ': plateMove() after ' + (k + 1) + ' of change ' + (si + 1) + ' gives ' + JSON.stringify(S) + ', the checker expects count ' + count + ', step ' + wantSt.st + ', ' + wantSt.did + ' done');
+          if (count < 0) fail(where + ': the plate goes below 0');
+        }
+        const want = si === 0 ? v.mid : v.ans;
+        if (count !== want) fail(where + ': after change ' + (si + 1) + ' the plate holds ' + count + ', should be ' + want);
+      });
+      if (D.plateMove(Object.assign({}, S), pSteps, 'jar', 'plate') !== 'silent') fail(where + ': plateMove() still accepts a move after both changes are done');
+      if (maxOn > P0.max) fail(where + ': ' + maxOn + ' items on the plate — only ' + P0.max + ' spots');
+      if (eaten > E.max) fail(where + ': ' + eaten + ' taken away — only ' + E.max + ' spots in the corner');
+      if (!wrong) fail(where + ': no move is ever blocked');
+      LANGS.forEach(L => {
+        const d = I18N[L], u = d.scenes[e.si];
+        steps.forEach(([op, n]) => {
+          const w = d.gPlateWay(e.si, op, n);
+          seq(where + ' gPlateWay ' + L, w, [n]);
+          has(where + ' gPlateWay ' + L, w, L === 'zh' ? [op === '+' ? u.add : u.sub, op === '+' ? '變多' : '變少'] : [op === '+' ? u.add : u.sub, op === '+' ? 'goes up' : 'goes down']);
+          for (let left = 1; left <= n; left++){ const h = d.gPlate2(e.si, op, left); seq(where + ' gPlate2 ' + L, h, [left]); has(where + ' gPlate2 ' + L, h, [op === '+' ? u.add : u.sub]); }
+        });
+        const fp = d.gPlateFromPlate(e.si);
+        seq(where + ' gPlateFromPlate ' + L, fp, []); has(where + ' gPlateFromPlate ' + L, fp, [u.sub]);
+        seq(where + ' gPlateNow0 ' + L, d.gPlateNow(e, 0, v.mid, v.ans), [e.a]);
+        seq(where + ' gPlateNow1 ' + L, d.gPlateNow(e, 1, v.mid, v.ans), [e.a, e.b, v.mid]);
+        seq(where + ' gPlateNow2 ' + L, d.gPlateNow(e, 2, v.mid, v.ans), [e.a, e.b, v.mid, v.mid, e.c, v.ans]);
+        const pm = d.gPlateMid(e, v.mid), pd = d.gPlateDone(e, v.mid, v.ans);
+        seq(where + ' gPlateMid ' + L, pm, [e.a, e.b, v.mid, v.mid]);
+        has(where + ' gPlateMid ' + L, pm, [eqText(e.a, e.o1, e.b, v.mid, L)]);
+        seq(where + ' gPlateDone ' + L, pd, [e.a, e.b, v.mid, v.mid, e.c, v.ans, v.ans]);
+        has(where + ' gPlateDone ' + L, pd, [eqText(v.mid, e.o2, e.c, v.ans, L)]);
+        seq(where + ' gPlateLbl ' + L, d.gPlateLbl(e.si, v.mid), [v.mid]);
+        const lines = d.gLines(e);
+        if (lines.length !== 4) fail(where + ' gLines ' + L + ': four lines expected');
+        else { seq(where + ' gLines ' + L + ' [0]', lines[0], [e.a]); seq(where + ' gLines ' + L + ' [1]', lines[1], [e.b]); seq(where + ' gLines ' + L + ' [2]', lines[2], [e.c]); seq(where + ' gLines ' + L + ' [3]', lines[3], []); }
+      });
+    });
+    need('plate', /var e = pick\(GAME_PLATE\), mid = midOf\(e\), ans = ansOf\(e\)/, 'the story is not the pool entry');
+    need('plate', /steps = \[\{ op:e\.o1, n:e\.b \}, \{ op:e\.o2, n:e\.c \}\]/, 'the two changes are not (o1, b) then (o2, c)');
+    need('plate', /for \(var i = 0; i < e\.a; i\+\+\) addItem\(\);/, 'the plate does not start with a items');
+    need('plate', /var zones = \[plate, eat\];\s*useTapSelect\(B, function\(P, pt\)\{\s*var z = nearestOpen\(zones, pt, PLATE_PAD\);\s*if \(!z \|\| S\.st > 1\) return false;/, 'the drop does not pick the nearest of the plate and the take-away box (empty space must be silent)');
+    need('plate', /var s = steps\[S\.st\], kind = P\.data\.kind, r = plateMove\(S, steps, kind, z === plate \? 'plate' : 'eat'\);\s*if \(r === 'silent'\) return false;\s*if \(r !== 'ok'\)\{ roundMiss\(r === 'fromPlate' \? d\.gPlateFromPlate\(e\.si\) : d\.gPlateWay\(e\.si, s\.op, s\.n\)\); return false; \}/, 'the drop does not go through plateMove(), or a blocked move is not bounced with its reason');
+    need('plate', /plbl\.textContent = d\.gPlateLbl\(e\.si, S\.count\);\s*if \(S\.did === 0\)\{/, "the plate label does not follow plateMove()'s count, or the end of a change is not read from it");
+    need('plate', /else \{ markStory\(story, -1\); roundSolved\(d\.gPlateDone\(e, mid, ans\)\); \}/, 'the round is not solved right after the second change');
+    need('plate', /if \(kind === 'jar'\)\{ P\.home\(\); addItem\(\); \}/, 'bringing one over does not add exactly one item');
+    need('plate', /onPlate\.splice\(onPlate\.indexOf\(P\), 1\);/, 'a taken-away item stays on the plate');
+    need('plate', /B\.dropOnPiece = function\(sel, P\)\{ return sel\.data\.kind === 'jar' && P\.data\.kind === 'item'; \};/, 'with "take from here" selected, tapping an item on the (full) plate does not count as tapping the plate');
+  }
+
+  /* ============ 第 2 關：中間那一格 ============ */
+  {
+    const F = D.FLOW_BOX, T = D.FLOW_TRAY;
+    if (D.GAME_FLOW.length < 4) fail('GAME_FLOW needs at least 4 entries');
+    const sh = shapesOf(D.GAME_FLOW);
+    ['++', '+-', '-+', '--'].forEach(k => { if (sh.indexOf(k) < 0) fail('GAME_FLOW must cover all four shapes; ' + k + ' is missing'); });
+    const boxes = F.x.map(x => ({ x, y:F.y, w:F.w, h:F.h }));
+    boxes.forEach((R, i) => inside(R, 'flow box ' + i, W, D.FLOW_H));
+    noHits(boxes, 'flow box');
+    F.x.forEach((x, k) => { const lb = { x:x - 4, y:F.lblY, w:F.w + 8, h:22 }; inside(lb, 'flow label ' + k, W, D.FLOW_H); if (lb.y + lb.h > F.y) fail('flow label ' + k + ' runs into its box'); });
+    for (let k = 0; k < 2; k++) if (F.x[k + 1] - F.x[k] - F.w < 40) fail('the arrow between flow boxes ' + k + ' and ' + (k + 1) + ' has no room for "− 24"');
+    const cards = [0, 1, 2].map(i => box((W - 2 * T.step) / 2 + i * T.step, T.y, T.w, T.h));
+    cards.forEach((c, i) => inside(c, 'flow card ' + i, W, D.FLOW_H));
+    noHits(cards, 'flow card');
+    if (T.w > F.w || T.h > F.h) fail('a flow card does not fit inside a box');
+    cards.forEach((c, i) => boxes.forEach((R, j) => { if (hit(c, { x:R.x - D.GPAD, y:R.y - D.GPAD, w:R.w + 2 * D.GPAD, h:R.h + 2 * D.GPAD })) fail('flow card ' + i + ' sits inside box ' + j + "'s drop pad"); }));
+    D.GAME_FLOW.forEach((e, i) => {
+      const where = 'GAME_FLOW[' + i + ']', v = entry(where, e, false);
+      if (!v) return;
+      const dec = calc(e.a, e.o2, e.c);
+      if (D.flowDecoy(e) !== dec) fail(where + ': flowDecoy gives ' + D.flowDecoy(e) + ', the checker gets ' + dec + ' (a, then only the second change)');
+      const cardsV = [v.mid, v.ans, dec];
+      if (new Set(cardsV).size !== 3) fail(where + ': the three cards ' + cardsV.join(', ') + ' must all differ');
+      cardsV.forEach(x => { if (!(x >= 1 && x <= 100)) fail(where + ': card ' + x + ' is outside 1~100'); if ([e.a, e.b, e.c].indexOf(x) >= 0) fail(where + ': card ' + x + ' is copied from the story'); });
+      /* 每一張卡 × 每一格：只收中間數→中間、答案→右邊；擋掉的那一句說的事要成立 */
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        cardsV.forEach(x => [1, 2].forEach(k => {
+          const okMove = (k === 1 && x === v.mid) || (k === 2 && x === v.ans);
+          if (okMove) return;
+          let t;
+          if (k === 1 && x === v.ans){ t = d.gFlowAnsInMid(e, x); seq(where + ' gFlowAnsInMid ' + L, t, [x, e.b]); }
+          else if (k === 2 && x === v.mid){ t = d.gFlowMidInAns(e, x); seq(where + ' gFlowMidInAns ' + L, t, [x, e.c]); }
+          else {
+            if (x !== dec) fail(where + ': card ' + x + ' in box ' + k + ' has no reason');
+            t = d.gFlowDecoy(e, x, k); seq(where + ' gFlowDecoy ' + L, t, [e.a, e.c, x, e.b]);
+            has(where + ' gFlowDecoy ' + L, t, [e.a + ' ' + (L === 'zh' ? opZh(e.o2) : opEn(e.o2)) + ' ' + e.c + (L === 'zh' ? ' ＝ ' : ' = ') + x]);
+          }
+        }));
+        const fd = d.gFlowDone(e, v.mid, v.ans);
+        seq(where + ' gFlowDone ' + L, fd, [e.a, e.b, v.mid, v.mid, e.c, v.ans, v.mid, v.ans]);
+        has(where + ' gFlowDone ' + L, fd, [eqText(e.a, e.o1, e.b, v.mid, L), eqText(v.mid, e.o2, e.c, v.ans, L)]);
+        seq(where + ' gFlow2(1) ' + L, d.gFlow2(e, 1, v.mid), [e.a, e.b]);
+        seq(where + ' gFlow2(2) ' + L, d.gFlow2(e, 2, v.mid), [v.mid, e.c]);
+        seq(where + ' gFlowNow ' + L, d.gFlowNow(e.a, v.mid, v.ans), [e.a, v.mid, v.ans]);
+        seq(where + ' gFlowNow(start) ' + L, d.gFlowNow(e.a, null, null), [e.a]);
+      });
+    });
+    need('flow', /var e = pick\(GAME_FLOW\), mid = midOf\(e\), ans = ansOf\(e\), dec = flowDecoy\(e\)/, 'the cards are not the middle number, the answer and flowDecoy()');
+    need('flow', /addZone\(B, F\.x\[0\], F\.y, F\.w, F\.h, 'gslot gfstart', String\(e\.a\)\);/, 'the start box does not show a');
+    need('flow', /\[\[e\.o1, e\.b\], \[e\.o2, e\.c\]\]\.forEach\(function\(s, k\)\{[\s\S]*?d\.opWord\(s\[0\]\) \+ ' ' \+ s\[1\]/, 'the arrows do not show "o1 b" and "o2 c"');
+    need('flow', /renderTray\(B, \[mid, ans, dec\], FLOW_TRAY\.y,/, 'the three cards are not shuffled');
+    need('flow', /var s = nearestOpen\(boxes, pt, GPAD\), v = P\.data\.v;\s*if \(!s\) return false;\s*if \(v !== \(s\.k === 1 \? mid : ans\)\)\{/, 'a box is not picked as the nearest, or box 1 / box 2 do not want the middle number / the answer');
+    need('flow', /if \(s\.k === 1\) roundMiss\(v === ans \? d\.gFlowAnsInMid\(e, v\) : d\.gFlowDecoy\(e, v, 1\)\);\s*else roundMiss\(v === mid \? d\.gFlowMidInAns\(e, v\) : d\.gFlowDecoy\(e, v, 2\)\);\s*return false;/, 'a wrong card is accepted, or the reason does not match the card');
+    need('flow', /if \(have\[1\] !== null && have\[2\] !== null\) roundSolved\(d\.gFlowDone\(e, mid, ans\)\);/, 'the round is not solved exactly when both boxes are filled');
+  }
+
+  /* ============ 第 3 關：接力 ============ */
+  {
+    const EQ = D.RELAY_EQ, h = EQ.slot / 2, T = D.RELAY_TRAY;
+    if (D.GAME_RELAY.length < 4) fail('GAME_RELAY needs at least 4 entries');
+    const sh = shapesOf(D.GAME_RELAY);
+    if (!sh.some(s => s[0] === '-') || !sh.some(s => s[1] === '-')) fail('GAME_RELAY needs a story whose first change takes away and one whose second change takes away (the − order rule must come up)');
+    const slots = [], zones = [];
+    EQ.y.forEach((y, r) => {
+      const row = [{ x:EQ.lbl - 14, y:y - h, w:28, h:EQ.slot }];
+      EQ.x.forEach(x => { const R = { x:x - h, y:y - h, w:EQ.slot, h:EQ.slot }; slots.push(R); row.push(R); });
+      row.push({ x:EQ.op - 12, y:y - h, w:24, h:EQ.slot }, { x:EQ.eq - 12, y:y - h, w:24, h:EQ.slot }, { x:EQ.res.x - EQ.res.w / 2, y:y - h, w:EQ.res.w, h:EQ.slot });
+      row.forEach((R, i) => inside(R, 'relay row ' + r + ' cell ' + i, W, D.RELAY_H));
+      noHits(row, 'relay row ' + r + ' cell');
+      zones.push.apply(zones, row);
+    });
+    if (T.size > EQ.res.w) fail('the middle-number card does not fit in the answer box');
+    const cards = [0, 1, 2].map(i => box((W - 2 * T.step) / 2 + i * T.step, T.y, T.size, T.size));
+    cards.forEach((c, i) => inside(c, 'relay card ' + i, W, D.RELAY_H));
+    noHits(cards, 'relay card');
+    cards.forEach((c, i) => slots.forEach((R, j) => { if (hit(c, { x:R.x - D.RELAY_PAD, y:R.y - D.RELAY_PAD, w:R.w + 2 * D.RELAY_PAD, h:R.h + 2 * D.RELAY_PAD })) fail('relay card ' + i + ' sits inside box ' + j + "'s drop pad"); }));
+    zoneCheck(slots, D.RELAY_PAD, 'relay box', [[0, 1], [0, 2], [1, 3]]);
+    D.GAME_RELAY.forEach((e, i) => {
+      const where = 'GAME_RELAY[' + i + ']', v = entry(where, e, false);
+      if (!v) return;
+      /* 所有放法走一遍：狀態 = 四格各放了什麼；卡片 = a、b、c，第一個算式寫好之後多一張中間數卡（'M'） */
+      /* 設定檔自己的一份規則（第二套實作）；每一步都和頁面的 relayRule() 比，不一樣就報錯 */
+      const rule = (st, card, s) => {
+        const row = s < 2 ? 0 : 1, pos = s % 2, step1 = st[0] !== null && st[1] !== null;
+        if (st[s] !== null) return 'silent';
+        if (row === 1 && !step1) return 'first';
+        if (row === 0 && card === 'c') return 'loose';
+        const isBig = row === 0 ? card === 'a' : card === 'M';
+        if ((row === 0 ? e.o1 : e.o2) === '-' && (pos === 0) !== isBig) return 'minus';
+        return 'ok';
+      };
+      const pageSays = (st, card, s, want) => {
+        if (want === 'silent') return;
+        const copy = st.slice(), page = D.relayRule(copy, [e.o1, e.o2], card, s);
+        if (page !== want) fail(where + ': relayRule(' + st.join(' ') + ', ' + card + ' → box ' + s + ') returns ' + page + ', the rule says ' + want);
+        /* 頁面把它的 put 陣列直接傳進去：relayRule() 只能讀、不可以改（改了，畫面上只放一張卡就可能放行第二個算式） */
+        let same = copy.length === st.length;
+        for (let i = 0; i < st.length; i++) if (!(i in copy) || !Object.is(copy[i], st[i])) same = false;   /* 逐格比：some() 會跳過被 delete 掉的洞 */
+        if (!same) fail(where + ': relayRule() changed the board it was asked about (' + st.join(' ') + ' → ' + copy.join(' ') + ')');
+      };
+      const val = c => ({ a:e.a, b:e.b, c:e.c, M:v.mid })[c];
+      const seen = {}, ends = [];
+      let reasons = { first:0, loose:0, minus:0 };
+      const walk = (st) => {
+        const key = st.join('|'); if (seen[key]) return; seen[key] = true;
+        const step1 = st[0] !== null && st[1] !== null;
+        const hand = ['a', 'b', 'c'].concat(step1 ? ['M'] : []).filter(c => st.indexOf(c) < 0);
+        if (st[2] !== null && st[3] !== null){ ends.push(st.slice()); return; }
+        let moves = 0;
+        hand.forEach(c => [0, 1, 2, 3].forEach(s => {
+          const r = rule(st, c, s);
+          pageSays(st, c, s, r);
+          if (r === 'ok'){ moves++; const n = st.slice(); n[s] = c; walk(n); }
+          else if (r !== 'silent'){
+            reasons[r]++;
+            /* 擋掉的放法真的是錯的：c 放進第一個算式，或減法寫反，算出來都不是該有的數（或根本不能減） */
+            if (r === 'loose'){ const other = st[s === 0 ? 1 : 0]; const x = other === null ? null : val(other); if (x !== null && (s === 0 ? calc(e.c, e.o1, x) : calc(x, e.o1, e.c)) === v.mid) fail(where + ': putting ' + e.c + ' in the first sentence is blocked, but it would still give the middle number'); }
+            if (r === 'minus'){ const row = s < 2 ? 0 : 1, big = row === 0 ? e.a : v.mid, sm = row === 0 ? e.b : e.c; if (!(big > sm)) fail(where + ': the − rule says ' + big + ' goes first, but ' + big + ' is not bigger than ' + sm); }
+          }
+        }));
+        if (!moves) fail(where + ': stuck at ' + key + ' — no card can be placed');
+      };
+      walk([null, null, null, null]);
+      if (!ends.length) fail(where + ': the round can never be finished');
+      ends.forEach(st => {
+        const r0 = calc(val(st[0]), e.o1, val(st[1])), r1 = calc(val(st[2]), e.o2, val(st[3]));
+        if (r0 !== v.mid || r1 !== v.ans) fail(where + ': a finished board ' + st.join(' ') + ' gives ' + r0 + ' and ' + r1 + ', not ' + v.mid + ' and ' + v.ans);
+        if (st.slice(2).indexOf('M') < 0) fail(where + ': a finished board does not carry the middle number into the second sentence');
+      });
+      if (!reasons.first || !reasons.loose) fail(where + ': the "first sentence first" / "c belongs to the second change" rules never come up');
+      if ((e.o1 === '-' || e.o2 === '-') && !reasons.minus) fail(where + ': the − order rule never comes up');
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        seq(where + ' gRelayLoose ' + L, d.gRelayLoose(e), [e.c, e.c]);
+        if (e.o1 === '-') seq(where + ' gRelayMinus(1) ' + L, d.gRelayMinus(e.a, e.b), [e.a, e.b, e.a]);
+        if (e.o2 === '-') seq(where + ' gRelayMinus(2) ' + L, d.gRelayMinus(v.mid, e.c), [v.mid, e.c, v.mid]);
+        seq(where + ' gRelayMid ' + L, d.gRelayMid(v.mid), [v.mid]);
+        const rd = d.gRelayDone(e, v.mid, v.ans);
+        seq(where + ' gRelayDone ' + L, rd, [e.a, e.b, v.mid, v.mid, e.c, v.ans, v.mid, v.ans]);
+        has(where + ' gRelayDone ' + L, rd, [eqText(e.a, e.o1, e.b, v.mid, L), eqText(v.mid, e.o2, e.c, v.ans, L)]);
+        seq(where + ' gRelay2(before) ' + L, d.gRelay2(e, false, v.mid), [e.a, e.b]);
+        seq(where + ' gRelay2(after) ' + L, d.gRelay2(e, true, v.mid), [v.mid, e.c]);
+        seq(where + ' gRelayNow ' + L, d.gRelayNow(v.mid, v.ans), [v.mid, v.ans]);
+      });
+    });
+    LANGS.forEach(L => { seq('gRelayFirst ' + L, I18N[L].gRelayFirst, []); if (I18N[L].eqWord !== (L === 'zh' ? '＝' : '=')) fail('eqWord ' + L + ' is "' + I18N[L].eqWord + '"'); });
+    need('relay', /var e = pick\(GAME_RELAY\), mid = midOf\(e\), ans = ansOf\(e\), EQ = RELAY_EQ, h = EQ\.slot \/ 2, ops = \[e\.o1, e\.o2\];/, 'the two sentences do not use the story\'s two operations');
+    need('relay', /renderTray\(B, \[e\.a, e\.b, e\.c\], RELAY_TRAY\.y,/, 'the cards a, b, c are not shuffled');
+    need('relay', /var s = nearestOpen\(slots, pt, RELAY_PAD\);\s*if \(!s\) return false;/, 'a box is not picked as the nearest (empty space must be silent)');
+    need('relay', /r = relayRule\(put, ops, P\.data\.key, slots\.indexOf\(s\)\);\s*if \(r === 'first'\)\{ roundMiss\(d\.gRelayFirst\); return false; \}\s*if \(r === 'loose'\)\{ roundMiss\(d\.gRelayLoose\(e\)\); return false; \}\s*if \(r === 'minus'\)\{ roundMiss\(s\.row === 0 \? d\.gRelayMinus\(e\.a, e\.b\) : d\.gRelayMinus\(mid, e\.c\)\); return false; \}\s*put\[slots\.indexOf\(s\)\] = P\.data\.key;/, 'a drop does not go through relayRule(), a blocked card is not bounced with its reason, or the board state it reads is not updated');
+    need('relay', /data:\{ v:v, key:\['a', 'b', 'c'\]\[\[e\.a, e\.b, e\.c\]\.indexOf\(v\)\] \} \}\);/, 'the cards do not carry which story number they are (a / b / c)');
+    need('relay', /if \(s\.row === 0 && filled\[0\] === 2\)\{\s*step1 = true;[\s\S]*?data:\{ v:mid, res:true, key:'M' \} \}\);/, 'the first sentence\'s answer does not become a card (the middle number must be carried by hand)');
+    need('relay', /\} else if \(filled\[1\] === 2\)\{[\s\S]*?roundSolved\(d\.gRelayDone\(e, mid, ans\)\);/, 'the round is not solved exactly when the second sentence is written');
+  }
+
+  /* ============ 第 4 關：排先後 ============ */
+  {
+    const S = D.SEQ_SLOT, C = D.SEQ_CARD;
+    if (D.GAME_SEQ.length < 4) fail('GAME_SEQ needs at least 4 entries');
+    const sl = S.y.map(y => ({ x:S.x, y, w:S.w, h:S.h }));
+    sl.forEach((R, i) => inside(R, 'sentence box ' + i, W, D.SEQ_H));
+    noHits(sl, 'sentence box');
+    S.y.forEach((y, k) => { if (S.x - 4 < 24) fail('no room for the ①②③ labels'); });
+    const cs = C.y.map(y => box(W / 2, y, C.w, C.h));
+    cs.forEach((c, i) => inside(c, 'sentence card ' + i, W, D.SEQ_H));
+    noHits(cs, 'sentence card');
+    if (C.w > S.w || C.h > S.h) fail('a sentence card does not fit inside a box');
+    cs.forEach((c, i) => sl.forEach((R, j) => { if (hit(c, { x:R.x - D.GPAD, y:R.y - D.GPAD, w:R.w + 2 * D.GPAD, h:R.h + 2 * D.GPAD })) fail('sentence card ' + i + ' sits inside box ' + j + "'s drop pad"); }));
+    zoneCheck(sl, D.GPAD, 'sentence box', [[0, 1], [1, 2]]);
+    LANGS.forEach(L => { const n = I18N[L].whenNames; if (!n || !n.w1 || !n.w2 || !n.w3) fail('whenNames missing in ' + L); });
+    D.GAME_SEQ.forEach((e, i) => {
+      const where = 'GAME_SEQ[' + i + ']', v = entry(where, e, false);
+      if (!v) return;
+      LANGS.forEach(L => {
+        const d = I18N[L], wd = d.whenWords, nm = [d.whenNames.w1, d.whenNames.w2, d.whenNames.w3], u = d.scenes[e.si];
+        const tx = d.gSeqCards(e);
+        if (tx.length !== 3) return fail(where + ' gSeqCards ' + L + ': three sentences expected');
+        seq(where + ' card 0 ' + L, tx[0], [e.a]); seq(where + ' card 1 ' + L, tx[1], [e.b]); seq(where + ' card 2 ' + L, tx[2], [e.c]);
+        has(where + ' card 0 ' + L, tx[0], [wd.w1]); has(where + ' card 1 ' + L, tx[1], [wd.w2, e.o1 === '+' ? u.add : u.sub]); has(where + ' card 2 ' + L, tx[2], [wd.w3, e.o2 === '+' ? u.add : u.sub]);
+        /* 每一張卡 × 每一格：只收自己的時間；擋掉的那一句「比較早／晚」要和時間的先後一致 */
+        for (let t = 0; t < 3; t++) for (let k = 0; k < 3; k++){
+          if (t === k) continue;
+          const m = t > k ? d.gSeqLate(nm[t], nm[k]) : d.gSeqEarly(nm[t], nm[k]);
+          seq(where + ' seq reason ' + L, m, []);
+          has(where + ' seq reason ' + L, m.toLowerCase(), [nm[t].toLowerCase(), nm[k].toLowerCase(), t > k ? (L === 'zh' ? '晚' : 'after') : (L === 'zh' ? '早' : 'before')]);
+        }
+        for (let k = 0; k < 3; k++) seq(where + ' gSeq2 ' + L, d.gSeq2(k, nm[k]), [k + 1]);
+        const sd = d.gSeqDone(e, v.mid, v.ans);
+        seq(where + ' gSeqDone ' + L, sd, [e.a, e.b, v.mid, v.mid, e.c, v.ans, v.ans]);
+        has(where + ' gSeqDone ' + L, sd, [eqText(e.a, e.o1, e.b, v.mid, L), eqText(v.mid, e.o2, e.c, v.ans, L)]);
+        seq(where + ' gSeqNow ' + L, d.gSeqNow(e, v.mid, v.ans), [e.a, e.b, v.mid, v.mid, e.c, v.ans]);
+      });
+    });
+    need('seq', /var texts = d\.gSeqCards\(e\), when = d\.whenNames, names = \[when\.w1, when\.w2, when\.w3\];/, 'the sentences are not the story told morning / noon / afternoon');
+    need('seq', /var s = nearestOpen\(slots, pt, GPAD\), t = P\.data\.t;\s*if \(!s\) return false;\s*if \(t !== s\.k\)\{ roundMiss\(t > s\.k \? d\.gSeqLate\(names\[t\], names\[s\.k\]\) : d\.gSeqEarly\(names\[t\], names\[s\.k\]\)\); return false; \}/, 'a sentence is accepted in the wrong box, or the reason compares the times the wrong way round');
+    need('seq', /if \(slots\.every\(function\(x\)\{ return x\.done; \}\)\)\{\s*line\.textContent = d\.gSeqNow\(e, mid, ans\);\s*roundSolved\(d\.gSeqDone\(e, mid, ans\)\);/, 'the round is not solved exactly when all three boxes are filled');
+  }
+
+  /* ============ 第 5 關：交卷 ============ */
+  {
+    if (D.HOP_STEPS.join() !== '-10,-1,1,10') fail('HOP_STEPS should be −10, −1, +1, +10');
+    if (D.GAME_HOP.length < 4) fail('GAME_HOP needs at least 4 entries');
+    const sh = shapesOf(D.GAME_HOP);
+    if (sh.indexOf('+-') < 0 || sh.indexOf('-+') < 0) fail('GAME_HOP must have both an add-first and a take-first story');
+    /* 積木：十最多 10 條、一最多 9 個，和自己的公式比、不互相碰到、都在框裡 */
+    const pic = { x:4, y:4, w:W - 8, h:D.HOP_H - 8 }, blk = [];
+    for (let i = 0; i < 10; i++){
+      const p = D.hopXY('t', i), b = D.HOP_BLK.t, mine = { x:b.cx + (i - 4.5) * b.sx, y:b.top + b.h / 2 };
+      if (Math.abs(p.x - mine.x) > 1e-9 || Math.abs(p.y - mine.y) > 1e-9) fail('hopXY(t, ' + i + ') disagrees with the checker');
+      blk.push(box(p.x, p.y, b.w, b.h));
+    }
+    for (let i = 0; i < 9; i++){
+      const p = D.hopXY('o', i), b = D.HOP_BLK.o, mine = { x:b.cx + (i % b.per - (b.per - 1) / 2) * b.sx, y:b.top + b.h / 2 + Math.floor(i / b.per) * b.sy };
+      if (Math.abs(p.x - mine.x) > 1e-9 || Math.abs(p.y - mine.y) > 1e-9) fail('hopXY(o, ' + i + ') disagrees with the checker');
+      blk.push(box(p.x, p.y, b.w, b.h));
+    }
+    blk.forEach((b, i) => within(b, pic, 'hop block ' + i));
+    noHits(blk, 'hop block');
+    D.GAME_HOP.forEach((e, i) => {
+      const where = 'GAME_HOP[' + i + ']', v = entry(where, e, true);
+      if (!v) return;
+      if (e.b % 10 === 0 || e.c % 10 === 0) fail(where + ': both changes need some ones (so going too far with ±10 can come up)');
+      /* 所有按法走一遍：狀態 (st, did)；按鈕 −10／−1／+1／+10／交卷 */
+      const steps = [[e.o1, e.b], [e.o2, e.c]], seen = {}, R = { way:0, over:0, sub0:0, stopMid:0, sub1:0 };
+      let solvedAt = [];
+      const pSteps = [{ op:e.o1, n:e.b }, { op:e.o2, n:e.c }];
+      const press = (st, did, cur, k, want, next) => {
+        const S = { st, did, cur }, got = D.hopPress(S, pSteps, k);
+        if (got !== want) fail(where + ': hopPress(step ' + (st + 1) + ', ' + did + ' done, at ' + cur + ', ' + (k ? (k > 0 ? '+' : '') + k : 'hand in') + ') returns ' + got + ', the rule says ' + want);
+        const after = next || { st, did, cur };
+        if (S.st !== after.st || S.did !== after.did || S.cur !== after.cur) fail(where + ': hopPress(' + (k || 'hand in') + ') leaves ' + JSON.stringify(S) + ', the checker expects ' + JSON.stringify(after));
+      };
+      const walk = (st, did, cur) => {
+        const key = st + ',' + did; if (seen[key]) return; seen[key] = true;
+        if (!(cur >= 0 && cur <= 100)) fail(where + ': the count reaches ' + cur + ' (blocks can show 0~100)');
+        if (st === 1 && did === 0 && cur !== v.mid) fail(where + ': after the first change the count is ' + cur + ', not the middle number ' + v.mid);
+        /* 交卷 */
+        if (st === 0){ R.sub0++; press(st, did, cur, 0, 'sub0'); }
+        else if (st === 1 && did === 0){ R.stopMid++; press(st, did, cur, 0, 'stopMid'); }
+        else if (st === 1){ R.sub1++; press(st, did, cur, 0, 'sub1'); }
+        else { solvedAt.push(cur); press(st, did, cur, 0, 'done'); }
+        if (st > 1){ D.HOP_STEPS.forEach(k => press(st, did, cur, k, 'silent')); return; }
+        const [op, n] = steps[st];
+        D.HOP_STEPS.forEach(k => {
+          const kop = k > 0 ? '+' : '-', amt = Math.abs(k);
+          if (kop !== op){ R.way++; press(st, did, cur, k, 'way'); return; }
+          if (did + amt > n){ R.over++; press(st, did, cur, k, 'over'); return; }
+          const nd = did + amt, nx = nd === n ? { st:st + 1, did:0, cur:cur + k } : { st, did:nd, cur:cur + k };
+          press(st, did, cur, k, 'ok', nx);
+          walk(nx.st, nx.did, nx.cur);
+        });
+      };
+      walk(0, 0, e.a);
+      if (!solvedAt.length || solvedAt.some(x => x !== v.ans)) fail(where + ': handing in is accepted at ' + solvedAt.join(',') + ', only ' + v.ans + ' is right');
+      Object.keys(R).forEach(k => { if (!R[k]) fail(where + ': the "' + k + '" rule never comes up'); });
+      LANGS.forEach(L => {
+        const d = I18N[L], u = d.scenes[e.si];
+        steps.forEach(([op, n]) => {
+          const w = d.gHopWay(e.si, op, n);
+          seq(where + ' gHopWay ' + L, w, [n]);
+          has(where + ' gHopWay ' + L, w, [op === '+' ? u.add : u.sub, L === 'zh' ? (op === '+' ? '變多' : '變少') : (op === '+' ? 'goes up' : 'goes down'), op === '+' ? '+' : '−']);
+          for (let did = 0; did < n; did++) [10, 1].forEach(k => { if (did + k > n) seq(where + ' gHopOver ' + L, d.gHopOver(e.si, op, did, k, n), [did, k, did + k, n]); });
+          for (let left = 1; left <= n; left++){
+            const t = Math.floor(left / 10), o = left % 10;
+            const want = L === 'zh' ? [left].concat(t ? [t, 10] : [], o ? [o, 1] : []) : [left].concat(t ? [10].concat(t > 1 ? [t] : []) : [], o ? [1].concat(o > 1 ? [o] : []) : []);
+            const g = d.gHop2(e.si, op, left);
+            seq(where + ' gHop2 ' + L, g, want);
+            has(where + ' gHop2 ' + L, g, [op === '+' ? '+' : '−']);
+            if (L === 'en' && ((t === 1 && !/10 once/.test(g)) || (o === 1 && !/1 once/.test(g)))) fail(where + ' gHop2 en: a single press must say "once" — ' + g);
+          }
+        });
+        seq(where + ' gHopMid ' + L, d.gHopMid(e, v.mid), [e.a, e.b, v.mid]);
+        seq(where + ' gHopBoth ' + L, d.gHopBoth(e, v.mid, v.ans), [v.mid, e.c, v.ans]);
+        seq(where + ' gHopSub0 ' + L, d.gHopSub0(e.si, e.o1, e.b), [e.b]);
+        const sm = d.gHopStopMid(e, v.mid);
+        seq(where + ' gHopStopMid ' + L, sm, [v.mid, e.c]);
+        has(where + ' gHopStopMid ' + L, sm, [e.o2 === '+' ? u.add : u.sub]);
+        for (let left = 1; left < e.c; left++) seq(where + ' gHopSub1 ' + L, d.gHopSub1(e.si, e.o2, left), [left]);
+        const hd = d.gHopDone(e, v.mid, v.ans);
+        seq(where + ' gHopDone ' + L, hd, [e.a, e.b, v.mid, v.mid, e.c, v.ans, v.ans]);
+        has(where + ' gHopDone ' + L, hd, [eqText(e.a, e.o1, e.b, v.mid, L), eqText(v.mid, e.o2, e.c, v.ans, L)]);
+        seq(where + ' gHopNow ' + L, d.gHopNow(e.a, v.mid, v.ans), [e.a, v.mid, v.ans]);
+      });
+    });
+    LANGS.forEach(L => { seq('gHopDone2 ' + L, I18N[L].gHopDone2, []); if (!I18N[L].gHopSubmitBtn) fail('gHopSubmitBtn missing in ' + L); });
+    need('hop', /var e = pick\(GAME_HOP\), mid = midOf\(e\), ans = ansOf\(e\), S = \{ st:0, did:0, cur:e\.a \};/, 'the count does not start at a');
+    need('hop', /var s = steps\[S\.st\], did0 = S\.did, r = hopPress\(S, steps, k\);\s*if \(r === 'way'\)\{ roundMiss\(d\.gHopWay\(e\.si, s\.op, s\.n\)\); return; \}\s*if \(r === 'over'\)\{ roundMiss\(d\.gHopOver\(e\.si, s\.op, did0, Math\.abs\(k\), s\.n\)\); return; \}\s*if \(r !== 'ok'\) return;\s*draw\(\);/, 'a press does not go through hopPress(), or a blocked press is not bounced with its reason');
+    need('hop', /var t = Math\.floor\(S\.cur \/ 10\), o = S\.cur % 10, i, p;/, "the blocks are not drawn from hopPress()'s count");
+    need('hop', /var r = hopPress\(S, steps, 0\);\s*if \(r === 'sub0'\) roundMiss\(d\.gHopSub0\(e\.si, e\.o1, e\.b\)\);\s*else if \(r === 'stopMid'\) roundMiss\(d\.gHopStopMid\(e, mid\)\);\s*else if \(r === 'sub1'\) roundMiss\(d\.gHopSub1\(e\.si, e\.o2, e\.c - S\.did\)\);\s*else if \(r === 'done'\)\{ sub\.disabled = true; roundSolved\(d\.gHopDone\(e, mid, ans\)\); \}/, 'handing in does not go through hopPress(), or is accepted before both changes are done (stopping at the middle number must be a mistake)');
+    need('hop', /btns\.forEach\(function\(x\)\{ x\.disabled = true; \}\);/, 'the step buttons stay live after both changes are done');
+    need('hop', /b\.textContent = \(k < 0 \? '−' : '\+'\) \+ Math\.abs\(k\);/, 'the buttons are not labelled −10 / −1 / +1 / +10');
+  }
+}
+/* 右下角第一排被拿走的東西的上緣（不可以壓到「吃掉／借走…」那一行字） */
+function eatXY0Top(D){ return D.eatXY(0).y - D.PLATE_EAT.size / 2; }
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-2/math/two-step */
   breaks: [
@@ -546,23 +1107,202 @@ module.exports = {
       find:'    var w = cols * size + 12, h = rows * size + 10;',
       replace:'    var w = cols * size - 20, h = rows * size + 10;' },
 
-    /* --- index.html：遊戲關卡 --- */
-    { file:'index', expect:'opts[ans] does not equal the answer',
-      find:"    { si:2, a:30, o1:'+', b:12, o2:'+', c:8, opts:[42, 50, 38], ans:1 },",
-      replace:"    { si:2, a:30, o1:'+', b:12, o2:'+', c:8, opts:[42, 50, 38], ans:0 }," },
-    { file:'index', expect:'should offer the middle number',
-      find:"    { si:1, a:24, o1:'-', b:9,  o2:'+', c:5, opts:[20, 15, 10], ans:0 },",
-      replace:"    { si:1, a:24, o1:'-', b:9,  o2:'+', c:5, opts:[20, 16, 10], ans:0 }," },
-    { file:'index', expect:'duplicate options',
-      find:"    { si:3, a:40, o1:'-', b:12, o2:'-', c:7, opts:[19, 28, 21], ans:2 },",
-      replace:"    { si:3, a:40, o1:'-', b:12, o2:'-', c:7, opts:[28, 28, 21], ans:2 }," },
-    { file:'index', expect:'is outside 1~100',
-      find:"    { si:0, a:8,  o1:'+', b:5,  o2:'-', c:6, opts:[13, 7, 19], ans:1 },",
-      replace:"    { si:0, a:8,  o1:'+', b:5,  o2:'-', c:6, opts:[13, 7, 190], ans:1 }," },
-    { file:'index', expect:'ROUNDS must cover all four shapes',
-      find:"    { si:2, a:30, o1:'+', b:12, o2:'+', c:8, opts:[42, 50, 38], ans:1 },\n    { si:3,",
-      replace:"    { si:2, a:30, o1:'+', b:12, o2:'-', c:8, opts:[42, 34, 38], ans:1 },\n    { si:3," },
 
+
+
+
+
+
+    /* --- 小遊戲（§六之五 五關五種玩法，2026-10-02）：每一條規則、題庫約束、版面常數、說明的數字各改壞一次 --- */
+    { file:'index', expect:"go to the farther target",
+      find:"if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"if (!best){ bd = dd; bc = dc; best = b; }" },
+    { file:'index', expect:"go to the farther target",
+      find:"var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;",
+      replace:"var dd = dx * dx + dy * dy, dc = dd;" },
+    { file:'index', expect:"a drop on a finished",
+      find:"    return best && !best.done ? best : null;",
+      replace:"    return best;" },
+    { file:'index', expect:"a mistake changed the score",
+      find:"function roundMiss(text){ gMistakes++; gMsg.innerHTML",
+      replace:"function roundMiss(text){ gMistakes++; gScore = Math.max(0, gScore - 1); elScore.textContent = gScore; gMsg.innerHTML" },
+    { file:'index', expect:"stars, should be 1",
+      find:"var stars = gMistakes === 0 ? 2 : 1;",
+      replace:"var stars = 2;" },
+    { file:'index', expect:"already in order",
+      find:"    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }\n",
+      replace:"" },
+    { file:'index', expect:"the sentence cards are not shuffled",
+      find:"shuffle([0, 1, 2]).forEach(function(t, i){",
+      replace:"[0, 1, 2].forEach(function(t, i){" },
+    { file:'index', expect:"renders its options without shuffle",
+      find:"shuffle(items).forEach(function(it, i){ mk(it, x0 + i * step, y); });",
+      replace:"items.forEach(function(it, i){ mk(it, x0 + i * step, y); });" },
+    { file:'index', expect:"ahead mode does not show hint level 1",
+      find:"if (mode === 'ahead'){ hintLevel = 1; showHint(); }",
+      replace:"if (false){ hintLevel = 1; showHint(); }" },
+    { file:'index', expect:"GPICK is",
+      find:"var GAME_W = 300, GPICK = 48, GPAD = 6;",
+      replace:"var GAME_W = 300, GPICK = 40, GPAD = 6;" },
+    { file:'index', expect:"must say it is all taps",
+      find:"hop:'這一關用點的：按 +／− 一件一件做",
+      replace:"hop:'按 +／− 一件一件做" },
+    { file:'index', expect:"seq: no second-level hint",
+      find:"      gCtx.hint2 = function(){\n        for (var k = 0; k < 3; k++) if (!slots[k].done) return d.gSeq2(k, names[k]);",
+      replace:"      gCtx.hint3 = function(){\n        for (var k = 0; k < 3; k++) if (!slots[k].done) return d.gSeq2(k, names[k]);" },
+    { file:'index', expect:"plateMove(",
+      find:"    if (op !== step.op) return 'way';                                        /* 方向做反 = 順序做反（只出一加一減） */\n",
+      replace:"" },
+    { file:'index', expect:"plateMove(",
+      find:"    if (kind === 'jar' && zone === 'eat') return step.op === '-' ? 'fromPlate' : 'way';",
+      replace:"    if (kind === 'jar' && zone === 'eat') return 'ok';" },
+    { file:'index', expect:"plateMove(",
+      find:"    s.did++;\n    if (s.did === step.n){ s.st++; s.did = 0; }",
+      replace:"    s.did++;\n    if (s.did === step.n + 1){ s.st++; s.did = 0; }" },
+    { file:'index', expect:"plateMove(",
+      find:"    s.count += op === '+' ? 1 : -1;",
+      replace:"    s.count += 1;" },
+    { file:'index', expect:"does not go through plateMove()",
+      find:"if (r !== 'ok'){ roundMiss(r === 'fromPlate'",
+      replace:"if (false){ roundMiss(r === 'fromPlate'" },
+    { file:'index', expect:"the plate label does not follow",
+      find:"plbl.textContent = d.gPlateLbl(e.si, S.count);\n        if (S.did === 0){",
+      replace:"plbl.textContent = d.gPlateLbl(e.si, e.a);\n        if (S.did === 0){" },
+    { file:'index', expect:"needs one change that adds and one that takes away",
+      find:"    { si:0, a:6,  o1:'+', b:5, o2:'-', c:4 },",
+      replace:"    { si:0, a:6,  o1:'+', b:5, o2:'+', c:4 }," },
+    { file:'index', expect:"only 15 spots",
+      find:"    { si:2, a:7,  o1:'+', b:6, o2:'-', c:9 },",
+      replace:"    { si:2, a:12, o1:'+', b:6, o2:'-', c:9 }," },
+    { file:'index', expect:"only 10 spots in the corner",
+      find:"    { si:3, a:10, o1:'-', b:7, o2:'+', c:9 }",
+      replace:"    { si:3, a:14, o1:'-', b:11, o2:'+', c:9 }" },
+    { file:'index', expect:"plate item 0 sticks out of its frame",
+      find:"var PLATE_BOX = { x:6, y:26, w:288, h:176, per:5, step:56, top:32, max:15 };",
+      replace:"var PLATE_BOX = { x:6, y:26, w:288, h:176, per:5, step:56, top:20, max:15 };" },
+    { file:'index', expect:"plate/take-away box 0 and 1 are",
+      find:"var PLATE_H = 318, PLATE_PAD = 10;",
+      replace:"var PLATE_H = 318, PLATE_PAD = 5;" },
+    { file:'index', expect:"covers its label",
+      find:"var PLATE_JAR = { x:6, y:214, w:140, h:98, size:60 };",
+      replace:"var PLATE_JAR = { x:6, y:214, w:140, h:98, size:76 };" },
+    { file:'index', expect:"cover the take-away label",
+      find:"var PLATE_EAT = { x:154, y:214, w:140, h:98, per:5, step:26, rowStep:28, size:22, top:48, max:10 };",
+      replace:"var PLATE_EAT = { x:154, y:214, w:140, h:98, per:5, step:26, rowStep:28, size:22, top:30, max:10 };" },
+    { file:'index', expect:"plateXY(5) is",
+      find:"y:P.y + P.top + Math.floor(i / P.per) * P.step };",
+      replace:"y:P.y + P.top + Math.floor(i / P.per) * (P.step - 1) };" },
+    { file:'index', expect:"does not count as tapping the plate",
+      find:"      B.dropOnPiece = function(sel, P){ return sel.data.kind === 'jar' && P.data.kind === 'item'; };\n",
+      replace:"" },
+    { file:'index', expect:"should say \"變多\"",
+      find:"s.place + '要變多，從左下角拿過來。'",
+      replace:"s.place + '要變少，從左下角拿過來。'" },
+    { file:'index', expect:"gPlateMid en: numbers should read",
+      find:"', and ' + mid + ' is the middle number. Now do the second change!'",
+      replace:"', and ' + (mid + 1) + ' is the middle number. Now do the second change!'" },
+    { file:'index', expect:"flowDecoy gives",
+      find:"function flowDecoy(x){ return x.o2 === '+' ? (x.a + x.c) : (x.a - x.c); }",
+      replace:"function flowDecoy(x){ return x.o2 === '+' ? (x.a + x.c + 1) : (x.a - x.c); }" },
+    { file:'index', expect:"box 1 / box 2 do not want",
+      find:"if (v !== (s.k === 1 ? mid : ans)){",
+      replace:"if (v !== (s.k === 1 ? mid : ans) && v !== ans){" },
+    { file:'index', expect:"is copied from the story",
+      find:"    { si:0, a:24, o1:'+', b:9,  o2:'-', c:5 },",
+      replace:"    { si:0, a:14, o1:'+', b:9,  o2:'-', c:5 }," },
+    { file:'index', expect:"gFlowMidInAns zh: numbers should read",
+      find:"return v + ' 只做完第一件事，是中間數！還要再 ' + this.opWord(c.o2) + ' ' + c.c + ' 才是答案。';",
+      replace:"return v + ' 只做完第一件事，是中間數！還要再 ' + this.opWord(c.o2) + ' ' + c.b + ' 才是答案。';" },
+    { file:'index', expect:"has no room",
+      find:"FLOW_BOX = { x:[4, 118, 232], y:34, w:64, h:60, lblY:8 }",
+      replace:"FLOW_BOX = { x:[4, 100, 232], y:34, w:64, h:60, lblY:8 }" },
+    { file:'index', expect:"does not fit inside a box",
+      find:"FLOW_TRAY = { y:150, step:84, w:60, h:50 };",
+      replace:"FLOW_TRAY = { y:150, step:84, w:70, h:50 };" },
+    { file:'index', expect:"the arrows do not show",
+      find:"[[e.o1, e.b], [e.o2, e.c]].forEach(function(s, k){",
+      replace:"[[e.o1, e.b], [e.o2, e.b]].forEach(function(s, k){" },
+    { file:'index', expect:"relayRule(",
+      find:"    if (row === 0 && card === 'c') return 'loose';\n",
+      replace:"" },
+    { file:'index', expect:"relayRule(",
+      find:"    if (row === 1 && !(filled[0] && filled[1])) return 'first';\n",
+      replace:"" },
+    { file:'index', expect:"relayRule(",
+      find:"    if (ops[row] === '-' && (pos === 0) !== isBig) return 'minus';\n",
+      replace:"" },
+    { file:'index', expect:"relayRule() changed the board",
+      find:"    if (row === 1 && !(filled[0] && filled[1])) return 'first';\n",
+      replace:"    if (row === 1 && !(filled[0] && filled[1])) return 'first';\n    if (row === 0) filled[1 - pos] = filled[1 - pos] || card;\n" },
+    { file:'index', expect:"relayRule() changed the board",
+      find:"    if (row === 0 && card === 'c') return 'loose';\n",
+      replace:"    if (row === 0 && card === 'c') return 'loose';\n    if (row === 0 && !filled[1 - pos]) filled[1 - pos] = [];\n" },
+    { file:'index', expect:"relayRule() changed the board",
+      find:"    if (ops[row] === '-' && (pos === 0) !== isBig) return 'minus';\n",
+      replace:"    if (ops[row] === '-' && (pos === 0) !== isBig) return 'minus';\n    if (row === 0) delete filled[1 - pos];\n" },
+    { file:'index', expect:"does not go through relayRule()",
+      find:"if (r === 'loose'){ roundMiss(d.gRelayLoose(e)); return false; }",
+      replace:"if (false){ roundMiss(d.gRelayLoose(e)); return false; }" },
+    { file:'index', expect:"relay box 0 and 1 are",
+      find:"var RELAY_H = 240, RELAY_PAD = 22;",
+      replace:"var RELAY_H = 240, RELAY_PAD = 12;" },
+    { file:'index', expect:"gRelayMinus(1) en: numbers should read",
+      find:"'It is ' + big + ' take away ' + small + ': ' + big + ' goes in front of the −.'",
+      replace:"'It is ' + big + ' take away ' + small + ': ' + small + ' goes in front of the −.'" },
+    { file:'index', expect:"must all differ",
+      find:"    { si:0, a:18, o1:'+', b:24, o2:'+', c:13 },",
+      replace:"    { si:0, a:18, o1:'+', b:24, o2:'+', c:42 }," },
+    { file:'index', expect:"does not become a card",
+      find:"data:{ v:mid, res:true, key:'M' } });",
+      replace:"data:{ v:mid, res:false, key:'M' } });" },
+    { file:'index', expect:"accepted in the wrong box",
+      find:"if (t !== s.k){ roundMiss(",
+      replace:"if (t !== s.k && false){ roundMiss(" },
+    { file:'index', expect:"should say \"晚\"",
+      find:"return w + '比' + ws + '晚，這一句要排到後面。';",
+      replace:"return w + '比' + ws + '早，這一句要排到後面。';" },
+    { file:'index', expect:"sentence box 0 and 1 are",
+      find:"SEQ_SLOT = { x:40, w:256, h:50, y:[6, 62, 118] }",
+      replace:"SEQ_SLOT = { x:40, w:256, h:50, y:[4, 68, 130] }" },
+    { file:'index', expect:"card 1 zh: should say",
+      find:"        return [w.w1 + this.sStart(c.si, c.a), this.sStepAt(c.si, c.o1, c.b, w.w2), this.sStepAt(c.si, c.o2, c.c, w.w3)];",
+      replace:"        return [w.w1 + this.sStart(c.si, c.a), this.sStepAt(c.si, c.o1, c.b, w.w3), this.sStepAt(c.si, c.o2, c.c, w.w2)];" },
+    { file:'index', expect:"hopPress(",
+      find:"    if (op !== step.op) return 'way';\n    if (s.did + amt > step.n) return 'over';",
+      replace:"    if (s.did + amt > step.n) return 'over';" },
+    { file:'index', expect:"hopPress(",
+      find:"    if (s.did + amt > step.n) return 'over';",
+      replace:"    if (s.did + amt > step.n + 10) return 'over';" },
+    { file:'index', expect:"hopPress(",
+      find:"      if (s.st === 1) return s.did === 0 ? 'stopMid' : 'sub1';",
+      replace:"      if (s.st === 1) return s.did === 0 ? 'done' : 'sub1';" },
+    { file:'index', expect:"hopPress(",
+      find:"    s.did += amt; s.cur += k;",
+      replace:"    s.did += amt; s.cur -= k;" },
+    { file:'index', expect:"the blocks are not drawn",
+      find:"var t = Math.floor(S.cur / 10), o = S.cur % 10, i, p;",
+      replace:"var t = Math.floor(e.a / 10), o = e.a % 10, i, p;" },
+    { file:'index', expect:"does not go through hopPress()",
+      find:"if (r === 'way'){ roundMiss(d.gHopWay(e.si, s.op, s.n)); return; }",
+      replace:"if (false){ roundMiss(d.gHopWay(e.si, s.op, s.n)); return; }" },
+    { file:'index', expect:"both changes need some ones",
+      find:"    { si:0, a:34, o1:'+', b:21, o2:'-', c:13 },",
+      replace:"    { si:0, a:34, o1:'+', b:20, o2:'-', c:13 }," },
+    { file:'index', expect:"the middle number 108 is outside 1~100",
+      find:"    { si:0, a:26, o1:'+', b:32, o2:'-', c:15 }",
+      replace:"    { si:0, a:76, o1:'+', b:32, o2:'-', c:15 }" },
+    { file:'index', expect:"gHop2 en",
+      find:"parts.push(s + '10 ' + (t === 1 ? 'once' : t + ' times'));",
+      replace:"parts.push(s + '10 ' + (t + ' times'));" },
+    { file:'index', expect:"gHopStopMid zh: should say",
+      find:"還有「' + this.verbWord(c.si, c.o2)",
+      replace:"還有「' + this.verbWord(c.si, c.o1)" },
+    { file:'index', expect:"hopXY(t, 0) disagrees",
+      find:"if (kind === 't') return { x:b.cx + (i - 4.5) * b.sx, y:b.top + b.h / 2 };",
+      replace:"if (kind === 't') return { x:b.cx + (i - 4) * b.sx, y:b.top + b.h / 2 };" },
+    { file:'index', expect:"hop block 0 and 1 overlap",
+      find:"t:{ w:10, h:40, sx:14, cx:96, top:22 }",
+      replace:"t:{ w:10, h:40, sx:9, cx:96, top:22 }" },
     /* --- index.html：字典與題庫 --- */
     { file:'index', expect:'the checker expects',
       find:"        { thing:'糖果', unit:'顆', place:'袋子裡', add:'放進', sub:'送出' },",
@@ -652,10 +1392,7 @@ module.exports = {
     { file:'index', expect:'t3 zh never states the answer with its unit',
       find:"               this.qty(c.si, ans) + '</span>才是答案。';",
       replace:"               '1' + this.qty(c.si, ans) + '</span>才是答案。';" },
-    /* index：遊戲的第二層提示不再說「接下來要算什麼」。 */
-    { file:'index', expect:'gHint2 never shows what to work out next',
-      find:"        return '中間數是 ' + mid + '。再算 ' + mid + ' ' + this.opWord(r.o2) + ' ' + r.c + '。';",
-      replace:"        return '中間數是 ' + mid + '。再算 ' + mid + ' ' + this.opWord(r.o2) + '。';" },
+
     /* --- 第三輪（codex 審查）補上的守門條件 --- */
     /* C1：把兩個事件的動詞對調。{8,5,6} 完全沒變，重算出來的答案照樣是 7，
        只有「運算元綁動詞」的 marks 抓得到。 */
@@ -742,17 +1479,9 @@ module.exports = {
     { file:'index', expect:'m0 zh never shows the first number sentence',
       find:"        return '小安算 ' + this.eqLine(c.a, c.o1, c.b, mid) + '，就說答案是 ' + this.qty(c.si, mid) + '。';",
       replace:"        return '小安算 ' + this.eqLine(c.a, c.o1 === '+' ? '-' : '+', c.b, mid) + '，就說答案是 ' + this.qty(c.si, mid) + '。';" },
-    /* R2-3：遊戲的說明把第二步教成反方向；舊寫法只要求提到 mid 和答案。 */
-    { file:'index', expect:'gWhy never shows the second number sentence',
-      find:"        return this.eqLine(r.a, r.o1, r.b, mid) + '，' + this.eqLine(mid, r.o2, r.c, ans) +",
-      replace:"        return this.eqLine(r.a, r.o1, r.b, mid) + '，' + this.eqLine(mid, r.o2 === '+' ? '-' : '+', r.c, ans) +" },
-    { file:'index', expect:'gHint2 never shows what to work out next',
-      find:"        return '中間數是 ' + mid + '。再算 ' + mid + ' ' + this.opWord(r.o2) + ' ' + r.c + '。';",
-      replace:"        return '中間數是 ' + mid + '。再算 ' + mid + ' ' + this.opWord(r.o2 === '+' ? '-' : '+') + ' ' + r.c + '。';" },
-    /* R2-5：陣列長度與每一格的形狀。刪掉第五關仍然涵蓋四種形狀，舊檢查全綠。 */
-    { file:'index', expect:'the game advertises 5',
-      find:"    { si:0, a:26, o1:'-', b:8,  o2:'+', c:5, opts:[18, 31, 23], ans:2 }\n  ];",
-      replace:"  ];" },
+
+
+
     { file:'index', expect:'FLOW_CASES has 5 entries',
       find:"    { si:3, a:50, o1:'-', b:12, o2:'-', c:9 }\n  ];",
       replace:"    { si:3, a:50, o1:'-', b:12, o2:'-', c:9 },\n    { si:3, a:50, o1:'-', b:12, o2:'-', c:9 }\n  ];" },
@@ -972,8 +1701,11 @@ module.exports = {
   data: {
     dataStart: '/* ---------- 語言無關的資料 ---------- */',
     dataEnd: '/* ---------- i18n ---------- */',
-    dataReturn: '{SCENES, STORY_EX, FLOW_CASES, EQ_CASES, MID_EX, ROUNDS, traySVG, flowSVG, midOf, ansOf}',
-    check: function(data, I18N, fail){
+    dataReturn: '{SCENES, STORY_EX, FLOW_CASES, EQ_CASES, MID_EX, traySVG, flowSVG, midOf, ansOf, ' +
+      'GAME_W, GPICK, GPAD, GAME_ORDER, GAME_PLATE, PLATE_H, PLATE_PAD, PLATE_BOX, PLATE_JAR, PLATE_EAT, plateXY, eatXY, plateMove, ' +
+      'GAME_FLOW, FLOW_H, FLOW_BOX, FLOW_TRAY, flowDecoy, GAME_RELAY, RELAY_H, RELAY_PAD, RELAY_EQ, RELAY_TRAY, relayRule, ' +
+      'GAME_SEQ, SEQ_H, SEQ_SLOT, SEQ_CARD, GAME_HOP, HOP_H, HOP_STEPS, HOP_BLK, hopXY, hopPress}',
+    check: function(data, I18N, fail, src){
       const LANGS = ['zh','en'];
       /* 「題幹有沒有印出 5」不可以用 indexOf：「15」和「50」裡面都有 5，
          整條檢查就會因為別的數字而永遠通過。一律比對數字邊界。 */
@@ -1188,57 +1920,8 @@ module.exports = {
         if (!hasPhrase(m3, word)) fail(`m3 ${L} never says which way the answer moves (expected "${word}")`);
       });
 
-      /* --- 遊戲關卡：五關，形狀順序也釘死（頁面上寫著「第 N / 5 關」） --- */
-      const ROUND_SHAPES = ['+-', '-+', '++', '--', '-+'];
-      if (data.ROUNDS.length !== ROUND_SHAPES.length){
-        fail(`ROUNDS has ${data.ROUNDS.length} rounds; the game advertises ${ROUND_SHAPES.length}`);
-      }
-      const gShapes = {};
-      data.ROUNDS.forEach((r, idx) => {
-        const i = idx + 1;
-        const v = stepOk(`ROUND ${i}`, r, 100);
-        if (!v) return;
-        if (ROUND_SHAPES[idx] && shapeOf(r) !== ROUND_SHAPES[idx]){
-          fail(`ROUND ${i} is shape ${shapeOf(r)}, the checker expects ${ROUND_SHAPES[idx]}`);
-        }
-        gShapes[shapeOf(r)] = true;
-        if (r.opts.length !== 3) fail(`ROUND ${i} should offer 3 options, has ${r.opts.length}`);
-        if (new Set(r.opts).size !== r.opts.length) fail(`ROUND ${i} has duplicate options`);
-        if (!Number.isInteger(r.ans) || r.ans < 0 || r.ans >= r.opts.length){
-          fail(`ROUND ${i}: ans ${r.ans} is not a valid option index`);
-          return;
-        }
-        if (r.opts[r.ans] !== v.ans) fail(`ROUND ${i}: opts[ans] does not equal the answer (${r.opts[r.ans]} vs ${v.ans})`);
-        /* 誘答一定要包含中間數 —— 這一課唯一要抓的迷思。 */
-        if (r.opts.indexOf(v.mid) < 0) fail(`ROUND ${i} should offer the middle number ${v.mid} as a distractor`);
-        /* 遊戲屬於基礎層，所以上限就是基礎題庫的上限（BANK_MAX.qs），不是進階的 200。 */
-        r.opts.forEach(o => {
-          if (!Number.isInteger(o) || !(o >= 1 && o <= BASE_MAX)) fail(`ROUND ${i}: option ${o} is outside 1~${BASE_MAX}`);
-        });
-        LANGS.forEach(L => {
-          const d = I18N[L];
-          const ask = d.gAsk(r), opt = d.gOpt(r, v.ans), h1 = d.gHint1(r), h2 = d.gHint2(r, v.mid), why = d.gWhy(r, v.mid, v.ans);
-          [ask, opt, h1, h2, why].forEach(s => { if (/undefined|NaN/.test(s)) fail(`ROUND ${i} ${L}: ${s}`); });
-          [r.a, r.b, r.c].forEach(n => {
-            if (!hasNum(ask, n)) fail(`ROUND ${i} ${L}: gAsk never prints ${n}`);
-          });
-          /* 提示只給算式、不給結果，所以比對的是「mid ⊕ c」這個式子本身；
-             說明則兩個完整算式都要有 —— 只檢查「有沒有提到 15 和 20」的話，
-             把第二步教成減法（15 － 5）也會是綠的。 */
-          const step2 = v.mid + (L === 'zh' ? (r.o2 === '+' ? ' ＋ ' : ' － ') : (r.o2 === '+' ? ' + ' : ' − ')) + r.c;
-          if (!hasPhrase(h2, step2)) fail(`ROUND ${i} ${L}: gHint2 never shows what to work out next ("${step2}")`);
-          const wq1 = eqText(r.a, r.o1, r.b, v.mid, L), wq2 = eqText(v.mid, r.o2, r.c, v.ans, L);
-          if (!hasPhrase(why, wq1)) fail(`ROUND ${i} ${L}: gWhy never shows the first number sentence "${wq1}"`);
-          if (!hasPhrase(why, wq2)) fail(`ROUND ${i} ${L}: gWhy never shows the second number sentence "${wq2}"`);
-          if (!hasPhrase(why, opt)) fail(`ROUND ${i} ${L}: gWhy never states the answer "${opt}"`);
-          const unit = L === 'zh' ? I18N.zh.scenes[r.si].unit : I18N.en.scenes[r.si].unit;
-          if (opt !== v.ans + ' ' + unit) fail(`ROUND ${i} ${L}: the option label is "${opt}", the checker expects "${v.ans} ${unit}"`);
-        });
-      });
-      ['++','+-','-+','--'].forEach(k => {
-        if (!gShapes[k]) fail(`ROUNDS must cover all four shapes; ${k} is missing`);
-      });
-      if (data.ROUNDS.map(r => r.ans).every(x => x === 0)) fail('every game round has the answer first');
+      /* --- 小遊戲：五關五種玩法（舊的五題選擇題 ROUNDS 已拿掉，檢查見檔頭的 gameCheck） --- */
+      gameCheck(data, I18N, fail, src, stepOk, eqText);
 
       /* --- 速查卡與家長頁：手寫的算式必須和課程資料一致 ---
          這兩頁的算式是從 FLOW_CASES／STORY_EX／MID_EX 抄過來的，以前沒有任何檢查
