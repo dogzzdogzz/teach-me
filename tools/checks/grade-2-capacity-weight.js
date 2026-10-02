@@ -214,6 +214,840 @@ function shapeMatch(kind, s, lang){
   return false;
 }
 
+/* ---------- 小遊戲「比比看大挑戰」（§六之五：五關五種玩法，2026-10-02 改版）----------
+   倒倒看（範例 1：倒過去看水）、天平（範例 2：沉下去的比較重、大不一定重）、用同一個杯子量（範例 3：杯子要一樣）、
+   用一樣的積木秤（範例 4：放到平、積木要一樣）、排排看（範例 3＋4：同一個單位的數字比大小，高／大不一定多）。
+   做法照 grade-2-length.js：
+   - 每一關的題庫用**設定檔自己的真值表**（CONTAINER_TRUTH／ITEM_TRUTH）重算答案，並要求「只看高矮／大小」一定答錯；
+   - 版面與觸控 ≥ 44px 從 index.html 的常數讀（不在這裡另抄一份數字），畫出來的天平盤子位置從 balanceSVG() 的輸出讀；
+   - nearestOpen()、roundSolved()、roundMiss()、shuffle() 從原始碼切出來**真的跑**；
+   - 每一關的 RENDER 函式本體切出來放進假的 DOM 裡**真的跑**，照遊戲的規則對每一題做每一種動作（每一個放開的位置、
+     每一個按鈕、每一張卡進每一格），看頁面自己的程式收不收、說哪一句、畫出什麼（jarSVG／balanceSVG／rowSVG 的輸出逐字比）；
+   - 每一句說明逐個比數字也比字（兩種語言、每一題、每一種放錯；誰比較多、「高不代表多」那一句只在該出現的時候出現）。
+   已知極限：拖拉、點選、兩根手指、capture 遺失、畫板不跳動、375px 的實際尺寸由
+   teaching-workspace/game-harness/g2-capacity-weight 的端對端測試驗。 */
+const { gameShuffleProblems, extractFunction } = require('./lib/gameshuffle.js');
+
+function gameCheck(D, I18N, fail, src, truth){
+  const LANGS = ['zh', 'en'];
+  const nums = t => (String(t).match(/\d+/g) || []).map(Number);
+  const bad = t => typeof t !== 'string' || /undefined|NaN|null|\[object/.test(t);
+  const seq = (where, text, want) => {
+    if (bad(text)) return fail(where + ': text has undefined/NaN/null: ' + text);
+    if (nums(text).join() !== want.join()) fail(where + ': numbers should read [' + want.join() + '], got [' + nums(text).join() + '] — ' + text);
+  };
+  const has = (where, text, needle) => { if (String(text).indexOf(needle) < 0) fail(where + ': should say "' + needle + '" — ' + text); };
+  const hasNot = (where, text, needle) => { if (String(text).indexOf(needle) >= 0) fail(where + ': must not say "' + needle + '" — ' + text); };
+  const box = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w, h });
+  const inside = (o, what, Wd, Hd) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= Wd + 1e-9 && o.y + o.h <= Hd + 1e-9)) fail(what + ' is outside the ' + Wd + '×' + Hd + ' board (' + JSON.stringify(o) + ')'); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return fail(what + ': ' + i + ' and ' + j + ' overlap'); };
+  const pad = (R, p) => ({ x:R.x - p, y:R.y - p, w:R.w + 2 * p, h:R.h + 2 * p });
+  const inBox = (pt, R, p) => pt.x >= R.x - p && pt.x <= R.x + R.w + p && pt.y >= R.y - p && pt.y <= R.y + R.h + p;
+  const W = D.GAME_W, CT = CONTAINER_TRUTH, IT = ITEM_TRUTH;
+  const cap = i => CT[i].cap, wt = i => IT[i].wt, ht = i => CT[i].h, sz = i => IT[i].size;
+  /* 字寬的粗估（px）：中文一字一個字級、emoji 1.15 個、英文大寫與數字 0.62、小寫 0.55、空白 0.3 */
+  const textW = (t, fs) => Array.from(String(t)).reduce((s, ch) => {
+    const c = ch.codePointAt(0);
+    if (c > 0xFFFF || (c >= 0x2600 && c <= 0x27BF)) return s + fs * 1.15;
+    if ((c >= 0x3000 && c <= 0x9FFF) || (c >= 0xFF00 && c <= 0xFFEF)) return s + fs;
+    if (/[A-Z0-9]/.test(ch)) return s + fs * 0.62;
+    if (ch === ' ') return s + fs * 0.3;
+    if (/[a-z]/.test(ch)) return s + fs * 0.55;
+    return s + fs * 0.35;
+  }, 0);
+  /* 換行後幾行：英文照字換、中文照字元換 */
+  const lines = (t, fs, w, L) => {
+    const parts = L === 'en' ? String(t).split(' ') : Array.from(String(t));
+    let n = 1, cur = 0;
+    parts.forEach(p => {
+      const pw = textW(p, fs) + (L === 'en' && cur > 0 ? fs * 0.3 : 0);
+      if (cur > 0 && cur + pw > w){ n++; cur = textW(p, fs); } else cur += pw;
+    });
+    return n;
+  };
+  const svgWH = s => { const m = String(s).match(/^<svg[^>]*?\swidth="(\d+(?:\.\d+)?)" height="(\d+(?:\.\d+)?)"/); return m ? { w:+m[1], h:+m[2] } : null; };
+  const MORE = { zh:'裝得比較多', en:' holds more' }, HEAVY = { zh:'比較重', en:' is heavier' };
+
+  /* 畫出來的東西自己讀（codex 第一輪：拿頁面自己的 jarSVG／rowSVG／balanceSVG 輸出當標準答案，畫錯了也比得一模一樣）。
+     容器：外框 = 真實寬高、水 = round(h × 杯數 ÷ 容量)、水花 = min(滿出來, 4) 滴；一排：恰好 n 個 icon、字級 px；
+     天平：data-tilt、兩個盤子的位置照自己的幾何、左盤上那一樣東西、右盤上恰好 n 個積木（都在右半邊）。 */
+  const jarIs = (svg, id, fill, spill) => {
+    const c = CT[id], t = String(svg), wet = Math.max(0, Math.min(c.cap, fill)), wh = Math.round(c.h * wet / c.cap);
+    const water = t.match(/<rect x="17" y="(-?[\d.]+)" width="(\d+)" height="(\d+)" rx="4" fill="#9AD1F0"\/>/);
+    const outline = t.match(/<rect x="14" y="(-?[\d.]+)" width="(\d+)" height="(\d+)" rx="8" fill="none" stroke="#3B7DD8"/);
+    if (!outline || +outline[2] !== c.w || +outline[3] !== c.h || +outline[1] !== 118 - c.h) return false;
+    if (wh > 0 ? !(water && +water[3] === wh && +water[1] === 118 - wh && +water[2] === c.w - 6) : /#9AD1F0/.test(t)) return false;
+    return (t.match(/💧/g) || []).length === Math.min(Math.max(0, spill), 4);
+  };
+  const rowIs = (svg, n, icon, size) => {
+    const t = String(svg);
+    if (!t) return n === 0;
+    const all = (t.match(/<text /g) || []).length, mine = (t.match(new RegExp('<text [^>]*font-size="' + size + '">' + icon + '</text>', 'g')) || []).length;
+    return all === n && mine === n && t.indexOf('data-count="' + n + '"') >= 0;
+  };
+  const balIs = (svg, itemId, n, tilt) => {
+    const t = String(svg);
+    if (t.indexOf('data-tilt="' + tilt + '"') < 0) return false;
+    const p = pansOf(t), want = [G.pivot + tilt * G.drop + G.hang, G.pivot - tilt * G.drop + G.hang];
+    if (p.length !== 2 || p[0].top !== want[0] || p[1].top !== want[1]) return false;
+    const blocks = []; const re = /<text x="(-?[\d.]+)" y="-?[\d.]+" font-size="(\d+)">🟧<\/text>/g; let m;
+    while ((m = re.exec(t))) blocks.push(+m[1]);
+    if (blocks.length !== n || blocks.some(x => x < G.cx)) return false;
+    const items = itemId === null ? 0 : (t.match(new RegExp('<text x="' + (G.cx - G.arm) + '" [^>]*>' + IT[itemId].icon + '</text>', 'g')) || []).length;
+    return items === (itemId === null ? 0 : 1) && (t.match(/<text /g) || []).length === n + (itemId === null ? 0 : 1);
+  };
+  /* --- 這一課的常數：釘死，不然改了也沒人會發現 --- */
+  if (D.BASE !== 118 || D.PAD !== 14) fail('BASE/PAD changed (' + D.BASE + '/' + D.PAD + ') — the game lines the jars up on them');
+  const G = D.BAL_GEO;
+  if (JSON.stringify(G) !== JSON.stringify({ W:260, H:176, cx:130, pivot:56, arm:92, drop:16, hang:30 })) fail('BAL_GEO is ' + JSON.stringify(G) + ', the balance the examples draw is 260×176 (cx 130, pivot 56, arm 92, drop 16, hang 30)');
+  if (D.GAME_W !== 300 || D.GPICK !== 48 || D.GPAD !== 6) fail('GAME_W / GPICK / GPAD should be 300 / 48 / 6');
+  if (D.CUP_BIG !== 2) fail('CUP_BIG is ' + D.CUP_BIG + ' — the big cup is two small cups');
+  /* 自己的 jarDims（畫布寬高）：寬 ＝ 2 × PAD ＋ 容器寬（有水花再 ＋40），高 ＝ max(BASE ＋ 14, 最後一滴水花的下緣) */
+  const ownDims = (c, spill) => {
+    const drops = Math.min(Math.max(0, spill || 0), 4), top = 118 - c.h;
+    return { w:14 + c.w + 14 + (drops > 0 ? 40 : 0), h:Math.max(132, drops > 0 ? top + 18 + (drops - 1) * 11 + 6 : 0) };
+  };
+  D.CONTAINERS.forEach((c, i) => {
+    for (let sp = 0; sp <= 5; sp++){
+      const o = ownDims(c, sp), p = D.jarDims(c, sp), s = svgWH(D.jarSVG(c, c.cap, sp));
+      if (p.w !== o.w || p.h !== o.h) fail('jarDims(container ' + i + ', spill ' + sp + ') is ' + JSON.stringify(p) + ', should be ' + JSON.stringify(o));
+      if (!s || s.w !== p.w || s.h !== p.h) fail('jarSVG(container ' + i + ', spill ' + sp + ') is ' + JSON.stringify(s) + ' but jarDims says ' + JSON.stringify(p) + ' — the board would cut it or squash it');
+    }
+  });
+  /* 天平的盤子，從畫出來的 balanceSVG 讀（不從 BAL_GEO 讀）：[左, 右]，各自的中心 x 與上緣 y */
+  const pansOf = svg => {
+    const out = []; const re = /<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="52" height="7" rx="3" fill="#E8871E"\/>/g; let m;
+    while ((m = re.exec(svg))) out.push({ cx:+m[1] + 26, top:+m[2] });
+    return out.sort((a, b) => a.cx - b.cx);
+  };
+  const panAt = {};
+  [-1, 0, 1].forEach(t => {
+    const p = pansOf(D.balanceSVG(null, null, t));
+    if (p.length !== 2) return fail('balanceSVG(tilt ' + t + ') does not draw two pans');
+    panAt[t] = p;
+    const want = [G.pivot + t * G.drop + G.hang, G.pivot - t * G.drop + G.hang];
+    if (p[0].top !== want[0] || p[1].top !== want[1] || p[0].cx !== G.cx - G.arm || p[1].cx !== G.cx + G.arm) fail('balanceSVG(tilt ' + t + ') draws its pans at ' + JSON.stringify(p) + ', BAL_GEO says ' + JSON.stringify(want));
+  });
+  if (panAt[1] && !(panAt[1][0].top > panAt[1][1].top)) fail('tilt 1 must put the LEFT pan lower (the left side is heavier)');
+
+  /* --- 順序、每一關的題目與提示 --- */
+  const TYPES = ['pour', 'tilt', 'cups', 'blocks', 'rank'];
+  if (D.GAME_ORDER.join() !== TYPES.join()) fail('GAME_ORDER should be ' + TYPES.join() + ', got ' + D.GAME_ORDER.join());
+  const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+  const B = {};
+  TYPES.forEach(t => {
+    B[t] = body(t); if (!B[t]) fail('cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      ['gAsks', 'gHints'].forEach(k => { if (!(I18N[L][k] && typeof I18N[L][k][t] === 'string' && I18N[L][k][t].length > 4)) fail(k + '.' + t + ' missing in ' + L); });
+    });
+    if (!/gCtx\.hint2 = function\(\)\{/.test(B[t])) fail(t + ': no second-level hint (gCtx.hint2)');
+    if (!/\broundSolved\(/.test(B[t].replace(/\/\*[\s\S]*?\*\//g, ''))) fail(t + ': the round never calls roundSolved()');
+  });
+  const need = (k, re, what) => { if (!re.test(B[k] || '')) fail(k + ': ' + what); };
+  /* 第一層提示要講這一關的那個方法（codex 第一輪：只驗長度的話，換成任何五個字都是綠的） */
+  const HINT1 = { pour:['倒', '高的不一定', 'pour', 'taller does not mean more'], tilt:['沉下去的那一邊比較重', '大的不一定重', 'goes down is heavier', 'Bigger is not always heavier'],
+    cups:['杯子要一樣', '左邊', 'cups must be the same', 'left one'], blocks:['積木還不夠', '翹', 'not enough blocks', 'up in the air'], rank:['同一個杯子', '數字大的排前面', 'same cup', 'bigger number goes first'] };
+  TYPES.forEach(t => { [['zh', 0], ['zh', 1], ['en', 2], ['en', 3]].forEach(([L, k]) => { const h = (I18N[L].gHints || {})[t] || ''; if (h.toLowerCase().indexOf(HINT1[t][k].toLowerCase()) < 0) fail(t + ': hint level 1 (' + L + ') should say "' + HINT1[t][k] + '": ' + h); }); });
+  /* showHint() 真的跑：第一層 = gHints[關]，第二層 = 第一層 ＋ 空白 ＋ gCtx.hint2() */
+  {
+    const fh = extractFunction(src, 'showHint');
+    if (!fh) fail('cannot find showHint() in index.html');
+    else TYPES.forEach((t, gi) => {
+      try {
+        const run = lv => new Function('I', fh + '\nvar gRound = ' + gi + ', GAME_ORDER = ' + JSON.stringify(TYPES) + ', hintLevel = ' + lv + ', gCtx = { hint2:function(){ return "H2"; } }, elHint = {};' +
+          '\nfunction L(){ return I; }\nshowHint(); return elHint.textContent;')(I18N.zh);
+        if (run(1) !== I18N.zh.gHints[t] || run(2) !== I18N.zh.gHints[t] + ' H2') fail(t + ': showHint() gives "' + run(1) + '" / "' + run(2) + '"');
+      } catch (e){ fail('showHint() could not run: ' + e.message); }
+    });
+  }
+  /* 第 2、3 關沒有拖拉（點一下本身就是動作），說明要寫出「這一關用點的」；其他三關要寫出「先點、再點」（§六之五第 4 點） */
+  ['tilt', 'cups'].forEach(t => { if (!/用點的/.test(I18N.zh.gAsks[t]) || !/all taps/.test(I18N.en.gAsks[t])) fail(t + ': the round has no drag — its instructions must say it is all taps'); });
+  ['pour', 'blocks', 'rank'].forEach(t => { if (!/也可以先點/.test(I18N.zh.gAsks[t]) || !/Or tap/.test(I18N.en.gAsks[t])) fail(t + ': the instructions do not mention the tap-then-tap way'); });
+  gameShuffleProblems(src, 1, { roundFn:'renderTray' }).forEach(fail);
+  if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(src)) fail('ahead mode does not show hint level 1 automatically');
+  if (!/if \(hintLevel >= 2\) gHintBtn\.disabled = true;/.test(src)) fail('the hint button is not disabled after the second level');
+  if (!/el\.classList\.remove\('dragging'\);\s*if \(gen !== gGen\) return;(?:\s*\/\*[\s\S]*?\*\/)*\s*if \(moved && B\.selected === P\)\{ el\.classList\.remove\('sel'\); B\.selected = null; \}\s*if \(cancelled \|\| gSolved\)\{ P\.home\(\); return; \}/.test(src))
+    fail('a piece that was tapped and then dragged stays selected — a later tap would drop it again');
+  if (!/el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/.test(src)) fail('lost pointer capture does not put the piece back');
+  if (!/if \(P\.locked \|\| gSolved \|\| start\) return;/.test(src)) fail('a second finger on a piece that is already being dragged is not ignored');
+  if (!/var start = null, orig = null, moved = false, pid = null, gen = gGen;/.test(src) || !/el\.classList\.remove\('dragging'\);\s*if \(gen !== gGen\) return;/.test(src) || !/gCtx = \{\}; gGen\+\+;/.test(extractFunction(src, 'startRound') || ''))
+    fail('a piece still held when the board is rebuilt (Restart, language switch) can still drop onto the new round — grade-2 length codex round 1');
+  if (!/gameStage\.textContent = '';/.test(extractFunction(src, 'startRound') || '')) fail('startRound() does not clear the stage before rendering');
+  if (!/if \(P\.busy\(\)\) return;/.test(src)) fail('a tap on a target while another finger drags the selected piece is not ignored');
+
+  /* --- 觸控：375px 手機上畫板能用的寬度從頁面的 CSS 算（.wrap 左右 padding、.card 的 padding 與邊框、.gstage 左右 padding） --- */
+  const cssPx = (sel, re) => { const m = src.match(new RegExp('\\n\\s*' + sel.replace('.', '\\.') + '\\{([^}]*)\\}')); const v = m && m[1].match(re); return v ? v.slice(1).map(Number) : null; };
+  const wrapPad = cssPx('.wrap', /padding:(\d+)px (\d+)px/), cardPad = cssPx('.card', /padding:(\d+)px/), cardBorder = cssPx('.card', /border:(\d+)px/), stagePad = cssPx('.gstage', /padding:\s*(\d+)px (\d+)/);
+  if (!wrapPad || !cardPad || !cardBorder || !stagePad) fail('touch: cannot read .wrap / .card / .gstage padding from the CSS');
+  const avail = 375 - 2 * ((wrapPad || [0, 0])[1] + (cardPad || [0])[0] + (cardBorder || [0])[0] + (stagePad || [0, 0])[1]);
+  const scale = Math.min(1.5, avail / W);
+  const small = (what, s) => { if (!(s * scale >= 44)) fail(what + ' is ' + (s * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+  small('GPICK', D.GPICK);
+  small('the crown', D.POUR_CROWN.size);
+  D.GAME_POUR.forEach((e, i) => { const d = ownDims(CT[e.a], 0); small('GAME_POUR[' + i + '] the full jar (' + d.w + '×' + d.h + ')', Math.min(d.w, d.h)); });
+  small('a thing on a balance (' + D.TILT_ITEM.w + '×' + D.TILT_ITEM.h + ')', Math.min(D.TILT_ITEM.w, D.TILT_ITEM.h));
+  small('the "Same" button', Math.min(D.TILT_SAME_BTN.w, D.TILT_SAME_BTN.h));
+  small('the small cup button', D.CUP_BTN.small); small('the big cup button', D.CUP_BTN.big);
+  small('a block source (' + D.BLK_TOK.w + '×' + D.BLK_TOK.h + ')', Math.min(D.BLK_TOK.w, D.BLK_TOK.h));
+  small('a rank card', Math.min(D.RANK_CARD.w, D.RANK_CARD.h));
+  small('a rank box', Math.min(D.RANK_SLOT.w, D.RANK_SLOT.h));
+  [D.POUR_CROWN.size, D.BLK_TOK.w, D.BLK_TOK.h, D.RANK_CARD.w, D.RANK_CARD.h].forEach(s => { if (s < D.GPICK) fail('a piece side of ' + s + ' is smaller than GPICK ' + D.GPICK); });
+  { const m = src.match(/\.btn\{[^}]*min-height:(\d+)px/); if (!m || +m[1] < 46) fail('blocks: the Level button (.btn) is not at least 46px tall'); }
+  need('pour', /var jar = addPiece\(B, \{ w:dA\.w, h:dA\.h, cx:J\.ax, cy:J\.top \+ dA\.h \/ 2,/, 'the full jar is not a jarDims-sized piece at (POUR_JAR.ax, top + h / 2)');
+  need('pour', /addPiece\(B, \{ w:Cr\.size, h:Cr\.size, cx:GAME_W \/ 2, cy:Cr\.y,/, 'the crown is not POUR_CROWN.size at (GAME_W / 2, POUR_CROWN.y)');
+  need('blocks', /addPiece\(B, \{ w:Tk\.w, h:Tk\.h, cx:Tk\.x\[i\], cy:Tk\.y,/, 'the block sources are not BLK_TOK.w × BLK_TOK.h at BLK_TOK.x');
+  need('rank', /addPiece\(B, \{ w:Cd\.w, h:Cd\.h, cx:cx, cy:cy,/, 'the rank cards are not RANK_CARD.w × RANK_CARD.h');
+
+  /* --- 星星：低年級不扣分（§三、§六之五第 3 點）。roundSolved()／roundMiss() 從原始碼切出來真的跑 --- */
+  {
+    const fs = extractFunction(src, 'roundSolved'), fm = extractFunction(src, 'roundMiss');
+    if (!fs || !fm) fail('stars: cannot find roundSolved()/roundMiss() in index.html');
+    else {
+      const env = 'var gSolved = false, gScore = S0, gMistakes = 0, gRound = 0, GAME_ORDER = [1,2,3,4,5], elScore = {}, gMsg = {}, gNext = {}, gHintBtn = {};' +
+        'var gameStage = { querySelectorAll: function(){ return []; } }; function L(){ return { gStars:function(n){ return "@" + n; }, gWin:function(s){ return "W" + s; }, gClear:"C" }; }\n';
+      const run = (s0, misses, solves) => new Function(env.replace('S0', s0) + fm + '\n' + fs + '\nfor (var i = 0; i < ' + misses + '; i++) roundMiss("why");' +
+        'var afterMiss = gScore;\nfor (var j = 0; j < ' + solves + '; j++) roundSolved("ok");\nreturn { s:gScore, afterMiss:afterMiss, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistakes };')();
+      try {
+        [[0, 0, 2], [3, 0, 2], [3, 1, 1], [0, 4, 1]].forEach(([s0, misses, want]) => {
+          const r = run(s0, misses, 1);
+          if (r.afterMiss !== s0) fail('stars: a mistake changed the score ' + s0 + ' → ' + r.afterMiss + ' (low grades never lose points)');
+          if (r.s !== s0 + want || String(r.shown) !== String(s0 + want)) fail('stars: a round with ' + misses + ' mistake(s) gives ' + (r.s - s0) + ' stars, should be ' + want);
+          if (r.html.indexOf('@' + want) < 0) fail('stars: the message does not say ⭐ +' + want);
+          if (misses && r.m !== misses) fail('stars: roundMiss() does not record the mistake');
+        });
+        if (run(0, 0, 2).s !== 2) fail('stars: a round can be scored twice');
+        /* 真的訊息（codex 第一輪）：放錯那一句要真的顯示出來；過關那一句要帶著傳進來的話；
+           roundInfo()（倒之前的提醒、積木太多了）不可以記錯、不可以動分數 */
+        const fi = extractFunction(src, 'roundInfo');
+        if (!fi) fail('stars: cannot find roundInfo() in index.html');
+        else {
+          const q = new Function(env.replace('S0', 3) + fm + '\n' + fs + '\n' + fi +
+            '\nroundMiss("WHY1"); var h1 = gMsg.innerHTML, m1 = gMistakes; gMistakes = 0; roundInfo("INFO1"); var h2 = gMsg.innerHTML, m2 = gMistakes, s2 = gScore;' +
+            '\nroundSolved("DONE1"); return { h1:h1, m1:m1, h2:h2, m2:m2, s2:s2, h3:gMsg.innerHTML, s3:gScore };')();
+          if (q.h1 !== '<span class="no">WHY1</span>' || q.m1 !== 1) fail('stars: roundMiss() does not show its reason as a mistake (' + q.h1 + ')');
+          if (q.h2.indexOf('INFO1') < 0 || /class="no"/.test(q.h2) || q.m2 !== 0 || q.s2 !== 3) fail('stars: roundInfo() counts as a mistake or changes the score (' + q.h2 + ', mistakes ' + q.m2 + ')');
+          if (q.h3.indexOf('DONE1') < 0 || q.s3 !== 5) fail('stars: after a roundInfo() reminder the round must still give 2 stars and say its text (' + q.h3 + ')');
+        }
+      } catch (e){ fail('stars: roundSolved()/roundMiss() could not run: ' + e.message); }
+    }
+  }
+  LANGS.forEach(L => {
+    const d = I18N[L];
+    seq('gStars ' + L, d.gStars(2), [2]);
+    if (nums(d.gWin(7)).indexOf(7) < 0) fail('gWin ' + L + ' does not show the stars: ' + d.gWin(7));
+    if (typeof d.gClear !== 'string' || !d.gClear || /\d/.test(d.gClear)) fail('gClear ' + L + ' missing or has a number in it');
+  });
+
+  /* --- nearestOpen()：從原始碼切出來真的跑 --- */
+  let nearestOpen = null;
+  {
+    const fsrc = extractFunction(src, 'nearestOpen');
+    if (!fsrc) fail('cannot find nearestOpen() in index.html');
+    else { try { nearestOpen = new Function(fsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('nearestOpen() could not be evaluated: ' + e.message); } }
+  }
+  if (nearestOpen){
+    /* 兩格的吸附範圍重疊時，挑「到方框」最近的那一格，不是清單裡第一個、也不是中心最近的 */
+    const A = { cx:50, cy:50, hw:40, hh:40, done:false, n:'A' }, Bx = { cx:140, cy:50, hw:40, hh:40, done:false, n:'B' }, Cbig = { cx:100, cy:200, hw:80, hh:20, done:false, n:'C' }, Dsm = { cx:100, cy:232, hw:10, hh:8, done:false, n:'D' };
+    for (let x = 85; x <= 105; x += 0.5){ const g = nearestOpen([A, Bx], { x, y:50 }, 6); const want = x < 95 ? 'A' : x > 95 ? 'B' : null; if (want && (!g || g.n !== want)) { fail('nearestOpen(): at x = ' + x + ' between two boxes it picks ' + (g && g.n) + ', should pick ' + want); break; } }
+    const g2 = nearestOpen([Cbig, Dsm], { x:100, y:219 }, 6);   /* 在大框裡面（距離 0），雖然離小框的中心比較近 */
+    if (!g2 || g2.n !== 'C') fail('nearestOpen(): a point inside a big box but near a small box\'s centre goes to ' + (g2 && g2.n) + ' — it must measure to the box, not to the centre');
+    Bx.done = true;   /* x = 96, pad 8：離 A 的框 6、離 B 的框 4 —— 兩個都碰得到，最近的是已經放好的 B */
+    if (nearestOpen([A, Bx], { x:96, y:50 }, 8) !== null) fail('nearestOpen(): when the nearest box is filled it must refuse, not skip to the other box');
+    if (nearestOpen([A], { x:100, y:50 }, 6) !== null) fail('nearestOpen(): a point 10px outside a box with pad 6 is accepted');
+  }
+
+  /* ================= 假的 DOM：每一關的 RENDER 函式本體真的跑 =================
+     makeBoard／addZone／addPiece／useTapSelect／actionButton／trailLine 換成記錄用的替身；target()／addButton()／jarZone()／
+     nearestOpen()／renderTray()／shuffle()／rankCardHTML() 用頁面自己的原始碼。pick() 依序取 picks、coin() 依序取 coins、
+     Math.random 換成給定的序列（shuffle 用）。 */
+  const EXEC = (() => {
+    const fns = ['target', 'addButton', 'jarZone', 'nearestOpen', 'renderTray', 'shuffle', 'rankCardHTML'].map(n => {
+      const f = extractFunction(src, n); if (!f) fail('exec: cannot cut ' + n + '() out of index.html'); return f || '';
+    }).join('\n');
+    const decl = Object.keys(D).map(k => 'var ' + k + ' = D.' + k + ';').join('\n');
+    const stub = `
+      var LOG = { miss:[], solved:[], info:[], zones:[], pieces:[], created:[], board:null, line:null, drop:null, action:null, kept:0 };
+      function el(){ var o = { style:{}, textContent:'', innerHTML:'', children:[], disabled:false, cls:{}, attrs:{},
+        classList:{ add:function(c){ o.cls[c] = true; }, remove:function(c){ delete o.cls[c]; }, contains:function(c){ return !!o.cls[c]; } },
+        appendChild:function(x){ o.children.push(x); return x; }, setAttribute:function(k, v){ o.attrs[k] = String(v); }, remove:function(){ o.removed = true; },
+        addEventListener:function(t, f){ o['on' + t] = f; } }; return o; }
+      var document = { createElement:function(tag){ var e = el(); e.tag = tag; LOG.created.push(e); return e; } };
+      var gameStage = el(), gMsg = el(), gSolved = false, gCtx = {}, gMistakes = 0;
+      function pick(arr){ return arr[PICKS.length ? PICKS.shift() : 0]; }
+      function coin(){ return COINS.length ? COINS.shift() : true; }
+      function makeBoard(W, H){ LOG.board = { W:W, H:H }; return { el:el(), W:W, k:1, selected:null }; }
+      function addZone(B, x, y, w, h, cls, text){ var z = el(); z.x = x; z.y = y; z.w = w; z.h = h; z.className = cls; if (text !== undefined) z.textContent = text; LOG.zones.push(z); return z; }
+      function trailLine(text){ LOG.line = el(); LOG.line.textContent = text; return LOG.line; }
+      function addPiece(B, o){ var P = { el:el(), w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {}, text:o.text, html:o.html, cls:o.cls, label:o.label };
+        P.el.innerHTML = o.html || '';
+        P.place = function(x, y){ P.cx = x; P.cy = y; }; P.home = function(){ P.place(P.homeX, P.homeY); }; P.lock = function(x, y){ P.locked = true; P.place(x, y); };
+        P.busy = function(){ return false; }; LOG.pieces.push(P); return P; }
+      function useTapSelect(B, fn){ LOG.drop = fn; }
+      function keepSelected(B, P){ LOG.kept++; }
+      function roundMiss(t){ gMistakes++; LOG.miss.push(t); }
+      function roundSolved(t){ if (gSolved) return; gSolved = true; LOG.solved.push(t); }
+      function roundInfo(t){ LOG.info.push(t); }
+      function refreshHint(){}
+      function actionButton(text, f){ var b = el(); b.textContent = text; LOG.action = { b:b, f:f }; return b; }
+    `;
+    return (type, o, d) => {
+      const seqR = (o.rnd || []).slice();
+      const fakeMath = Object.create(Math); fakeMath.random = () => seqR.length ? seqR.shift() : 0.5;
+      const code = decl + '\nvar PICKS = ' + JSON.stringify(o.picks || []) + ', COINS = ' + JSON.stringify(o.coins || []) + ';\n' + stub + fns +
+        '\n(function(d){' + B[type] + '\n})(d);\nreturn { LOG:LOG, solved:function(){ return gSolved; }, misses:function(){ return gMistakes; }, msg:function(){ return gMsg.textContent; }, hint2:function(){ return gCtx.hint2 ? gCtx.hint2() : null; } };';
+      try { return new Function('D', 'd', 'Math', code)(D, d, fakeMath); }
+      catch (e){ fail('exec: RENDER.' + type + ' could not run in the stub DOM: ' + e.message); return null; }
+    };
+  })();
+  const zonesOf = (r, cls) => r.LOG.zones.filter(z => z.className === cls && !z.removed);
+  const btnsOf = r => r.LOG.created.filter(c => c.tag === 'button' && typeof c.onclick === 'function');
+  const px = s => parseFloat(s);
+  [['pour', 'POUR_H'], ['tilt', 'TILT_H'], ['cups', 'CUPS_H'], ['blocks', 'BLOCKS_H'], ['rank', 'RANK_H']].forEach(([t, h]) => {
+    const r = EXEC(t, {}, I18N.zh);
+    if (r && !(r.LOG.board && r.LOG.board.W === W && r.LOG.board.H === D[h])) fail('exec: RENDER.' + t + ' opens a board of ' + JSON.stringify(r.LOG.board) + ', should be ' + W + ' × ' + h + ' (' + D[h] + ')');
+  });
+
+  /* ================= 第 1 關：倒倒看（範例 1） ================= */
+  {
+    const J = D.POUR_JAR, S = D.POUR_SAME, Cr = D.POUR_CROWN, H = D.POUR_H;
+    const outOf = (a, b) => cap(a) > cap(b) ? 'spill' : cap(a) < cap(b) ? 'room' : 'exact';
+    const moreOf = out => out === 'spill' ? 'a' : out === 'room' ? 'b' : 'same';
+    const seen = {};
+    if (!(D.GAME_POUR.length >= 6)) fail('GAME_POUR should have at least 6 entries');
+    if (new Set(D.GAME_POUR.map(e => e.a + ',' + e.b)).size !== D.GAME_POUR.length) fail('GAME_POUR has the same pair twice');
+    const Sb = { x:S.x, y:S.y, w:S.w, h:S.h }, crownHome = box(W / 2, Cr.y, Cr.size, Cr.size);
+    inside(Sb, 'pour: the "same" box', W, H); inside(crownHome, 'pour: the crown', W, H);
+    if (hit(pad(Sb, D.GPAD), crownHome)) fail('pour: the crown starts inside the "same" box\'s drop pad');
+    D.GAME_POUR.forEach((e, i) => {
+      const w = 'GAME_POUR[' + i + ']';
+      if (!(CT[e.a] && CT[e.b]) || e.a === e.b) return fail(w + ': not two different containers');
+      const out = outOf(e.a, e.b); seen[out] = (seen[out] || 0) + 1;
+      if (ht(e.a) === ht(e.b)) return fail(w + ': the two are the same height — the height trap is missing');
+      const tall = ht(e.a) > ht(e.b) ? 'a' : 'b', more = moreOf(out);
+      if (tall === more) fail(w + ': the taller one also holds more — judging by height already gives the right crown');
+      const dA = ownDims(CT[e.a], 0), dB = ownDims(CT[e.b], 0), dBs = ownDims(CT[e.b], Math.max(0, cap(e.a) - cap(e.b)));
+      const Ab = { x:J.ax - CT[e.a].w / 2 - 14, y:J.top, w:dA.w, h:dA.h }, Bb = { x:J.bx - CT[e.b].w / 2 - 14, y:J.top, w:dB.w, h:dB.h }, Bs = { x:Bb.x, y:J.top, w:dBs.w, h:dBs.h };
+      inside(Ab, w + ' the full jar', W, H); inside(Bs, w + ' the empty jar after pouring (with the spill)', W, H);
+      if (hit(Ab, Bs)) fail(w + ': the two jars overlap');
+      if (hit(pad(Ab, D.GPAD), pad(Bb, D.GPAD))) fail(w + ': the two jars\' drop pads overlap');
+      const lA = { x:J.ax - J.lblW / 2, y:J.lblY, w:J.lblW, h:22 }, lB = { x:J.bx - J.lblW / 2, y:J.lblY, w:J.lblW, h:22 };
+      inside(lA, w + ' name A', W, H); inside(lB, w + ' name B', W, H);
+      if (hit(lA, lB)) fail(w + ': the two names overlap');
+      if (J.lblY < J.top + Math.max(dA.h, dBs.h)) fail(w + ': the names sit on top of the jars');
+      [lA, lB, Ab, Bs].forEach((R, k) => { if (hit(R, pad(Sb, D.GPAD)) || hit(R, crownHome)) fail(w + ': part ' + k + ' (names/jars) runs into the "same" box or the crown'); });
+      /* 王冠放好：縮成 placed、停在容器口上面（下緣在口的上面、不出畫板） */
+      [['a', e.a, J.ax], ['b', e.b, J.bx]].forEach(([who, id, cx]) => {
+        const rim = J.top + 118 - ht(id), cb = box(cx, rim - 20, Cr.placed, Cr.placed);
+        inside(cb, w + ' the crown on ' + who, W, H);
+        if (cb.y + cb.h > rim) fail(w + ': the crown on ' + who + ' covers the jar\'s rim');
+      });
+      LANGS.forEach(L => {
+        const d = I18N[L], A = fCName(e.a, L), Bn = fCName(e.b, L), MR = MORE[L];
+        [A, Bn].forEach(n => { if (lines(n, 14, J.lblW - 4, L) > 1) fail(w + ' ' + L + ': the name "' + n + '" needs two lines in a ' + J.lblW + 'px label'); });
+        const moreName = more === 'a' ? A : more === 'b' ? Bn : null, lessName = more === 'a' ? Bn : more === 'b' ? A : null;
+        const seenT = d.gPourSeen[out];
+        if (bad(seenT) || !seenT || /\d/.test(seenT)) fail(w + ' ' + L + ': gPourSeen.' + out + ' missing or has a number');
+        has(w + ' ' + L + ' gPourSeen', seenT, L === 'zh' ? { spill:'滿出來', room:'空位', exact:'剛好滿' }[out] : { spill:'spills', room:'room', exact:'exactly full' }[out]);
+        const done = d.gPourDone(out, e.a, e.b);
+        if (moreName){ has(w + ' ' + L + ' gPourDone', done, moreName + MR); hasNot(w + ' ' + L + ' gPourDone', done, lessName + MR); }
+        else { has(w + ' ' + L + ' gPourDone', done, L === 'zh' ? '一樣多' : 'the same'); hasNot(w + ' ' + L + ' gPourDone', done, MR); }
+        ['a', 'b', 'same'].filter(x => x !== more).forEach(who => {
+          const t = d.gPourWrong(out, who, e.a, e.b), wh = w + ' ' + L + ' crown on ' + who;
+          if (bad(t)) return fail(wh + ': ' + t);
+          if (/\d/.test(t)) fail(wh + ': has a number in it: ' + t);
+          if (moreName){ has(wh, t, moreName + MR); hasNot(wh, t, lessName + MR); }
+          else { has(wh, t, L === 'zh' ? '兩個一樣多' : 'they hold the same'); hasNot(wh, t, MR); }
+          if (who === 'same') has(wh, t, L === 'zh' ? '不一樣多' : 'do not hold the same');
+          has(wh, t, L === 'zh' ? { spill:'水滿出來了', room:'還有空位', exact:'剛好滿' }[out] : { spill:'spilled over', room:'still room', exact:'Exactly full' }[out]);
+          const noteN = L === 'zh' ? '高不代表多' : 'taller does not mean more';
+          if (who === tall) has(wh, t, noteN); else hasNot(wh, t, noteN);
+          if (who === tall) has(wh, t, (who === 'a' ? A : Bn) + (L === 'zh' ? '比較高' : ' is taller'));
+        });
+        const h0 = d.gPour2(false, out, e.a, e.b), h1 = d.gPour2(true, out, e.a, e.b);
+        has(w + ' ' + L + ' gPour2 (before)', h0, A); has(w + ' ' + L + ' gPour2 (before)', h0, Bn);
+        if (moreName) has(w + ' ' + L + ' gPour2 (after)', h1, moreName); else has(w + ' ' + L + ' gPour2 (after)', h1, L === 'zh' ? '一樣多' : 'Same');
+      });
+    });
+    ['spill', 'room', 'exact'].forEach(k => { if (!seen[k]) fail('GAME_POUR needs at least one "' + k + '" pour'); });
+    LANGS.forEach(L => { const d = I18N[L]; [d.gPourAsk, d.gPourFirst, d.gSameLbl].forEach(t => { if (bad(t) || !t || /\d/.test(t)) fail('pour ' + L + ': a fixed string is missing or has a number: ' + t); }); });
+    need('pour', /if \(!poured\)\{ roundInfo\(d\.gPourFirst\); return false; \}/, 'the crown before pouring is not a reminder (it must bounce without being a mistake)');
+    need('pour', /if \(t\.who !== more\)\{ roundMiss\(d\.gPourWrong\(out, t\.who, e\.a, e\.b\)\); return false; \}/, 'a crown on the wrong one is accepted');
+
+    /* --- 跑起來：每一題、兩種語言 --- */
+    D.GAME_POUR.forEach((e, i) => LANGS.forEach(L => {
+      const d = I18N[L], w = 'exec pour[' + i + '] ' + L, A = D.CONTAINERS[e.a], Bc = D.CONTAINERS[e.b];
+      const out = outOf(e.a, e.b), more = moreOf(out), spill = Math.max(0, cap(e.a) - cap(e.b));
+      const dA = ownDims(CT[e.a], 0), dB = ownDims(CT[e.b], 0), dBs = ownDims(CT[e.b], spill);
+      const Bbox = { x:J.bx - CT[e.b].w / 2 - 14, y:J.top, w:dB.w, h:dB.h }, Abox = { x:J.ax - CT[e.a].w / 2 - 14, y:J.top, w:dA.w, h:dA.h };
+      let r = EXEC('pour', { picks:[i] }, d); if (!r) return;
+      const jar = r.LOG.pieces.filter(P => P.data.jar)[0], crown = r.LOG.pieces.filter(P => P.data.crown)[0], bz = zonesOf(r, 'gjar')[0];
+      if (!jar || !crown || !bz || r.LOG.pieces.length !== 2) return fail(w + ': not exactly one jar piece, one crown and one empty jar');
+      if (jar.w !== dA.w || jar.h !== dA.h || jar.homeX !== J.ax || jar.homeY !== J.top + dA.h / 2 || !jarIs(jar.html, e.a, cap(e.a), 0)) fail(w + ': the full jar is not drawn full at its place');
+      if (bz.x !== Bbox.x || bz.y !== Bbox.y || bz.w !== Bbox.w || bz.h !== Bbox.h || !jarIs(bz.innerHTML, e.b, 0, 0)) fail(w + ': the empty jar is not drawn empty at its place');
+      const names = zonesOf(r, 'gname').map(z => z.textContent);
+      if (names.join('|') !== [fCName(e.a, L), fCName(e.b, L)].join('|')) fail(w + ': the names read ' + names.join(' / '));
+      const sameZ = r.LOG.zones.filter(z => z.className === 'gslot gsame')[0];
+      if (!sameZ || sameZ.textContent !== d.gSameLbl) fail(w + ': no "same" box');
+      if (r.LOG.line.textContent !== d.gPourAsk) fail(w + ': the line should ask, not answer: ' + r.LOG.line.textContent);
+      const crownT = { a:Abox, b:Bbox, same:{ x:S.x, y:S.y, w:S.w, h:S.h } };
+      /* 倒之前：王冠放在哪一個目標上都只提醒、不算錯 */
+      ['a', 'b', 'same'].forEach(who => {
+        const R = crownT[who], n0 = r.LOG.info.length;
+        if (r.LOG.drop(crown, { x:R.x + R.w / 2, y:R.y + R.h / 2 }) !== false || r.LOG.info.length !== n0 + 1 || r.LOG.info[n0] !== d.gPourFirst || r.LOG.miss.length || crown.locked) fail(w + ': the crown on ' + who + ' before pouring is not just a reminder');
+      });
+      /* 容器放開的位置：每 3px 一點。不在空的那一個（＋GPAD）上 → 什麼都不做；在上面 → 倒過去（先跑不收的，再跑收的） */
+      const pts = [];
+      for (let x = 0; x <= W; x += 3) for (let y = 0; y <= D.POUR_H; y += 3) pts.push({ x, y, want:inBox({ x, y }, Bbox, D.GPAD) });
+      let badP = 0;
+      pts.filter(p => !p.want).forEach(p => { const got = r.LOG.drop(jar, { x:p.x, y:p.y }); if (got !== false || jar.locked || r.LOG.miss.length || r.LOG.info.length !== 3) badP++; });
+      if (badP) fail(w + ': ' + badP + ' drops of the jar away from the empty one pour or say something');
+      const yes = pts.filter(p => p.want);
+      if (!yes.length) fail(w + ': no drop position pours');
+      if (r.LOG.drop(jar, { x:yes[0].x, y:yes[0].y }) !== true) fail(w + ': a drop on the empty jar does not pour');
+      if (!jar.locked || jar.cx !== J.ax || !jarIs(jar.el.innerHTML, e.a, 0, 0)) fail(w + ': after pouring the left jar is not empty and back in place');
+      if (!jarIs(bz.innerHTML, e.b, Math.min(cap(e.a), cap(e.b)), spill) || bz.style.width !== dBs.w + 'px' || bz.style.height !== dBs.h + 'px') fail(w + ': after pouring the right jar does not hold min(a, b) with the spill drawn');
+      if (r.LOG.line.textContent !== d.gPourSeen[out] || r.LOG.miss.length) fail(w + ': after pouring the line says ' + r.LOG.line.textContent);
+      if (r.hint2() !== d.gPour2(true, out, e.a, e.b)) fail(w + ': hint 2 after pouring is not gPour2(poured)');
+      /* 王冠：每 3px 一點。不在目標上 → 靜靜的；在錯的目標上 → 說為什麼；在對的上 → 過關 */
+      let badC = 0; const wrongSaid = {};
+      pts.forEach(p => {
+        const at = ['a', 'b', 'same'].filter(k => inBox(p, crownT[k], D.GPAD));
+        if (at.length > 1) badC++;
+        if (at[0] === more) return;
+        const m0 = r.LOG.miss.length, got = r.LOG.drop(crown, { x:p.x, y:p.y });
+        const said = r.LOG.miss.slice(m0);
+        if (got !== false || crown.locked) badC++;
+        if (!at.length && said.length) badC++;
+        if (at.length){ if (said.join() !== d.gPourWrong(out, at[0], e.a, e.b)) badC++; wrongSaid[at[0]] = true; }
+      });
+      if (badC) fail(w + ': ' + badC + ' crown drops behave wrongly (silent off target, the reason on a wrong one, never accepted)');
+      ['a', 'b', 'same'].filter(k => k !== more).forEach(k => { if (!wrongSaid[k]) fail(w + ': the crown was never refused on ' + k); });
+      const R = crownT[more], m1 = r.LOG.miss.length;
+      if (r.LOG.drop(crown, { x:R.x + R.w / 2, y:R.y + R.h / 2, tap:true }) !== true || r.LOG.miss.length !== m1) fail(w + ': tap-then-tap with the crown on ' + more + ' is not accepted');
+      const lx = more === 'same' ? S.x + S.w / 2 : more === 'a' ? J.ax : J.bx, ly = more === 'same' ? S.y + S.h / 2 : J.top + 118 - ht(more === 'a' ? e.a : e.b) - 20;
+      if (!crown.locked || crown.cx !== lx || crown.cy !== ly || crown.w !== Cr.placed) fail(w + ': the crown is not locked (' + Cr.placed + 'px) at ' + lx + ',' + ly + ' — got ' + crown.cx + ',' + crown.cy);
+      if (!r.solved() || r.LOG.solved.join() !== d.gPourDone(out, e.a, e.b)) fail(w + ': not solved with gPourDone');
+      /* 點目的地倒水 */
+      r = EXEC('pour', { picks:[i] }, d);
+      if (r && r.LOG.drop(r.LOG.pieces[0], { x:J.bx, y:J.top + dB.h / 2, tap:true }) !== true) fail(w + ': tap-then-tap on the empty jar does not pour');
+      if (r && r.hint2() !== d.gPour2(true, out, e.a, e.b)) fail(w + ': hint 2 does not follow the pour');
+    }));
+  }
+
+  /* ================= 第 2 關：天平（範例 2） ================= */
+  {
+    const T = D.TILT, I = D.TILT_ITEM, Sb = D.TILT_SAME_BTN, H = D.TILT_H, s = T.s;
+    const tiltOf = e => wt(e.a) > wt(e.b) ? 1 : wt(e.a) < wt(e.b) ? -1 : 0;
+    const okPair = (e, w) => { if (!(IT[e.a] && IT[e.b]) || e.a === e.b){ fail(w + ': not two different things'); return false; } return true; };
+    D.TILT_TRAP.forEach((e, i) => { const w = 'TILT_TRAP[' + i + ']'; if (!okPair(e, w)) return; const hv = wt(e.a) > wt(e.b) ? e.a : e.b, lt = hv === e.a ? e.b : e.a; if (!(wt(e.a) !== wt(e.b) && sz(lt) > sz(hv))) fail(w + ': the bigger one is not the lighter one'); });
+    D.TILT_SAME.forEach((e, i) => { const w = 'TILT_SAME[' + i + ']'; if (!okPair(e, w)) return; if (wt(e.a) !== wt(e.b)) fail(w + ': the two do not weigh the same'); });
+    D.TILT_BIG.forEach((e, i) => { const w = 'TILT_BIG[' + i + ']'; if (!okPair(e, w)) return; const hv = wt(e.a) > wt(e.b) ? e.a : e.b, lt = hv === e.a ? e.b : e.a; if (!(wt(e.a) !== wt(e.b) && sz(hv) > sz(lt))) fail(w + ': the bigger one is not the heavier one'); });
+    if (!D.TILT_TRAP.length || !D.TILT_SAME.length || !D.TILT_BIG.length) fail('every TILT pool needs an entry');
+    /* 版面：每一排、每一種傾斜 */
+    const rowZ = r => ({ x:T.x, y:T.top + r * T.rowH + T.dy, w:G.W * s, h:G.H * s });
+    const itemBox = (r, side, t) => { const p = panAt[t][side], zy = T.top + r * T.rowH + T.dy; return box(T.x + p.cx * s, zy + p.top * s - I.h / 2, I.w, I.h); };
+    const sameBox = r => box(Sb.cx, T.top + r * T.rowH + Sb.dy, Sb.w, Sb.h);
+    if (panAt[1]) {
+      for (let r = 0; r < 3; r++){
+        inside(rowZ(r), 'tilt: balance ' + (r + 1), W, H); inside(sameBox(r), 'tilt: "Same" ' + (r + 1), W, H);
+        [-1, 0, 1].forEach(t => [0, 1].forEach(side => inside(itemBox(r, side, t), 'tilt: row ' + (r + 1) + ' tilt ' + t + ' thing ' + side, W, H)));
+      }
+      noHits([0, 1, 2].map(rowZ), 'tilt: two balances');
+      /* 所有排、所有傾斜的組合：按鈕兩兩不碰 */
+      const combos = [];
+      [-1, 0, 1].forEach(a => [-1, 0, 1].forEach(b => [-1, 0, 1].forEach(c => combos.push([a, b, c]))));
+      let clash = 0;
+      combos.forEach(tt => { const all = []; tt.forEach((t, r) => { all.push(itemBox(r, 0, t), itemBox(r, 1, t), sameBox(r)); }); for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) if (hit(all[i], all[j])) clash++; });
+      if (clash) fail('tilt: buttons overlap in ' + clash + ' tilt combinations');
+      if (!((panAt[1][0].top - panAt[1][1].top) * s >= 15)) fail('tilt: the two pans of a tilted balance differ by only ' + ((panAt[1][0].top - panAt[1][1].top) * s).toFixed(1) + 'px — too small to see');
+    }
+    D.ITEMS.forEach((it, i) => { const fs = 14 + it.size * 4; if (fs > I.h - 6 || fs > I.w - 6) fail('tilt: item ' + i + ' (' + fs + 'px) does not fit its ' + I.w + '×' + I.h + ' button'); });
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      [].concat(D.TILT_TRAP, D.TILT_BIG).forEach(e => {
+        const hv = wt(e.a) > wt(e.b) ? e.a : e.b, lt = hv === e.a ? e.b : e.a, t = d.gTiltLight(lt, hv), w = 'tilt ' + L + ' tapped ' + lt + ' (heavy ' + hv + ')';
+        if (bad(t) || /\d/.test(t)) fail(w + ': ' + t);
+        has(w, t, fIName(hv, L) + HEAVY[L]); hasNot(w, t, fIName(lt, L) + HEAVY[L]);
+        const note = L === 'zh' ? '大不代表重' : 'bigger does not mean heavier';
+        if (sz(lt) > sz(hv)) has(w, t, note); else hasNot(w, t, note);
+        has(w + ' gTiltNotLevel', d.gTiltNotLevel(hv), fIName(hv, L));
+        for (let k = 1; k <= 3; k++){ seq(w + ' gTilt2', d.gTilt2(k, hv), [k]); has(w + ' gTilt2', d.gTilt2(k, hv), fIName(hv, L)); }
+      });
+      for (let k = 1; k <= 3; k++) seq('tilt ' + L + ' gTilt2 level', d.gTilt2(k, -1), [k]);
+      for (let n = 0; n <= 3; n++) seq('tilt ' + L + ' gTiltNow', d.gTiltNow(n), [n, 3]);
+      [d.gTiltLevel, d.gTiltDone, d.gSameW].forEach(t => { if (bad(t) || !t || /\d/.test(t)) fail('tilt ' + L + ': a fixed string is missing or has a number: ' + t); });
+      if (d.gTiltLevel.indexOf(d.gSameW) < 0) fail('tilt ' + L + ': gTiltLevel does not name the "' + d.gSameW + '" button');
+    });
+    need('tilt', /var rows = shuffle\(\[pick\(TILT_TRAP\), pick\(TILT_SAME\), pick\(TILT_BIG\)\]\)/, 'the three rows are not one from each pool, shuffled');
+    /* --- 跑起來：每一個 TRAP × 每一個 BIG（SAME 只有一個）× 左右八種 × 三種排列 --- */
+    const nameToId = L => { const m = {}; IT.forEach((x, id) => { m[fIName(id, L)] = id; }); return m; };
+    const perms = [[0.1, 0.1], [0.9, 0.1], [0.5, 0.9]];
+    let runs = 0;
+    D.TILT_TRAP.forEach((_, ti) => D.TILT_BIG.forEach((__, bi) => [0, 1, 2, 3, 4, 5, 6, 7].forEach(cm => perms.forEach((rnd, pi) => LANGS.forEach(L => {
+      if ((ti + bi + cm + pi) % 2 && L === 'en') return;   /* 英文跑一半的組合就夠（字串各自另外全驗過） */
+      const d = I18N[L], w = 'exec tilt[' + [ti, bi, cm, pi].join(',') + '] ' + L, ids = nameToId(L);
+      const coins = [!!(cm & 1), !!(cm & 2), !!(cm & 4)];
+      const r = EXEC('tilt', { picks:[ti, 0, bi], coins:coins, rnd:rnd }, d); if (!r) return;
+      runs++;
+      const btns = btnsOf(r), items = btns.filter(b => b.className === 'gitem'), sames = btns.filter(b => b.className === 'gsamebtn');
+      if (items.length !== 6 || sames.length !== 3 || zonesOf(r, 'gbal').length !== 3) return fail(w + ': not three balances with two things and a "Same" each');
+      const rowOf = b => Math.floor((px(b.style.top) - T.top + 20) / T.rowH);
+      const rows = [0, 1, 2].map(k => ({ it:items.filter(b => rowOf(b) === k).sort((a, b) => px(a.style.left) - px(b.style.left)), same:sames.filter(b => rowOf(b) === k)[0], z:zonesOf(r, 'gbal')[k] }));
+      if (!rows.every(x => x.it.length === 2 && x.same)) return fail(w + ': the buttons do not group into three rows');
+      const pairs = rows.map(x => x.it.map(b => ids[b.attrs['aria-label']]));
+      if (pairs.some(p => p.some(id => id === undefined))) return fail(w + ': a thing\'s label is not its name');
+      /* 三排就是一個 TRAP、一個 SAME、一個 BIG（不分左右） */
+      const key = p => p.slice().sort((a, b) => a - b).join(',');
+      const wantKeys = [D.TILT_TRAP[ti], D.TILT_SAME[0], D.TILT_BIG[bi]].map(e => key([e.a, e.b])).sort();
+      if (pairs.map(key).sort().join('|') !== wantKeys.join('|')) fail(w + ': the rows are ' + pairs.map(key).join(' / ') + ', should be one from each pool');
+      rows.forEach((x, k) => {
+        const [a, b] = pairs[k], t = wt(a) > wt(b) ? 1 : wt(a) < wt(b) ? -1 : 0;
+        if (!balIs(x.z.innerHTML, null, 0, t)) fail(w + ': balance ' + (k + 1) + ' is not drawn with tilt ' + t);
+        [0, 1].forEach(side => {
+          const want = itemBox(k, side, t), bt = x.it[side];
+          if (Math.abs(px(bt.style.left) - want.x) > 1e-6 || Math.abs(px(bt.style.top) - want.y) > 1e-6) fail(w + ': thing ' + side + ' of balance ' + (k + 1) + ' is not standing on its pan');
+          const id = pairs[k][side];
+          if (bt.innerHTML !== IT[id].icon || bt.style.fontSize !== (14 + sz(id) * 4) + 'px') fail(w + ': thing ' + id + ' is not drawn at its size');
+        });
+      });
+      /* 錯的動作：每一排各試一次 */
+      let found = 0;
+      rows.forEach((x, k) => {
+        const [a, b] = pairs[k], hv = wt(a) > wt(b) ? a : wt(a) < wt(b) ? b : -1;
+        if (hv < 0){
+          x.it.forEach(bt => { const m0 = r.LOG.miss.length; bt.onclick(); if (r.LOG.miss.length !== m0 + 1 || r.LOG.miss[m0] !== d.gTiltLevel || bt.cls.found) fail(w + ': a thing on the level balance is not refused with gTiltLevel'); });
+        } else {
+          const lt = hv === a ? b : a, lb = x.it[hv === a ? 1 : 0];
+          let m0 = r.LOG.miss.length; lb.onclick(); if (r.LOG.miss[m0] !== d.gTiltLight(lt, hv) || lb.cls.found) fail(w + ': the lighter thing on balance ' + (k + 1) + ' is not refused with gTiltLight');
+          m0 = r.LOG.miss.length; x.same.onclick(); if (r.LOG.miss[m0] !== d.gTiltNotLevel(hv) || x.same.cls.found) fail(w + ': "Same" on tilted balance ' + (k + 1) + ' is not refused with gTiltNotLevel');
+        }
+        if (r.hint2() !== d.gTilt2(k + 1, hv)) fail(w + ': hint 2 does not point at balance ' + (k + 1) + ': ' + r.hint2());
+        const right = hv < 0 ? x.same : x.it[hv === a ? 0 : 1], m1 = r.LOG.miss.length;
+        right.onclick(); found++;
+        if (!right.cls.found || r.LOG.miss.length !== m1 || r.LOG.line.textContent !== d.gTiltNow(found)) fail(w + ': the right answer on balance ' + (k + 1) + ' is not marked found');
+        x.it.concat([x.same]).forEach(bt => { if (bt !== right && !bt.cls.off) fail(w + ': the other buttons of a finished balance are not dimmed'); });
+        x.it.concat([x.same]).forEach(bt => { const m2 = r.LOG.miss.length; bt.onclick(); if (r.LOG.miss.length !== m2) fail(w + ': a tap on a finished balance is a mistake'); });
+        if (r.LOG.line.textContent !== d.gTiltNow(found)) fail(w + ': a tap on a finished balance counts again');
+        if (found < 3 && r.solved()) fail(w + ': solved after ' + found + ' balances');
+      });
+      if (!r.solved() || r.LOG.solved.join() !== d.gTiltDone) fail(w + ': not solved with gTiltDone after three balances');
+    })))));
+    if (runs < 50) fail('exec tilt: only ' + runs + ' runs — the combinations were not played');
+  }
+
+  /* ================= 第 3 關：用同一個杯子量（範例 3） ================= */
+  {
+    const J = D.CUPS_JAR, R = D.CUP_ROW, Cb = D.CUP_BTN, H = D.CUPS_H;
+    let sawBig = false, sawSmall = false, sawSame = false, sawTrap = false;
+    const rowBox = cx => ({ x:cx - R.w / 2, y:R.y, w:R.w, h:R.h });
+    const btnBox = (i, big) => box(Cb.x[i], Cb.y, big ? Cb.big : Cb.small, big ? Cb.big : Cb.small);
+    [[0, false], [1, true]].forEach(() => {});
+    [[false, true], [true, false]].forEach(sides => { const bb = sides.map((big, i) => btnBox(i, big)); bb.forEach((x, i) => inside(x, 'cups: cup button ' + i, W, H)); noHits(bb, 'cups: the two cup buttons'); bb.forEach(x => { if (hit(x, rowBox(J.ax)) || hit(x, rowBox(J.bx))) fail('cups: a cup button covers a cup row'); }); });
+    inside(rowBox(J.ax), 'cups: row A', W, H); inside(rowBox(J.bx), 'cups: row B', W, H);
+    if (hit(rowBox(J.ax), rowBox(J.bx))) fail('cups: the two cup rows overlap');
+    const lab = cx => ({ x:cx - J.lblW / 2, y:J.lblY, w:J.lblW, h:J.lblH });
+    if (hit(lab(J.ax), lab(J.bx))) fail('cups: the two labels overlap');
+    if (lab(J.ax).y + J.lblH > R.y) fail('cups: the labels run into the cup rows');
+    D.GAME_CUPS.forEach((e, i) => {
+      const w = 'GAME_CUPS[' + i + ']';
+      if (!(CT[e.a] && CT[e.b]) || e.a === e.b) return fail(w + ': not two different containers');
+      const unit = e.big ? 2 : 1;
+      if (cap(e.a) % unit || cap(e.b) % unit) return fail(w + ': measured with the big cup, but a container does not take a whole number of big cups');
+      const na = cap(e.a) / unit, nb = cap(e.b) / unit;
+      if (e.big) sawBig = true; else sawSmall = true;
+      if (na === nb) sawSame = true;
+      if (na !== nb && ht(na > nb ? e.b : e.a) > ht(na > nb ? e.a : e.b)) sawTrap = true;
+      const dA = ownDims(CT[e.a], 0), dB = ownDims(CT[e.b], 0);
+      const Ab = { x:J.ax - CT[e.a].w / 2 - 14, y:J.top, w:dA.w, h:dA.h }, Bb = { x:J.bx - CT[e.b].w / 2 - 14, y:J.top, w:dB.w, h:dB.h };
+      inside(Ab, w + ' jar A', W, H); inside(Bb, w + ' jar B', W, H);
+      if (hit(Ab, Bb)) fail(w + ': the two jars overlap');
+      if (J.lblY < J.top + Math.max(dA.h, dB.h)) fail(w + ': the labels sit on the jars');
+      const pxv = e.big ? D.CUP_PX_BIG : D.CUP_PX_SMALL, per = e.big ? R.bigPer : R.smallPer;
+      [na, nb].forEach(n => { const s2 = svgWH(D.rowSVG(n, D.CUP_ICON, pxv, per)); if (!s2 || s2.w > R.w || s2.h > R.h) fail(w + ': ' + n + ' cups at ' + pxv + 'px, ' + per + ' a row, are ' + JSON.stringify(s2) + ' — bigger than the ' + R.w + '×' + R.h + ' row'); });
+      LANGS.forEach(L => {
+        const d = I18N[L], A = fCName(e.a, L), Bn = fCName(e.b, L), wl = w + ' ' + L;
+        for (let n = 0; n <= Math.max(na, nb); n++) [e.a, e.b].forEach(id => {
+          const t = d.cupLabel(id, n);
+          if (lines(t, 14, J.lblW - 4, L) * 14 * 1.15 > J.lblH) fail(wl + ': the label "' + t + '" needs ' + lines(t, 14, J.lblW - 4, L) + ' lines — taller than ' + J.lblH + 'px');
+        });
+        const own = big => L === 'zh' ? (big ? '大杯子' : '小杯子') : (big ? 'the big cup' : 'the small cup');
+        const t = d.gCupWrong(e.a, e.big);
+        has(wl + ' gCupWrong', t, A); has(wl + ' gCupWrong', t, own(e.big)); hasNot(wl + ' gCupWrong', t, own(!e.big));
+        const done = d.gCupsDone(e.a, na, e.b, nb, e.big);
+        seq(wl + ' gCupsDone', done, [na, nb].concat(na === nb ? [] : [Math.max(na, nb), Math.min(na, nb)]));
+        has(wl + ' gCupsDone', done, own(e.big)); hasNot(wl + ' gCupsDone', done, own(!e.big));
+        if (na === nb){ hasNot(wl + ' gCupsDone', done, MORE[L]); has(wl + ' gCupsDone', done, L === 'zh' ? '一樣多' : 'the same'); }
+        else {
+          const mo = na > nb ? A : Bn, le = na > nb ? Bn : A, leId = na > nb ? e.b : e.a, moId = na > nb ? e.a : e.b;
+          has(wl + ' gCupsDone', done, mo + MORE[L]); hasNot(wl + ' gCupsDone', done, le + MORE[L]);
+          const note = L === 'zh' ? le + '比較高，卻比較少' : le + ' is taller, yet holds less';
+          if (ht(leId) > ht(moId)) has(wl + ' gCupsDone', done, note); else hasNot(wl + ' gCupsDone', done, L === 'zh' ? '卻比較少' : 'yet holds less');
+        }
+        for (let left = 1; left <= nb; left++){ seq(wl + ' gCups2', d.gCups2(e.big, left), [left]); has(wl + ' gCups2', d.gCups2(e.big, left), own(e.big)); }
+      });
+    });
+    if (!sawBig || !sawSmall) fail('GAME_CUPS needs both a small-cup and a big-cup entry (otherwise "always the small cup" is never wrong)');
+    if (!sawSame) fail('GAME_CUPS needs an entry where both take the same number of cups');
+    if (!sawTrap) fail('GAME_CUPS needs an entry where the taller one takes fewer cups');
+    LANGS.forEach(L => { const d = I18N[L]; for (let n = 0; n <= 9; n++){ seq('cups ' + L + ' gCupsNow', d.gCupsNow(n), [n]); seq('cups ' + L + ' cupLabel', d.cupLabel(0, n), [n]); }
+      if (L === 'en'){ if (!/ 1 cup\b/.test(d.gCupsNow(1)) || !/ 2 cups\b/.test(d.gCupsNow(2))) fail('cups en: "1 cup / 2 cups" plural is wrong: ' + d.gCupsNow(1) + ' / ' + d.gCupsNow(2)); } });
+    need('cups', /if \(big !== e\.big\)\{ roundMiss\(d\.gCupWrong\(e\.a, e\.big\)\); return; \}/, 'the other cup is accepted');
+    need('cups', /if \(n === nb\) roundSolved\(d\.gCupsDone\(e\.a, na, e\.b, nb, e\.big\)\);/, 'the round is not solved exactly when the right jar is full');
+    /* --- 跑起來 --- */
+    D.GAME_CUPS.forEach((e, i) => [true, false].forEach(cn => LANGS.forEach(L => {
+      const d = I18N[L], w = 'exec cups[' + i + '] ' + (cn ? 'small-left' : 'big-left') + ' ' + L, A = D.CONTAINERS[e.a], Bc = D.CONTAINERS[e.b];
+      const unit = e.big ? 2 : 1, na = cap(e.a) / unit, nb = cap(e.b) / unit, pxv = e.big ? D.CUP_PX_BIG : D.CUP_PX_SMALL, per = e.big ? R.bigPer : R.smallPer;
+      const r = EXEC('cups', { picks:[i], coins:[cn] }, d); if (!r) return;
+      const jars = zonesOf(r, 'gjar'), rows = zonesOf(r, 'gcups'), names = zonesOf(r, 'gname'), btns = btnsOf(r);
+      if (jars.length !== 2 || rows.length !== 2 || names.length !== 2 || btns.length !== 2) return fail(w + ': not two jars, two rows, two labels, two cups');
+      if (!jarIs(jars[0].innerHTML, e.a, cap(e.a), 0) || !jarIs(jars[1].innerHTML, e.b, 0, 0)) fail(w + ': the left jar is not full / the right one not empty');
+      if (!rowIs(rows[0].innerHTML, na, D.CUP_ICON, pxv) || rows[1].innerHTML !== '') fail(w + ': the left row does not show ' + na + ' cups at ' + pxv + 'px');
+      if (names[0].textContent !== d.cupLabel(e.a, na) || names[1].textContent !== d.cupLabel(e.b, 0)) fail(w + ': labels ' + names.map(z => z.textContent).join(' / '));
+      const bigBtn = btns.filter(b => b.attrs['data-big'] === '1')[0], smallBtn = btns.filter(b => b.attrs['data-big'] === '0')[0];
+      if (!bigBtn || !smallBtn) return fail(w + ': no big and small cup');
+      if (px(bigBtn.style.width) !== Cb.big || px(smallBtn.style.width) !== Cb.small) fail(w + ': the cup buttons are not ' + Cb.big + ' / ' + Cb.small + ' wide');
+      if ((px(smallBtn.style.left) < px(bigBtn.style.left)) !== cn) fail(w + ': coin() does not decide which cup is on the left');
+      if (bigBtn.innerHTML.indexOf('font-size:' + D.CUP_PX_BIG + 'px') < 0 || smallBtn.innerHTML.indexOf('font-size:' + D.CUP_PX_SMALL + 'px') < 0) fail(w + ': the cup buttons are not drawn at the two cup sizes');
+      const right = e.big ? bigBtn : smallBtn, wrong = e.big ? smallBtn : bigBtn;
+      let m0 = r.LOG.miss.length; wrong.onclick();
+      if (r.LOG.miss.length !== m0 + 1 || r.LOG.miss[m0] !== d.gCupWrong(e.a, e.big) || !jarIs(jars[1].innerHTML, e.b, 0, 0)) fail(w + ': the other cup is not refused with gCupWrong (or it pours)');
+      for (let n = 1; n <= nb; n++){
+        if (r.hint2() !== d.gCups2(e.big, nb - n + 1)) fail(w + ': hint 2 at ' + (n - 1) + ' cups is ' + r.hint2());
+        m0 = r.LOG.miss.length; right.onclick();
+        if (r.LOG.miss.length !== m0) fail(w + ': the right cup is a mistake');
+        if (!jarIs(jars[1].innerHTML, e.b, n * unit, 0)) fail(w + ': after ' + n + ' cups the right jar does not hold ' + (n * unit) + ' small cups of water');
+        if (!rowIs(rows[1].innerHTML, n, D.CUP_ICON, pxv) || names[1].textContent !== d.cupLabel(e.b, n) || r.LOG.line.textContent !== d.gCupsNow(n)) fail(w + ': after ' + n + ' cups the row / label / line do not say ' + n);
+        if (n < nb && r.solved()) fail(w + ': solved after ' + n + ' of ' + nb + ' cups');
+        if (n === 1){ m0 = r.LOG.miss.length; wrong.onclick(); if (r.LOG.miss[m0] !== d.gCupWrong(e.a, e.big) || !rowIs(rows[1].innerHTML, 1, D.CUP_ICON, pxv)) fail(w + ': the other cup halfway is not refused'); }
+      }
+      if (!r.solved() || r.LOG.solved.join() !== d.gCupsDone(e.a, na, e.b, nb, e.big)) fail(w + ': not solved with gCupsDone when the right jar is full');
+      const mm = r.LOG.miss.length, html = jars[1].innerHTML; right.onclick(); wrong.onclick();
+      if (r.LOG.miss.length !== mm || jars[1].innerHTML !== html) fail(w + ': taps after the round is solved still do something');
+    })));
+  }
+
+  /* ================= 第 4 關：用一樣的積木秤（範例 4） ================= */
+  {
+    const K = D.BLK_BAL, Pn = D.BLK_PAN, Tk = D.BLK_TOK, Rw = D.BLK_ROW, H = D.BLOCKS_H;
+    const panBox = { x:K.x + G.cx + G.arm - Pn.w / 2, y:K.y + G.pivot + G.hang + 12 - Pn.h, w:Pn.w, h:Pn.h };
+    inside(panBox, 'blocks: the right pan\'s drop area', W, H); inside({ x:K.x, y:K.y, w:G.W, h:G.H }, 'blocks: the balance', W, H);
+    if (panAt[1] && panAt[0]){
+      [0, 1].forEach(t => {
+        const rp = panAt[t][1], lp = panAt[t][0];
+        const rpb = { x:K.x + rp.cx - 26, y:K.y + rp.top, w:52, h:7 }, lpb = { x:K.x + lp.cx - 26, y:K.y + lp.top, w:52, h:7 };
+        if (!(rpb.x >= panBox.x && rpb.x + rpb.w <= panBox.x + panBox.w && rpb.y >= panBox.y && rpb.y <= panBox.y + panBox.h)) fail('blocks: the right pan (tilt ' + t + ') is not under the drop area');
+        if (hit(pad(panBox, D.GPAD), lpb)) fail('blocks: the left pan is inside the drop area');
+        /* 盤子上方要放得下積木：兩排 BLK_PAN_PX 的積木都在 drop area 裡面 */
+        if (rpb.y - 2 * D.BLK_PAN_PX < panBox.y) fail('blocks: two rows of blocks on the raised pan stick out above the drop area');
+      });
+    }
+    const toks = Tk.x.map(x => box(x, Tk.y, Tk.w, Tk.h));
+    toks.forEach((t, i) => { inside(t, 'blocks: source ' + i, W, H); if (hit(t, pad(panBox, D.GPAD))) fail('blocks: source ' + i + ' starts inside the pan\'s drop area'); });
+    noHits(toks, 'blocks: the two sources');
+    const rowB = { x:Rw.x, y:Rw.y, w:Rw.w, h:Rw.h };
+    inside(rowB, 'blocks: the row of blocks', W, H); toks.forEach((t, i) => { if (hit(t, rowB)) fail('blocks: source ' + i + ' covers the row of blocks'); });
+    if (!(D.GAME_BLOCKS.length >= 4)) fail('GAME_BLOCKS should have at least 4 entries');
+    D.GAME_BLOCKS.forEach((id, i) => {
+      const w = 'GAME_BLOCKS[' + i + ']';
+      if (!IT[id]) return fail(w + ': not a thing');
+      if (!(wt(id) >= 2 && wt(id) <= 2 * D.BLK_PAN_PER_ROW)) fail(w + ': ' + wt(id) + ' blocks do not fit in two rows on the pan');
+      const s2 = svgWH(D.rowSVG(wt(id), D.BLK_ICON, Rw.px, Rw.per)); if (!s2 || s2.w > Rw.w || s2.h > Rw.h) fail(w + ': the row of ' + wt(id) + ' blocks is ' + JSON.stringify(s2) + ', bigger than ' + Rw.w + '×' + Rw.h);
+      LANGS.forEach(L => {
+        const d = I18N[L], wl = w + ' ' + L, nm = fIName(id, L), n = wt(id);
+        has(wl + ' gBlkShort', d.gBlkShort(id), nm); if (/\d/.test(d.gBlkShort(id))) fail(wl + ': gBlkShort has a number in it');
+        seq(wl + ' gBlkDone', d.gBlkDone(id, n), [n, n]); has(wl + ' gBlkDone', d.gBlkDone(id, n), nm);
+        for (let k = 0; k <= n; k++) seq(wl + ' gBlk2 at ' + k, d.gBlk2(id, k, n), k < n ? [n - k] : []);
+      });
+    });
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      for (let n = 0; n <= 10; n++) seq('blocks ' + L + ' gBlkNow', d.gBlkNow(n), [n]);
+      if (L === 'en' && (!/ 1 block\b/.test(d.gBlkNow(1)) || !/ 2 blocks\b/.test(d.gBlkNow(2)) || !/^1 block more/.test(d.gBlk2(0, 1, 2)))) fail('blocks en: "1 block / 2 blocks" plural is wrong');
+      [d.gBlkOdd, d.gBlkOver, d.gBlkEmpty, d.gBlkBtn].forEach(t => { if (bad(t) || !t || /\d/.test(t)) fail('blocks ' + L + ': a fixed string is missing or has a number: ' + t); });
+      has('blocks ' + L + ' gBlkOdd', d.gBlkOdd, D.BLK_ICON);
+      has('blocks ' + L + ' gAsks', d.gAsks.blocks, d.gBlkBtn);
+    });
+    if (D.BLK_ODD_ICON === D.BLK_ICON) fail('blocks: the different block looks the same as the blocks');
+    need('blocks', /if \(P\.data\.k !== 'same'\)\{ roundMiss\(d\.gBlkOdd\); return false; \}/, 'the different block is accepted');
+    need('blocks', /if \(n >= wt\)\{ roundInfo\(d\.gBlkOver\); return false; \}/, 'a block after level is accepted (or counted as a mistake)');
+    need('blocks', /if \(n < wt\)\{ roundMiss\(d\.gBlkShort\(id\)\); return; \}\s*doneBtn\.disabled = true;\s*roundSolved\(d\.gBlkDone\(id, wt\)\);/, 'Level is accepted before the balance is level');
+    /* --- 跑起來 --- */
+    D.GAME_BLOCKS.forEach((id, i) => [true, false].forEach(cn => LANGS.forEach(L => {
+      const d = I18N[L], w = 'exec blocks[' + i + '] ' + (cn ? 'same-left' : 'odd-left') + ' ' + L, n0 = wt(id), it = D.ITEMS[id];
+      const r = EXEC('blocks', { picks:[i], coins:[cn] }, d); if (!r) return;
+      const bal = zonesOf(r, 'gbal')[0], row = zonesOf(r, 'gcups')[0];
+      const same = r.LOG.pieces.filter(P => P.data.k === 'same')[0], odd = r.LOG.pieces.filter(P => P.data.k === 'odd')[0];
+      if (!bal || !row || !same || !odd || !r.LOG.action) return fail(w + ': no balance / row / two sources / Level button');
+      if (same.text !== D.BLK_ICON || odd.text !== D.BLK_ODD_ICON) fail(w + ': the sources are not ' + D.BLK_ICON + ' and ' + D.BLK_ODD_ICON);
+      if ((same.homeX < odd.homeX) !== cn) fail(w + ': coin() does not decide which source is on the left');
+      if (!balIs(bal.innerHTML, id, 0, 1) || !rowIs(row.innerHTML, 0, D.BLK_ICON, Rw.px)) fail(w + ': the start is not the thing alone, its side down');
+      const mid = { x:panBox.x + panBox.w / 2, y:panBox.y + panBox.h / 2 };
+      r.LOG.action.f();
+      if (r.LOG.miss.length || r.solved() || r.msg() !== d.gBlkEmpty) fail(w + ': Level with no blocks should only remind');
+      /* 盤子的範圍：每 3px 一點，範圍外放開什麼都不做 */
+      let badP = 0;
+      for (let x = 0; x <= W; x += 3) for (let y = 0; y <= H; y += 3){ if (inBox({ x, y }, panBox, D.GPAD)) continue; const g = r.LOG.drop(same, { x, y }); if (g !== false || r.LOG.miss.length || r.LOG.info.length) badP++; }
+      if (badP) fail(w + ': ' + badP + ' drops away from the pan do something');
+      /* 盤子範圍裡面的每一點（每 6px，各開一局）都要收（codex 第一輪：只放中心的話，只收中間一條也是綠的） */
+      if (cn && L === 'zh'){
+        let miss = 0;
+        for (let x = panBox.x - D.GPAD; x <= panBox.x + panBox.w + D.GPAD; x += 6) for (let y = panBox.y - D.GPAD; y <= panBox.y + panBox.h + D.GPAD; y += 6){
+          if (x > W) continue;
+          const q = EXEC('blocks', { picks:[i], coins:[cn] }, d); if (!q) continue;
+          if (q.LOG.drop(q.LOG.pieces.filter(P => P.data.k === 'same')[0], { x, y }) !== true) miss++;
+        }
+        if (miss) fail(w + ': ' + miss + ' points inside the pan\'s drop area do not take a block');
+      }
+      let m0 = r.LOG.miss.length;
+      if (r.LOG.drop(odd, Object.assign({}, mid)) !== false || r.LOG.miss[m0] !== d.gBlkOdd) fail(w + ': the different block is not refused with gBlkOdd');
+      for (let n = 1; n <= n0; n++){
+        if (r.hint2() !== d.gBlk2(id, n - 1, n0)) fail(w + ': hint 2 at ' + (n - 1) + ' blocks is ' + r.hint2());
+        const tap = n % 2 === 0, k0 = r.LOG.kept;
+        m0 = r.LOG.miss.length;
+        if (r.LOG.drop(same, Object.assign({ tap:tap }, mid)) !== true || r.LOG.miss.length !== m0) { fail(w + ': block ' + n + ' is refused'); break; }
+        if (!balIs(bal.innerHTML, id, n, n < n0 ? 1 : 0)) fail(w + ': after ' + n + ' blocks the balance is not drawn with ' + n + ' blocks, tilt ' + (n < n0 ? 1 : 0));
+        if (!rowIs(row.innerHTML, n, D.BLK_ICON, Rw.px) || r.LOG.line.textContent !== d.gBlkNow(n)) fail(w + ': after ' + n + ' blocks the row / line do not say ' + n);
+        if ((r.LOG.kept === k0 + 1) !== tap) fail(w + ': keepSelected after a ' + (tap ? 'tap' : 'drag') + ' is wrong');
+        if (r.solved()) fail(w + ': a block solved the round (Level must be pressed)');
+        if (n < n0){ m0 = r.LOG.miss.length; r.LOG.action.f(); if (r.LOG.miss[m0] !== d.gBlkShort(id) || r.solved()) fail(w + ': Level at ' + n + ' of ' + n0 + ' is not refused with gBlkShort'); }
+      }
+      if (r.hint2() !== d.gBlk2(id, n0, n0)) fail(w + ': hint 2 at level is ' + r.hint2());
+      m0 = r.LOG.miss.length; const i0 = r.LOG.info.length;
+      if (r.LOG.drop(same, Object.assign({}, mid)) !== false || r.LOG.miss.length !== m0 || r.LOG.info[i0] !== d.gBlkOver || !balIs(bal.innerHTML, id, n0, 0)) fail(w + ': a block after level is not refused with gBlkOver (no mistake, nothing added)');
+      r.LOG.action.f();
+      if (!r.solved() || r.LOG.solved.join() !== d.gBlkDone(id, n0) || !r.LOG.action.b.disabled) fail(w + ': Level at ' + n0 + ' does not solve with gBlkDone');
+    })));
+  }
+
+  /* ================= 第 5 關：排排看（範例 3＋4） ================= */
+  {
+    const S = D.RANK_SLOT, Cd = D.RANK_CARD, H = D.RANK_H;
+    const slotB = S.x.map(x => box(x, S.y, S.w, S.h));
+    slotB.forEach((b, k) => inside(b, 'rank: box ' + (k + 1), W, H)); noHits(slotB, 'rank: two boxes');
+    for (let k = 1; k < slotB.length; k++){ const gap = slotB[k].x - (slotB[k - 1].x + slotB[k - 1].w); if (!(gap > 0 && gap < 2 * D.GPAD)) fail('rank: the gap between box ' + k + ' and ' + (k + 1) + ' is ' + gap + ' — it must be > 0 and < 2 × GPAD so the drop pads overlap (nearest-box rule exercised)'); }
+    const x0 = (W - 2 * Cd.step) / 2, cards = [0, 1, 2].map(k => box(x0 + k * Cd.step, Cd.y, Cd.w, Cd.h));
+    cards.forEach((c, k) => { inside(c, 'rank: card ' + k, W, H); slotB.forEach(sb => { if (hit(c, pad(sb, D.GPAD))) fail('rank: card ' + k + ' starts inside a box\'s drop pad'); }); });
+    noHits(cards, 'rank: two cards');
+    if (Cd.w > S.w || Cd.h > S.h) fail('rank: a card is bigger than a box');
+    const lbl = { x:8, y:6, w:W - 16, h:26 }; slotB.forEach(sb => { if (hit(lbl, sb)) fail('rank: the label covers a box'); });
+    if (!(D.GAME_RANK.length >= 5)) fail('GAME_RANK should have at least 5 sets');
+    const cats = {};
+    D.GAME_RANK.forEach((set, i) => {
+      const w = 'GAME_RANK[' + i + ']', cat = set.cat;
+      if (cat !== 'C' && cat !== 'I') return fail(w + ': unknown catalogue ' + cat);
+      cats[cat] = true;
+      const T = cat === 'C' ? CT : IT;
+      if (set.ids.length !== 3 || new Set(set.ids).size !== 3 || !set.ids.every(id => T[id])) return fail(w + ': not three different things');
+      const val = id => truth(cat, id), look = id => cat === 'C' ? ht(id) : sz(id);
+      const vals = set.ids.map(val);
+      if (new Set(vals).size !== 3) return fail(w + ': two of them measure the same');
+      const order = set.ids.slice().sort((a, b) => val(b) - val(a));
+      const biggest = set.ids.slice().sort((a, b) => look(b) - look(a));
+      if (look(biggest[0]) === look(biggest[1]) && val(biggest[1]) === val(order[0])) fail(w + ': tied for tallest/biggest with the one that has the most');
+      if (biggest[0] === order[0]) fail(w + ': the ' + (cat === 'C' ? 'tallest' : 'biggest') + ' one also has the most — sorting by looks gives the right first card');
+      const byLook = set.ids.slice().sort((a, b) => look(b) - look(a) || 0).map(val);
+      if (byLook.join() === order.map(val).join()) fail(w + ': sorting by looks gives the right order');
+      LANGS.forEach(L => {
+        const d = I18N[L], wl = w + ' ' + L;
+        set.ids.forEach(id => {
+          const q = d.gRankQty(cat, id);
+          seq(wl + ' gRankQty', q, [val(id)]);
+          if (textW(q, 15) > Cd.w - 10) fail(wl + ': the card text "' + q + '" is about ' + textW(q, 15).toFixed(0) + 'px, the card is ' + Cd.w);
+          if (cat === 'C'){ const c = CT[id]; if (c.w * D.RANK_JAR > D.RANK_PIC.w || c.h * D.RANK_JAR > D.RANK_PIC.h - 2) fail(wl + ': the small jar ' + id + ' does not fit the card picture'); if (q.indexOf(c.icon) < 0) fail(wl + ': the card does not show which container it is'); }
+          else if (14 + sz(id) * 4 > 54) fail(wl + ': thing ' + id + ' is too big for the card picture');
+          const v = d.gRankVal(cat, id); has(wl + ' gRankVal', v, (cat === 'C' ? fCName : fIName)(id, L)); seq(wl + ' gRankVal', v, [val(id)]);
+        });
+        order.forEach((want, k) => set.ids.forEach(id => {
+          if (id === want) return;
+          const t = d.gRankWhy(cat, id, want), more = val(id) > val(want), wh = wl + ' put ' + id + ' in box ' + (k + 1);
+          seq(wh, t, [val(id), val(want)]);
+          const vI = d.gRankVal(cat, id), vW = d.gRankVal(cat, want);
+          if (L === 'zh'){ has(wh, t, vI + '比 ' + vW + (more ? '多' : '少') + '：'); has(wh, t, cat === 'C' ? (more ? '裝得少一點的' : '裝得多一點的') : (more ? '輕一點的' : '重一點的')); }
+          else {
+            const nm = x => (cat === 'C' ? fCName : fIName)(x, 'en'), q = x => cat === 'C' ? fCup(val(x), 'en') : fBlk(val(x), 'en');
+            has(wh, t, nm(id) + (cat === 'C' ? ' holds ' : ' weighs ') + q(id) + ', ' + (more ? 'more' : (cat === 'C' ? 'fewer' : 'less')) + ' than ' + nm(want) + '’s ' + q(want) + ' — '); has(wh, t, cat === 'C' ? (more ? 'one that holds less' : 'one that holds more') : (more ? 'lighter one' : 'heavier one')); }
+          const note = cat === 'C' ? (L === 'zh' ? '高不代表多' : 'Taller does not mean more') : (L === 'zh' ? '大不代表重' : 'Bigger does not mean heavier');
+          if (!more && look(id) > look(want)) has(wh, t, note); else hasNot(wh, t, note);
+        }));
+        seq(wl + ' gRankDone', d.gRankDone(cat, order), order.map(val));
+        order.forEach((id, k) => seq(wl + ' gRank2', d.gRank2(k, cat, id), [k + 1, val(id)]));
+        const ttl = cat === 'C' ? d.gRankCap : d.gRankW;
+        if (bad(ttl) || textW(ttl, 15) > W - 20) fail(wl + ': the box label is missing or too long: ' + ttl);
+      });
+    });
+    if (!cats.C || !cats.I) fail('GAME_RANK needs both capacity (C) and weight (I) sets');
+    need('rank', /var order = set\.ids\.slice\(\)\.sort\(function\(x, y\)\{ return truthOf\(cat, y\) - truthOf\(cat, x\); \}\);/, 'the target order is not most first');
+    need('rank', /renderTray\(B, set\.ids\.map\(function\(x\)\{ return -truthOf\(cat, x\); \}\), Cd\.y,/, 'the tray is not shuffled by the NEGATED amounts (shuffle() only refuses ascending, and the answer here is descending)');
+    /* shuffle()：托盤一開始不可以已經是正解的順序。用「一定洗回原樣」的假亂數跑每一組，再用真亂數跑 2000 次 */
+    {
+      const fsrc = extractFunction(src, 'shuffle');
+      if (!fsrc) fail('cannot find shuffle() in index.html');
+      else {
+        try {
+          const fake = Object.create(Math); fake.random = () => 0.999999;
+          const forced = new Function('Math', fsrc + '\nreturn shuffle;')(fake), real = new Function(fsrc + '\nreturn shuffle;')();
+          const up = a => a.every((v, j) => j === 0 || a[j - 1] < v);
+          D.GAME_RANK.forEach((set, i) => {
+            const keys = set.ids.map(id => -truth(set.cat, id)).sort((a, b) => a - b);
+            const out = forced(keys);
+            if (up(out) || out.slice().sort((a, b) => a - b).join() !== keys.join()) fail('GAME_RANK[' + i + ']: shuffle() of a tray already in answer order leaves it so (' + out.join(',') + ')');
+            for (let r = 0; r < 2000; r++){ const o = real(keys); if (up(o)){ fail('GAME_RANK[' + i + ']: shuffle() produced a tray already in answer order'); break; } }
+          });
+        } catch (e){ fail('shuffle() could not run: ' + e.message); }
+      }
+    }
+    /* --- 跑起來：每一張卡進每一個空格，再整組照順序放 --- */
+    D.GAME_RANK.forEach((set, i) => LANGS.forEach(L => [[0.1, 0.1], [0.9, 0.5], [0.4, 0.9]].forEach((rnd, ri) => {
+      const d = I18N[L], w = 'exec rank[' + i + '.' + ri + '] ' + L, cat = set.cat, val = id => truth(cat, id);
+      const order = set.ids.slice().sort((a, b) => val(b) - val(a));
+      const r = EXEC('rank', { picks:[i], rnd:rnd }, d); if (!r) return;
+      const cards = r.LOG.pieces;
+      if (cards.length !== 3 || cards.map(P => P.data.id).sort().join() !== set.ids.slice().sort().join()) return fail(w + ': the tray does not hold the three cards');
+      /* 卡片的畫：容器是真實寬高 × RANK_JAR 的長方形（看得出高矮），東西照它的大小；下面寫量出來的數 */
+      cards.forEach(P => {
+        const id = P.data.id, h = String(P.html);
+        const picOk = cat === 'C'
+          ? new RegExp('<rect x="[\\d.]+" y="[\\d.]+" width="' + (CT[id].w * D.RANK_JAR) + '" height="' + (CT[id].h * D.RANK_JAR) + '"').test(h)
+          : h.indexOf('font-size:' + (14 + sz(id) * 4) + 'px">' + IT[id].icon + '</span>') >= 0;
+        if (!picOk || h.indexOf('<div class="gqty">' + d.gRankQty(cat, id) + '</div>') < 0) fail(w + ': card ' + id + ' does not show its picture at its true size and its amount');
+      });
+      const tray = cards.slice().sort((a, b) => a.homeX - b.homeX).map(P => val(P.data.id));
+      if (tray.every((v, j) => j === 0 || tray[j - 1] > v)) fail(w + ': the tray starts already in order (' + tray.join(',') + ')');
+      const lab = r.LOG.zones.filter(z => z.className === 'glbl')[0];
+      if (!lab || lab.textContent !== (cat === 'C' ? d.gRankCap : d.gRankW)) fail(w + ': the box label does not say what is ranked');
+      if (ri === 0) order.forEach((want, k) => set.ids.forEach(id => {
+        const q = EXEC('rank', { picks:[i], rnd:rnd }, d); if (!q) return;
+        const P = q.LOG.pieces.filter(x => x.data.id === id)[0], got = q.LOG.drop(P, { x:S.x[k], y:S.y });
+        if (id === want){ if (got !== true || !P.locked || q.LOG.miss.length) fail(w + ': ' + id + ' is refused in the empty box ' + (k + 1)); }
+        else if (got !== false || P.locked || q.LOG.miss.join() !== d.gRankWhy(cat, id, want)) fail(w + ': ' + id + ' in the empty box ' + (k + 1) + ' is not refused with gRankWhy');
+      }));
+      S.x.forEach((x, k) => {
+        if (r.hint2() !== d.gRank2(k, cat, order[k])) fail(w + ': hint 2 before box ' + (k + 1) + ' is ' + r.hint2());
+        const right = cards.filter(P => P.data.id === order[k])[0];
+        if (r.LOG.drop(right, { x, y:S.y, tap:k === 1 }) !== true || !right.locked || right.cx !== x || right.cy !== S.y) fail(w + ': ' + order[k] + ' is not locked in box ' + (k + 1));
+        const other = cards.filter(P => !P.locked)[0];
+        if (other){ const m1 = r.LOG.miss.length; if (r.LOG.drop(other, { x, y:S.y }) !== false || r.LOG.miss.length !== m1) fail(w + ': a drop on the filled box ' + (k + 1) + ' is not silent'); }
+        if (k < 2 && r.solved()) fail(w + ': solved after ' + (k + 1) + ' boxes');
+        if (r.LOG.line.textContent !== order.map((id, j) => j <= k ? d.gRankQty(cat, id) : '□').join(' > ')) fail(w + ': the line says ' + r.LOG.line.textContent);
+      });
+      if (!r.solved() || r.LOG.solved.join() !== d.gRankDone(cat, order)) fail(w + ': not solved with gRankDone');
+    })));
+  }
+
+  /* --- 家長頁的精熟標準要說出遊戲現在的名字（改名之後那一句不可以留著舊的） --- */
+  {
+    const fs2 = require('fs'), path = require('path');
+    let par = '';
+    try { par = fs2.readFileSync(path.join(path.dirname(process.argv[2]), 'parents.html'), 'utf8'); } catch (e){ fail('cannot read parents.html: ' + e.code); }
+    LANGS.forEach(L => {
+      const name = I18N[L].s6h2, block = (par.match(L === 'zh' ? /"zh":\s*\{[\s\S]*?"readyBox":\s*"((?:[^"\\]|\\.)*)"/ : /"en":\s*\{[\s\S]*?"readyBox":\s*"((?:[^"\\]|\\.)*)"/) || [])[1] || '';
+      if (!name || block.indexOf(name) < 0) fail('parents.html ' + L + ' readyBox does not name the game "' + name + '"');
+    });
+    if (/排排看大挑戰|Line-Them-Up/.test(par)) fail('parents.html still names the old game');
+  }
+}
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-2/math/capacity-weight */
   breaks: [
@@ -438,35 +1272,15 @@ module.exports = {
       find:"               '。' + hi + ' 比 ' + lo + ' 多 → <span class=\"bigans\">' + more + '比較重</span>（積木要一樣的才能比）';\n      },\n      blkLabel",
       replace:"               '。' + hi + ' 比 ' + lo + ' 多 → <span class=\"bigans\">' + more + '比較重</span>';\n      },\n      blkLabel" },
 
-    /* --- index.html：遊戲關卡 --- */
-    { file:'index', expect:'opts[ans] is not the true order',
-      find:"    { cat:'I', dom:'w',   show:'count', ids:[0,7,2], opts:[[7,2,0],[0,2,7],[2,7,0]], ans:0 },",
-      replace:"    { cat:'I', dom:'w',   show:'count', ids:[0,7,2], opts:[[7,2,0],[0,2,7],[2,7,0]], ans:1 }," },
-    { file:'index', expect:'two options are the same order',
-      find:"    { cat:'B', dom:'w',   show:'clue',  ids:[0,1,2], opts:[[1,0,2],[2,1,0],[0,1,2]], ans:2 },",
-      replace:"    { cat:'B', dom:'w',   show:'clue',  ids:[0,1,2], opts:[[1,0,2],[1,0,2],[0,1,2]], ans:2 }," },
-    { file:'index', expect:'measurements must all differ',
-      find:"    { cat:'C', dom:'cap', show:'count', ids:[3,0,2], opts:[[2,3,0],[0,3,2],[3,0,2]], ans:1 },",
-      replace:"    { cat:'C', dom:'cap', show:'count', ids:[3,5,1], opts:[[1,3,5],[5,3,1],[3,5,1]], ans:1 }," },
-    { file:'index', expect:'ROUNDS needs a round where the tallest container',
-      find:"    { cat:'C', dom:'cap', show:'count', ids:[1,3,4], opts:[[4,1,3],[4,3,1],[1,3,4]], ans:1 },",
-      replace:"    { cat:'C', dom:'cap', show:'count', ids:[0,3,2], opts:[[2,0,3],[0,3,2],[3,0,2]], ans:1 }," },
-    { file:'index', expect:'weight clue rounds must use the boxes',
-      find:"    { cat:'B', dom:'w',   show:'clue',  ids:[0,1,2], opts:[[1,0,2],[2,1,0],[0,1,2]], ans:2 },\n    { cat:'C', dom:'cap', show:'count', ids:[1,3,4]",
-      replace:"    { cat:'I', dom:'w',   show:'clue',  ids:[7,5,2], opts:[[5,7,2],[2,5,7],[7,5,2]], ans:2 },\n    { cat:'C', dom:'cap', show:'count', ids:[1,3,4]" },
-    { file:'index', expect:'gWhy never states the order',
-      find:"        return '從多到少是 ' + nums.join('、') + ' ' + unit + '，所以順序是 ' + this.gOpt(r, order) + '。';",
-      replace:"        return '從多到少是 ' + nums.join('、') + ' ' + unit + '。';" },
-
     /* --- index.html：SVG 的寬度 --- */
-    /* 水滿出來的水花畫在容器右邊，只算容器寬度的話那幾滴會被整段切掉。 */
+    /* 水滿出來的水花畫在容器右邊，只算容器寬度的話那幾滴會被整段切掉（寬度在 jarDims() 算）。 */
     { file:'index', expect:'px wide but draws out to x=',
-      find:"    var w = PAD + c.w + PAD + (drops > 0 ? 40 : 0);",
-      replace:"    var w = PAD + c.w + PAD;" },
+      find:"    return { w:PAD + c.w + PAD + (drops > 0 ? 40 : 0),",
+      replace:"    return { w:PAD + c.w + PAD," },
     /* 天平右盤上的積木排開來比盤子寬，只量盤子的話量不到。 */
     { file:'index', expect:'px wide but draws out to x=',
-      find:"    var W = 260, H = 176, cx = 130, pivot = 56, arm = 92, drop = 16, hang = 30;",
-      replace:"    var W = 200, H = 176, cx = 130, pivot = 56, arm = 92, drop = 16, hang = 30;" },
+      find:"  var BAL_GEO = { W:260, H:176, cx:130, pivot:56, arm:92, drop:16, hang:30 };",
+      replace:"  var BAL_GEO = { W:200, H:176, cx:130, pivot:56, arm:92, drop:16, hang:30 };" },
     /* 一排杯子只算到第九個的起點，最後一個會被切掉。 */
     { file:'index', expect:'px wide but draws out to x=',
       find:'    var w = cols * step + 14;',
@@ -526,7 +1340,7 @@ module.exports = {
       find:'<p data-i18n="h1p">拿同一個碗',
       replace:'<p data-i18n="h1pX">拿同一個碗' },
     /* ===== 第二輪審查新增／改寫的斷言，每一條各配一筆改壞版本 ===== */
-    /* 傳遞題的線索方向跟遊戲那邊的輕重真值相反 —— 同一個箱子兩頁講不同的話。 */
+    /* 傳遞題的線索方向跟上課頁 BOXES 的輕重真值相反 —— 同一個箱子兩頁講不同的話。 */
     { file:'review', expect:'contradicts the box weights',
       find:'        var tri = [first].concat(rest).sort(function(x, y){ return BOXES[y].wt - BOXES[x].wt; });',
       replace:'        var tri = [first].concat(rest).sort(function(x, y){ return BOXES[x].wt - BOXES[y].wt; });' },
@@ -534,18 +1348,6 @@ module.exports = {
     { file:'index', expect:"the checker's own table says",
       find:"  function truthOf(cat, id){ return cat === 'C' ? CONTAINERS[id].cap : catalog(cat)[id].wt; }",
       replace:"  function truthOf(cat, id){ return cat === 'C' ? CONTAINERS[id].cap + 1 : catalog(cat)[id].wt; }" },
-    /* 線索寫反了（藍箱比紅箱重）—— 照著畫面上的線索推理會選到錯的選項。 */
-    { file:'index', expect:'the checker expects',
-      find:"      gClueW:function(a, b){ return this.bName(a) + '比 ' + this.bName(b) + '重'; },",
-      replace:"      gClueW:function(a, b){ return this.bName(b) + '比 ' + this.bName(a) + '重'; }," },
-    /* 倒水的線索寫反了。 */
-    { file:'index', expect:'the checker expects',
-      find:"      gClueC:function(a, b){ return this.cName(a) + '裝滿倒進 ' + this.cName(b) + '，水滿出來了'; },",
-      replace:"      gClueC:function(a, b){ return this.cName(b) + '裝滿倒進 ' + this.cName(a) + '，水滿出來了'; }," },
-    /* 只有第二句線索寫反：只驗第一句的話這一筆會靜靜通過。 */
-    { file:'index', expect:'clue 2 reads',
-      find:"      gClueW:function(a, b){ return this.bName(a) + '比 ' + this.bName(b) + '重'; },",
-      replace:"      gClueW:function(a, b){ return (b === 2 ? this.bName(b) + '比 ' + this.bName(a) : this.bName(a) + '比 ' + this.bName(b)) + '重'; }," },
     /* 尺寸寫在 style 裡的元素：清點得到、卻一條邊都量不到。 */
     { file:'index', expect:'cannot be measured',
       find:"    s += '<rect x=\"' + (PAD - 6) + '\" y=\"' + BASE + '\" width=\"' + (c.w + 12) +\n         '\" height=\"4\" rx=\"2\" fill=\"#E8E2D6\"/>';",
@@ -565,8 +1367,8 @@ module.exports = {
     /* ===== 這一輪新增／改寫的斷言，每一條各配一筆改壞版本 ===== */
     /* 畫布只算寬度的話，height 少算就沒人發現 —— 矮容器的第四滴水花會被切掉。 */
     { file:'index', expect:'px tall but draws out to y=',
-      find:'    var h = Math.max(BASE + 14, drops > 0 ? (top + 18 + (drops - 1) * 11 + 6) : 0);',
-      replace:'    var h = BASE + 14;' },
+      find:'             h:Math.max(BASE + 14, drops > 0 ? (top + 18 + (drops - 1) * 11 + 6) : 0) };',
+      replace:'             h:BASE + 14 };' },
     /* 一排杯子的高度只算 size + 8 的話，大杯那一排的下緣會被切掉 ——
        文字的 y 是基線，emoji 還會往下掉大約三成字級。 */
     { file:'index', expect:'px tall but draws out to y=',
@@ -628,6 +1430,235 @@ module.exports = {
     { file:'review', expect:'bad option shape',
       find:"      '放上天平：沉下去的那一邊比較重，平平的就一樣重',",
       replace:"      '放上天平，看哪一邊沉下去'," },
+    /* ===== 小遊戲「比比看大挑戰」（§六之五，2026-10-02 改版）：每一筆各守 gameCheck() 的一條規則 ===== */
+    /* Bfirst：nearestOpen 挑清單裡第一個碰得到的 */
+    { file:'index', expect:"nearestOpen(): at x",
+      find:"      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"      if (!best){ bd = dd; bc = dc; best = b; }" },
+    /* Bcentre：nearestOpen 量到中心、不是量到方框 */
+    { file:'index', expect:"it must measure to the box",
+      find:"      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"      if (dc < bc){ bd = dd; bc = dc; best = b; }" },
+    /* Bskip：最近的格子已經放好時，改放進旁邊的空格 */
+    { file:'index', expect:"when the nearest box is filled",
+      find:"    return best && !best.done ? best : null;",
+      replace:"    return best && !best.done ? best : (list.filter(function(b){ return !b.done && Math.abs(pt.x - b.cx) <= b.hw + pad && Math.abs(pt.y - b.cy) <= b.hh + pad; })[0] || null);" },
+    /* Bdeduct：放錯扣分（低年級從不倒扣） */
+    { file:'index', expect:"a mistake changed the score",
+      find:"  function roundMiss(text){ gMistakes++; gMsg.innerHTML",
+      replace:"  function roundMiss(text){ gMistakes++; gScore = Math.max(0, gScore - 1); elScore.textContent = gScore; gMsg.innerHTML" },
+    /* Bstars：犯過錯也給 2 顆 */
+    { file:'index', expect:"mistake(s) gives",
+      find:"    var stars = gMistakes === 0 ? 2 : 1;",
+      replace:"    var stars = 2;" },
+    /* Bstale：舊畫板的積木放開時還會動新的那一關 */
+    { file:'index', expect:"a piece still held when the board is rebuilt",
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */\n",
+      replace:"" },
+    /* Bsel：先點選、再拖走的那一塊還選著 */
+    { file:'index', expect:"stays selected",
+      find:"      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }\n",
+      replace:"" },
+    /* Blost：capture 遺失時不放回去 */
+    { file:'index', expect:"lost pointer capture",
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+      replace:"" },
+    /* Bahead：超前模式不自動給第一層提示 */
+    { file:'index', expect:"ahead mode does not show",
+      find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }",
+      replace:"    if (mode === 'ahead'){ hintLevel = 1; }" },
+    /* Bpresort：托盤可以一開始就是正解順序 */
+    { file:'index', expect:"already in answer order",
+      find:"    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }\n",
+      replace:"" },
+    /* Bpick：拿得起來的東西不到 44px */
+    { file:'index', expect:"GPICK",
+      find:"  var GAME_W = 300, GPICK = 48, GPAD = 6;",
+      replace:"  var GAME_W = 300, GPICK = 40, GPAD = 6;" },
+    /* Bfirstinfo：倒之前放王冠算一次錯 */
+    { file:'index', expect:"before pouring is not just a reminder",
+      find:"        if (!poured){ roundInfo(d.gPourFirst); return false; }",
+      replace:"        if (!poured){ roundMiss(d.gPourFirst); return false; }" },
+    /* Bcrownany：王冠放在哪裡都收 */
+    { file:'index', expect:"a crown on the wrong one is accepted",
+      find:"        if (t.who !== more){ roundMiss(d.gPourWrong(out, t.who, e.a, e.b)); return false; }",
+      replace:"        if (t.who !== more && false){ roundMiss(d.gPourWrong(out, t.who, e.a, e.b)); return false; }" },
+    /* Bpouranywhere：容器放在哪裡都會倒 */
+    { file:'index', expect:"drops of the jar away from the empty one",
+      find:"          if (!nearestOpen([tB], pt, GPAD)) return false;\n          /* 倒過去",
+      replace:"          /* 倒過去" },
+    /* Bpourmax：倒過去的水量不對 */
+    { file:'index', expect:"does not hold min(a, b)",
+      find:"          bz.innerHTML = jarSVG(Bc, Math.min(A.cap, Bc.cap), spill);",
+      replace:"          bz.innerHTML = jarSVG(Bc, Math.min(A.cap, Bc.cap) - 1, spill);" },
+    /* Bpourtrap：比較高的那個剛好也裝得多（只看高矮就答對） */
+    { file:'index', expect:"the taller one also holds more",
+      find:"  var GAME_POUR = [ { a:1, b:3 },",
+      replace:"  var GAME_POUR = [ { a:0, b:2 }," },
+    /* Bnote：「高不代表多」每一次都說 */
+    { file:'index', expect:"must not say \"高不代表多\"",
+      find:"        var note = who === tall ? '（' + (who === 'a' ? A : B) + '比較高，可是高不代表多。）' : '';",
+      replace:"        var note = '（' + (who === 'a' ? A : B) + '比較高，可是高不代表多。）';" },
+    /* Bpourmsg：放錯時說成另一個比較多 */
+    { file:'index', expect:"crown on a: should say",
+      find:"        if (out === 'room') return (who === 'same' ? '還有空位，不是剛好滿 → 不一樣多：' : '還有空位：' + A + '的水倒完了，' + B + '還裝不滿 → ') + B + '裝得比較多。' + note;",
+      replace:"        if (out === 'room') return (who === 'same' ? '還有空位，不是剛好滿 → 不一樣多：' : '還有空位：' + A + '的水倒完了，' + B + '還裝不滿 → ') + A + '裝得比較多。' + note;" },
+    /* Bcrownpos：王冠放好之後跑出畫板 */
+    { file:'index', expect:"the crown on a is outside",
+      find:"  var POUR_JAR = { top:34,",
+      replace:"  var POUR_JAR = { top:12," },
+    /* Bcrownhome：王冠一開始就在「一樣多」的吸附範圍裡 */
+    { file:'index', expect:"starts inside the \"same\" box",
+      find:"  var POUR_CROWN = { y:274,",
+      replace:"  var POUR_CROWN = { y:262," },
+    /* Blight：點比較輕的也算 */
+    { file:'index', expect:"the lighter thing on balance",
+      find:"        if (id === row.heavy){",
+      replace:"        if (id === row.heavy || (id >= 0 && row.heavy >= 0)){" },
+    /* Btiltsame：斜的天平點「一樣重」也算 */
+    { file:'index', expect:"on tilted balance",
+      find:"        if (id < 0){ roundMiss(d.gTiltNotLevel(row.heavy)); return; }",
+      replace:"        if (id < 0){ row.heavy = -1; return tapRow(row, id, b); }" },
+    /* Btrap：「大的反而輕」那一排不是陷阱 */
+    { file:'index', expect:"the bigger one is not the lighter one",
+      find:"  var TILT_TRAP = [ { a:1, b:6 },",
+      replace:"  var TILT_TRAP = [ { a:7, b:0 }," },
+    /* Bonpan：東西沒有站在盤子上（盤子斜了，東西還在原地） */
+    { file:'index', expect:"is not standing on its pan",
+      find:"        var pans = [[e.a, G.cx - G.arm, G.pivot + tilt * G.drop + G.hang], [e.b, G.cx + G.arm, G.pivot - tilt * G.drop + G.hang]];",
+      replace:"        var pans = [[e.a, G.cx - G.arm, G.pivot + G.hang], [e.b, G.cx + G.arm, G.pivot + G.hang]];" },
+    /* Btiltnote：「大不代表重」每一次都說 */
+    { file:'index', expect:"must not say \"大不代表重\"",
+      find:"               (ITEMS[lt].size > ITEMS[hv].size ? '（' + this.iName(lt) + '比較大，可是大不代表重。）' : '');",
+      replace:"               '（' + this.iName(lt) + '比較大，可是大不代表重。）';" },
+    /* Btiltrows：三排不是三個池子各一個 */
+    { file:'index', expect:"one from each pool",
+      find:"      var rows = shuffle([pick(TILT_TRAP), pick(TILT_SAME), pick(TILT_BIG)])",
+      replace:"      var rows = shuffle([pick(TILT_TRAP), pick(TILT_TRAP), pick(TILT_BIG)])" },
+    /* Btilth：畫板比三個天平矮 */
+    { file:'index', expect:"outside the 300×",
+      find:"  var TILT_H = 346;",
+      replace:"  var TILT_H = 336;" },
+    /* Bcupany：用不一樣的杯子也倒 */
+    { file:'index', expect:"the other cup is accepted",
+      find:"          if (big !== e.big){ roundMiss(d.gCupWrong(e.a, e.big)); return; }",
+      replace:"          if (big !== e.big && false){ roundMiss(d.gCupWrong(e.a, e.big)); return; }" },
+    /* Bcupearly：差一杯就過關 */
+    { file:'index', expect:"solved after",
+      find:"          if (n === nb) roundSolved(d.gCupsDone(e.a, na, e.b, nb, e.big));",
+      replace:"          if (n === nb - 1) roundSolved(d.gCupsDone(e.a, na, e.b, nb, e.big));" },
+    /* Bcupodd：用大杯量、裝不下整數杯 */
+    { file:'index', expect:"whole number of big cups",
+      find:"{ a:3, b:0, big:true }",
+      replace:"{ a:1, b:0, big:true }" },
+    /* Bcupmore：說成杯數少的那一個比較多 */
+    { file:'index', expect:"gCupsDone: should say",
+      find:"        var more = na > nb ? a : b, less = na > nb ? b : a;\n        return head + Math.max(na, nb) + ' 比 '",
+      replace:"        var more = na > nb ? b : a, less = na > nb ? a : b;\n        return head + Math.max(na, nb) + ' 比 '" },
+    /* Bcuplbl：英文標籤兩行，框只有一行高 */
+    { file:'index', expect:"lines — taller than",
+      find:"  var CUPS_JAR = { top:10, ax:74, bx:206, lblY:144, lblW:124, lblH:34 };",
+      replace:"  var CUPS_JAR = { top:10, ax:74, bx:206, lblY:144, lblW:124, lblH:22 };" },
+    /* Bcupbig：沒有用大杯量的題目（「永遠點小杯」不會錯） */
+    { file:'index', expect:"needs both a small-cup and a big-cup entry",
+      find:"{ a:0, b:2, big:true }, { a:3, b:0, big:true }, { a:2, b:3, big:true }",
+      replace:"{ a:0, b:2, big:false }, { a:3, b:0, big:false }, { a:2, b:3, big:false }" },
+    /* Bblkodd：不一樣的積木也收 */
+    { file:'index', expect:"the different block is accepted",
+      find:"        if (P.data.k !== 'same'){ roundMiss(d.gBlkOdd); return false; }",
+      replace:"        if (P.data.k !== 'same' && false){ roundMiss(d.gBlkOdd); return false; }" },
+    /* Bblkover：平了之後還收積木 */
+    { file:'index', expect:"a block after level is accepted",
+      find:"        if (n >= wt){ roundInfo(d.gBlkOver); return false; }",
+      replace:"        if (n >= wt + 1){ roundInfo(d.gBlkOver); return false; }" },
+    /* Bblkovermiss：平了之後再放算一次錯 */
+    { file:'index', expect:"a block after level is accepted (or counted as a mistake)",
+      find:"        if (n >= wt){ roundInfo(d.gBlkOver); return false; }",
+      replace:"        if (n >= wt){ roundMiss(d.gBlkOver); return false; }" },
+    /* Bblkearly：還沒平就能按「平了！」 */
+    { file:'index', expect:"Level is accepted before the balance is level",
+      find:"        if (n < wt){ roundMiss(d.gBlkShort(id)); return; }",
+      replace:"        if (n < 1){ roundMiss(d.gBlkShort(id)); return; }" },
+    /* Bblkauto：放到平就自己過關（不用看天平） */
+    { file:'index', expect:"a block solved the round",
+      find:"        line.textContent = d.gBlkNow(n);\n",
+      replace:"        line.textContent = d.gBlkNow(n);\n        if (n === wt) roundSolved(d.gBlkDone(id, wt));\n" },
+    /* Bblktilt：天平的傾斜和積木數對不起來 */
+    { file:'index', expect:"the balance is not drawn with",
+      find:"        bal.innerHTML = balanceSVG(it, n ? { icon:BLK_ICON, count:n } : null, n < wt ? 1 : 0);",
+      replace:"        bal.innerHTML = balanceSVG(it, n ? { icon:BLK_ICON, count:n } : null, n < wt - 1 ? 1 : 0);" },
+    /* Bblkhint：第二層提示的「還要再放」數字錯 */
+    { file:'index', expect:"gBlk2 at",
+      find:"      gBlk2:function(i, n, wt){ return n < wt ? '還要再放 ' + this.qtyBlk(wt - n) + '。' : '天平已經平了，按「平了！」。'; },",
+      replace:"      gBlk2:function(i, n, wt){ return n < wt ? '還要再放 ' + this.qtyBlk(wt) + '。' : '天平已經平了，按「平了！」。'; }," },
+    /* Bblkempty：沒放就按「平了！」算一次錯 */
+    { file:'index', expect:"Level with no blocks should only remind",
+      find:"        if (n === 0){ gMsg.textContent = d.gBlkEmpty; return; }",
+      replace:"        if (n === 0){ roundMiss(d.gBlkEmpty); return; }" },
+    /* Brankany：排排看什麼都收 */
+    { file:'index', expect:"is not refused with gRankWhy",
+      find:"        if (id !== want){ roundMiss(d.gRankWhy(cat, id, want)); return false; }",
+      replace:"        if (id !== want && false){ roundMiss(d.gRankWhy(cat, id, want)); return false; }" },
+    /* Brankasc：排成由少到多 */
+    { file:'index', expect:"the target order is not most first",
+      find:"    var order = set.ids.slice().sort(function(x, y){ return truthOf(cat, y) - truthOf(cat, x); });",
+      replace:"    var order = set.ids.slice().sort(function(x, y){ return truthOf(cat, x) - truthOf(cat, y); });" },
+    /* Branktray：托盤用正的量洗牌（擋不到由多到少的正解順序） */
+    { file:'index', expect:"shuffled by the NEGATED",
+      find:"      renderTray(B, set.ids.map(function(x){ return -truthOf(cat, x); }), Cd.y, function(v, cx, cy){\n        var id = set.ids.filter(function(x){ return -truthOf(cat, x) === v; })[0];",
+      replace:"      renderTray(B, set.ids.map(function(x){ return truthOf(cat, x); }), Cd.y, function(v, cx, cy){\n        var id = set.ids.filter(function(x){ return truthOf(cat, x) === v; })[0];" },
+    /* Branktrap：最高的那個剛好最多（照高矮排就對） */
+    { file:'index', expect:"also has the most",
+      find:"    { cat:'C', ids:[1, 3, 2] },",
+      replace:"    { cat:'C', ids:[0, 3, 2] }," },
+    /* Brankwhy：放錯的理由多／少說反 */
+    { file:'index', expect:"put",
+      find:"        return this.gRankVal(cat, id) + '比 ' + this.gRankVal(cat, want) + (more ? '多' : '少') + '：這一格要放' + noun + '。' +",
+      replace:"        return this.gRankVal(cat, id) + '比 ' + this.gRankVal(cat, want) + (more ? '少' : '多') + '：這一格要放' + noun + '。' +" },
+    /* Brankgap：格子之間的縫太寬（吸附範圍不重疊，最近的規則驗不到） */
+    { file:'index', expect:"the drop pads overlap",
+      find:"  var RANK_SLOT = { y:92, w:92, h:100, x:[50, 150, 250] }",
+      replace:"  var RANK_SLOT = { y:92, w:86, h:100, x:[50, 150, 250] }" },
+    /* Brankpic：卡片上的容器畫成一樣高 */
+    { file:'index', expect:"true size",
+      find:"      var c = CONTAINERS[id], w = c.w * RANK_JAR, h = c.h * RANK_JAR;",
+      replace:"      var c = CONTAINERS[id], w = c.w * RANK_JAR, h = 40;" },
+    /* Bparents：家長頁的精熟標準還寫著舊遊戲的名字 */
+    { file:'parents', expect:'readyBox does not name the game',
+      find:"小遊戲「比比看大挑戰」有通關</strong>，就表示這一課學得差不多了，可以放心往下一課前進。如果還沒達到，建議回到「上課」頁面的<strong>範例教學 3</strong>，陪他把「再倒一杯」從頭按到底一次 —— 一杯一杯數出來的那個過程，就是這一課最重要的東西。真的還是卡住的話，改用家裡的兩個杯子做一次，實物永遠比螢幕有效。\",",
+      replace:"小遊戲「排排看大挑戰」有通關</strong>，就表示這一課學得差不多了，可以放心往下一課前進。如果還沒達到，建議回到「上課」頁面的<strong>範例教學 3</strong>，陪他把「再倒一杯」從頭按到底一次 —— 一杯一杯數出來的那個過程，就是這一課最重要的東西。真的還是卡住的話，改用家裡的兩個杯子做一次，實物永遠比螢幕有效。\"," },
+    /* Bwet：容器不畫水（以前拿 jarSVG 自己的輸出比，比得一模一樣）（codex 第一輪） */
+    { file:'index', expect:"is not drawn full",
+      find:"    var wet = Math.max(0, Math.min(c.cap, fill));",
+      replace:"    var wet = 0;" },
+    /* Browicon：一排杯子畫成別的東西（codex 第一輪） */
+    { file:'index', expect:"row does not show",
+      find:"      s += '<text x=\"' + (5 + (i % perRow) * step) + '\" y=\"' +\n           (4 + Math.floor(i / perRow) * (size + 8) + size) + '\" font-size=\"' + size + '\">' + icon + '</text>';",
+      replace:"      s += '<text x=\"' + (5 + (i % perRow) * step) + '\" y=\"' +\n           (4 + Math.floor(i / perRow) * (size + 8) + size) + '\" font-size=\"' + size + '\">❌</text>';" },
+    /* Bpanicon：天平右盤的積木畫成別的東西（codex 第一輪） */
+    { file:'index', expect:"blocks the balance is not drawn",
+      find:"'\" font-size=\"' + BLK_PAN_PX + '\">' + obj.icon + '</text>';",
+      replace:"'\" font-size=\"' + BLK_PAN_PX + '\">❌</text>';" },
+    /* Binfo：提醒（倒之前、積木太多）也記一次錯（codex 第一輪） */
+    { file:'index', expect:"roundInfo() counts as a mistake",
+      find:"  function roundInfo(text){ gMsg.innerHTML",
+      replace:"  function roundInfo(text){ gMistakes++; gMsg.innerHTML" },
+    /* Bmissmsg：放錯不說為什麼（codex 第一輪） */
+    { file:'index', expect:"does not show its reason",
+      find:"  function roundMiss(text){ gMistakes++; gMsg.innerHTML = '<span class=\"no\">' + text + '</span>'; }",
+      replace:"  function roundMiss(text){ gMistakes++; gMsg.innerHTML = '<span class=\"no\">再試一次</span>'; }" },
+    /* Bpanstrip：右盤只收正中間一條（codex 第一輪） */
+    { file:'index', expect:"inside the pan's drop area do not take",
+      find:"        if (!nearestOpen([pan], pt, GPAD)) return false;",
+      replace:"        if (!nearestOpen([pan], pt, GPAD) || Math.abs(pt.x - pan.cx) > 1) return false;" },
+    /* Bhint1：第一層提示沒有講方法（codex 第一輪） */
+    { file:'index', expect:"hint level 1 (zh)",
+      find:"        pour:'倒之前看不出來：高的不一定裝得多。倒過去，看水怎麼樣。',",
+      replace:"        pour:'加油，你可以的！'," },
+    /* Bshowhint：第二層提示沒有接上（codex 第一輪） */
+    { file:'index', expect:"showHint() gives",
+      find:"    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');",
+      replace:"    elHint.textContent = d.gHints[type];" },
   ],
 
   sim: {
@@ -856,8 +1887,11 @@ module.exports = {
     dataStart: '/* ---------- 語言無關的資料 ---------- */',
     dataEnd: '/* ---------- i18n ---------- */',
     dataReturn: '{AREA_PER_CUP, CONTAINERS, ITEMS, BOXES, UNKNOWNS, CUP_ICON, BLK_ICON, CUP_PX_SMALL, CUP_PX_BIG,' +
-                ' POUR_CASES, BAL_CASES, CUP_EX, CUP_WARN, BLK_CASES, ROUNDS, truthOf, jarSVG, balanceSVG, rowSVG}',
-    check: function(data, I18N, fail){
+                ' POUR_CASES, BAL_CASES, CUP_EX, CUP_WARN, BLK_CASES, truthOf, jarSVG, balanceSVG, rowSVG, BASE, PAD, jarDims, BAL_GEO,' +
+                ' BLK_PAN_PX, BLK_PAN_PER_ROW, GAME_W, GPICK, GPAD, GAME_ORDER, GAME_POUR, POUR_H, POUR_JAR, POUR_SAME, POUR_CROWN,' +
+                ' TILT_TRAP, TILT_SAME, TILT_BIG, TILT_H, TILT, TILT_ITEM, TILT_SAME_BTN, CUP_BIG, GAME_CUPS, CUPS_H, CUPS_JAR, CUP_ROW, CUP_BTN,' +
+                ' GAME_BLOCKS, BLK_ODD_ICON, BLOCKS_H, BLK_BAL, BLK_PAN, BLK_ROW, BLK_TOK, GAME_RANK, RANK_H, RANK_SLOT, RANK_CARD, RANK_JAR, RANK_PIC}',
+    check: function(data, I18N, fail, src){
       const LANGS = ['zh','en'];
 
       /* --- 1. 三本目錄：資料區（大小、輕重）與字典（名字）用索引對齊 --- */
@@ -1245,7 +2279,7 @@ module.exports = {
         fail('BLK_CASES needs one pair where the bigger thing is lighter');
       }
 
-      /* --- 8. 遊戲關卡：排排看 --- */
+      /* --- 8. 遊戲：真值表 --- */
       /* 課程的 truthOf 先跟設定檔自己的表對過一次，之後遊戲的真值一律從
          設定檔的表算 —— 直接用 data.truthOf 等於拿課程自己的函式當標準答案，
          truthOf 寫錯時整個遊戲照樣是綠的。 */
@@ -1258,93 +2292,15 @@ module.exports = {
         });
       });
       const truth = (cat, id) => (cat === 'C' ? CONTAINER_TRUTH[id].cap : TRUTH_TABLES[cat][id].wt);
+      /* 遊戲用到的一排杯子／積木：每一種一排幾個（per）都要量 */
+      for (let n = 1; n <= maxCount; n++){
+        [[data.CUP_PX_SMALL, data.CUP_ROW.smallPer], [data.CUP_PX_BIG, data.CUP_ROW.bigPer], [data.BLK_ROW.px, data.BLK_ROW.per]].forEach(([px, per]) => {
+          widthOk(`rowSVG(${n} @ ${px}px, ${per} a row)`, data.rowSVG(n, data.CUP_ICON, px, per));
+        });
+      }
 
-      const seenShow = {}, seenDom = {};
-      let sawTallTrap = false;
-      data.ROUNDS.forEach((r, idx) => {
-        const i = idx + 1;
-        if (['C','I','B'].indexOf(r.cat) < 0){ fail(`ROUND ${i}: unknown catalogue ${r.cat}`); return; }
-        if (r.dom !== 'cap' && r.dom !== 'w'){ fail(`ROUND ${i}: unknown domain ${r.dom}`); return; }
-        if (r.show !== 'count' && r.show !== 'clue'){ fail(`ROUND ${i}: unknown mode ${r.show}`); return; }
-        if (r.dom === 'cap' && r.cat !== 'C') fail(`ROUND ${i}: a capacity round must use containers`);
-        if (r.dom === 'w' && r.cat === 'C') fail(`ROUND ${i}: a weight round cannot use containers`);
-        /* 線索題（只給兩兩比較）如果用真實的東西，孩子用生活經驗就答得出來，
-           量不到「接龍」。重量的線索題一律用一樣大的箱子。 */
-        if (r.show === 'clue' && r.dom === 'w' && r.cat !== 'B'){
-          fail(`ROUND ${i}: weight clue rounds must use the boxes, otherwise everyday knowledge answers it without the chain`);
-          return;   /* 目錄不對的話，下面組線索時會拿箱子的名字去查東西的表 */
-        }
-        seenShow[r.show] = true; seenDom[r.dom] = true;
-        const table = r.cat === 'C' ? data.CONTAINERS : (r.cat === 'I' ? data.ITEMS : data.BOXES);
-        if (!Array.isArray(r.ids) || r.ids.length !== 3){ fail(`ROUND ${i}: needs exactly 3 things`); return; }
-        for (const id of r.ids){
-          const e = idxOk(id, table.length, `ROUND ${i} thing`);
-          if (e){ fail(e); return; }
-        }
-        if (new Set(r.ids).size !== 3){ fail(`ROUND ${i}: the three things must all differ`); return; }
-        const val = id => truth(r.cat, id);
-        const vals = r.ids.map(val);
-        if (new Set(vals).size !== 3){
-          fail(`ROUND ${i}: the three measurements must all differ, got ${vals.join(' / ')}`);
-          return;
-        }
-        const want = r.ids.slice().sort((x, y) => val(y) - val(x));
-        if (r.opts.length !== 3) fail(`ROUND ${i}: should offer 3 orderings, has ${r.opts.length}`);
-        const keys = r.opts.map(o => o.join(','));
-        if (new Set(keys).size !== keys.length) fail(`ROUND ${i}: two options are the same order`);
-        r.opts.forEach((o, oi) => {
-          if (o.slice().sort().join(',') !== r.ids.slice().sort().join(',')){
-            fail(`ROUND ${i} option ${oi}: orders a different set of things`);
-          }
-        });
-        if (keys.filter(k => k === want.join(',')).length !== 1){
-          fail(`ROUND ${i}: exactly one option must be the true order`);
-        }
-        if (!Number.isInteger(r.ans) || r.ans < 0 || r.ans >= r.opts.length){
-          fail(`ROUND ${i}: ans ${r.ans} is not a valid option index`);
-          return;
-        }
-        if (keys[r.ans] !== want.join(',')) fail(`ROUND ${i}: opts[ans] is not the true order (${keys[r.ans]} vs ${want.join(',')})`);
-        /* 至少一關要示範「最高的容器不是裝最多的」。 */
-        if (r.cat === 'C' && r.show === 'count'){
-          const tallest = r.ids.slice().sort((x, y) => data.CONTAINERS[y].h - data.CONTAINERS[x].h)[0];
-          if (tallest !== want[0]) sawTallTrap = true;
-        }
-        LANGS.forEach(L => {
-          const d = I18N[L];
-          const ask = d.gAsk(r), h1 = d.gHint1(r), why = d.gWhy(r, want);
-          const h2 = d.gHint2(r, d.nameOf(r.cat, want[0], L));
-          const labels = r.opts.map(o => d.gOpt(r, o));
-          [ask, h1, h2, why].concat(labels).forEach(s => { if (/undefined|NaN/.test(s)) fail(`ROUND ${i} ${L}: ${s}`); });
-          if (new Set(labels).size !== labels.length) fail(`ROUND ${i} ${L}: two option labels are identical`);
-          const wantLabel = fOrd(r.cat, want, L);
-          if (labels[r.ans] !== wantLabel) fail(`ROUND ${i} ${L}: the marked label is "${labels[r.ans]}", the checker expects "${wantLabel}"`);
-          if (why.indexOf(wantLabel) < 0) fail(`ROUND ${i} ${L}: gWhy never states the order "${wantLabel}"`);
-          if (h2.indexOf(fName(r.cat, want[0], L)) < 0) fail(`ROUND ${i} ${L}: gHint2 never names the front runner`);
-          if (r.show === 'count'){
-            r.ids.forEach(id => {
-              const lab = d.gCount(r.cat, id, val(id), r.dom);
-              if (lab.indexOf(String(val(id))) < 0) fail(`ROUND ${i} ${L}: the label for thing ${id} never prints ${val(id)}`);
-              if (lab.indexOf(fName(r.cat, id, L)) < 0) fail(`ROUND ${i} ${L}: the label for thing ${id} never names it`);
-            });
-          } else {
-            /* 兩句線索都要驗，而且整句逐字比對（含方向）。只驗第二個名字在不在，
-               把「紅箱比藍箱重」寫反成「藍箱比紅箱重」也會過。 */
-            [[want[0], want[1]], [want[1], want[2]]].forEach((pr, pi) => {
-              const clue = r.dom === 'w' ? d.gClueW(pr[0], pr[1]) : d.gClueC(pr[0], pr[1]);
-              if (/undefined|NaN/.test(clue)){ fail(`ROUND ${i} ${L}: clue ${clue}`); return; }
-              const wantClue = r.dom === 'w' ? fClueW(pr[0], pr[1], L) : fClueC(pr[0], pr[1], L);
-              if (clue !== wantClue){
-                fail(`ROUND ${i} ${L}: clue ${pi + 1} reads "${clue}", the checker expects "${wantClue}"`);
-              }
-            });
-          }
-        });
-      });
-      ['count','clue'].forEach(k => { if (!seenShow[k]) fail(`ROUNDS needs at least one "${k}" round`); });
-      ['cap','w'].forEach(k => { if (!seenDom[k]) fail(`ROUNDS needs at least one "${k}" round`); });
-      if (!sawTallTrap) fail('ROUNDS needs a round where the tallest container is not the one that holds most');
-      if (data.ROUNDS.map(r => r.ans).every(x => x === 0)) fail('every game round has the answer first');
+      /* 遊戲（§六之五，2026-10-02 改版）：見檔案上方的 gameCheck() */
+      gameCheck(data, I18N, fail, src, truth);
 
       /* --- 8b. 速查卡與家長頁：這兩頁也會教規則，也要被驗 ---
          breaktest 會把四頁都複製進暫存目錄，所以這裡的斷言真的跑得到。 */

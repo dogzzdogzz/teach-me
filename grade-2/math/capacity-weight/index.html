@@ -121,15 +121,53 @@
     border-radius:16px;padding:14px 16px;font-size:16px;
   }
   .warnbox h4{font-size:17px;color:var(--red);margin-bottom:4px}
-  .gopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px}
-  .gopt{
-    border:3px solid var(--line);background:var(--card);border-radius:16px;padding:16px 10px;
-    font-size:19px;font-weight:800;color:var(--ink);cursor:pointer;min-height:60px;
-    display:flex;align-items:center;justify-content:center;text-align:center;
-  }
-  .gopt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
-  .gopt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
-  .gopt:disabled{cursor:default;opacity:.9}
+  /* ---- 小遊戲：倒倒看、天平、一杯一杯量、放積木、排排看（§六之五） ---- */
+  .gamemsg{text-align:center}
+  .game .hint{text-align:center}
+  .gstage{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0 }
+  .gask{ font-weight:700; text-align:center; font-size:18px }
+  /* 兩行高：英文的句子在手機上會換行，畫板不可以因此往下跳 */
+  .gtrail{ font-size:20px; font-weight:800; color:var(--ink); text-align:center; line-height:1.3; min-height:2.6em;
+    display:flex; align-items:center; justify-content:center }
+  .gwrap{ position:relative; margin:0 auto }
+  .gboard{ position:absolute; left:0; top:0; transform-origin:0 0; background:var(--bg); border-radius:16px }
+  .gboard > div, .gboard > button{ position:absolute }
+  .gpiece{ left:0; top:0; display:flex; align-items:center; justify-content:center;
+    touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; transition:transform .25s ease; z-index:5 }
+  .gpiece.dragging{ transition:none; cursor:grabbing; z-index:50 !important; filter:drop-shadow(0 6px 8px rgba(70,60,40,.25)) }
+  .gpiece.sel{ outline:3px dashed var(--blue); outline-offset:4px; border-radius:12px }
+  .gpiece.locked{ cursor:default; pointer-events:none }
+  .gpiece svg{ display:block; pointer-events:none }
+  .gjar, .gbal{ pointer-events:none }
+  .gjar svg, .gbal svg{ display:block }
+  .gname{ display:flex; align-items:center; justify-content:center; text-align:center; font-size:14px; font-weight:700; color:var(--ink); line-height:1.1; pointer-events:none }
+  .glbl{ display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:var(--muted); pointer-events:none }
+  .gslot{ display:flex; align-items:center; justify-content:center; border:3px dashed var(--line); border-radius:10px; background:var(--card) }
+  .gsame{ font-size:16px; font-weight:800; color:var(--muted) }
+  .gcrown{ font-size:30px; border:3px solid var(--line); border-radius:14px; background:var(--card) }
+  .gcrown.placed{ font-size:26px; background:transparent; border-color:transparent }
+  /* 第 2 關：天平上的東西（按鈕，底邊貼著盤子）與「一樣重」 */
+  .gitem{ background:transparent; border:3px solid transparent; border-radius:14px; padding:0; cursor:pointer; line-height:1;
+    display:flex; align-items:flex-end; justify-content:center; padding-bottom:2px }
+  .gitem.found, .gsamebtn.found{ border-color:var(--green); background:var(--green-soft) }
+  .gitem.off, .gsamebtn.off{ opacity:.45; cursor:default }
+  .gsamebtn{ background:var(--card); border:3px solid var(--line); border-radius:12px; font-size:16px; font-weight:800; color:var(--ink); cursor:pointer; padding:0 }
+  /* 第 3 關：一排杯子、兩個杯子按鈕 */
+  .gcups{ display:flex; justify-content:center; align-items:flex-start; pointer-events:none }
+  .gcupbtn{ background:var(--card); border:3px solid var(--line); border-radius:14px; cursor:pointer; padding:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.05 }
+  .gcupn{ font-size:13px; font-weight:800; color:var(--muted) }
+  /* 第 4 關：積木（拿不完）與不一樣的那一塊 */
+  .gtok{ border:3px solid var(--line); border-radius:14px; background:var(--card); font-size:26px }
+  .godd{ font-size:38px }
+  .gaction{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap }
+  /* 第 5 關：卡片（畫＋數） */
+  .gcard{ background:var(--card); border:3px solid var(--line); border-radius:12px; flex-direction:column; justify-content:flex-end; padding-bottom:6px }
+  .gcard.placed{ border-color:var(--green); background:var(--green-soft) }
+  .gpic{ height:54px; display:flex; align-items:flex-end; justify-content:center; pointer-events:none; line-height:1 }
+  .gqty{ font-size:15px; font-weight:800; color:var(--ink); white-space:nowrap; pointer-events:none }
+  /* 遊戲裡的數字用西文字型 */
+  .gtrail, .gcard, .gname, #gMsg{ font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif }
 </style>
 </head>
 <body>
@@ -246,22 +284,18 @@
   <!-- 6. 小遊戲 -->
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
-    <h2 data-i18n="s6h2">排排看大挑戰</h2>
-    <p class="lead" data-i18n="s6lead">看清楚圖，把三樣東西排出順序。</p>
+    <h2 data-i18n="s6h2">比比看大挑戰</h2>
+    <p class="lead" data-i18n="s6lead">倒倒看、找重的、一杯一杯量、放積木、排排看 —— 五關都過就是比比看小高手！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
-        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+        <span><span data-i18n="gScoreLabel">星星</span> <b id="gScore">0</b> ⭐</span>
       </div>
-      <p class="hopline" id="gAskLine"></p>
-      <div id="gPic"></div>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
-      </div>
-      <div class="gopts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -356,16 +390,67 @@
     { a:1, b:6 }   /* 🎈 氣球 1 個 vs 🪨 石頭 9 個（再看一次大 ≠ 重） */
   ];
 
-  /* 遊戲：排排看。cat 是用哪一本目錄（C 容器／I 東西／B 箱子），
-     dom 是比什麼（cap 容量／w 重量），show 是給數量還是只給線索。
-     ids 是畫面上的排列順序，正確答案由真值（cap／wt）排出來，不是寫死的。 */
-  var ROUNDS = [
-    { cat:'C', dom:'cap', show:'count', ids:[3,0,2], opts:[[2,3,0],[0,3,2],[3,0,2]], ans:1 },
-    { cat:'I', dom:'w',   show:'count', ids:[0,7,2], opts:[[7,2,0],[0,2,7],[2,7,0]], ans:0 },
-    { cat:'B', dom:'w',   show:'clue',  ids:[0,1,2], opts:[[1,0,2],[2,1,0],[0,1,2]], ans:2 },
-    { cat:'C', dom:'cap', show:'count', ids:[1,3,4], opts:[[4,1,3],[4,3,1],[1,3,4]], ans:1 },
-    { cat:'C', dom:'cap', show:'clue',  ids:[0,5,2], opts:[[2,5,0],[5,0,2],[0,5,2]], ans:2 }
+  /* ---------- 小遊戲「比比看大挑戰」的題庫與版面（§六之五：五關五種玩法） ----------
+     版面一律是畫板上的 px（畫板寬 GAME_W），位置一律記「中心點」。拿得起來的東西至少 GPICK × GPICK
+     （375px 手機上畫板能用 289px 寬，縮成約 0.963 倍，48 → 46.2）。GPAD：放開的點離目標的方框多遠還算放進去。
+     每一關從自己的池子隨機抽一題。容器、天平、一排杯子都用上面範例的同一套畫法（jarSVG／balanceSVG／rowSVG）。 */
+  var GAME_W = 300, GPICK = 48, GPAD = 6;
+  var GAME_ORDER = ['pour', 'tilt', 'cups', 'blocks', 'rank'];
+
+  /* 第 1 關 倒倒看（範例 1）：左邊的 a 裝滿水，右邊的 b 是空的。把 a 拖到 b 上面才會倒（倒之前看不出誰多）；
+     倒完再把 👑 放到裝得比較多的那一個上面，或放進「一樣多」。水滿出來 → a 多；還有空位 → b 多；剛好滿 → 一樣多。
+     每一組都「比較高的那一個沒有裝得比較多」—— 只看高矮的話一定放錯（三種結果都有：還有空位 3、滿出來 3、剛好 2）。
+     容器照 CONTAINERS 的真實寬高畫（和範例 1 同一張圖），底線對齊。 */
+  var GAME_POUR = [ { a:1, b:3 }, { a:0, b:4 }, { a:2, b:3 }, { a:3, b:1 }, { a:4, b:0 }, { a:3, b:2 }, { a:1, b:5 }, { a:5, b:1 } ];
+  var POUR_H = 304;
+  var POUR_JAR = { top:34, ax:74, bx:194, lblY:168, lblW:118 };   /* ax／bx：兩個容器的中心；畫布高 jarDims().h */
+  var POUR_SAME = { x:105, y:200, w:90, h:42 };                  /* 「一樣多」的格子 */
+  var POUR_CROWN = { y:274, size:GPICK, placed:36 };             /* 王冠放好之後縮小，停在容器口的上面 */
+
+  /* 第 2 關 天平（範例 2）：三個天平疊成三排，每一個都點出比較重的那一個；平的就點「一樣重」（這一關用點的）。
+     三排各從一個池子抽：比較大的反而比較輕（TILT_TRAP）、一樣重（TILT_SAME）、比較大的也比較重（TILT_BIG）——
+     只看大小的話第一排一定點錯。左右隨機對調、三排的順序洗牌。天平是 balanceSVG 縮成 TILT.s 倍。 */
+  var TILT_TRAP = [ { a:1, b:6 }, { a:1, b:0 }, { a:1, b:2 }, { a:5, b:6 } ];
+  var TILT_SAME = [ { a:2, b:3 } ];
+  var TILT_BIG  = [ { a:7, b:0 }, { a:5, b:2 }, { a:7, b:4 }, { a:4, b:0 } ];
+  var TILT_H = 346;
+  var TILT = { s:0.6, x:14, top:6, rowH:110, dy:12 };   /* 第 r 排的天平畫在 (x, top + r × rowH + dy) */
+  var TILT_ITEM = { w:56, h:50 };                         /* 盤子上的東西：按鈕，底邊貼著盤子 */
+  var TILT_SAME_BTN = { cx:262, dy:54, w:64, h:48 };      /* 每一排右邊的「一樣重」 */
+
+  /* 第 3 關 用同一個杯子量（範例 3）：左邊的 a 已經量好了 —— 下面畫出它用的杯子、一共幾杯；右邊的 b 是空的。
+     點一下杯子就倒一杯進 b（這一關用點的）。一定要用和 a 一樣的杯子：點另一個杯子 → 說為什麼（杯子不一樣大，杯數不能比）。
+     b 滿了就過關，說出兩邊各幾杯、誰多。大杯 ＝ CUP_BIG 小杯：big 的那幾組，兩個容器裝得下的都是整數個大杯。 */
+  var CUP_BIG = 2;
+  var GAME_CUPS = [ { a:1, b:3, big:false }, { a:3, b:1, big:false }, { a:0, b:4, big:false }, { a:5, b:1, big:false },
+                    { a:0, b:2, big:true }, { a:3, b:0, big:true }, { a:2, b:3, big:true } ];
+  var CUPS_H = 356;
+  var CUPS_JAR = { top:10, ax:74, bx:206, lblY:144, lblW:124, lblH:34 };   /* 名字＋杯數：英文要兩行 */
+  var CUP_ROW = { y:180, w:124, h:96, smallPer:4, bigPer:2 };   /* 杯子一排幾個（小杯 4、大杯 2），畫在容器正下方 */
+  var CUP_BTN = { y:316, small:60, big:72, x:[110, 190] };
+
+  /* 第 4 關 用一樣的積木秤（範例 4）：左盤放一樣東西，把 🟧 積木一個一個放到右盤，放到天平平了，自己按「平了！」。
+     🟧 拿不完；托盤上另外有一塊不一樣的 🟫 —— 放上去 → 說為什麼（要用一樣的積木才能數）。
+     已經平了還要放 → 說「太多了」，不放上去、不算錯。還沒平就按 → 說為什麼（算一次錯）；什麼都沒放就按 → 只提醒。
+     天平就是範例 4 的 balanceSVG（右盤的積木一顆一顆畫出來）。 */
+  var GAME_BLOCKS = [ 0, 2, 3, 4, 5, 6 ];   /* ITEMS 的索引：草莓 2、蘋果 4、橘子 4、馬鈴薯 5、玩具熊 6、石頭 9 */
+  var BLK_ODD_ICON = '🟫';
+  var BLOCKS_H = 248;
+  var BLK_BAL = { x:20, y:0 };                                   /* balanceSVG 畫在 (x, y)，原尺寸 */
+  var BLK_PAN = { w:92, h:96 };                                   /* 右盤的吸附範圍：盤子正上方那一塊 */
+  var BLK_ROW = { x:196, y:116, w:104, h:52, px:14, per:5 };    /* 盤子上的積木太小，數不清楚：在右盤下面再畫一排大一點的（範例 4 也是） */
+  var BLK_TOK = { y:212, w:60, h:60, x:[110, 190] };
+
+  /* 第 5 關 排排看（範例 3＋4）：三張卡從「裝得最多／最重」排到「最少／最輕」。數字都是同一個杯子、一樣的積木量的。
+     每一組都有「比較高（比較大）卻比較少（比較輕）」的那一張 —— 照高矮或大小排一定排錯。
+     第 k 格只收第 k 多的；放錯說出兩張的數字誰多。三格只隔 RANK_SLOT 的縫（比 2 × GPAD 小）—— 吸附範圍重疊。 */
+  var GAME_RANK = [
+    { cat:'C', ids:[1, 3, 2] }, { cat:'C', ids:[0, 4, 2] }, { cat:'C', ids:[1, 4, 3] }, { cat:'C', ids:[2, 3, 5] },
+    { cat:'I', ids:[1, 6, 2] }, { cat:'I', ids:[5, 6, 0] }, { cat:'I', ids:[1, 4, 0] }
   ];
+  var RANK_H = 264;
+  var RANK_SLOT = { y:92, w:92, h:100, x:[50, 150, 250] }, RANK_CARD = { y:210, w:88, h:96, step:96 };
+  var RANK_JAR = 0.45, RANK_PIC = { w:76, h:52 };                 /* 卡片上的小容器：真實寬高的 0.45 倍 */
 
   function catalog(cat){ return cat === 'C' ? CONTAINERS : (cat === 'I' ? ITEMS : BOXES); }
   function truthOf(cat, id){ return cat === 'C' ? CONTAINERS[id].cap : catalog(cat)[id].wt; }
@@ -373,16 +458,21 @@
   /* 容器圖：所有容器的底線都畫在 BASE，並排時高矮可以直接看。
      fill 是裝了幾杯，spill 是滿出來幾杯。畫布寬度要蓋住滿出來的水花。 */
   var BASE = 118, PAD = 14;
+  /* 畫布的寬高（小遊戲要把這張圖放到畫板上，得先知道它多大 —— 只算一次，jarSVG 自己也用這一份） */
+  function jarDims(c, spill){
+    var drops = Math.min(Math.max(0, spill || 0), 4), top = BASE - c.h;
+    /* 水花一滴比一滴低，畫布高度要蓋住最後一滴 —— 只用 BASE 算的話，
+       矮容器（碗）的第四滴會被切在畫布外面。 */
+    return { w:PAD + c.w + PAD + (drops > 0 ? 40 : 0),
+             h:Math.max(BASE + 14, drops > 0 ? (top + 18 + (drops - 1) * 11 + 6) : 0) };
+  }
   function jarSVG(c, fill, spill){
     var wet = Math.max(0, Math.min(c.cap, fill));
     var wh = Math.round(c.h * wet / c.cap);
     var top = BASE - c.h;
     var sp = Math.max(0, spill || 0);
     var drops = Math.min(sp, 4);
-    var w = PAD + c.w + PAD + (drops > 0 ? 40 : 0);
-    /* 水花一滴比一滴低，畫布高度要蓋住最後一滴 —— 只用 BASE 算的話，
-       矮容器（碗）的第四滴會被切在畫布外面。 */
-    var h = Math.max(BASE + 14, drops > 0 ? (top + 18 + (drops - 1) * 11 + 6) : 0);
+    var dm = jarDims(c, sp), w = dm.w, h = dm.h;
     var s = '<svg data-cap="' + c.cap + '" data-fill="' + wet + '" data-spill="' + sp +
             '" data-jarw="' + c.w + '" data-jarh="' + c.h + '" width="' + w + '" height="' + h +
             '" viewBox="0 0 ' + w + ' ' + h + '" style="max-width:100%;height:auto" ' +
@@ -406,8 +496,10 @@
      東西畫多大由 size 決定 —— 「大 ≠ 重」要看得出來才有說服力。
      盤子上放的若是積木（obj.count），就一顆一顆畫出來，孩子數得到。 */
   var BLK_PAN_PX = 11, BLK_PAN_PER_ROW = 5;
+  /* 天平的幾何：小遊戲要把東西（按鈕）擺在盤子上，所以這幾個數放在外面、和畫圖共用一份。 */
+  var BAL_GEO = { W:260, H:176, cx:130, pivot:56, arm:92, drop:16, hang:30 };
   function balanceSVG(left, right, tilt){
-    var W = 260, H = 176, cx = 130, pivot = 56, arm = 92, drop = 16, hang = 30;
+    var G = BAL_GEO, W = G.W, H = G.H, cx = G.cx, pivot = G.pivot, arm = G.arm, drop = G.drop, hang = G.hang;
     var ly = pivot + tilt * drop, ry = pivot - tilt * drop;
     var s = '<svg data-tilt="' + tilt + '" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H +
             '" style="max-width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
@@ -442,8 +534,8 @@
 
   /* 一排一排的東西（杯子／積木）。px 決定畫多大 —— 大杯和小杯用同一個圖案、
      不同的字級，孩子一眼看得出「不是同一個杯子」。 */
-  function rowSVG(n, icon, px){
-    var size = px || 22, perRow = 10, step = size + 4;
+  function rowSVG(n, icon, px, per){
+    var size = px || 22, perRow = per || 10, step = size + 4;
     var cols = Math.min(n, perRow) || 1;
     var rows = Math.ceil(n / perRow) || 1;
     var w = cols * step + 14;
@@ -482,7 +574,7 @@
       s3h2:'用同一個杯子量幾杯', s3lead:'倒不進去的時候，兩個都用同一個小杯子裝滿，數幾杯。',
       s4h2:'用一樣的積木秤幾個', s4lead:'一邊放東西，一邊放一樣的積木，放到天平變平。',
       s5h2:'檢查一下', s5lead:'點一下答案，馬上知道對不對！',
-      s6h2:'排排看大挑戰', s6lead:'看清楚圖，把三樣東西排出順序。',
+      s6h2:'比比看大挑戰', s6lead:'倒倒看、找重的、一杯一杯量、放積木、排排看 —— 五關都過就是比比看小高手！',
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a>。',
@@ -647,45 +739,104 @@
           why:'同一個杯子量出來，6 杯比 5 杯多，所以碗裝得比較多。比較高的不一定裝得多。' }
       ],
 
-      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
-      gAsk:function(r){
-        var what = r.dom === 'cap' ? '從裝得多到裝得少' : '從重到輕';
-        var how = r.show === 'count'
-          ? (r.dom === 'cap' ? '（都是同一個小杯子量的）' : '（都是一樣的積木秤的）')
-          : '（看兩句線索，接起來想）';
-        return what + '排排看' + how;
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'星星',
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gAsks:{
+        pour:'把裝滿水的拖到空的上面倒倒看，再把 👑 放到裝得多的上面。（也可以先點，再點要放的地方）',
+        tilt:'每一個天平都點出比較重的；平的就點「一樣重」。（這一關用點的）',
+        cups:'用和左邊一樣的杯子，把右邊裝滿。點一下杯子，就倒一杯。（這一關用點的）',
+        blocks:'把一樣的積木放到右邊的盤子，放到天平平了，按「平了！」。（也可以先點積木，再點盤子）',
+        rank:'從最多排到最少。（也可以先點卡片，再點格子）'
       },
-      gClueW:function(a, b){ return this.bName(a) + '比 ' + this.bName(b) + '重'; },
-      gClueC:function(a, b){ return this.cName(a) + '裝滿倒進 ' + this.cName(b) + '，水滿出來了'; },
-      gCount:function(cat, id, n, dom){
-        return this.nameOf(cat, id) + '：' + (dom === 'cap' ? this.qtyCup(n) : (this.qtyBlk(n) + '積木'));
+      gHints:{
+        pour:'倒之前看不出來：高的不一定裝得多。倒過去，看水怎麼樣。',
+        tilt:'沉下去的那一邊比較重；平平的就是一樣重。大的不一定重。',
+        cups:'杯子要一樣，杯數才能比：看左邊用的是哪一個杯子。',
+        blocks:'積木那一邊還翹高高的，就是積木還不夠。',
+        rank:'用同一個杯子、一樣的積木量的：數字大的排前面。'
       },
-      gOpt:function(r, order){
+      gStars:function(n){ return '⭐ +' + n; },
+      gClear:'按「下一關」繼續比。',
+      gWin:function(s){ return '五關全過！一共 ' + s + ' 顆星星 🏆 按「重新開始」再玩一次。'; },
+
+      gCrownLabel:'王冠', gSameLbl:'一樣多',
+      gPourAsk:'還沒倒，看不出誰裝得多。',
+      gPourSeen:{ spill:'倒下去 —— 水滿出來了！', room:'倒完了 —— 還有空位。', exact:'倒完了 —— 剛好滿，沒有剩。' },
+      gPourFirst:'先倒倒看才知道！把裝滿水的拖到空的上面。',
+      /* 王冠放錯：說的是「水怎麼了」，再說誰多；放在比較高的那一個上面時加一句「高不代表多」 */
+      gPourWrong:function(out, who, a, b){
+        var A = this.cName(a), B = this.cName(b);
+        var tall = CONTAINERS[a].h > CONTAINERS[b].h ? 'a' : 'b';
+        var note = who === tall ? '（' + (who === 'a' ? A : B) + '比較高，可是高不代表多。）' : '';
+        if (out === 'spill') return (who === 'same' ? '水滿出來了，不是剛好滿 → 不一樣多：' : '水滿出來了：' + B + '裝不下 ' + A + '的水 → ') + A + '裝得比較多。' + note;
+        if (out === 'room') return (who === 'same' ? '還有空位，不是剛好滿 → 不一樣多：' : '還有空位：' + A + '的水倒完了，' + B + '還裝不滿 → ') + B + '裝得比較多。' + note;
+        return '剛好滿、沒有剩 → 兩個一樣多。' + note;
+      },
+      gPourDone:function(out, a, b){
+        if (out === 'spill') return '水滿出來 → ' + this.cName(a) + '裝得比較多！';
+        if (out === 'room') return '還有空位 → ' + this.cName(b) + '裝得比較多！';
+        return '剛好滿 → 兩個一樣多！';
+      },
+      gPour2:function(poured, out, a, b){
+        if (!poured) return '把 ' + this.cName(a) + '拖到 ' + this.cName(b) + '上面。';
+        if (out === 'spill') return '水滿出來了：倒出去的 ' + this.cName(a) + '比較多。';
+        if (out === 'room') return '還有空位：接水的 ' + this.cName(b) + '比較多。';
+        return '剛好滿：把 👑 放進「一樣多」。';
+      },
+
+      gSameW:'一樣重',
+      gTiltNow:function(n){ return '找到 ' + n + ' / 3 個'; },
+      gTiltLight:function(lt, hv){
+        return '沉下去的是 ' + this.iName(hv) + '那一邊：' + this.iName(hv) + '比較重。' +
+               (ITEMS[lt].size > ITEMS[hv].size ? '（' + this.iName(lt) + '比較大，可是大不代表重。）' : '');
+      },
+      gTiltLevel:'天平是平的：兩個一樣重，要點「一樣重」。',
+      gTiltNotLevel:function(hv){ return '天平沒有平：' + this.iName(hv) + '那一邊沉下去了。'; },
+      gTilt2:function(k, hv){ return '第 ' + k + ' 個天平：' + (hv < 0 ? '它是平的。' : '沉下去的是 ' + this.iName(hv) + '那一邊。'); },
+      gTiltDone:'三個天平都找對了！沉下去的比較重，平的一樣重。',
+
+      gCupSmall:'小杯', gCupBig:'大杯',
+      gCupName:function(big){ return big ? '大杯子' : '小杯子'; },
+      gCupsNow:function(n){ return '右邊倒了 ' + this.qtyCup(n); },
+      gCupWrong:function(a, big){
+        return this.cName(a) + '是用' + this.gCupName(big) + '量的。右邊也要用同一個' + this.gCupName(big) + '，杯數才能比。';
+      },
+      gCups2:function(big, left){ return '點' + this.gCupName(big) + '，還要再倒 ' + this.qtyCup(left) + '。'; },
+      gCupsDone:function(a, na, b, nb, big){
+        var head = '都用' + this.gCupName(big) + '：' + this.cName(a) + ' ' + this.qtyCup(na) + '，' + this.cName(b) + ' ' + this.qtyCup(nb) + '。';
+        if (na === nb) return head + '一樣多杯 → 兩個一樣多！';
+        var more = na > nb ? a : b, less = na > nb ? b : a;
+        return head + Math.max(na, nb) + ' 比 ' + Math.min(na, nb) + ' 多 → ' + this.cName(more) + '裝得比較多！' +
+               (CONTAINERS[less].h > CONTAINERS[more].h ? '（' + this.cName(less) + '比較高，卻比較少。）' : '');
+      },
+
+      gBlkBtn:'平了！', gBlkLabel:'積木', gBlkOddLabel:'不一樣的積木',
+      gBlkNow:function(n){ return '右盤放了 ' + this.qtyBlk(n) + '積木'; },
+      gBlkOdd:'這一塊和 🟧 不一樣。要用一樣的積木，才能數幾個。',
+      gBlkOver:'天平已經平了：再放一個，積木那邊就會沉下去 —— 太多了。',
+      gBlkShort:function(i){ return '還沒平：' + this.iName(i) + '那一邊還沉著，積木還不夠。'; },
+      gBlkEmpty:'先把積木放到右邊的盤子上。',
+      gBlk2:function(i, n, wt){ return n < wt ? '還要再放 ' + this.qtyBlk(wt - n) + '。' : '天平已經平了，按「平了！」。'; },
+      gBlkDone:function(i, n){
+        return '天平平了：' + this.iName(i) + '和 ' + this.qtyBlk(n) + '積木一樣重 → ' + this.iName(i) + '＝ ' + this.qtyBlk(n) + '積木';
+      },
+
+      gRankCap:'裝得最多 → 最少', gRankW:'最重 → 最輕',
+      gRankQty:function(cat, id){ return cat === 'C' ? CONTAINERS[id].icon + ' ' + this.qtyCup(CONTAINERS[id].cap) : this.qtyBlk(ITEMS[id].wt) + '積木'; },
+      gRankVal:function(cat, id){ return this.nameOf(cat, id) + ' ' + (cat === 'C' ? this.qtyCup(CONTAINERS[id].cap) : this.qtyBlk(ITEMS[id].wt) + '積木'); },
+      /* 放錯（id 放進了要放 want 的格子）：說兩張的數字誰多、這一格要的是哪一種；比較高（比較大）的那張放錯時加一句 */
+      gRankWhy:function(cat, id, want){
+        var v = truthOf(cat, id), w = truthOf(cat, want), more = v > w;
+        var noun = cat === 'C' ? (more ? '裝得少一點的' : '裝得多一點的') : (more ? '輕一點的' : '重一點的');
+        var big = cat === 'C' ? CONTAINERS[id].h > CONTAINERS[want].h : ITEMS[id].size > ITEMS[want].size;
+        return this.gRankVal(cat, id) + '比 ' + this.gRankVal(cat, want) + (more ? '多' : '少') + '：這一格要放' + noun + '。' +
+               (big && !more ? (cat === 'C' ? '（高不代表多。）' : '（大不代表重。）') : '');
+      },
+      gRank2:function(k, cat, id){ return '第 ' + (k + 1) + ' 格放 ' + this.gRankVal(cat, id) + '。'; },
+      gRankDone:function(cat, order){
         var self = this;
-        return order.map(function(id){ return self.nameOf(r.cat, id); }).join(' → ');
-      },
-      gHintBtn:'💡 提示',
-      gHint1:function(r){
-        if (r.show === 'clue'){
-          return r.dom === 'cap' ? '把兩句線索接起來：誰在最前面？' : '把兩句線索接起來：誰在最前面？';
-        }
-        return r.dom === 'cap' ? '數字最大的排最前面。' : '積木最多的排最前面。';
-      },
-      gHint2:function(r, first){ return '提示：排在最前面的是 ' + first + '。'; },
-      gWhy:function(r, order){
-        if (r.show === 'clue'){
-          return '兩句線索接起來，順序就是 ' + this.gOpt(r, order) + '。';
-        }
-        var nums = order.map(function(id){ return truthOf(r.cat, id); });
-        var unit = r.dom === 'cap' ? '杯' : '個積木';
-        return '從多到少是 ' + nums.join('、') + ' ' + unit + '，所以順序是 ' + this.gOpt(r, order) + '。';
-      },
-      gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:function(v){ return '答對了！＋20 分！順序就是 ' + v + '。'; },
-      gCorrectRetry:function(v){ return '答對了！＋10 分。順序就是 ' + v + '。'; },
-      gTryAgain:'再看一次圖：誰最多、誰最少？',
-      gClear:'按「下一關」繼續排。',
-      gWin:function(score){ return '五關全過！最後得分 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; }
+        return '排好了：' + order.map(function(id){ return self.gRankVal(cat, id); }).join(' ＞ ') + '。';
+      }
     },
     en: {
       langAria:'Switch language',
@@ -706,7 +857,7 @@
       s3h2:'Count How Many Cups, Using the Same Cup', s3lead:'When you cannot pour one into the other, fill both using the same small cup and count the cups.',
       s4h2:'Count How Many Blocks, Using the Same Blocks', s4lead:'Put the thing on one side and identical blocks on the other, until the balance is level.',
       s5h2:'Quick Check', s5lead:'Tap an answer and find out right away!',
-      s6h2:'Line-Them-Up Challenge', s6lead:'Read the picture carefully and put all three in order.',
+      s6h2:'Compare-It Challenge', s6lead:'Pour it, find the heavier one, count the cups, add the blocks, line them up — clear all five and you are a Comparing Champ!',
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a>.',
@@ -868,41 +1019,105 @@
           why:'Measured with the same cup, 6 cups is more than 5 cups, so the bowl holds more. The taller one does not have to hold more.' }
       ],
 
-      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
-      gAsk:function(r){
-        var what = r.dom === 'cap' ? 'Put them in order, the one that holds most first' : 'Put them in order, heaviest first';
-        var how = r.show === 'count'
-          ? (r.dom === 'cap' ? ' (all measured with the same small cup)' : ' (all weighed with identical blocks)')
-          : ' (read the two clues and join them up)';
-        return what + how;
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Stars',
+      gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Restart',
+      gAsks:{
+        pour:'Drag the full one onto the empty one to pour, then put the 👑 on the one that holds more. (Or tap a piece, then tap where it goes)',
+        tilt:'On every balance, tap the heavier one; if it is level, tap “Same”. (This round is all taps)',
+        cups:'Fill the right one using the same cup as the left one. Each tap on a cup pours one cupful. (This round is all taps)',
+        blocks:'Put identical blocks on the right pan until the balance is level, then press “Level!”. (Or tap a block, then tap the pan)',
+        rank:'Put them in order, most first. (Or tap a card, then tap a box)'
       },
-      gClueW:function(a, b){ return this.bName(a) + ' is heavier than ' + this.bName(b); },
-      gClueC:function(a, b){ return 'pouring the full ' + this.cn[a] + ' into ' + this.cName(b) + ' makes the water spill over'; },
-      gCount:function(cat, id, n, dom){
-        return this.nameOf(cat, id) + ': ' + (dom === 'cap' ? this.qtyCup(n) : this.qtyBlk(n));
+      gHints:{
+        pour:'You cannot tell before pouring — taller does not mean more. Pour it over and watch the water.',
+        tilt:'The side that goes down is heavier; level means the same. Bigger is not always heavier.',
+        cups:'The cups must be the same, or the counts cannot be compared — look at which cup the left one used.',
+        blocks:'If the block side is still up in the air, there are not enough blocks yet.',
+        rank:'Everything was measured with the same cup or identical blocks: the bigger number goes first.'
       },
-      gOpt:function(r, order){
+      gStars:function(n){ return '⭐ +' + n; },
+      gClear:'Press “Next round” to keep comparing.',
+      gWin:function(s){ return 'All 5 rounds cleared! ' + s + ' stars in total 🏆 Press “Restart” to play again.'; },
+
+      gCrownLabel:'crown', gSameLbl:'Same',
+      gPourAsk:'Not poured yet — nobody can tell which holds more.',
+      gPourSeen:{ spill:'Pouring — the water spills over!', room:'All poured — there is still room.', exact:'All poured — exactly full, nothing left over.' },
+      gPourFirst:'Pour it first, then you will know! Drag the full one onto the empty one.',
+      gPourWrong:function(out, who, a, b){
+        var A = this.cName(a), B = this.cName(b);
+        var tall = CONTAINERS[a].h > CONTAINERS[b].h ? 'a' : 'b';
+        var note = who === tall ? ' (' + (who === 'a' ? A : B) + ' is taller, but taller does not mean more.)' : '';
+        if (out === 'spill') return (who === 'same' ? 'The water spilled over, so it was not exactly full → they do not hold the same: ' : 'The water spilled over: ' + B + ' cannot take all of ' + A + '’s water → ') + A + ' holds more.' + note;
+        if (out === 'room') return (who === 'same' ? 'There is still room, so it was not exactly full → they do not hold the same: ' : 'There is still room: all of ' + A + '’s water went in and ' + B + ' is not full → ') + B + ' holds more.' + note;
+        return 'Exactly full, nothing left over → they hold the same.' + note;
+      },
+      gPourDone:function(out, a, b){
+        if (out === 'spill') return 'It spilled over → ' + this.cName(a) + ' holds more!';
+        if (out === 'room') return 'There was room left → ' + this.cName(b) + ' holds more!';
+        return 'Exactly full → they hold the same!';
+      },
+      gPour2:function(poured, out, a, b){
+        if (!poured) return 'Drag ' + this.cName(a) + ' onto ' + this.cName(b) + '.';
+        if (out === 'spill') return 'It spilled over: ' + this.cName(a) + ', the one you poured from, holds more.';
+        if (out === 'room') return 'There is room left: ' + this.cName(b) + ', the one that caught the water, holds more.';
+        return 'Exactly full: put the 👑 in “Same”.';
+      },
+
+      gSameW:'Same',
+      gTiltNow:function(n){ return 'Found ' + n + ' / 3'; },
+      gTiltLight:function(lt, hv){
+        return 'The side that went down is ' + this.iName(hv) + '’s, so ' + this.iName(hv) + ' is heavier.' +
+               (ITEMS[lt].size > ITEMS[hv].size ? ' (' + this.iName(lt) + ' is bigger, but bigger does not mean heavier.)' : '');
+      },
+      gTiltLevel:'The balance is level: they weigh the same — tap “Same”.',
+      gTiltNotLevel:function(hv){ return 'The balance is not level: ' + this.iName(hv) + '’s side went down.'; },
+      gTilt2:function(k, hv){ return 'Balance ' + k + ': ' + (hv < 0 ? 'it is level.' : 'the side that went down is ' + this.iName(hv) + '’s.'); },
+      gTiltDone:'All three balances right! The side that goes down is heavier; level means the same.',
+
+      gCupSmall:'small', gCupBig:'big',
+      gCupName:function(big){ return big ? 'the big cup' : 'the small cup'; },
+      gCupsNow:function(n){ return 'Right one: ' + this.qtyCup(n) + ' so far'; },
+      gCupWrong:function(a, big){
+        return this.cName(a) + ' was measured with ' + this.gCupName(big) + '. Use that same cup for the right one too, or the counts cannot be compared.';
+      },
+      gCups2:function(big, left){ return 'Tap ' + this.gCupName(big) + ' — ' + this.qtyCup(left) + ' still to pour.'; },
+      gCupsDone:function(a, na, b, nb, big){
+        var head = 'Both with ' + this.gCupName(big) + ': ' + this.cName(a) + ' ' + this.qtyCup(na) + ', ' + this.cName(b) + ' ' + this.qtyCup(nb) + '. ';
+        if (na === nb) return head + 'The same number of cups → they hold the same!';
+        var more = na > nb ? a : b, less = na > nb ? b : a;
+        return head + Math.max(na, nb) + ' is more than ' + Math.min(na, nb) + ' → ' + this.cName(more) + ' holds more!' +
+               (CONTAINERS[less].h > CONTAINERS[more].h ? ' (' + this.cName(less) + ' is taller, yet holds less.)' : '');
+      },
+
+      gBlkBtn:'Level!', gBlkLabel:'block', gBlkOddLabel:'a different block',
+      gBlkNow:function(n){ return 'Right pan: ' + this.qtyBlk(n); },
+      gBlkOdd:'This one is not like the 🟧 blocks. Use identical blocks, or you cannot count them.',
+      gBlkOver:'The balance is already level: one more and the block side would go down — too many.',
+      gBlkShort:function(i){ return 'Not level yet: ' + this.iName(i) + '’s side is still down, so there are not enough blocks.'; },
+      gBlkEmpty:'Put some blocks on the right pan first.',
+      gBlk2:function(i, n, wt){ return n < wt ? this.qtyBlk(wt - n) + ' more to go.' : 'It is level already — press “Level!”.'; },
+      gBlkDone:function(i, n){
+        return 'Level: ' + this.iName(i) + ' weighs the same as ' + this.qtyBlk(n) + ' → ' + this.iName(i) + ' = ' + this.qtyBlk(n);
+      },
+
+      gRankCap:'Holds most → least', gRankW:'Heaviest → lightest',
+      gRankQty:function(cat, id){ return cat === 'C' ? CONTAINERS[id].icon + ' ' + this.qtyCup(CONTAINERS[id].cap) : this.qtyBlk(ITEMS[id].wt); },
+      gRankVal:function(cat, id){ return this.nameOf(cat, id) + ', ' + (cat === 'C' ? this.qtyCup(CONTAINERS[id].cap) : this.qtyBlk(ITEMS[id].wt)); },
+      gRankWhy:function(cat, id, want){
+        var v = truthOf(cat, id), w = truthOf(cat, want), more = v > w;
+        var noun = cat === 'C' ? (more ? 'one that holds less' : 'one that holds more') : (more ? 'lighter one' : 'heavier one');
+        var big = cat === 'C' ? CONTAINERS[id].h > CONTAINERS[want].h : ITEMS[id].size > ITEMS[want].size;
+        var self = this, qty = function(x){ return cat === 'C' ? self.qtyCup(CONTAINERS[x].cap) : self.qtyBlk(ITEMS[x].wt); };
+        /* 比的是「杯數／積木數」，不是東西本身：🏺 the vase holds 5 cups, fewer than 🥣 the bowl’s 6 cups（codex 第一輪） */
+        return this.nameOf(cat, id) + (cat === 'C' ? ' holds ' : ' weighs ') + qty(id) + ', ' + (more ? 'more' : (cat === 'C' ? 'fewer' : 'less')) +
+               ' than ' + this.nameOf(cat, want) + '’s ' + qty(want) + ' — this box needs the ' + noun + '.' +
+               (big && !more ? (cat === 'C' ? ' (Taller does not mean more.)' : ' (Bigger does not mean heavier.)') : '');
+      },
+      gRank2:function(k, cat, id){ return 'Box ' + (k + 1) + ' takes ' + this.gRankVal(cat, id) + '.'; },
+      gRankDone:function(cat, order){
         var self = this;
-        return order.map(function(id){ return self.nameOf(r.cat, id); }).join(' → ');
-      },
-      gHintBtn:'💡 Hint',
-      gHint1:function(r){
-        if (r.show === 'clue') return 'Join the two clues into one chain — who ends up at the front?';
-        return r.dom === 'cap' ? 'The biggest number goes first.' : 'The most blocks goes first.';
-      },
-      gHint2:function(r, first){ return 'Hint: the one at the front is ' + first + '.'; },
-      gWhy:function(r, order){
-        if (r.show === 'clue') return 'Join the two clues up and the order is ' + this.gOpt(r, order) + '.';
-        var nums = order.map(function(id){ return truthOf(r.cat, id); });
-        var unit = r.dom === 'cap' ? 'cups' : 'blocks';
-        return 'Most to fewest, that is ' + nums.join(', ') + ' ' + unit + ', so the order is ' + this.gOpt(r, order) + '.';
-      },
-      gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst:function(v){ return 'Correct on the first try! +20 points! The order is ' + v + '.'; },
-      gCorrectRetry:function(v){ return 'Correct! +10 points. The order is ' + v + '.'; },
-      gTryAgain:'Look at the picture again: which is the most, and which is the least?',
-      gClear:'Press “Next round” to keep going.',
-      gWin:function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; }
+        return 'In order: ' + order.map(function(id){ return self.gRankVal(cat, id); }).join(' > ') + '.';
+      }
     }
   };
 
@@ -1187,13 +1402,19 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：排排看大挑戰 ---------- */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ---------- 6. 小遊戲：比比看大挑戰 —— 五關、五種玩法（倒、點、量、秤、排） ----------
+     設計原則見 docs/teaching-framework.md §六之五。二年級是低年級（§三）：不扣分、不會失敗。
+     放錯（概念錯）→ 彈回原位＋一句為什麼，算一次錯；放到空白處 → 靜靜彈回，不算錯。
+     星星：這一關沒犯錯 2 顆、犯過錯 1 顆（只是少拿，從不倒扣）。
+     每個拖拉也可以「先點東西、再點目的地」；第 2 關（天平）、第 3 關（倒杯子）沒有拖拉：點一下本身就是那個動作，
+     那兩關的說明有寫。題庫與版面常數在 i18n 前面的資料區。拖拉引擎沿用 grade-2/math/length。 */
+  var gRound = 0, gScore = 0, gMistakes = 0, gSolved = false, gCtx = {};
+  /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加星星）。grade-2 length 的 codex 第一輪 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskLine = document.getElementById('gAskLine');
-  var gPic = document.getElementById('gPic');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
@@ -1201,90 +1422,484 @@
   var elHint = document.getElementById('gHint');
   var hintLevel = 0;
 
-  /* 正確順序是從真值排出來的，不是寫死的 —— 資料改了，答案跟著改。 */
-  function trueOrder(r){
-    return r.ids.slice().sort(function(x, y){ return truthOf(r.cat, y) - truthOf(r.cat, x); });
-  }
-  function roundPic(r){
-    var d = L();
-    if (r.show === 'count'){
-      return r.ids.map(function(id){
-        var n = truthOf(r.cat, id);
-        var icon = r.dom === 'cap' ? CUP_ICON : BLK_ICON;
-        return jarCell(rowSVG(n, icon, 20), d.gCount(r.cat, id, n, r.dom));
-      }).join('');
+  /* ⚠️ 托盤一定要洗牌再畫：題庫裡的順序是固定的，照順序畫的話孩子玩兩次就會記住位置。
+     洗出來剛好由小到大的話，把前兩張對調（三年級 numbers 同一個做法）。用對調不用重洗：一定會結束，
+     而且由小到大時前兩張一定不一樣，對調之後就不是由小到大。物件（第 2 關的三排天平）比不出大小，不會被對調。 */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
     }
-    /* 線索題：只給兩兩比較，順序要自己接起來。 */
-    var ord = trueOrder(r);
-    var pairs = [[ord[0], ord[1]], [ord[1], ord[2]]];
-    return pairs.map(function(p){
-      if (r.dom === 'w'){
-        return jarCell(balanceSVG({ icon:BOXES[p[0]].icon, size:3 }, { icon:BOXES[p[1]].icon, size:3 }, 1),
-                       d.gClueW(p[0], p[1]));
-      }
-      var A = CONTAINERS[p[0]], B = CONTAINERS[p[1]];
-      return jarCell(jarSVG(B, B.cap, A.cap - B.cap), d.gClueC(p[0], p[1]));
-    }).join('');
+    var up = a.length > 1;
+    for (var i = 1; i < a.length; i++) if (!(a[i - 1] < a[i])) up = false;
+    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }
+    return a;
   }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  /* 左右對調用丟銅板（不用 shuffle：兩個數字的 shuffle 一定不會由小到大，等於永遠同一邊） */
+  function coin(){ return Math.random() < 0.5; }
+
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，任何地方的 pointerup／pointercancel
+     傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 畫板上的按鈕（第 2、3 關用點的）：中心點 (cx, cy) */
+  function addButton(B, cx, cy, w, h, cls, html, label){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = cls;
+    b.style.left = (cx - w / 2) + 'px'; b.style.top = (cy - h / 2) + 'px'; b.style.width = w + 'px'; b.style.height = h + 'px';
+    b.innerHTML = html;
+    if (label) b.setAttribute('aria-label', label);
+    B.el.appendChild(b);
+    return b;
+  }
+  /* 格子（吸附目標）：記中心點與半寬、半高，給 nearestOpen() 用 */
+  function target(B, x, y, w, h, cls, more){
+    var t = { z:addZone(B, x, y, w, h, cls), cx:x + w / 2, cy:y + h / 2, hw:w / 2, hh:h / 2, done:false };
+    for (var key in more) t[key] = more[key];
+    return t;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 容器圖（jarSVG）放在畫板上：cx 是容器的中心，底線對齊（畫布的上緣都在 top） */
+  function jarZone(B, c, cx, top, fill, spill){
+    var dm = jarDims(c, spill);
+    var z = addZone(B, cx - c.w / 2 - PAD, top, dm.w, dm.h, 'gjar');
+    z.innerHTML = jarSVG(c, fill, spill);
+    return z;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.html !== undefined) el.innerHTML = o.html;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (moved) P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */
+      /* 先點選、後來又直接拖走的那一塊：拖完（放好、彈回、capture 遺失都一樣）就不再是「選起來」的，
+         不然下一次點格子會多放一次（二年級 numbers 的 codex 第一、二輪） */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      /* 放在哪裡看那一塊的中心點（§六之五：位置一律記中心點），不是手指的位置 */
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 拿不完的東西（第 4 關的積木）點一下放好之後繼續選著，不用每一個都重點一次 */
+  function keepSelected(B, P){ if (!P.locked && !gSolved){ B.selected = P; P.el.classList.add('sel'); } }
+  /* 放進哪一格：放開時那一塊的中心點（點目的地時是點的位置）落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+  /* 托盤：一律洗牌後排成一排（正解不可以固定在同一個位置）。items 要是「由小到大就是正解順序」的數 */
+  function renderTray(B, items, y, mk, step){
+    var x0 = (B.W - (items.length - 1) * step) / 2;
+    shuffle(items).forEach(function(it, i){ mk(it, x0 + i * step, y); });
+  }
+
+  /* 星星（低年級：純收集、不扣分 —— §三、§六之五第 3 點）：這一關沒犯錯 2 顆、犯過錯 1 顆 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var stars = gMistakes === 0 ? 2 : 1;
+    gScore += stars; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var last = gRound === GAME_ORDER.length - 1;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gStars(stars) + '</span> ' + (last ? L().gWin(gScore) : L().gClear);
+    if (!last) gNext.disabled = false;
+  }
+  /* 放錯：說為什麼、記一次錯（只影響這一關拿 2 顆還是 1 顆），分數不動 */
+  function roundMiss(text){ gMistakes++; gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 第二層提示跟著畫面走：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  /* 按鈕列（第 4 關的「平了！」）：放在畫板下面，不在畫板裡 */
+  function actionButton(text, onClick){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn'; b.textContent = text;
+    b.addEventListener('click', onClick);
+    row.appendChild(b);
+    gameStage.appendChild(row);
+    return b;
+  }
+  /* 第 5 關的卡片：上面是畫（容器照真實寬高的 RANK_JAR 倍、東西照它的大小），下面是量出來的數 */
+  function rankCardHTML(d, cat, id){
+    var pic;
+    if (cat === 'C'){
+      var c = CONTAINERS[id], w = c.w * RANK_JAR, h = c.h * RANK_JAR;
+      pic = '<svg width="' + RANK_PIC.w + '" height="' + RANK_PIC.h + '" viewBox="0 0 ' + RANK_PIC.w + ' ' + RANK_PIC.h +
+            '" aria-hidden="true" data-jarw="' + w + '" data-jarh="' + h + '"><rect x="' + ((RANK_PIC.w - w) / 2) + '" y="' + (RANK_PIC.h - 2 - h) +
+            '" width="' + w + '" height="' + h + '" rx="3" fill="#9AD1F0" stroke="#3B7DD8" stroke-width="2"/></svg>';
+    } else {
+      pic = '<span class="gicon" data-size="' + ITEMS[id].size + '" style="font-size:' + (14 + ITEMS[id].size * 4) + 'px">' + ITEMS[id].icon + '</span>';
+    }
+    return '<div class="gpic">' + pic + '</div><div class="gqty">' + d.gRankQty(cat, id) + '</div>';
+  }
+
+  var RENDER = {
+    /* 第 1 關：倒倒看 —— 把裝滿水的 a 拖到空的 b 上面倒進去（只有 a 拿得起來），再把 👑 放到裝得多的那一個上面或「一樣多」。
+       倒之前放王冠 → 只說「先倒倒看」、彈回、不算錯；倒完放錯 → 彈回＋為什麼。 */
+    pour: function(d){
+      var e = pick(GAME_POUR), A = CONTAINERS[e.a], Bc = CONTAINERS[e.b], J = POUR_JAR, S = POUR_SAME, Cr = POUR_CROWN;
+      var out = A.cap > Bc.cap ? 'spill' : (A.cap < Bc.cap ? 'room' : 'exact');
+      var more = out === 'spill' ? 'a' : (out === 'room' ? 'b' : 'same');
+      var poured = false;
+      var line = trailLine(d.gPourAsk);
+      var B = makeBoard(GAME_W, POUR_H);
+      var dA = jarDims(A, 0), dB = jarDims(Bc, 0);
+      var bz = jarZone(B, Bc, J.bx, J.top, 0, 0);
+      addZone(B, J.ax - J.lblW / 2, J.lblY, J.lblW, 22, 'gname', d.cName(e.a));
+      addZone(B, J.bx - J.lblW / 2, J.lblY, J.lblW, 22, 'gname', d.cName(e.b));
+      var tB = { cx:J.bx, cy:J.top + dB.h / 2, hw:dB.w / 2, hh:dB.h / 2, done:false };
+      var crownAt = [
+        { who:'a', cx:J.ax, cy:J.top + dA.h / 2, hw:dA.w / 2, hh:dA.h / 2, lx:J.ax, ly:J.top + BASE - A.h - 20, done:false },
+        { who:'b', cx:J.bx, cy:J.top + dB.h / 2, hw:dB.w / 2, hh:dB.h / 2, lx:J.bx, ly:J.top + BASE - Bc.h - 20, done:false },
+        target(B, S.x, S.y, S.w, S.h, 'gslot gsame', { who:'same', lx:S.x + S.w / 2, ly:S.y + S.h / 2 })
+      ];
+      crownAt[2].z.textContent = d.gSameLbl;
+      var jar = addPiece(B, { w:dA.w, h:dA.h, cx:J.ax, cy:J.top + dA.h / 2, html:jarSVG(A, A.cap, 0), cls:'gjarp', label:d.cName(e.a), data:{ jar:true } });
+      addPiece(B, { w:Cr.size, h:Cr.size, cx:GAME_W / 2, cy:Cr.y, text:'👑', cls:'gcrown', label:d.gCrownLabel, data:{ crown:true } });
+      gCtx.hint2 = function(){ return d.gPour2(poured, out, e.a, e.b); };
+      useTapSelect(B, function(P, pt){
+        if (P.data.jar){
+          if (!nearestOpen([tB], pt, GPAD)) return false;
+          /* 倒過去：a 變空的、b 裝了 min(a, b) 杯、滿出來的水花畫在 b 的右邊 */
+          poured = true;
+          var spill = Math.max(0, A.cap - Bc.cap), dm = jarDims(Bc, spill);
+          P.lock(J.ax, J.top + dA.h / 2);
+          P.el.innerHTML = jarSVG(A, 0, 0);
+          bz.style.width = dm.w + 'px'; bz.style.height = dm.h + 'px';
+          bz.innerHTML = jarSVG(Bc, Math.min(A.cap, Bc.cap), spill);
+          line.textContent = d.gPourSeen[out];
+          gMsg.textContent = '';
+          refreshHint();
+          return true;
+        }
+        var t = nearestOpen(crownAt, pt, GPAD);
+        if (!t) return false;
+        if (!poured){ roundInfo(d.gPourFirst); return false; }
+        if (t.who !== more){ roundMiss(d.gPourWrong(out, t.who, e.a, e.b)); return false; }
+        P.el.style.width = P.el.style.height = Cr.placed + 'px'; P.w = P.h = Cr.placed;
+        P.lock(t.lx, t.ly); P.el.classList.add('placed');
+        roundSolved(d.gPourDone(out, e.a, e.b));
+        return true;
+      });
+    },
+
+    /* 第 2 關：天平 —— 三排天平，每一排點出比較重的（沉下去的那一邊）；平的點「一樣重」（這一關沒有拖拉）。
+       點到比較輕的、平的時候點東西、斜的時候點「一樣重」→ 說為什麼；已經找到的那一排再點 → 不動、不算錯。 */
+    tilt: function(d){
+      var rows = shuffle([pick(TILT_TRAP), pick(TILT_SAME), pick(TILT_BIG)]).map(function(e){ return coin() ? { a:e.a, b:e.b } : { a:e.b, b:e.a }; });
+      var found = 0, T = TILT, G = BAL_GEO, I = TILT_ITEM, Sb = TILT_SAME_BTN;
+      var line = trailLine(d.gTiltNow(0));
+      var B = makeBoard(GAME_W, TILT_H);
+      var state = rows.map(function(e, r){
+        var wa = ITEMS[e.a].wt, wb = ITEMS[e.b].wt, tilt = wa > wb ? 1 : (wa < wb ? -1 : 0);
+        var heavy = tilt > 0 ? e.a : (tilt < 0 ? e.b : -1);
+        var zy = T.top + r * T.rowH + T.dy;
+        addZone(B, T.x, zy, G.W * T.s, G.H * T.s, 'gbal').innerHTML = balanceSVG(null, null, tilt);
+        var row = { done:false, heavy:heavy, k:r + 1 };
+        /* 盤子的上緣（balanceSVG 的幾何 × 縮放）：東西的按鈕底邊貼著它 */
+        var pans = [[e.a, G.cx - G.arm, G.pivot + tilt * G.drop + G.hang], [e.b, G.cx + G.arm, G.pivot - tilt * G.drop + G.hang]];
+        var btns = pans.map(function(p){
+          var it = ITEMS[p[0]], cx = T.x + p[1] * T.s, top = zy + p[2] * T.s;
+          var b = addButton(B, cx, top - I.h / 2, I.w, I.h, 'gitem', it.icon, d.iName(p[0]));
+          b.style.fontSize = (14 + it.size * 4) + 'px';
+          b.setAttribute('data-size', it.size);
+          b.addEventListener('click', function(){ tapRow(row, p[0], b); });
+          return b;
+        });
+        var sb = addButton(B, Sb.cx, T.top + r * T.rowH + Sb.dy, Sb.w, Sb.h, 'gsamebtn', d.gSameW);
+        sb.addEventListener('click', function(){ tapRow(row, -1, sb); });
+        row.btns = btns.concat([sb]);
+        return row;
+      });
+      function tapRow(row, id, b){
+        if (gSolved || row.done) return;
+        if (id === row.heavy){
+          row.done = true; found++;
+          b.classList.add('found');
+          row.btns.forEach(function(x){ if (x !== b) x.classList.add('off'); });
+          line.textContent = d.gTiltNow(found);
+          gMsg.textContent = '';
+          if (found === state.length) roundSolved(d.gTiltDone);
+          refreshHint();
+          return;
+        }
+        if (row.heavy < 0){ roundMiss(d.gTiltLevel); return; }
+        if (id < 0){ roundMiss(d.gTiltNotLevel(row.heavy)); return; }
+        roundMiss(d.gTiltLight(id, row.heavy));
+      }
+      gCtx.hint2 = function(){
+        for (var r = 0; r < state.length; r++) if (!state[r].done) return d.gTilt2(state[r].k, state[r].heavy);
+        return '';
+      };
+    },
+
+    /* 第 3 關：用同一個杯子量 —— 左邊的 a 已經量好了（畫出它用的杯子、幾杯）；點一下杯子就倒一杯進右邊的 b（這一關沒有拖拉）。
+       點了和 a 不一樣的杯子 → 說為什麼、不倒；b 滿了就過關。 */
+    cups: function(d){
+      var e = pick(GAME_CUPS), A = CONTAINERS[e.a], Bc = CONTAINERS[e.b], J = CUPS_JAR, R = CUP_ROW, Cb = CUP_BTN;
+      var unit = e.big ? CUP_BIG : 1, na = A.cap / unit, nb = Bc.cap / unit, n = 0;
+      var px = e.big ? CUP_PX_BIG : CUP_PX_SMALL, per = e.big ? R.bigPer : R.smallPer;
+      var line = trailLine(d.gCupsNow(0));
+      var B = makeBoard(GAME_W, CUPS_H);
+      jarZone(B, A, J.ax, J.top, A.cap, 0);
+      var bz = jarZone(B, Bc, J.bx, J.top, 0, 0);
+      addZone(B, J.ax - J.lblW / 2, J.lblY, J.lblW, J.lblH, 'gname', d.cupLabel(e.a, na));
+      var lblB = addZone(B, J.bx - J.lblW / 2, J.lblY, J.lblW, J.lblH, 'gname', d.cupLabel(e.b, 0));
+      addZone(B, J.ax - R.w / 2, R.y, R.w, R.h, 'gcups').innerHTML = rowSVG(na, CUP_ICON, px, per);
+      var rowB = addZone(B, J.bx - R.w / 2, R.y, R.w, R.h, 'gcups');
+      gCtx.hint2 = function(){ return d.gCups2(e.big, nb - n); };
+      var sides = coin() ? [false, true] : [true, false];
+      sides.forEach(function(big, i){
+        var sz = big ? Cb.big : Cb.small;
+        var b = addButton(B, Cb.x[i], Cb.y, sz, sz, 'gcupbtn' + (big ? ' big' : ''),
+          '<span class="gcupi" style="font-size:' + (big ? CUP_PX_BIG : CUP_PX_SMALL) + 'px">' + CUP_ICON + '</span><span class="gcupn">' + (big ? d.gCupBig : d.gCupSmall) + '</span>',
+          big ? d.gCupBig : d.gCupSmall);
+        b.setAttribute('data-big', big ? '1' : '0');
+        b.addEventListener('click', function(){
+          if (gSolved) return;
+          if (big !== e.big){ roundMiss(d.gCupWrong(e.a, e.big)); return; }
+          n++;
+          bz.innerHTML = jarSVG(Bc, n * unit, 0);
+          rowB.innerHTML = rowSVG(n, CUP_ICON, px, per);
+          lblB.textContent = d.cupLabel(e.b, n);
+          line.textContent = d.gCupsNow(n);
+          gMsg.textContent = '';
+          if (n === nb) roundSolved(d.gCupsDone(e.a, na, e.b, nb, e.big));
+          refreshHint();
+        });
+      });
+    },
+
+    /* 第 4 關：用一樣的積木秤 —— 左盤一樣東西；🟧 一個一個放到右盤（拿不完），平了自己按「平了！」。
+       🟫 不一樣的積木 → 說為什麼；已經平了還要放 → 說「太多了」、不放、不算錯；還沒平就按 → 說為什麼；沒放就按 → 只提醒。 */
+    blocks: function(d){
+      var id = pick(GAME_BLOCKS), it = ITEMS[id], wt = it.wt, n = 0, K = BLK_BAL, G = BAL_GEO, Pn = BLK_PAN, Tk = BLK_TOK;
+      var line = trailLine(d.gBlkNow(0));
+      var B = makeBoard(GAME_W, BLOCKS_H);
+      var bal = addZone(B, K.x, K.y, G.W, G.H, 'gbal');
+      var row = addZone(B, BLK_ROW.x, BLK_ROW.y, BLK_ROW.w, BLK_ROW.h, 'gcups');
+      /* 積木比東西少：東西那一邊（左）沉下去；一樣多：平的 */
+      function draw(){
+        bal.innerHTML = balanceSVG(it, n ? { icon:BLK_ICON, count:n } : null, n < wt ? 1 : 0);
+        row.innerHTML = rowSVG(n, BLK_ICON, BLK_ROW.px, BLK_ROW.per);
+      }
+      draw();
+      /* 右盤的吸附範圍：盤子正上方那一塊（盤子翹高、放平都蓋得到） */
+      var pan = { cx:K.x + G.cx + G.arm, cy:K.y + G.pivot + G.hang + 12 - Pn.h / 2, hw:Pn.w / 2, hh:Pn.h / 2, done:false };
+      var kinds = coin() ? ['same', 'odd'] : ['odd', 'same'];
+      kinds.forEach(function(k, i){
+        addPiece(B, { w:Tk.w, h:Tk.h, cx:Tk.x[i], cy:Tk.y, text:k === 'same' ? BLK_ICON : BLK_ODD_ICON,
+                      cls:'gtok gblk' + (k === 'odd' ? ' godd' : ''), label:k === 'same' ? d.gBlkLabel : d.gBlkOddLabel, data:{ k:k } });
+      });
+      gCtx.hint2 = function(){ return d.gBlk2(id, n, wt); };
+      useTapSelect(B, function(P, pt){
+        if (!nearestOpen([pan], pt, GPAD)) return false;
+        if (P.data.k !== 'same'){ roundMiss(d.gBlkOdd); return false; }
+        if (n >= wt){ roundInfo(d.gBlkOver); return false; }
+        n++;
+        draw();
+        P.home();
+        line.textContent = d.gBlkNow(n);
+        gMsg.textContent = '';
+        if (pt.tap) keepSelected(B, P);
+        refreshHint();
+        return true;
+      });
+      var doneBtn = actionButton(d.gBlkBtn, function(){
+        if (gSolved) return;
+        if (n === 0){ gMsg.textContent = d.gBlkEmpty; return; }
+        if (n < wt){ roundMiss(d.gBlkShort(id)); return; }
+        doneBtn.disabled = true;
+        roundSolved(d.gBlkDone(id, wt));
+      });
+    },
+
+    /* 第 5 關：排排看 —— 三張卡從最多（最重）排到最少（最輕）。第 k 格只收第 k 多的；放錯 → 彈回，說兩張的數誰多。 */
+    rank: function(d){
+      var set = pick(GAME_RANK), cat = set.cat, S = RANK_SLOT, Cd = RANK_CARD;
+      var order = set.ids.slice().sort(function(x, y){ return truthOf(cat, y) - truthOf(cat, x); });
+      var slots = [];
+      function shown(){ return slots.map(function(s){ return s.done ? d.gRankQty(cat, order[s.k]) : '□'; }).join(' > '); }
+      var line = trailLine('□ > □ > □');
+      var B = makeBoard(GAME_W, RANK_H);
+      addZone(B, 8, 6, GAME_W - 16, 26, 'glbl', cat === 'C' ? d.gRankCap : d.gRankW);
+      slots = S.x.map(function(x, k){ return target(B, x - S.w / 2, S.y - S.h / 2, S.w, S.h, 'gslot', { k:k }); });
+      gCtx.hint2 = function(){
+        for (var k = 0; k < slots.length; k++) if (!slots[k].done) return d.gRank2(k, cat, order[k]);
+        return '';
+      };
+      /* 洗牌的是「負的量」：由小到大就是由多到少 —— shuffle() 擋的是由小到大，這樣才擋得到正解順序 */
+      renderTray(B, set.ids.map(function(x){ return -truthOf(cat, x); }), Cd.y, function(v, cx, cy){
+        var id = set.ids.filter(function(x){ return -truthOf(cat, x) === v; })[0];
+        addPiece(B, { w:Cd.w, h:Cd.h, cx:cx, cy:cy, html:rankCardHTML(d, cat, id), cls:'gcard', label:d.gRankVal(cat, id), data:{ id:id } });
+      }, Cd.step);
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, GPAD), id = P.data.id;
+        if (!s) return false;
+        var want = order[s.k];
+        if (id !== want){ roundMiss(d.gRankWhy(cat, id, want)); return false; }
+        s.done = true; P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        line.textContent = shown();
+        gMsg.textContent = '';
+        if (slots.every(function(x){ return x.done; })) roundSolved(d.gRankDone(cat, order));
+        refreshHint();
+        return true;
+      });
+    }
+  };
 
   function startRound(){
     var d = L();
-    var r = ROUNDS[gRound];
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistakes = 0; gCtx = {}; gGen++;
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-    gAskLine.innerHTML = '<span style="font-size:20px;font-weight:800">' + d.gAsk(r) + '</span>';
-    gPic.textContent = '';
-    gPic.innerHTML = '<div class="pairwrap">' + roundPic(r) + '</div>';
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = d.gHint1(r);
-    } else {
-      elHint.textContent = '';
-    }
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }
+  }
 
-    gAnswers.textContent = '';
-    r.opts.forEach(function(order, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'gopt';
-      b.textContent = d.gOpt(r, order);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        var dd = L();
-        var lbl = dd.gOpt(r, r.opts[r.ans]);
-        if (oi === r.ans){
-          var all = gAnswers.querySelectorAll('.gopt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gRound === ROUNDS.length - 1){
-            gScore += gMistake ? 10 : 20;
-            gMsg.innerHTML = '<span class="yes">' + dd.gWin(gScore) + '</span> ' + dd.gWhy(r, r.opts[r.ans]);
-          } else {
-            if (gMistake){
-              gScore += 10;
-              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectRetry(lbl) + '</span> ' + dd.gWhy(r, r.opts[r.ans]);
-            } else {
-              gScore += 20;
-              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectFirst(lbl) + '</span> ' + dd.gWhy(r, r.opts[r.ans]);
-            }
-            gMsg.innerHTML += ' ' + dd.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gMsg.innerHTML = '<span class="no">' + dd.gTryAgain + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
   function restartGame(){
@@ -1292,19 +1907,15 @@
   }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
 
   gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2) return;
     hintLevel++;
-    var r = ROUNDS[gRound];
-    if (hintLevel === 1){
-      elHint.textContent = L().gHint1(r);
-    } else {
-      elHint.textContent = L().gHint2(r, L().nameOf(r.cat, r.opts[r.ans][0]));
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
