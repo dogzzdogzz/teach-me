@@ -113,15 +113,54 @@
   table.solids th{background:var(--blue-soft);color:var(--blue);font-size:14px}
   table.solids td.nm{font-weight:800;text-align:left;white-space:nowrap}
   .note{color:var(--muted);font-size:15px;margin-top:10px}
-  .gopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
-  .gopt{
-    border:3px solid var(--line);background:var(--card);border-radius:16px;padding:16px 10px;
-    font-size:20px;font-weight:800;color:var(--ink);cursor:pointer;min-height:60px;
-    display:flex;align-items:center;justify-content:center;text-align:center;
-  }
-  .gopt.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
-  .gopt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
-  .gopt:disabled{cursor:default;opacity:.9}
+
+  /* ---- 小遊戲：點一點、分一分、滾一滾、疊一疊、貼一貼（§六之五） ---- */
+  .gamemsg{text-align:center}
+  .game .hint{text-align:center}
+  .gstage{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0 }
+  .gask{ font-weight:700; text-align:center; font-size:18px }
+  .gtrail{ font-size:20px; font-weight:800; color:var(--ink); text-align:center; line-height:1.3; min-height:2.6em;
+    display:flex; align-items:center; justify-content:center }
+  .gwrap{ position:relative; margin:0 auto }
+  .gboard{ position:absolute; left:0; top:0; transform-origin:0 0; background:var(--bg); border-radius:16px }
+  .gboard > div, .gboard > button, .gboard > svg{ position:absolute }
+  .gpiece{ left:0; top:0; display:flex; align-items:center; justify-content:center;
+    touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; transition:transform .25s ease; z-index:5 }
+  .gpiece.dragging{ transition:none; cursor:grabbing; z-index:50 !important; filter:drop-shadow(0 6px 8px rgba(70,60,40,.25)) }
+  .gpiece.sel{ outline:3px dashed var(--blue); outline-offset:4px; border-radius:12px }
+  .gpiece.locked{ cursor:default; pointer-events:none }
+  .gpiece *{ pointer-events:none }
+  .gorder{ display:flex; align-items:center; justify-content:center; text-align:center; font-size:18px; font-weight:800; color:var(--ink); line-height:1.2; pointer-events:none }
+  .glbl{ display:flex; align-items:center; justify-content:center; text-align:center; font-size:15px; font-weight:800; color:var(--muted); line-height:1.2; pointer-events:none }
+  .gslot{ border:3px dashed var(--line); border-radius:12px; background:var(--card) }
+  .gart{ left:0; top:0; pointer-events:none }
+  /* 一張形體卡：上面是圖，下面是名字 */
+  .gso{ flex-direction:column; background:var(--card); border:3px solid var(--line); border-radius:12px; padding:2px }
+  .gso svg{ display:block; width:100%; height:calc(100% - 15px) }
+  .gso.noname svg{ height:100% }
+  .gso .gname{ font-size:12px; font-weight:800; line-height:1.1; color:var(--ink); white-space:nowrap }
+  .gso.placed{ border-color:var(--green); background:var(--green-soft) }
+  .gbinlbl{ position:absolute; left:0; right:0; top:4px; text-align:center; font-size:16px; font-weight:800; color:var(--blue); pointer-events:none }
+  /* 第 3 關：滾道、旗子、轉一轉的按鈕 */
+  .glane{ background:#F1E7D6; border-top:6px solid #C9A97A; border-radius:8px }
+  .gturn{ border:3px solid var(--line); border-radius:14px; background:var(--card); font-size:22px; cursor:pointer; padding:0;
+    display:flex; align-items:center; justify-content:center }
+  .gturn:disabled{ opacity:.35; cursor:default }
+  /* 第 4 關：塔的每一層 */
+  .gcellbox{ border:2px dashed #DCD5C6; border-radius:8px; pointer-events:none }
+  .gcellbox.next{ border:3px dashed var(--blue); background:rgba(59,125,216,.06) }
+  .gtable{ background:#C9C4B8; border-radius:3px; pointer-events:none }
+  /* 第 5 關：形體的格子、貼紙 */
+  .gbox{ background:var(--card); border:3px dashed var(--line); border-radius:12px; display:flex; flex-direction:column; align-items:center; padding-top:4px }
+  .gbox svg{ width:84px; height:76px; pointer-events:none }
+  .gbox .gname{ font-size:13px; font-weight:800; pointer-events:none }
+  .gbox .gdots{ display:flex; flex-wrap:wrap; justify-content:center; gap:2px; width:88px; min-height:30px; margin-top:4px; pointer-events:none }
+  .gstk{ width:13px; height:13px; border-radius:50%; background:#E8871E; box-shadow:inset 0 0 0 2px #9A5A12 }
+  .gsticker{ font-size:30px; background:var(--card); border:3px solid var(--line); border-radius:14px }
+  .gaction{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap }
+  .gdotn{ display:flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%;
+    background:var(--green); color:#fff; font-size:14px; font-weight:800; pointer-events:none }
+  .gtrail, .gorder, .glbl, .gbinlbl, #gMsg{ font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif }
 </style>
 </head>
 <body>
@@ -234,21 +273,18 @@
   <!-- 6. 小遊戲 -->
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
-    <h2 data-i18n="s6h2">猜猜我是誰</h2>
-    <p class="lead" data-i18n="s6lead">先數平平的面，再看它會不會滾。</p>
+    <h2 data-i18n="s6h2">立體形體大挑戰</h2>
+    <p class="lead" data-i18n="s6lead">點頂點、分一分、滾一滾、疊一疊、貼一貼 —— 五關都過就是立體形體小高手！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
-        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+        <span><span data-i18n="gScoreLabel">星星</span> <b id="gScore">0</b> ⭐</span>
       </div>
-      <p class="hopline" id="gAskLine"></p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
-      </div>
-      <div class="gopts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -309,24 +345,6 @@
   /* 範例 2 只數正方體和長方體 —— 這兩個才有直直的邊和頂點可以數。 */
   var COUNT_SOLIDS = ['cube','cuboid'];
   var PARTS = ['flat','edge','vert'];
-
-  /* 遊戲：五關，每一關的線索是「結構化的條件」，不是一句寫死的話。
-     判準只用 flat 與 sameFaces —— 這兩個條件在五個立體形體裡剛好各自唯一，
-     檢查腳本會從 SOLIDS 重算一次「有幾個立體形體符合」，必須剛好 1 個。
-     extra 是線索裡多講的那一句（會滾／疊不住／一樣大），也要和真值一致。 */
-  var ROUNDS = [
-    { flat:6, sameFaces:true,  extra:'same',      opts:['cube','cuboid','cyl'],  ans:0 },
-    { flat:0, sameFaces:null,  extra:'roll',      opts:['cyl','ball','cube'],    ans:1 },
-    { flat:2, sameFaces:null,  extra:'rollstack', opts:['ball','cone','cyl'],    ans:2 },
-    { flat:1, sameFaces:null,  extra:'point',     opts:['cone','ball','cuboid'], ans:0 },
-    { flat:6, sameFaces:false, extra:'notsame',   opts:['cube','cuboid','cyl'],  ans:1 }
-  ];
-  /* 線索符合誰？只看 flat 與 sameFaces（sameFaces 為 null 表示不看）。 */
-  function clueMatches(r, s){
-    if (s.flat !== r.flat) return false;
-    if (r.sameFaces !== null && s.sameFaces !== r.sameFaces) return false;
-    return true;
-  }
 
   /* ---------- 畫圖：只用 rect／polygon／line／ellipse／circle 五種基本圖形 ----------
      沒有 <path>，所以每一個元素的右緣都算得出來，檢查腳本才驗得到
@@ -446,6 +464,189 @@
     return s;
   }
 
+  /* ---------- 小遊戲「立體形體大挑戰」的題庫與版面（§六之五：五關五種玩法） ----------
+     版面一律是畫板上的 px（畫板寬 GAME_W），位置一律記「中心點」。拿得起來的東西至少 GPICK × GPICK
+     （375px 手機上畫板能用 289px 寬，縮成約 0.963 倍，48 → 46.2）。GPAD：放開的點離格子的方框多遠還算放進去。
+     立體形體是實物，所以每一關都照「它是誰」判斷（SOLIDS 的 flat／curved／stable／rolls／stackTop），
+     不照「它長在畫面的哪裡」判斷。 */
+  var GAME_W = 300, GPICK = 48, GPAD = 6;
+  var GAME_ORDER = ['point', 'sort', 'roll', 'stack', 'sticker'];
+
+  /* 第 1 關 點一點（範例 2：看不到的那一邊也要數）：畫一個正方體或長方體（和範例 2 一樣，看不到的三條邊畫虛線），
+     沒有任何標記 —— 自己點出所有的頂點（尖尖的角）。這一關用點的。往後的方向 dir 有兩種（往右上、往左上），
+     看不到的那一個頂點就換邊（dir ＝ 1 是後左下，dir ＝ −1 是後右下）。
+     點到邊或面 → 說那是什麼，算一次錯；點到空白處、點過的再點 → 不動。
+     頂點的拿取範圍半徑 POINT_CORNER（24 → 直徑 48），兩個頂點最近也隔 64（往後那條邊 50 × 40），不會重疊。
+     「點到邊」只用來說為什麼（POINT_EDGE 以內），不需要拿取範圍。
+     ⚠️ 這一關只找頂點，不找邊：邊的拿取帶要 ≥ 44px 寬，可是看不到的那兩條虛線穿過前面那一面的中間 ——
+     帶子一寬，點在前面那一面正中央也會被算成「找到後面那一條邊」，等於點錯也過關。 */
+  var GAME_POINT = [ { s:'cube', dir:1 }, { s:'cube', dir:-1 }, { s:'cuboid', dir:1 }, { s:'cuboid', dir:-1 } ];
+  /* POINT_TOP：上面那一行題目的高度（兩行字也放得下）；整張圖畫在它下面，連頂點的拿取範圍都不會碰到題目（驗證者抓到：英文題目換成兩行，點到的頂點蓋住了字） */
+  var POINT_H = 270, POINT_TOP = 54, POINT_CORNER = 24, POINT_EDGE = 14, POINT_SLIP = 10;
+  function pointGeom(id, dir){
+    var W = (id === 'cube') ? 120 : 160, H = (id === 'cube') ? 120 : 90, dx = 50 * dir, dy = 40;
+    var x0 = (GAME_W - W - Math.abs(dx)) / 2 + (dir < 0 ? -dx : 0), y0 = POINT_TOP + (POINT_H - POINT_TOP - H - dy) / 2 + dy;
+    var A = [x0, y0 + H], B = [x0 + W, y0 + H], C = [x0 + W, y0], D = [x0, y0];
+    var A2 = [A[0] + dx, A[1] - dy], B2 = [B[0] + dx, B[1] - dy], C2 = [C[0] + dx, C[1] - dy], D2 = [D[0] + dx, D[1] - dy];
+    /* 頂點 0~7 ＝ 前左下、前右下、前右上、前左上、後左下、後右下、後右上、後左上；看不到的是後面下方靠「往後那一邊的反方向」那一個 */
+    var corners = [A, B, C, D, A2, B2, C2, D2];
+    var hid = dir > 0 ? 4 : 5;
+    var hiddenCorner = corners.map(function(c, i){ return i === hid; });
+    /* 邊：[頂點, 頂點, 看不到?] —— 碰到看不到的那個頂點的三條邊就是看不到的 */
+    var edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]].map(function(e){
+      return [e[0], e[1], e[0] === hid || e[1] === hid];
+    });
+    /* 看得到的三個面：前、上、旁邊（往右上時是右邊，往左上時是左邊） */
+    var faces = [[A, B, C, D], [D, C, C2, D2], dir > 0 ? [B, C, C2, B2] : [A, D, D2, A2]];
+    return { W:W, H:H, dx:dx, dy:dy, x0:x0, y0:y0, corners:corners, hiddenCorner:hiddenCorner, edges:edges, faces:faces };
+  }
+  function segDist(p, a, b){
+    var vx = b[0] - a[0], vy = b[1] - a[1], wx = p.x - a[0], wy = p.y - a[1];
+    var t = (vx * wx + vy * wy) / (vx * vx + vy * vy);
+    t = Math.max(0, Math.min(1, t));
+    var ex = a[0] + t * vx - p.x, ey = a[1] + t * vy - p.y;
+    return Math.sqrt(ex * ex + ey * ey);
+  }
+  function inPoly(p, poly){
+    var inside = false;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++){
+      var xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+      if (((yi > p.y) !== (yj > p.y)) && (p.x < (xj - xi) * (p.y - yi) / (yj - yi) + xi)) inside = !inside;
+    }
+    return inside;
+  }
+  /* 點在畫板上的 p：它是哪一個頂點／一條邊／一個面／什麼都不是？
+     頂點挑「最近的」那一個，不是挑陣列裡第一個在範圍內的。 */
+  function pointHit(g, p){
+    var i, bc = -1, bcd = Infinity, bed = Infinity;
+    for (i = 0; i < g.corners.length; i++){
+      var dx = p.x - g.corners[i][0], dy = p.y - g.corners[i][1], dd = Math.sqrt(dx * dx + dy * dy);
+      if (dd < bcd){ bcd = dd; bc = i; }
+    }
+    if (bcd <= POINT_CORNER) return { kind:'vert', k:bc };
+    for (i = 0; i < g.edges.length; i++) bed = Math.min(bed, segDist(p, g.corners[g.edges[i][0]], g.corners[g.edges[i][1]]));
+    if (bed <= POINT_EDGE) return { kind:'edge' };
+    for (i = 0; i < g.faces.length; i++) if (inPoly(p, g.faces[i])) return { kind:'face' };
+    return null;
+  }
+
+  /* 第 2 關 分一分（範例 1、4：平平的面有幾個）：五張形體卡放進「0 個／1 個／2 個／6 個」四格。
+     放錯 → 彈回＋說它真正有幾個平平的面、為什麼（彎彎的不算、看不到的也算）。6 個那一格要放兩張（正方體、長方體）。
+     四格只隔 SORT_BIN.gap（4），比 2 × GPAD 小 —— 吸附範圍重疊，挑最近的。 */
+  var SORT_VALUES = [0, 1, 2, 6];
+  var SORT_H = 300;
+  var SORT_BIN = { y:34, w:70, h:150, gap:4, top:36, placedW:56, placedH:50 };
+  var SORT_CARD = { y:248, w:54, h:72, step:58 };
+  function sortBinX(k){ var x0 = (GAME_W - SORT_VALUES.length * SORT_BIN.w - (SORT_VALUES.length - 1) * SORT_BIN.gap) / 2; return x0 + SORT_BIN.w / 2 + k * (SORT_BIN.w + SORT_BIN.gap); }
+
+  /* 第 3 關 滾一滾（範例 3：讓彎彎的面碰到桌子，一推才會滾）：三個形體 —— 一個方塊（正方體或長方體）、
+     一個站著的圓柱、一顆球 —— 把會滾的推到滾道上，滾到旗子那裡。每一個下面都有一顆 🔄，按一下轉一下：
+     圓柱站著 ↔ 躺下來，長方體躺平 ↔ 立起來，正方體、球轉了還是一樣。
+     收不收只看「現在碰到桌子的是哪一種面」：彎彎的面才收（rollsOnTable）。站著的圓柱、方塊 → 彈回＋為什麼。
+     圓錐不放進這一關：它躺下來是繞著尖點轉圈圈，不會直直滾到旗子那裡（桌上看起來就不是那樣）。 */
+  var GAME_ROLL = ['cube', 'cuboid'];
+  var ROLL_H = 320;
+  var ROLL_PIECE = { y:86, w:80, h:72, xs:[52, 150, 248], placedW:64, placedH:58 };
+  var ROLL_TURN = { y:150, size:48 };
+  var ROLL_LANE = { x:8, y:216, w:284, h:92, spots:[190, 256] };
+  var ROLL_START = { cube:'flat', cuboid:'flat', cyl:'stand', ball:'any' };
+  function turnOf(id, o){
+    if (id === 'cyl') return o === 'stand' ? 'lie' : 'stand';
+    if (id === 'cuboid') return o === 'flat' ? 'up' : 'flat';
+    return o;
+  }
+  /* 現在碰到桌子的是平平的面還是彎彎的面 */
+  function downFace(id, o){ return (id === 'ball' || (id === 'cyl' && o === 'lie')) ? 'curved' : 'flat'; }
+  function rollsOnTable(id, o){ return downFace(id, o) === 'curved'; }
+
+  /* 第 4 關 疊一疊（範例 3：下面平平的才放得穩，上面也平平的才疊得上去）：從桌子往上疊 4 層，托盤有五個。
+     一次只能放「下一層」：放到上面還空著的那幾格（半空中）→ 彈回＋提醒「從桌子往上一層一層疊」，不算錯
+     （四格都畫了虛線框，放進上面那一格比較像手滑，不是不懂誰疊得上去 —— codex 第一輪建議算錯，沒有採用）。第 1～3 層要「下面平、上面也平」（stackTop）；
+     最上面那一層只要下面平（stable）。球放哪一層都 → 彈回；圓錐放在第 1～3 層 → 彈回（上面尖尖的，再也疊不上去）。
+     所以一定疊得完：三個上面平平的放下面三層、圓錐放最上面，球留在托盤。 */
+  var STACK_H = 330, STACK_LEVELS = 4;
+  var STACK_CELL = { w:84, h:56 }, STACK_X = 222, STACK_TABLE = 312;
+  var STACK_PIECE = { w:72, h:64 };
+  var STACK_TRAY = [[46, 82], [126, 82], [46, 160], [126, 160], [86, 238]];
+  function stackLevelY(k){ return STACK_TABLE - STACK_CELL.h / 2 - k * STACK_CELL.h; }
+  /* 第 level 層（0 是最下面）收不收 id？null ＝ 收；'ball' ＝ 下面不平、站不住；'top' ＝ 上面不平、上面疊不上去 */
+  function stackWhy(id, level){
+    var s = solidById(id);
+    if (!s.stable) return 'ball';
+    if (level < STACK_LEVELS - 1 && !s.stackTop) return 'top';
+    return null;
+  }
+
+  /* 第 5 關 貼一貼（範例 2、試題進階：每一個平平的面一張，彎彎的不算、看不到的也算，幾個加起來）：
+     畫兩三個形體，每一個平平的面貼一張貼紙（貼紙拿不完）。貼滿了還貼、貼在球上 → 彈回＋為什麼；
+     自己按「貼好了」：還有沒貼滿的 → 說哪一個還差（算一次錯）；什麼都沒貼就按 → 只提醒、不算錯。
+     每一組都有彎彎的面（圓柱／圓錐／球），所以「彎彎的面也貼」一定會被擋下來。三格只隔 4 —— 吸附範圍重疊。 */
+  var GAME_STICK = [ ['cube', 'cyl'], ['cyl', 'cyl', 'ball'], ['cuboid', 'cone'], ['cube', 'ball', 'cone'], ['cyl', 'cone', 'cyl'], ['cuboid', 'cyl'] ];
+  var STICK_H = 290;
+  var STICK_BOX = { y:34, w:92, h:150, gap:4 };
+  var STICK_SRC = { y:244, size:64 };
+  function stickBoxX(n, i){ var x0 = (GAME_W - n * STICK_BOX.w - (n - 1) * STICK_BOX.gap) / 2; return x0 + STICK_BOX.w / 2 + i * (STICK_BOX.w + STICK_BOX.gap); }
+
+  /* 遊戲裡的形體圖（第 2～5 關）：畫布 140 × 126，沒有桌面線（滾道、塔、格子自己畫桌子）。
+     o 是擺法：圓柱 'stand'／'lie'，長方體 'flat'／'up'，其他照 solidSVG。 */
+  function pieceSVG(id, o){
+    var fill = '#FDF0E0', edge = '#E8871E', b = 118;
+    var s = '<svg viewBox="0 0 140 126" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
+    var pts = function(arr){ return arr.map(function(p){ return p.join(','); }).join(' '); };
+    if (id === 'cube' || id === 'cuboid'){
+      var up = (id === 'cuboid' && o === 'up');
+      var W = (id === 'cube') ? 64 : (up ? 46 : 88), H = (id === 'cube') ? 64 : (up ? 88 : 46);
+      var dx = 24, dy = 20, x0 = (140 - W - dx) / 2, y0 = b - H;
+      var A = [x0, y0 + H], B = [x0 + W, y0 + H], C = [x0 + W, y0], D = [x0, y0];
+      var B2 = [B[0] + dx, B[1] - dy], C2 = [C[0] + dx, C[1] - dy], D2 = [D[0] + dx, D[1] - dy];
+      s += '<polygon points="' + pts([A, B, C, D]) + '" fill="' + fill + '" stroke="' + edge + '" stroke-width="3"/>';
+      s += '<polygon points="' + pts([D, C, C2, D2]) + '" fill="#FFF6E8" stroke="' + edge + '" stroke-width="3"/>';
+      s += '<polygon points="' + pts([B, C, C2, B2]) + '" fill="#F6E4CC" stroke="' + edge + '" stroke-width="3"/>';
+    } else if (id === 'cyl' && o === 'lie'){
+      /* 躺著的圓柱，從正面看（端面朝向我們、軸往畫面裡面）：彎彎的面貼著桌子，前面那一個圓是平平的面。
+         ⚠️ 不可以畫成側面（兩端的扁橢圓在左右、軸沿著滾道）—— 那樣往 🚩 推是順著軸推，會滑不會滾（驗證者抓到）。
+         往裡面的那一段縮得很短（10, −16）：比半徑短，而且往上比往旁邊多（codex：往旁邊比較多的話軸看起來還是沿著滾道）：一看就知道軸是往畫面裡，滾的方向（左右）和軸垂直。 */
+      s += '<ellipse cx="72" cy="72" rx="30" ry="30" fill="#F6E4CC" stroke="' + edge + '" stroke-width="3"/>';
+      s += '<polygon points="37,72 47,56 97,88 87,104" fill="#F6E4CC" stroke="none"/>';
+      s += '<line x1="37" y1="72" x2="47" y2="56" stroke="' + edge + '" stroke-width="3"/>';
+      s += '<line x1="87" y1="104" x2="97" y2="88" stroke="' + edge + '" stroke-width="3"/>';
+      s += '<ellipse cx="62" cy="88" rx="30" ry="30" fill="#FFF6E8" stroke="' + edge + '" stroke-width="3"/>';
+    } else if (id === 'cyl'){
+      s += '<ellipse cx="70" cy="108" rx="30" ry="10" fill="' + fill + '" stroke="' + edge + '" stroke-width="3"/>';
+      s += '<rect x="40" y="40" width="60" height="68" fill="' + fill + '" stroke="none"/>';
+      s += '<line x1="40" y1="40" x2="40" y2="108" stroke="' + edge + '" stroke-width="3"/>';
+      s += '<line x1="100" y1="40" x2="100" y2="108" stroke="' + edge + '" stroke-width="3"/>';
+      s += '<ellipse cx="70" cy="40" rx="30" ry="10" fill="#FFF6E8" stroke="' + edge + '" stroke-width="3"/>';
+    } else if (id === 'ball'){
+      s += '<circle cx="70" cy="82" r="36" fill="' + fill + '" stroke="' + edge + '" stroke-width="3"/>';
+      s += '<ellipse cx="70" cy="82" rx="13" ry="35" fill="none" stroke="#F0C99A" stroke-width="2"/>';
+    } else {
+      s += '<ellipse cx="70" cy="108" rx="32" ry="10" fill="' + fill + '" stroke="' + edge + '" stroke-width="3"/>';
+      s += '<polygon points="38,108 70,22 102,108" fill="' + fill + '" stroke="' + edge + '" stroke-width="3"/>';
+    }
+    return s + '</svg>';
+  }
+
+  /* 第 1 關的整張圖（畫板座標，不給 viewBox）：看得到的三個面、虛線的三條看不到的邊；
+     found 是已經點到的頂點（值是第幾個點到的）。 */
+  function pointSVG(g, found){
+    var edge = '#E8871E', pts = function(arr){ return arr.map(function(p){ return p.join(','); }).join(' '); };
+    var s = '<svg class="gart" width="' + GAME_W + '" height="' + POINT_H + '" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
+    var fills = ['#FDF0E0', '#FFF6E8', '#F6E4CC'];
+    g.faces.forEach(function(f, i){ s += '<polygon points="' + pts(f) + '" fill="' + fills[i] + '" stroke="' + edge + '" stroke-width="3"/>'; });
+    g.edges.forEach(function(e){
+      if (!e[2]) return;
+      var a = g.corners[e[0]], b = g.corners[e[1]];
+      s += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="' + edge + '" stroke-width="2" stroke-dasharray="6 4"/>';
+    });
+    g.corners.forEach(function(c, i){
+      if (!found[i]) return;
+      s += '<circle data-v="' + i + '" cx="' + c[0] + '" cy="' + c[1] + '" r="13" fill="#2F9E69" stroke="#FFFFFF" stroke-width="2"/>';
+      s += '<text x="' + c[0] + '" y="' + (c[1] + 5) + '" font-size="14" font-weight="800" text-anchor="middle" fill="#FFFFFF">' + found[i] + '</text>';
+    });
+    return s + '</svg>';
+  }
+
   /* ---------- i18n ---------- */
   var I18N = {
     zh: {
@@ -467,7 +668,7 @@
       s3h2:'誰會滾、誰疊得高', s3lead:'只要問兩句話：下面平不平？上面平不平？',
       s4h2:'五個一起看', s4lead:'一次出現一列，最後整張表就是這一課的重點。',
       s5h2:'檢查一下', s5lead:'點一下答案，馬上知道對不對！',
-      s6h2:'猜猜我是誰', s6lead:'先數平平的面，再看它會不會滾。',
+      s6h2:'立體形體大挑戰', s6lead:'點頂點、分一分、滾一滾、疊一疊、貼一貼 —— 五關都過就是立體形體小高手！',
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a>。',
@@ -571,7 +772,7 @@
           opts:['4 個','6 個','12 個','8 個'], ans:3,
           why:'上面四個角、下面四個角，一共 8 個頂點。' },
         { stem:'哪一個可以在桌上<strong>平順地滾來滾去</strong>，不會翻跟斗？',
-          opts:['🎲 骰子','🥛 牛奶盒','📚 書本','⚽ 皮球'], ans:3,
+          opts:['🎲 骰子','🧃 牛奶盒','📚 書本','⚽ 皮球'], ans:3,
           why:'皮球整個都是彎彎的面，往哪邊推都滾得順。另外三個只有平平的面，用力推會翻過邊倒下去，滾不順。' },
         { stem:'🎄 圓錐形的聖誕樹擺飾是圓錐。<br>它有幾個<strong>平平的面</strong>？',
           opts:['0 個','2 個','1 個','3 個'], ans:2,
@@ -600,49 +801,82 @@
           why:'那一片是圓形（平面圖形）。圓柱和球是立體形體，整個拿得起來。' }
       ],
 
-      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
-      gClueExtra:{
-        same:'，而且每一個面都是一樣大的正方形',
-        notsame:'，可是它們不是都一樣大',
-        rollstack:'，躺下來會滾，站起來可以疊',
-        point:'，上面尖尖的，沒有可以穩穩疊東西的平面',
-        roll:'，站不穩，輕輕一碰就滾走了'
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'星星',
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gAsks:{
+        point:'點一點：把要找的一個一個點出來（這一關用點的）。',
+        sort:'分一分：把每一張卡拖到它「平平的面」的個數。也可以先點卡、再點格子。',
+        roll:'滾一滾：把會滾的推到下面的滾道。按 🔄 可以把它轉一下。也可以先點它、再點滾道。',
+        stack:'疊一疊：從桌子往上疊 4 層，一次疊一層。也可以先點它、再點塔上的空格。',
+        sticker:'貼一貼：每一個平平的面貼一張貼紙，貼好了按「貼好了」。也可以先點貼紙、再點形體。'
       },
-      /* 線索的第三人稱說法。解釋一定要把「決定答案的那一句」再講一次 ——
-         光說「有 6 個平平的面」分不出正方體和長方體。 */
-      gClueWhy:{
-        same:'，六個面都是一樣大的正方形',
-        notsame:'，可是它們不是都一樣大',
-        rollstack:'，躺下來會滾、站起來可以疊',
-        point:'，上面尖尖的、沒有平平的頂面可以穩穩疊東西',
-        roll:'，所以站不穩，一推就滾走'
+      gHints:{
+        point:'策略：頂點是邊和邊碰在一起的尖尖的角。虛線是看不到的那一邊，三條虛線碰在一起的地方也是一個頂點。',
+        sort:'策略：平平的面是可以整片放在桌上的那一片。彎彎的面不算，看不到的背面、底面要算。',
+        roll:'策略：要讓彎彎的面碰到桌子，一推才會滾。平平的面貼著桌子，推了只會滑或翻倒。',
+        stack:'策略：下面平平的才放得穩；上面也平平的，上面才疊得上去。',
+        sticker:'策略：一個平平的面貼一張。彎彎的面不貼，看不到的面也要算。'
       },
-      gAsk:function(r){
-        var head = (r.flat === 0) ? '我一個平平的面都沒有' : ('我有 ' + this.flatWord(r.flat));
-        return '🕵️ 猜猜我是誰：' + head + this.gClueExtra[r.extra] + '。';
+      gStars:function(n){ return '⭐ +' + n; },
+      gClear:'按「下一關」繼續。',
+      gWin:function(s){ return '五關全過！一共 ' + s + ' 顆星星 🏆 按「重新開始」再玩一次。'; },
+
+      gPointTask:function(i){ return '找出' + this.solids[i].name + '所有的頂點（尖尖的角）'; },
+      gPointNow:function(got){ return '找到 ' + got + ' 個頂點'; },
+      gPointEdge:'這裡是直直的邊。頂點是邊和邊碰在一起的尖尖的角。',
+      gPointFace:'這裡是一個平平的面。頂點是尖尖的角，在面的角落上。',
+      gPoint2:function(left, hid){ return '還有 ' + left + ' 個頂點沒點到' + (hid ? '，其中 ' + hid + ' 個在三條虛線碰在一起的地方' : '') + '。'; },
+      gPointDone:function(i, n){ return '找齊了！' + this.solids[i].name + '有 ' + n + ' 個頂點 —— 虛線那邊看不到的也算。'; },
+
+      gSortHead:'平平的面有幾個？',
+      gSortBin:function(v){ return v + ' 個'; },
+      gFlatWhy:[ '上、下、前、後、左、右，一共 6 個', '上、下、前、後、左、右，一共 6 個', '上面和下面一共 2 個，旁邊彎彎的面不算',
+                 '整個都是彎彎的面，一個平平的面都沒有', '只有底下那 1 個，旁邊彎彎的面不算' ],
+      gSortWrong:function(i, v){ return this.solids[i].name + '不是 ' + v + ' 個：' + this.gFlatWhy[i] + '。'; },
+      gSortNow:function(n){ return '分好了 ' + n + ' / 5 張'; },
+      gSort2:function(i){ return this.solids[i].name + '：' + this.gFlatWhy[i] + '。'; },
+      gSortDone:'分好了！球 0 個、圓錐 1 個、圓柱 2 個，正方體和長方體都是 6 個平平的面。',
+
+      gRollAsk:'哪一個推了會滾？',
+      gRollTurn:function(i, face){
+        return this.solids[i].name + (face === 'curved' ? '：現在是彎彎的面碰到桌子' : '：現在是平平的面碰到桌子');
       },
-      gOpt:function(id){
-        var i = SOLIDS.indexOf(solidById(id));
-        return this.nameOf(i);
+      gRollStand:'圓柱站著的時候，下面是平平的面貼著桌子，推了可能會滑、也可能會倒，就是不會滾。先按 🔄 讓它躺下來。',
+      gRollBlock:function(i){ return this.solids[i].name + '只有平平的面，怎麼轉都是平平的面碰到桌子，推了可能會滑、也可能翻過邊倒下去，就是滾不順。'; },
+      gRolled:function(i){ return this.solids[i].name + '滾到 🚩 了！'; },
+      gRoll2:{
+        cylStand:'圓柱現在站著：先按它下面的 🔄 讓它躺下來，再推到滾道。',
+        cylLie:'圓柱躺好了，彎彎的面碰到桌子 —— 把它推到滾道。',
+        ball:'球怎麼放都是彎彎的面碰到桌子，直接推到滾道。'
       },
-      gHintBtn:'💡 提示',
-      gHint1:'策略提示：先數它有幾個平平的面，再看它會不會滾。',
-      gHint2:function(r){
-        var i = SOLIDS.indexOf(solidById(r.opts[r.ans]));
-        var head = (r.flat === 0) ? '一個平平的面都沒有' : this.flatWord(r.flat);
-        return '再想一想：' + head + '的，生活裡就像' + this.solids[i].real + '。';
+      gRollDone:function(i){
+        return '圓柱躺下來、球本來就是圓的 —— 彎彎的面碰到桌子，一推就滾。' + this.solids[i].name + '只有平平的面，留在原地。';
       },
-      gWhy:function(r){
-        var i = SOLIDS.indexOf(solidById(r.opts[r.ans]));
-        var head = (r.flat === 0) ? '一個平平的面都沒有' : ('有 ' + this.flatWord(r.flat));
-        return this.solids[i].name + head + this.gClueWhy[r.extra] + '，就像' + this.solids[i].real + '。';
+
+      gStackNow:function(n){ return '疊了 ' + n + ' / 4 層'; },
+      gStackBall:'球沒有平平的面，放上去會滾下來。',
+      gStackFloat:'要從桌子往上，一層一層疊：先放藍色框框的那一格。',
+      gStackCone:'圓錐上面尖尖的，放了它，上面就疊不上去了。把它留到最上面。',
+      gStack2:function(level){
+        return level < 3 ? ('第 ' + (level + 1) + ' 層：找一個下面平平、上面也平平的。')
+                         : '最上面那一層：下面平平的就站得住，上面尖尖的也沒關係。';
       },
-      gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:function(v){ return '答對了！＋20 分！答案就是 ' + v + '。'; },
-      gCorrectRetry:function(v){ return '答對了！＋10 分。答案就是 ' + v + '。'; },
-      gTryAgain:'再看一次線索：它有幾個平平的面？',
-      gClear:'按「下一關」繼續猜。',
-      gWin:function(score){ return '五關全過！最後得分 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; }
+      gStackDone:'疊了 4 層！正方體、長方體、圓柱上面都是平平的，才疊得上去；圓錐上面尖尖的，只能放最上面；球放哪裡都站不住。',
+
+      gStickBtn:'貼好了',
+      gStickNow:function(n){ return '一共貼了 ' + n + ' 張'; },
+      gStickBall:'球沒有平平的面；彎彎的面不貼貼紙。',
+      gStickFull:function(i){
+        var s = SOLIDS[i];
+        return this.solids[i].name + '只有 ' + s.flat + ' 個平平的面，都貼好了' + (s.curved ? '；彎彎的面不貼' : '') + '。';
+      },
+      gStickNote:[ '：看不到的後面、左邊、下面也要算', '：看不到的後面、左邊、下面也要算', '：上面和下面都要貼', '', '：底下那一個圓圓的平面也要貼' ],
+      gStickShort:function(i, have){
+        return this.solids[i].name + '有 ' + SOLIDS[i].flat + ' 個平平的面，現在只貼了 ' + have + ' 張' + this.gStickNote[i] + '。';
+      },
+      gStickEmpty:'先把貼紙拖到形體上，一個平平的面貼一張。',
+      gStick2:function(i, left){ return i < 0 ? '都貼滿了，按「貼好了」。' : (this.solids[i].name + '還可以再貼 ' + left + ' 張。'); },
+      gStickDone:function(parts, total){ return '貼好了！' + parts.join(' ＋ ') + ' ＝ ' + total + ' 個平平的面。'; }
     },
     en: {
       langAria:'Switch language',
@@ -663,7 +897,7 @@
       s3h2:'Who Rolls, and Who Stacks Up High', s3lead:'Just two questions: is the bottom flat? is the top flat?',
       s4h2:'All Five Side by Side', s4lead:'One row at a time — the finished table is the whole lesson.',
       s5h2:'Quick Check', s5lead:'Tap an answer and find out right away!',
-      s6h2:'Guess Who I Am', s6lead:'Count the flat faces first, then check whether it rolls.',
+      s6h2:'The Solid Shapes Challenge', s6lead:'Tap the corners, sort, roll, stack and stick — clear all five rounds to become a solid-shapes expert!',
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a>.',
@@ -766,7 +1000,7 @@
           opts:['4','6','12','8'], ans:3,
           why:'Four corners on the top and four on the bottom — 8 corners in all.' },
         { stem:'Which one <strong>rolls smoothly</strong> in any direction, instead of tipping over an edge?',
-          opts:['🎲 A die','🥛 A milk carton','📚 A book','⚽ A ball'], ans:3,
+          opts:['🎲 A die','🧃 A milk carton','📚 A book','⚽ A ball'], ans:3,
           why:'A ball is curved all over, so it rolls smoothly whichever way you push it. The other three have only flat faces — a hard push tips them over an edge instead of rolling them.' },
         { stem:'🎄 A cone-shaped Christmas tree is a cone.<br>How many <strong>flat faces</strong> does it have?',
           opts:['0','2','1','3'], ans:2,
@@ -795,47 +1029,89 @@
           why:'That face is a circle — a flat shape. A cylinder and a sphere are solid shapes you pick up whole.' }
       ],
 
-      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
-      gClueExtra:{
-        same:', and every one of them is a square of the same size',
-        notsame:', but they are not all the same size',
-        rollstack:', I roll when I lie down, and I stack when I stand up',
-        point:', and my top is a sharp point, so there is no flat top to stack on',
-        roll:', I do not sit stably, and one gentle nudge sends me rolling away'
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Stars',
+      gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Restart',
+      gAsks:{
+        point:'Tap it: find every one of them on the picture (this round is taps only).',
+        sort:'Sort it: drag each card to its number of flat faces. Or tap a card, then tap a box.',
+        roll:'Roll it: push the ones that roll onto the track below. 🔄 turns a shape. Or tap a shape, then tap the track.',
+        stack:'Stack it: build a tower 4 levels high, one level at a time. Or tap a shape, then tap the empty space on the tower.',
+        sticker:'Stick it: one sticker on every flat face, then press “Done”. Or tap the sticker, then tap a shape.'
       },
-      gClueWhy:{
-        same:', and all six are squares of the same size',
-        notsame:', but they are not all the same size',
-        rollstack:', it rolls lying down and stacks standing up',
-        point:', and its top is a sharp point with no flat top for stable stacking',
-        roll:', so it does not sit stably and rolls easily when nudged'
+      gHints:{
+        point:'Strategy: a corner is the pointy spot where edges meet. The dashed lines are the side you cannot see — where the three dashed lines meet is a corner too.',
+        sort:'Strategy: a flat face is a part that can sit flat on the table. Curved faces do not count; the back and bottom you cannot see do.',
+        roll:'Strategy: a shape rolls when a curved face touches the table. With a flat face on the table it only slides or tips over.',
+        stack:'Strategy: a flat bottom makes it stand still; a flat top lets something else go on top.',
+        sticker:'Strategy: one sticker per flat face. No stickers on curved faces; the faces you cannot see count too.'
       },
-      gAsk:function(r){
-        var head = (r.flat === 0) ? 'I have no flat faces at all' : ('I have ' + this.flatWord(r.flat));
-        return '🕵️ Guess who I am: ' + head + this.gClueExtra[r.extra] + '.';
+      gStars:function(n){ return '⭐ +' + n; },
+      gClear:'Press “Next round” to keep going.',
+      gWin:function(s){ return 'All 5 rounds cleared! ' + s + ' stars in total 🏆 Press “Restart” to play again.'; },
+
+      gPointTask:function(i){ return 'Find every corner of the ' + this.solids[i].name; },
+      gPointNow:function(got){ return 'Found ' + got + (got === 1 ? ' corner' : ' corners'); },
+      gPointEdge:'That is a straight edge. A corner is the pointy spot where edges meet.',
+      gPointFace:'That is a flat face. A corner is a pointy spot at the corner of a face.',
+      gPoint2:function(left, hid){
+        return left + (left === 1 ? ' corner' : ' corners') + ' still to find' + (hid ? ' — ' + hid + ' of them ' + (hid === 1 ? 'is' : 'are') + ' where the three dashed lines meet' : '') + '.';
       },
-      gOpt:function(id){
-        var i = SOLIDS.indexOf(solidById(id));
-        return this.nameOf(i);
+      gPointDone:function(i, n){ return 'All found! A ' + this.solids[i].name + ' has ' + n + ' corners — the one on the hidden side counts too.'; },
+
+      gSortHead:'How many flat faces?',
+      gSortBin:function(v){ return String(v); },
+      gFlatWhy:[ 'top, bottom, front, back, left and right make 6', 'top, bottom, front, back, left and right make 6',
+                 'the top and the bottom make 2, and the curved side does not count', 'it is curved all over, with no flat face at all',
+                 'there is just the 1 underneath, and the curved side does not count' ],
+      gSortWrong:function(i, v){ return 'Not ' + v + ' for the ' + this.solids[i].name + ': ' + this.gFlatWhy[i] + '.'; },
+      gSortNow:function(n){ return 'Sorted ' + n + ' / 5 cards'; },
+      gSort2:function(i){ return 'The ' + this.solids[i].name + ': ' + this.gFlatWhy[i] + '.'; },
+      gSortDone:'All sorted! Sphere 0, cone 1, cylinder 2, and the cube and the cuboid both have 6 flat faces.',
+
+      gRollAsk:'Which ones roll when pushed?',
+      gRollTurn:function(i, face){
+        return 'The ' + this.solids[i].name + (face === 'curved' ? ' now has a curved face on the table' : ' now has a flat face on the table');
       },
-      gHintBtn:'💡 Hint',
-      gHint1:'Strategy hint: count the flat faces first, then check whether it rolls.',
-      gHint2:function(r){
-        var i = SOLIDS.indexOf(solidById(r.opts[r.ans]));
-        var head = (r.flat === 0) ? 'no flat faces at all' : this.flatWord(r.flat);
-        return 'Think again: the one with ' + head + ' is like ' + this.solids[i].real + ' at home.';
+      gRollStand:'Standing up, the cylinder has a flat face on the table, so a push may slide it or tip it over, but it will not roll. Press 🔄 to lay it down first.',
+      gRollBlock:function(i){ return 'The ' + this.solids[i].name + ' has only flat faces: however you turn it, a flat face is on the table, so a push may slide it or tip it over an edge, but it will not roll smoothly.'; },
+      gRolled:function(i){ return 'The ' + this.solids[i].name + ' rolled to the 🚩!'; },
+      gRoll2:{
+        cylStand:'The cylinder is standing up: press the 🔄 under it to lay it down, then push it onto the track.',
+        cylLie:'The cylinder is lying down with its curved face on the table — push it onto the track.',
+        ball:'However a sphere sits, a curved face is on the table — push it straight onto the track.'
       },
-      gWhy:function(r){
-        var i = SOLIDS.indexOf(solidById(r.opts[r.ans]));
-        var head = (r.flat === 0) ? 'has no flat faces at all' : ('has ' + this.flatWord(r.flat));
-        return 'A ' + this.solids[i].name + ' ' + head + this.gClueWhy[r.extra] + ' — just like ' + this.solids[i].real + '.';
+      gRollDone:function(i){
+        return 'The cylinder lying down and the round sphere both have a curved face on the table, so a push rolls them. The ' + this.solids[i].name + ' has only flat faces, so it stays put.';
       },
-      gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst:function(v){ return 'Correct on the first try! +20 points! The answer is ' + v + '.'; },
-      gCorrectRetry:function(v){ return 'Correct! +10 points. The answer is ' + v + '.'; },
-      gTryAgain:'Read the clue again: how many flat faces does it have?',
-      gClear:'Press “Next round” to keep guessing.',
-      gWin:function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; }
+
+      gStackNow:function(n){ return 'Levels stacked: ' + n + ' / 4'; },
+      gStackBall:'A sphere has no flat face, so it would roll off.',
+      gStackFloat:'Build up from the table, one level at a time: fill the blue space first.',
+      gStackCone:'A cone has a pointy top, so nothing could be stacked on it. Save it for the very top.',
+      gStack2:function(level){
+        return level < 3 ? ('Level ' + (level + 1) + ': pick one that is flat at the bottom and flat on top too.')
+                         : 'The top level: a flat bottom is enough to stand still, so a pointy top is fine here.';
+      },
+      gStackDone:'4 levels high! The cube, the cuboid and the cylinder have flat tops, so things stack on them; the cone has a pointy top, so it only goes at the very top; the sphere cannot stand anywhere.',
+
+      gStickBtn:'Done',
+      gStickNow:function(n){ return 'Stickers so far: ' + n; },
+      gStickBall:'A sphere has no flat faces; curved faces do not get stickers.',
+      gStickFull:function(i){
+        var s = SOLIDS[i];
+        return 'The ' + this.solids[i].name + ' has only ' + this.flatWord(s.flat) + ', and ' + (s.flat === 1 ? 'it already has its sticker' : 'they all have stickers') +
+               (s.curved ? ' — no stickers on the curved face' : '') + '.';
+      },
+      gStickNote:[ ' — the back, left and bottom you cannot see count too', ' — the back, left and bottom you cannot see count too',
+                   ' — the top and the bottom both need one', '', ' — the round flat face underneath needs one' ],
+      gStickShort:function(i, have){
+        return 'The ' + this.solids[i].name + ' has ' + this.flatWord(SOLIDS[i].flat) + ', but only ' + have + (have === 1 ? ' sticker' : ' stickers') + ' so far' + this.gStickNote[i] + '.';
+      },
+      gStickEmpty:'Drag the sticker onto a shape first — one sticker for each flat face.',
+      gStick2:function(i, left){
+        return i < 0 ? 'Every flat face has a sticker — press “Done”.' : ('The ' + this.solids[i].name + ' can take ' + left + (left === 1 ? ' more sticker.' : ' more stickers.'));
+      },
+      gStickDone:function(parts, total){ return 'All stuck! ' + parts.join(' + ') + ' = ' + total + ' flat faces.'; }
     }
   };
 
@@ -1118,12 +1394,20 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：猜猜我是誰 ---------- */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ---------- 6. 小遊戲：立體形體大挑戰 —— 五關、五種玩法（點、分、滾、疊、貼） ----------
+     設計原則見 docs/teaching-framework.md §六之五。二年級是低年級（§三）：不扣分、不會失敗。
+     放錯（概念錯）→ 彈回原位＋一句為什麼，算一次錯；放到空白處 → 靜靜彈回，不算錯。
+     星星：這一關沒犯錯 2 顆、犯過錯 1 顆（只是少拿，從不倒扣）。
+     每個拖拉也可以「先點東西、再點目的地」；第 1 關（點一點）沒有拖拉：點一下畫面就是指出一個，
+     那一關的說明有寫。第 3 關的 🔄 是另一顆按鈕，不是點形體本身，所以點形體照樣是「選起來」。
+     題庫與版面常數在 i18n 前面的資料區。 */
+  var gRound = 0, gScore = 0, gMistakes = 0, gSolved = false, gCtx = {};
+  /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加星星）。二年級 length 的 codex 第一輪 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskLine = document.getElementById('gAskLine');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
@@ -1131,62 +1415,452 @@
   var elHint = document.getElementById('gHint');
   var hintLevel = 0;
 
+  /* ⚠️ 托盤一定要洗牌再畫：題庫裡的順序是固定的，照順序畫的話孩子玩兩次就會記住位置。
+     洗出來剛好由小到大（照 key 比，一樣大也算排好）的話，把前兩個對調（三年級 numbers 同一個做法）：
+     第 2 關的格子是 0、1、2、6 由小到大，托盤一開始就照「平平的面由少到多」排好，等於不用想就照順序拖 ——
+     正方體和長方體都是 6，「6、6」不管誰先都是排好的，所以比的是「≤」不是「＜」。用對調不用重洗：一定會結束；
+     第 2 關由小到大時前兩個一定是 0 和 1（不一樣），對調之後就不是由小到大。 */
+  function shuffle(arr, key){
+    var a = arr.slice();
+    key = key || function(x){ return x; };
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    var up = a.length > 1;
+    for (var i = 1; i < a.length; i++) if (!(key(a[i - 1]) <= key(a[i]))) up = false;
+    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece, .gturn')) return;   /* 🔄 是按鈕，不是目的地 */
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，任何地方的 pointerup／pointercancel
+     傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 格子（吸附目標）：記中心點與半寬、半高，給 nearestOpen() 用 */
+  function target(B, x, y, w, h, cls, more){
+    var t = { z:addZone(B, x, y, w, h, cls), cx:x + w / 2, cy:y + h / 2, hw:w / 2, hh:h / 2, done:false };
+    for (var key in more) t[key] = more[key];
+    return t;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.html !== undefined) el.innerHTML = o.html;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.resize = function(w, h){ P.w = w; P.h = h; el.style.width = w + 'px'; el.style.height = h + 'px'; };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (moved) P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */
+      /* 先點選、後來又直接拖走的那一塊：拖完（放好、彈回、capture 遺失都一樣）就不再是「選起來」的，
+         不然下一次點格子會多放一次（二年級 numbers 的 codex 第一、二輪） */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      /* 放在哪裡看那一塊的中心點（§六之五：位置一律記中心點），不是手指的位置 */
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 拿不完的東西（第 5 關的貼紙）點一下放好之後繼續選著，不用每一張都重點一次 */
+  function keepSelected(B, P){ if (!P.locked && !gSolved){ B.selected = P; P.el.classList.add('sel'); } }
+  /* 放進哪一格：放開時那一塊的中心點（點目的地時是點的位置）落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+  /* 一張形體卡的內容：圖＋名字 */
+  function soHTML(d, i, o){ return pieceSVG(SOLIDS[i].id, o) + '<span class="gname">' + d.solids[i].name + '</span>'; }
+
+  /* 星星（低年級：純收集、不扣分 —— §三、§六之五第 3 點）：這一關沒犯錯 2 顆、犯過錯 1 顆 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var stars = gMistakes === 0 ? 2 : 1;
+    gScore += stars; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var last = gRound === GAME_ORDER.length - 1;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gStars(stars) + '</span> ' + (last ? L().gWin(gScore) : L().gClear);
+    if (!last) gNext.disabled = false;
+  }
+  /* 放錯：說為什麼、記一次錯（只影響這一關拿 2 顆還是 1 顆），分數不動 */
+  function roundMiss(text){ gMistakes++; gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 第二層提示跟著畫面走：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  /* 按鈕列（第 5 關的「貼好了」）：放在畫板下面，不在畫板裡 */
+  function actionButton(text, onClick){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn'; b.textContent = text;
+    b.addEventListener('click', onClick);
+    row.appendChild(b);
+    gameStage.appendChild(row);
+    return b;
+  }
+
+  var RENDER = {
+    /* 第 1 關：點一點 —— 正方體或長方體（看不到的三條邊畫虛線），自己點出所有的頂點／直直的邊。
+       判斷點到什麼用資料區的 pointHit()（最近的頂點、最近的邊）；點到別的東西 → 說那是什麼（算錯）；
+       點到空白處、點過的再點 → 不動、不算錯。這一關沒有拖拉。 */
+    point: function(d){
+      var e = pick(GAME_POINT), si = SOLIDS.indexOf(solidById(e.s)), g = pointGeom(e.s, e.dir);
+      var n = g.corners.length, found = {}, got = 0;
+      var line = trailLine(d.gPointNow(0));
+      var B = makeBoard(GAME_W, POINT_H);
+      addZone(B, 0, 4, GAME_W, POINT_TOP - 6, 'gorder', d.gPointTask(si));
+      var art = addZone(B, 0, 0, GAME_W, POINT_H, 'gart');
+      function draw(){ art.innerHTML = pointSVG(g, found); }
+      draw();
+      function hiddenLeft(){ var c = 0; g.hiddenCorner.forEach(function(h, i){ if (h && !found[i]) c++; }); return c; }
+      gCtx.hint2 = function(){ return d.gPoint2(n - got, hiddenLeft()); };
+      /* 這一關只收「點一下」：按下去和放開的地方差超過 POINT_SLIP，就是拖過去的，不算點（codex 第一輪） */
+      var downAt = null;
+      B.el.addEventListener('pointerdown', function(ev){ downAt = B.toBoard(ev); });
+      B.el.addEventListener('click', function(ev){
+        if (gSolved) return;
+        var p = B.toBoard(ev), from = downAt;
+        downAt = null;
+        if (from && (p.x - from.x) * (p.x - from.x) + (p.y - from.y) * (p.y - from.y) > POINT_SLIP * POINT_SLIP) return;   /* 量直線距離（codex 第二輪：分開比 x、y 的話斜著拖 8、8 也算點） */
+        var h = pointHit(g, p);
+        if (!h) return;
+        if (h.kind === 'vert'){
+          if (found[h.k]) return;
+          got++; found[h.k] = got; draw();
+          line.textContent = d.gPointNow(got);
+          gMsg.textContent = '';
+          if (got === n) roundSolved(d.gPointDone(si, n));
+          refreshHint();
+          return;
+        }
+        roundMiss(h.kind === 'face' ? d.gPointFace : d.gPointEdge);
+      });
+    },
+
+    /* 第 2 關：分一分 —— 五張形體卡放進「平平的面有 0／1／2／6 個」的格子。
+       收不收只看那個形體的 flat 等不等於格子的數字；放錯 → 彈回＋它真正有幾個、為什麼。 */
+    sort: function(d){
+      var S = SORT_BIN, C = SORT_CARD, placed = 0;
+      var line = trailLine(d.gSortNow(0));
+      var B = makeBoard(GAME_W, SORT_H);
+      addZone(B, 0, 4, GAME_W, 26, 'gorder', d.gSortHead);
+      var bins = SORT_VALUES.map(function(v, k){
+        var t = target(B, sortBinX(k) - S.w / 2, S.y, S.w, S.h, 'gslot', { v:v, n:0 });
+        var lb = document.createElement('span'); lb.className = 'gbinlbl'; lb.textContent = d.gSortBin(v); t.z.appendChild(lb);
+        return t;
+      });
+      var left = [0, 1, 2, 3, 4];
+      gCtx.hint2 = function(){ return left.length ? d.gSort2(left[0]) : ''; };
+      /* 洗牌照「平平的面有幾個」比：由少到多（0、1、2、6、6）就是答案的順序，不可以一開始就排好 */
+      var order = shuffle(SOLIDS.map(function(s, i){ return i; }), function(i){ return SOLIDS[i].flat; });
+      var x0 = (GAME_W - (order.length - 1) * C.step) / 2;
+      order.forEach(function(i, j){
+        addPiece(B, { w:C.w, h:C.h, cx:x0 + j * C.step, cy:C.y, html:soHTML(d, i, ROLL_START[SOLIDS[i].id] || 'stand'), cls:'gso', label:d.solids[i].name, data:{ si:i } });
+      });
+      useTapSelect(B, function(P, pt){
+        var b = nearestOpen(bins, pt, GPAD), i = P.data.si;
+        if (!b) return false;
+        if (SOLIDS[i].flat !== b.v){ roundMiss(d.gSortWrong(i, b.v)); return false; }
+        P.resize(S.placedW, S.placedH);
+        P.lock(b.cx, S.y + S.top + S.placedH / 2 + b.n * (S.placedH + 4));
+        P.el.classList.add('placed');
+        b.n++; placed++;
+        left = left.filter(function(x){ return x !== i; });
+        line.textContent = d.gSortNow(placed);
+        gMsg.textContent = '';
+        if (placed === SOLIDS.length) roundSolved(d.gSortDone);
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 3 關：滾一滾 —— 一個方塊、一個站著的圓柱、一顆球。把會滾的推到滾道上（滾到 🚩）。
+       收不收只看「現在碰到桌子的是哪一種面」（rollsOnTable）；🔄 轉一下改擺法。兩個都滾到了就過關。 */
+    roll: function(d){
+      var blk = pick(GAME_ROLL), R = ROLL_PIECE, T = ROLL_TURN, Ln = ROLL_LANE, rolled = 0, pieces = {};
+      var line = trailLine(d.gRollAsk);
+      var B = makeBoard(GAME_W, ROLL_H);
+      var lane = target(B, Ln.x, Ln.y, Ln.w, Ln.h, 'glane', {});
+      addZone(B, Ln.x + Ln.w - 40, Ln.y - 34, 40, 30, 'glbl', '🚩');
+      var ids = [blk, 'cyl', 'ball'];
+      shuffle([0, 1, 2]).forEach(function(slot, j){
+        var id = ids[j], si = SOLIDS.indexOf(solidById(id)), x = R.xs[slot];
+        var P = addPiece(B, { w:R.w, h:R.h, cx:x, cy:R.y, html:pieceSVG(id, ROLL_START[id]), cls:'gso noname', label:d.solids[si].name, data:{ id:id, si:si, o:ROLL_START[id] } });
+        pieces[id] = P;
+        var tb = document.createElement('button');
+        tb.type = 'button'; tb.className = 'gturn'; tb.textContent = '🔄';
+        tb.setAttribute('aria-label', d.solids[si].name + ' 🔄');
+        tb.style.left = (x - T.size / 2) + 'px'; tb.style.top = (T.y - T.size / 2) + 'px';
+        tb.style.width = T.size + 'px'; tb.style.height = T.size + 'px';
+        tb.addEventListener('click', function(){
+          if (gSolved || P.locked || P.busy()) return;
+          P.data.o = turnOf(id, P.data.o);
+          P.el.innerHTML = pieceSVG(id, P.data.o);
+          line.textContent = d.gRollTurn(si, downFace(id, P.data.o));
+          refreshHint();
+        });
+        B.el.appendChild(tb);
+        P.turnBtn = tb;
+      });
+      gCtx.hint2 = function(){
+        if (!pieces.cyl.locked) return pieces.cyl.data.o === 'lie' ? d.gRoll2.cylLie : d.gRoll2.cylStand;
+        return pieces.ball.locked ? '' : d.gRoll2.ball;
+      };
+      useTapSelect(B, function(P, pt){
+        if (!nearestOpen([lane], pt, GPAD)) return false;
+        var id = P.data.id;
+        if (!rollsOnTable(id, P.data.o)){ roundMiss(id === 'cyl' ? d.gRollStand : d.gRollBlock(P.data.si)); return false; }
+        P.resize(R.placedW, R.placedH);
+        P.lock(Ln.spots[rolled], Ln.y + Ln.h / 2 + 4);
+        P.el.classList.add('placed');
+        P.turnBtn.disabled = true;
+        rolled++;
+        line.textContent = d.gRolled(P.data.si);
+        gMsg.textContent = '';
+        if (rolled === 2) roundSolved(d.gRollDone(SOLIDS.indexOf(solidById(blk))));
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 4 關：疊一疊 —— 從桌子往上疊 4 層，一次只能放下一層。收不收用資料區的 stackWhy()：
+       球哪一層都不收；圓錐只收在最上面那一層。 */
+    stack: function(d){
+      var level = 0, Cc = STACK_CELL, Pc = STACK_PIECE;
+      var line = trailLine(d.gStackNow(0));
+      var B = makeBoard(GAME_W, STACK_H);
+      addZone(B, STACK_X - Cc.w / 2 - 14, STACK_TABLE, Cc.w + 28, 8, 'gtable');
+      var cells = [];
+      for (var k = 0; k < STACK_LEVELS; k++) cells.push(addZone(B, STACK_X - Cc.w / 2, stackLevelY(k) - Cc.h / 2, Cc.w, Cc.h, 'gcellbox'));
+      /* 四格都是吸附目標：最近的是下一層才收；是上面還空著的那幾格 → 提醒；已經疊好的那幾格（done）→ 靜靜彈回 */
+      var slots = cells.map(function(c, k){ return { cx:STACK_X, cy:stackLevelY(k), hw:Cc.w / 2, hh:Cc.h / 2, done:false, k:k }; });
+      function mark(){ cells.forEach(function(c, k){ c.className = 'gcellbox' + (k === level ? ' next' : ''); }); }
+      mark();
+      gCtx.hint2 = function(){ return level < STACK_LEVELS ? d.gStack2(level) : ''; };
+      /* 托盤的五個位置也洗牌：五個形體各自站在哪一個位置不固定 */
+      var spots = shuffle([0, 1, 2, 3, 4]);
+      SOLIDS.forEach(function(s, i){
+        var at = STACK_TRAY[spots[i]];
+        addPiece(B, { w:Pc.w, h:Pc.h, cx:at[0], cy:at[1], html:pieceSVG(s.id, 'stand'), cls:'gso noname', label:d.solids[i].name, data:{ id:s.id } });
+      });
+      useTapSelect(B, function(P, pt){
+        var at = level < STACK_LEVELS ? nearestOpen(slots, pt, GPAD) : null;
+        if (!at) return false;
+        if (at.k !== level){ gMsg.textContent = d.gStackFloat; return false; }
+        var why = stackWhy(P.data.id, level);
+        if (why === 'ball'){ roundMiss(d.gStackBall); return false; }
+        if (why === 'top'){ roundMiss(d.gStackCone); return false; }
+        P.resize(Cc.w - 8, Cc.h);
+        P.lock(STACK_X, stackLevelY(level));
+        P.el.classList.add('placed');
+        slots[level].done = true;
+        level++;
+        mark();
+        line.textContent = d.gStackNow(level);
+        gMsg.textContent = '';
+        if (level === STACK_LEVELS) roundSolved(d.gStackDone);
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 5 關：貼一貼 —— 兩三個形體，每一個平平的面貼一張貼紙（拿不完），自己按「貼好了」。
+       貼滿了還貼、貼在球上 → 彈回＋為什麼；還沒貼滿就按 → 說哪一個還差（算錯）；什麼都沒貼就按 → 只提醒。 */
+    sticker: function(d){
+      var group = pick(GAME_STICK), n = group.length, S = STICK_BOX, have = group.map(function(){ return 0; });
+      var line = trailLine(d.gStickNow(0));
+      var B = makeBoard(GAME_W, STICK_H);
+      var boxes = group.map(function(id, i){
+        var si = SOLIDS.indexOf(solidById(id));
+        var t = target(B, stickBoxX(n, i) - S.w / 2, S.y, S.w, S.h, 'gbox', { si:si, i:i });
+        t.z.innerHTML = pieceSVG(id, 'stand') + '<span class="gname">' + d.solids[si].name + '</span><span class="gdots"></span>';
+        return t;
+      });
+      function total(){ return have.reduce(function(a, b){ return a + b; }, 0); }
+      function drawDots(t){
+        var box = t.z.querySelector('.gdots');
+        box.textContent = '';
+        for (var j = 0; j < have[t.i]; j++){ var dot = document.createElement('span'); dot.className = 'gstk'; box.appendChild(dot); }
+      }
+      gCtx.hint2 = function(){
+        for (var i = 0; i < n; i++) if (have[i] < SOLIDS[boxes[i].si].flat) return d.gStick2(boxes[i].si, SOLIDS[boxes[i].si].flat - have[i]);
+        return d.gStick2(-1, 0);
+      };
+      addPiece(B, { w:STICK_SRC.size, h:STICK_SRC.size, cx:GAME_W / 2, cy:STICK_SRC.y, html:'⭐', cls:'gsticker', label:'⭐' });
+      useTapSelect(B, function(P, pt){
+        var t = nearestOpen(boxes, pt, GPAD);
+        if (!t) return false;
+        var s = SOLIDS[t.si];
+        if (s.flat === 0){ roundMiss(d.gStickBall); return false; }
+        if (have[t.i] >= s.flat){ roundMiss(d.gStickFull(t.si)); return false; }
+        have[t.i]++;
+        drawDots(t);
+        P.home();
+        line.textContent = d.gStickNow(total());
+        gMsg.textContent = '';
+        if (pt.tap) keepSelected(B, P);
+        refreshHint();
+        return true;
+      });
+      var doneBtn = actionButton(d.gStickBtn, function(){
+        if (gSolved) return;
+        if (total() === 0){ gMsg.textContent = d.gStickEmpty; return; }
+        for (var i = 0; i < n; i++){
+          if (have[i] < SOLIDS[boxes[i].si].flat){ roundMiss(d.gStickShort(boxes[i].si, have[i])); return; }
+        }
+        doneBtn.disabled = true;
+        roundSolved(d.gStickDone(boxes.map(function(t){ return SOLIDS[t.si].flat; }), total()));
+      });
+    }
+  };
+
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistakes = 0; gCtx = {}; gGen++;
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-    gAskLine.innerHTML = '<span style="font-size:20px;font-weight:800">' + d.gAsk(round) + '</span>';
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = d.gHint1;
-    } else {
-      elHint.textContent = '';
-    }
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }
+  }
 
-    gAnswers.textContent = '';
-    round.opts.forEach(function(id, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'gopt';
-      b.textContent = d.gOpt(id);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        var dd = L();
-        var lbl = dd.gOpt(round.opts[round.ans]);
-        if (oi === round.ans){
-          var all = gAnswers.querySelectorAll('.gopt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gRound === ROUNDS.length - 1){
-            gScore += gMistake ? 10 : 20;
-            gMsg.innerHTML = '<span class="yes">' + dd.gWin(gScore) + '</span> ' + dd.gWhy(round);
-          } else {
-            if (gMistake){
-              gScore += 10;
-              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectRetry(lbl) + '</span> ' + dd.gWhy(round);
-            } else {
-              gScore += 20;
-              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectFirst(lbl) + '</span> ' + dd.gWhy(round);
-            }
-            gMsg.innerHTML += ' ' + dd.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gMsg.innerHTML = '<span class="no">' + dd.gTryAgain + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
   function restartGame(){
@@ -1194,18 +1868,15 @@
   }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
 
   gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2) return;
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = L().gHint1;
-    } else {
-      elHint.textContent = L().gHint2(ROUNDS[gRound]);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
