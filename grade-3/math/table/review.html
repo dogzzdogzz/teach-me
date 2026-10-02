@@ -228,10 +228,11 @@
     for (var c = 0; c < grid[0].length; c++){ cs.push(sum(grid.map(function(row){ return row[c]; }))); }
     return allDistinct(rs) && allDistinct(cs);
   }
+  /* 一定回傳列總計、行總計都兩兩不同的表格：抽到為止（3 × 4、2～9 幾乎一兩次就抽到）；
+     真的一直抽不到，才用一張寫死的、已知合格的表（之前的版本修 30 次之後不再檢查就回傳 —— codex 抓到）。 */
   function makeDistinctMarginGrid(rows, cols, lo, hi){
-    var grid;
-    for (var tries = 0; tries < 60; tries++){
-      grid = [];
+    for (var tries = 0; tries < 1000; tries++){
+      var grid = [];
       for (var r = 0; r < rows; r++){
         var row = [];
         for (var c = 0; c < cols; c++) row.push(lo + rand(hi - lo + 1));
@@ -239,18 +240,18 @@
       }
       if (hasDistinctMargins(grid)) return grid;
     }
-    for (var fix = 0; fix < 30 && !hasDistinctMargins(grid); fix++){
-      var rr = rand(rows), cc = rand(cols);
-      grid[rr][cc] = Math.min(hi, grid[rr][cc] + 1 + rand(2));
-    }
-    return grid;
+    return [[2, 3, 4, 5], [6, 7, 8, 9], [3, 5, 7, 9]].slice(0, rows).map(function(row){ return row.slice(0, cols); });
   }
-  /* 保證 3 個相異、且不等於正解的錯誤選項 */
-  function makeWrongs(correct, candidates){
+  /* 保證 3 個相異、且不等於正解的錯誤選項。
+     avoid：題幹上印出來的數字先當成已經用過，候選和保底都不會把它抄回來（framework §六之三第 4 點）；
+     刻意的迷思誘答不要放進 avoid（除法的「餘數 ＝ 除數」）。負數不當誘答。 */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
+      if (c < 0) return;
       if (!seen[key]){ seen[key] = true; out.push(c); }
     });
     var step = 1;
@@ -262,8 +263,8 @@
     }
     return out.slice(0, 3);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -327,7 +328,7 @@
       } },
     { id:'extreme1D', cat:'table',
       make: function(){
-        var n = pick([4,5]);
+        var n = 4;   /* 一種水果一個選項；中年級一題 4 個選項（framework §三） */
         var keys = shuffle(FRUIT_KEYS).slice(0, n);
         var values = distinctValues(n, 4, 27);
         var wantMax = Math.random() < 0.5;
@@ -354,7 +355,8 @@
         var correct = grid[r][c];
         var wrongPool = [];
         grid.forEach(function(row, ri){ row.forEach(function(v, ci){ if (!(ri===r && ci===c)) wrongPool.push(v); }); });
-        var m = mixOpts(correct, shuffle(wrongPool));
+        /* 別的格子不夠三個不同的數時保底是正解 ± 1、± 2；每格至少 2 人，0 人不當誘答（codex 第二輪抓到：正解 2 的保底會走到 0） */
+        var m = mixOpts(correct, shuffle(wrongPool), [0]);
         return { rk:rk, ck:ck, grid:grid, r:r, c:c, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -446,7 +448,7 @@
         var v1 = grid[rIdx[0]][c], v2 = grid[rIdx[1]][c];
         var correct = v1 + v2;
         var diffWrong = Math.abs(v1 - v2);
-        var m = mixOpts(correct, [diffWrong, v1, v2]);
+        var m = mixOpts(correct, diffWrong > 0 ? [diffWrong, v1, v2] : [v1, v2]);   /* 兩格一樣時「相差」是 0，不當誘答 */
         return { rk:rk, ck:ck, grid:grid, c:c, rIdx:rIdx, v1:v1, v2:v2, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -486,9 +488,10 @@
         var n = 12 + rand(5);
         var records = [];
         for (var i=0;i<n;i++) records.push(pick(keys));
-        var targetKey = pick(keys);
-        var correct = records.filter(function(v){ return v === targetKey; }).length;
         var counts = keys.map(function(k){ return records.filter(function(v){ return v === k; }).length; });
+        /* 只問有人投的地點（一票都沒有的地點，問「有幾票」答案是 0，不是這一題要練的數數） */
+        var targetKey = pick(keys.filter(function(k, ki){ return counts[ki] > 0; }));
+        var correct = records.filter(function(v){ return v === targetKey; }).length;
         var otherCounts = counts.filter(function(c,i){ return keys[i] !== targetKey; });
         var m = mixOpts(correct, otherCounts.concat([correct+2, Math.max(0, correct-2)]));
         return { keys:keys, records:records, targetKey:targetKey, correct:correct, opts:m.opts, ans:m.ans };
@@ -511,12 +514,12 @@
         if (isAdd){
           var x = 100 + rand(400), y = 100 + rand(400);
           var correct = x + y;
-          var m = mixOpts(correct, [correct-10, correct+10, correct-100]);
+          var m = mixOpts(correct, [correct-10, correct+10, correct-100], [x, y]);
           return { isAdd:true, x:x, y:y, correct:correct, opts:m.opts, ans:m.ans };
         } else {
           var p = 300 + rand(600), q = 10 + rand(p - 10);
           var correct2 = p - q;
-          var m2 = mixOpts(correct2, [correct2+10, correct2-10, p+q]);
+          var m2 = mixOpts(correct2, [correct2+10, correct2-10, p+q].filter(function(v){ return v > 0; }), [p, q, 0]);   /* 差至少是 1：0 不當誘答（保底也不會出 0） */
           return { isAdd:false, x:p, y:q, correct:correct2, opts:m2.opts, ans:m2.ans };
         }
       },
@@ -551,8 +554,9 @@
         var dividend = divisor * quotient + remainder;
         var askRemainder = Math.random() < 0.5;
         var correct = askRemainder ? remainder : quotient;
-        var wrongPool = askRemainder ? [remainder+1, Math.max(0, remainder-1), divisor] : [quotient+1, Math.max(1, quotient-1), dividend];
-        var m = mixOpts(correct, wrongPool);
+        /* 餘數題的「除數」是刻意的迷思誘答（餘數一定比除數小），所以 avoid 只放被除數；商的那一題兩個都不抄 */
+        var wrongPool = askRemainder ? [remainder+1, remainder-1, divisor] : [quotient+1, quotient-1, quotient+2];
+        var m = mixOpts(correct, wrongPool, askRemainder ? [dividend] : [dividend, divisor]);
         return { divisor:divisor, quotient:quotient, remainder:remainder, dividend:dividend, askRemainder:askRemainder, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){

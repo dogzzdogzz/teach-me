@@ -133,6 +133,57 @@
   .tallychip.active{border-color:var(--orange);background:var(--orange-soft);color:var(--orange)}
   .tallynarr{margin-top:12px;font-size:16px;min-height:24px}
   .checkline{margin-top:14px;font-size:16px;background:var(--green-soft);border-radius:12px;padding:10px 14px;color:var(--ink);min-height:22px}
+  /* ---- 小遊戲「表格小管家」：點一點、移手指、補總計、排算式、整理票數（§六之五） ---- */
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:18px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div{position:absolute}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gpiece.gone{visibility:hidden}
+  .gtitle{display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--ink);pointer-events:none;white-space:nowrap}
+  .gtc{display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--card);
+    font-size:20px;font-weight:800;color:var(--ink);pointer-events:none;line-height:1.1;text-align:center}
+  .gtc.gth{background:var(--blue-soft);color:var(--blue);font-size:13px}
+  .gtc.gth .gico{font-size:18px}
+  .gtc.gth.gcorner{font-size:11px;white-space:nowrap}
+  .gtc.gtr{background:var(--orange-soft);color:var(--orange);font-size:13px}
+  .gtc.gtot{background:var(--blue-soft);color:var(--blue)}
+  .gtc.gtr.gbig{font-size:17px}
+  .gtc.ghit{background:var(--green) !important;color:#fff !important}
+  .gtrow{display:flex;cursor:pointer;user-select:none;-webkit-user-select:none}
+  .gtrow > span{display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--card);font-size:20px;font-weight:800;color:var(--ink)}
+  .gtrow > span.gname{background:var(--orange-soft);color:var(--orange);font-size:17px}
+  .gtrow.found{pointer-events:none}
+  .gtrow.found > span{background:var(--green-soft);color:var(--green);border-color:var(--green)}
+  .gband{pointer-events:none;border-radius:6px;background:rgba(232,135,30,.18);border:2px solid var(--orange)}
+  .gband.gcolband{background:rgba(59,125,216,.16);border-color:var(--blue)}
+  .gfinger{font-size:24px;background:rgba(255,255,255,.7);border:2px dashed #C9BFA9;border-radius:50%}
+  .gfinger.locked{border-color:transparent;background:transparent}
+  .gslot{display:flex;align-items:center;justify-content:center;border:3px dashed var(--orange);border-radius:10px;background:var(--orange-soft);
+    font-size:15px;font-weight:800;color:var(--muted);pointer-events:none}
+  .gslot.filled{border-color:transparent;background:transparent}
+  .gslot.gsym{font-size:24px}
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-size:22px;font-weight:800;color:var(--ink)}
+  .gcard.placed{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gcard.gop{border-color:var(--blue);color:var(--blue);font-size:26px}
+  .gcell{background:transparent;border-radius:6px;font-size:20px;font-weight:800;color:var(--ink)}
+  .gcell.placed{background:var(--green-soft);border:3px solid var(--green);color:var(--green)}
+  .gchip{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-size:16px;font-weight:800;color:var(--ink);white-space:nowrap}
+  .glbl{display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:var(--ink);pointer-events:none;white-space:nowrap}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
+  .gaction{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .gaction .btn{min-height:48px}
+  .gnum{width:110px;min-height:48px;border:3px solid var(--blue);border-radius:12px;font-size:24px;font-weight:800;text-align:center;color:var(--ink);background:var(--card)}
+  .gnum:disabled{border-color:var(--line);background:var(--bg)}
+  /* 遊戲裡的數字用西文字型（中文字照樣退回 PingFang） */
+  .gtrail, .gtc, .gtrow, .gslot, .gcard, .gcell, .gchip, .glbl, .gtitle, .gnum, #gMsg{font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif}
 </style>
 </head>
 <body>
@@ -262,20 +313,18 @@
   <!-- 小遊戲 -->
   <section>
     <span class="eyebrow" data-i18n="eb7">小遊戲</span>
-    <h2 data-i18n="s7h2">表格快問快答</h2>
-    <p class="lead" data-i18n="s7lead">看清楚表格，選出正確答案。答對愈快，分數愈高！</p>
+    <h2 data-i18n="s7h2">表格小管家</h2>
+    <p class="lead" data-i18n="s7lead">五關五種玩法：點一點、移手指、補總計、排算式、整理票數。放錯只扣一點分，隨時可以再試！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <p class="target" id="gAskLine" style="font-size:19px;margin-top:14px"></p>
-      <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="tblwrap"><div id="gTableWrap"></div></div>
-      <div class="opts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
-      <div class="btnrow">
+      <div class="btnrow" style="justify-content:center">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -325,6 +374,87 @@
   function rowSum(grid, r){ return sum(grid[r]); }
   function colSum(grid, c){ return sum(grid.map(function(row){ return row[c]; })); }
   function gridSum(grid){ return sum(grid.map(function(row){ return sum(row); })); }
+
+  /* ============ 小遊戲「表格小管家」的題庫與版面（§六之五）—— 放在 i18n 前面，檢查設定直接讀這一段 ============
+     五關對應範例 1～5：點一點（一維表格：先看標題與單位，再一列一列比數字）、移手指（二維表格：列和欄的交叉點）、
+     補總計（列總計、行總計、總計）、排算式（用表格回答「相差」「一共」）、整理票數（把紀錄一筆一筆整理成表格）。
+     畫板一律是 300 寬的邏輯座標；位置一律記「中心點」。 */
+  var GAME_ORDER = ['pick', 'ruler', 'total', 'sentence', 'tally'];
+  var GPICK = 48;   /* 拿得起來的東西至少這麼大（300 寬的畫板在 375px 手機上縮成約 0.967 倍，還有 46px） */
+
+  /* 第 1 關：點一點 —— 一維表格（五種水果、單位是箱），點出所有「比 n 箱多／少」的水果。
+     每一題剛好有一種水果「和 n 一樣多」（一樣多不算比較多），符合的有 2～3 種。 */
+  var GAME_PICK = [
+    { vals:[12, 8, 15, 10, 6], dir:'more', n:10 },
+    { vals:[9, 14, 7, 11, 16], dir:'more', n:11 },
+    { vals:[11, 17, 9, 14, 6], dir:'more', n:9 },
+    { vals:[13, 6, 10, 5, 18], dir:'less', n:10 },
+    { vals:[7, 15, 12, 9, 4], dir:'less', n:9 },
+    { vals:[8, 13, 5, 16, 7], dir:'less', n:13 }
+  ];
+  var PICK = { th:28, hy:32, hh:40, ry:72, rh:48, x0:20, xm:150, x1:280 };
+  var PICK_H = 320;
+  function pickRowY(i){ return PICK.ry + i * PICK.rh; }   /* 第 i 列的上緣 */
+
+  /* 第 2～4 關的二維表格：三個班級 × 四種寵物（單位：人）。英文標頭要擠得進 51～54 寬的欄，所以用短字。 */
+  var PET_KEYS = ['dog', 'cat', 'fish', 'bird'];
+  var PET_ICONS = { dog:'🐶', cat:'🐱', fish:'🐟', bird:'🐦' };
+  var GAME_GRIDS = [
+    [[6, 5, 3, 7], [4, 8, 2, 5], [9, 3, 6, 4]],
+    [[5, 7, 4, 2], [8, 3, 6, 5], [3, 6, 9, 7]],
+    [[7, 2, 5, 8], [3, 9, 4, 6], [6, 4, 8, 3]]
+  ];
+
+  /* 第 2 關：移手指 —— 👉 只能上下移（放到班級那一列），👇 只能左右移（放到寵物那一欄）；兩條交叉的那一格就是答案。
+     左邊 34 寬是 👉 的走道（手指拿取範圍 48，比走道寬，壓到班級欄一點點沒關係），上面 44 高是 👇 的走道。 */
+  var GAME_RULER = [ { g:0, r:0, c:1 }, { g:0, r:2, c:3 }, { g:1, r:1, c:2 }, { g:1, r:2, c:0 }, { g:2, r:0, c:3 }, { g:2, r:1, c:1 } ];
+  var RULER = { cx0:34, cw:62, col:51, th:24, gy:26, gh:44, hy:72, hh:44, ry:116, rh:48, finger:GPICK, rowX:24, homeY:286 };
+  var RULER_H = 312;
+  function rulerColX(c){ return RULER.cx0 + RULER.cw + c * RULER.col + RULER.col / 2; }
+  function rulerRowY(r){ return RULER.ry + r * RULER.rh + RULER.rh / 2; }
+
+  /* 第 3 關：補總計 —— 3 × 3 的表格，列總計、行總計大部分寫好了，空著三格：一個列總計（br）、一個行總計（bc）、總計。
+     五張卡：三個正解＋兩個常見的錯（dec：這一列漏加一格、總計漏加一列）。 */
+  var GAME_TOTAL = [
+    { grid:[[7, 4, 5], [3, 8, 6], [5, 2, 9]], br:1, bc:2, dec:[11, 33] },
+    { grid:[[6, 5, 8], [4, 9, 3], [7, 2, 6]], br:2, bc:2, dec:[9, 31] },
+    { grid:[[3, 7, 6], [8, 4, 5], [2, 9, 7]], br:0, bc:2, dec:[10, 33] },
+    { grid:[[9, 3, 4], [5, 6, 8], [4, 7, 2]], br:2, bc:0, dec:[11, 32] },
+    { grid:[[5, 8, 3], [6, 2, 9], [7, 4, 6]], br:1, bc:2, dec:[8, 34] },
+    { grid:[[8, 6, 4], [3, 5, 7], [9, 2, 6]], br:2, bc:1, dec:[11, 32] }
+  ];
+  var TOTAL = { cx0:8, cw:68, col:52, tw:64, th:24, hy:26, hh:44, ry:70, rh:48, trayY:300, step:56, card:48 };
+  var TOTAL_H = 330;
+  function totalColX(c){ return c < 3 ? TOTAL.cx0 + TOTAL.cw + c * TOTAL.col + TOTAL.col / 2 : TOTAL.cx0 + TOTAL.cw + 3 * TOTAL.col + TOTAL.tw / 2; }
+  function totalRowY(r){ return TOTAL.ry + r * TOTAL.rh + TOTAL.rh / 2; }   /* r = 3 是「行總計」那一列 */
+
+  /* 第 4 關：排算式 —— 從表格裡把要用的兩格拖進「□ ○ □ ＝」，選 ＋ 或 −，再打出答案。
+     kind:'diff' 問「相差」（大的減小的），'sum' 問「一共」；a、b 是兩格的 [列, 欄]，一半同一欄、一半同一列。 */
+  var GAME_EQ = [
+    { g:0, kind:'diff', a:[0, 0], b:[2, 0] },
+    { g:0, kind:'sum', a:[0, 1], b:[1, 1] },
+    { g:1, kind:'diff', a:[1, 0], b:[1, 2] },
+    { g:1, kind:'sum', a:[2, 2], b:[2, 3] },
+    { g:2, kind:'diff', a:[0, 3], b:[1, 3] },
+    { g:2, kind:'sum', a:[1, 1], b:[2, 1] }
+  ];
+  var EQ = { cx0:8, cw:66, col:54, th:24, hy:26, hh:44, ry:70, rh:48, y:254, slot:48, xa:58, xop:114, xb:170, xeq:214, xres:260, opY:318, opStep:64 };
+  var EQ_H = 346;
+  function eqColX(c){ return EQ.cx0 + EQ.cw + c * EQ.col + EQ.col / 2; }
+  function eqRowY(r){ return EQ.ry + r * EQ.rh + EQ.rh / 2; }
+
+  /* 第 5 關：整理票數 —— 九張票（紀錄），一張一張放進表格裡它投的那個地點；那一列的票數加 1。 */
+  var TALLY_ICONS = { zoo:'🦁', beach:'🏖️', park:'🎢' };
+  var GAME_TALLY = [
+    ['zoo', 'beach', 'zoo', 'park', 'beach', 'zoo', 'beach', 'zoo', 'park'],
+    ['beach', 'park', 'beach', 'zoo', 'beach', 'park', 'beach', 'zoo', 'beach'],
+    ['park', 'zoo', 'park', 'park', 'beach', 'zoo', 'park', 'beach', 'park'],
+    ['zoo', 'park', 'beach', 'zoo', 'zoo', 'beach', 'park', 'zoo', 'beach']
+  ];
+  var TALLY = { x0:10, xm:150, x1:290, hh:40, ry:40, rh:52, cw:88, ch:GPICK, cy0:228, cstep:96, crow:54 };
+  var TALLY_H = 364;
+  function tallyRowY(i){ return TALLY.ry + i * TALLY.rh + TALLY.rh / 2; }
+  function tallyChipXY(i){ return { x:150 + ((i % 3) - 1) * TALLY.cstep, y:TALLY.cy0 + Math.floor(i / 3) * TALLY.crow }; }
 
   /* ===================== i18n ===================== */
   var I18N = {
@@ -424,7 +554,7 @@
       cGood:'很棒！錯的那幾題再看一次說明。',
       cTry:'沒關係，回到上面的範例教學再看一次。',
       qs:[
-        { picture:'fruit', ans:3,
+        { picture:'fruit', ans:0,
           stem:'根據下表，葡萄賣出了幾箱？', opts:['16','9','20','14'],
           why:'在表格中找到「葡萄」那一列，數字是 16 箱。' },
         { picture:'fruit', ans:1,
@@ -441,7 +571,7 @@
           why:'三年一班籃球是 7 人，三年二班是 3 人，7 + 3 = 10 人。' },
         { picture:'sportsTotals', ans:3,
           stem:'哪一種運動最多三年級學生選？', opts:['跳繩','足球','籃球','桌球'],
-          why:'比較四個行總計：籃球15、足球14、桌球20、跳繩18，最大的是桌球 20 人。' }
+          why:'比較四個行總計：籃球 15、足球 14、桌球 20、跳繩 18，最大的是桌球 20 人。' }
       ],
       qsAdv:[
         { picture:'sportsTotals', ans:2,
@@ -465,17 +595,76 @@
           stem:'迷思檢查：三年一班和三年二班選籃球的人數「相差」多少人？（不是一共）', opts:['10','4','7','3'],
           why:'三年一班籃球 7 人、三年二班 3 人，相差是 7 − 3 = 4 人；10 是把兩個加起來（那是「一共」，不是「相差」）。' }
       ],
-      /* ---- 遊戲 ---- */
-      s7h2:'表格快問快答', s7lead:'看清楚表格，選出正確答案。答對愈快，分數愈高！',
+      /* ---- 遊戲：表格小管家（五關五種玩法） ---- */
+      s7h2:'表格小管家', s7lead:'五關五種玩法：點一點、移手指、補總計、排算式、整理票數。放錯只扣一點分，隨時可以再試！',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
-      gHintBtn:'💡 提示',
-      gHint1:'提示 1：先找對的那一列和那一行！',
-      gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst: function(v){ return '答對了！答案是 ' + v + '，+20 分！'; },
-      gCorrectRetry: function(v){ return '答對了！答案是 ' + v + '，+10 分。'; },
-      gWrong: function(v){ return v + ' 不對，再試一次，−5 分。'; },
-      gClear:'按「下一關」出下一題。',
-      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gAsks:{
+        pick:'先看標題和單位，再點出符合的每一種水果（點一下那一列就是選它）。',
+        ruler:'把 👉 上下移到班級那一列、把 👇 左右移到寵物那一欄（拖曳，或先點手指再點位置）。',
+        total:'把卡片放進空著的總計格（拖曳，或先點卡片再點空格）。',
+        sentence:'從表格拖出要用的兩格、選 ＋ 或 −，排成算式，再打出答案。',
+        tally:'把每一張票放進表格裡它投的那個地點（拖曳，或先點票再點那一列）。'
+      },
+      gHints:{
+        pick:'提示：先看標題和單位（箱），再從上往下一列一列讀數字，和題目的數比一比；一樣多的不算。',
+        ruler:'提示：👉 只管「列」（橫的，班級），👇 只管「欄」（直的，寵物）；兩條交叉的那一格就是答案。',
+        total:'提示：列總計是同一列橫著加，行總計是同一欄直著加，總計是全部加起來。',
+        sentence:'提示：先圈出關鍵字 ——「相差」用減法，大的減小的；「一共」用加法。',
+        tally:'提示：一張一張來，每一張票放進和它寫的地點同名的那一列，那一列就加 1 票。'
+      },
+      gPts: function(p){ return '+' + p + ' 分！'; },
+      gMinus:'−5 分',
+      gClear:'按「下一關」繼續。',
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; },
+      /* 第 1 關：點一點 */
+      gPickTitle:'阿明水果行 — 星期日賣出的水果',
+      gPickNow: function(more, n, found, k){ return '哪些水果賣出比 ' + n + ' 箱' + (more ? '多' : '少') + '？找到 ' + found + ' / ' + k + ' 種'; },
+      gPickEq: function(name, v, more){ return name + '剛好 ' + v + ' 箱，和 ' + v + ' 箱一樣多 —— 一樣多不算比較' + (more ? '多' : '少') + '。'; },
+      gPickNot: function(name, v, n, more){ return more ? name + '只有 ' + v + ' 箱，沒有比 ' + n + ' 箱多。' : name + '有 ' + v + ' 箱，沒有比 ' + n + ' 箱少。'; },
+      gPickDone: function(more, n, list){ return '比 ' + n + ' 箱' + (more ? '多' : '少') + '的是：' + list.map(function(x){ return x[0] + ' ' + x[1] + ' 箱'; }).join('、') + '。'; },
+      gPick2: function(left, name){ return '還有 ' + left + ' 種沒找到 —— 看看「' + name + '」那一列。'; },
+      /* 第 2 關：移手指 */
+      gPetTitle:'三年級「最想養的寵物」調查（單位：人）',
+      gPetCorner:'班級＼寵物',
+      petNames:{ dog:'狗', cat:'貓', fish:'魚', bird:'鳥' },
+      gRowFinger:'列手指（上下移動）', gColFinger:'欄手指（左右移動）',
+      gRulerNow: function(cls, pet, v){ return '找出：' + cls + ' × ' + pet + ' → ' + (v === null ? '？' : v) + ' 人'; },
+      gRulerRow: function(got, want){ return '這是' + got + '那一列；要找的是' + want + '。'; },
+      gRulerCol: function(got, want){ return '這是「' + got + '」那一欄；要找的是「' + want + '」。'; },
+      gRulerDone: function(cls, pet, v){ return cls + '那一列和「' + pet + '」那一欄交叉在這一格：' + v + ' 人。'; },
+      gRuler2: function(cls, r, pet, c){ return cls + '是第 ' + r + ' 列（從上面數），「' + pet + '」是第 ' + c + ' 欄（從左邊數）。'; },
+      /* 第 3 關：補總計 */
+      gGrand:'總計',
+      gTotalNow: function(filled, n){ return '空著的總計格：放好 ' + filled + ' / ' + n + ' 格'; },
+      gTotRow: function(cls, cells, v){ return '這一格是' + cls + '的列總計：要把這一列的 ' + cells.join('、') + ' 加起來，' + v + ' 不對。'; },
+      gTotCol: function(pet, cells, v){ return '這一格是「' + pet + '」的行總計：要把這一欄的 ' + cells.join('、') + ' 加起來，' + v + ' 不對。'; },
+      gTotGrand: function(v){ return '總計要等於三個列總計加起來，也等於三個行總計加起來 —— ' + v + ' 兩種都對不上。'; },
+      gTotalDone: function(R, C, G){ return '列總計 ' + R.join(' ＋ ') + ' ＝ ' + G + '，行總計 ' + C.join(' ＋ ') + ' ＝ ' + G + ' —— 兩種加法一樣，總計是 ' + G + '。'; },
+      gTot2Row: function(cls, cells){ return cls + '這一列：' + cells.join(' ＋ ') + '。'; },
+      gTot2Col: function(pet, cells){ return '「' + pet + '」這一欄：' + cells.join(' ＋ ') + '。'; },
+      gTot2Grand: function(R){ return '總計：把三個列總計 ' + R.join('、') + ' 加起來。'; },
+      /* 第 4 關：排算式 */
+      gEqDiffCol: function(c1, c2, pet){ return c1 + '和' + c2 + '想養' + pet + '的人數相差多少？'; },
+      gEqDiffRow: function(cls, p1, p2){ return cls + '想養' + p1 + '和想養' + p2 + '的人數相差多少？'; },
+      gEqSumCol: function(c1, c2, pet){ return c1 + '和' + c2 + '一共有幾人想養' + pet + '？'; },
+      gEqSumRow: function(cls, p1, p2){ return cls + '想養' + p1 + '和想養' + p2 + '的一共有幾人？'; },
+      gEqCell: function(cls, pet, v){ return '這個 ' + v + ' 是' + cls + '想養' + pet + '的人數，題目沒有問這一格。'; },
+      gEqOrder: function(big, small){ return '相差是大的數減小的數：大的 ' + big + ' 放在 − 前面，小的 ' + small + ' 放在後面。'; },
+      gEqOpDiff:'題目問「相差」，要用減法 −。',
+      gEqOpSum:'題目問「一共」，要用加法 ＋。',
+      gEqBtn:'算好了',
+      gEqInput:'答案',
+      gEqEmpty:'請打一個整數，不要有空格、小數點或開頭的 0。',
+      gEqWrong: function(a, op, b, v){ return '再算一次 ' + a + ' ' + op + ' ' + b + '，不是 ' + v + '。'; },
+      gEqDone: function(a, op, b, r){ return a + ' ' + op + ' ' + b + ' ＝ ' + r + '：' + (op === '−' ? '相差 ' : '一共 ') + r + ' 人。'; },
+      gEq2: function(c1, p1, v1, c2, p2, v2){ return '要用的兩格：' + c1 + '想養' + p1 + '的 ' + v1 + '，和' + c2 + '想養' + p2 + '的 ' + v2 + '。'; },
+      /* 第 5 關：整理票數 */
+      gTallyNames:{ zoo:'動物園', beach:'海邊', park:'樂園' },
+      gTallyNow: function(placed, n){ return '一張一張放進表格：放好 ' + placed + ' / ' + n + ' 張'; },
+      gTallyWrong: function(vote, bin){ return '這一張票投的是「' + vote + '」，要放進「' + vote + '」那一列，不是「' + bin + '」。'; },
+      gTallyDone: function(list, total){ return list.map(function(x){ return x[0] + ' ' + x[1] + ' 票'; }).join('、') + '：' + list.map(function(x){ return x[1]; }).join(' ＋ ') + ' ＝ ' + total + '，和 ' + total + ' 張票一樣多。'; },
+      gTally2: function(left){ return '還剩 ' + left + ' 張；看清楚每一張寫的地點，放進同一個地點的那一列。'; },
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
@@ -572,7 +761,7 @@
       cGood:'Great job! Re-read the explanations for the ones you missed.',
       cTry:'That’s okay — scroll up and look at the examples one more time.',
       qs:[
-        { picture:'fruit', ans:3,
+        { picture:'fruit', ans:0,
           stem:'According to the table, how many boxes of grapes were sold?', opts:['16','9','20','14'],
           why:'Find the row for “Grapes” in the table — the number is 16 boxes.' },
         { picture:'fruit', ans:1,
@@ -613,16 +802,70 @@
           stem:'Misconception check: how many more students chose basketball in Class 3-1 than in Class 3-2? (Not the total)', opts:['10','4','7','3'],
           why:'Class 3-1 basketball is 7, Class 3-2 is 3, so the difference is 7 − 3 = 4. 10 comes from adding them together (that’s the “total”, not the “difference”).' }
       ],
-      s7h2:'Table Quick-Fire', s7lead:'Look carefully at the table and pick the correct answer. The faster you answer, the more points you score!',
+      s7h2:'Table Keeper', s7lead:'Five rounds, five ways to play: tap, slide, fill in the totals, build a number sentence, sort the votes. A wrong move only costs a few points — try again anytime!',
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
-      gHintBtn:'💡 Hint',
-      gHint1:'Hint 1: first find the correct row AND the correct column!',
-      gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst: function(v){ return 'Correct on the first try! The answer is ' + v + ' — +20 points!'; },
-      gCorrectRetry: function(v){ return 'Correct! The answer is ' + v + ' — +10 points.'; },
-      gWrong: function(v){ return v + ' isn’t right — try again. −5 points.'; },
-      gClear:'Press “Next round” for the next question.',
+      gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Restart',
+      gAsks:{
+        pick:'Read the title and the unit first, then tap every fruit that fits (tapping a row picks it).',
+        ruler:'Slide 👉 up or down to the class row, and 👇 left or right to the pet column (drag, or tap a finger and then the spot).',
+        total:'Put the cards into the empty total boxes (drag, or tap a card and then a box).',
+        sentence:'Drag the two boxes you need out of the table, choose + or −, build the number sentence, then type the answer.',
+        tally:'Put each vote into the table, on the place it was for (drag, or tap a vote and then the row).'
+      },
+      gHints:{
+        pick:'Hint: read the title and the unit (boxes) first, then go down the rows one by one and compare each number with the one in the question. The same amount does not count.',
+        ruler:'Hint: 👉 only finds a row (across — the class), 👇 only finds a column (down — the pet). The box where the two cross is the answer.',
+        total:'Hint: a row total adds along one row, a column total adds down one column, and the grand total adds everything.',
+        sentence:'Hint: circle the key words first — “difference” means subtract, bigger minus smaller; “in total” means add.',
+        tally:'Hint: one vote at a time — put each vote in the row with the same place name, and that row goes up by 1.'
+      },
+      gPts: function(p){ return '+' + p + ' points!'; },
+      gMinus:'−5 points',
+      gClear:'Press “Next round” to continue.',
       gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gPickTitle:'Ming’s Fruit Shop — Sunday Sales',
+      gPickNow: function(more, n, found, k){ return 'Which fruits sold ' + (more ? 'more' : 'fewer') + ' than ' + n + ' boxes? Found ' + found + ' / ' + k; },
+      gPickEq: function(name, v, more){ return name + ' sold exactly ' + v + ' boxes — the same as ' + v + ' is not ' + (more ? 'more' : 'fewer') + '.'; },
+      gPickNot: function(name, v, n, more){ return more ? name + ' sold only ' + v + ' boxes — not more than ' + n + '.' : name + ' sold ' + v + ' boxes — not fewer than ' + n + '.'; },
+      gPickDone: function(more, n, list){ return (more ? 'More' : 'Fewer') + ' than ' + n + ' boxes: ' + list.map(function(x){ return x[0] + ' (' + x[1] + ')'; }).join(', ') + '.'; },
+      gPick2: function(left, name){ return left + ' still to find — look at the “' + name + '” row.'; },
+      gPetTitle:'Favorite pet survey (unit: students)',
+      gPetCorner:'Class＼Pet',
+      petNames:{ dog:'Dogs', cat:'Cats', fish:'Fish', bird:'Birds' },
+      gRowFinger:'Row finger (moves up and down)', gColFinger:'Column finger (moves left and right)',
+      gRulerNow: function(cls, pet, v){ return 'Find: ' + cls + ' × ' + pet + ' → ' + (v === null ? '?' : v) + ' students'; },
+      gRulerRow: function(got, want){ return 'That is the ' + got + ' row — we need ' + want + '.'; },
+      gRulerCol: function(got, want){ return 'That is the ' + got + ' column — we need ' + want + '.'; },
+      gRulerDone: function(cls, pet, v){ return 'The ' + cls + ' row and the ' + pet + ' column cross at this box: ' + v + ' students.'; },
+      gRuler2: function(cls, r, pet, c){ return cls + ' is row ' + r + ' (counting from the top); ' + pet + ' is column ' + c + ' (counting from the left).'; },
+      gGrand:'Total',
+      gTotalNow: function(filled, n){ return 'Empty total boxes: ' + filled + ' / ' + n + ' done'; },
+      gTotRow: function(cls, cells, v){ return 'This box is ' + cls + '’s row total: add that row’s ' + cells.join(', ') + ' — ' + v + ' is not it.'; },
+      gTotCol: function(pet, cells, v){ return 'This box is the ' + pet + ' column total: add that column’s ' + cells.join(', ') + ' — ' + v + ' is not it.'; },
+      gTotGrand: function(v){ return 'The grand total must equal the three row totals added up, and also the three column totals added up — ' + v + ' matches neither.'; },
+      gTotalDone: function(R, C, G){ return 'Row totals ' + R.join(' + ') + ' = ' + G + ', column totals ' + C.join(' + ') + ' = ' + G + ' — both ways agree: the grand total is ' + G + '.'; },
+      gTot2Row: function(cls, cells){ return cls + '’s row: ' + cells.join(' + ') + '.'; },
+      gTot2Col: function(pet, cells){ return 'The ' + pet + ' column: ' + cells.join(' + ') + '.'; },
+      gTot2Grand: function(R){ return 'Grand total: add the three row totals ' + R.join(', ') + '.'; },
+      gEqDiffCol: function(c1, c2, pet){ return 'What is the difference between ' + c1 + ' and ' + c2 + ' in students who chose ' + pet.toLowerCase() + '?'; },
+      gEqDiffRow: function(cls, p1, p2){ return 'In ' + cls + ', what is the difference between ' + p1.toLowerCase() + ' and ' + p2.toLowerCase() + '?'; },
+      gEqSumCol: function(c1, c2, pet){ return 'How many students in ' + c1 + ' and ' + c2 + ' chose ' + pet.toLowerCase() + ' in total?'; },
+      gEqSumRow: function(cls, p1, p2){ return 'In ' + cls + ', how many students chose ' + p1.toLowerCase() + ' or ' + p2.toLowerCase() + ' in total?'; },
+      gEqCell: function(cls, pet, v){ return 'This ' + v + ' is ' + cls + ' choosing ' + pet.toLowerCase() + ' — the question does not ask about that box.'; },
+      gEqOrder: function(big, small){ return 'A difference is bigger minus smaller: the bigger ' + big + ' goes before the −, the smaller ' + small + ' after it.'; },
+      gEqOpDiff:'The question asks for the difference — use subtraction (−).',
+      gEqOpSum:'The question asks how many in total — use addition (+).',
+      gEqBtn:'Check',
+      gEqInput:'Answer',
+      gEqEmpty:'Please type one whole number — no spaces, no decimal point, no leading 0.',
+      gEqWrong: function(a, op, b, v){ return 'Work out ' + a + ' ' + op + ' ' + b + ' again — it is not ' + v + '.'; },
+      gEqDone: function(a, op, b, r){ return a + ' ' + op + ' ' + b + ' = ' + r + ': ' + (op === '−' ? 'the difference is ' : 'that is ') + r + ' students' + (op === '−' ? '.' : ' in total.'); },
+      gEq2: function(c1, p1, v1, c2, p2, v2){ return 'The two boxes you need: ' + c1 + ' ' + p1.toLowerCase() + ' (' + v1 + ') and ' + c2 + ' ' + p2.toLowerCase() + ' (' + v2 + ').'; },
+      gTallyNames:{ zoo:'Zoo', beach:'Beach', park:'Park' },
+      gTallyNow: function(placed, n){ return 'Put the votes into the table: ' + placed + ' / ' + n + ' done'; },
+      gTallyWrong: function(vote, bin){ return 'This vote is for the ' + vote + ' — it goes in the ' + vote + ' row, not the ' + bin + ' row.'; },
+      gTallyDone: function(list, total){ return list.map(function(x){ return x[0] + ' ' + x[1]; }).join(', ') + ': ' + list.map(function(x){ return x[1]; }).join(' + ') + ' = ' + total + ' — the same as the ' + total + ' votes.'; },
+      gTally2: function(left){ return left + ' left — read the place on each vote and put it in the row with the same place.'; },
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
@@ -1062,59 +1305,217 @@
     });
   }
 
-  /* ===================== 小遊戲：表格快問快答 ===================== */
-  var GROUNDS = [
-    { picture:'fruit', hlRow:2,
-      ask:{ zh:'橘子賣了幾箱？', en:'How many boxes of oranges were sold?' },
-      hint2:{ zh:'提示 2：看「橘子」那一列的數字。', en:'Hint 2: look at the “Oranges” row.' },
-      correct:'9', choices:['9','14','20','7'] },
-    { picture:'sports', hlCells:[[0,2]],
-      ask:{ zh:'三年一班選桌球的有幾人？', en:'How many students in Class 3-1 chose ping-pong?' },
-      hint2:{ zh:'提示 2：找「三年一班」列和「桌球」欄交叉的格子。', en:'Hint 2: find where “Class 3-1” crosses “Ping-pong”.' },
-      correct:'5', choices:['5','7','4','9'] },
-    { picture:'sports', hlRows:[1],
-      ask:{ zh:'三年二班選的運動總人數是多少？', en:'What is the total for Class 3-2?' },
-      hint2:{ zh:'提示 2：把「三年二班」那一列的四個數字加起來。', en:'Hint 2: add up all four numbers in the “Class 3-2” row.' },
-      correct:'21', choices:['21','22','24','20'] },
-    { picture:'sports', hlCols:[1],
-      ask:{ zh:'選「足球」的三年級學生總共有幾人？', en:'How many grade-3 students in total chose soccer?' },
-      hint2:{ zh:'提示 2：把「足球」那一欄的三個數字加起來。', en:'Hint 2: add up all three numbers in the “Soccer” column.' },
-      correct:'14', choices:['14','15','20','18'] },
-    { picture:'sports', hlCells:[[2,0],[1,0]],
-      ask:{ zh:'三年三班和三年二班選籃球的人數相差多少？', en:'What is the difference in basketball choices between Class 3-3 and Class 3-2?' },
-      hint2:{ zh:'提示 2：三年三班籃球是 5，三年二班籃球是 3。', en:'Hint 2: Class 3-3 basketball is 5, Class 3-2 basketball is 3.' },
-      correct:'2', choices:['2','8','5','3'] }
-  ];
-
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 小遊戲：表格小管家（五關五種玩法，§六之五） ===================== */
+  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskLine = document.getElementById('gAskLine');
-  var gTableWrap = document.getElementById('gTableWrap');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
-  var hintLevel = 0;
 
-  function renderGPicture(showHint){
-    var round = GROUNDS[gRound];
-    var opts = {};
-    if (showHint){
-      opts.hlRows = round.hlRows || [];
-      opts.hlCols = round.hlCols || [];
-      opts.hlCells = round.hlCells || [];
-    }
-    if (round.picture === 'fruit'){
-      renderFruitTable(gTableWrap, showHint ? { hlRow: round.hlRow } : {});
-    } else {
-      renderSportsTable(gTableWrap, opts);
-    }
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，任何地方的 pointerup／pointercancel
+     傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 表格的一格：x、y 是左上角 */
+  function addCell(B, x, y, w, h, cls, text){ return addZone(B, x, y, w, h, 'gtc' + (cls ? ' ' + cls : ''), text); }
+  /* 寵物的欄標頭：上面是圖示、下面是字 */
+  function addPetHead(B, d, x, y, w, h, key){
+    var z = addCell(B, x, y, w, h, 'gth');
+    var ico = document.createElement('span'); ico.className = 'gico'; ico.textContent = PET_ICONS[key];
+    var t = document.createElement('span'); t.textContent = d.petNames[key];
+    z.appendChild(ico); z.appendChild(t);
+    return z;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫板下面的一排：輸入框與按鈕（排算式） */
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, onClick){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn'; b.textContent = text;
+    b.addEventListener('click', onClick);
+    row.appendChild(b);
+    return b;
   }
 
-  /* 遊戲選項每回合重新洗牌，正確答案不固定在第一個 */
+  /* ---- 「點一下」本身就是動作的格子（第 1 關的一整列）：只認第一根手指，按下和放開都在這一格才算一下。
+     放開的監聽只在按著的時候掛在 window 上（在別處放開、或被捲動取消，都只是取消，不算點）。 ---- */
+  function addTap(B, x, y, w, h, cls, onTap){
+    var z = addZone(B, x, y, w, h, cls);
+    z.setAttribute('role', 'button'); z.tabIndex = 0;
+    var pid = null;
+    function reset(){ pid = null; window.removeEventListener('pointerup', onWinEnd); window.removeEventListener('pointercancel', onWinEnd); }
+    function onWinEnd(e){ if (e.pointerId === pid) reset(); }
+    z.addEventListener('pointerdown', function(e){
+      if (pid !== null || gSolved) return;   /* 第二根手指不算 */
+      pid = e.pointerId;
+      window.addEventListener('pointerup', onWinEnd);
+      window.addEventListener('pointercancel', onWinEnd);
+    });
+    z.addEventListener('pointerup', function(e){
+      if (pid === null || e.pointerId !== pid) return;
+      reset();
+      if (!gSolved) onTap();
+    });
+    z.addEventListener('keydown', function(e){ if ((e.key === 'Enter' || e.key === ' ') && !gSolved){ e.preventDefault(); onTap(); } });
+    return z;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。axis:'x'／'y' 只能沿著那一軸移動 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (o.axis === 'x') dy = 0;
+      if (o.axis === 'y') dx = 0;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的積木一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（grade-3 multiply 的 e2e 抓到的）。
+     兩個都一樣近（剛好放在兩格正中間）就不收、靜靜彈回 —— 不可以照陣列順序挑一格、再算孩子放錯（codex 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity, tie = false;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; tie = false; }
+      else if (dd === bd && dc === bc) tie = true;
+    });
+    return best && !best.done && !tie ? best : null;
+  }
+  /* 托盤：卡片一律洗牌後排好（正解不可以固定在同一個位置） */
+  function renderTray(B, items, y, mk, step){
+    var x0 = (B.W - (items.length - 1) * step) / 2;
+    shuffle(items).forEach(function(it, i){ mk(it, x0 + i * step, y); });
+  }
   function shuffle(arr){
     var a = arr.slice();
     for (var j = a.length - 1; j > 0; j--){
@@ -1124,81 +1525,305 @@
     return a;
   }
 
+  /* 計分（中年級：輕度計分，答錯小扣分但不會結束 —— §三）：這一關沒犯錯 +20、犯過錯 +10；
+     每一次「放錯並說明為什麼」−5（最低 0 分）。放到空白處只是手滑，不扣分。 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「−5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+
+  var RENDER = {
+    /* 第 1 關：點一點 —— 一維表格（範例 1：先看標題、欄位名稱與單位，最後才讀數字）。
+       點出所有「比 n 箱多（少）」的水果；點錯一列 → 說為什麼（剛好一樣多的那一種另有一句）。點一下就是動作，這一關沒有拖拉。 */
+    pick: function(d){
+      var e = pick(GAME_PICK), P = PICK, more = e.dir === 'more', found = 0, done = [];
+      var fits = function(v){ return more ? v > e.n : v < e.n; };
+      var k = e.vals.filter(fits).length;
+      var line = trailLine(d.gPickNow(more, e.n, 0, k));
+      var B = makeBoard(300, PICK_H);
+      addZone(B, 0, 0, 300, P.th, 'gtitle', d.gPickTitle);
+      addCell(B, P.x0, P.hy, P.xm - P.x0, P.hh, 'gth', d.fruitColLabel);
+      addCell(B, P.xm, P.hy, P.x1 - P.xm, P.hh, 'gth', d.fruitValueLabel);
+      function left(){ for (var j = 0; j < FRUIT_KEYS.length; j++) if (!done[j] && fits(e.vals[j])) return j; return -1; }
+      gCtx.hint2 = function(){ return d.gPick2(k - found, d.fruitNames[FRUIT_KEYS[left()]]); };
+      FRUIT_KEYS.forEach(function(fk, i){
+        var name = d.fruitNames[fk], v = e.vals[i];
+        var row = addTap(B, P.x0, pickRowY(i), P.x1 - P.x0, P.rh, 'gtrow', function(){
+          if (done[i]) return;
+          if (!fits(v)){ roundMiss(v === e.n ? d.gPickEq(name, v, more) : d.gPickNot(name, v, e.n, more)); return; }
+          done[i] = true; row.classList.add('found'); found++;
+          line.textContent = d.gPickNow(more, e.n, found, k);
+          if (found === k){
+            roundSolved(d.gPickDone(more, e.n, FRUIT_KEYS.map(function(f, j){ return [d.fruitNames[f], e.vals[j]]; }).filter(function(x, j){ return fits(e.vals[j]); })));
+          } else { gMsg.textContent = ''; refreshHint(); }
+        });
+        row.setAttribute('aria-label', name + ' ' + v);
+        var a = document.createElement('span'); a.className = 'gname'; a.style.width = (P.xm - P.x0) + 'px'; a.textContent = name;
+        var b = document.createElement('span'); b.style.width = (P.x1 - P.xm) + 'px'; b.textContent = v;
+        row.appendChild(a); row.appendChild(b);
+      });
+    },
+
+    /* 第 2 關：移手指 —— 二維表格（範例 2：同時找到「列」和「欄」）。
+       👉 只能上下移、放到班級那一列；👇 只能左右移、放到寵物那一欄；兩條都放對了，交叉的那一格亮起來就是答案。
+       放錯列／欄 → 彈回＋說是哪一列（欄）。 */
+    ruler: function(d){
+      var e = pick(GAME_RULER), G = GAME_GRIDS[e.g], R = RULER, v = G[e.r][e.c], got = { row:false, col:false };
+      var cls = d.classNames[CLASS_KEYS[e.r]], pet = d.petNames[PET_KEYS[e.c]];
+      var line = trailLine(d.gRulerNow(cls, pet, null));
+      var B = makeBoard(300, RULER_H);
+      var bottom = R.ry + 3 * R.rh, x1 = R.cx0 + R.cw + 4 * R.col;
+      addZone(B, 0, 0, 300, R.th, 'gtitle', d.gPetTitle);
+      addCell(B, R.cx0, R.hy, R.cw, R.hh, 'gth gcorner', d.gPetCorner);
+      PET_KEYS.forEach(function(pk, c){ addPetHead(B, d, R.cx0 + R.cw + c * R.col, R.hy, R.col, R.hh, pk); });
+      var cells = [];
+      CLASS_KEYS.forEach(function(ck, r){
+        addCell(B, R.cx0, R.ry + r * R.rh, R.cw, R.rh, 'gtr', d.classNames[ck]);
+        cells.push(G[r].map(function(x, c){ return addCell(B, R.cx0 + R.cw + c * R.col, R.ry + r * R.rh, R.col, R.rh, '', x); }));
+      });
+      /* 放得下的位置：每一列（整個畫板寬）、每一欄（從手指走道到表格底） */
+      var rows = [0, 1, 2].map(function(r){ return { r:r, cx:150, cy:rulerRowY(r), hw:150, hh:R.rh / 2, done:false }; });
+      var cols = [0, 1, 2, 3].map(function(c){ return { c:c, cx:rulerColX(c), cy:(R.gy + bottom) / 2, hw:R.col / 2, hh:(bottom - R.gy) / 2, done:false }; });
+      var rowF = addPiece(B, { w:R.finger, h:R.finger, cx:R.rowX, cy:R.homeY, text:'👉', cls:'gfinger', axis:'y', label:d.gRowFinger, data:{ kind:'row' } });
+      var colF = addPiece(B, { w:R.finger, h:R.finger, cx:R.cx0 + R.cw / 2, cy:R.gy + R.gh / 2, text:'👇', cls:'gfinger', axis:'x', label:d.gColFinger, data:{ kind:'col' } });
+      gCtx.hint2 = function(){ return d.gRuler2(cls, e.r + 1, pet, e.c + 1); };
+      useTapSelect(B, function(P, pt){
+        if (P.data.kind === 'row'){
+          var b = nearestOpen(rows, pt, 6);
+          if (!b) return false;
+          if (b.r !== e.r){ roundMiss(d.gRulerRow(d.classNames[CLASS_KEYS[b.r]], cls)); return false; }
+          P.lock(R.rowX, b.cy); b.done = true; got.row = true;
+          addZone(B, R.cx0, R.ry + b.r * R.rh, x1 - R.cx0, R.rh, 'gband');
+        } else {
+          var c = nearestOpen(cols, pt, 6);
+          if (!c) return false;
+          if (c.c !== e.c){ roundMiss(d.gRulerCol(d.petNames[PET_KEYS[c.c]], pet)); return false; }
+          P.lock(c.cx, R.gy + R.gh / 2); c.done = true; got.col = true;
+          addZone(B, R.cx0 + R.cw + c.c * R.col, R.hy, R.col, bottom - R.hy, 'gband gcolband');
+        }
+        if (got.row && got.col){
+          cells[e.r][e.c].classList.add('ghit');
+          line.textContent = d.gRulerNow(cls, pet, v);
+          roundSolved(d.gRulerDone(cls, pet, v));
+        } else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      });
+      return rowF;
+    },
+
+    /* 第 3 關：補總計 —— 範例 3：列總計＝同一列加起來、行總計＝同一欄加起來，兩種加起來的總計一樣。
+       空著三格（一個列總計、一個行總計、總計）；五張卡，卡片只收進它真的等於的那一格。 */
+    total: function(d){
+      var e = pick(GAME_TOTAL), T = TOTAL, g = e.grid, filled = 0;
+      var RS = g.map(function(row){ return sum(row); }), CS = [0, 1, 2].map(function(c){ return colSum(g, c); }), GS = gridSum(g);
+      var line = trailLine(d.gTotalNow(0, 3));
+      var B = makeBoard(300, TOTAL_H);
+      var x3 = T.cx0 + T.cw + 3 * T.col;
+      addZone(B, 0, 0, 300, T.th, 'gtitle', d.gPetTitle);
+      addCell(B, T.cx0, T.hy, T.cw, T.hh, 'gth gcorner', d.gPetCorner);
+      [0, 1, 2].forEach(function(c){ addPetHead(B, d, T.cx0 + T.cw + c * T.col, T.hy, T.col, T.hh, PET_KEYS[c]); });
+      addCell(B, x3, T.hy, T.tw, T.hh, 'gth', d.rowTotalLabel);
+      var blanks = [];
+      function blank(kind, i, v, c, r){
+        var w = c < 3 ? T.col : T.tw, x = c < 3 ? T.cx0 + T.cw + c * T.col : x3, y = T.ry + r * T.rh;
+        var z = addZone(B, x + 2, y + 2, w - 4, T.rh - 4, 'gslot', kind === 'grand' ? d.gGrand : '?');
+        blanks.push({ kind:kind, i:i, v:v, cx:totalColX(c), cy:totalRowY(r), hw:w / 2 - 2, hh:T.rh / 2 - 2, done:false, el:z });
+      }
+      [0, 1, 2].forEach(function(r){
+        addCell(B, T.cx0, T.ry + r * T.rh, T.cw, T.rh, 'gtr', d.classNames[CLASS_KEYS[r]]);
+        g[r].forEach(function(x, c){ addCell(B, T.cx0 + T.cw + c * T.col, T.ry + r * T.rh, T.col, T.rh, '', x); });
+        if (r === e.br) blank('row', r, RS[r], 3, r);
+        else addCell(B, x3, T.ry + r * T.rh, T.tw, T.rh, 'gtot', RS[r]);
+      });
+      addCell(B, T.cx0, T.ry + 3 * T.rh, T.cw, T.rh, 'gtr', d.colTotalLabel);
+      [0, 1, 2].forEach(function(c){
+        if (c === e.bc) blank('col', c, CS[c], c, 3);
+        else addCell(B, T.cx0 + T.cw + c * T.col, T.ry + 3 * T.rh, T.col, T.rh, 'gtot', CS[c]);
+      });
+      blank('grand', 0, GS, 3, 3);
+      gCtx.hint2 = function(){
+        var s = blanks.filter(function(b){ return !b.done; })[0];
+        if (!s) return '';
+        if (s.kind === 'row') return d.gTot2Row(d.classNames[CLASS_KEYS[s.i]], g[s.i]);
+        if (s.kind === 'col') return d.gTot2Col(d.petNames[PET_KEYS[s.i]], g.map(function(row){ return row[s.i]; }));
+        return d.gTot2Grand(RS);
+      };
+      renderTray(B, [RS[e.br], CS[e.bc], GS].concat(e.dec), T.trayY, function(v, cx, cy){
+        addPiece(B, { w:T.card, h:T.card, cx:cx, cy:cy, text:String(v), cls:'gcard', data:{ v:v } });
+      }, T.step);
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(blanks, pt, 4);
+        if (!s) return false;
+        if (P.data.v !== s.v){
+          if (s.kind === 'row') roundMiss(d.gTotRow(d.classNames[CLASS_KEYS[s.i]], g[s.i], P.data.v));
+          else if (s.kind === 'col') roundMiss(d.gTotCol(d.petNames[PET_KEYS[s.i]], g.map(function(row){ return row[s.i]; }), P.data.v));
+          else roundMiss(d.gTotGrand(P.data.v));
+          return false;
+        }
+        P.lock(s.cx, s.cy); P.el.classList.add('placed'); s.done = true; s.el.classList.add('filled'); s.el.textContent = '';
+        filled++;
+        line.textContent = d.gTotalNow(filled, 3);
+        if (filled === 3) roundSolved(d.gTotalDone(RS, CS, GS));
+        else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 4 關：排算式 —— 範例 4：用表格回答問題。「相差」用減法（大的減小的）、「一共」用加法。
+       表格的每一格都拿得起來（拿起來的是一張數字卡，格子裡的數字還在）；要用的兩格放進 □ ○ □，＋／− 放進 ○，排好才能打答案。 */
+    sentence: function(d){
+      var e = pick(GAME_EQ), g = GAME_GRIDS[e.g], Q = EQ, diff = e.kind === 'diff';
+      var va = g[e.a[0]][e.a[1]], vb = g[e.b[0]][e.b[1]], big = Math.max(va, vb), small = Math.min(va, vb);
+      var ca = d.classNames[CLASS_KEYS[e.a[0]]], cb = d.classNames[CLASS_KEYS[e.b[0]]], pa = d.petNames[PET_KEYS[e.a[1]]], pb = d.petNames[PET_KEYS[e.b[1]]];
+      var sameCol = e.a[1] === e.b[1];
+      var ask = diff ? (sameCol ? d.gEqDiffCol(ca, cb, pa) : d.gEqDiffRow(ca, pa, pb)) : (sameCol ? d.gEqSumCol(ca, cb, pa) : d.gEqSumRow(ca, pa, pb));
+      trailLine(ask);
+      var B = makeBoard(300, EQ_H);
+      addZone(B, 0, 0, 300, Q.th, 'gtitle', d.gPetTitle);
+      addCell(B, Q.cx0, Q.hy, Q.cw, Q.hh, 'gth gcorner', d.gPetCorner);
+      PET_KEYS.forEach(function(pk, c){ addPetHead(B, d, Q.cx0 + Q.cw + c * Q.col, Q.hy, Q.col, Q.hh, pk); });
+      CLASS_KEYS.forEach(function(ck, r){
+        addCell(B, Q.cx0, Q.ry + r * Q.rh, Q.cw, Q.rh, 'gtr', d.classNames[ck]);
+        g[r].forEach(function(x, c){
+          addCell(B, Q.cx0 + Q.cw + c * Q.col, Q.ry + r * Q.rh, Q.col, Q.rh, '', x);
+          addPiece(B, { w:Q.col - 4, h:Q.rh, cx:eqColX(c), cy:eqRowY(r), text:String(x), cls:'gcell', data:{ r:r, c:c, v:x },
+            label:d.classNames[ck] + ' ' + d.petNames[PET_KEYS[c]] + ' ' + x });
+        });
+      });
+      var h = Q.slot / 2;
+      var slots = [ { k:'a', cx:Q.xa, cy:Q.y, hw:h, hh:h, done:false, v:null }, { k:'b', cx:Q.xb, cy:Q.y, hw:h, hh:h, done:false, v:null } ];
+      var opSlot = { k:'op', cx:Q.xop, cy:Q.y, hw:h, hh:h, done:false, v:null };
+      slots.concat([opSlot]).forEach(function(s){ s.el = addZone(B, s.cx - h, s.cy - h, Q.slot, Q.slot, 'gslot gsym', s.k === 'op' ? '○' : '□'); });
+      addZone(B, Q.xeq - 16, Q.y - h, 32, Q.slot, 'glbl', '＝');
+      var res = addZone(B, Q.xres - 28, Q.y - h, 56, Q.slot, 'glbl', '?');
+      renderTray(B, ['+', '−'], Q.opY, function(op, cx, cy){
+        addPiece(B, { w:GPICK, h:GPICK, cx:cx, cy:cy, text:op === '+' ? '＋' : '−', cls:'gcard gop', data:{ op:op } });
+      }, Q.opStep);
+      var row = actionRow();
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.inputMode = 'numeric'; inp.className = 'gnum'; inp.maxLength = 3; inp.disabled = true;
+      inp.setAttribute('aria-label', d.gEqInput);
+      row.appendChild(inp);
+      var btn = actionBtn(row, d.gEqBtn, submit);
+      btn.disabled = true;
+      inp.addEventListener('keydown', function(ev){ if (ev.key === 'Enter'){ ev.preventDefault(); submit(); } });
+      function ready(){ return slots[0].done && slots[1].done && opSlot.done; }
+      function opText(){ return opSlot.v === '+' ? '+' : '−'; }
+      function submit(){
+        if (gSolved || !ready()) return;
+        var t = inp.value.trim();
+        if (!/^(0|[1-9]\d*)$/.test(t)){ gMsg.textContent = d.gEqEmpty; return; }
+        var want = opSlot.v === '+' ? slots[0].v + slots[1].v : slots[0].v - slots[1].v, got = +t;
+        if (got !== want){ roundMiss(d.gEqWrong(slots[0].v, opText(), slots[1].v, got)); return; }
+        inp.disabled = true; btn.disabled = true; res.textContent = String(want);
+        roundSolved(d.gEqDone(slots[0].v, opText(), slots[1].v, want));
+      }
+      gCtx.hint2 = function(){ return d.gEq2(ca, pa, va, cb, pb, vb); };
+      useTapSelect(B, function(P, pt){
+        if (P.data.op){
+          var o = nearestOpen([opSlot], pt, 6);
+          if (!o) return false;
+          if ((P.data.op === '−') !== diff){ roundMiss(diff ? d.gEqOpDiff : d.gEqOpSum); return false; }
+          P.lock(o.cx, o.cy); P.el.classList.add('placed'); o.done = true; o.v = P.data.op; o.el.textContent = '';
+        } else {
+          var s = nearestOpen(slots, pt, 6);
+          if (!s) return false;
+          var isA = P.data.r === e.a[0] && P.data.c === e.a[1], isB = P.data.r === e.b[0] && P.data.c === e.b[1];
+          if (!isA && !isB){ roundMiss(d.gEqCell(d.classNames[CLASS_KEYS[P.data.r]], d.petNames[PET_KEYS[P.data.c]], P.data.v)); return false; }
+          if (diff && P.data.v !== (s.k === 'a' ? big : small)){ roundMiss(d.gEqOrder(big, small)); return false; }
+          P.lock(s.cx, s.cy); P.el.classList.add('placed'); s.done = true; s.v = P.data.v; s.el.textContent = '';
+        }
+        if (ready()){ inp.disabled = false; btn.disabled = false; }
+        gMsg.textContent = ''; refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 5 關：整理票數 —— 範例 5：把紀錄一筆一筆整理成表格。每一張票只收進它投的那個地點那一列，那一列的票數加 1；
+       全部放完，表格的票數加起來一定等於票的張數。 */
+    tally: function(d){
+      var votes = pick(GAME_TALLY), T = TALLY, counts = {}, placed = 0;
+      TALLY_KEYS.forEach(function(k){ counts[k] = 0; });
+      var line = trailLine(d.gTallyNow(0, votes.length));
+      var B = makeBoard(300, TALLY_H);
+      addCell(B, T.x0, 0, T.xm - T.x0, T.hh, 'gth', d.tallyColLabel);
+      addCell(B, T.xm, 0, T.x1 - T.xm, T.hh, 'gth', d.tallyValueLabel);
+      var bins = TALLY_KEYS.map(function(k, i){
+        var y = T.ry + i * T.rh;
+        addCell(B, T.x0, y, T.xm - T.x0, T.rh, 'gtr gbig', TALLY_ICONS[k] + ' ' + d.gTallyNames[k]);
+        var num = addCell(B, T.xm, y, T.x1 - T.xm, T.rh, '', '0');
+        return { k:k, cx:(T.x0 + T.x1) / 2, cy:tallyRowY(i), hw:(T.x1 - T.x0) / 2, hh:T.rh / 2, done:false, num:num };
+      });
+      votes.forEach(function(k, i){
+        var p = tallyChipXY(i);
+        addPiece(B, { w:T.cw, h:T.ch, cx:p.x, cy:p.y, text:TALLY_ICONS[k] + ' ' + d.gTallyNames[k], cls:'gchip', data:{ k:k } });
+      });
+      gCtx.hint2 = function(){ return d.gTally2(votes.length - placed); };
+      useTapSelect(B, function(P, pt){
+        var b = nearestOpen(bins, pt, 4);
+        if (!b) return false;
+        if (b.k !== P.data.k){ roundMiss(d.gTallyWrong(d.gTallyNames[P.data.k], d.gTallyNames[b.k])); return false; }
+        counts[b.k]++; b.num.textContent = counts[b.k]; placed++;
+        P.lock(P.cx, P.cy); P.el.classList.add('gone');
+        line.textContent = d.gTallyNow(placed, votes.length);
+        if (placed === votes.length){
+          roundSolved(d.gTallyDone(TALLY_KEYS.map(function(k){ return [d.gTallyNames[k], counts[k]]; }), placed));
+        } else { gMsg.textContent = ''; refreshHint(); }
+        return true;
+      });
+    }
+  };
+
   function startRound(){
-    var round = GROUNDS[gRound];
-    gMistake = false;
+    var d = L();
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {};
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = L().gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = L().gHint1;
-    } else {
-      elHint.textContent = '';
-    }
-
-    gAskLine.textContent = round.ask[lang];
-    renderGPicture(hintLevel >= 2);
-
-    gAnswers.textContent = '';
-    shuffle(round.choices).forEach(function(v){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = v;
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        if (v === round.correct){
-          var all = gAnswers.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + L().gCorrectRetry(round.correct) + '</span>';
-          } else {
-            gScore += 20;
-            gMsg.innerHTML = '<span class="yes">' + L().gCorrectFirst(round.correct) + '</span>';
-          }
-          if (gRound === GROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + L().gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gScore = Math.max(0, gScore - 5);
-          gMsg.innerHTML = '<span class="no">' + L().gWrong(v) + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
+
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
 
   gNext.addEventListener('click', function(){
-    if (gRound < GROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
-
   gHintBtn.addEventListener('click', function(){
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = L().gHint1;
-    } else {
-      var round = GROUNDS[gRound];
-      elHint.textContent = round.hint2[lang];
-      renderGPicture(true);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ===================== 語言切換：靜態文字＋所有動態區重新渲染 ===================== */
