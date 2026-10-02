@@ -127,14 +127,51 @@
   }
   .cday.blank{border-color:transparent;background:transparent;cursor:default}
   .cday[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--green)}
-  .gopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
-  .gopt{
-    border:3px solid var(--line);background:var(--card);border-radius:16px;padding:8px;
-    cursor:pointer;display:flex;align-items:center;justify-content:center;
-  }
-  .gopt.right{border-color:var(--green);background:var(--green-soft)}
-  .gopt.wrong{border-color:var(--red);background:var(--red-soft)}
-  .gopt:disabled{cursor:default;opacity:.9}
+
+  /* ---- 小遊戲：撥長針、讀時間、排一天、補日曆、數日子（§六之五） ---- */
+  .gamemsg{text-align:center}
+  .game .hint{text-align:center}
+  .gstage{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0 }
+  .gask{ font-weight:700; text-align:center; font-size:18px }
+  /* 兩行高：英文的「7:00 a.m. → 10:00 a.m. → 3:00 p.m. → 7:00 p.m.」在手機上會換行，畫板不可以因此往下跳 */
+  .gtrail{ font-size:20px; font-weight:800; color:var(--ink); text-align:center; line-height:1.3; min-height:2.6em;
+    display:flex; align-items:center; justify-content:center }
+  .gwrap{ position:relative; margin:0 auto }
+  .gboard{ position:absolute; left:0; top:0; transform-origin:0 0; background:var(--bg); border-radius:16px }
+  .gboard > div, .gboard > button{ position:absolute }
+  .gpiece{ left:0; top:0; display:flex; align-items:center; justify-content:center;
+    touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; transition:transform .25s ease; z-index:5 }
+  .gpiece.dragging{ transition:none; cursor:grabbing; z-index:50 !important; filter:drop-shadow(0 6px 8px rgba(70,60,40,.25)) }
+  .gpiece.sel{ outline:3px dashed var(--blue); outline-offset:4px; border-radius:12px }
+  .gpiece.locked{ cursor:default; pointer-events:none }
+  .gcard{ background:var(--card); border:3px solid var(--line); border-radius:12px; font-size:24px; font-weight:800; color:var(--ink) }
+  .gcard.placed{ border-color:var(--green); background:var(--green-soft); color:var(--green) }
+  .gday{ font-size:16px; line-height:1.25; text-align:center; white-space:pre-line }
+  .glbl{ display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--muted); pointer-events:none }
+  .gunit{ display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:800; color:var(--ink); pointer-events:none }
+  .gorder{ display:flex; align-items:center; justify-content:center; text-align:center; font-size:19px; font-weight:800; color:var(--ink); line-height:1.25; pointer-events:none }
+  .gslot{ display:flex; align-items:center; justify-content:center; border:3px dashed var(--line); border-radius:10px; background:var(--card) }
+  /* 第 1、2 關的鐘面：整張 SVG 拿不起來；第 1 關拿得起來的是長針上的圈圈 */
+  .gface{ pointer-events:none }
+  .gface svg{ display:block }
+  .gring{ border-radius:50%; border:4px solid #3B7DD8; background:rgba(59,125,216,.18) }
+  .gring.placed{ border-color:#2F9E69; background:rgba(47,158,105,.18) }
+  .gring.sel{ border-radius:50% }
+  /* 第 4、5 關的日曆：格子拿不起來；第 4 關的空格是放日期卡的位置 */
+  .gwd{ display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:var(--muted); pointer-events:none }
+  .gdate{ display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--ink);
+    border:1px solid var(--line); background:var(--card); pointer-events:none }
+  .gdate.hole{ border:2px dashed #9C9689; background:#FFFDF8 }
+  .gdate.filled{ color:var(--green); background:var(--green-soft); border:2px solid var(--green) }
+  .gdate.today{ border:3px solid var(--orange); color:var(--orange) }
+  .ghop{ border-radius:50%; border:3px solid var(--blue); background:rgba(59,125,216,.16); pointer-events:none; transition:left .2s, top .2s }
+  .ghop.done{ border-color:var(--green); background:rgba(47,158,105,.2) }
+  .gaction{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap }
+  .gaction .btn{ padding:12px 18px }
+  .gaction .btn:disabled{ background:#C9C4B8; color:#fff; border-color:#C9C4B8 }
+  .ghoptask{ font-size:18px }
+  /* 遊戲裡的數字用西文字型：PingFang 的粗體數字又寬又擠 */
+  .gtrail, .gcard, .gslot, .gorder, .gdate, .gunit, #gMsg{ font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif }
 </style>
 </head>
 <body>
@@ -242,20 +279,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">對時大挑戰</h2>
-    <p class="lead" data-i18n="s6lead">找出說對時間的那個時鐘！</p>
+    <p class="lead" data-i18n="s6lead">撥長針、讀時間、排一天、補日曆、數日子 —— 五關都過就是時間小管家！</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
-        <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
+        <span><span data-i18n="gScoreLabel">星星</span> <b id="gScore">0</b> ⭐</span>
       </div>
-      <p class="hopline" id="gAskLine"></p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
-      </div>
-      <div class="gopts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -306,16 +340,68 @@
   /* 範例 4：月曆。2026 年不是閏年，2 月剛好 28 天；6 月小月 30 天、7 月大月 31 天。 */
   var CAL_YEAR = 2026;
   var CAL_MONTHS = [2, 6, 7];
-  /* 遊戲：說出一個時刻，從三個鐘面裡挑對的。
-     誘答都是真的會犯的錯：短針讀成下一個數字、長針左右看反、長針的數字直接當分鐘。
-     opts 是物件陣列，圖就是從 opts 自己畫出來的 —— 沒有第二個要跟著對齊的陣列。 */
-  var ROUNDS = [
-    { ask:{ half:'am',    h:7,  m:20 }, opts:[{h:7,m:40},{h:7,m:20},{h:8,m:20}],  ans:1 },
-    { ask:{ half:'pm',    h:3,  m:50 }, opts:[{h:3,m:50},{h:4,m:50},{h:3,m:10}],  ans:0 },
-    { ask:{ half:'noon',  h:12, m:30 }, opts:[{h:6,m:0},{h:12,m:6},{h:12,m:30}],  ans:2 },
-    { ask:{ half:'night', h:8,  m:5  }, opts:[{h:9,m:5},{h:8,m:5},{h:8,m:55}],    ans:1 },
-    { ask:{ half:'am',    h:11, m:55 }, opts:[{h:11,m:55},{h:12,m:55},{h:11,m:25}], ans:0 }
+  /* ---------- 小遊戲「對時大挑戰」的題庫與版面（§六之五：五關五種玩法） ----------
+     版面一律是畫板上的 px（畫板寬 GAME_W），位置一律記「中心點」。拿得起來的東西至少 GPICK × GPICK
+     （375px 手機上畫板能用 289px 寬，縮成約 0.963 倍，48 → 46.2）。GPAD：放開的點離格子的方框多遠還算放進去。
+     每一關從自己的池子隨機抽一題。 */
+  var GAME_W = 300, GPICK = 48, GPAD = 6;
+  var GAME_ORDER = ['long', 'read', 'day', 'fill', 'hop'];
+
+  /* 第 1 關 撥長針（範例 1：長針走一個數字是 5 分；走一圈 60 分 ＝ 1 小時）：鐘一開始是 h 點整（長針指著 12）。
+     把長針上的圈圈拖著轉，撥成「h 點 m 分」。短針跟著齒輪一起走 —— 和真的時鐘一樣。
+     放開時看長針一共轉了幾分（每一次移動的角度差加起來，取最近的 5 的倍數）：剛好 m 分才收。
+     指著別的數字 → 說「指著 n 是 n 個 5 分」；多轉一圈 → 「一圈 60 分 ＝ 1 小時，變成下一個鐘點了」；
+     倒著轉 → 「時間往回走了」。轉回 12 等於沒撥，靜靜放回去。
+     m 不是 0 也不是 60；5 分、10 分那兩題的「把 m 當成數字」（指著 5、指著 10）是會被抓到的迷思。 */
+  var GAME_LONG = [ { h:3, m:40 }, { h:8, m:10 }, { h:5, m:25 }, { h:10, m:35 }, { h:2, m:5 }, { h:7, m:50 }, { h:9, m:20 } ];
+  var LONG_H = 300;
+  var LONG_DIAL = { cx:150, cy:150, size:290, ring:0.50, inner:0.22, outer:1.12 };
+
+  /* 第 2 關 讀時間（範例 2：先看短針，再看長針）：畫一個 h 點 m 分的鐘，m ≥ 35 —— 短針已經很靠近下一個數字。
+     四張數字卡 h、h 的下一個數字、長針指著的數字 n、分鐘數 m，放進「□ 點 □ 分」。
+     「點」只收 h（下一個數字 → 「還沒走到」）；「分」只收 m（n → 「指著 n 是 n 個 5 分」）。四張卡的數字一定都不一樣。 */
+  var GAME_READ = [ { h:3, m:50 }, { h:4, m:45 }, { h:10, m:35 }, { h:6, m:55 }, { h:1, m:40 }, { h:11, m:50 }, { h:12, m:40 } ];
+  var READ_H = 350;
+  var READ_DIAL = { cx:150, cy:94, size:180 };
+  var READ_SLOT = { y:240, w:64, h:56, x:[100, 196] }, READ_LBL_Y = 188, READ_LBL_W = 92, READ_CARD = { y:316, w:56, h:52, step:68 };
+
+  /* 第 3 關 排一天（範例 3：短針一天走兩圈，一圈上午、一圈下午和晚上）：四張「幾點」卡從一天裡最早排到最晚。
+     每一組都有「下午／晚上的數字比上午小、其實比較晚」的一對 —— 只比數字一定排錯。整點，避開 12 點和 5、6 點
+     （中午／半夜、傍晚算下午還是晚上，都說不準）。第 k 格只收第 k 早的；四格只隔 2，吸附範圍重疊，挑最近的。 */
+  var GAME_DAY = [
+    [ { half:'am', h:7 }, { half:'pm', h:3 }, { half:'night', h:7 }, { half:'am', h:10 } ],
+    [ { half:'pm', h:2 }, { half:'am', h:8 }, { half:'night', h:9 }, { half:'am', h:11 } ],
+    [ { half:'night', h:8 }, { half:'am', h:6 }, { half:'pm', h:4 }, { half:'am', h:9 } ],
+    [ { half:'pm', h:1 }, { half:'am', h:11 }, { half:'night', h:10 }, { half:'am', h:7 } ],
+    [ { half:'night', h:9 }, { half:'pm', h:4 }, { half:'am', h:9 }, { half:'am', h:8 } ],
+    [ { half:'am', h:10 }, { half:'pm', h:3 }, { half:'night', h:8 }, { half:'am', h:8 } ]
   ];
+  var DAY_ICON = { am:'🌅', pm:'☀️', night:'🌙' };
+  var DAY_H = 214;
+  var DAY_SLOT = { y:76, w:72, h:64, x:[39, 113, 187, 261] }, DAY_CARD = { y:170, w:72, h:64, step:74 };
+  /* 一天裡的第幾分鐘（上午 h 點 ＝ h × 60；下午、晚上 h 點 ＝ (h + 12) × 60）—— 只用來比早晚 */
+  function dayMin(v){ return ((v.half === 'am' ? 0 : 12) + v.h) * 60; }
+
+  /* 第 4 關 補日曆（範例 4：一個星期 7 天，日曆一排是 7 天）：CAL_YEAR 年 mo 月的日曆少了三天。
+     把三張日期卡放回自己的空格；放錯 → 「這一格的上面是 x − 7 日，往下一格多 7 天」。
+     空格都不在第一排、上面那一格也不是空格（說明才看得到上面那一個日期）。格子之間沒有縫，吸附範圍重疊，挑最近的；
+     最近的是已經寫好日期的格子 → 靜靜彈回。 */
+  var GAME_FILL = [ { mo:6, holes:[10, 16, 24] }, { mo:7, holes:[9, 15, 28] }, { mo:9, holes:[11, 17, 23] },
+                    { mo:3, holes:[12, 20, 26] }, { mo:10, holes:[8, 19, 29] }, { mo:4, holes:[13, 18, 22] } ];
+  var CAL_GRID = { x0:10, cw:40, ch:34, head:24 };
+  var FILL_H = 322, FILL_Y0 = 46, FILL_CARD = { y:290, w:56, h:52, step:76 };
+
+  /* 第 5 關 數日子（範例 4：差 7 天就是同一個星期幾）：「今天是 mo 月 s 日，n 天後（k 個星期後）是幾月幾日？」
+     按「+1 天」「+7 天」讓藍色圈圈在日曆上往後走，走到了按「就是這一天」（這一關用點的）。
+     停錯就說「從 s 日走到 x 日是 x − s 天」；還沒走就按 → 只提醒、不算錯；走過月底 → 只提醒、不動。 */
+  var GAME_HOP = [ { mo:7, s:5, n:14 }, { mo:9, s:2, n:21 }, { mo:10, s:6, n:9 }, { mo:3, s:10, n:8 },
+                   { mo:11, s:4, n:7 }, { mo:4, s:8, n:16 } ];
+  var HOP_H = 262, HOP_Y0 = 60;
+  /* 第 d 日在日曆的哪一格（中心點）：1 號排在星期 first 那一欄，往右一天、往下一排是 7 天 */
+  function calCellXY(G, y0, first, d){
+    var i = first + d - 1;
+    return { x:G.x0 + (i % 7) * G.cw + G.cw / 2, y:y0 + G.head + Math.floor(i / 7) * G.ch + G.ch / 2 };
+  }
 
   /* 這個月有幾天、1 號是星期幾 —— 都算出來，不寫死。 */
   function daysInMonth(y, m){ return new Date(y, m, 0).getDate(); }
@@ -374,6 +460,53 @@
     return s;
   }
 
+  /* 遊戲用的鐘面：每一樣東西都和 size 成比例（clockSVG 的數字是固定 17px，縮小就擠在一起）。
+     mins 可以不是整數（拖長針時一直在轉）；短針的角度一樣是 ((h % 12) + mins / 60) × 30。 */
+  function dialR(size){ return size / 2 - 6; }
+  function dialSVG(h, mins, size){
+    var cx = size / 2, cy = size / 2, r = dialR(size), fs = Math.round(r * 0.17);
+    var hp = polar(cx, cy, ((h % 12) + mins / 60) * 30, r * 0.48);
+    var mp = polar(cx, cy, mins * 6, r * 0.74);
+    var s = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size +
+            '" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">';
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#FFFFFF" stroke="#2B2A33" stroke-width="3"/>';
+    for (var t = 0; t < 60; t++){
+      var big = (t % 5 === 0);
+      var p1 = polar(cx, cy, t * 6, r - 2), p2 = polar(cx, cy, t * 6, r - (big ? r * 0.11 : r * 0.05));
+      s += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) +
+           '" stroke="' + (big ? '#2B2A33' : '#C9C4B8') + '" stroke-width="' + (big ? 2.5 : 1.2) + '"/>';
+    }
+    for (var i = 1; i <= 12; i++){
+      var tp = polar(cx, cy, i * 30, r * 0.79);
+      s += '<text x="' + tp.x.toFixed(1) + '" y="' + (tp.y + fs * 0.36).toFixed(1) + '" font-size="' + fs +
+           '" text-anchor="middle" fill="#2B2A33" font-weight="700">' + i + '</text>';
+    }
+    s += '<line class="hh" x1="' + cx + '" y1="' + cy + '" x2="' + hp.x.toFixed(2) + '" y2="' + hp.y.toFixed(2) +
+         '" stroke="#E8871E" stroke-width="' + Math.max(6, r * 0.075).toFixed(1) + '" stroke-linecap="round"/>';
+    s += '<line class="mh" x1="' + cx + '" y1="' + cy + '" x2="' + mp.x.toFixed(2) + '" y2="' + mp.y.toFixed(2) +
+         '" stroke="#3B7DD8" stroke-width="' + Math.max(4, r * 0.04).toFixed(1) + '" stroke-linecap="round"/>';
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + Math.max(5, r * 0.05).toFixed(1) + '" fill="#2B2A33"/>';
+    s += '</svg>';
+    return s;
+  }
+  /* 從圓心看過去的角度（12 點鐘方向是 0°，順時針） */
+  function dialAngle(Dl, pt){ var a = Math.atan2(pt.x - Dl.cx, Dl.cy - pt.y) * 180 / Math.PI; return a < 0 ? a + 360 : a; }
+  /* 這一點最靠近鐘面上的哪一個數字（1～12，看角度）；太靠近圓心或在鐘面外 → 0（放在空白處） */
+  function dialNumber(Dl, pt){
+    var dx = pt.x - Dl.cx, dy = pt.y - Dl.cy, r = Math.sqrt(dx * dx + dy * dy), R = dialR(Dl.size);
+    if (r < R * Dl.inner || r > R * Dl.outer) return 0;
+    var k = Math.round(dialAngle(Dl, pt) / 30) % 12;
+    return k === 0 ? 12 : k;
+  }
+  /* 圈圈在角度 ang 的時候，中心點在哪裡 */
+  function ringXY(Dl, ang){ return polar(Dl.cx, Dl.cy, ang, dialR(Dl.size) * Dl.ring); }
+  /* 拖一下長針轉了幾度（−180～180）：每一次移動都加起來，倒著轉是負的、多轉一圈就多 360° ＝ 60 分 */
+  function angleStep(a0, a1){ var d = a1 - a0; while (d > 180) d -= 360; while (d <= -180) d += 360; return d; }
+  /* 放開時長針停在哪一分：轉過的分鐘數取最近的 5 的倍數（一個數字 5 分） */
+  function snapMinutes(total){ return 5 * Math.round(total / 5); }
+  /* h 點再走 laps 個小時（可以是負的）是幾點：12 之後是 1 */
+  function hourAfter(h, laps){ return ((h - 1 + laps) % 12 + 12) % 12 + 1; }
+
   /* ---------- i18n ---------- */
   var I18N = {
     zh: {
@@ -395,7 +528,7 @@
       s3h2:'一天，短針走兩圈', s3lead:'一圈是上午，一圈是下午和晚上。',
       s4h2:'日曆怎麼看', s4lead:'點一個日子，看看那天是星期幾。',
       s5h2:'檢查一下', s5lead:'點一下答案，馬上知道對不對！',
-      s6h2:'對時大挑戰', s6lead:'找出說對時間的那個時鐘！',
+      s6h2:'對時大挑戰', s6lead:'撥長針、讀時間、排一天、補日曆、數日子 —— 五關都過就是時間小管家！',
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a>。',
@@ -493,31 +626,89 @@
           why:'長針指著數字要數 5：5、10、15、20 → 指著 4 是 20 分，不是 4 分。' }
       ],
 
-      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
-      gAsk:function(when){ return '哪一個時鐘是「' + when + '」？'; },
-      gOptAria:function(i){ return '時鐘 ' + i; },
-      gHintBtn:'💡 提示',
-      gHint1:'先看短針在哪兩個數字中間，再看長針指著哪個數字。',
-      gHints2:[
-        '提示：20 分的時候，長針要指著 4。',
-        '提示：短針還沒走到 4，所以是 3 點。',
-        '提示：30 分的時候，長針要指著 6，短針在 12 和 1 中間。',
-        '提示：5 分的時候，長針只走到 1。',
-        '提示：短針快到 12 了，但還沒到，所以是 11 點。'
-      ],
-      gWhys:[
-        '短針在 7 和 8 中間 → 7 點；長針指著 4 → 20 分。',
-        '短針還沒走到 4 → 3 點；長針指著 10 → 50 分。',
-        '長針指著 6 是 30 分，不是 6 分；短針走到 12 和 1 的正中間。',
-        '長針指著 1 → 5 分；短針還在 8 附近，是 8 點。',
-        '長針指著 11 → 55 分；短針快到 12，但還沒到，所以是 11 點。'
-      ],
-      gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:function(v){ return '答對了！+20 分！那就是 ' + v + '。'; },
-      gCorrectRetry:function(v){ return '答對了！+10 分。那就是 ' + v + '。'; },
-      gTryAgain:'這個時鐘不對喔，再看一次短針和長針！',
-      gClear:'按「下一關」繼續對時。',
-      gWin:function(score){ return '五關全過！最後得分 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; }
+      gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'星星',
+      gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
+      gAsks:{
+        long:'拖長針上的圈圈，順著 1、2、3 的方向轉，把時鐘撥好。（也可以先點圈圈，再點鐘面上的數字）',
+        read:'這個時鐘是幾點幾分？把數字卡放進框框。（也可以先點卡片，再點框框）',
+        day:'這四個時間，從一天裡最早的排到最晚的。（也可以先點卡片，再點格子）',
+        fill:'日曆少了三天，把日期卡放回它的格子。（也可以先點卡片，再點格子）',
+        hop:'按「+1 天」「+7 天」在日曆上往後走，走到了按「就是這一天」。（這一關用點的）'
+      },
+      gHints:{
+        long:'長針走一個數字是 5 分：從 12 開始，5、10、15……一個數字數一個 5。',
+        read:'先看短針在哪兩個數字中間，還沒走到的那個不算；再看長針指著幾，數幾個 5。',
+        day:'一天是先上午、再下午、最後晚上；同一段裡才比幾點。',
+        fill:'日曆一排是 7 天：往下一格，日期就多 7。',
+        hop:'1 個星期是 7 天：按一次「+7 天」，就往下跳一排。'
+      },
+      gStars:function(n){ return '⭐ +' + n; },
+      gClear:'按「下一關」繼續。',
+      gWin:function(s){ return '五關全過！一共 ' + s + ' 顆星星 🏆 按「重新開始」再玩一次。'; },
+
+      gRingLabel:'長針的圈圈',
+      fives:function(n){ return n + ' 個 5'; },
+      gLongTask:function(h, m){ return '撥成 ' + this.timeText(h, m); },
+      gLongNow:function(h, m){ return this.timeText(h, m) + ' ✓'; },
+      gLongWrong:function(n, m){ return '長針指著 ' + n + ' → ' + n + ' 個 5 分 → ' + (n * 5) + ' 分，不是 ' + m + ' 分。'; },
+      gLongLap:function(q, now, n){
+        return '長針轉過了 12（走滿 ' + q + ' 圈）：一圈是 60 分 ＝ 1 小時，所以變成 ' + now + '了。從 12 往前撥到 ' + n + '，不要轉過頭。';
+      },
+      gLongBack:function(now, n){ return '長針倒著轉，時間就往回走，變成 ' + now + '了。要從 12 往 1、2、3 的方向撥到 ' + n + '。'; },
+      gLong2:function(m, n){ return '數到 ' + m + ' 分要數 ' + n + ' 個 5：長針要指著 ' + n + '。'; },
+      gLongDone:function(h, m, n){
+        return '長針指著 ' + n + '：' + n + ' 個 5 分，' + n + ' × 5 ＝ ' + m + ' 分。短針也跟著走，停在 ' + h + ' 和 ' + hourAfter(h, 1) + ' 中間。';
+      },
+
+      gReadLblH:'短針說幾點', gReadLblM:'長針說幾分', gReadUnitH:'點', gReadUnitM:'分',
+      gReadNow:function(h, m){ return (h === null ? '?' : h) + ' 點 ' + (m === null ? '?' : m) + ' 分'; },
+      gReadNext:function(h, nx){ return '短針在 ' + h + ' 和 ' + nx + ' 中間，還沒走到 ' + nx + ' → 是 ' + h + ' 點。'; },
+      gReadHourHand:function(h, nx){ return '幾點要看短針（短的那一根）：它在 ' + h + ' 和 ' + nx + ' 中間 → ' + h + ' 點。'; },
+      gReadNum:function(n, m){ return '長針指著 ' + n + ' → ' + n + ' 個 5 分 → ' + m + ' 分，不是 ' + n + ' 分。'; },
+      gReadMinHand:function(n, m){ return '幾分要看長針（長的那一根）：長針指著 ' + n + ' → ' + m + ' 分。'; },
+      gRead2H:function(h, nx){ return '短針在 ' + h + ' 和 ' + nx + ' 中間，還沒走到 ' + nx + '。'; },
+      gRead2M:function(n){ return '長針指著 ' + n + '：數 ' + n + ' 個 5。'; },
+      gReadDone:function(h, nx, n, m){
+        return '短針還沒走到 ' + nx + ' → ' + h + ' 點；長針指著 ' + n + ' → ' + m + ' 分。合起來是 ' + this.timeText(h, m) + '。';
+      },
+
+      gDayArrow:'最早 ➜ 最晚',
+      dayText:function(v){ return this.halfName[v.half] + ' ' + v.h + ' 點'; },
+      dayCard:function(v){ return DAY_ICON[v.half] + ' ' + this.halfName[v.half] + '\n' + v.h + ' 點'; },
+      gDayOrder:'上午 → 下午 → 晚上',
+      gDayLater:function(v, c){
+        return this.dayText(v) + '比' + this.dayText(c) + '晚' + (v.half !== c.half ? '（' + this.gDayOrder + '）' : '') + '，這一格要放比較早的。';
+      },
+      gDayEarlier:function(v, c){
+        return this.dayText(v) + '比' + this.dayText(c) + '早' + (v.half !== c.half ? '（' + this.gDayOrder + '）' : '') + '，這一格要放比較晚的。';
+      },
+      gDay2:function(k, v){ return '第 ' + (k + 1) + ' 格放第 ' + (k + 1) + ' 早的：' + this.dayText(v) + '。'; },
+      gDaySep:' → ',
+      gDayDone:function(list){ var t = this; return list.map(function(v){ return t.dayText(v); }).join(' → ') + '，排好了！'; },
+
+      calTitle:function(y, mo){ return y + ' 年 ' + mo + ' 月'; },
+      gFillNow:function(k){ return '放好了 ' + k + ' / 3 天'; },
+      gFillWrong:function(x, y){ return '這一格的上面是 ' + (x - 7) + ' 日，往下一格多 7 天：' + (x - 7) + ' ＋ 7 ＝ ' + x + '，不是 ' + y + '。'; },
+      gFill2:function(x){ return '上面寫著 ' + (x - 7) + ' 日的那一格，它的正下方還空著：' + (x - 7) + ' ＋ 7。'; },
+      gFillDone:function(holes){
+        return holes.map(function(x){ return (x - 7) + ' ＋ 7 ＝ ' + x; }).join('、') + '：往下一格就多 7 天，日曆補好了！';
+      },
+
+      gHop1:'+1 天', gHop7:'+7 天', gHopBack:'↩ 回到今天', gHopGo:'就是這一天！',
+      hopSpan:function(n){ return n % 7 === 0 ? (n / 7) + ' 個星期' : n + ' 天'; },
+      gHopTask:function(mo, s, n){ return '今天是 ' + mo + ' 月 ' + s + ' 日。<br>' + this.hopSpan(n) + '後是幾月幾日？'; },
+      gHopNow:function(mo, x){ return '圈圈在 ' + mo + ' 月 ' + x + ' 日'; },
+      gHopEnd:function(len){ return '這個月只有 ' + len + ' 天，再走就到下個月了。'; },
+      gHopStay:'先按「+1 天」或「+7 天」往後走。',
+      gHopWrong:function(s, x, n){ return '從 ' + s + ' 日走到 ' + x + ' 日是 ' + (x - s) + ' 天，要走的是 ' + n + ' 天' + (n % 7 === 0 ? '（' + this.hopSpan(n) + '）' : '') + '。'; },
+      gHop2:function(n){
+        var k = Math.floor(n / 7), j = n % 7;
+        return n + ' 天 ＝ ' + k + ' 個星期' + (j ? '又 ' + j + ' 天：按 ' + k + ' 次「+7 天」，再按 ' + j + ' 次「+1 天」。' : '：按 ' + k + ' 次「+7 天」。');
+      },
+      gHopDone:function(mo, s, n, t, wd){
+        return s + ' ＋ ' + n + ' ＝ ' + t + ' → ' + mo + ' 月 ' + t + ' 日，' + wd + '。' +
+               (n % 7 === 0 ? '差 ' + n + ' 天剛好是 ' + (n / 7) + ' 個星期，所以和 ' + s + ' 日一樣是' + wd + '。' : '');
+      }
     },
     en: {
       langAria:'Switch language',
@@ -538,7 +729,7 @@
       s3h2:'The Short Hand Goes Round Twice a Day', s3lead:'One lap is the morning, the other is the afternoon and evening.',
       s4h2:'How to Read a Calendar', s4lead:'Tap a date and see what day of the week it is.',
       s5h2:'Quick Check', s5lead:'Tap an answer and find out right away!',
-      s6h2:'Clock Match Challenge', s6lead:'Find the clock that really shows the time!',
+      s6h2:'Clock Match Challenge', s6lead:'Turn the long hand, read the clock, order the day, fix the calendar, count the days — clear all five and you are a Time Keeper!',
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a>.',
@@ -636,32 +827,89 @@
           why:'Count the long hand in fives: 5, 10, 15, 20 → pointing at 4 means 20 minutes, not 4 minutes.' }
       ],
 
-      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
-      gAsk:function(when){ return 'Which clock shows “' + when + '”?'; },
-      gOptAria:function(i){ return 'Clock ' + i; },
-      gHintBtn:'💡 Hint',
-      gHint1:'Look at which two numbers the short hand sits between, then see which number the long hand points at.',
-      gHints2:[
-        'Hint: for 20 minutes the long hand has to point at 4.',
-        'Hint: the short hand has not reached 4 yet, so the hour is 3.',
-        'Hint: for 30 minutes the long hand points at 6, and the short hand is between 12 and 1.',
-        'Hint: for 5 minutes the long hand has only reached 1.',
-        'Hint: the short hand is nearly at 12 but not there yet, so the hour is 11.'
-      ],
-      gWhys:[
-        'The short hand is between 7 and 8 → 7 o’clock; the long hand points at 4 → 20 minutes.',
-        'The short hand has not reached 4 → 3 o’clock; the long hand points at 10 → 50 minutes.',
-        'The long hand on 6 means 30 minutes, not 6 minutes; the short hand sits exactly halfway between 12 and 1.',
-        'The long hand points at 1 → 5 minutes; the short hand is still by the 8, so the hour is 8.',
-        'The long hand points at 11 → 55 minutes; the short hand is nearly at 12 but has not arrived, so the hour is 11.'
-      ],
-      gNextBtn:'Next round', gRestartBtn:'Restart',
-      /* v 的英文以 a.m./p.m. 的句點結尾，句尾不要再補一個點。 */
-      gCorrectFirst:function(v){ return 'Correct on the first try! +20 points! That one is ' + v; },
-      gCorrectRetry:function(v){ return 'Correct! +10 points. That one is ' + v; },
-      gTryAgain:'That clock is not the one — look at the short hand and the long hand again!',
-      gClear:'Press “Next round” to keep matching.',
-      gWin:function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; }
+      gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Stars',
+      gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Restart',
+      gAsks:{
+        long:'Drag the ring on the long hand round the 1, 2, 3 way to set the clock. (Or tap the ring, then tap a number on the clock.)',
+        read:'What time does this clock show? Put number cards in the boxes. (Or tap a card, then tap a box.)',
+        day:'Put these four times in order, from the earliest in the day to the latest. (Or tap a card, then tap a box.)',
+        fill:'Three days are missing from the calendar. Put each date card back in its box. (Or tap a card, then tap a box.)',
+        hop:'Press “+1 day” and “+7 days” to walk along the calendar; when you get there, press “This is the day!”. (This round is all taps.)'
+      },
+      gHints:{
+        long:'Each number the long hand passes is 5 minutes: start at 12 and count 5, 10, 15… one five per number.',
+        read:'First see which two numbers the short hand is between — the one it has not reached does not count. Then see which number the long hand points at and count that many fives.',
+        day:'A day goes morning (a.m.) first, then afternoon and evening (p.m.); only inside the same part do you compare the hours.',
+        fill:'One row of the calendar is 7 days: go one box down and the date is 7 more.',
+        hop:'One week is 7 days: one press of “+7 days” jumps down one row.'
+      },
+      gStars:function(n){ return '⭐ +' + n; },
+      gClear:'Press “Next round” to keep going.',
+      gWin:function(s){ return 'All 5 rounds cleared! ' + s + ' stars in total 🏆 Press “Restart” to play again.'; },
+
+      gRingLabel:'ring on the long hand',
+      gLongTask:function(h, m){ return 'Set it to ' + this.timeText(h, m); },
+      gLongNow:function(h, m){ return this.timeText(h, m) + ' ✓'; },
+      fives:function(n){ return n === 1 ? '1 five' : n + ' fives'; },
+      gLongWrong:function(n, m){ return 'The long hand on ' + n + ' → ' + this.fives(n) + ' → ' + (n * 5) + ' minutes, not ' + m + '.'; },
+      gLongLap:function(q, now, n){
+        return 'The long hand went past 12 (' + (q === 1 ? '1 whole lap' : q + ' whole laps') + '): one lap is 60 minutes = 1 hour, so it is now ' + now + '. Go forward from 12 to ' + n + ' and stop there.';
+      },
+      gLongBack:function(now, n){ return 'The long hand went backwards, so the time went back to ' + now + '. Turn it from 12 the 1, 2, 3 way, to ' + n + '.'; },
+      gLong2:function(m, n){ return 'To count up to ' + m + ' minutes you count ' + this.fives(n) + ': the long hand must point at ' + n + '.'; },
+      gLongDone:function(h, m, n){
+        return 'The long hand points at ' + n + ': ' + this.fives(n) + ', ' + n + ' × 5 = ' + m + ' minutes. The short hand moved too — it stopped between ' + h + ' and ' + hourAfter(h, 1) + '.';
+      },
+
+      gReadLblH:'short hand', gReadLblM:'long hand', gReadUnitH:':', gReadUnitM:'',
+      gReadNow:function(h, m){ return (h === null ? '?' : h) + ':' + (m === null ? '??' : m); },
+      gReadNext:function(h, nx){ return 'The short hand is between ' + h + ' and ' + nx + ' and has not reached ' + nx + ' yet → the hour is ' + h + '.'; },
+      gReadHourHand:function(h, nx){ return 'The hour comes from the short hand (the shorter one): it is between ' + h + ' and ' + nx + ' → ' + h + '.'; },
+      gReadNum:function(n, m){ return 'The long hand on ' + n + ' → ' + this.fives(n) + ' → ' + m + ' minutes, not ' + n + '.'; },
+      gReadMinHand:function(n, m){ return 'The minutes come from the long hand (the longer one): it points at ' + n + ' → ' + m + ' minutes.'; },
+      gRead2H:function(h, nx){ return 'The short hand is between ' + h + ' and ' + nx + ' and has not reached ' + nx + ' yet.'; },
+      gRead2M:function(n){ return 'The long hand points at ' + n + ': count ' + this.fives(n) + '.'; },
+      gReadDone:function(h, nx, n, m){
+        return 'The short hand has not reached ' + nx + ' → ' + h + ' o’clock; the long hand points at ' + n + ' → ' + m + ' minutes. Together: ' + this.timeText(h, m) + '.';
+      },
+
+      gDayArrow:'earliest ➜ latest',
+      dayText:function(v){ return v.h + ':00 ' + (v.half === 'am' ? 'a.m.' : 'p.m.'); },
+      dayCard:function(v){ return DAY_ICON[v.half] + ' ' + v.h + ':00\n' + (v.half === 'am' ? 'a.m.' : 'p.m.'); },
+      gDayOrder:'a.m. comes before p.m.',
+      gDayLater:function(v, c){
+        return this.dayText(v) + ' is later than ' + this.dayText(c) + ((v.half === 'am') !== (c.half === 'am') ? ' (' + this.gDayOrder + ')' : '') + ' — this box needs an earlier one.';
+      },
+      gDayEarlier:function(v, c){
+        return this.dayText(v) + ' is earlier than ' + this.dayText(c) + ((v.half === 'am') !== (c.half === 'am') ? ' (' + this.gDayOrder + ')' : '') + ' — this box needs a later one.';
+      },
+      gDay2:function(k, v){ return 'Box ' + (k + 1) + ' takes the ' + ['1st', '2nd', '3rd', '4th'][k] + ' earliest: ' + this.dayText(v) + '.'; },
+      gDaySep:' → ',
+      gDayDone:function(list){ var t = this; return list.map(function(v){ return t.dayText(v); }).join(' → ') + ' — all in order!'; },
+
+      calTitle:function(y, mo){ return this.monthLong[mo - 1] + ' ' + y; },
+      gFillNow:function(k){ return k + ' of 3 days back in place'; },
+      gFillWrong:function(x, y){ return 'The box above this one is ' + (x - 7) + ', and one box down is 7 days later: ' + (x - 7) + ' + 7 = ' + x + ', not ' + y + '.'; },
+      gFill2:function(x){ return 'The box right under ' + (x - 7) + ' is still empty: ' + (x - 7) + ' + 7.'; },
+      gFillDone:function(holes){
+        return holes.map(function(x){ return (x - 7) + ' + 7 = ' + x; }).join(', ') + ' — one box down is 7 days later. The calendar is complete!';
+      },
+
+      gHop1:'+1 day', gHop7:'+7 days', gHopBack:'↩ Back to today', gHopGo:'This is the day!',
+      hopSpan:function(n){ return n % 7 === 0 ? (n === 7 ? '1 week' : (n / 7) + ' weeks') : n + ' days'; },
+      gHopTask:function(mo, s, n){ return 'Today is ' + s + ' ' + this.monthLong[mo - 1] + '.<br>Which date is ' + this.hopSpan(n) + ' later?'; },
+      gHopNow:function(mo, x){ return 'The ring is on ' + x + ' ' + this.monthLong[mo - 1]; },
+      gHopEnd:function(len){ return 'This month has only ' + len + ' days — any further and you are in the next month.'; },
+      gHopStay:'Press “+1 day” or “+7 days” to move forward first.',
+      gHopWrong:function(s, x, n){ return 'From day ' + s + ' to day ' + x + ' is ' + (x - s === 1 ? '1 day' : (x - s) + ' days') + '; you need ' + n + ' days' + (n % 7 === 0 ? ' (' + this.hopSpan(n) + ')' : '') + '.'; },
+      gHop2:function(n){
+        var k = Math.floor(n / 7), j = n % 7, w = k === 1 ? '1 week' : k + ' weeks', tw = k === 1 ? 'once' : k + ' times', td = j === 1 ? 'once' : j + ' times';
+        return n + ' days = ' + w + (j ? ' and ' + (j === 1 ? '1 day' : j + ' days') + ': press “+7 days” ' + tw + ', then “+1 day” ' + td + '.' : ': press “+7 days” ' + tw + '.');
+      },
+      gHopDone:function(mo, s, n, t, wd){
+        return s + ' + ' + n + ' = ' + t + ' → ' + wd + ', ' + t + ' ' + this.monthLong[mo - 1] + '.' +
+               (n % 7 === 0 ? ' ' + n + ' days is exactly ' + this.hopSpan(n) + ', so it is a ' + wd + ', just like day ' + s + '.' : '');
+      }
     }
   };
 
@@ -927,12 +1175,19 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：對時大挑戰 ---------- */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ---------- 6. 小遊戲：對時大挑戰 —— 五關、五種玩法（撥、讀、排、補、數） ----------
+     設計原則見 docs/teaching-framework.md §六之五。二年級是低年級（§三）：不扣分、不會失敗。
+     放錯（概念錯）→ 彈回原位＋一句為什麼，算一次錯；放到空白處 → 靜靜彈回，不算錯。
+     星星：這一關沒犯錯 2 顆、犯過錯 1 顆（只是少拿，從不倒扣）。
+     每個拖拉也可以「先點東西、再點目的地」；第 5 關（數日子）沒有拖拉，那一關的說明有寫「這一關用點的」。
+     題庫與版面常數在 i18n 前面的資料區。拖拉引擎和二年級 length 是同一套（含舊畫板的積木不能替新的一關過關）。 */
+  var gRound = 0, gScore = 0, gMistakes = 0, gSolved = false, gCtx = {};
+  /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加星星）。 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskLine = document.getElementById('gAskLine');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
@@ -940,64 +1195,444 @@
   var elHint = document.getElementById('gHint');
   var hintLevel = 0;
 
+  /* ⚠️ 托盤一定要洗牌再畫：題庫裡的順序是固定的，照順序畫的話孩子玩兩次就會記住位置。
+     洗出來剛好由小到大的話，把前兩張對調（三年級 numbers 同一個做法）：排一天要的就是由早到晚，
+     托盤一開始就排好等於不用排（四張有 1/24 的機會）。用對調不用重洗：一定會結束，
+     而且由小到大時前兩張一定不一樣，對調之後就不是由小到大。 */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    var up = a.length > 1;
+    for (var i = 1; i < a.length; i++) if (!(a[i - 1] < a[i])) up = false;
+    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null, onGrab:null, onMove:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，任何地方的 pointerup／pointercancel
+     傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 格子（吸附目標）：記中心點與半寬、半高，給 nearestOpen() 用 */
+  function target(B, x, y, w, h, cls, more){
+    var t = { z:addZone(B, x, y, w, h, cls), cx:x + w / 2, cy:y + h / 2, hw:w / 2, hh:h / 2, done:false };
+    for (var key in more) t[key] = more[key];
+    return t;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 日曆（第 4、5 關）：星期那一列＋每一天一格。回傳每一天的格子（索引 ＝ 日期），格子本身拿不起來 */
+  function drawCal(B, y0, mo, d){
+    var G = CAL_GRID, first = firstWeekday(CAL_YEAR, mo), n = daysInMonth(CAL_YEAR, mo), cells = [null];
+    for (var w = 0; w < 7; w++) addZone(B, G.x0 + w * G.cw, y0, G.cw, G.head, 'gwd', d.wdShort[w]);
+    for (var day = 1; day <= n; day++){
+      var c = calCellXY(G, y0, first, day);
+      cells.push(addZone(B, c.x - G.cw / 2, c.y - G.ch / 2, G.cw, G.ch, 'gdate', String(day)));
+    }
+    return cells;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      if (B.onGrab) B.onGrab(P);
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (moved){ P.place(orig.x + dx, orig.y + dy); if (B.onMove) B.onMove(P); }
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */
+      /* 先點選、後來又直接拖走的那一塊：拖完（放好、彈回、capture 遺失都一樣）就不再是「選起來」的，
+         不然下一次點格子會多放一次（二年級 numbers 的 codex 第一、二輪） */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); if (B.onHome) B.onHome(P); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      /* 放在哪裡看那一塊的中心點（§六之五：位置一律記中心點），不是手指的位置 */
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))){ P.home(); if (B.onHome) B.onHome(P); }
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開時那一塊的中心點（點目的地時是點的位置）落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+  /* 托盤：一律洗牌後排成一排（正解不可以固定在同一個位置） */
+  function renderTray(B, items, y, mk, step){
+    var x0 = (B.W - (items.length - 1) * step) / 2;
+    shuffle(items).forEach(function(it, i){ mk(it, x0 + i * step, y); });
+  }
+
+  /* 星星（低年級：純收集、不扣分 —— §三、§六之五第 3 點）：這一關沒犯錯 2 顆、犯過錯 1 顆 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var stars = gMistakes === 0 ? 2 : 1;
+    gScore += stars; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var last = gRound === GAME_ORDER.length - 1;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gStars(stars) + '</span> ' + (last ? L().gWin(gScore) : L().gClear);
+    if (!last) gNext.disabled = false;
+  }
+  /* 放錯：說為什麼、記一次錯（只影響這一關拿 2 顆還是 1 顆），分數不動 */
+  function roundMiss(text){ gMistakes++; gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 第二層提示跟著畫面走：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  /* 按鈕列（第 5 關的四顆按鈕）：放在畫板下面，不在畫板裡 */
+  function actionButtons(list){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    var out = list.map(function(it){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn' + (it[2] ? ' ' + it[2] : ''); b.textContent = it[0];
+      b.addEventListener('click', it[1]);
+      row.appendChild(b);
+      return b;
+    });
+    gameStage.appendChild(row);
+    return out;
+  }
+
+  var RENDER = {
+    /* 第 1 關：撥長針 —— 鐘一開始是 h 點整；拖長針上的圈圈轉，短針跟著走。放開時長針一共轉了 S 分（取最近的 5 的倍數）：
+       S ＝ m 才收；S ＝ 0（轉回 12）靜靜放回去；指著別的數字、多轉一圈、倒著轉 → 彈回＋為什麼。
+       先點圈圈、再點鐘面上的數字 n：等於從 12 往前撥到 n（S ＝ 5n，點 12 等於沒撥）。 */
+    long: function(d){
+      var e = pick(GAME_LONG), Dl = LONG_DIAL, n = e.m / 5, total = 0, lastAng = 0, lost = false;
+      var line = trailLine(d.gLongTask(e.h, e.m));
+      var B = makeBoard(GAME_W, LONG_H);
+      var face = addZone(B, Dl.cx - Dl.size / 2, Dl.cy - Dl.size / 2, Dl.size, Dl.size, 'gface');
+      function draw(mins){ face.innerHTML = dialSVG(e.h, mins, Dl.size); }
+      draw(0);
+      var home = ringXY(Dl, 0);
+      var ring = addPiece(B, { w:GPICK, h:GPICK, cx:home.x, cy:home.y, cls:'gring', label:d.gRingLabel });
+      gCtx.hint2 = function(){ return d.gLong2(e.m, n); };
+      /* 拖的時候：每一次移動的角度差加起來，長針指向圈圈、短針跟著走。
+         穿過圓心不算轉：一進到圓心附近就停止累加，出來時從「出來的那個角度」重新接著算 ——
+         不然從 12 直直拖過圓心到 6，出來那一下會一口氣多 180°（codex 第一輪）。指針也停在原來的地方，不會瞬間跳過去。 */
+      B.onGrab = function(){ total = 0; lastAng = 0; lost = false; };
+      B.onMove = function(P){
+        var a = dialAngle(Dl, { x:P.cx, y:P.cy });
+        if (Math.hypot(P.cx - Dl.cx, P.cy - Dl.cy) < dialR(Dl.size) * Dl.inner){ lost = true; return; }
+        if (lost){ lost = false; lastAng = a; return; }
+        total += angleStep(lastAng, a) / 6; lastAng = a;   /* 6° ＝ 1 分 */
+        draw(total);
+      };
+      B.onHome = function(){ total = 0; lastAng = 0; lost = false; draw(0); };
+      useTapSelect(B, function(P, pt){
+        if (!dialNumber(Dl, pt)) return false;   /* 太靠近圓心或在鐘面外：放在空白處 */
+        var S = pt.tap ? (dialNumber(Dl, pt) % 12) * 5 : snapMinutes(total);
+        if (S === 0) return false;               /* 轉回 12：等於沒撥，靜靜放回去、不算錯 */
+        /* 錯的時候先看方向和圈數（codex 第一輪）：倒著轉 → 時間往回走；轉過 12（滿一圈以上）→ 多了 1 小時；
+           都沒有才是「指錯數字」。q 是長針走過 12 幾次，現在的時刻是 (h + q) 點 r60 分 */
+        var r60 = ((S % 60) + 60) % 60, q = Math.floor(S / 60), now = d.timeText(hourAfter(e.h, q), r60);
+        if (S !== e.m){
+          if (S < 0) roundMiss(d.gLongBack(now, n));
+          else if (q >= 1) roundMiss(d.gLongLap(q, now, n));
+          else roundMiss(d.gLongWrong(r60 / 5, e.m));
+          return false;
+        }
+        var at = ringXY(Dl, e.m * 6);
+        total = e.m; draw(e.m);
+        P.lock(at.x, at.y); P.el.classList.add('placed');
+        line.textContent = d.gLongNow(e.h, e.m);
+        roundSolved(d.gLongDone(e.h, e.m, n));
+        return true;
+      });
+    },
+
+    /* 第 2 關：讀時間 —— 畫 h 點 m 分（短針已經很靠近下一個數字）；四張數字卡 h、下一個數字 nx、長針指著的 n、分鐘數 m。
+       「點」只收 h，「分」只收 m；放錯 → 彈回＋為什麼。兩格都放好才過關。 */
+    read: function(d){
+      var e = pick(GAME_READ), Dl = READ_DIAL, S = READ_SLOT, n = e.m / 5, nx = hourAfter(e.h, 1), got = { h:null, m:null };
+      var line = trailLine(d.gReadNow(null, null));
+      var B = makeBoard(GAME_W, READ_H);
+      var face = addZone(B, Dl.cx - Dl.size / 2, Dl.cy - Dl.size / 2, Dl.size, Dl.size, 'gface');
+      face.innerHTML = dialSVG(e.h, e.m, Dl.size);
+      var slots = [
+        target(B, S.x[0] - S.w / 2, S.y - S.h / 2, S.w, S.h, 'gslot', { k:'h', want:e.h }),
+        target(B, S.x[1] - S.w / 2, S.y - S.h / 2, S.w, S.h, 'gslot', { k:'m', want:e.m })
+      ];
+      addZone(B, S.x[0] - READ_LBL_W / 2, READ_LBL_Y, READ_LBL_W, 22, 'glbl', d.gReadLblH);
+      addZone(B, S.x[1] - READ_LBL_W / 2, READ_LBL_Y, READ_LBL_W, 22, 'glbl', d.gReadLblM);
+      addZone(B, S.x[0] + S.w / 2, S.y - S.h / 2, S.x[1] - S.x[0] - S.w, S.h, 'gunit', d.gReadUnitH);
+      addZone(B, S.x[1] + S.w / 2, S.y - S.h / 2, 34, S.h, 'gunit', d.gReadUnitM);
+      gCtx.hint2 = function(){ return got.h === null ? d.gRead2H(e.h, nx) : d.gRead2M(n); };
+      renderTray(B, [e.h, nx, n, e.m], READ_CARD.y, function(v, cx, cy){
+        addPiece(B, { w:READ_CARD.w, h:READ_CARD.h, cx:cx, cy:cy, text:String(v), cls:'gcard', data:{ v:v } });
+      }, READ_CARD.step);
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, GPAD), v = P.data.v;
+        if (!s) return false;
+        if (v !== s.want){
+          if (s.k === 'h') roundMiss(v === nx ? d.gReadNext(e.h, nx) : d.gReadHourHand(e.h, nx));
+          else roundMiss(v === n ? d.gReadNum(n, e.m) : d.gReadMinHand(n, e.m));
+          return false;
+        }
+        s.done = true; got[s.k] = v;
+        P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        line.textContent = d.gReadNow(got.h, got.m);
+        gMsg.textContent = '';
+        if (slots[0].done && slots[1].done) roundSolved(d.gReadDone(e.h, nx, n, e.m));
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 3 關：排一天 —— 四張「上午／下午／晚上 幾點」卡放進四格，從一天裡最早排到最晚。第 k 格只收第 k 早的那一張；
+       放錯 → 彈回，說出誰比較早、誰比較晚（不同段時加一句「上午 → 下午 → 晚上」）。 */
+    day: function(d){
+      var set = pick(GAME_DAY), order = set.slice().sort(function(a, b){ return dayMin(a) - dayMin(b); }), S = DAY_SLOT;
+      var line = trailLine('□ → □ → □ → □');
+      var B = makeBoard(GAME_W, DAY_H);
+      addZone(B, 8, 18, GAME_W - 16, 26, 'glbl', d.gDayArrow);
+      var slots = S.x.map(function(x, k){ return target(B, x - S.w / 2, S.y - S.h / 2, S.w, S.h, 'gslot', { k:k }); });
+      function shown(){ return slots.map(function(s){ return s.done ? d.dayText(order[s.k]) : '□'; }).join(d.gDaySep); }
+      gCtx.hint2 = function(){
+        for (var k = 0; k < 4; k++) if (!slots[k].done) return d.gDay2(k, order[k]);
+        return '';
+      };
+      /* 洗牌的是「一天裡的第幾分鐘」（物件不能比大小，洗牌的「不可以一開始就排好」要用數字比） */
+      renderTray(B, set.map(dayMin), DAY_CARD.y, function(t, cx, cy){
+        var v = set.filter(function(x){ return dayMin(x) === t; })[0];
+        addPiece(B, { w:DAY_CARD.w, h:DAY_CARD.h, cx:cx, cy:cy, text:d.dayCard(v), cls:'gcard gday', data:{ v:v } });
+      }, DAY_CARD.step);
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, GPAD), v = P.data.v;
+        if (!s) return false;
+        var c = order[s.k];
+        if (v !== c){ roundMiss(dayMin(v) > dayMin(c) ? d.gDayLater(v, c) : d.gDayEarlier(v, c)); return false; }
+        s.done = true; P.lock(s.cx, s.cy); P.el.classList.add('placed');
+        line.textContent = shown();
+        gMsg.textContent = '';
+        if (slots.every(function(x){ return x.done; })) roundSolved(d.gDayDone(order));
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 4 關：補日曆 —— 日曆少了三天（空格）；三張日期卡各自放回自己的空格。
+       放進別的空格 → 彈回＋「上面是 x − 7 日，往下一格多 7 天」；最近的是寫好日期的格子 → 靜靜彈回。 */
+    fill: function(d){
+      var e = pick(GAME_FILL), G = CAL_GRID, placed = 0;
+      var line = trailLine(d.gFillNow(0));
+      var B = makeBoard(GAME_W, FILL_H);
+      addZone(B, 0, 6, GAME_W, 34, 'gorder', d.calTitle(CAL_YEAR, e.mo));
+      var cells = drawCal(B, FILL_Y0, e.mo, d), first = firstWeekday(CAL_YEAR, e.mo);
+      /* 每一天都是吸附目標（寫好的日期 done = true —— 最近的是它就不收） */
+      var spots = [];
+      for (var day = 1; day < cells.length; day++){
+        var c = calCellXY(G, FILL_Y0, first, day), hole = e.holes.indexOf(day) >= 0;
+        if (hole){ cells[day].textContent = ''; cells[day].className = 'gdate hole'; }
+        spots.push({ z:cells[day], cx:c.x, cy:c.y, hw:G.cw / 2, hh:G.ch / 2, day:day, done:!hole });
+      }
+      gCtx.hint2 = function(){
+        var left = spots.filter(function(s){ return !s.done; });
+        return left.length ? d.gFill2(left[0].day) : '';
+      };
+      renderTray(B, e.holes, FILL_CARD.y, function(v, cx, cy){
+        addPiece(B, { w:FILL_CARD.w, h:FILL_CARD.h, cx:cx, cy:cy, text:String(v), cls:'gcard', data:{ v:v } });
+      }, FILL_CARD.step);
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(spots, pt, GPAD), v = P.data.v;
+        if (!s) return false;
+        if (v !== s.day){ roundMiss(d.gFillWrong(s.day, v)); return false; }
+        s.done = true; placed++;
+        s.z.className = 'gdate filled'; s.z.textContent = String(v);
+        P.lock(s.cx, s.cy); P.el.style.visibility = 'hidden';
+        line.textContent = d.gFillNow(placed);
+        gMsg.textContent = '';
+        if (placed === e.holes.length) roundSolved(d.gFillDone(e.holes));
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 5 關：數日子 —— 「今天是 mo 月 s 日，n 天後是幾月幾日？」按「+1 天」「+7 天」讓圈圈往後走（這一關沒有拖拉）。
+       走到了按「就是這一天」：x ＝ s + n 才過關；還沒走就按 → 只提醒；停錯 → 「從 s 日走到 x 日是 x − s 天」（算一次錯）；
+       走過月底 → 只提醒、不動；「回到今天」靜靜回到 s。 */
+    hop: function(d){
+      var e = pick(GAME_HOP), G = CAL_GRID, len = daysInMonth(CAL_YEAR, e.mo), first = firstWeekday(CAL_YEAR, e.mo), x = e.s, T = e.s + e.n;
+      var line = trailLine(d.gHopNow(e.mo, x));
+      var B = makeBoard(GAME_W, HOP_H);
+      addZone(B, 0, 4, GAME_W, 50, 'gorder ghoptask', '').innerHTML = d.gHopTask(e.mo, e.s, e.n);
+      var cells = drawCal(B, HOP_Y0, e.mo, d);
+      cells[e.s].className = 'gdate today';
+      var me = addZone(B, 0, 0, G.cw - 4, G.ch - 2, 'ghop');
+      function moveTo(day){
+        x = day;
+        var c = calCellXY(G, HOP_Y0, first, day);
+        me.style.left = (c.x - (G.cw - 4) / 2) + 'px'; me.style.top = (c.y - (G.ch - 2) / 2) + 'px';
+        line.textContent = d.gHopNow(e.mo, x);
+      }
+      moveTo(e.s);
+      gCtx.hint2 = function(){ return d.gHop2(e.n); };
+      function step(k){
+        if (gSolved) return;
+        if (x + k > len){ gMsg.textContent = d.gHopEnd(len); return; }
+        moveTo(x + k); gMsg.textContent = '';
+      }
+      var btns = actionButtons([
+        [d.gHop1, function(){ step(1); }],
+        [d.gHop7, function(){ step(7); }],
+        [d.gHopBack, function(){ if (!gSolved){ moveTo(e.s); gMsg.textContent = ''; } }, 'ghost'],
+        [d.gHopGo, function(){
+          if (gSolved) return;
+          if (x === e.s){ gMsg.textContent = d.gHopStay; return; }
+          if (x !== T){ roundMiss(d.gHopWrong(e.s, x, e.n)); return; }
+          me.className = 'ghop done';
+          btns.forEach(function(b){ b.disabled = true; });
+          roundSolved(d.gHopDone(e.mo, e.s, e.n, T, d.wdLong[weekdayOf(CAL_YEAR, e.mo, T)]));
+        }]
+      ]);
+    }
+  };
+
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    var target = d.whenText(round.ask.half, round.ask.h, round.ask.m);
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistakes = 0; gCtx = {}; gGen++;
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-    gAskLine.innerHTML = '<span style="font-size:22px;font-weight:800">' + d.gAsk(target) + '</span>';
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = d.gHint1;
-    } else {
-      elHint.textContent = '';
-    }
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }
+  }
 
-    gAnswers.textContent = '';
-    round.opts.forEach(function(o, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'gopt';
-      b.innerHTML = clockSVG(o.h, o.m, { size:150 });
-      b.setAttribute('aria-label', d.gOptAria(oi + 1));
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        var dd = L();
-        var lbl = dd.whenText(round.ask.half, round.ask.h, round.ask.m);
-        if (oi === round.ans){
-          var all = gAnswers.querySelectorAll('.gopt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gRound === ROUNDS.length - 1){
-            gScore += gMistake ? 10 : 20;
-            gMsg.innerHTML = '<span class="yes">' + dd.gWin(gScore) + '</span> ' + dd.gWhys[gRound];
-          } else {
-            if (gMistake){
-              gScore += 10;
-              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectRetry(lbl) + '</span> ' + dd.gWhys[gRound];
-            } else {
-              gScore += 20;
-              gMsg.innerHTML = '<span class="yes">' + dd.gCorrectFirst(lbl) + '</span> ' + dd.gWhys[gRound];
-            }
-            gMsg.innerHTML += ' ' + dd.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gMsg.innerHTML = '<span class="no">' + dd.gTryAgain + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
   function restartGame(){
@@ -1005,18 +1640,15 @@
   }
 
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
 
   gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2) return;
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = L().gHint1;
-    } else {
-      elHint.textContent = L().gHints2[gRound];
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
