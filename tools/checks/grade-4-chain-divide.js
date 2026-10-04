@@ -388,7 +388,7 @@ function factorPairsRef(D){
    量詞由這一課自己給 —— 共用清單漏掉某一課的量詞時，那一課的算式會**靜靜地**
    多出一個假的運算元。 */
 const arithProblems = makeArith({
-  units:['顆', '片', '支', '個', '箱', '盒', '袋', '包', '堆', '份', '班', '瓶', '元', '題', '分', '關'],
+  units:['顆', '片', '支', '個', '件', '箱', '盒', '袋', '包', '堆', '份', '班', '瓶', '元', '題', '分', '關', '行', '種'],
   unitsEn:['sweets?', 'biscuits?', 'marbles?', 'eggs?', 'pens?', 'apples?', 'items?',
            'boxes?', 'bags?', 'crates?', 'trays?', 'cartons?', 'sacks?', 'packets?',
            'classes?', 'bottles?', 'dollars?', 'points?', 'shares?', 'piles?', 'rolls?']
@@ -577,22 +577,22 @@ const SIBLING_RULES = [
   { file:'index',     text:'連續除以兩個數，就是除以那兩個數的積', min:4, why:'is the one rule this whole lesson turns on' },
   { file:'reference', text:'連續除以兩個數，就是除以那兩個數的積', min:2, why:'must match the lesson page word for word' },
   { file:'parents',   text:'連續除以兩個數，就是除以那兩個數的積', min:2, why:'the adult has to hear the same sentence' },
-  { file:'index',     text:'從左往右', min:10, why:'is the rule for two operations on the same level' },
+  { file:'index',     text:'從左往右', min:12, why:'is the rule for two operations on the same level' },
   { file:'reference', text:'從左往右', min:12, why:'must match the lesson page' },
   { file:'review',    text:'從左往右', min:3,  why:'the generators must explain it the same way' },
   { file:'parents',   text:'從左往右', min:10, why:'is what the adult is meant to say out loud' },
   { file:'index',     text:'除得剛剛好', min:2, why:'is the precondition the whole rule depends on' },
   { file:'reference', text:'除得剛剛好', min:4, why:'must state the same precondition' },
   { file:'parents',   text:'除得剛剛好', min:2, why:'must state the same precondition' },
-  { file:'index',     text:'第二次除的是', min:3, why:'is the second-division misconception' },
+  { file:'index',     text:'第二次除的是', min:4, why:'is the second-division misconception' },
   { file:'reference', text:'第二次除的是', min:4, why:'must match the lesson page' },
   { file:'parents',   text:'第二次除的是', min:4, why:'must match the lesson page' },
   { file:'reference', text:'乘起來要剛好是原來的除數', min:3, why:'is the condition on splitting a divisor' },
-  { file:'index',     text:'乘起來要剛好是原來的除數', min:2, why:'must match the cheat sheet' },
+  { file:'index',     text:'乘起來要剛好是原來的除數', min:3, why:'must match the cheat sheet' },
   /* 英文那一邊也要釘 —— 只釘中文的話英文會自己漂走。 */
   { file:'index',     text:'dividing by two numbers in a row is dividing by their product', min:1, why:'the English rule must not drift' },
   { file:'parents',   text:'dividing by two numbers in a row is dividing by their product', min:1, why:'the English rule must not drift' },
-  { file:'index',     text:'left to right', min:6, why:'the English rule must not drift' },
+  { file:'index',     text:'left to right', min:7, why:'the English rule must not drift' },
   { file:'reference', text:'left to right', min:7, why:'the English rule must not drift' },
   { file:'review',    text:'left to right', min:2, why:'the English rule must not drift' },
   { file:'parents',   text:'left to right', min:5, why:'the English rule must not drift' }
@@ -727,6 +727,515 @@ const ARITH_MIN = {
   splitDivisor:5, mixedMulDiv:2, wordChain:4, wordOnce:4, pickExpr:2,
   interDigits:1, interOrder:3
 };
+
+/* ===================== 小遊戲「生產線接單」的檢查（index.html，§六之五） =====================
+   五關：relay（排出兩行算式）、once（打出一共幾袋）、sort（分算式卡）、steps（點出先算哪一步）、split（拆大除數）。
+   每一關**照遊戲自己的規則把題庫裡每一題玩一遍**，答案一律用這份設定檔的第二套實作重算
+   （divRef 重複相減、mulRef 重複相加、evalPrintedRef 把印出來的算式讀回來）—— 不拿課程頁的 `/` 當神諭。
+   375px 手機上卡片內寬約 289px：300 寬的畫板縮成 0.963 倍 —— 拿得起來／點得到的東西要 ≥ 44 / 0.963 ≈ 45.7 個邏輯 px
+   （實際量測在端對端測試裡，這裡驗設計值）。
+   ⚠️ 說清楚極限：RENDER 裡的「放錯就彈回」那幾行是**字面釘樁**（need()），證明得了那一行還在，
+   證明不了它被接到了畫面上 —— 那一半由 teaching-workspace/game-harness/g4-chain-divide 的端對端測試負責。 */
+const { extractFunction } = require('./lib/gameshuffle.js');
+function gNums(text){ return (String(text).match(/\d+/g) || []).map(Number); }
+const PHONE_K = Math.min(1.5, 289 / 300);
+
+function gameChecks(D, I18N, fail, src, scan){
+  const LANGS = ['zh', 'en'], W = D.GAME_W;
+  const TYPES = ['relay', 'once', 'sort', 'steps', 'split'];
+  if (W !== 300) fail('GAME_W is ' + W + ', the boards are designed for 300');
+  if (!Array.isArray(D.GAME_ORDER) || D.GAME_ORDER.join() !== TYPES.join())
+    fail('GAME_ORDER should be ' + TYPES.join() + ' (the order of examples 1–5), got ' + D.GAME_ORDER);
+  /* RENDER.<type> 的函式本體（拿掉註解之後才比對，貼進註解的字不算） */
+  const code = String(src).replace(/\/\*[\s\S]*?\*\//g, '\n');
+  const body = name => (code.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+  const B = {};
+  TYPES.forEach(t => {
+    B[t] = body(t);
+    if (!B[t]) fail('cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('gAsks.' + t + ' missing in ' + L);
+      if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('gHints.' + t + ' missing in ' + L);
+    });
+  });
+  const need = (k, re, what) => { if (!re.test(B[k] || '')) fail(k + ': ' + what); };
+  const seq = (where, text, want) => {
+    if (typeof text !== 'string' || /undefined|NaN|null/.test(text)) return fail(where + ': text has undefined/NaN/null: ' + text);
+    const got = gNums(text).join();
+    if (got !== want.join()) fail(where + ': numbers should read ' + want.join() + ', got ' + got + ' — ' + text);
+  };
+  const say = (where, text, lang, tag) => { scan(text, lang, tag || where); inexactDivisions(text).forEach(p => fail(where + ': ' + p)); };
+  const touch = (what, sz) => { if (!(sz * PHONE_K >= 44)) fail(what + ' is ' + (sz * PHONE_K).toFixed(1) + 'px on a 375px phone — under 44'); };
+  const inside = (o, what, H) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail(what + ' is outside the ' + W + '×' + H + ' board: ' + JSON.stringify(o)); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const box = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w:w, h:h });
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return fail(what + ' ' + i + ' and ' + j + ' overlap'); };
+  ['GAME_RELAY', 'GAME_ONCE', 'GAME_SORT', 'GAME_STEP', 'GAME_SPLIT'].forEach(k => {
+    if (!Array.isArray(D[k]) || D[k].length < 4) fail(k + ' should be a pool of at least 4 entries');
+    else for (let i = 0; i < D[k].length; i++) if (!Object.prototype.hasOwnProperty.call(D[k], i)) fail(k + '[' + i + '] is a hole in the array');
+  });
+  const EQ = { zh:' ＝ ', en:' = ' };
+
+  /* ---------- 共用：shuffle() 真的跑：是排列、不改輸入、**永遠不會由小到大**（托盤一開始不可以已經排好） ---------- */
+  {
+    const fsrc = extractFunction(src, 'shuffle');
+    let shuffle = null;
+    if (!fsrc) fail('cannot find shuffle() in index.html');
+    else { try { shuffle = new Function(fsrc + '\nreturn shuffle;')(); } catch (e){ fail('shuffle() could not be evaluated on its own: ' + e.message); } }
+    if (shuffle){
+      [[0, 1, 2], [0, 1, 2, 3], [2, 3, 6, 8, 4, 12, 24]].forEach(input => {
+        const orders = new Set(), before = input.join();
+        for (let i = 0; i < 3000; i++){
+          const out = shuffle(input);
+          if (input.join() !== before) return fail('shuffle() mutates its input');
+          if (out.slice().sort((a, b) => a - b).join() !== input.slice().sort((a, b) => a - b).join()) return fail('shuffle() changed the set: ' + out);
+          let up = true; for (let k = 1; k < out.length; k++) if (!(out[k - 1] < out[k])) up = false;
+          if (up) return fail('shuffle() returned ' + out.join(',') + ' — already in increasing order');
+          orders.add(out.join());
+        }
+        /* ⚠️ 「出現過三種順序」擋不住只會轉圈的假洗牌（codex 第一輪）：3、4 張要出現**每一種**不是由小到大的排列，
+           7 張要每一張在每一個位置都出現過。3000 次抽樣下，真的 Fisher–Yates 漏掉任何一種的機率小於 10^-30。 */
+        const fact = n => (n <= 1 ? 1 : n * fact(n - 1));
+        if (input.length <= 4 && orders.size !== fact(input.length) - 1) fail('shuffle() of ' + input.join(',') + ' produced ' + orders.size + ' different orders in 3000 runs, expected all ' + (fact(input.length) - 1) + ' orders other than increasing');
+        if (input.length > 4){
+          const seen = input.map(() => new Set());
+          orders.forEach(o => o.split(',').forEach((v, pos) => seen[pos].add(v)));
+          if (seen.some(st => st.size !== input.length)) fail('shuffle() of ' + input.join(',') + ': some card never reaches some place in the tray');
+        }
+      });
+    }
+    /* 每一個托盤／每一個排列都要經過 shuffle（第 1 關的數字卡、第 3 關的算式卡、第 4 關的三行） */
+    need('relay', /shuffle\(relayCards\(e\)\)\.forEach\(/, 'the number cards are not shuffled into the tray');
+    need('sort', /shuffle\(\[0, 1, 2, 3\]\)\.forEach\(/, 'the expression cards are not shuffled into the tray');
+    need('steps', /rows = shuffle\(\[0, 1, 2\]\)\.map\(/, 'the three lines are not shuffled');
+  }
+
+  /* ---------- 共用：nearestOpen() 真的跑 ---------- */
+  {
+    const fsrc = extractFunction(src, 'nearestOpen');
+    let nearestOpen = null;
+    if (!fsrc) fail('cannot find nearestOpen() in index.html');
+    else { try { nearestOpen = new Function(fsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('nearestOpen() could not be evaluated: ' + e.message); } }
+    if (nearestOpen){
+      /* 第 1 關的六格：每一格裡的每一點都要判給那一格 */
+      const G = D.RELAY_G, list = [];
+      [0, 1].forEach(r => G.slotX.forEach((x, i) => list.push({ id:r * 3 + i, cx:x, cy:G.rowY[r], hw:G.slotW / 2, hh:G.slotH / 2, done:false })));
+      let bad = 0;
+      list.forEach(b => {
+        for (let x = b.cx - b.hw + 0.5; x < b.cx + b.hw; x += 1)
+          for (let y = b.cy - b.hh + 0.5; y < b.cy + b.hh; y += 2){ const g = nearestOpen(list, { x, y }, G.pad); if (!g || g.id !== b.id) bad++; }
+      });
+      if (bad) fail('nearestOpen(): ' + bad + ' points inside a relay box are given to another box (or none)');
+      /* 兩行之間的縫：放寬之後重疊；比較靠近**第二行**（陣列裡排後面）的點要判給第二行 */
+      const a = list[0], b = list[3], gapT = a.cy + a.hh, gapB = b.cy - b.hh;
+      if (!(gapB > gapT)) fail('the two relay lines touch — no gap to test the overlap zone in');
+      else if (!(gapB - gapT < 2 * G.pad)) fail('the relay pad does not reach across the gap between the lines — the overlap zone is never exercised');
+      else {
+        const py = gapT + (gapB - gapT) * 0.7, g = nearestOpen(list, { x:a.cx, y:py }, G.pad);
+        if (!g || g.id !== 3) fail('nearestOpen(): a drop between the lines nearer line 2 goes to ' + (g ? g.id : 'none') + ' (first match, not nearest)');
+      }
+      const two = [ { id:0, cx:100, cy:100, hw:42, hh:42, done:false }, { id:1, cx:155, cy:100, hw:12, hh:12, done:false } ];
+      const r0 = nearestOpen(two, { x:140, y:100 }, 6);
+      if (!r0 || r0.id !== 0) fail('nearestOpen(): a point inside the big box near the small one is given to the small one (measure to the box, not the centre)');
+      const done = [ { id:0, cx:100, cy:100, hw:22, hh:22, done:true }, { id:1, cx:148, cy:100, hw:22, hh:22, done:false } ];
+      if (nearestOpen(done, { x:121, y:100 }, 6) !== null) fail('nearestOpen(): a drop nearest to a finished box skips it and lands in the next box');
+      if (nearestOpen(done, { x:300, y:300 }, 6) !== null) fail('nearestOpen(): a drop far from every box is accepted');
+    }
+  }
+
+  /* ---------- 共用：計分（中年級 §三：沒犯錯 +20、犯過錯 +10；放錯一次 −5，最低 0）---------- */
+  if (!/var pts = gMistake \? 10 : 20;/.test(code)) fail('scoring: a round should give +20 with no mistakes and +10 after mistakes');
+  {
+    const fsrc = extractFunction(src, 'roundMiss');
+    if (!fsrc) fail('scoring: cannot find roundMiss() in index.html');
+    else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(([s0, want, shows]) => {
+      let r;
+      try { r = new Function('var gMistake = false, gScore = ' + s0 + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+      catch (e){ return fail('scoring: roundMiss() could not run: ' + e.message); }
+      if (r.s !== want || String(r.shown) !== String(want)) fail('scoring: a mistake at ' + s0 + ' leaves ' + r.s + ' — a mistake does not cost 5 (floored at 0)');
+      if ((r.html.indexOf('@MINUS@') >= 0) !== shows) fail('scoring: at ' + s0 + ' points the "−5" note is ' + (shows ? 'missing' : 'shown although nothing was taken'));
+      if (r.html.indexOf('why') < 0 || !r.m) fail('scoring: roundMiss() does not show the reason or record the mistake');
+    });
+  }
+  /* ---------- 共用：拖拉引擎（§六之五 實作要點）—— 字面釘樁 ---------- */
+  [
+    [/if \(gen !== gGen\) return;/, 'the drag engine has no board-generation guard: a piece held across Restart could act on the new board'],
+    [/var start = null, orig = null, moved = false, pid = null, gen = gGen;/, 'a piece does not remember which board it belongs to'],
+    [/gSolved = false; gMistake = false; gCtx = \{\}; gGen\+\+;/, 'startRound() does not bump gGen'],
+    [/el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/, 'a lost pointer capture does not put the piece back'],
+    [/el\.addEventListener\('pointercancel', function\(e\)\{ end\(e, true\); \}\);/, 'pointercancel does not put the piece back'],
+    [/document\.addEventListener\('pointerup', onDocEnd\);/, 'a release elsewhere on the page is not caught'],
+    [/if \(PIECE_PTR\[e\.pointerId\]\) return;/, 'the finger that pressed a piece can also count as tapping a destination'],
+    [/if \(P\.busy\(\)\) return;/, 'a tap on a destination can place a piece another finger is still dragging'],
+    [/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/, 'ahead mode does not show hint level 1 automatically']
+  ].forEach(([re, why]) => { if (!re.test(code)) fail(why); });
+  /* pointermove 和放開兩個地方都要只認第一根手指 */
+  if ((code.match(/if \(!start \|\| e\.pointerId !== pid\) return;/g) || []).length !== 2) fail('the drag follows any finger, not only the first one (move and release must both check the pointer id)');
+  if (!/\.gpiece\.locked\{[^}]*pointer-events:none/.test(src)) fail('placed pieces do not get pointer-events:none, so they block taps on what is under them');
+  if (!/\.gpiece\{[^}]*touch-action:none/.test(src)) fail('pieces do not set touch-action:none');
+  ['relay', 'sort'].forEach(k => need(k, /useTapSelect\(B, function\(P, pt\)\{/, 'this drag round has no tap-then-tap alternative'));
+  need('split', /useTapSelect\(B, tryDrop\);/, 'this drag round has no tap-then-tap alternative');
+  LANGS.forEach(L => {
+    seq('gPts ' + L, I18N[L].gPts(20), [20]);
+    seq('gMinus ' + L, I18N[L].gMinus, [5]);
+    if (gNums(I18N[L].gWin(85)).indexOf(85) < 0) fail('gWin ' + L + ' does not show the score');
+    ['gClear', 'gSortDone'].forEach(k => say(L + '.' + k, I18N[L][k], L));
+    TYPES.forEach(t => { say(L + '.gAsks.' + t, I18N[L].gAsks[t], L); say(L + '.gHints.' + t, I18N[L].gHints[t], L); });
+  });
+  /* ⚠️ 這一課教的是 × 和 ÷：「錯」的標記不可以用會被讀成乘號的字（範例 3 那一條規則，套到遊戲的箱子上） */
+  LANGS.forEach(L => { if (/[×✗✕*]/.test(I18N[L].gSortNo + I18N[L].gSortYes)) fail(L + '.gSortNo/gSortYes: the marker must not read as a multiplication sign'); });
+
+  /* 前三關共用的小圖：每一箱裡剛好 b 袋、箱子互不重疊、全部在畫板裡 */
+  function figOk(a, b, what, H){
+    const f = D.gFig(a, b);
+    if (f.boxes.length !== a) fail(what + ': the picture draws ' + f.boxes.length + ' big boxes, expected ' + a);
+    if (f.bags.length !== mulRef(a, b)) fail(what + ': the picture draws ' + f.bags.length + ' small bags, expected ' + a + ' × ' + b);
+    f.boxes.forEach((bx, i) => {
+      inside(bx, what + ' box ' + i, H);
+      const inBox = f.bags.filter(g => g.x >= bx.x && g.y >= bx.y && g.x + g.w <= bx.x + bx.w && g.y + g.h <= bx.y + bx.h);
+      if (inBox.length !== b) fail(what + ': big box ' + i + ' holds ' + inBox.length + ' small bags, expected ' + b);
+    });
+    noHits(f.boxes, what + ': big boxes');
+    noHits(f.bags, what + ': small bags');
+    return f;
+  }
+
+  /* ================= 第 1 關：排出兩行算式（範例 1） ================= */
+  {
+    const G = D.RELAY_G;
+    touch('a number card (' + G.cardW + '×' + G.cardH + ')', Math.min(G.cardW, G.cardH));
+    const slots = [];
+    [0, 1].forEach(r => G.slotX.forEach(x => slots.push(box(x, G.rowY[r], G.slotW, G.slotH))));
+    slots.forEach((s, i) => inside(s, 'relay box ' + i, G.H));
+    noHits(slots, 'relay boxes');
+    [0, 1].forEach(r => G.opX.forEach((x, i) => {
+      const sym = box(x, G.rowY[r], 22, G.slotH);
+      inside(sym, 'relay sign', G.H);
+      slots.forEach((s, j) => { if (hit(sym, s)) fail('relay: the ' + (i ? '=' : '÷') + ' sign on line ' + (r + 1) + ' sits on box ' + j); });
+    }));
+    slots.forEach((s, j) => { if (G.lblW > s.x) fail('relay: the line label runs into box ' + j); });
+    const tray = [];
+    for (let i = 0; i < 7; i++){ const row = i < 4 ? 0 : 1, col = row ? i - 4 : i, n = row ? 3 : 4; tray.push(box(W / 2 + (col - (n - 1) / 2) * G.trayStep, G.trayY[row], G.cardW, G.cardH)); }
+    tray.forEach((c, i) => { inside(c, 'relay card ' + i, G.H); slots.forEach((s, j) => { if (hit(c, s)) fail('relay: tray card ' + i + ' sits on box ' + j); }); });
+    noHits(tray, 'relay tray cards');
+    D.GAME_RELAY.forEach((e, i) => {
+      const w = 'GAME_RELAY[' + i + '] ' + e.t + '/' + e.a + '/' + e.b;
+      const cv = chainVsOnceRef(e.t, e.a, e.b);
+      if (!cv.ok || !cv.exact || !cv.agree) return fail(w + ': does not divide exactly both ways');
+      const q = divRef(e.t, e.a).q, c = cv.chain;
+      if (e.a < 2 || e.b < 2 || e.a === e.b || c < 2) fail(w + ': needs a, b ≥ 2, a ≠ b (so "the wrong divisor" is a different card) and at least 2 in a bag');
+      const want = [e.t, e.a, q, q, e.b, c];
+      if (D.relayWant(e).join() !== want.join()) fail(w + ': relayWant is ' + D.relayWant(e) + ', the reference gives ' + want);
+      const cards = D.relayCards(e), wantCards = [e.t, e.a, e.b, q, c, mulRef(e.a, e.b), divRef(e.t, e.b).q];
+      if (cards.slice().sort((x, y) => x - y).join() !== wantCards.slice().sort((x, y) => x - y).join()) fail(w + ': cards ' + cards + ', expected ' + wantCards);
+      if (new Set(cards).size !== cards.length) fail(w + ': two number cards show the same number ' + cards);
+      if (divRef(e.t, e.b).r !== 0) fail(w + ': the "divide by bags first" card is not a whole number');
+      if (e.t > TOTAL_MAX_REF) fail(w + ': total above ' + TOTAL_MAX_REF);
+      /* 照遊戲的規則玩一遍：每一格剛好有一張卡收（解得完），而且收的就是答案 */
+      want.forEach((v, k) => { const ok = cards.filter(x => x === v); if (ok.length !== 1) fail(w + ': box ' + k + ' is accepted by ' + ok.length + ' cards'); });
+      figOk(e.a, e.b, w, G.rowY[0] - G.slotH / 2);
+      LANGS.forEach(L => {
+        const d = I18N[L], tag = L + '.' + w;
+        say(tag + ' order', d.gOrderLine(e.t, e.a, e.b), L);
+        seq(tag + ' order', d.gOrderLine(e.t, e.a, e.b), [e.t, e.a, e.b]);
+        say(tag + ' hint2', d.gRelay2(e.t, e.a, e.b), L);
+        say(tag + ' done', d.gRelayDone(e.t, e.a, q, e.b, c), L);
+        seq(tag + ' done', d.gRelayDone(e.t, e.a, q, e.b, c), [e.t, e.a, q, q, e.b, c, c]);
+        seq(tag + ' total', d.gRelayTotal(e.t), [e.t]);
+        seq(tag + ' box-not-bag', d.gRelayBoxNotBag(e.a, e.b), [e.a, e.b]);
+        seq(tag + ' bag-not-box', d.gRelayBagNotBox(e.a, e.b), [e.b, e.a]);
+        seq(tag + ' once-way', d.gRelayOnceWay(e.a, e.b), [e.a, e.b]);
+        seq(tag + ' first answer', d.gRelayFirstAns(e.t), [e.t]);
+        ['gRelayTotal', 'gRelayFirstAns'].forEach(k => say(tag + ' ' + k, d[k](e.t), L));
+        ['gRelayBoxNotBag', 'gRelayBagNotBox', 'gRelayOnceWay'].forEach(k => say(tag + ' ' + k, d[k](e.a, e.b), L));
+        /* 答案格放錯的那一句：乘回去一定不是 t（那句話的理由真的成立），而且數字照順序 */
+        cards.forEach(v => {
+          if (v !== q){
+            const p = mulRef(v, e.a), s = d.gRelayCheck(v, e.a, p, e.t);
+            if (p === e.t) fail(tag + ': card ' + v + ' × ' + e.a + ' comes back to ' + e.t + ' although it is not one big box');
+            seq(tag + ' check ' + v, s, [v, e.a, p, e.t, v]); say(tag + ' check ' + v, s, L);
+          }
+          if (v !== c){
+            const p = mulRef(mulRef(v, e.b), e.a), s = d.gRelayCheck2(v, e.b, e.a, p, e.t);
+            if (p === e.t) fail(tag + ': card ' + v + ' × ' + e.b + ' × ' + e.a + ' comes back to ' + e.t + ' although it is not one small bag');
+            seq(tag + ' check2 ' + v, s, [v, e.b, e.a, p, e.t, v]); say(tag + ' check2 ' + v, s, L);
+          }
+        });
+      });
+    });
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      if (!Array.isArray(d.gRelayRow) || d.gRelayRow.length !== 2) fail(L + '.gRelayRow needs two line labels');
+      ['gRelayCountBoxes', 'gRelayCountBags', 'gRelayFirstAns2'].forEach(k => { say(L + '.' + k, d[k], L); if (/\d/.test(d[k])) fail(L + '.' + k + ' prints a number although it is used for any wrong card'); });
+      if (!/第一次的答案|answer to the first|first answer/.test(d.gRelayFirstAns(24))) fail(L + '.gRelayFirstAns does not say the second division works on the first answer');
+    });
+    need('relay', /if \(v !== want\[slot\.k\]\)\{ roundMiss\(why\(slot\.k, v\)\); return false; \}/, 'a card in the wrong box is not refused with its reason');
+    need('relay', /var slot = nearestOpen\(slots, pt, G\.pad\);\n\s*if \(!slot\) return false;/, 'a drop on empty space / a filled box is not sent back silently');
+    need('relay', /if \(k === 3\) return v === e\.t \? d\.gRelayFirstAns\(e\.t\) : d\.gRelayFirstAns2;/, 'the original total as the second dividend does not get "the second division works on the first answer"');
+    need('relay', /if \(k === 2\) return d\.gRelayCheck\(v, e\.a, v \* e\.a, e\.t\);/, 'a wrong "one big box" is not checked by multiplying back');
+    need('relay', /return d\.gRelayCheck2\(v, e\.b, e\.a, v \* e\.b \* e\.a, e\.t\);/, 'a wrong "one small bag" is not checked by multiplying back');
+    need('relay', /if \(pt\.tap\) keepSelected\(B, P\);/, 'a tapped card does not stay selected (the cards never run out)');
+    need('relay', /drawFig\(B, e\.a, e\.b\);/, 'the picture is not drawn from the order\'s own numbers');
+  }
+
+  /* ================= 第 2 關：打出一共幾袋（範例 2） ================= */
+  {
+    const G = D.ONCE_G;
+    touch('an answer box (' + G.inW + '×' + G.inH + ')', Math.min(G.inW, G.inH));
+    touch('the OK button (' + G.btnW + '×' + G.btnH + ')', Math.min(G.btnW, G.btnH));
+    const ins = G.inX.map(x => ({ x:x - G.inW / 2, y:G.exprY, w:G.inW, h:G.inH }));
+    ins.forEach((b, i) => inside(b, 'once box ' + i, G.H));
+    noHits(ins.concat([{ x:G.eqX - 14, y:G.exprY, w:28, h:G.inH }]), 'once boxes and the = sign');
+    inside({ x:(W - G.btnW) / 2, y:G.btnY, w:G.btnW, h:G.btnH }, 'once OK button', G.H);
+    if (!(G.lblY >= G.exprY + G.inH && G.btnY >= G.lblY + 20)) fail('once: the labels and the button overlap the boxes');
+    D.GAME_ONCE.forEach((e, i) => {
+      const w = 'GAME_ONCE[' + i + '] ' + e.t + '/' + e.a + '/' + e.b;
+      const cv = chainVsOnceRef(e.t, e.a, e.b);
+      if (!cv.ok || !cv.exact || !cv.agree) return fail(w + ': does not divide exactly both ways');
+      const n = cv.prod, c = cv.once;
+      if (e.a + e.b === n) fail(w + ': a + b equals a × b, so the "added" answer would be right');
+      if (e.a === e.b || e.a < 2 || e.b < 2) fail(w + ': needs a ≠ b, both ≥ 2 (the two "counted only half" answers must be told apart)');
+      if (e.t > TOTAL_MAX_REF) fail(w + ': total above ' + TOTAL_MAX_REF);
+      figOk(e.a, e.b, w, G.exprY);
+      LANGS.forEach(L => {
+        const d = I18N[L], tag = L + '.' + w;
+        say(tag + ' order', d.gOrderLine(e.t, e.a, e.b), L);
+        say(tag + ' hint2', d.gOnce2(e.t, e.a, e.b), L);
+        say(tag + ' add', d.gOnceAdd(e.a, e.b, e.a + e.b), L);
+        seq(tag + ' add', d.gOnceAdd(e.a, e.b, e.a + e.b), [e.a, e.b, e.a, e.b, e.a, e.b, e.a + e.b]);
+        if (!/乘|multipl/.test(d.gOnceAdd(e.a, e.b, e.a + e.b))) fail(tag + ': the "added" reason does not say the bags are multiplied');
+        seq(tag + ' only boxes', d.gOnceOnlyBoxes(e.a, e.b), [e.a, e.b]);
+        seq(tag + ' only bags', d.gOnceOnlyBags(e.a, e.b), [e.b, e.a]);
+        seq(tag + ' count', d.gOnceCount(e.a, e.b), [e.a, e.b]);
+        ['gOnceOnlyBoxes', 'gOnceOnlyBags', 'gOnceCount'].forEach(k => say(tag + ' ' + k, d[k](e.a, e.b), L));
+        seq(tag + ' bags ok', d.gOnceBagsOk(n), [n]); say(tag + ' bags ok', d.gOnceBagsOk(n), L);
+        seq(tag + ' done', d.gOnceDone(e.t, e.a, e.b, c), [e.t, e.a, e.b, e.t, e.a, e.b, c]); say(tag + ' done', d.gOnceDone(e.t, e.a, e.b, c), L);
+        [c - 1, c + 1, e.t / e.a].forEach(v => {
+          if (v === c || v < 0) return;
+          const p = mulRef(v, n), s = d.gOnceCheck(v, n, p, e.t);
+          if (p === e.t) fail(tag + ': ' + v + ' × ' + n + ' comes back to ' + e.t);
+          seq(tag + ' check ' + v, s, [v, n, p, e.t, v]); say(tag + ' check ' + v, s, L);
+        });
+      });
+    });
+    LANGS.forEach(L => { const d = I18N[L]; say(L + '.gOnceInt', d.gOnceInt, L); if (!Array.isArray(d.gOnceLbl) || d.gOnceLbl.length !== 2) fail(L + '.gOnceLbl needs two labels'); });
+    need('once', /if \(v !== n\)\{\n\s*roundMiss\(v === e\.a \+ e\.b \? d\.gOnceAdd\(e\.a, e\.b, e\.a \+ e\.b\)/, 'a wrong number of bags is not refused with its reason (a + b first)');
+    need('once', /if \(v !== c\)\{ roundMiss\(d\.gOnceCheck\(v, n, v \* n, e\.t\)\); return; \}/, 'a wrong "one bag" is not refused by multiplying back');
+    need('once', /if \(v === null\)\{ gMsg\.textContent = d\.gOnceInt; return; \}/, 'an empty or malformed entry is not a reminder-only');
+    need('once', /var e = pick\(GAME_ONCE\), G = ONCE_G, n = e\.a \* e\.b, c = e\.t \/ n, step = 0;/, 'the round does not take its answers from the order');
+    need('once', /inp\.disabled = i > 0;/, 'the second box is open before the number of bags is right');
+    /* readInt() 只收寫法正常的整數 —— 從原始碼切出來跑 */
+    {
+      const m = (B.once || '').match(/function readInt\(s\)\{[^\n]*\}/);
+      let readInt = null;
+      if (!m) fail('once: cannot find readInt()');
+      else { try { readInt = new Function(m[0] + '\nreturn readInt;')(); } catch (e){ fail('once: readInt() could not run: ' + e.message); } }
+      if (readInt){
+        [['12', 12], [' 12 ', 12], ['0', 0], ['1 2', null], ['012', null], ['1.2', null], ['', null], ['12a', null], ['-3', null], ['１２', null]].forEach(([s, want]) => {
+          if (readInt(s) !== want) fail('once: readInt("' + s + '") gives ' + readInt(s) + ', expected ' + want);
+        });
+      }
+    }
+  }
+
+  /* ================= 第 3 關：分算式卡（範例 2、3） ================= */
+  {
+    const G = D.SORT_G;
+    touch('an expression card (' + G.cardW + '×' + G.cardH + ')', Math.min(G.cardW, G.cardH));
+    if (D.SORT_KEYS.join() !== 'chain,once,left,add') fail('SORT_KEYS should be chain,once,left,add');
+    const cards = [];
+    for (let i = 0; i < 4; i++) cards.push(box(G.trayX[i % 2], G.trayY[Math.floor(i / 2)], G.cardW, G.cardH));
+    cards.forEach((c, i) => inside(c, 'sort card ' + i, G.H));
+    noHits(cards, 'sort tray cards');
+    const bins = G.binX.map(x => ({ x:x, y:G.binY, w:G.binW, h:G.binH }));
+    bins.forEach((b, i) => { inside(b, 'sort box ' + i, G.H); cards.forEach((c, j) => { if (hit(b, c)) fail('sort: tray card ' + j + ' sits on box ' + i); }); });
+    noHits(bins, 'sort boxes');
+    if (!(G.binX[1] - (G.binX[0] + G.binW) < 12)) fail('sort: the gap between the boxes is wider than the pad — the overlap zone is never exercised');
+    /* 每一個箱子要放得下兩張（兩張算得出、兩張算的是別的）而且彼此不蓋到 */
+    if (G.lbl + 4 + 2 * G.cardH + 4 > G.binH) fail('sort: a box cannot hold its two cards');
+    if (G.cardW > G.binW) fail('sort: a card is wider than a box');
+    D.GAME_SORT.forEach((e, i) => {
+      const w = 'GAME_SORT[' + i + '] ' + e.t + '/' + e.a + '/' + e.b;
+      const cv = chainVsOnceRef(e.t, e.a, e.b);
+      if (!cv.ok || !cv.exact || !cv.agree) return fail(w + ': does not divide exactly both ways');
+      const c = cv.chain, q = divRef(e.t, e.a).q, nb = cv.prod, s = e.a + e.b, add = divRef(e.t, s), left = mulRef(q, e.b);
+      if (!add || add.r !== 0) fail(w + ': ' + e.t + ' ÷ (' + e.a + ' + ' + e.b + ') does not divide exactly — the distractor breaks the lesson\'s promise');
+      if (s === nb || e.b < 2) fail(w + ': needs a + b ≠ a × b and b ≥ 2');
+      const ref = { chain:c, once:c, left:left, add:add ? add.q : null };
+      D.SORT_KEYS.forEach(k => {
+        if (D.sortValue(k, e) !== ref[k]) fail(w + ': sortValue(' + k + ') = ' + D.sortValue(k, e) + ', the reference gives ' + ref[k]);
+        if (D.sortIsBag(k) !== (ref[k] === c && (k === 'chain' || k === 'once'))) fail(w + ': sortIsBag(' + k + ') = ' + D.sortIsBag(k));
+      });
+      if (left === c || (add && add.q === c)) fail(w + ': a "something else" card comes to the same number as one bag');
+      if (e.t > TOTAL_MAX_REF) fail(w + ': total above ' + TOTAL_MAX_REF);
+      figOk(e.a, e.b, w, G.trayY[0] - G.cardH / 2);
+      LANGS.forEach(L => {
+        const d = I18N[L], tag = L + '.' + w;
+        /* 卡片印出來的樣子：讀回來算一次（從左往右、括號先算），必須等於 sortValue */
+        const texts = { chain:D.exprText('chain', e.t, e.a, e.b), once:D.exprText('once', e.t, e.a, e.b), left:D.exprText('left', e.t, e.a, e.b),
+                        add:e.t + ' ÷ (' + e.a + (L === 'zh' ? ' ＋ ' : ' + ') + e.b + ')' };
+        D.SORT_KEYS.forEach(k => {
+          const v = intOfPrinted(texts[k]);
+          if (v !== ref[k]) fail(tag + ': the ' + k + ' card "' + texts[k] + '" reads back as ' + v + ', expected ' + ref[k]);
+          inexactDivisions(texts[k]).forEach(p => fail(tag + ' card ' + k + ': ' + p));
+        });
+        const why = { chain:d.gSortChain(e.t, e.a, e.b, q, c), once:d.gSortOnce(e.t, e.a, e.b, nb, c),
+                      left:d.gSortLeft(e.t, e.a, e.b, q, left), add:d.gSortAdd(e.t, e.a, e.b, s, add ? add.q : 0, nb) };
+        seq(tag + ' chain', why.chain, [e.t, e.a, e.b, c, e.a, q, e.b]);
+        seq(tag + ' once', why.once, [e.t, e.a, e.b, e.t, nb, c, nb]);
+        seq(tag + ' left', why.left, [e.t, e.a, e.b, left, q, e.b, e.b]);
+        seq(tag + ' add', why.add, [e.a, e.b, s, e.a, e.b, nb, e.t, e.a, e.b, add ? add.q : 0]);
+        Object.keys(why).forEach(k => say(tag + ' ' + k, why[k], L));
+        say(tag + ' line', d.gSortLine(e.t, e.a, e.b, 1, 4), L);
+        seq(tag + ' line', d.gSortLine(e.t, e.a, e.b, 1, 4), [e.t, e.a, e.b, 1, 4]);
+        say(tag + ' hint2', d.gSort2(e.t, e.a, e.b), L);
+      });
+    });
+    need('sort', /if \(bin\.bag !== sortIsBag\(key\)\)\{ roundMiss\(whyOf\(key\)\); return false; \}/, 'a card in the wrong box is not refused with its reason');
+    need('sort', /var bin = nearestOpen\(bins, pt, 6\);\n\s*if \(!bin\) return false;/, 'a drop on empty space is not sent back silently');
+    need('sort', /return exprText\(key, e\.t, e\.a, e\.b\);/, 'the cards are not printed by the lesson\'s own exprText()');
+  }
+
+  /* ================= 第 4 關：點出先算哪一步（範例 4） ================= */
+  {
+    const G = D.STEP_G;
+    touch('an operation button (' + G.opW + ')', G.opW);
+    for (let r = 1; r < G.rowY.length; r++) if (G.rowY[r] - G.rowY[r - 1] < G.tokH + G.lineDY) fail('steps lines ' + r + ' and ' + (r + 1) + ' (with the step written under) overlap');
+    if (G.rowY[G.rowY.length - 1] + G.lineDY + 10 > G.H) fail('steps: the last line\'s steps run off the board');
+    if (G.rowY[0] - G.tokH / 2 - 4 < 0) fail('steps: the first line runs off the top');
+    D.GAME_STEP.forEach((e, i) => {
+      const w = 'GAME_STEP[' + i + '] ' + JSON.stringify(e);
+      const rows = D.stepRows(e);
+      if (rows.map(r => r.id).join() !== 'left,br,mul') return fail(w + ': stepRows should give left, br, mul');
+      const want = { left:{ first:0, v:mulRef(divRef(e.t, e.a).q, e.b) }, br:{ first:1, v:divRef(e.t, mulRef(e.a, e.b)).q }, mul:{ first:0, v:divRef(mulRef(e.p, e.q), e.r).q } };
+      if (divRef(e.t, e.a).r || divRef(e.t, mulRef(e.a, e.b)).r || divRef(mulRef(e.p, e.q), e.r).r) fail(w + ': a printed step does not divide exactly');
+      if (want.left.v === want.br.v) fail(w + ': t ÷ a × b and t ÷ (a × b) come to the same number, so the brackets look pointless');
+      if (e.a < 2 || e.b < 2 || e.r < 2) fail(w + ': every number must be at least 2');
+      rows.forEach(r => {
+        const wt = want[r.id], printed = r.nums[0] + (r.ops[0] === '*' ? ' × ' : ' ÷ ') + (r.br ? '(' : '') + r.nums[1] + (r.ops[1] === '*' ? ' × ' : ' ÷ ') + r.nums[2] + (r.br ? ')' : '');
+        if (D.stepFirst(r) !== wt.first) fail(w + ' ' + r.id + ': stepFirst = ' + D.stepFirst(r) + ', expected ' + wt.first + ' (brackets first, otherwise left to right)');
+        if (D.stepValue(r) !== wt.v) fail(w + ' ' + r.id + ': stepValue = ' + D.stepValue(r) + ', the reference gives ' + wt.v);
+        /* 讀印出來的算式（設定檔自己的求值器 —— 規則的第二套實作）也要得到同一個數 */
+        if (intOfPrinted(printed) !== wt.v) fail(w + ' ' + r.id + ': "' + printed + '" reads back as ' + intOfPrinted(printed) + ', expected ' + wt.v);
+        if (r.id !== 'mul') inexactDivisions(printed).forEach(p => fail(w + ' ' + r.id + ': ' + p));
+        /* 排版：還沒算的那一行最寬（數字、兩個按鈕、括號），一定要放得進畫板 */
+        const numW = v => G.numPad + String(v).length * G.digitW;
+        const widths = [numW(r.nums[0]), G.opW, numW(r.nums[1]), G.opW, numW(r.nums[2])].concat(r.br ? [G.brW, G.brW] : []);
+        const total = widths.reduce((s, x) => s + x, 0) + G.gap * (widths.length - 1);
+        if (total > W - 8) fail(w + ' ' + r.id + ': the line is ' + total + ' wide, the board is ' + W);
+      });
+      LANGS.forEach(L => {
+        const d = I18N[L], tag = L + '.' + w;
+        const sl = d.gStepWhyLeft(e.t, e.a, e.b), sb = d.gStepWhyBr(e.a, e.b), sm = d.gStepWhyMul(e.p, e.q);
+        seq(tag + ' why left', sl, [e.t, e.a, e.a, e.b, e.t, e.a, e.b]);
+        seq(tag + ' why br', sb, [e.a, e.b]);
+        seq(tag + ' why mul', sm, [e.p, e.q]);
+        if (!/從左往右|left to right/.test(sl) || !/從左往右|left to right/i.test(sm)) fail(tag + ': the no-bracket reasons do not say "left to right"');
+        if (!/括號|Brackets/i.test(sb)) fail(tag + ': the bracket reason does not say brackets go first');
+        /* ⚠️ p × q ÷ r 的 q ÷ r 不一定整除，說明裡不可以印出來 */
+        if (sm.indexOf(e.q + ' ÷ ' + e.r) >= 0) fail(tag + ': the reason prints ' + e.q + ' ÷ ' + e.r + ', which this lesson never divides');
+        [sl, sb, sm].forEach((s, k) => say(tag + ' why' + k, s, L));
+        const done = d.gStepDone(e.t, e.a, e.b, want.left.v, want.br.v);
+        seq(tag + ' done', done, [e.t, e.a, e.b, want.left.v, e.t, e.a, e.b, want.br.v]); say(tag + ' done', done, L);
+        say(tag + ' next', d.gStepNext(e.t + ' ÷ ' + e.a), L);
+        /* 畫面上每一行算完寫在下面的兩步：照遊戲的規則組出來、驗算 */
+        rows.forEach(r => {
+          const n = r.nums, f = D.stepFirst(r), op = o => (o === '*' ? ' × ' : ' ÷ ');
+          const v1 = f === 0 ? D.applyOp(n[0], r.ops[0], n[1]) : D.applyOp(n[1], r.ops[1], n[2]);
+          const s1 = (f === 0 ? n[0] + op(r.ops[0]) + n[1] : n[1] + op(r.ops[1]) + n[2]) + EQ[L] + v1;
+          const s2 = (f === 0 ? v1 + op(r.ops[1]) + n[2] : n[0] + op(r.ops[0]) + v1) + EQ[L] + D.stepValue(r);
+          say(tag + ' ' + r.id + ' steps', s1 + '　→　' + s2, L);
+        });
+      });
+    });
+    LANGS.forEach(L => { seq(L + '.gStepNow', I18N[L].gStepNow(1, 3), [1, 3]); say(L + '.gStepNow', I18N[L].gStepNow(1, 3), L); });
+    need('steps', /if \(i !== f\)\{ b\.disabled = true; b\.classList\.add\('tried'\); roundMiss\(why\(row\)\); return; \}/, 'a tap on the wrong operation is not refused (and disabled) with its reason');
+    need('steps', /var n = row\.def\.nums, o = row\.def\.ops, f = stepFirst\(row\.def\);/, 'the first step is not taken from stepFirst()');
+    need('steps', /if \(gSolved \|\| row\.phase === 2 \|\| b\.disabled\) return;/, 'a finished line or a refused button can still be tapped');
+  }
+
+  /* ================= 第 5 關：拆大除數（範例 5） ================= */
+  {
+    const G = D.SPLIT_G;
+    touch('the knob (' + G.knob + ')', G.knob);
+    /* 數字鍵：每一個 ≥ 44px、在畫板裡、彼此不碰到、不壓到刻度和說明 */
+    touch('a number key (' + G.padW + ')', G.padW);
+    const keys = [];
+    for (let n = G.nMin; n <= G.nMax; n++){ const xy = D.splitPadXY(n); keys.push(box(xy.x, xy.y, G.padW, G.padW)); }
+    keys.forEach((k, i) => { inside(k, 'split number key ' + (i + G.nMin), G.H); if (k.y < G.tickY + 36) fail('split: number key ' + (i + G.nMin) + ' runs into the ticks and caption'); });
+    noHits(keys, 'split number keys');
+    need('split', /b\.addEventListener\('click', function\(\)\{\n\s*if \(gSolved \|\| knob\.busy\(\)\) return;\n\s*knob\.place\(splitKnobX\(n\), G\.trackY\);\n\s*if \(!tryDrop\(knob, \{ x:splitKnobX\(n\), y:G\.trackY, tap:true \}\)\) knob\.home\(\);/, 'a number key does not go through the same rule as dropping the knob');
+    if (G.nMin !== 2 || G.nMax !== 12) fail('SPLIT_G should offer 2..12 bags per box');
+    if (D.splitKnobX(0) - G.knob / 2 < 0 || D.splitKnobX(G.nMax) + G.knob / 2 > W) fail('split: the knob can be dragged off the board');
+    if (D.splitKnobX(G.nMin) - D.splitKnobX(0) < G.step) fail('split: the parking spot is closer to tick 2 than the ticks are to each other');
+    inside(box(D.splitKnobX(0), G.trackY, G.knob, G.knob), 'split knob', G.H);
+    if (G.tickY + 18 + 18 > G.H) fail('split: the caption under the ticks runs off the board');
+    /* 旋鈕放開 → 最近的一格：掃整條軌道每 0.25px，用自己的比距離重算 */
+    for (let x = D.splitKnobX(0); x <= D.splitKnobX(G.nMax); x += 0.25){
+      let best = 0, bd = Math.abs(x - D.splitKnobX(0));
+      for (let n = G.nMin; n <= G.nMax; n++){ const dd = Math.abs(x - (G.x2 + (n - G.nMin) * G.step)); if (dd < bd){ bd = dd; best = n; } }
+      if (D.splitNearest(x) !== best){ fail('splitNearest(' + x + ') = ' + D.splitNearest(x) + ', the nearest tick is ' + best); break; }
+    }
+    for (let n = G.nMin; n <= G.nMax; n++) if (D.splitKnobX(n) !== G.x2 + (n - G.nMin) * G.step) fail('splitKnobX(' + n + ') is off its tick');
+    D.GAME_SPLIT.forEach((e, i) => {
+      const w = 'GAME_SPLIT[' + i + '] ' + e.t + ' ÷ ' + e.d;
+      const all = divRef(e.t, e.d);
+      if (!all || all.r !== 0) return fail(w + ': does not divide exactly');
+      if (e.d <= G.nMax || e.d > 2 * G.rows) fail(w + ': d must be above ' + G.nMax + ' (every choice is at least two boxes) and at most ' + 2 * G.rows + ' (fits the board)');
+      if (e.t > TOTAL_MAX_REF) fail(w + ': total above ' + TOTAL_MAX_REF);
+      /* 照遊戲的規則玩一遍：每一個 n ＝ 2～12 —— 整除 d 才是拆法，兩步都除得剛剛好、答案和直接除一樣 */
+      const pairs = new Set();
+      for (let n = G.nMin; n <= G.nMax; n++){
+        const dv = divRef(e.d, n), lay = D.splitLayout(e.d, n), rows = Math.ceil(e.d / n);
+        if (lay.sq.length !== e.d) fail(w + ' n=' + n + ': ' + lay.sq.length + ' bags drawn');
+        if (lay.boxes.length !== rows) fail(w + ' n=' + n + ': ' + lay.boxes.length + ' boxes drawn, expected ' + rows);
+        if (rows > G.rows) fail(w + ' n=' + n + ': ' + rows + ' rows do not fit');
+        lay.boxes.forEach((b, k) => {
+          inside(b, w + ' n=' + n + ' box ' + k, G.trackY - G.knob / 2);
+          const inB = lay.sq.filter(s => s.x >= b.x && s.y >= b.y && s.x + G.sq <= b.x + b.w && s.y + G.sq <= b.y + b.h).length;
+          const wantK = k < rows - 1 ? n : e.d - n * (rows - 1);
+          if (inB !== wantK) fail(w + ' n=' + n + ': box ' + k + ' holds ' + inB + ' bags, expected ' + wantK);
+          if (b.full !== (wantK === n)) fail(w + ' n=' + n + ': box ' + k + ' is marked ' + (b.full ? 'full' : 'part-filled') + ' but holds ' + inB + ' of ' + n);
+        });
+        noHits(lay.sq.map(s => ({ x:s.x, y:s.y, w:G.sq, h:G.sq })), w + ' n=' + n + ' bags');
+        if (dv.r === 0){
+          const r1 = divRef(e.t, dv.q), r2 = r1 && divRef(r1.q, n);
+          if (!r1 || r1.r || !r2 || r2.r || r2.q !== all.q) fail(w + ': ' + e.t + ' ÷ ' + dv.q + ' ÷ ' + n + ' is not exact or not ' + all.q);
+          pairs.add(Math.min(dv.q, n) + 'x' + Math.max(dv.q, n));
+          LANGS.forEach(L => {
+            const s = I18N[L].gSplitOk(e.d, dv.q, n, e.t, r1.q, all.q);
+            seq(L + '.' + w + ' ok ' + n, s, [e.d, dv.q, n, e.t, e.d, e.t, dv.q, n, e.t, dv.q, r1.q, r1.q, n, all.q]);
+            say(L + '.' + w + ' ok ' + n, s, L);
+            say(L + '.' + w + ' hint2 ' + n, I18N[L].gSplit2(e.d, n, dv.q), L);
+          });
+        } else {
+          LANGS.forEach(L => {
+            const k = dv.q, r = e.d - n * k, s = I18N[L].gSplitLeft(n, k, r, e.d);
+            if (!(k >= 1 && r > 0 && r < n)) fail(w + ' n=' + n + ': the leftover is ' + r);
+            seq(L + '.' + w + ' left ' + n, s, [n, k, r, n, k, n * k, e.d]); say(L + '.' + w + ' left ' + n, s, L);
+          });
+        }
+      }
+      /* 牆壁都在：停車位不是任何一格 */
+      const lay0 = D.splitLayout(e.d, 0);
+      if (lay0.boxes.length !== 0 || lay0.sq.length !== e.d) fail(w + ': the parked pile should draw ' + e.d + ' bags and no boxes');
+      if (pairs.size < 2) fail(w + ': only ' + pairs.size + ' different split(s) with 2..12 bags per box — the round asks for two');
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        seq(L + '.' + w + ' line', d.gSplitLine(e.t, e.d, 1), [e.t, e.d, e.d, 1, 2]); say(L + '.' + w + ' line', d.gSplitLine(e.t, e.d, 1), L);
+        seq(L + '.' + w + ' done', d.gSplitDone(e.t, e.d, all.q), [e.t, e.d, all.q]); say(L + '.' + w + ' done', d.gSplitDone(e.t, e.d, all.q), L);
+        say(L + '.' + w + ' same', d.gSplitSame(3, 8), L);
+      });
+    });
+    LANGS.forEach(L => say(L + '.gSplitCap', I18N[L].gSplitCap, L));
+    need('split', /if \(e\.d % n\)\{\n\s*var k = Math\.floor\(e\.d \/ n\);\n\s*roundMiss\(d\.gSplitLeft\(n, k, e\.d - n \* k, e\.d\)\);\n\s*return false;/, 'a choice that leaves bags over is not refused with its reason');
+    need('split', /if \(!n\) return false;/, 'the parking spot is not a silent bounce');
+    need('split', /if \(found\.indexOf\(key\) >= 0\)\{ roundInfo\(d\.gSplitSame/, 'the same pair (either order) counts as a new split');
+    need('split', /function pairKey\(rows, n\)\{ return Math\.min\(rows, n\) \+ 'x' \+ Math\.max\(rows, n\); \}/, 'the pair key does not ignore order');
+    need('split', /if \(found\.length === 2\) roundSolved\(/, 'the round does not need two different splits');
+    need('split', /axis:'x', minX:G\.parkX, maxX:splitKnobX\(G\.nMax\),/, 'the knob is not held to its track');
+  }
+}
 
 module.exports = {
   /* ================= 刻意改壞測試 ================= */
@@ -883,42 +1392,286 @@ module.exports = {
       find:"    return { t:S5_T, d:S5_D, mid:S5_T / pair[0], end:S5_T / pair[0] / pair[1] };\n  }",
       replace:"    return { t:S5_T, d:0, mid:S5_T / pair[0], end:S5_T / pair[0] / pair[1] };\n  }",
       why:"the narration would print a divisor the arithmetic never used" },
-    { file:"index", via:"index", expect:"but the computed answer is at",
-      find:"    { kind:'total', a:5, b:6,           opts:[11, 30, 36, 25],  ans:1 },",
-      replace:"    { kind:'total', a:5, b:6,           opts:[11, 30, 36, 25],  ans:0 },",
-      why:"the game would mark the \"added\" distractor correct" },
-    { file:"index", via:"index", expect:"exactly one split must multiply back to",
-      find:"pairs:[[4, 4], [4, 6], [8, 4], [12, 12]], ans:1 }",
-      replace:"pairs:[[4, 4], [4, 6], [6, 4], [12, 12]], ans:1 }",
-      why:"two options would be valid splits, so the round has no single answer" },
-    { file:"index", via:"index", expect:"two options have the same value",
-      find:"    { kind:'left',  t:600, a:5, b:2,    opts:[60, 120, 300, 240], ans:3 },",
-      replace:"    { kind:'left',  t:600, a:5, b:2,    opts:[60, 120, 240, 240], ans:3 },",
-      why:"the child would see three options, not four" },
-    { file:"index", via:"index", expect:"exactly five rounds",
-      find:"    { kind:'chain', t:180, a:5, b:6,    opts:[36, 216, 6, 30],  ans:2 },\n",
+    { file:"index", via:"index", expect:"already in increasing order",
+      find:"    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }\n",
+      replace:"    a.sort(function(x, y){ return x - y; });\n",
+      why:"the tray could start in increasing order" },
+    { file:"index", via:"index", expect:"first match, not nearest",
+      find:"if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"if (!best){ bd = dd; bc = dc; best = b; }",
+      why:"a drop between two lines would go to whichever box is listed first" },
+    { file:"index", via:"index", expect:"measure to the box, not the centre",
+      find:"var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;",
+      replace:"var dd = dx * dx + dy * dy, dc = dd;",
+      why:"a drop inside a big box near a small one would be given to the small one" },
+    { file:"index", via:"index", expect:"skips it and lands in the next box",
+      find:"      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;",
+      replace:"      if (b.done || Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;",
+      why:"a card dropped on a filled box would jump into the neighbouring empty box" },
+    { file:"index", via:"index", expect:"shown although nothing was taken",
+      find:"var lost = gScore >= 5 ? 5 : 0;",
+      replace:"var lost = 5;",
+      why:"at 0 points the game would still say −5" },
+    { file:"index", via:"index", expect:"does not cost 5",
+      find:"    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;\n    gMsg.innerHTML = '<span class=\"no\">'",
+      replace:"    gScore = Math.max(0, gScore - 0); elScore.textContent = gScore;\n    gMsg.innerHTML = '<span class=\"no\">'",
+      why:"a mistake would cost nothing" },
+    { file:"index", via:"index", expect:"should give +20 with no mistakes",
+      find:"var pts = gMistake ? 10 : 20;",
+      replace:"var pts = 20;",
+      why:"a round with mistakes would still give +20" },
+    { file:"index", via:"index", expect:"board-generation guard",
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */\n",
       replace:"",
-      why:"a missing round would shorten the game without anyone noticing" },
-    { file:"index", via:"index", expect:"roundValue gives",
-      find:"    if (r.kind === 'left')  return r.t / r.a * r.b;",
-      replace:"    if (r.kind === 'left')  return r.t / (r.a * r.b);",
-      why:"the no-bracket round would be scored as if it had brackets" },
-    { file:"index", via:"index", expect:"options, expected 4",
-      find:"  function roundOptCount(r){ return (r.kind === 'split') ? r.pairs.length : r.opts.length; }",
-      replace:"  function roundOptCount(r){ return (r.kind === 'split') ? r.pairs.length : r.opts.length - 1; }",
-      why:"the last option would never be rendered" },
-    { file:"index", via:"index", expect:"the option marked correct is not the computed answer",
-      find:"    { kind:'once',  t:720, a:6, b:4,    opts:[480, 30, 72, 120], ans:1 },",
-      replace:"    { kind:'once',  t:720, a:6, b:4,    opts:[480, 72, 30, 120], ans:1 },",
-      why:"the bracketed round would mark the \"added divisor\" answer correct" },
-    { file:"index", via:"index", expect:"the correct option sits in the same slot",
-      find:"    { kind:'total', a:5, b:6,           opts:[11, 30, 36, 25],  ans:1 },\n    { kind:'chain', t:180, a:5, b:6,    opts:[36, 216, 6, 30],  ans:2 },\n    { kind:'once',  t:720, a:6, b:4,    opts:[480, 30, 72, 120], ans:1 },\n    { kind:'left',  t:600, a:5, b:2,    opts:[60, 120, 300, 240], ans:3 },\n    { kind:'split', t:864, d:24, pairs:[[4, 4], [4, 6], [8, 4], [12, 12]], ans:1 }",
-      replace:"    { kind:'total', a:5, b:6,           opts:[30, 11, 36, 25],  ans:0 },\n    { kind:'chain', t:180, a:5, b:6,    opts:[6, 36, 216, 30],  ans:0 },\n    { kind:'once',  t:720, a:6, b:4,    opts:[30, 480, 72, 120], ans:0 },\n    { kind:'left',  t:600, a:5, b:2,    opts:[240, 60, 120, 300], ans:0 },\n    { kind:'split', t:864, d:24, pairs:[[4, 6], [4, 4], [20, 4], [12, 12]], ans:0 }",
-      why:"the correct option must not sit in the same slot in every round" },
-    { file:"index", via:"index", expect:"the round does not divide exactly both ways",
-      find:"    { kind:'chain', t:180, a:5, b:6,    opts:[36, 216, 6, 30],  ans:2 },",
-      replace:"    { kind:'chain', t:181, a:5, b:6,    opts:[36, 216, 6, 30],  ans:2 },",
-      why:"the round would ask a question with no whole-number answer" },
+      why:"a card held across Restart could fill a box on the new board" },
+    { file:"index", via:"index", expect:"the drag follows any finger",
+      find:"      if (!start || e.pointerId !== pid) return;\n      var p = B.toBoard(e)",
+      replace:"      if (!start) return;\n      var p = B.toBoard(e)",
+      why:"a second finger would move the piece" },
+    { file:"index", via:"index", expect:"lost pointer capture does not put the piece back",
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+      replace:"",
+      why:"a piece could be stuck half-way when the capture is lost" },
+    { file:"index", via:"index", expect:"pointer-events:none",
+      find:".gpiece.locked{cursor:default;pointer-events:none}",
+      replace:".gpiece.locked{cursor:default}",
+      why:"a placed card would block taps on what is under it" },
+    { file:"index", via:"index", expect:"touch-action:none",
+      find:"touch-action:none;cursor:grab;",
+      replace:"cursor:grab;",
+      why:"dragging on a phone would scroll the page instead" },
+    { file:"index", via:"index", expect:"ahead mode does not show hint level 1",
+      find:"if (mode === 'ahead'){ hintLevel = 1; showHint(); }",
+      replace:"if (false){ hintLevel = 1; showHint(); }",
+      why:"ahead mode would start without its hint" },
+    { file:"index", via:"index", expect:"can also count as tapping a destination",
+      find:"      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */\n",
+      replace:"",
+      why:"releasing a piece after a lost capture would also place the selected one" },
+    { file:"index", via:"index", expect:"another finger is still dragging",
+      find:"      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */\n",
+      replace:"",
+      why:"a tap could place a piece a second finger is still dragging" },
+    { file:"index", via:"index", expect:"GAME_ORDER should be",
+      find:"var GAME_ORDER = ['relay', 'once', 'sort', 'steps', 'split'];",
+      replace:"var GAME_ORDER = ['once', 'relay', 'sort', 'steps', 'split'];",
+      why:"the rounds would no longer follow examples 1–5" },
+    { file:"index", via:"index", expect:"relay: this drag round has no tap-then-tap",
+      find:"      useTapSelect(B, function(P, pt){\n        var slot = nearestOpen(slots, pt, G.pad);",
+      replace:"      B.onDrop = (function(P, pt){\n        var slot = nearestOpen(slots, pt, G.pad);",
+      why:"the relay cards could only be dragged" },
+    { file:"index", via:"index", expect:"relay: a card in the wrong box",
+      find:"if (v !== want[slot.k]){ roundMiss(why(slot.k, v)); return false; }",
+      replace:"if (false){ roundMiss(why(slot.k, v)); return false; }",
+      why:"any card would fill any box" },
+    { file:"index", via:"index", expect:"relayWant is",
+      find:"function relayWant(e){ var q = e.t / e.a; return [e.t, e.a, q, q, e.b, q / e.b]; }",
+      replace:"function relayWant(e){ var q = e.t / e.a; return [e.t, e.a, q, e.t, e.b, q / e.b]; }",
+      why:"the second line would divide the original total again — the misconception itself" },
+    { file:"index", via:"index", expect:": cards ",
+      find:"e.a * e.b, e.t / e.b]; }",
+      replace:"e.a * e.b, e.a + e.b]; }",
+      why:"the 'divide by bags first' card would be gone" },
+    { file:"index", via:"index", expect:"needs a, b ≥ 2, a ≠ b",
+      find:"{ t:24, a:3, b:2 }, { t:30, a:3, b:2 },",
+      replace:"{ t:36, a:3, b:3 }, { t:30, a:3, b:2 },",
+      why:"a = b makes the wrong-divisor card the same as the right one" },
+    { file:"index", via:"index", expect:"GAME_RELAY[2] 44/2/4: does not divide exactly",
+      find:"{ t:40, a:2, b:4 },",
+      replace:"{ t:44, a:2, b:4 },",
+      why:"a bag would not get a whole number" },
+    { file:"index", via:"index", expect:"the original total as the second dividend",
+      find:"if (k === 3) return v === e.t ? d.gRelayFirstAns(e.t) : d.gRelayFirstAns2;",
+      replace:"if (k === 3) return d.gRelayFirstAns2;",
+      why:"the key misconception would get only the generic sentence" },
+    { file:"index", via:"index", expect:"check ",
+      find:"gRelayCheck:function(v, a, p, t){ return v + ' × ' + a + ' ＝ ' + p + '，不是 '",
+      replace:"gRelayCheck:function(v, a, p, t){ return v + ' × ' + a + ' ＝ ' + (p + 1) + '，不是 '",
+      why:"the multiply-back reason would print a wrong product" },
+    { file:"index", via:"index", expect:"small bags, expected",
+      find:"      for (j = 0; j < b; j++) bags.push(",
+      replace:"      for (j = 1; j < b; j++) bags.push(",
+      why:"every big box would be drawn one bag short" },
+    { file:"index", via:"index", expect:"relay boxes 0 and 3 overlap",
+      find:"rowY:[70, 128], pad:8,",
+      replace:"rowY:[70, 112], pad:8,",
+      why:"the two lines would be drawn on top of each other" },
+    { file:"index", via:"index", expect:"a tapped card does not stay selected",
+      find:"        if (pt.tap) keepSelected(B, P);\n",
+      replace:"",
+      why:"the never-ending cards would have to be re-tapped each time" },
+    { file:"index", via:"index", expect:"a number card (60×44)",
+      find:"cardW:60, cardH:48,",
+      replace:"cardW:60, cardH:44,",
+      why:"the number cards would be under 44px on a phone" },
+    { file:"index", via:"index", expect:"number cards are not shuffled",
+      find:"shuffle(relayCards(e)).forEach(",
+      replace:"relayCards(e).forEach(",
+      why:"the tray would always show the same order" },
+    { file:"index", via:"index", expect:"a wrong number of bags is not refused",
+      find:"          if (v !== n){\n",
+      replace:"          if (v !== n && v !== e.a + e.b){\n",
+      why:"adding the bags would be accepted" },
+    { file:"index", via:"index", expect:"a + b equals a × b",
+      find:"{ t:600, a:2, b:5 },",
+      replace:"{ t:600, a:2, b:2 },",
+      why:"with a = b = 2 adding and multiplying give the same answer" },
+    { file:"index", via:"index", expect:"once: readInt(",
+      find:"function readInt(s){ s = String(s).trim(); return /^(0|[1-9]\\d{0,4})$/.test(s) ? +s : null; }",
+      replace:"function readInt(s){ s = String(s).replace(/\\s+/g, ''); return /^\\d+$/.test(s) ? +s : null; }",
+      why:"'1 2' would be read as 12" },
+    { file:"index", via:"index", expect:"the second box is open before",
+      find:"inp.disabled = i > 0;",
+      replace:"inp.disabled = false;",
+      why:"the answer could be typed before the number of bags" },
+    { file:"index", via:"index", expect:"add: numbers should read",
+      find:"' ＋ ' + b + ' ＝ ' + s + ' 袋。'; },",
+      replace:"' ＋ ' + b + ' ＝ ' + (s + 1) + ' 袋。'; },",
+      why:"the added-bags reason would print a wrong sum" },
+    { file:"index", via:"index", expect:"an answer box (66×44)",
+      find:"inW:66, inH:50,",
+      replace:"inW:66, inH:44,",
+      why:"the answer boxes would be under 44px on a phone" },
+    { file:"index", via:"index", expect:"reminder-only",
+      find:"if (v === null){ gMsg.textContent = d.gOnceInt; return; }",
+      replace:"if (v === null){ roundMiss(d.gOnceInt); return; }",
+      why:"an empty box would cost points" },
+    { file:"index", via:"index", expect:"GAME_ONCE[0] 730/4/3: does not divide exactly",
+      find:"{ t:720, a:4, b:3 }, { t:480, a:3, b:4 },",
+      replace:"{ t:730, a:4, b:3 }, { t:480, a:3, b:4 },",
+      why:"one bag would not get a whole number" },
+    { file:"index", via:"index", expect:"sortIsBag(",
+      find:"function sortIsBag(key){ return key === 'chain' || key === 'once'; }",
+      replace:"function sortIsBag(key){ return key === 'chain' || key === 'left'; }",
+      why:"t ÷ a × b would be sorted as 'one small bag'" },
+    { file:"index", via:"index", expect:"sort: a card in the wrong box",
+      find:"if (bin.bag !== sortIsBag(key)){ roundMiss(whyOf(key)); return false; }",
+      replace:"if (false){ roundMiss(whyOf(key)); return false; }",
+      why:"any card would go in any box" },
+    { file:"index", via:"index", expect:"the distractor breaks the lesson",
+      find:"{ t:90, a:3, b:2 }, { t:48, a:2, b:4 },",
+      replace:"{ t:72, a:3, b:2 }, { t:48, a:2, b:4 },",
+      why:"72 ÷ (3 + 2) does not divide exactly" },
+    { file:"index", via:"index", expect:"sortValue(left)",
+      find:"if (key === 'left')  return e.t / e.a * e.b;",
+      replace:"if (key === 'left')  return e.t / (e.a * e.b);",
+      why:"the no-bracket card would be valued as if it had brackets" },
+    { file:"index", via:"index", expect:"sort: the gap between the boxes",
+      find:"binX:[4, 152], binW:144,",
+      replace:"binX:[0, 156], binW:144,",
+      why:"the overlap zone between the boxes would disappear" },
+    { file:"index", via:"index", expect:"left: numbers should read",
+      find:"' 件，再乘 ' + b + ' —— 那是 ' + b + ' 個大箱一共幾件",
+      replace:"' 件，再乘 ' + b + ' —— 那是 ' + a + ' 個大箱一共幾件",
+      why:"the reason would describe the wrong number of boxes" },
+    { file:"index", via:"index", expect:"expression cards are not shuffled",
+      find:"shuffle([0, 1, 2, 3]).forEach(",
+      replace:"[0, 1, 2, 3].forEach(",
+      why:"the right cards would always sit in the first two places" },
+    { file:"index", via:"index", expect:"must not read as a multiplication sign",
+      find:"gSortNo:'❌ 算的是\\n別的東西'",
+      replace:"gSortNo:'✗ 算的是\\n別的東西'",
+      why:"in a lesson about × a ✗ reads as a times sign" },
+    { file:"index", via:"index", expect:"stepFirst = 0, expected 1",
+      find:"function stepFirst(row){ return row.br ? 1 : 0; }",
+      replace:"function stepFirst(row){ return 0; }",
+      why:"brackets would no longer go first" },
+    { file:"index", via:"index", expect:"stepFirst = 1, expected 0",
+      find:"function stepFirst(row){ return row.br ? 1 : 0; }",
+      replace:"function stepFirst(row){ return (row.br || row.ops[1] === '*') ? 1 : 0; }",
+      why:"'multiply before divide' would be taught as a rule" },
+    { file:"index", via:"index", expect:"a tap on the wrong operation",
+      find:"if (i !== f){ b.disabled = true; b.classList.add('tried'); roundMiss(why(row)); return; }",
+      replace:"if (false){ b.disabled = true; b.classList.add('tried'); roundMiss(why(row)); return; }",
+      why:"any operation could be done first" },
+    { file:"index", via:"index", expect:"come to the same number",
+      find:"{ t:480, a:4, b:3, p:15, q:8, r:6 }",
+      replace:"{ t:480, a:4, b:1, p:15, q:8, r:6 }",
+      why:"with b = 1 the brackets make no difference to the answer" },
+    { file:"index", via:"index", expect:"stepValue =",
+      find:"return row.br ? applyOp(n[0], o[0], applyOp(n[1], o[1], n[2])) : applyOp(applyOp(n[0], o[0], n[1]), o[1], n[2]);",
+      replace:"return applyOp(n[0], o[0], applyOp(n[1], o[1], n[2]));",
+      why:"every line would be worked right to left" },
+    { file:"index", via:"index", expect:"steps lines 1 and 2",
+      find:"rowY:[46, 136, 226], tokH:48,",
+      replace:"rowY:[46, 110, 226], tokH:48,",
+      why:"the written steps would run into the next line" },
+    { file:"index", via:"index", expect:"three lines are not shuffled",
+      find:"rows = shuffle([0, 1, 2]).map(",
+      replace:"rows = [0, 1, 2].map(",
+      why:"the bracketed line would always be second" },
+    { file:"index", via:"index", expect:"a choice that leaves bags over",
+      find:"        if (e.d % n){\n",
+      replace:"        if (false){\n",
+      why:"a split with bags left over would be accepted" },
+    { file:"index", via:"index", expect:"pair key does not ignore order",
+      find:"function pairKey(rows, n){ return Math.min(rows, n) + 'x' + Math.max(rows, n); }",
+      replace:"function pairKey(rows, n){ return rows + 'x' + n; }",
+      why:"4 × 6 and 6 × 4 would count as two different splits" },
+    { file:"index", via:"index", expect:"does not need two different splits",
+      find:"if (found.length === 2) roundSolved(",
+      replace:"if (found.length === 1) roundSolved(",
+      why:"one split would finish the round" },
+    { file:"index", via:"index", expect:"different split(s)",
+      find:"{ t:480, d:16 },",
+      replace:"{ t:520, d:13 },",
+      why:"13 cannot be split at all" },
+    { file:"index", via:"index", expect:"splitNearest(",
+      find:"var best = 0, bd = Math.abs(x - SPLIT_G.parkX);",
+      replace:"var best = 2, bd = Math.abs(x - splitKnobX(2));",
+      why:"the knob could never be parked" },
+    { file:"index", via:"index", expect:"is marked full",
+      find:"full:k === per });",
+      replace:"full:true });",
+      why:"a part-filled last box would be drawn as full" },
+    { file:"index", via:"index", expect:"rows do not fit",
+      find:"rowH:22, areaY:8, rows:12,",
+      replace:"rowH:22, areaY:8, rows:10,",
+      why:"two bags per box would run off the top" },
+    { file:"index", via:"index", expect:"the knob (44)",
+      find:"trackY:302, knob:48,",
+      replace:"trackY:302, knob:44,",
+      why:"the knob would be under 44px on a phone" },
+    { file:"index", via:"index", expect:"parking spot is not a silent bounce",
+      find:"if (!n) return false;",
+      replace:"if (!n){ roundMiss(d.gSplitCap); return false; }",
+      why:"parking the knob would cost points" },
+    { file:"index", via:"index", expect:"a choice that leaves bags over",
+      find:"          var k = Math.floor(e.d / n);\n          roundMiss(d.gSplitLeft(n, k, e.d - n * k, e.d));",
+      replace:"          var k = Math.floor(e.d / n);\n          roundInfo(d.gSplitLeft(n, k, e.d - n * k, e.d));",
+      why:"a wrong split would be reported but not counted as a mistake" },
+    { file:"index", via:"index", expect:"missing space between Chinese and a digit",
+      find:"gOrderLine:function(t, a, b){ return '一批 ' + t + ' 件：'",
+      replace:"gOrderLine:function(t, a, b){ return '一批' + t + ' 件：'",
+      why:"a Chinese character glued to a digit" },
+    { file:"index", via:"index", expect:"ok 2: numbers should read",
+      find:"' ＝ ' + t + ' ÷ ' + rows + ' ÷ ' + n + '：' + t + ' ÷ ' + rows + ' ＝ ' + mid",
+      replace:"' ＝ ' + t + ' ÷ ' + n + ' ÷ ' + rows + '：' + t + ' ÷ ' + rows + ' ＝ ' + mid",
+      why:"the split sentence would print the two divisors in the other order than the steps that follow" },
+    { file:"index", via:"index", expect:"1 takes the singular",
+      find:"relay:'Order 1: share it out twice. Put number cards into the two lines — the first line finds",
+      replace:"relay:'Order 1: share it out twice. Put number cards into the two lines — line 1 finds",
+      why:"'line 1 finds' reads as a plural after 1" },
+    { file:"index", via:"index", expect:"orders other than increasing",
+      find:"      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */",
+      replace:"      var k = Math.random() < 0.5 ? j : 0;",
+      why:"a pseudo-shuffle that only reaches a few orders" },
+    { file:"index", via:"index", expect:"a number key (40)",
+      find:"padW:46, padStep:50,",
+      replace:"padW:40, padStep:50,",
+      why:"the number keys would be under 44px on a phone" },
+    { file:"index", via:"index", expect:"split number keys",
+      find:"padW:46, padStep:50,",
+      replace:"padW:46, padStep:40,",
+      why:"the number keys would overlap" },
+    { file:"index", via:"index", expect:"a number key does not go through the same rule",
+      find:"          if (!tryDrop(knob, { x:splitKnobX(n), y:G.trackY, tap:true })) knob.home();",
+      replace:"          knob.homeX = splitKnobX(n); knob.home();",
+      why:"a number key would move the knob without checking the split" },
+    { file:"index", via:"index", expect:"split: this drag round has no tap-then-tap",
+      find:"      useTapSelect(B, tryDrop);",
+      replace:"      B.onDrop = tryDrop;",
+      why:"the knob could only be dragged" },
     { file:"review", via:"review", expect:"but repeated addition gives",
       find:"          return { a:a, b:b, total:a * b, opts:opts, ans:opts.indexOf(a * b) };",
       replace:"          return { a:a, b:b, total:a + b, opts:opts, ans:opts.indexOf(a * b) };",
@@ -1195,7 +1948,7 @@ module.exports = {
       find:"  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */\n  var QCOUNT = 12;",
       replace:"  /* ---------- 出一批 12 題：12 種題型各一題 ---------- */\n  var QCOUNT = 12;\n  GENS[0].id = 'renamed';",
       why:"renaming a generator after the executed block would change the page but not the checker" },
-    { file:"index", via:"index", expect:"appears 9 time(s), expected exactly 10",
+    { file:"index", via:"index", expect:"appears 11 time(s), expected exactly 12",
       find:"  <p class=\"notebox\" data-i18n=\"s4note\">💬 <strong>×</strong> 和 <strong>÷</strong> 是<strong>同一層</strong>，沒有「先乘後除」這回事 —— <strong>從左往右</strong>一個一個算。想改變算的順序，只能<strong>加括號</strong>。</p>",
       replace:"  <p class=\"notebox\" data-i18n=\"s4note\">💬 <strong>×</strong> 和 <strong>÷</strong> 是<strong>同一層</strong>，沒有「先乘後除」這回事 —— 一個一個算。想改變算的順序，只能<strong>加括號</strong>。</p>\n  // 從左往右",
       why:"a comment must not be able to replace a sentence the child actually reads" },
@@ -1647,7 +2400,10 @@ module.exports = {
                 'PILE_COLS, PILE_DX, PILE_DY, dotRows, bagSize, boxSize, dotAt, packPlan, ' +
                 'EXPR_KEYS, exprText, exprValue, S3_T, S3_A, S3_B, S3_QKEYS, S3_ANSWERS, ' +
                 'S4_CASES, S4_STEPS, opText, stepValues, partialExpr, fullExpr, exprAnswer, ' +
-                'S5_T, S5_D, S5_SPLITS, splitSteps, ROUNDS, roundValue, roundAnswerIndex, roundOptCount, plEn}',
+                'S5_T, S5_D, S5_SPLITS, splitSteps, plEn, ' +
+                'GAME_ORDER, GAME_W, shuffle, GFIG, gBoxW, gFigW, gFigH, gFig, GAME_RELAY, relayWant, relayCards, RELAY_G, ' +
+                'GAME_ONCE, ONCE_G, GAME_SORT, SORT_KEYS, sortValue, sortIsBag, SORT_G, GAME_STEP, stepRows, stepFirst, applyOp, stepValue, STEP_G, ' +
+                'GAME_SPLIT, SPLIT_G, splitKnobX, splitNearest, splitLayout, splitPadXY}',
     optionValueMax: VAL_MAX_REF,
 
     check: function(data, I18N, fail, src){
@@ -2027,59 +2783,7 @@ module.exports = {
       else if (new Set(endVals.concat([direct.q])).size !== 1)
         fail('example 5: the splits give ' + endVals.join('/') + ' but dividing directly gives ' + direct.q);
 
-      /* ---------- 小遊戲的五關 ---------- */
-      if (!Array.isArray(data.ROUNDS) || data.ROUNDS.length !== 5) fail('the game must have exactly five rounds');
-      const kinds = {};
-      data.ROUNDS.forEach((r, ri) => {
-        const tag = 'round ' + (ri + 1) + ' (' + (r && r.kind) + ')';
-        if (!r || !r.kind){ fail(tag + ': broken round'); return; }
-        if (kinds[r.kind]) fail(tag + ': the same kind of round appears twice');
-        kinds[r.kind] = 1;
-        const n = data.roundOptCount(r);
-        if (n !== 4) fail(tag + ': ' + n + ' options, expected 4');
-        const at = data.roundAnswerIndex(r);
-        if (at !== r.ans) fail(tag + ': ans says ' + r.ans + ' but the computed answer is at ' + at);
-        if (!(at >= 0 && at < n)) fail(tag + ': the computed answer is not one of the options');
-        if (r.kind === 'split'){
-          const wanted = r.pairs.filter(p => mulRef(p[0], p[1]) === r.d);
-          if (wanted.length !== 1) fail(tag + ': exactly one split must multiply back to ' + r.d + ', found ' + wanted.length);
-          const chain = chainVsOnceRef(r.t, r.pairs[at][0], r.pairs[at][1]);
-          if (!chain.ok || !chain.exact) fail(tag + ': the correct split does not divide exactly');
-          const texts = [];
-          for (let i = 0; i < n; i++){
-            const txt = r.t + ' ÷ ' + r.pairs[i][0] + ' ÷ ' + r.pairs[i][1];
-            texts.push(txt);
-            if (!evalPrintedRef(txt)) fail(tag + ': option ' + i + ' cannot be read back');
-          }
-          if (new Set(texts).size !== n) fail(tag + ': two options print the same expression');
-        } else {
-          const want = data.roundValue(r);
-          let ref = null;
-          if (r.kind === 'total') ref = mulRef(r.a, r.b);
-          if (r.kind === 'chain') ref = divRef(divRef(r.t, r.a).q, r.b).q;
-          if (r.kind === 'once')  ref = divRef(r.t, mulRef(r.a, r.b)).q;
-          if (r.kind === 'left')  ref = mulRef(divRef(r.t, r.a).q, r.b);
-          if (ref === null) fail(tag + ': no reference implementation for this kind of round');
-          else if (ref !== want) fail(tag + ': roundValue gives ' + want + ' but the reference gives ' + ref);
-          if (r.opts[r.ans] !== ref) fail(tag + ': the option marked correct is not the computed answer');
-          if (new Set(r.opts).size !== r.opts.length) fail(tag + ': two options have the same value');
-          r.opts.forEach(o => { if (!inRangeRef(o)) fail(tag + ': option ' + o + ' is outside 0..' + VAL_MAX_REF); });
-          if (r.kind === 'chain' || r.kind === 'once'){
-            const c2 = chainVsOnceRef(r.t, r.a, r.b);
-            if (!c2.ok || !c2.exact || !c2.agree) fail(tag + ': the round does not divide exactly both ways');
-          }
-          if (r.kind === 'left'){
-            const asPrinted = evalPrintedRef(r.t + ' ÷ ' + r.a + ' × ' + r.b);
-            if (!asPrinted || !fIsInt(asPrinted) || asPrinted.n !== ref) fail(tag + ': the printed expression does not read back as ' + ref);
-          }
-          if (r.kind === 'once'){
-            const asPrinted = evalPrintedRef(r.t + ' ÷ (' + r.a + ' × ' + r.b + ')');
-            if (!asPrinted || !fIsInt(asPrinted) || asPrinted.n !== ref) fail(tag + ': the printed expression does not read back as ' + ref);
-          }
-        }
-      });
-      /* 正解不可以每一關都在同一格。 */
-      if (new Set(data.ROUNDS.map(r => r.ans)).size < 2) fail('the correct option sits in the same slot in every round');
+      /* ---------- 小遊戲的五關：見 gameChecks()（要用到下面的 scan()，所以在文字那一段之後才呼叫） ---------- */
 
       /* ---------- 三層題庫的神諭 ---------- */
       ['qs', 'qsAdv', 'qsBoost'].forEach(bank => {
@@ -2149,17 +2853,7 @@ module.exports = {
         const d = I18N[lang];
         ['intro', 'scopeNote', 's1note', 's2note', 's3note', 's4note', 's5note', 'footer',
          's1lead', 's2lead', 's3lead', 's4lead', 's5lead', 's2cap',
-         'cAll', 'cGood', 'cTry', 'gClear'].forEach(k => scan(d[k], lang, lang + '.' + k));
-        Object.keys(d.gHint1).forEach(k => scan(d.gHint1[k], lang, lang + '.gHint1.' + k));
-        data.ROUNDS.forEach((r, ri) => {
-          scan(d.gPrompt[r.kind](r), lang, lang + '.gPrompt[' + ri + ']');
-          scan(d.gHint2[r.kind](r), lang, lang + '.gHint2[' + ri + ']');
-          for (let i = 0; i < data.roundOptCount(r); i++){
-            const tag = lang + '.gOptText[' + ri + '][' + i + ']';
-            scan(d.gOptText(r, i), lang, tag);
-            inexactDivisions(d.gOptText(r, i)).forEach(p => fail(tag + ': ' + p));
-          }
-        });
+         'cAll', 'cGood', 'cTry'].forEach(k => scan(d[k], lang, lang + '.' + k));
         data.S1_CASES.forEach(cs => {
           scan(d.s1chip(cs, d), lang, lang + '.s1chip.' + cs.id);
           for (let st = 0; st <= 2; st++){
@@ -2226,6 +2920,12 @@ module.exports = {
         });
       });
 
+      /* --- 遊戲：生產線接單（§六之五，五關五種玩法） ---
+         每一關**照遊戲自己的規則把題庫裡每一題玩一遍**，正解一律用這份設定檔的 divRef／mulRef／evalPrintedRef 重算；
+         版面與觸控從資料區讀；shuffle()／nearestOpen()／roundMiss()／readInt() 從原始碼切出來真的跑；
+         遊戲印出來的每一段文字都進 scan()（算式驗算、中文黏數字、英文單複數）與 inexactDivisions()。 */
+      gameChecks(data, I18N, fail, src || '', scan);
+
       /* ---------- 範例與遊戲印出來的每一個算式都要除得剛剛好 ---------- */
       /* ⚠️ 中英文都要掃：只掃中文的話，英文那一份 s1calc 印出一條除不開的除法
          完全不會響（codex 第二輪的改壞測試抓到）。 */
@@ -2265,8 +2965,8 @@ module.exports = {
 
       /* ---------- 覆蓋率：驗過幾條、幾條是題目式、以及驗過的算式本身的指紋 ----------
          ⚠️ 只釘數量擋不住「拿掉一條、再補一條」—— 數字一樣，驗的卻是別的宣稱。 */
-      const ARITH_VERIFIED = 194, ARITH_QUESTIONS = 6;
-      const ARITH_SHA1 = '76aab03957bf52d352ef81989e2008a8a8df3e5f';
+      const ARITH_VERIFIED = 1108, ARITH_QUESTIONS = 6;
+      const ARITH_SHA1 = '3fcc787ca07cd042d6cfeada65b53646abd97562';
       if (verified !== ARITH_VERIFIED) fail('the lesson text verified ' + verified + ' equations, expected exactly ' + ARITH_VERIFIED);
       if (questions !== ARITH_QUESTIONS) fail('the lesson text has ' + questions + ' question-shaped equations, expected exactly ' + ARITH_QUESTIONS);
       const fp = require('crypto').createHash('sha1').update(arithProblems.verifiedAll().join(' | ')).digest('hex');
