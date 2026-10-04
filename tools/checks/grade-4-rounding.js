@@ -167,6 +167,460 @@ const SIBLING_RULES = {
   }
 };
 
+/* ===================== 小遊戲「四捨五入快車」的檢查（index.html，§六之五） =====================
+   五關：line（開進最近的一站）、cut（剪一刀）、build（排出概數）、est（估一估）、blank（找出 □）。
+   375px 手機上卡片內寬約 289px：300 寬的畫板縮成 0.963 倍 —— 拿得起來的東西要 ≥ 44 / 0.963 ≈ 45.7 個邏輯 px
+   （實際量測在端對端測試裡，這裡驗設計值）。 */
+const { extractFunction } = require('./lib/gameshuffle.js');
+function nums(text){ return (String(text).match(/\d+/g) || []).map(Number); }
+const PHONE_K = Math.min(1.5, 289 / 300);
+
+function gameChecks(D, I18N, fail, src){
+  const LANGS = ['zh', 'en'], W = D.GAME_W;
+  const TYPES = ['line', 'cut', 'build', 'est', 'blank'];
+  if (W !== 300) fail('GAME_W is ' + W + ', the boards are designed for 300');
+  if (!Array.isArray(D.GAME_ORDER) || D.GAME_ORDER.join() !== TYPES.join())
+    fail('GAME_ORDER should be ' + TYPES.join() + ' (the order of the examples), got ' + D.GAME_ORDER);
+  const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+  const B = {};
+  TYPES.forEach(t => {
+    B[t] = body(t);
+    if (!B[t]) fail('cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('gAsks.' + t + ' missing in ' + L);
+      if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('gHints.' + t + ' missing in ' + L);
+    });
+  });
+  const need = (k, re, what) => { if (!re.test(B[k] || '')) fail(k + ': ' + what); };
+  const seq = (where, text, want) => {
+    if (typeof text !== 'string' || /undefined|NaN|null/.test(text)) return fail(where + ': text has undefined/NaN/null: ' + text);
+    const got = nums(text).join();
+    if (got !== want.join()) fail(where + ': numbers should read ' + want.join() + ', got ' + got + ' — ' + text);
+  };
+  const hasWord = (where, text, w) => { if (String(text).indexOf(w) < 0) fail(where + ' does not say "' + w + '": ' + text); };
+  const touch = (what, sz) => { if (!(sz * PHONE_K >= 44)) fail(what + ' is ' + (sz * PHONE_K).toFixed(1) + 'px on a 375px phone — under 44'); };
+  const inside = (o, what, H) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail(what + ' is outside the ' + W + '×' + H + ' board: ' + JSON.stringify(o)); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const box = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w:w, h:h });
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return fail(what + ' ' + i + ' and ' + j + ' overlap'); };
+  ['GAME_LINE', 'GAME_CUT', 'GAME_BUILD', 'GAME_EST', 'GAME_BLANK'].forEach(k => {
+    if (!Array.isArray(D[k]) || D[k].length < 3) fail(k + ' should be a pool of at least 3 entries');
+    else for (let i = 0; i < D[k].length; i++) if (!Object.prototype.hasOwnProperty.call(D[k], i)) fail(k + '[' + i + '] is a hole in the array');
+  });
+
+  /* ---------- 共用：shuffle() 真的跑：是排列、不改輸入、而且**永遠不會由小到大**（托盤一開始不可以已經排好） ---------- */
+  {
+    const fsrc = extractFunction(src, 'shuffle');
+    let shuffle = null;
+    if (!fsrc) fail('cannot find shuffle() in index.html');
+    else { try { shuffle = new Function(fsrc + '\nreturn shuffle;')(); } catch (e){ fail('shuffle() could not be evaluated on its own: ' + e.message); } }
+    if (shuffle){
+      [[3, 5, 4], [3300, 3700, 3500], [1, 2, 3, 4]].forEach(input => {
+        const orders = new Set(), before = input.join();
+        for (let i = 0; i < 3000; i++){
+          const out = shuffle(input);
+          if (input.join() !== before) return fail('shuffle() mutates its input');
+          if (out.slice().sort((a, b) => a - b).join() !== input.slice().sort((a, b) => a - b).join()) return fail('shuffle() changed the set: ' + out);
+          let up = true; for (let k = 1; k < out.length; k++) if (!(out[k - 1] < out[k])) up = false;
+          if (up) return fail('shuffle() returned ' + out.join(',') + ' — already in increasing order');
+          orders.add(out.join());
+        }
+        if (orders.size < 3) fail('shuffle() of ' + input.join(',') + ' produced only ' + orders.size + ' orders in 3000 runs');
+      });
+    }
+    need('line', /shuffle\(e\.ns\)\.forEach\(/, 'the trains are not shuffled into rows');
+    need('est', /shuffle\(set\.cards\)\.forEach\(/, 'the cards are not shuffled into the tray');
+  }
+
+  /* ---------- 共用：nearestOpen() 真的跑 ---------- */
+  {
+    const fsrc = extractFunction(src, 'nearestOpen');
+    let nearestOpen = null;
+    if (!fsrc) fail('cannot find nearestOpen() in index.html');
+    else { try { nearestOpen = new Function(fsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('nearestOpen() could not be evaluated: ' + e.message); } }
+    if (nearestOpen){
+      /* 排出概數的格子：每一格（含右邊）放寬 6 之後和隔壁重疊；格子裡的每一點都要判給那一格 */
+      const G = D.BUILD_G, cols = 6, h = G.slot / 2;
+      const list = []; for (let c = 0; c < cols; c++) list.push({ id:c, cx:D.buildColX(cols, c), cy:G.slotY + h, hw:h, hh:h, done:false });
+      let bad = 0;
+      list.forEach(b => { for (let x = b.cx - h + 0.5; x < b.cx + h; x += 1) { const g = nearestOpen(list, { x, y:b.cy }, 6); if (!g || g.id !== b.id) bad++; } });
+      if (bad) fail('nearestOpen(): ' + bad + ' points inside a build box are given to another box (or none)');
+      /* 兩格中間的縫：比較靠近**後面那一格**（陣列裡排第二）的點要判給它，不是陣列裡第一個符合的 */
+      const a = list[0], b = list[1], gapL = b.cx + h, gapR = a.cx - h;
+      if (!(gapR > gapL)) fail('build boxes touch — no gap to test the overlap zone in');
+      else {
+        const px = gapL + (gapR - gapL) * 0.3, g = nearestOpen(list, { x:px, y:a.cy }, 6);
+        if (!g || g.id !== 1) fail('nearestOpen(): a drop in the gap nearer the later box goes to ' + (g ? g.id : 'none') + ' (first match, not nearest)');
+      }
+      const two = [ { id:0, cx:100, cy:100, hw:42, hh:42, done:false }, { id:1, cx:155, cy:100, hw:12, hh:12, done:false } ];
+      const r0 = nearestOpen(two, { x:140, y:100 }, 6);
+      if (!r0 || r0.id !== 0) fail('nearestOpen(): a point inside the big box near the small one is given to the small one (measure to the box, not the centre)');
+      const done = [ { id:0, cx:100, cy:100, hw:22, hh:22, done:true }, { id:1, cx:148, cy:100, hw:22, hh:22, done:false } ];
+      if (nearestOpen(done, { x:121, y:100 }, 6) !== null) fail('nearestOpen(): a drop nearest to a finished box skips it and lands in the next box');
+      if (nearestOpen(done, { x:300, y:300 }, 6) !== null) fail('nearestOpen(): a drop far from every box is accepted');
+    }
+  }
+
+  /* ---------- 共用：計分（中年級 §三：沒犯錯 +20、犯過錯 +10；放錯一次 −5，最低 0）---------- */
+  if (!/var pts = gMistake \? 10 : 20;/.test(src)) fail('scoring: a round should give +20 with no mistakes and +10 after mistakes');
+  {
+    const fsrc = extractFunction(src, 'roundMiss');
+    if (!fsrc) fail('scoring: cannot find roundMiss() in index.html');
+    else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(([s0, want, shows]) => {
+      let r;
+      try { r = new Function('var gMistake = false, gScore = ' + s0 + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+      catch (e){ return fail('scoring: roundMiss() could not run: ' + e.message); }
+      if (r.s !== want || String(r.shown) !== String(want)) fail('scoring: a mistake at ' + s0 + ' leaves ' + r.s + ' — a mistake does not cost 5 (floored at 0)');
+      if ((r.html.indexOf('@MINUS@') >= 0) !== shows) fail('scoring: at ' + s0 + ' points the "−5" note is ' + (shows ? 'missing' : 'shown although nothing was taken'));
+      if (r.html.indexOf('why') < 0 || !r.m) fail('scoring: roundMiss() does not show the reason or record the mistake');
+    });
+  }
+  /* 換畫板之後，還拿在手上的舊積木放開時不可以動到新的那一關（二年級 length 的 codex 第一輪） */
+  if (!/if \(gen !== gGen\) return;/.test(src) || !/var start = null, orig = null, moved = false, pid = null, gen = gGen;/.test(src))
+    fail('the drag engine has no board-generation guard: a piece held across Restart could act on the new board');
+  if (!/gSolved = false; gMistake = false; gCtx = \{\}; gGen\+\+;/.test(src)) fail('startRound() does not bump gGen');
+  /* 拖拉引擎的保險（codex 第一輪）：只跟著第一根手指、三條放開的路、放好的不擋點擊、每一關都接上「拖」和「先點再點」 */
+  if ((src.match(/if \(!start \|\| e\.pointerId !== pid\) return;/g) || []).length !== 2) fail('the drag engine does not follow only the first finger (move and end must both check pointerId)');
+  if (!/document\.addEventListener\('pointerup', onDocEnd\);\n\s*document\.addEventListener\('pointercancel', onDocEnd\);/.test(src)) fail('the drag engine has no document-level release while dragging');
+  if (!/el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/.test(src)) fail('the drag engine does not put a piece back on lostpointercapture');
+  if (!/el\.addEventListener\('pointercancel', function\(e\)\{ end\(e, true\); \}\);/.test(src)) fail('the drag engine does not put a piece back on pointercancel');
+  if (!/\.gpiece\.locked\{cursor:default;pointer-events:none\}/.test(src)) fail('placed pieces still take pointer events');
+  ['line', 'cut', 'build', 'est'].forEach(t => { if ((B[t].match(/useTapSelect\(B, function\(P, pt\)\{/g) || []).length !== 1) fail(t + ': the round does not install its drop / tap-then-tap handler (useTapSelect)'); });
+  if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(src)) fail('ahead mode does not show hint level 1 automatically');
+  LANGS.forEach(L => {
+    seq('gPts ' + L, I18N[L].gPts(20), [20]);
+    seq('gMinus ' + L, I18N[L].gMinus, [5]);
+    if (nums(I18N[L].gWin(85)).indexOf(85) < 0) fail('gWin ' + L + ' does not show the score');
+  });
+
+  /* ================= 第 1 關：開進最近的一站 ================= */
+  {
+    const G = D.LINE_G;
+    touch('a train (' + G.trainW + '×' + G.trainH + ')', Math.min(G.trainW, G.trainH));
+    if (G.rowY.length !== 3) fail('LINE_G.rowY should have 3 rows');
+    for (let r = 1; r < G.rowY.length; r++) if (G.rowY[r] - G.rowY[r - 1] < Math.max(G.trainH, G.stH)) fail('line rows ' + r + ' and ' + (r + 1) + ' are closer than a train/stop');
+    /* 吸附：放開的位置離一站 ≤ dock 才算開進那一站（掃整條軌道每 0.25 px） */
+    for (let x = G.X0; x <= G.X1; x += 0.25){
+      const want = Math.abs(x - G.X0) <= G.dock ? 'lo' : (Math.abs(x - G.X1) <= G.dock ? 'hi' : null);
+      if (D.lineDock(x) !== want){ fail('lineDock(' + x + ') = ' + D.lineDock(x) + ', expected ' + want); break; }
+    }
+    if (G.dock >= (G.X1 - G.X0) / 2) fail('LINE_G.dock reaches past halfway — a train stopped near halfway would count as arriving');
+    let kinds = { below:0, above:0, half:0 };
+    D.GAME_LINE.forEach((e, i) => {
+      const w = 'GAME_LINE[' + i + ']', pv = PV[e.place], lo = e.lo, hi = lo + pv, mid = lo + pv / 2;
+      if (!(e.place >= MIN_PLACE && e.place <= MAX_PLACE)) return fail(w + ': place ' + e.place + ' out of range');
+      if (lo % pv !== 0 || lo < 0 || hi > STEM_MAX) fail(w + ': stops ' + lo + '/' + hi + ' are not whole multiples of ' + pv + ' inside the lesson range');
+      if (!Array.isArray(e.ns) || e.ns.length !== 3) return fail(w + ': needs exactly 3 trains');
+      if (new Set(e.ns).size !== 3) fail(w + ': duplicate trains');
+      const cnt = { below:0, above:0, half:0 };
+      e.ns.forEach(n => {
+        if (!Number.isInteger(n) || n <= lo || n >= hi) return fail(w + ': train ' + n + ' is not strictly between ' + lo + ' and ' + hi);
+        /* 第二套實作：比距離 */
+        const goal = roundByLine(n, e.place);
+        if (goal !== lo && goal !== hi) fail(w + ': ' + n + ' rounds to ' + goal + ', not one of the two stops');
+        /* 照遊戲的規則：只收 want 那一站；want 要等於比距離的結果 */
+        const want = (n * 2 >= lo + hi) ? 'hi' : 'lo';
+        if ((want === 'hi' ? hi : lo) !== goal) fail(w + ': the game would accept ' + want + ' for ' + n + ', the nearer stop is ' + goal);
+        if (n === mid) cnt.half++; else if (n < mid) cnt.below++; else cnt.above++;
+        /* 畫面決定得了答案：不是正中間的，至少離正中間 1/10 段；而且畫的位置就是它的比例 */
+        const x = D.lineTrainX(n, lo, pv), xm = (G.X0 + G.X1) / 2;
+        if (Math.abs(x - (G.X0 + (G.X1 - G.X0) * (n - lo) / pv)) > 1e-9) fail(w + ': lineTrainX(' + n + ') is not its place on the line');
+        if (n !== mid && Math.abs(x - xm) < (G.X1 - G.X0) / 10) fail(w + ': train ' + n + ' sits within 1/10 of halfway — the picture hardly decides');
+        /* 一開始不可以已經在站裡：放開不動不可以算開進去（離站 > dock）；火車不碰到車站 */
+        if (Math.abs(x - G.X0) <= G.dock || Math.abs(x - G.X1) <= G.dock) fail(w + ': train ' + n + ' starts inside a stop\'s dock range');
+        const tb = box(x, 0, G.trainW, G.trainH), s0 = box(G.X0, 0, G.stW, G.stH), s1 = box(G.X1, 0, G.stW, G.stH);
+        if (hit(tb, s0) || hit(tb, s1)) fail(w + ': train ' + n + ' covers a stop at the start');
+        /* 說明文字：每一種放錯的理由裡的數字逐個比，而且理由本身成立（真的比較近、真的一樣遠） */
+        const dLo = n - lo, dHi = hi - n;
+        LANGS.forEach(L => {
+          const d = I18N[L];
+          if (n === mid){
+            if (dLo !== dHi) fail(w + ': ' + n + ' is called halfway but is not');
+            seq('gLineHalf ' + L + ' ' + n, d.gLineHalf(n, lo, hi, pv / 2), [n, lo, hi, pv / 2, hi]);
+            seq('gLineOkHalf ' + L + ' ' + n, d.gLineOkHalf(n, hi), [n, hi]);
+          } else {
+            const far = want === 'lo' ? hi : lo, nearSt = want === 'lo' ? lo : hi, dFar = Math.abs(far - n), dNear = Math.abs(n - nearSt);
+            if (!(dNear < dFar)) fail(w + ': the reason calls ' + nearSt + ' nearer to ' + n + ' but it is not');
+            const t = d.gLineFar(n, far, nearSt, dFar, dNear);
+            if (L === 'zh') seq('gLineFar zh ' + n, t, [n, far, dFar, nearSt, dNear, nearSt, nearSt]);
+            else seq('gLineFar en ' + n, t, [n, dFar, far, dNear, nearSt, nearSt, nearSt]);
+            seq('gLineOk ' + L + ' ' + n, d.gLineOk(n, nearSt), [n, nearSt]);
+          }
+          const h2 = d.gLine2(n, lo, hi, dLo, dHi);
+          seq('gLine2 ' + L + ' ' + n, h2, dLo === dHi ? (L === 'zh' ? [n, lo, hi, dLo] : [n, dLo, lo, hi]) : (L === 'zh' ? [n, lo, dLo, hi, dHi] : [n, dLo, lo, dHi, hi]));
+        });
+      });
+      if (cnt.below !== 1 || cnt.above !== 1 || cnt.half !== 1) fail(w + ': needs one train below halfway, one above, one exactly halfway — got ' + JSON.stringify(cnt));
+      Object.keys(cnt).forEach(k => kinds[k] += cnt[k]);
+      LANGS.forEach(L => {
+        [lo, hi].forEach(v => { const t = I18N[L].gStation(v); if (nums(t).join() !== String(v)) fail('gStation ' + L + ' ' + v + ': ' + t); });
+      });
+    });
+    if (new Set(D.GAME_LINE.map(e => e.place)).size < 3) fail('GAME_LINE should round to at least 3 different places');
+    /* 版面：車站、軌道、數線標籤都在畫板裡 */
+    G.rowY.forEach((y, r) => {
+      inside(box(G.X0, y, G.stW, G.stH), 'line row ' + (r + 1) + ' lower stop', G.H);
+      inside(box(G.X1, y, G.stW, G.stH), 'line row ' + (r + 1) + ' upper stop', G.H);
+      inside(box(G.X0, y, G.trainW, G.trainH), 'a train docked at the lower stop of row ' + (r + 1), G.H);
+      inside(box(G.X1, y, G.trainW, G.trainH), 'a train docked at the upper stop of row ' + (r + 1), G.H);
+    });
+    if (G.axisY <= G.rowY[2] + G.stH / 2) fail('the number line runs through the bottom row of stops');
+    need('line', /addZone\(B, v\[0\] - 28, G\.axisY \+ 12, 56, 20, v\[2\], String\(v\[1\]\)\);/, 'the stop labels are not 56 wide under their ticks');
+    [G.X0, G.X1].forEach(x => inside({ x:x - 28, y:G.axisY + 12, w:56, h:20 }, 'the number-line label at ' + x, G.H));
+    inside({ x:(G.X0 + G.X1) / 2 - 50, y:G.axisY + 32, w:100, h:18 }, 'the "halfway" label', G.H);
+    /* RENDER 的關鍵規則 */
+    need('line', /var n = P\.data\.n, want = \(n \* 2 >= lo \+ hi\) \? 'hi' : 'lo';/, 'the accepted stop is not "halfway or more goes up"');
+    need('line', /if \(kind !== want\)\{/, 'a train driven to the wrong stop is not refused');
+    need('line', /: want === 'lo' \? d\.gLineFar\(n, hi, lo, hi - n, n - lo\) : d\.gLineFar\(n, lo, hi, n - lo, hi - n\)\);/, 'the far-stop reason is not given as (number, far stop, near stop, far distance, near distance)');
+    need('line', /\} else kind = lineDock\(P\.cx\);\n\s*if \(!kind\) return false;/, 'a train stopped halfway along is not sent back silently');
+    need('line', /if \(!st \|\| st\.row !== P\.data\.row\) return false;/, 'a tap on another row\'s stop is not ignored');
+    need('line', /axis:'x', minX:G\.X0, maxX:G\.X1,/, 'the trains are not kept on their track (axis x between the stops)');
+    need('line', /addPiece\(B, \{ w:G\.trainW, h:G\.trainH, cx:lineTrainX\(n, lo, pv\), cy:y,/, 'a train is not drawn at lineTrainX()');
+  }
+
+  /* ================= 第 2 關：剪一刀 ================= */
+  {
+    const G = D.CUT_G;
+    touch('the scissors (' + G.knob + ')', G.knob);
+    touch('a gap to tap (pitch ' + G.pitch + ')', G.pitch);
+    if (G.boxW > G.pitch - 2) fail('cut digit boxes touch (box ' + G.boxW + ', pitch ' + G.pitch + ')');
+    D.GAME_CUT.forEach((e, i) => {
+      const w = 'GAME_CUT[' + i + ']', s = String(e.n), len = s.length;
+      if (!(e.n >= 1000 && e.n <= STEM_MAX)) fail(w + ': ' + e.n + ' should be 4~6 digits within the lesson range');
+      if (!(e.place >= MIN_PLACE && e.place <= MAX_PLACE && e.place < len)) return fail(w + ': place ' + e.place + ' does not fit ' + e.n);
+      if (!D.GAME_CUT.some(x => x.place !== e.place)) fail(w + ': no other entry with a different place — the second number cannot be picked');
+      /* 每一條縫：cutX → cutNearest 回到同一條；整條剪刀的範圍每 0.25 px 都判給最近的縫（自己的算法） */
+      for (let j = 0; j <= len; j++) if (D.cutNearest(len, D.cutX(len, j)) !== j) fail(w + ': cutNearest(cutX(' + j + ')) is not ' + j);
+      const minX = Math.max(D.cutX(len, len), G.knob / 2 + 2), maxX = Math.min(D.cutX(len, 0), W - G.knob / 2 - 2);
+      for (let x = minX; x <= maxX; x += 0.25){
+        let bj = 0, bd = Infinity;
+        for (let j = 0; j <= len; j++){ const dd = Math.abs(x - D.cutX(len, j)); if (dd < bd - 1e-9){ bd = dd; bj = j; } }
+        if (Math.abs(bd - G.pitch / 2) < 1e-9) continue;   /* 剛好在兩條縫正中間：哪一條都說得通 */
+        if (D.cutNearest(len, x) !== bj){ fail(w + ': cutNearest(' + x + ') = ' + D.cutNearest(len, x) + ', the nearest gap is ' + bj); break; }
+      }
+      /* 剪刀的兩端：停得住、在畫板裡，而且是「沒剪到東西」（j = 0 或 len）—— 停在那裡不算錯 */
+      [minX, maxX].forEach(x => { const j = D.cutNearest(len, x); if (j !== 0 && j !== len) fail(w + ': a scissors end at ' + x + ' falls on gap ' + j); inside(box(x, 100, G.knob, G.knob), w + ' scissors at its end', 1e9); });
+      /* 位置：每一格在畫板裡、標籤在目標位正上方而且在畫板裡 */
+      for (let p = 0; p < len; p++) inside(box(D.cutDigitX(len, p), 100, G.boxW, G.boxH), w + ' digit box ' + p, 1e9);
+      inside({ x:D.cutDigitX(len, e.place) - 60, y:0, w:120, h:22 }, w + ' badge', 1e9);
+      if (Math.abs(D.cutX(len, e.place) - (D.cutDigitX(len, e.place) + D.cutDigitX(len, e.place - 1)) / 2) > 1e-9)
+        fail(w + ': the right gap is not between the target digit and the next one');
+      /* 每一種剪錯的理由：名字、方向都對；剪對之後的那一句數字逐個比 */
+      LANGS.forEach(L => {
+        const d = I18N[L], P = PLACES[L];
+        for (let j = 1; j < len; j++){
+          if (j === e.place) continue;
+          const t = d.gCutWrong(P[j], P[e.place], j > e.place);
+          hasWord(w + ' gCutWrong ' + L + ' j=' + j, t, P[j]); hasWord(w + ' gCutWrong ' + L + ' j=' + j, t, P[e.place]);
+          /* j > place：剪在目標位左邊 → 剪刀要往右 */
+          if (L === 'zh' && t.indexOf(j > e.place ? '往右' : '往左') < 0) fail(w + ' gCutWrong zh j=' + j + ' points the wrong way: ' + t);
+          if (L === 'en' && !new RegExp('further ' + (j > e.place ? 'right' : 'left')).test(t)) fail(w + ' gCutWrong en j=' + j + ' points the wrong way: ' + t);
+        }
+        const look = nextDigitAt(e.n, e.place), r = roundByLine(e.n, e.place);
+        seq(w + ' gCutOk ' + L, d.gCutOk(e.n, P[e.place], P[e.place - 1], look, r), [e.n, look, e.n, r]);
+        const okT = d.gCutOk(e.n, P[e.place], P[e.place - 1], look, r);
+        if (okT.indexOf(L === 'zh' ? (look >= 5 ? '，入 →' : '，捨 →') : (look >= 5 ? 'goes up →' : 'goes down →')) < 0) fail(w + ' gCutOk ' + L + ': says the wrong one of down/up: ' + okT);
+        seq(w + ' gCut2 ' + L, d.gCut2(e.n, P[e.place], P[e.place - 1]), [e.n]);
+      });
+    });
+    const rows = 2;
+    if (4 + rows * G.rowH > G.H) fail('two cut rows (' + (4 + rows * G.rowH) + ') do not fit CUT_G.H ' + G.H);
+    if (G.knobY + G.knob / 2 > G.rowH) fail('the scissors run into the next row');
+    if (G.digitY < G.badgeH) fail('the badge overlaps the digits');
+    need('cut', /var e1 = pick\(GAME_CUT\), e2 = pick\(GAME_CUT\.filter\(function\(x\)\{ return x\.place !== e1\.place; \}\)\);/, 'the two numbers are not picked with different places');
+    need('cut', /if \(j <= 0 \|\| j >= D\.len\) return false;/, 'scissors left at an end are not sent back silently');
+    need('cut', /if \(j !== e\.place\)\{ roundMiss\(d\.gCutWrong\(d\.places\[j\], d\.places\[e\.place\], j > e\.place\)\); return false; \}/, 'a cut in the wrong gap is not refused with its reason');
+    need('cut', /var j = cutNearest\(D\.len, pt\.x\);/, 'the cut is not judged at the nearest gap');
+    need('cut', /D\.boxes\[p\]\.classList\.add\(p >= e\.place \? 'keep' : p === e\.place - 1 \? 'look' : 'skip'\);/, 'after the cut, the kept / look / skipped digits are not coloured keep / look / skip');
+    need('cut', /axis:'x', minX:Math\.max\(cutX\(len, len\), G\.knob \/ 2 \+ 2\), maxX:Math\.min\(cutX\(len, 0\), GAME_W - G\.knob \/ 2 - 2\),/, 'the scissors can leave the board (their ends are not clamped inside it)');
+    need('cut', /if \(pt\.tap && \(pt\.y < D\.y0 \+ G\.digitY - 6 \|\| pt\.y > D\.y0 \+ G\.knobY \+ G\.knob \/ 2\)\) return false;/, 'a tap outside this number\'s row is not ignored');
+  }
+
+  /* ================= 第 3 關：排出概數 ================= */
+  {
+    const G = D.BUILD_G;
+    touch('a digit card (' + G.card + ')', G.card);
+    let has = { down:0, up:0, five:0, carry:0, newDigit:0 };
+    D.GAME_BUILD.forEach((e, i) => {
+      const w = 'GAME_BUILD[' + i + ']', s = String(e.n), len = s.length, cols = len + 1;
+      if (!(len >= 4 && len <= 5)) fail(w + ': ' + e.n + ' should be 4~5 digits (6 boxes at most fit the board)');
+      if (!(e.place >= MIN_PLACE && e.place <= MAX_PLACE && e.place < len)) return fail(w + ': place ' + e.place + ' does not fit ' + e.n);
+      const r = roundByLine(e.n, e.place), rs = String(r), look = nextDigitAt(e.n, e.place);
+      /* 第二套：結果的每一位，對齊到 cols 格（最前面那一格只有一路進位時才有） */
+      const mine = []; for (let c = 0; c < cols; c++) mine.push(c < rs.length ? +rs[rs.length - 1 - c] : null);
+      if (rs.length > cols) fail(w + ': the result ' + r + ' needs more boxes than there are');
+      const want = D.buildWant(e.n, e.place);
+      if (JSON.stringify(want) !== JSON.stringify(mine)) fail(w + ': buildWant = ' + JSON.stringify(want) + ', expected ' + JSON.stringify(mine));
+      /* 照遊戲的規則玩：每一格只收 want；收完之後讀出來就是 r */
+      const got = want.slice().reverse().filter(v => v !== null).join('');
+      if (got !== rs) fail(w + ': filling every box reads ' + got + ', not ' + r);
+      for (let c = 0; c < e.place; c++) if (want[c] !== 0) fail(w + ': box ' + c + ' right of the target is not 0');
+      if (look < 5) has.down++; else has.up++;
+      if (look === 5 && e.n % PV[e.place - 1] === 0) has.five++;
+      if (look >= 5 && digitAt(e.n, e.place) === 9) has.carry++;
+      if (rs.length === cols) has.newDigit++;
+      for (let c = 0; c < cols; c++) inside(box(D.buildColX(cols, c), G.slotY + G.slot / 2, G.slot, G.slot), w + ' box ' + c, G.H);
+      for (let c = 1; c < cols; c++) if (D.buildColX(cols, c - 1) - D.buildColX(cols, c) - G.slot <= 0) fail(w + ': build boxes touch');
+      inside({ x:D.buildColX(cols, e.place) - 60, y:G.badgeY, w:120, h:22 }, w + ' badge', G.H);
+      /* 每一格放錯的那一句：數字逐個比，而且說的理由成立 */
+      LANGS.forEach(L => {
+        const d = I18N[L], P = PLACES[L], up = look >= 5;
+        for (let c = 0; c < len; c++){
+          const orig = digitAt(e.n, c);
+          if (c < e.place){ seq(w + ' gBuildZero ' + L, d.gBuildZero(P[e.place], orig, orig), orig === 0 ? [0, 0] : [0, orig]); continue; }
+          if (c === e.place){
+            const t = up ? d.gBuildUp(P[e.place - 1], look, orig) : d.gBuildDown(P[e.place - 1], look, orig);
+            const nn = nums(t);
+            if (nn[0] !== look || nn.indexOf(orig) < 0) fail(w + ' target reason ' + L + ' should name the look digit ' + look + ' and the target ' + orig + ': ' + t);
+            if (up && (want[c] !== (orig + 1) % 10)) fail(w + ': the target box after "up" is not ' + orig + ' + 1');
+            if (!up && want[c] !== orig) fail(w + ': the target box after "down" is not ' + orig);
+            continue;
+          }
+          let carried = up; for (let q = e.place; q < c; q++) if (digitAt(e.n, q) !== 9) carried = false;
+          if (carried){ seq(w + ' gBuildCarry ' + L, d.gBuildCarry(orig), [1, orig, 1].concat(orig === 9 ? [0, 1] : [])); if (want[c] !== (orig + 1) % 10) fail(w + ': a carried box ' + c + ' is not ' + orig + ' + 1'); }
+          else { seq(w + ' gBuildKeep ' + L, d.gBuildKeep(orig), [orig]); if (want[c] !== orig) fail(w + ': a kept box ' + c + ' changed'); }
+        }
+        if ((want[len] === null) !== (rs.length === len)) fail(w + ': the front box ' + (want[len] === null ? 'stays empty' : 'is used') + ' but the result has ' + rs.length + ' digits');
+        seq(w + ' gBuildDone ' + L, d.gBuildDone(e.n, P[e.place], r), [e.n, r]);
+        seq(w + ' gBuildNow ' + L, d.gBuildNow(e.n, P[e.place]), [e.n]);
+        seq(w + ' gBuild2 ' + L, d.gBuild2(P[e.place - 1], look, up), up ? (L === 'zh' ? [look, 1, 0] : [look, 1, 0]) : [look, 0]);
+      });
+    });
+    Object.keys(has).forEach(k => { if (!has[k]) fail('GAME_BUILD has no "' + k + '" case'); });
+    LANGS.forEach(L => {
+      seq('gBuildLeadYes ' + L, I18N[L].gBuildLeadYes, [1]);
+      seq('gBuildLeadNo ' + L, I18N[L].gBuildLeadNo, []);
+      seq('gBuildUp carry ' + L, I18N[L].gBuildUp(PLACES[L][1], 6, 9), L === 'zh' ? [6, 5, 5, 9, 1, 9, 1, 0, 1] : [6, 5, 9, 1, 9, 1, 0, 1]);
+    });
+    /* 數字卡：0～9 兩排，不重疊、在畫板裡，卡片在格子下面 */
+    const cards = []; for (let k = 0; k <= 9; k++) cards.push(box(W / 2 + ((k % 5) - 2) * G.trayStep, G.trayY[Math.floor(k / 5)], G.card, G.card));
+    noHits(cards, 'build digit cards'); cards.forEach((c, k) => inside(c, 'build card ' + k, G.H));
+    if (G.trayY[0] - G.card / 2 <= G.slotY + G.slot + 6) fail('the digit cards touch the boxes\' drop pad');
+    need('build', /if \(v !== want\[slot\.c\]\)\{ roundMiss\(why\(slot\.c, v\)\); return false; \}/, 'a card in the wrong box is not refused with its reason');
+    need('build', /var slot = nearestOpen\(slots, pt, 6\);\n\s*if \(!slot\) return false;/, 'a drop on empty space / a filled box is not sent back silently');
+    need('build', /if \(c === len\) return want\[c\] === null \? d\.gBuildLeadNo : d\.gBuildLeadYes;/, 'the front box reason is wrong');
+    need('build', /if \(c < e\.place\) return d\.gBuildZero\(pname, orig, v\);/, 'the right-of-target reason is wrong');
+    need('build', /if \(c === e\.place\) return up \? d\.gBuildUp\(lname, look, orig\) : d\.gBuildDown\(lname, look, orig\);/, 'the target-box reason is wrong');
+    need('build', /return carried\(c\) \? d\.gBuildCarry\(orig\) : d\.gBuildKeep\(orig\);/, 'the left-of-target reason is wrong');
+    need('build', /for \(var q = e\.place; q < c; q\+\+\) if \(digitAt\(e\.n, q\) !== 9\) return false;/, 'carried() does not follow the run of 9s');
+  }
+
+  /* ================= 第 4 關：估一估 ================= */
+  {
+    const G = D.EST_G;
+    touch('an answer card (' + G.cardW + '×' + G.cardH + ')', Math.min(G.cardW, G.cardH));
+    let maxKind = 0, places = new Set();
+    D.GAME_EST.forEach((set, i) => {
+      const w = 'GAME_EST[' + i + ']', pv = PV[set.place];
+      if (!(set.place >= 2 && set.place <= MAX_PLACE)) fail(w + ': place ' + set.place + ' out of range');
+      places.add(set.place);
+      if (!Array.isArray(set.cards) || set.cards.length !== 4) return fail(w + ': needs 4 cards');
+      let close = 0;
+      set.cards.forEach((c, k) => {
+        const [a, op, b, claim] = c, ww = w + '.cards[' + k + '] ' + a + op + b + '=' + claim;
+        if (op !== '+' && op !== '-') return fail(ww + ': op must be + or -');
+        if (![a, b, claim].every(v => Number.isInteger(v) && v > 0 && v <= STEM_MAX)) fail(ww + ': numbers must be positive integers within the lesson range');
+        if (a < PV[set.place] || b < PV[set.place]) fail(ww + ': an operand is smaller than the place it is rounded to');
+        const exact = op === '+' ? a + b : a - b, ra = roundByLine(a, set.place), rb = roundByLine(b, set.place), est = op === '+' ? ra + rb : ra - rb;
+        const gap = Math.abs(claim - est);
+        /* 規則的量詞：精確答案一定在一個位值以內（兩個數各自最多差半個位值）—— 每一張的精確答案都驗 */
+        if (Math.abs(exact - est) > pv) fail(ww + ': the exact answer is more than one place value from the estimate — the lesson\'s rule would be false');
+        const o = D.estOf(c, set.place);
+        if (o.ra !== ra || o.rb !== rb || o.est !== est || o.exact !== exact) fail(ww + ': estOf = ' + JSON.stringify(o) + ', expected ' + JSON.stringify({ ra, rb, est, exact }));
+        const isClose = gap <= pv;
+        if (D.estClose(c, set.place) !== isClose) fail(ww + ': estClose disagrees with |c − estimate| ≤ ' + pv);
+        /* ✅ 的那幾張就是精確答案；❌ 的那幾張不是，而且差得比一個位值**還多**（「一定」算錯才成立） */
+        if (isClose && claim !== exact) fail(ww + ': a close card that is not the exact answer — sorting it ✅ would bless a wrong answer');
+        if (!isClose && claim === exact) fail(ww + ': the exact answer is far from the estimate');
+        if (isClose) close++;
+        LANGS.forEach(L => {
+          const sym = op === '+' ? '+' : '−';
+          const t = I18N[L].gEstWhy(a, ra, b, rb, sym, est, claim, gap, pv);
+          seq(ww + ' gEstWhy ' + L, t, [a, ra, b, rb, ra, rb, est, claim, gap, pv]);
+          /* seq() 只看數字：運算符號另外驗（codex 第一輪） */
+          if (t.indexOf(ra + ' ' + sym + ' ' + rb + ' ') < 0) fail(ww + ' gEstWhy ' + L + ' does not show the estimate as ' + ra + ' ' + sym + ' ' + rb + ': ' + t);
+          const saysWrong = L === 'zh' ? /一定是哪裡算錯了/.test(t) : /must have gone wrong/.test(t);
+          if (saysWrong !== !isClose) fail(ww + ' gEstWhy ' + L + ' says ' + (saysWrong ? 'must be wrong' : 'cannot tell') + ' with gap ' + gap + ' vs ' + pv);
+          seq(ww + ' gEst2 ' + L, I18N[L].gEst2(a, ra, b, rb, sym, est), [a, ra, b, rb, ra, rb, est]);
+        });
+      });
+      if (close < 1 || close > 3) fail(w + ': ' + close + ' close cards — need 1~3 of each kind');
+      maxKind = Math.max(maxKind, close, 4 - close);
+      LANGS.forEach(L => seq(w + ' gEstNow ' + L, I18N[L].gEstNow(PLACES[L][set.place], 1, 4), [1, 4]));
+    });
+    if (places.size < 3) fail('GAME_EST should estimate to at least 3 different places');
+    if (G.lbl + 4 + maxKind * (G.cardH + 4) > G.binH) fail('a box cannot hold ' + maxKind + ' cards');
+    if (G.cardW > G.binW - 4) fail('an answer card is wider than its box');
+    const tray = [0, 1, 2, 3].map(i => box(G.trayX[i % 2], G.trayY[Math.floor(i / 2)], G.cardW, G.cardH));
+    noHits(tray, 'est tray cards'); tray.forEach((c, i) => inside(c, 'est tray card ' + i, G.H));
+    if (G.trayY[1] + G.cardH / 2 + 6 >= G.binY) fail('the tray touches the boxes\' drop pad');
+    G.binX.forEach((x, i) => inside({ x, y:G.binY, w:G.binW, h:G.binH }, 'est box ' + i, G.H));
+    if (G.binX[1] - (G.binX[0] + G.binW) <= 0) fail('the two est boxes touch');
+    need('est', /if \(bin\.close !== estClose\(c, set\.place\)\)\{ roundMiss\(whyOf\(c\)\); return false; \}/, 'a card in the wrong box is not refused with its reason');
+    need('est', /var bin = nearestOpen\(bins, pt, 6\);\n\s*if \(!bin\) return false;/, 'a drop on empty space is not sent back silently');
+    need('est', /\[true, false\]\.map\(function\(close, i\)\{/, 'the ✅ box is not the left one');
+    need('est', /function sym\(op\)\{ return op === '\+' \? '\+' : '−'; \}/, 'sym() does not turn - into −');
+    need('est', /return d\.gEstWhy\(c\[0\], o\.ra, c\[2\], o\.rb, sym\(c\[1\]\), o\.est, c\[3\], Math\.abs\(c\[3\] - o\.est\), pv\);/, 'the reason is not built from the card\'s own operator');
+    need('est', /var txt = c\[0\] \+ ' ' \+ sym\(c\[1\]\) \+ ' ' \+ c\[2\] \+ '\\n= ' \+ c\[3\];/, 'a card does not show its own operator');
+  }
+
+  /* ================= 第 5 關：找出 □ ================= */
+  {
+    const G = D.BLANK_G;
+    touch('a digit key (' + G.keyW + ')', G.keyW);
+    let kinds = { look:0, right:0, left:0, lookDown:0, lookUp:0 };
+    D.GAME_BLANK.forEach((e, i) => {
+      const w = 'GAME_BLANK[' + i + '] ' + e.s, len = e.s.length;
+      if (!/^[1-9][0-9?]*$/.test(e.s) || e.s.split('?').length !== 2) return fail(w + ': needs exactly one ? and a non-zero, non-blank leading digit');
+      if (!(e.place >= MIN_PLACE && e.place <= MAX_PLACE && e.place < len)) return fail(w + ': place ' + e.place + ' does not fit');
+      const bp = len - 1 - e.s.indexOf('?');
+      if (D.blankPlace(e.s) !== bp) fail(w + ': blankPlace = ' + D.blankPlace(e.s) + ', expected ' + bp);
+      /* 第二套：0～9 每一個都放進去，比距離四捨五入 */
+      const mine = [];
+      for (let dg = 0; dg <= 9; dg++){ const n = +e.s.replace('?', dg); if (n > STEM_MAX) fail(w + ': ' + n + ' above the lesson range'); if (roundByLine(n, e.place) === e.r) mine.push(dg); }
+      const ans = D.blankAnswers(e);
+      if (ans.join() !== mine.join()) fail(w + ': blankAnswers = ' + ans.join() + ', expected ' + mine.join());
+      if (!mine.length) fail(w + ': no digit works — the round could never be finished');
+      if (e.r % PV[e.place] !== 0) fail(w + ': the answer ' + e.r + ' is not a whole multiple of ' + PV[e.place]);
+      /* 每一種位置的 □ 都要有；理由（提示第二層）說的範圍要真的成立 */
+      const kind = bp === e.place - 1 ? 'look' : (bp < e.place - 1 ? 'right' : 'left');
+      kinds[kind]++;
+      if (kind === 'right' && mine.length !== 10) fail(w + ': the □ is never looked at, so all 10 digits should work');
+      if (kind === 'look'){
+        const up = mine[0] >= 5;
+        if (mine.join() !== (up ? '5,6,7,8,9' : '0,1,2,3,4')) fail(w + ': the □ is the look digit but the answers are ' + mine.join());
+        kinds[up ? 'lookUp' : 'lookDown']++;
+      }
+      if (kind === 'left' && mine.length !== 1) fail(w + ': the □ is the target (or left of it) — exactly one digit should work, got ' + mine.join());
+      LANGS.forEach(L => {
+        const d = I18N[L], P = PLACES[L];
+        for (let dg = 0; dg <= 9; dg++){
+          const full = +e.s.replace('?', dg), res = roundByLine(full, e.place);
+          if (res === e.r) seq(w + ' gBlankYes ' + L + ' ' + dg, d.gBlankYes(full, e.r), [full, e.r]);
+          else seq(w + ' gBlankNo ' + L + ' ' + dg, d.gBlankNo(dg, full, P[e.place - 1], nextDigitAt(full, e.place), res, e.r), [dg, full, nextDigitAt(full, e.place), res, e.r]);
+        }
+        const look = kind === 'look' ? null : nextDigitAt(+e.s.replace('?', 0), e.place);
+        const h2 = d.gBlank2(kind, P[bp], P[e.place - 1], look, kind === 'look' ? mine[0] >= 5 : look >= 5);
+        if (kind === 'look') seq(w + ' gBlank2 ' + L, h2, mine[0] >= 5 ? [5, 9] : [0, 4]);
+        else if (kind === 'right') seq(w + ' gBlank2 ' + L, h2, [0, 9]);
+        else seq(w + ' gBlank2 ' + L, h2, [look]);
+        hasWord(w + ' gBlank2 ' + L, h2, kind === 'left' ? P[bp] : P[e.place - 1]);
+        seq(w + ' gBlankLine ' + L, d.gBlankLine(e.s.replace('?', '□'), P[e.place], e.r), nums(e.s.replace('?', '□')).concat([e.r]));
+        seq(w + ' gBlankDone ' + L, d.gBlankDone(mine, mine.length === 10), mine);
+      });
+      for (let p = 0; p < len; p++) inside(box((W - len * G.pitch) / 2 + (len - 1 - p) * G.pitch + G.pitch / 2, G.numY + G.boxH / 2, G.boxW, G.boxH), w + ' digit box ' + p, G.H);
+    });
+    Object.keys(kinds).forEach(k => { if (!kinds[k]) fail('GAME_BLANK has no "' + k + '" entry'); });
+    const keys = []; for (let k = 0; k <= 9; k++) keys.push(box(W / 2 + ((k % 5) - 2) * G.keyStep, G.keyY[Math.floor(k / 5)], G.keyW, G.keyW));
+    noHits(keys, 'blank keys'); keys.forEach((c, k) => inside(c, 'blank key ' + k, G.H));
+    if (G.keyY[0] - G.keyW / 2 < G.numY + G.boxH + 8 + 24) fail('the keys cover the "found x / k" counter');
+    need('blank', /var full = blankFill\(s, k\), res = roundTo\(full, e\.place\);/, 'a tapped digit is not judged by rounding the filled-in number');
+    need('blank', /if \(res !== e\.r\)\{\n\s*b\.classList\.add\('tried'\);\n\s*roundMiss\(/, 'a wrong digit is not refused with its reason');
+    need('blank', /if \(gSolved \|\| b\.disabled\) return;/, 'a tried / found digit can be tapped again');
+    need('blank', /if \(found === ans\.length\)\{/, 'the round does not finish only when every digit is found');
+  }
+}
+
 module.exports = {
   /* 刻意改壞的清單：node tools/breaktest.js grade-4/math/rounding */
   breaks: [
@@ -434,28 +888,129 @@ module.exports = {
       find:"    { a:28600, b:11700, place:4, op:'+' },",
       replace:"    { a:28600, b:11700, place:3, op:'+' }," },
 
-    /* ---------- index.html：遊戲 ---------- */
-    { file:'index', expect:'the marked option is',
-      find:'    { n:3847,  place:2, opts:[3900, 3800, 3850, 4000],      ans:1 },',
-      replace:'    { n:3847,  place:2, opts:[3900, 3800, 3850, 4000],      ans:0 },' },
-    { file:'index', expect:'duplicate option values',
-      find:'    { n:2650,  place:2, opts:[2600, 3000, 2700, 2650],      ans:2 },',
-      replace:'    { n:2650,  place:2, opts:[2600, 2700, 2700, 2650],      ans:1 },' },
-    { file:'index', expect:'non-integer option',
-      find:'    { n:9648,  place:3, opts:[9000, 9600, 9700, 10000],     ans:3 },',
-      replace:"    { n:9648,  place:3, opts:[9000, 9600, 9700, 'banana'],  ans:3 }," },
-    { file:'index', expect:'ROUNDS has no exactly-halfway round',
-      find:'    { n:2650,  place:2, opts:[2600, 3000, 2700, 2650],      ans:2 },\n',
-      replace:'    { n:2670,  place:2, opts:[2600, 3000, 2700, 2650],      ans:2 },\n' },
-    { file:'index', expect:'ROUNDS has no carrying round',
-      find:'    { n:9648,  place:3, opts:[9000, 9600, 9700, 10000],     ans:3 },\n',
-      replace:'    { n:9448,  place:3, opts:[9000, 9600, 9700, 10000],     ans:3 },\n' },
-    { file:'index', expect:'ROUNDS never rounds to the ten-thousands',
-      find:'    { n:48500, place:4, opts:[50000, 40000, 48000, 49000],  ans:0 },',
-      replace:'    { n:48500, place:3, opts:[50000, 40000, 48000, 49000],  ans:0 },' },
-    { file:'index', expect:'every game round has the answer first',
-      find:'    { n:3847,  place:2, opts:[3900, 3800, 3850, 4000],      ans:1 },\n    { n:2650,  place:2, opts:[2600, 3000, 2700, 2650],      ans:2 },\n    { n:9648,  place:3, opts:[9000, 9600, 9700, 10000],     ans:3 },\n    { n:48500, place:4, opts:[50000, 40000, 48000, 49000],  ans:0 },\n    { n:27364, place:3, opts:[28000, 27400, 27000, 27300],  ans:2 }',
-      replace:'    { n:3847,  place:2, opts:[3800, 3900, 3850, 4000],      ans:0 },\n    { n:2650,  place:2, opts:[2700, 3000, 2600, 2650],      ans:0 },\n    { n:9648,  place:3, opts:[10000, 9600, 9700, 9000],     ans:0 },\n    { n:48500, place:4, opts:[50000, 40000, 48000, 49000],  ans:0 },\n    { n:27364, place:3, opts:[27000, 27400, 28000, 27300],  ans:0 }' },
+    /* ---------- index.html：小遊戲「四捨五入快車」（§六之五，五關五種玩法） ---------- */
+    /* 第 1 關：開進最近的一站 */
+    { file:'index', expect:'needs one train below halfway',
+      find:'    { place:3, lo:3000,  ns:[3300, 3700, 3500] },', replace:'    { place:3, lo:3000,  ns:[3300, 3700, 3600] },' },
+    { file:'index', expect:'within 1/10 of halfway',
+      find:'    { place:2, lo:400,   ns:[430, 470, 450] },', replace:'    { place:2, lo:400,   ns:[430, 455, 450] },' },
+    { file:'index', expect:'starts inside a stop',
+      find:'    { place:1, lo:70,    ns:[73, 77, 75] },', replace:'    { place:1, lo:70,    ns:[71, 77, 75] },' },
+    { file:'index', expect:'lineDock(',
+      find:"    if (Math.abs(x - LINE_G.X0) <= LINE_G.dock) return 'lo';", replace:"    if (Math.abs(x - LINE_G.X0) <= LINE_G.dock + 40) return 'lo';" },
+    { file:'index', expect:'is not its place on the line',
+      find:'(LINE_G.X1 - LINE_G.X0) * (n - lo) / pv; }', replace:'(LINE_G.X1 - LINE_G.X0) * (n - lo + pv / 20) / pv; }' },
+    { file:'index', expect:'the accepted stop is not',
+      find:"want = (n * 2 >= lo + hi) ? 'hi' : 'lo';", replace:"want = (n * 2 > lo + hi) ? 'hi' : 'lo';" },
+    { file:'index', expect:"a tap on another row's stop",
+      find:'          if (!st || st.row !== P.data.row) return false;', replace:'          if (!st) return false;' },
+    { file:'index', expect:'the far-stop reason is not given',
+      find:": want === 'lo' ? d.gLineFar(n, hi, lo, hi - n, n - lo) : d.gLineFar(n, lo, hi, n - lo, hi - n));",
+      replace:": want === 'lo' ? d.gLineFar(n, lo, hi, n - lo, hi - n) : d.gLineFar(n, hi, lo, hi - n, n - lo));" },
+    { file:'index', expect:'the stop labels are not 56 wide',
+      find:'addZone(B, v[0] - 28, G.axisY + 12, 56, 20, v[2], String(v[1]));', replace:'addZone(B, v[0] - 40, G.axisY + 12, 80, 20, v[2], String(v[1]));' },
+    { file:'index', expect:'a train (',
+      find:'trainW:52, trainH:48,', replace:'trainW:52, trainH:44,' },
+    { file:'index', expect:'gLineHalf zh',
+      find:"兩邊都差 ' + half + ' —— 一樣遠的時候約定往上", replace:"兩邊都差 ' + (half + 1) + ' —— 一樣遠的時候約定往上" },
+    /* 第 2 關：剪一刀 */
+    { file:'index', expect:'the two numbers are not picked',
+      find:'e2 = pick(GAME_CUT.filter(function(x){ return x.place !== e1.place; }));', replace:'e2 = pick(GAME_CUT);' },
+    { file:'index', expect:'cutNearest(',
+      find:'    return len - c;\n', replace:'    return len - c + (c === 2 ? 1 : 0);\n' },
+    { file:'index', expect:'a cut in the wrong gap is not refused',
+      find:'d.places[e.place], j > e.place)); return false; }', replace:'d.places[e.place], j < e.place)); return false; }' },
+    { file:'index', expect:'points the wrong way',
+      find:"'，剪刀要再往' + (right ? '右' : '左') + '。'", replace:"'，剪刀要再往' + (right ? '左' : '右') + '。'" },
+    { file:'index', expect:'says the wrong one of down/up',
+      find:"', so it goes ' + (look >= 5 ? 'up' : 'down') + ' → ' + num + ' rounded to the '", replace:"', so it goes ' + (look > 5 ? 'up' : 'down') + ' → ' + num + ' rounded to the '" },
+    { file:'index', expect:'the scissors can leave the board',
+      find:"axis:'x', minX:Math.max(cutX(len, len), G.knob / 2 + 2), maxX:Math.min(cutX(len, 0), GAME_W - G.knob / 2 - 2),",
+      replace:"axis:'x', minX:cutX(len, len), maxX:cutX(len, 0)," },
+    { file:'index', expect:'the scissors (',
+      find:'knob:48, knobY:104,', replace:'knob:44, knobY:104,' },
+    /* 第 3 關：排出概數 */
+    { file:'index', expect:'buildWant =',
+      find:'(r >= PV[len] ? 1 : null) : digitAt(r, c));', replace:'(r >= PV[len] ? 1 : 0) : digitAt(r, c));' },
+    { file:'index', expect:'buildWant =',
+      find:'(r >= PV[len] ? 1 : null) : digitAt(r, c));', replace:'(r >= PV[len] ? 1 : null) : digitAt(n, c));' },
+    { file:'index', expect:'GAME_BUILD has no "five" case',
+      find:'{ n:2650,  place:2 }, { n:9648,  place:3 },', replace:'{ n:2651,  place:2 }, { n:9648,  place:3 },' },
+    { file:'index', expect:'build: a card in the wrong box is not refused',
+      find:'if (v !== want[slot.c]){ roundMiss(why(slot.c, v)); return false; }', replace:'if (v !== want[slot.c] && slot.c !== 0){ roundMiss(why(slot.c, v)); return false; }' },
+    { file:'index', expect:'carried() does not follow the run of 9s',
+      find:'for (var q = e.place; q < c; q++) if (digitAt(e.n, q) !== 9) return false;', replace:'for (var q = e.place; q < c; q++) if (digitAt(e.n, q) !== 8) return false;' },
+    { file:'index', expect:'the front box reason is wrong',
+      find:'if (c === len) return want[c] === null ? d.gBuildLeadNo : d.gBuildLeadYes;', replace:'if (c === len) return want[c] === null ? d.gBuildLeadYes : d.gBuildLeadNo;' },
+    { file:'index', expect:'gBuildCarry zh',
+      find:"'右邊進上來 1：這一位的 ' + orig + ' 要加 1'", replace:"'右邊進上來 1：這一位的 ' + (orig + 1) + ' 要加 1'" },
+    { file:'index', expect:'a digit card (',
+      find:'slot:44, badgeY:0, numY:24, slotY:96, card:48,', replace:'slot:44, badgeY:0, numY:24, slotY:96, card:44,' },
+    /* 第 4 關：估一估 */
+    { file:'index', expect:'a close card that is not the exact answer',
+      find:"[650, '+', 170, 620]", replace:"[650, '+', 170, 850]" },
+    { file:'index', expect:'close cards — need 1~3 of each kind',
+      find:"[2840, '+', 3170, 8010], [5240, '-', 1880, 1360]", replace:"[2840, '+', 3170, 6010], [5240, '-', 1880, 3360]" },
+    { file:'index', expect:'estClose disagrees',
+      find:'  function estClose(c, place){ return Math.abs(c[3] - estOf(c, place).est) <= PV[place]; }',
+      replace:'  function estClose(c, place){ return Math.abs(c[3] - estOf(c, place).est) <= PV[place] * 3; }' },
+    { file:'index', expect:'est: a card in the wrong box is not refused',
+      find:'if (bin.close !== estClose(c, set.place)){ roundMiss(whyOf(c)); return false; }', replace:'if (false){ roundMiss(whyOf(c)); return false; }' },
+    { file:'index', expect:'gEstWhy zh',
+      find:"(gap > pv ? '比一個位值 '", replace:"(gap > pv * 2 ? '比一個位值 '" },
+    { file:'index', expect:'a box cannot hold',
+      find:'binY:146, binH:228,', replace:'binY:146, binH:200,' },
+    /* 第 5 關：找出 □ */
+    { file:'index', expect:'blankAnswers =',
+      find:'if (roundTo(blankFill(e.s, d), e.place) === e.r) out.push(d);', replace:'if (roundTo(blankFill(e.s, d), e.place) === e.r && d > 0) out.push(d);' },
+    { file:'index', expect:'no digit works',
+      find:"{ s:'6?82',  place:2, r:6500 },", replace:"{ s:'6?82',  place:2, r:6000 }," },
+    { file:'index', expect:'a wrong digit is not refused',
+      find:"          if (res !== e.r){\n            b.classList.add('tried');", replace:"          if (res !== e.r && false){\n            b.classList.add('tried');" },
+    { file:'index', expect:'a tried / found digit can be tapped again',
+      find:'if (gSolved || b.disabled) return;', replace:'if (gSolved) return;' },
+    { file:'index', expect:'gBlankNo zh',
+      find:"'□ 放 ' + dg + '：' + full + ' 看'", replace:"'□ 放 ' + dg + '：' + (full + 1) + ' 看'" },
+    { file:'index', expect:'gBlank2 zh',
+      find:"'的更右邊 —— 一律不看，0～9 放什麼都一樣。'", replace:"'的更右邊 —— 一律不看，1～9 放什麼都一樣。'" },
+    { file:'index', expect:'a digit key (',
+      find:'keyW:52, keyStep:58,', replace:'keyW:44, keyStep:58,' },
+    /* codex 第一輪補上的守門 */
+    { file:'index', expect:'line: the round does not install its drop',
+      find:"      useTapSelect(B, function(P, pt){\n        var kind;", replace:"      (function(B, f){})(B, function(P, pt){\n        var kind;" },
+    { file:'index', expect:'does not follow only the first finger',
+      find:"    el.addEventListener('pointermove', function(e){\n      if (!start || e.pointerId !== pid) return;", replace:"    el.addEventListener('pointermove', function(e){\n      if (!start) return;" },
+    { file:'index', expect:'no document-level release',
+      find:"      document.addEventListener('pointerup', onDocEnd);\n      document.addEventListener('pointercancel', onDocEnd);\n", replace:"" },
+    { file:'index', expect:'lostpointercapture',
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n", replace:"" },
+    { file:'index', expect:'placed pieces still take pointer events',
+      find:'.gpiece.locked{cursor:default;pointer-events:none}', replace:'.gpiece.locked{cursor:default}' },
+    { file:'index', expect:'coloured keep / look / skip',
+      find:"p >= e.place ? 'keep' : p === e.place - 1 ? 'look' : 'skip'", replace:"p >= e.place ? 'keep' : p === e.place - 1 ? 'skip' : 'look'" },
+    { file:'index', expect:'sym() does not turn',
+      find:"function sym(op){ return op === '+' ? '+' : '−'; }", replace:"function sym(op){ return '+'; }" },
+    { file:'index', expect:'a gap to tap',
+      find:'var CUT_G = { pitch:46, boxW:42,', replace:'var CUT_G = { pitch:44, boxW:40,' },
+    /* 共用：洗牌、最近的格子、計分、換畫板、超前模式 */
+    { file:'index', expect:'already in increasing order',
+      find:'    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }\n', replace:'' },
+    { file:'index', expect:'nearestOpen():',
+      find:'if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }', replace:'if (!best){ bd = dd; bc = dc; best = b; }' },
+    { file:'index', expect:'measure to the box',
+      find:'var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;', replace:'var dd = dx * dx + dy * dy, dc = dd;' },
+    { file:'index', expect:'"−5" note',
+      find:'var lost = gScore >= 5 ? 5 : 0;', replace:'var lost = 5;' },
+    { file:'index', expect:'does not cost 5',
+      find:'gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;\n    gMsg.innerHTML = \'<span class="no">\'', replace:'gScore = Math.max(0, gScore - 0); elScore.textContent = gScore;\n    gMsg.innerHTML = \'<span class="no">\'' },
+    { file:'index', expect:'scoring: a round should give',
+      find:'var pts = gMistake ? 10 : 20;', replace:'var pts = gMistake ? 15 : 20;' },
+    { file:'index', expect:'board-generation guard',
+      find:'      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */\n', replace:'' },
+    { file:'index', expect:'ahead mode does not show hint level 1',
+      find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */\n", replace:'' },
+    { file:'index', expect:'GAME_ORDER should be',
+      find:"var GAME_ORDER = ['line', 'cut', 'build', 'est', 'blank'];", replace:"var GAME_ORDER = ['cut', 'line', 'build', 'est', 'blank'];" },
 
     /* ---------- index.html：位名表與三層題庫 ---------- */
     { file:'index', expect:'place-name table says',
@@ -927,10 +1482,12 @@ module.exports = {
                 'stopsOf, roundSteps, LINE_W, LINE_H, LINE_X0, LINE_X1, LINE_Y, markerX, ' +
                 'LBL_STOP_DY, LBL_STOP_FONT, LBL_MID_DY, LBL_MID_FONT, ' +
                 'LBL_MARK_DY, LBL_MARK_FONT, MARK_TOP_DY, ' +
-                'WHY_CASES, LINE_CASES, STEP_CASES, MULTI_NUMS, EST_CASES, ROUNDS}',
+                'WHY_CASES, LINE_CASES, STEP_CASES, MULTI_NUMS, EST_CASES, ' +
+                'GAME_ORDER, GAME_W, GAME_LINE, LINE_G, lineTrainX, lineDock, GAME_CUT, CUT_G, cutX0, cutX, cutDigitX, cutNearest, ' +
+                'GAME_BUILD, BUILD_G, buildColX, buildWant, GAME_EST, EST_G, estOf, estClose, GAME_BLANK, BLANK_G, blankFill, blankAnswers, blankPlace}',
     optionValueMax: VALUE_MAX,
 
-    check: function(data, I18N, fail){
+    check: function(data, I18N, fail, src){
       const LANGS = ['zh', 'en'];
 
       if (data.STEM_MAX !== STEM_MAX) fail(`the lesson's STEM_MAX is ${data.STEM_MAX}, this config assumes ${STEM_MAX}`);
@@ -943,7 +1500,7 @@ module.exports = {
       /* --- 每一組範例資料的**筆數**也要釘住（codex 第三輪 #3） ---
          只驗「有沒有涵蓋每一種情形」的話，刪掉一筆多餘的例子不會有人發現：
          畫面上少了一個 chip，所有斷言卻還是綠的。 */
-      const SIZES = { WHY_CASES:3, LINE_CASES:5, STEP_CASES:5, MULTI_NUMS:4, EST_CASES:4, ROUNDS:5 };
+      const SIZES = { WHY_CASES:3, LINE_CASES:5, STEP_CASES:5, MULTI_NUMS:4, EST_CASES:4, GAME_LINE:6, GAME_CUT:8, GAME_BUILD:9, GAME_EST:5, GAME_BLANK:11 };
       Object.keys(SIZES).forEach(key => {
         const arr = data[key];
         if (!Array.isArray(arr) || arr.length !== SIZES[key])
@@ -1285,42 +1842,12 @@ module.exports = {
       if (!hasMinus) fail('EST_CASES has no subtraction case');
       if (!hasWan) fail('EST_CASES never rounds to the ten-thousands place');
 
-      /* --- 遊戲：四捨五入快車 --- */
-      let gMid = 0, gCarry = 0, gWan = 0;
-      data.ROUNDS.forEach((r, i) => {
-        if (r.n > STEM_MAX) fail(`ROUND ${i+1}: n ${r.n} above the lesson range`);
-        if (r.place < MIN_PLACE || r.place > MAX_PLACE) fail(`ROUND ${i+1}: place ${r.place} out of range`);
-        if (r.n < PV[r.place]) fail(`ROUND ${i+1}: n is smaller than its target place`);
-        if (r.ans < 0 || r.ans >= r.opts.length){ fail(`ROUND ${i+1}: ans index out of range`); return; }
-        /* 先確認每個值是整數，否則 `'banana' > VALUE_MAX` 是 false，範圍檢查會靜靜放行。 */
-        r.opts.forEach((v, k) => {
-          if (!Number.isInteger(v)) fail(`ROUND ${i+1}: option ${k} is a non-integer option ${JSON.stringify(v)}`);
-        });
-        const want = roundByLine(r.n, r.place);
-        if (r.opts[r.ans] !== want)
-          fail(`ROUND ${i+1}: the marked option is ${r.opts[r.ans]}, recomputed ${want}`);
-        if (new Set(r.opts).size !== r.opts.length) fail(`ROUND ${i+1}: duplicate option values`);
-        r.opts.forEach(v => {
-          if (!Number.isInteger(v) || v < 10 || v > VALUE_MAX) fail(`ROUND ${i+1}: option ${v} outside 10~${VALUE_MAX}`);
-        });
-        if (isHalfway(r.n, r.place)) gMid++;
-        if (nextDigitAt(r.n, r.place) >= 5 && digitAt(r.n, r.place) === 9) gCarry++;
-        if (r.place === MAX_PLACE) gWan++;
-        LANGS.forEach(L => {
-          const d = I18N[L];
-          const prompt = d.gPrompt(r.n, PLACES[L][r.place]);
-          const hint2 = d.gHint2(PLACES[L][r.place - 1], nextDigitAt(r.n, r.place));
-          [prompt, hint2].forEach(t => { if (/undefined|NaN/.test(t)) fail(`ROUND ${i+1} ${L}: ${t}`); });
-          if (!printsNum(prompt, r.n)) fail(`ROUND ${i+1} ${L} prompt does not print ${r.n}`);
-          if (prompt.indexOf(PLACES[L][r.place]) < 0) fail(`ROUND ${i+1} ${L} prompt does not name the ${PLACES[L][r.place]} place`);
-          if (!printsNum(hint2, nextDigitAt(r.n, r.place))) fail(`ROUND ${i+1} ${L} hint 2 does not print the look digit`);
-          if (hint2.indexOf(PLACES[L][r.place - 1]) < 0) fail(`ROUND ${i+1} ${L} hint 2 does not name the ${PLACES[L][r.place - 1]} place`);
-        });
-      });
-      if (data.ROUNDS.map(r => r.ans).every(x => x === 0)) fail('every game round has the answer first');
-      if (!gMid) fail('ROUNDS has no exactly-halfway round');
-      if (!gCarry) fail('ROUNDS has no carrying round (target digit 9)');
-      if (!gWan) fail('ROUNDS never rounds to the ten-thousands place');
+      /* --- 遊戲：四捨五入快車（§六之五，五關五種玩法） ---
+         每一關**照遊戲自己的規則把每一題從頭玩一遍**，證明一定解得完、而且解完一定是對的答案；
+         正解一律用這裡的第二套實作（roundByLine：比距離，不看下一位）重算，不拿課程的 roundTo 當神諭。
+         版面與觸控從資料區讀；nearestOpen()／roundMiss()／shuffle() 從原始碼切出來真的跑；
+         RENDER 裡的關鍵規則用原始碼形狀守住（breaks 逐條證明這些守門會響）。 */
+      gameChecks(data, I18N, fail, src || '');
 
       /* --- 三層題庫：從題幹的數字與題幹說的目標位重算一次正解 --- */
       Object.keys(BANK_EXPECTED).forEach(bank => {
