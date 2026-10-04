@@ -30,10 +30,16 @@
 
    ⑤ **「周長」是這一課刻意的誘答，所以面積不可以等於周長的數字。**
       4 × 4 與 3 × 6 的面積剛好等於周長，那時候誘答會撞到正解、孩子選對也被判錯。
-      遊戲關卡與所有產生器都必須避開，這裡逐一驗。 */
+      所有產生器都必須避開，這裡逐一驗。（小遊戲 2026-10-04 改成五關動手玩法，沒有選項了，見「遊戲：鋪磚廠闖關」那一段。） */
 
 const fs = require('fs');
 const path = require('path');
+const { extractFunction } = require('./lib/gameshuffle.js');
+const { makeArith } = require('./lib/arith.js');
+/* 小遊戲句子裡的算式逐條驗算（量詞先換掉，它們不是運算元） */
+const gameArith = makeArith({ units:['平方公分', '平方公尺', '公分', '公尺', '格', '排'], unitsEn:['cm²', 'm²', 'cm', 'm', 'squares?', 'rows?'] });
+/* 小遊戲「貼單位」裡每一個東西真實的大小（公分，第二套來源）：量出來的數字要接近它 */
+const GAME_REAL_CM = { stamp:[5, 3], book:[26, 19], rug:[300, 200], classroom:[900, 800], court:[2800, 1500], door:[200, 90], bed:[200, 120] };
 
 /* 這一課自己的常數（第二套來源，不從課程讀）。 */
 const CM_PER_M = 100;
@@ -679,29 +685,54 @@ module.exports = {
     { file:'index', expect:'the hole is', via:'index',
       find:'    { w:8,  h:5, nw:3, nh:2 },\n    { w:7,  h:4, nw:2, nh:2 },',
       replace:'    { w:8,  h:5, nw:8, nh:2 },\n    { w:7,  h:4, nw:2, nh:2 },' },
-    { file:'index', expect:'the marked option is', via:'index',
-      find:"    { shape:'rect',   w:7,  h:4,             opts:[22, 28, 11, 32], ans:1 },",
-      replace:"    { shape:'rect',   w:7,  h:4,             opts:[22, 29, 11, 32], ans:1 }," },
-    { file:'index', expect:'does not offer the trap value', via:'index',
-      find:"    { shape:'square', w:6,  h:6,             opts:[36, 24, 12, 30], ans:0 },",
-      replace:"    { shape:'square', w:6,  h:6,             opts:[36, 25, 12, 30], ans:0 }," },
-    { file:'index', expect:'roundArea says', via:'index',
-      find:"    return (r.shape === 'lshape') ? areaOf(r.w, r.h) - areaOf(r.nw, r.nh) : areaOf(r.w, r.h);",
-      replace:"    return areaOf(r.w, r.h);" },
-    { file:'index', expect:'roundTrap says', via:'index',
-      find:"    return (r.shape === 'lshape') ? areaOf(r.w, r.h) : perimeterOf(r.w, r.h);",
-      replace:"    return (r.shape === 'lshape') ? areaOf(r.w, r.h) : areaOf(r.w, r.h) + 1;" },
-    { file:'index', expect:'is drawn 6x6, which is a square', via:'index',
-      find:"    { shape:'square', w:6,  h:6,             opts:[36, 24, 12, 30], ans:0 },",
-      replace:"    { shape:'rect', w:6,  h:6,             opts:[36, 24, 12, 30], ans:0 }," },
-    { file:'index', expect:'every game round has the answer first', via:'index',
-      find:"    { shape:'rect',   w:7,  h:4,             opts:[22, 28, 11, 32], ans:1 },\n    { shape:'square', w:6,  h:6,             opts:[36, 24, 12, 30], ans:0 },\n    { shape:'rect',   w:9,  h:3,             opts:[24, 12, 27, 30], ans:2 },\n    { shape:'lshape', w:8,  h:5, nw:3, nh:2, opts:[40, 34, 6,  26], ans:1 },\n    { shape:'lshape', w:10, h:3, nw:3, nh:1, opts:[30, 3,  26, 27], ans:3 }",
-      replace:"    { shape:'rect',   w:7,  h:4,             opts:[28, 22, 11, 32], ans:0 },\n    { shape:'square', w:6,  h:6,             opts:[36, 24, 12, 30], ans:0 },\n    { shape:'rect',   w:9,  h:3,             opts:[27, 12, 24, 30], ans:0 },\n    { shape:'lshape', w:8,  h:5, nw:3, nh:2, opts:[34, 40, 6,  26], ans:0 },\n    { shape:'lshape', w:10, h:3, nw:3, nh:1, opts:[27, 3,  26, 30], ans:0 }" },
-    /* 挖掉 4 × 1 的話剩下 26，而這個圖形的周長也是 26 —— 「算周長」會走到正解上。 */
-    { file:'index', expect:"equals the shape's perimeter", via:'index',
-      find:"    { shape:'lshape', w:10, h:3, nw:3, nh:1, opts:[30, 3,  26, 27], ans:3 }",
-      replace:"    { shape:'lshape', w:10, h:3, nw:4, nh:1, opts:[30, 4,  24, 26], ans:3 }" },
+    /* ---------- index.html：小遊戲「鋪磚廠闖關」（2026-10-04，§六之五） ---------- */
+    { file:"index", via:"index", expect:"a strip of the wrong length is accepted", find:"        if (len !== w){ roundMiss(", replace:"        if (len < w - 1){ roundMiss(" },
+    { file:"index", via:"index", expect:"the drawn row says", find:"cy:TILE.y + r * TILE_U + TILE_U / 2, hw:", replace:"cy:TILE.y + r * TILE_U + TILE_U, hw:" },
+    { file:"index", via:"index", expect:"not w − 1, w, w + 1", find:"return shuffle([w - 1, w, w + 1]);", replace:"return shuffle([w - 1, w, w + 2]);" },
+    { file:"index", via:"index", expect:"does not fit the board", find:"var GAME_TILE = [ { w:4, h:3 }, { w:5, h:3 },", replace:"var GAME_TILE = [ { w:4, h:3 }, { w:6, h:3 }," },
+    { file:"index", via:"index", expect:"not given to the nearest row", find:"        var row = nearestOpen(rows, pt, TILE.pad);", replace:"        var row = rows.filter(function(r){ return !r.done && Math.abs(pt.y - r.cy) <= r.hh + TILE.pad; })[0];" },
+    { file:"index", via:"index", expect:"not a whole number of rows", find:"{ A:35, w:7 }", replace:"{ A:36, w:7 }" },
+    { file:"index", via:"index", expect:"a square", find:"{ A:36, w:9 } ];", replace:"{ A:36, w:6 } ];" },
+    { file:"index", via:"index", expect:"a wrong width is accepted", find:"        if (v !== h){ roundMiss(p < e.A ?", replace:"        if (v < h){ roundMiss(p < e.A ?" },
+    { file:"index", via:"index", expect:"but the reason says otherwise", find:"' 平方公分，比 ' + A + ' 平方公分少。'; },", replace:"' 平方公分，比 ' + A + ' 平方公分多。'; }," },
+    { file:"index", via:"index", expect:"fenceOk(", find:"return w >= 1 && w <= S - 1 && w * (S - w) === e.A; }", replace:"return w >= 1 && w <= S - 1 && w * (S - w) >= e.A; }" },
+    { file:"index", via:"index", expect:"unsolvable", find:"{ P:24, A:32 }", replace:"{ P:24, A:33 }" },
+    { file:"index", via:"index", expect:"not the nearest", find:"return Math.max(1, Math.min(S - 1, Math.round((x - FENCE.x0) / fenceU(S)))); }", replace:"return Math.max(1, Math.min(S - 1, Math.floor((x - FENCE.x0) / fenceU(S)))); }" },
+    { file:"index", via:"index", expect:"does not start at the long thin shape", find:"u = fenceU(S), F = FENCE, w = S - 1;", replace:"u = fenceU(S), F = FENCE, w = S - 3;" },
+    { file:"index", via:"index", expect:"judges while ↔ is still held", find:"        if (knob.busy()) return;   /* 另一根手指還拖著 ↔：形狀還沒定，不判、不扣分 */\n", replace:"" },
+    { file:"index", via:"index", expect:"wider than the left label", find:"lblH:20, lblW:64 }", replace:"lblH:20, lblW:30 }" },
+    { file:"index", via:"index", expect:"wrong basket is accepted", find:"        if (bin.i !== want){ roundMiss(d.gUnitWrong(", replace:"        if (false){ roundMiss(d.gUnitWrong(" },
+    { file:"index", via:"index", expect:"unitBin says", find:"function unitBin(c){ return UNIT_ORDER.indexOf(areaUnitOf(c.len)); }", replace:"function unitBin(c){ return c.a >= 100 ? 1 : UNIT_ORDER.indexOf(areaUnitOf(c.len)); }" },
+    { file:"index", via:"index", expect:"the tray started", find:"    if (under || first){ var x = t[0]; t[0] = t[3]; t[3] = x; }\n", replace:"" },
+    { file:"index", via:"index", expect:"no big thing measured in cm", find:"{ key:'rug', len:UNIT_CM, a:300, b:200 }", replace:"{ key:'book', len:UNIT_CM, a:26, b:19 }" },
+    { file:"index", via:"index", expect:"is not its real-life size", find:"{ key:'door', len:UNIT_CM, a:200, b:90 }", replace:"{ key:'door', len:UNIT_CM, a:20, b:9 }" },
+    { file:"index", via:"index", expect:"inside a basket's drop zone", find:"UNIT_TRAY = { y:216,", replace:"UNIT_TRAY = { y:180," },
+    { file:"index", via:"index", expect:"font size is not", find:"border-radius:12px;font-size:13px;", replace:"border-radius:12px;font-size:15px;" },
+    { file:"index", via:"index", expect:"does not name the ruler", find:"return name + '的邊長是用' + ruler + '量的（'", replace:"return name + '的邊長是量的（'" },
+    { file:"index", via:"index", expect:"cutResult says", find:"if (L.dir === 'h' && L.k === e.nh) return { ok:true", replace:"if (L.dir === 'h' && L.k >= e.nh) return { ok:true" },
+    { file:"index", via:"index", expect:"cutPick() disagrees", find:"    if (close.length === 1) return close[0].L;", replace:"    if (close.length >= 1) return close[0].L;" },
+    { file:"index", via:"index", expect:"taps right on a correct cut line are refused", find:"    return good.length ? good[0].L : null;", replace:"    return null;" },
+    { file:"index", via:"index", expect:"missing corner's edge", find:"y1:y0 + (c > cw ? e.nh : 0) * U,", replace:"y1:y0 + (c >= cw ? e.nh : 0) * U," },
+    { file:"index", via:"index", expect:"non-rectangle is accepted", find:"        if (!r.ok){ roundMiss(d.gCutBad(r.rect.w, r.rect.h)); return; }", replace:"        if (false){ roundMiss(d.gCutBad(r.rect.w, r.rect.h)); return; }" },
+    { file:"index", via:"index", expect:"not strictly inside", find:"{ w:5, h:4, nw:2, nh:2 }, { w:6, h:4, nw:2, nh:1 }", replace:"{ w:5, h:4, nw:5, nh:2 }, { w:6, h:4, nw:2, nh:1 }" },
+    { file:"index", via:"index", expect:"under 44", find:"var CUT_U = 46,", replace:"var CUT_U = 40," },
+    { file:"index", via:"index", expect:"under 44", find:"var TILE_U = 46,", replace:"var TILE_U = 44," },
+    { file:"index", via:"index", expect:"measure to the box", find:"      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;", replace:"      var dd = dx * dx + dy * dy, dc = dd;" },
+    { file:"index", via:"index", expect:"skips it and lands in the next slot", find:"    return best && !best.done ? best : null;", replace:"    return best;" },
+    { file:"index", via:"index", expect:"does not cost 5", find:"    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;", replace:"    gScore = gScore - 5; elScore.textContent = gScore;" },
+    { file:"index", via:"index", expect:"+20 with no mistakes", find:"    var pts = gMistake ? 10 : 20;", replace:"    var pts = 20;" },
+    { file:"index", via:"index", expect:"does not start a new board generation", find:"gSolved = false; gMistake = false; gCtx = {}; gGen++;", replace:"gSolved = false; gMistake = false; gCtx = {};" },
+    { file:"index", via:"index", expect:"check its board generation", find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */\n", replace:"" },
+    { file:"index", via:"index", expect:"GAME_ORDER should be", find:"var GAME_ORDER = ['tile', 'side', 'fence', 'unit', 'cut'];", replace:"var GAME_ORDER = ['tile', 'fence', 'side', 'unit', 'cut'];" },
+    { file:"index", via:"index", expect:"does not really shuffle", find:"      var k = Math.floor(Math.random() * (j + 1));   /* 自足", replace:"      var k = j;   /* 自足" },
+    { file:"index", via:"index", expect:"ahead mode no longer shows", find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }", replace:"    if (mode === 'ahead'){ hintLevel = 0; }" },
+    { file:"index", via:"index", expect:"numbers should read", find:"' ＝ ' + A + ' 格，面積是 ' + A + ' 平方公分！'; },", replace:"' ＝ ' + (A + 1) + ' 格，面積是 ' + A + ' 平方公分！'; }," },
+    { file:"index", via:"index", expect:"numbers should read", find:"a + ' + ' + b + ' = ' + T + ' cm²!'; },", replace:"a + ' + ' + b + ' = ' + (T + 1) + ' cm²!'; }," },
+    { file:"index", via:"index", expect:"arithmetic is wrong", find:"' 平方公分，不是 ' + A + '。籬笆一樣長", replace:"' 平方公分，不是 ' + A + '。' + w + ' ＋ ' + h + ' ＝ ' + (w * h) + '。籬笆一樣長" },
 
+    { file:"index", via:"index", expect:"is not marked done", find:"row.done = true; row.el.className = 'growfill'; n++;", replace:"row.el.className = 'growfill'; n++;" },
+    { file:"index", via:"index", expect:"a second finger can tap the board", find:"      if (!e.isPrimary) return;   /* 第二根手指：不理", replace:"      if (false) return;   /* 第二根手指：不理" },
+    { file:"index", via:"index", expect:"a second finger can pick up a piece", find:"if (!e.isPrimary || P.locked || gSolved", replace:"if (P.locked || gSolved" },
     /* ---------- index.html：字典 ---------- */
     { file:'index', expect:'does not carry the area unit', via:'index',
       find:"      areaText: function(v, u){ return v + ((u === 'm2') ? ' 平方公尺' : ' 平方公分'); },",
@@ -736,13 +767,6 @@ module.exports = {
     { file:'index', expect:'s5same', via:'index',
       find:"      s5same: function(total){ return '兩種做法都是 ' + total + ' 平方公分 —— 切法不會改變面積。'; },",
       replace:"      s5same: function(total){ return '兩種做法的答案是一樣的 —— 切法不會改變面積。'; }," },
-    { file:'index', expect:'gHint2Rect does not print', via:'index',
-      find:"      gHint2Rect: function(w, h){ return '提示 2：每一排 ' + w + ' 格、一共 ' + h + ' 排，算 ' + w + ' × ' + h + '。'; },",
-      replace:"      gHint2Rect: function(w, h){ return '提示 2：每一排幾格、一共幾排，乘起來。'; }," },
-    { file:'index', expect:'gHint2L does not print', via:'index',
-      find:"        return '提示 2：先當成完整的 ' + w + ' × ' + h + ' 大長方形，再把挖掉的 ' + nw + ' × ' + nh + ' 那一塊減掉。';",
-      replace:"        return '提示 2：先當成完整的大長方形，再把挖掉的那一塊減掉。';" },
-
     /* ---------- index.html：三層題庫 ---------- */
     { file:'index', expect:'marked answer is', via:'index',
       find:"        { stem:'一個長方形長 7 公分、寬 4 公分，面積是多少？', opts:['22 平方公分','11 平方公分','28 平方公分','28 公分'], ans:2,",
@@ -1140,7 +1164,11 @@ module.exports = {
                 'UF_W, UF_H, UF_SMALL, UF_BIG, UF_SMALL_X, UF_BIG_X, UF_TOP, UF_FONT, UF_LBL_DY, ' +
                 'gridBox, cellList, lCellList, lParts, partCellList, sideLabels, unitFigBoxes, ' +
                 'TILE_CASES, FORMULA_CASES, PERIM_SAME, PERIM_SAME_CASES, AREA_SAME, AREA_SAME_CASES, ' +
-                'UNIT_CASES, UNIT_ORDER, COMPOSITE_CASES, ROUNDS, roundArea, roundTrap}',
+                'UNIT_CASES, UNIT_ORDER, COMPOSITE_CASES, ' +
+                'GPICK, shuffle, pick, TILE_U, TILE, TILE_TRAY, TILE_H, GAME_TILE, tileX0, tileRows, tileTray, ' +
+                'SIDE_U, SIDE, SIDE_KEYS, SIDE_H, GAME_SIDE, sideSlot, FENCE, FENCE_H, GAME_FENCE, fenceU, fenceW, fenceOk, ' +
+                'UNIT_BIN, UNIT_CARD, UNIT_TRAY, UNIT_H, UNIT_ICON, GAME_UNIT, unitBin, unitTray, ' +
+                'CUT_U, CUT, CUT_H, GAME_CUT, cutX0, cutLines, segDist, cutPick, cutResult, cutInner, cutBoxes}',
     optionValueMax: CM2_PER_M2,
 
     check: function(data, I18N, fail){
@@ -1436,7 +1464,7 @@ module.exports = {
         let src = '';
         try { src = fs.readFileSync(target, 'utf8'); } catch (err){ src = ''; }
         src = src.replace(/<!--[\s\S]*?-->/g, ' ');
-        ['s1fig', 's2fig', 's3fig', 's5fig', 'gFig'].forEach(id => {
+        ['s1fig', 's2fig', 's3fig', 's5fig'].forEach(id => {
           const m = new RegExp('id="' + id + '"[^>]*viewBox="0 0 (\\d+) (\\d+)"').exec(src);
           if (!m) fail(`cannot find the ${id} viewBox, so its canvas-size check did not run`);
           else if (Number(m[1]) !== data.FIG_W || Number(m[2]) !== data.FIG_H)
@@ -1503,7 +1531,7 @@ module.exports = {
 
       /* ---------- 8. 每一組範例資料的筆數與內容 ---------- */
       const SIZES = { TILE_CASES:4, FORMULA_CASES:4, PERIM_SAME_CASES:4, AREA_SAME_CASES:3,
-                      UNIT_CASES:6, COMPOSITE_CASES:3, ROUNDS:5 };
+                      UNIT_CASES:6, COMPOSITE_CASES:3 };
       Object.keys(SIZES).forEach(key => {
         const arr = data[key];
         if (!Array.isArray(arr) || arr.length !== SIZES[key])
@@ -1733,73 +1761,561 @@ module.exports = {
         });
       });
 
-      /* --- 遊戲：鋪磚廠闖關 --- */
-      let gRect = 0, gSquare = 0, gL = 0;
-      (data.ROUNDS || []).forEach((r, i) => {
-        if (['rect', 'square', 'lshape'].indexOf(r.shape) < 0) return fail(`ROUND ${i+1}: unknown shape "${r.shape}"`);
-        inGrid('ROUNDS', r);
-        if (r.shape === 'rect'){
-          gRect++;
-          if (r.w === r.h) fail(`ROUND ${i+1}: a "rect" round is drawn ${r.w}x${r.h}, which is a square`);
+      /* --- 遊戲：鋪磚廠闖關（2026-10-04 改成五關五種玩法，§六之五） ---
+         每一關用自己的算法（數格子、列舉兩條邊、看尺的單位、把格子分成兩堆看是不是長方形）重算答案，
+         並**照遊戲自己的規則把每一題從頭玩一次**，證明一定解得完、而且解完一定是對的；
+         頁面的純函式（tileRows／sideSlot／fenceW／fenceOk／unitBin／unitTray／cutLines／cutPick／cutResult／cutBoxes）
+         拿整個題庫去呼叫、再和自己的幾何比；nearestOpen()、roundMiss()、shuffle() 從原始碼切出來真的跑；
+         只在 RENDER 裡、切不出來的關鍵規則用原始碼形狀守住（need()）。每一句說明逐個比數字、句子裡的算式逐條重算。
+         拖拉、點選、兩根手指、capture 遺失、375px 的實際尺寸由 teaching-workspace/game-harness/g4-area 的端對端測試驗。 */
+      {
+        const D = data, LANGS = ['zh', 'en'], W = 300;
+        let gsrc = '';
+        try { gsrc = fs.readFileSync(process.argv[2], 'utf8'); } catch (err){ gsrc = ''; }
+        if (!gsrc) fail('GAME: cannot read index.html, so the game checks did not run');
+        const src = gsrc.replace(/<!--[\s\S]*?-->/g, ' ');
+        const fin = v => typeof v === 'number' && isFinite(v);
+        const nums = t => (String(t).match(/\d+/g) || []).map(Number);
+        const seq = (where, text, want) => {
+          text = typeof text === 'string' ? text.replace(/^(提示|Hint) 2[:：]\s*/, '') : text;
+          if (typeof text !== 'string' || /undefined|NaN|null|\[object/.test(text)) return fail('GAME ' + where + ': text has undefined/NaN/null: ' + text);
+          if (nums(text).join() !== want.join()) fail('GAME ' + where + ': numbers should read ' + want.join() + ', got ' + nums(text).join() + ' — ' + text);
+          const r = gameArith(text);
+          r.problems.forEach(b => fail('GAME ' + where + ': ' + b + ' in: ' + text));
+          return r.verified;
+        };
+        const inside = (o, what, H) => { if (!(fin(o.x) && fin(o.y) && o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail('GAME ' + what + ' is outside the ' + W + '×' + H + ' board: ' + JSON.stringify(o)); };
+        const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+        const sq = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w:w, h:h });
+        const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return fail('GAME ' + what + ' ' + i + ' and ' + j + ' overlap'); };
+        /* 手機：375px 手機上卡片內寬約 289px，300 寬的畫板縮成約 0.963 倍 */
+        const scale = Math.min(1.5, 289 / W);
+        const tooSmall = (what, sz) => { if (!(sz * scale >= 44)) fail('GAME ' + what + ' is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+        let arithVerified = 0;
+
+        /* --- 五關的順序、RENDER、題目與提示 --- */
+        const TYPES = ['tile', 'side', 'fence', 'unit', 'cut'];
+        const order = (src.match(/var GAME_ORDER = \[([^\]]*)\]/) || [])[1];
+        if (order === undefined) fail('GAME: cannot find GAME_ORDER in index.html');
+        else {
+          const types = order.split(',').map(x => x.trim().replace(/^'|'$/g, ''));
+          if (types.join() !== TYPES.join()) fail('GAME_ORDER should be ' + TYPES.join() + ' (examples 1, 2, 3, 4, 5), got ' + types.join());
         }
-        if (r.shape === 'square'){
-          gSquare++;
-          if (r.w !== r.h) fail(`ROUND ${i+1}: a "square" round is drawn ${r.w}x${r.h}, which is not a square`);
+        const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+        const RB = {};
+        TYPES.forEach(t => {
+          RB[t] = body(t);
+          if (!RB[t]) fail('GAME: cannot cut RENDER.' + t + ' out of index.html');
+          LANGS.forEach(L => {
+            if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('GAME: gAsks.' + t + ' missing in ' + L);
+            if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('GAME: gHints.' + t + ' missing in ' + L);
+          });
+        });
+        const need = (k, re, what) => { if (!re.test(RB[k] || '')) fail('GAME ' + k + ': ' + what); };
+        ['GAME_TILE', 'GAME_SIDE', 'GAME_FENCE', 'GAME_UNIT', 'GAME_CUT'].forEach(k => {
+          if (!Array.isArray(D[k]) || D[k].length < 2) fail('GAME: ' + k + ' should be a pool of at least 2 entries (pick() of an empty pool crashes the round)');
+        });
+        if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(src)) fail('GAME: ahead mode no longer shows hint level 1 automatically');
+        if (!/if \(hintLevel >= 2\) gHintBtn\.disabled = true;/.test(src)) fail('GAME: the hint button is not disabled after the second level');
+        if (!/gSolved = false; gMistake = false; gCtx = \{\}; gGen\+\+;/.test(src)) fail('GAME: startRound() does not start a new board generation (gGen++) — a piece held across a restart could solve the new round');
+        if (!/if \(!e\.isPrimary\) return;/.test(src)) fail('GAME: a second finger can tap the board while the first finger is held elsewhere (only the first finger counts)');
+        if (!/if \(!e\.isPrimary \|\| P\.locked \|\| gSolved \|\| start \|\| gen !== gGen\) return;/.test(src)) fail('GAME: a second finger can pick up a piece while the first finger is held elsewhere');
+        if (!/if \(gen !== gGen\) return;/.test(src)) fail('GAME: a released piece does not check its board generation — a piece held across a restart could solve the new round');
+
+        /* --- 計分：沒犯錯 +20、犯過錯 +10；放錯一次 −5，最低 0（§三 中年級） --- */
+        if (!/var pts = gMistake \? 10 : 20;/.test(src)) fail('GAME scoring: a round should give +20 with no mistakes and +10 after mistakes');
+        {
+          const fsrc = extractFunction(src, 'roundMiss');
+          if (!fsrc) fail('GAME scoring: cannot find roundMiss() in index.html');
+          else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(([s0, want, shows]) => {
+            let r;
+            try { r = new Function('var gMistake = false, gScore = ' + s0 + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+            catch (e){ return fail('GAME scoring: roundMiss() could not run: ' + e.message); }
+            if (r.s !== want || String(r.shown) !== String(want)) fail('GAME scoring: a mistake at ' + s0 + ' leaves ' + r.s + ' — a mistake does not cost 5 (floored at 0)');
+            if ((r.html.indexOf('@MINUS@') >= 0) !== shows) fail('GAME scoring: at ' + s0 + ' points the "−5" note is ' + (shows ? 'missing' : 'shown although nothing was taken'));
+            if (r.html.indexOf('why') < 0 || !r.m) fail('GAME scoring: roundMiss() does not show the reason or record the mistake');
+          });
         }
-        if (r.shape === 'lshape'){
-          gL++;
-          if (!(r.nw >= 1 && r.nw < r.w && r.nh >= 1 && r.nh < r.h))
-            fail(`ROUND ${i+1}: the hole ${r.nw}x${r.nh} is not strictly inside the ${r.w}x${r.h} rectangle`);
-        }
-        const want = (r.shape === 'lshape') ? areaRef(r.w, r.h) - areaRef(r.nw, r.nh) : areaRef(r.w, r.h);
-        if (data.roundArea(r) !== want) fail(`ROUND ${i+1}: roundArea says ${data.roundArea(r)}, independently ${want}`);
-        const trap = (r.shape === 'lshape') ? areaRef(r.w, r.h) : perimeterRef(r.w, r.h);
-        if (data.roundTrap(r) !== trap) fail(`ROUND ${i+1}: roundTrap says ${data.roundTrap(r)}, independently ${trap}`);
-        if (trap === want)
-          fail(`ROUND ${i+1}: the trap distractor equals the answer (${want}), so a child who is right gets marked wrong`);
-        /* 從角上挖掉一塊長方形不會改變周長，所以**每一種形狀**都要驗一次：
-           面積等於周長的那一關，「算周長」也會走到正解上（2026-08-27 codex 審查）。 */
-        if (perimeterRef(r.w, r.h) === want)
-          fail(`ROUND ${i+1}: the area (${want}) equals the shape's perimeter, so perimeter reasoning reaches the key`);
-        if (!Array.isArray(r.opts) || r.opts.length !== 4){
-          fail(`ROUND ${i+1}: ${r.opts ? r.opts.length : 'no'} options, expected 4`); return;
-        }
-        for (let k = 0; k < 4; k++){
-          if (!Object.prototype.hasOwnProperty.call(r.opts, k)){
-            fail(`ROUND ${i+1}: option ${k} is a hole in the array, so the button would be blank`);
-          } else if (!Number.isInteger(r.opts[k])){
-            fail(`ROUND ${i+1}: option ${k} is not a whole number (${JSON.stringify(r.opts[k])})`);
-          } else if (r.opts[k] < 1 || r.opts[k] > areaRef(data.GRID_MAX_W, data.GRID_MAX_H)){
-            fail(`ROUND ${i+1}: option ${r.opts[k]} is outside 1~${areaRef(data.GRID_MAX_W, data.GRID_MAX_H)}`);
-          }
-        }
-        if (new Set(r.opts).size !== r.opts.length) fail(`ROUND ${i+1}: duplicate option values`);
-        if (!(r.ans >= 0 && r.ans < r.opts.length)){ fail(`ROUND ${i+1}: ans index out of range`); return; }
-        if (r.opts[r.ans] !== want) fail(`ROUND ${i+1}: the marked option is ${r.opts[r.ans]}, recomputed ${want}`);
-        if (r.opts.indexOf(trap) < 0)
-          fail(`ROUND ${i+1}: does not offer the trap value ${trap} as a distractor, which is what this game trains`);
         LANGS.forEach(L => {
           const d = I18N[L];
-          const prompt = (r.shape === 'lshape') ? d.gPromptL : (r.shape === 'square' ? d.gPromptSquare : d.gPromptRect);
-          const hint = (r.shape === 'lshape') ? d.gHint2L(r.w, r.h, r.nw, r.nh) : d.gHint2Rect(r.w, r.h);
-          [prompt, hint, d.gHint1].forEach(t => { if (/undefined|NaN/.test(t)) fail(`ROUND ${i+1} ${L}: ${t}`); });
-          if (r.shape === 'lshape'){
-            [r.w, r.h, r.nw, r.nh].forEach(v => {
-              if (!printsNum(hint, v)) fail(`ROUND ${i+1} ${L} gHint2L does not print ${v}`);
-            });
-          } else {
-            [r.w, r.h].forEach(v => {
-              if (!printsNum(hint, v)) fail(`ROUND ${i+1} ${L} gHint2Rect does not print ${v}`);
-            });
-          }
-          if (d.areaText(want, 'cm2').indexOf(UNIT_LABELS[L].cm2) < 0)
-            fail(`ROUND ${i+1} ${L}: the answer button does not carry the area unit`);
+          if (nums(d.gPts(20)).join() !== '20' || nums(d.gPts(10)).join() !== '10') fail('GAME gPts ' + L + ' does not show the points');
+          if (nums(d.gMinus).join() !== '5') fail('GAME gMinus ' + L + ' should say 5');
+          if (nums(d.gWin(85)).indexOf(85) < 0) fail('GAME gWin ' + L + ' does not show the score');
+          if (typeof d.gClear !== 'string' || !d.gClear) fail('GAME gClear missing in ' + L);
         });
-      });
-      if (!gRect) fail('ROUNDS never shows a rectangle');
-      if (!gSquare) fail('ROUNDS never shows a square');
-      if (!gL) fail('ROUNDS never shows a composite shape');
-      if ((data.ROUNDS || []).map(r => r.ans).every(x => x === 0)) fail('every game round has the answer first');
+
+        /* --- 觸控 ≥ 44px（版面數字一律從 index.html 讀） --- */
+        tooSmall('GPICK ' + D.GPICK, D.GPICK);
+        tooSmall('a tile strip (' + D.TILE_U + ' tall)', D.TILE_U);
+        tooSmall('a row to drop a strip on (' + D.TILE_U + ' tall)', D.TILE_U);
+        tooSmall('a digit card (' + D.SIDE_KEYS.size + ')', D.SIDE_KEYS.size);
+        tooSmall('the width box with its pad', D.SIDE.slot + 2 * D.SIDE.pad);
+        tooSmall('a unit card (' + D.UNIT_CARD.h + ' tall)', D.UNIT_CARD.h);
+        tooSmall('the gap between two grid lines to tap (' + D.CUT_U + ')', D.CUT_U);
+        /* 格線不是拿得起來的東西：點的範圍是線的兩邊各 CUT.hit。⚠️ 刻意的例外（和三年級 numbers 的刻度一樣）：
+           兩條線只隔一格，範圍不能大到蓋住整格 —— 點在格子中間（沒有瞄準任何一條線）要當成沒點到，不可以被判成切錯扣分。
+           所以這裡要的是「至少 32（手機上約 31px）、而且格子中間留一塊空白」，不是 44。 */
+        if (!(2 * D.CUT.hit >= 32)) fail('GAME cut: the tap band around a grid line is ' + 2 * D.CUT.hit + ' — under 32');
+        if (!(D.CUT.hit < D.CUT_U / 2 - 2)) fail('GAME cut: a grid line\'s tap band (' + D.CUT.hit + ') reaches the middle of a cell, so a tap in a cell would cut');
+        [D.SIDE_KEYS.size, D.UNIT_CARD.h].forEach(s => { if (s < D.GPICK) fail('GAME: a piece of size ' + s + ' is smaller than GPICK ' + D.GPICK); });
+        need('fence', /addPiece\(B, \{ w:GPICK, h:GPICK, cx:F\.x0 \+ w \* u, cy:F\.knobY,/, 'the ↔ knob is not GPICK × GPICK');
+        need('tile', /addPiece\(B, \{ w:len \* U, h:U, cx:150, cy:TILE_TRAY\.y\[i\],/, 'the strips are not len × TILE_U, centred in the tray');
+        need('side', /addPiece\(B, \{ w:SIDE_KEYS\.size, h:SIDE_KEYS\.size,/, 'the digit cards are not SIDE_KEYS.size square');
+        need('unit', /addPiece\(B, \{ w:UNIT_CARD\.w, h:UNIT_CARD\.h,/, 'the unit cards are not UNIT_CARD sized');
+
+        /* --- shuffle()：切出來真的跑，必須是排列、而且真的會換順序 --- */
+        let shuffleFn = null;
+        {
+          const fsrc = extractFunction(src, 'shuffle');
+          if (!fsrc) fail('GAME: cannot find shuffle() in index.html');
+          else { try { shuffleFn = new Function(fsrc + '\nreturn shuffle;')(); } catch (e){ fail('GAME: shuffle() could not be evaluated: ' + e.message); } }
+          if (shuffleFn){
+            const seen = new Set();
+            for (let i = 0; i < 400; i++){
+              const a = [1, 2, 3, 4], r = shuffleFn(a);
+              if (r.slice().sort().join() !== '1,2,3,4' || a.join() !== '1,2,3,4'){ fail('GAME shuffle(): not a permutation of its input (or it changed the input)'); break; }
+              seen.add(r.join());
+            }
+            if (seen.size < 20) fail('GAME shuffle(): only ' + seen.size + ' of 24 orders in 400 draws — it does not really shuffle');
+          }
+        }
+
+        /* --- nearestOpen()：從原始碼切出來真的跑 --- */
+        let nearestOpen = null;
+        {
+          const fsrc = extractFunction(src, 'nearestOpen');
+          if (!fsrc) fail('GAME: cannot find nearestOpen() in index.html');
+          else { try { nearestOpen = new Function(fsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('GAME: nearestOpen() could not be evaluated: ' + e.message); } }
+          if (nearestOpen){
+            const two = [{ id:0, cx:100, cy:100, hw:60, hh:20 }, { id:1, cx:170, cy:100, hw:10, hh:10 }];
+            const r0 = nearestOpen(two, { x:155, y:100 }, 6);
+            if (!r0 || r0.id !== 0) fail('GAME nearestOpen(): a point inside the big box near the small one is given to the small one (measure to the box, not the centre)');
+            const done = [{ id:0, cx:100, cy:100, hw:20, hh:20, done:true }, { id:1, cx:142, cy:100, hw:20, hh:20 }];
+            if (nearestOpen(done, { x:119, y:100 }, 6) !== null) fail('GAME nearestOpen(): a drop nearest to a finished slot skips it and lands in the next slot');
+            if (nearestOpen(done, { x:300, y:300 }, 6) !== null) fail('GAME nearestOpen(): a drop far from every slot is accepted');
+            const edge = [{ id:0, cx:100, cy:100, hw:20, hh:20 }];
+            if (!nearestOpen(edge, { x:125.5, y:100 }, 6)) fail('GAME nearestOpen(): a drop inside the pad is refused');
+            if (nearestOpen(edge, { x:126.5, y:100 }, 6)) fail('GAME nearestOpen(): a drop outside the pad is accepted');
+          }
+        }
+        /* 自己的「最近的方框」：到方框的距離最小；一樣近比到中心 —— 回傳**物件**，不是 id */
+        const nearestBox = (list, p, pad) => {
+          let best = null, bd = Infinity, bc = Infinity;
+          for (const b of list){
+            const dx = Math.abs(p.x - b.cx), dy = Math.abs(p.y - b.cy);
+            if (dx > b.hw + pad || dy > b.hh + pad) continue;
+            const dd = Math.hypot(Math.max(0, dx - b.hw), Math.max(0, dy - b.hh)), dc = Math.hypot(dx, dy);
+            if (dd < bd - 1e-9 || (Math.abs(dd - bd) < 1e-9 && dc < bc)){ bd = dd; bc = dc; best = b; }
+          }
+          return best;
+        };
+
+        /* ================= 第 1 關：鋪一排 ================= */
+        {
+          const U = D.TILE_U, T = D.TILE;
+          need('tile', /var row = nearestOpen\(rows, pt, TILE\.pad\);/, 'a strip is not given to the nearest row');
+          need('tile', /if \(len !== w\)\{ roundMiss\(len < w \? d\.gTileShort\(len, w\) : d\.gTileLong\(len, w\)\); return false; \}/, 'a strip of the wrong length is accepted (or explained the wrong way round)');
+          need('tile', /if \(n === h\)\{/, 'the round does not end exactly when every row is laid');
+          need('tile', /row\.done = true; row\.el\.className = 'growfill'; n\+\+;/, 'a laid row is not marked done, so one row laid h times would finish the round (codex round 1)');
+          D.GAME_TILE.forEach((e, i) => {
+            const where = 'tile[' + i + '] ' + e.w + '×' + e.h;
+            if (!(Number.isInteger(e.w) && Number.isInteger(e.h) && e.w >= 2 && e.h >= 2)) return fail('GAME ' + where + ': sides must be whole numbers ≥ 2');
+            if ((e.w + 1) * U > W) fail('GAME ' + where + ': the w + 1 strip (' + (e.w + 1) * U + 'px) does not fit the board');
+            /* 排：自己算每一排的位置，和 tileRows() 比 */
+            const rows = D.tileRows(e.w, e.h), x0 = D.tileX0(e.w);
+            if (rows.length !== e.h) fail('GAME ' + where + ': tileRows gives ' + rows.length + ' rows');
+            rows.forEach((r, k) => {
+              const want = { cx:x0 + e.w * U / 2, cy:T.y + k * U + U / 2, hw:e.w * U / 2, hh:U / 2 };
+              ['cx', 'cy', 'hw', 'hh'].forEach(f => { if (Math.abs(r[f] - want[f]) > 1e-9) fail('GAME ' + where + ' row ' + k + ': ' + f + ' is ' + r[f] + ', the drawn row says ' + want[f]); });
+              if (r.done) fail('GAME ' + where + ': a row starts already laid');
+            });
+            inside({ x:x0, y:T.y, w:e.w * U, h:e.h * U }, where + ' rectangle', D.TILE_H);
+            inside({ x:x0, y:T.lblY, w:e.w * U, h:T.lblH }, where + ' length label', D.TILE_H);
+            if (T.lblY + T.lblH > T.y) fail('GAME ' + where + ': the length label runs into the rectangle');
+            /* 托盤：三條，w − 1、w、w + 1，一定是同一組，在畫板裡、不互相碰、不碰長方形（含 pad） */
+            for (let rep = 0; rep < 30; rep++){
+              const tray = D.tileTray(e.w);
+              if (tray.slice().sort((a, b) => a - b).join() !== [e.w - 1, e.w, e.w + 1].join()){ fail('GAME ' + where + ': the tray is ' + tray.join(',') + ', not w − 1, w, w + 1'); break; }
+            }
+            if (D.TILE_TRAY.y.length !== 3) fail('GAME tile: TILE_TRAY.y should hold three rows for three strips');
+            const boxes = [e.w - 1, e.w, e.w + 1].map((len, k) => sq(150, D.TILE_TRAY.y[k], len * U, U));
+            boxes.forEach((b, k) => {
+              inside(b, where + ' tray strip ' + k, D.TILE_H);
+              if (hit(b, { x:x0 - T.pad, y:T.y - T.pad, w:e.w * U + 2 * T.pad, h:e.h * U + 2 * T.pad })) fail('GAME ' + where + ': a tray strip sits inside the rows\' drop zone, so picking it up and letting go would lay it');
+            });
+            noHits(boxes.map(b => ({ x:b.x, y:b.y - 4, w:b.w, h:b.h + 8 })), where + ' tray strips (with 4px between)');
+            /* nearestOpen() 在每一排：排裡的每一點（每 2px）都判給那一排；兩排之間的重疊帶判給比較近的 */
+            if (nearestOpen){
+              const list = rows.map((r, k) => Object.assign({ id:k }, r));
+              let bad = 0;
+              for (let y = T.y - T.pad + 0.5; y < T.y + e.h * U + T.pad; y += 1){
+                for (let x = x0 - T.pad + 0.5; x < x0 + e.w * U + T.pad; x += 3){
+                  const g = nearestOpen(list, { x, y }, T.pad), o = nearestBox(list, { x, y }, T.pad);
+                  if ((g && g.id) !== (o && o.id)) bad++;
+                }
+              }
+              if (bad) fail('GAME ' + where + ': nearestOpen() disagrees with the nearest row at ' + bad + ' points');
+            }
+            /* 照規則玩一遍：只有 w 格的那一條放得進去；放滿 h 排剛好是 w × h 格 */
+            let laid = 0, cells = 0;
+            rows.forEach(() => { [e.w - 1, e.w, e.w + 1].forEach(len => { if (len === e.w){ laid++; cells += len; } }); });
+            if (laid !== e.h || cells !== areaRef(e.w, e.h)) fail('GAME ' + where + ': playing by the rules lays ' + cells + ' squares, not ' + areaRef(e.w, e.h));
+            LANGS.forEach(L => {
+              const d = I18N[L];
+              const top = d.sideTop(e.w, D.UNIT_CM);
+              if (nums(top).join() !== String(e.w)) fail('GAME ' + where + ' ' + L + ': the length label "' + top + '" does not read ' + e.w);
+              arithVerified += seq(where + ' gTileDone ' + L, d.gTileDone(e.w, e.h, areaRef(e.w, e.h)), [e.w, e.h, e.w, e.h, areaRef(e.w, e.h), areaRef(e.w, e.h)]);
+              seq(where + ' gTileShort ' + L, d.gTileShort(e.w - 1, e.w), L === 'zh' ? [e.w - 1, e.w, 1] : [e.w - 1, e.w, 1]);
+              seq(where + ' gTileLong ' + L, d.gTileLong(e.w + 1, e.w), L === 'zh' ? [e.w + 1, e.w, 1] : [e.w + 1, 1, e.w]);
+              for (let n = 0; n <= e.h; n++){
+                seq(where + ' gTileNow ' + L, d.gTileNow(n, e.w), n ? [n, e.w] : [e.w]);
+                if (n < e.h) seq(where + ' gTile2 ' + L, d.gTile2(e.w, e.h, n), [e.w, n, e.h - n]);
+                if (n >= 1) seq(where + ' gTileRow ' + L, d.gTileRow(n, e.w), [n, e.w]);
+              }
+              if (d.unitName && UNIT_LABELS[L] && d.gTileDone(e.w, e.h, 1).indexOf(UNIT_LABELS[L].cm2) < 0) fail('GAME ' + where + ' ' + L + ': the finishing line does not give the area in ' + UNIT_LABELS[L].cm2);
+            });
+          });
+        }
+
+        /* ================= 第 2 關：找寬 ================= */
+        {
+          const U = D.SIDE_U, S = D.SIDE, K = D.SIDE_KEYS;
+          need('side', /if \(!nearestOpen\(\[S\], pt, SIDE\.pad\)\) return false;/, 'a digit card is not dropped by the width box\'s own drop zone');
+          need('side', /if \(v !== h\)\{ roundMiss\(p < e\.A \? d\.gSideSmall\(w, v, p, e\.A\) : d\.gSideBig\(w, v, p, e\.A\)\); return false; \}/, 'a wrong width is accepted (or called too small/too big the wrong way round)');
+          need('side', /var e = pick\(GAME_SIDE\), w = e\.w, h = otherSide\(e\.A, e\.w\)/, 'the width is not area ÷ length');
+          const keys = [];
+          for (let v = 0; v <= 9; v++) keys.push(sq(150 + ((v % 5) - 2) * K.step, K.y + Math.floor(v / 5) * K.rowStep, K.size, K.size));
+          keys.forEach((k, v) => inside(k, 'side digit card ' + v, D.SIDE_H));
+          noHits(keys, 'side digit cards');
+          D.GAME_SIDE.forEach((e, i) => {
+            const where = 'side[' + i + '] ' + e.A + '÷' + e.w;
+            const h = otherSideRef(e.A, e.w);
+            if (h === null) return fail('GAME ' + where + ': the area is not a whole number of rows of ' + e.w);
+            if (D.otherSide(e.A, e.w) !== h) fail('GAME ' + where + ': otherSide says ' + D.otherSide(e.A, e.w) + ', independently ' + h);
+            if (!(h >= 1 && h <= 9)) fail('GAME ' + where + ': the width ' + h + ' is not one digit card');
+            if (h > e.w) fail('GAME ' + where + ': the width ' + h + ' is longer than the length ' + e.w + ' — the drawing would call the longer side 寬');
+            if (h === e.w) fail('GAME ' + where + ': a square — the "length" and "width" labels would both be the same side');
+            /* 畫面：長方形照比例、在畫板裡；寬的框在長方形左邊、和它的高置中；面積標籤在下面、不碰數字卡 */
+            const rect = { x:S.x0, y:S.y0, w:e.w * U, h:h * U };
+            inside(rect, where + ' rectangle', D.SIDE_H);
+            inside({ x:S.x0, y:S.lblY, w:e.w * U, h:S.lblH }, where + ' length label', D.SIDE_H);
+            if (S.lblY + S.lblH > S.y0) fail('GAME ' + where + ': the length label runs into the rectangle');
+            const area = { x:S.x0, y:S.y0 + h * U + S.areaGap, w:e.w * U, h:24 };
+            inside(area, where + ' area label', D.SIDE_H);
+            if (keys.some(k => hit(k, area))) fail('GAME ' + where + ': the area label runs into the digit cards');
+            const slot = D.sideSlot(e);
+            if (slot.cx !== S.slotX || Math.abs(slot.cy - (S.y0 + h * U / 2)) > 1e-9) fail('GAME ' + where + ': the width box is not centred on the rectangle\'s height');
+            const sb = sq(slot.cx, slot.cy, slot.hw * 2, slot.hh * 2);
+            inside(sb, where + ' width box', D.SIDE_H);
+            if (sb.x + sb.w + S.pad > S.x0) fail('GAME ' + where + ': the width box\'s drop zone reaches the rectangle');
+            inside({ x:0, y:slot.cy - slot.hh - 22, w:S.x0 - 2, h:20 }, where + ' "width" label', D.SIDE_H);
+            inside({ x:0, y:slot.cy + slot.hh + 2, w:S.x0 - 2, h:20 }, where + ' unit label under the box', D.SIDE_H);
+            if (keys.some(k => hit(k, { x:sb.x - S.pad, y:sb.y - S.pad, w:sb.w + 2 * S.pad, h:sb.h + 2 * S.pad }))) fail('GAME ' + where + ': a digit card sits inside the width box\'s drop zone');
+            /* 照規則玩一遍：每一張卡 v，只有 v × 長 ＝ 面積 的那一張收；說「少」「多」要真的少、多 */
+            let okCount = 0;
+            for (let v = 0; v <= 9; v++){
+              if (v * e.w === e.A){ okCount++; continue; }
+              LANGS.forEach(L => {
+                const d = I18N[L], p = areaRef(e.w, v);
+                const t = p < e.A ? d.gSideSmall(e.w, v, p, e.A) : d.gSideBig(e.w, v, p, e.A);
+                arithVerified += seq(where + ' wrong card ' + v + ' ' + L, t, [v, e.w, v, p, e.A]);
+                const saysLess = L === 'zh' ? /少/.test(t) : /less than/.test(t), saysMore = L === 'zh' ? /多/.test(t) : /more than/.test(t);
+                if (p < e.A ? !(saysLess && !saysMore) : !(saysMore && !saysLess)) fail('GAME ' + where + ' ' + L + ': card ' + v + ' gives ' + p + ' vs ' + e.A + ' but the reason says otherwise: ' + t);
+              });
+            }
+            if (okCount !== 1) fail('GAME ' + where + ': ' + okCount + ' digit cards give the area — exactly one should');
+            LANGS.forEach(L => {
+              const d = I18N[L];
+              arithVerified += seq(where + ' gSideDone ' + L, d.gSideDone(e.A, e.w, h), [e.A, e.w, h, h, e.w, h, e.A]);
+              arithVerified += seq(where + ' gSideLine ' + L, d.gSideLine(e.w, h, e.A), [e.w, h, e.A]);
+              seq(where + ' gSideNow ' + L, d.gSideNow(e.w, e.A), [e.w, e.A]);
+              seq(where + ' gSide2 ' + L, d.gSide2(e.A, e.w), [e.w, e.A, e.A, e.w]);
+              seq(where + ' gSideArea ' + L, d.gSideArea(e.A), [e.A]);
+            });
+          });
+        }
+
+        /* ================= 第 3 關：拉籬笆 ================= */
+        {
+          const F = D.FENCE;
+          need('fence', /var e = pick\(GAME_FENCE\), S = e\.P \/ 2, u = fenceU\(S\), F = FENCE, w = S - 1;/, 'the fence does not start at the long thin shape');
+          need('fence', /if \(knob\.busy\(\)\) return;/, 'the button judges while ↔ is still held');
+          need('fence', /if \(!fenceOk\(e, w\)\)\{ roundMiss\(d\.gFenceNo\(w, h, w \* h, e\.A\)\); return; \}/, 'a shape with the wrong area is accepted');
+          need('fence', /axis:'x', minX:F\.x0 \+ u, maxX:F\.x0 \+ \(S - 1\) \* u,/, '↔ is not limited to 1 … S − 1 columns');
+          need('fence', /onPlace:function\(P\)\{ var nw = fenceW\(S, P\.cx\); if \(nw !== w && !gSolved\)\{ w = nw; draw\(\); \} \}/, 'the drawn shape does not follow ↔');
+          D.GAME_FENCE.forEach((e, i) => {
+            const where = 'fence[' + i + '] P' + e.P + ' A' + e.A;
+            if (!(Number.isInteger(e.P) && e.P % 2 === 0 && e.P >= 8)) return fail('GAME ' + where + ': the fence must be an even whole number ≥ 8');
+            const S = e.P / 2, sols = [];
+            for (let w = 1; w <= S - 1; w++){
+              const h = S - w;
+              if (perimeterRef(w, h) !== e.P) fail('GAME ' + where + ': ' + w + ' × ' + h + ' does not have perimeter ' + e.P);
+              const ok = areaRef(w, h) === e.A;
+              if (ok) sols.push(w);
+              if (D.fenceOk(e, w) !== ok) fail('GAME ' + where + ': fenceOk(' + w + ') says ' + D.fenceOk(e, w) + ', independently ' + ok);
+            }
+            [0, S, -1, S + 1].forEach(w => { if (D.fenceOk(e, w)) fail('GAME ' + where + ': fenceOk accepts ' + w + ' columns, which is not a rectangle of this fence'); });
+            if (!sols.length) fail('GAME ' + where + ': no rectangle of this fence has area ' + e.A + ' — unsolvable');
+            if (sols.indexOf(S - 1) >= 0) fail('GAME ' + where + ': the starting shape already has the target area');
+            if (e.A === e.P) fail('GAME ' + where + ': the target area equals the fence length — perimeter reasoning lands on it');
+            const u = D.fenceU(S);
+            if (!(u >= 1 && (S - 1) * u <= F.span)) fail('GAME ' + where + ': ' + (S - 1) + ' columns of ' + u + 'px do not fit the span ' + F.span);
+            /* 每一種形狀都畫得下：長方形、上面與左邊的邊長標籤、目標標籤、↔ 與軌道 */
+            for (let w = 1; w <= S - 1; w++){
+              const h = S - w, yt = F.yb - h * u;
+              const r = { x:F.x0, y:yt, w:w * u, h:h * u };
+              inside(r, where + ' shape ' + w + '×' + h, D.FENCE_H);
+              const top = { x:F.x0 + w * u / 2 - 40, y:yt - F.lblH - 2, w:80, h:F.lblH };
+              inside(top, where + ' top label for ' + w + '×' + h, D.FENCE_H);
+              if (top.y < F.goalY + F.goalH) fail('GAME ' + where + ': the top label of ' + w + '×' + h + ' runs into the target label');
+              const left = { x:0, y:yt + h * u / 2 - F.lblH / 2, w:F.lblW, h:F.lblH };
+              inside(left, where + ' left label', D.FENCE_H);
+              if (left.x + left.w > F.x0) fail('GAME ' + where + ': the left label runs into the shape');
+              LANGS.forEach(L => {
+                const t = I18N[L].lenText(Math.max(w, h), D.UNIT_CM), est = String(t).length * 9.5;
+                if (est > F.lblW) fail('GAME ' + where + ' ' + L + ': "' + t + '" (~' + est + 'px) is wider than the left label ' + F.lblW);
+              });
+              const knob = sq(F.x0 + w * u, F.knobY, D.GPICK, D.GPICK);
+              inside(knob, where + ' ↔ at ' + w, D.FENCE_H);
+              if (knob.y < F.yb) fail('GAME ' + where + ': ↔ overlaps the shape\'s bottom edge');
+            }
+            /* fenceW()：拖到 x 時是幾格寬 —— 和自己的「最近的角」比，每 0.5px */
+            let bad = 0;
+            for (let x = F.x0 - 30; x <= F.x0 + S * u + 30; x += 0.5){
+              let bj = 1, bd = Infinity;
+              for (let j = 1; j <= S - 1; j++){ const dd = Math.abs(F.x0 + j * u - x); if (dd < bd - 1e-9){ bd = dd; bj = j; } }
+              const got = D.fenceW(S, x);
+              if (got !== bj && Math.abs(Math.abs(F.x0 + got * u - x) - bd) > 1e-9) bad++;
+            }
+            if (bad) fail('GAME ' + where + ': fenceW() picks a corner that is not the nearest at ' + bad + ' points');
+            LANGS.forEach(L => {
+              const d = I18N[L];
+              for (let w = 1; w <= S - 1; w++){
+                const h = S - w;
+                seq(where + ' gFenceNow ' + L, d.gFenceNow(e.P, w, h), [e.P, w, h]);
+                if (sols.indexOf(w) < 0) arithVerified += seq(where + ' gFenceNo ' + w + ' ' + L, d.gFenceNo(w, h, areaRef(w, h), e.A), [w, h, areaRef(w, h), e.A]);
+                else arithVerified += seq(where + ' gFenceDone ' + L, d.gFenceDone(w, h, e.A, e.P), [w, h, e.A, e.P]);
+              }
+              seq(where + ' gFence2 ' + L, d.gFence2(S, e.A), [S, S, e.A]);
+              seq(where + ' gFenceGoal ' + L, d.gFenceGoal(e.A), [e.A]);
+            });
+          });
+        }
+
+        /* ================= 第 4 關：貼單位 ================= */
+        {
+          const BN = D.UNIT_BIN, C = D.UNIT_CARD, T = D.UNIT_TRAY;
+          /* 卡片的字級：這裡自己定一份，再對頁面的 CSS 驗 */
+          const CARD_FONT = 13;
+          if (src.indexOf('.gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-size:' + CARD_FONT + 'px;') < 0) fail('GAME unit: the .gcard font size is not ' + CARD_FONT + 'px, so the card-width estimate is off');
+          need('unit', /var bin = nearestOpen\(bins, pt, 8\);/, 'a card is not given to the nearest basket');
+          need('unit', /if \(bin\.i !== want\)\{ roundMiss\(d\.gUnitWrong\(/, 'a card in the wrong basket is accepted');
+          need('unit', /var c = P\.data, want = unitBin\(c\), u = UNIT_ORDER\[want\];/, 'the basket is not decided by unitBin()');
+          need('unit', /unitTray\(set\)\.map\(function\(c, i\)\{/, 'the tray is not laid out by unitTray()');
+          if (D.UNIT_ORDER.join() !== 'cm2,m2') fail('GAME unit: the baskets assume UNIT_ORDER cm2, m2');
+          const bins = [0, 1].map(i => ({ id:i, cx:BN.x[i] + BN.w / 2, cy:BN.y + BN.h / 2, hw:BN.w / 2, hh:BN.h / 2 }));
+          bins.forEach((b, i) => inside(sq(b.cx, b.cy, BN.w, BN.h), 'unit basket ' + i, D.UNIT_H));
+          if (BN.x[0] + BN.w > BN.x[1]) fail('GAME unit: the two baskets overlap');
+          const tray = [0, 1, 2, 3].map(i => sq(150 + (i % 2 ? 1 : -1) * T.step / 2, T.y + Math.floor(i / 2) * T.rowStep, C.w, C.h));
+          tray.forEach((b, i) => {
+            inside(b, 'unit tray card ' + i, D.UNIT_H);
+            if (b.y < BN.y + BN.h + 8) fail('GAME unit: tray card ' + i + ' sits inside a basket\'s drop zone');
+          });
+          noHits(tray, 'unit tray cards');
+          /* 籃子裡最多兩張：兩個位置都在籃子裡、在標籤下面、不互相碰 */
+          const placed = [0, 1].map(n => sq(0, BN.y + BN.first + n * BN.step, C.w, C.h));
+          if (placed[0].y < BN.y + BN.lbl) fail('GAME unit: the first placed card covers the basket label');
+          if (placed[1].y + placed[1].h > BN.y + BN.h) fail('GAME unit: the second placed card hangs out of the basket');
+          if (placed[0].y + placed[0].h > placed[1].y) fail('GAME unit: two placed cards overlap');
+          if (C.w > BN.w) fail('GAME unit: a card is wider than a basket');
+          if (nearestOpen){
+            let bad = 0;
+            for (let x = BN.x[0] - 8 + 0.5; x < BN.x[1] + BN.w + 8; x += 0.5){
+              const p = { x, y:BN.y + BN.h / 2 }, g = nearestOpen(bins, p, 8), o = nearestBox(bins, p, 8);
+              if ((g && g.id) !== (o && o.id)) bad++;
+            }
+            if (bad) fail('GAME unit: nearestOpen() disagrees with the nearest basket at ' + bad + ' points across the two baskets');
+          }
+          D.GAME_UNIT.forEach((set, si) => {
+            const where = 'unit[' + si + ']';
+            if (!Array.isArray(set) || set.length !== 4) return fail('GAME ' + where + ': a set should have 4 cards');
+            const want = set.map(c => D.UNIT_ORDER.indexOf(areaUnitRef(c.len)));
+            set.forEach((c, k) => { if (D.unitBin(c) !== want[k]) fail('GAME ' + where + ' card ' + k + ': unitBin says ' + D.unitBin(c) + ', the ruler says ' + want[k]); });
+            if (want.filter(x => x === 0).length !== 2) fail('GAME ' + where + ': not two cards per basket (' + want.join(',') + ') — a basket holds two');
+            if (!set.some(c => c.len === 'cm' && Math.max(c.a, c.b) >= 100)) fail('GAME ' + where + ': no big thing measured in cm — the set never tests "the unit follows the ruler, not the size"');
+            set.forEach((c, k) => {
+              if (!(Number.isInteger(c.a) && Number.isInteger(c.b) && c.a > 0 && c.b > 0)) fail('GAME ' + where + ' card ' + k + ': sides must be positive whole numbers');
+              if (!D.UNIT_ICON[c.key]) fail('GAME ' + where + ': no icon for ' + c.key);
+              /* 量出來的數字要是那個東西真實的大小（換成公分比，容許 ±25%／±40%）—— 不然「單位跟著尺走」的例子本身就是假的 */
+              const real = GAME_REAL_CM[c.key];
+              if (!real) fail('GAME ' + where + ': this config has no real-life size for ' + c.key);
+              else {
+                const cm = c.len === 'm' ? [c.a * CM_PER_M, c.b * CM_PER_M] : [c.a, c.b];
+                if (Math.abs(cm[0] - real[0]) > real[0] * 0.25 || Math.abs(cm[1] - real[1]) > real[1] * 0.4) fail('GAME ' + where + ': ' + c.key + ' measured ' + c.a + ' × ' + c.b + ' ' + c.len + ' is not its real-life size ' + real.join(' × ') + ' cm');
+              }
+              LANGS.forEach(L => {
+                const d = I18N[L], name = d.gObj && d.gObj[c.key];
+                if (!name) return fail('GAME ' + where + ': gObj.' + c.key + ' missing in ' + L);
+                if (d.objectNames[c.key] && (L === 'zh' ? d.objectNames[c.key] !== name : d.objectNames[c.key].split(' ').indexOf(name.split(' ')[0]) < 0)) fail('GAME ' + where + ' ' + L + ': gObj.' + c.key + ' "' + name + '" is not the lesson\'s name "' + d.objectNames[c.key] + '"');
+                const sides = d.lenText(c.a, c.len) + ' × ' + d.lenText(c.b, c.len), u = D.UNIT_ORDER[want[k]];
+                if (nums(sides).join() !== [c.a, c.b].join() || sides.indexOf(UNIT_LABELS[L][c.len]) < 0) fail('GAME ' + where + ' ' + L + ': the card reads "' + sides + '"');
+                /* 卡片上的字放得下（中文字 14px 寬、其他字 0.62 字寬，故意高估） */
+                [D.UNIT_ICON[c.key] + ' ' + name, sides].forEach(t => {
+                  let em = 0;
+                  for (const ch of t) em += /[　-鿿＀-￯]/.test(ch) ? 1 : /[\u{1F000}-\u{1FFFF}☀-➿]/u.test(ch) ? 1.2 : ch === ' ' ? 0.3 : /[0-9×]/.test(ch) ? 0.6 : 0.62;
+                  if (em * CARD_FONT > C.w - 8) fail('GAME ' + where + ' ' + L + ': "' + t + '" (~' + Math.round(em * CARD_FONT) + 'px) does not fit a ' + C.w + 'px card');
+                });
+                const wrong = d.gUnitWrong(name, sides, d.unitRuler[u], d.unitName[u]);
+                seq(where + ' gUnitWrong ' + c.key + ' ' + L, wrong, [c.a, c.b]);
+                /* 尺的名字要在「邊長」與「面積單位」之外另外說一次（公分 也藏在 300 公分、平方公分 裡） */
+                const rest = wrong.split(sides).join(' ').split(UNIT_NAME[L][u]).join(' ');
+                if (rest.indexOf(UNIT_RULER[L][u]) < 0 || wrong.indexOf(UNIT_NAME[L][u]) < 0) fail('GAME ' + where + ' ' + L + ': the reason for ' + c.key + ' does not name the ruler "' + UNIT_RULER[L][u] + '" and the unit "' + UNIT_NAME[L][u] + '"');
+                const okT = d.gUnitOk(name, d.unitRuler[u], d.unitName[u]);
+                if (okT.indexOf(UNIT_NAME[L][u]) < 0) fail('GAME ' + where + ' ' + L + ': gUnitOk does not name ' + UNIT_NAME[L][u]);
+                const h2 = d.gUnit2(name, d.unitRuler[u], d.gBin[u]);
+                if (h2.indexOf(d.gBin[u]) < 0 || h2.indexOf(UNIT_RULER[L][u]) < 0) fail('GAME ' + where + ' ' + L + ': hint 2 for ' + c.key + ' does not name the basket and the ruler');
+              });
+            });
+            /* 托盤：每一種洗法都要是這一組的排列；不可以是答案的排法 */
+            {
+              let under = 0, first = 0;
+              for (let rep = 0; rep < 600; rep++){
+                const t = D.unitTray(set);
+                if (t.length !== 4 || t.some(c => set.indexOf(c) < 0) || new Set(t).size !== 4){ fail('GAME ' + where + ': unitTray() is not a permutation of the set'); break; }
+                const b = t.map(c => D.UNIT_ORDER.indexOf(areaUnitRef(c.len)));
+                if (b.every((x, i) => x === i % 2)) under++;
+                if (b.every((x, i) => i === 0 || b[i - 1] <= x)) first++;
+              }
+              if (under) fail('GAME ' + where + ': the tray started with every card under its own basket ' + under + ' times in 600');
+              if (first) fail('GAME ' + where + ': the tray started with the cm² cards first ' + first + ' times in 600');
+            }
+          });
+          LANGS.forEach(L => {
+            const d = I18N[L];
+            ['cm2', 'm2'].forEach(u => {
+              if (!(d.gBin && d.gBin[u])) return fail('GAME unit: gBin.' + u + ' missing in ' + L);
+              if (d.gBin[u].indexOf(UNIT_LABELS[L][u]) < 0) fail('GAME unit ' + L + ': the basket label "' + d.gBin[u] + '" is not ' + UNIT_LABELS[L][u]);
+              if (String(d.gBin[u]).length * 16 * (L === 'zh' ? 1 : 0.62) > BN.w - 8) fail('GAME unit ' + L + ': the basket label "' + d.gBin[u] + '" is wider than the basket');
+            });
+            seq('unit gUnitNow ' + L, d.gUnitNow(3, 4), [3, 4]);
+          });
+        }
+
+        /* ================= 第 5 關：切一刀 ================= */
+        {
+          const U = D.CUT_U, C = D.CUT;
+          need('cut', /var L = cutPick\(e, pt\);\s*\n\s*if \(!L\) return;/, 'a tap is not resolved by cutPick()');
+          need('cut', /if \(!r\.ok\)\{ roundMiss\(d\.gCutBad\(r\.rect\.w, r\.rect\.h\)\); return; \}/, 'a cut that leaves a non-rectangle is accepted');
+          if (!/if \(B\.onBoardTap && !gSolved\) B\.onBoardTap\(pt\);/.test(src)) fail('GAME cut: a tap on the board is not passed to the round (or still works after the round is solved)');
+          /* 自己的線段距離（軸對齊的線段） */
+          const dSeg = (L, p) => L.dir === 'h'
+            ? Math.hypot(p.x < L.x1 ? L.x1 - p.x : (p.x > L.x2 ? p.x - L.x2 : 0), p.y - L.y1)
+            : Math.hypot(p.x - L.x1, p.y < L.y1 ? L.y1 - p.y : (p.y > L.y2 ? p.y - L.y2 : 0));
+          D.GAME_CUT.forEach((e, i) => {
+            const where = 'cut[' + i + '] ' + e.w + '×' + e.h + '−' + e.nw + '×' + e.nh;
+            if (!(e.nw >= 1 && e.nw < e.w && e.nh >= 1 && e.nh < e.h)) return fail('GAME ' + where + ': the missing corner is not strictly inside');
+            const x0 = D.cutX0(e.w), y0 = C.y0;
+            if (Math.abs(x0 - (W - e.w * U) / 2) > 1e-9) fail('GAME ' + where + ': the shape is not centred');
+            inside({ x:x0, y:y0, w:e.w * U, h:e.h * U }, where + ' shape', D.CUT_H);
+            /* 自己的格子：L 形每一格 */
+            const cells = [];
+            for (let r = 0; r < e.h; r++) for (let c = 0; c < e.w; c++) if (!(r < e.nh && c >= e.w - e.nw)) cells.push([r, c]);
+            if (cells.length !== areaRef(e.w, e.h) - areaRef(e.nw, e.nh)) fail('GAME ' + where + ': cell count is off');
+            const isRect = cs => {
+              if (!cs.length) return null;
+              const rs = cs.map(x => x[0]), csx = cs.map(x => x[1]);
+              const r0 = Math.min(...rs), r1 = Math.max(...rs), c0 = Math.min(...csx), c1 = Math.max(...csx);
+              return (r1 - r0 + 1) * (c1 - c0 + 1) === cs.length ? { w:c1 - c0 + 1, h:r1 - r0 + 1 } : null;
+            };
+            /* 每一條切得下去的格線：自己列出來，和 cutLines() 比 */
+            const own = [];
+            for (let r = 1; r < e.h; r++) own.push('h' + r);
+            for (let c = 1; c < e.w; c++) own.push('v' + c);
+            const lines = D.cutLines(e);
+            if (lines.map(L => L.dir + L.k).sort().join() !== own.sort().join()) fail('GAME ' + where + ': cutLines() lists ' + lines.map(L => L.dir + L.k).join(',') + ', the shape has ' + own.join(','));
+            let good = 0;
+            lines.forEach(L => {
+              /* 線段要真的在圖形裡（或剛好沿著缺角的邊、和對的切線在同一直線上） */
+              const yIn = (L.y1 - y0) / U, xIn = (L.x1 - x0) / U;
+              if (L.dir === 'h' && !(L.y1 === L.y2 && L.x1 === x0 && L.x2 === x0 + (L.k < e.nh ? e.w - e.nw : e.w) * U && yIn === L.k)) fail('GAME ' + where + ': the drawn line h' + L.k + ' is not where that grid line is');
+              if (L.dir === 'v' && !(L.x1 === L.x2 && xIn === L.k && L.y2 === y0 + e.h * U && L.y1 === y0 + (L.k > e.w - e.nw ? e.nh : 0) * U)) fail('GAME ' + where + ': the drawn line v' + L.k + ' is not where that grid line is');
+              const A = cells.filter(x => L.dir === 'h' ? x[0] < L.k : x[1] < L.k), B = cells.filter(x => L.dir === 'h' ? x[0] >= L.k : x[1] >= L.k);
+              const ra = isRect(A), rb = isRect(B), ok = !!(ra && rb);
+              const res = D.cutResult(e, L);
+              if (res.ok !== ok) fail('GAME ' + where + ': cutting along ' + L.dir + L.k + ' — cutResult says ' + (res.ok ? '' : 'not ') + 'two rectangles, the cells say ' + (ok ? '' : 'not ') + 'two rectangles');
+              if (ok){
+                good++;
+                if (!(res.a.w === ra.w && res.a.h === ra.h && res.b.w === rb.w && res.b.h === rb.h)) fail('GAME ' + where + ': the two pieces of ' + L.dir + L.k + ' are ' + JSON.stringify([res.a, res.b]) + ', the cells say ' + JSON.stringify([ra, rb]));
+                /* cutBoxes()：兩塊的位置剛好蓋住那兩堆格子 */
+                const bx = D.cutBoxes(e, L);
+                [[bx[0], A], [bx[1], B]].forEach(([b, cs], z) => {
+                  const cr = isRect(cs), r0 = Math.min(...cs.map(x => x[0])), c0 = Math.min(...cs.map(x => x[1]));
+                  if (!(b.x === x0 + c0 * U && b.y === y0 + r0 * U && b.w === cr.w * U && b.h === cr.h * U)) fail('GAME ' + where + ': cutBoxes piece ' + z + ' of ' + L.dir + L.k + ' is not where its cells are');
+                });
+                LANGS.forEach(Lg => {
+                  const d = I18N[Lg], a = areaRef(ra.w, ra.h), b = areaRef(rb.w, rb.h), T = areaRef(e.w, e.h) - areaRef(e.nw, e.nh);
+                  if (a + b !== T) fail('GAME ' + where + ': the two pieces add to ' + (a + b) + ', the shape has ' + T + ' cells');
+                  arithVerified += seq(where + ' gCutDone ' + L.dir + L.k + ' ' + Lg, d.gCutDone(ra.w, ra.h, rb.w, rb.h, a, b, T), [ra.w, ra.h, a, rb.w, rb.h, b, a, b, T]);
+                  arithVerified += seq(where + ' gCutLine ' + Lg, d.gCutLine(a, b, T), [a, b, T]);
+                  seq(where + ' gCutPiece ' + Lg, d.gCutPiece(ra.w, ra.h), [ra.w, ra.h]);
+                  const pill = sq(bx[0].x + bx[0].w / 2, bx[0].y + bx[0].h / 2, C.pill, 24);
+                  inside(pill, where + ' piece label', D.CUT_H);
+                  if (String(d.gCutPiece(ra.w, ra.h)).length * 15 * 0.62 > C.pill) fail('GAME ' + where + ': the piece label is wider than its pill');
+                });
+              } else if (res.rect){
+                const rect = ra || rb;
+                if (!rect || (ra && rb)) fail('GAME ' + where + ': a wrong cut ' + L.dir + L.k + ' should leave exactly one rectangle');
+                else if (!(res.rect.w === rect.w && res.rect.h === rect.h)) fail('GAME ' + where + ': the wrong cut ' + L.dir + L.k + ' says it leaves ' + res.rect.w + '×' + res.rect.h + ', the cells say ' + rect.w + '×' + rect.h);
+                LANGS.forEach(Lg => seq(where + ' gCutBad ' + L.dir + L.k + ' ' + Lg, I18N[Lg].gCutBad(res.rect.w, res.rect.h), [res.rect.w, res.rect.h]));
+              }
+            });
+            if (good !== 2) fail('GAME ' + where + ': ' + good + ' cuts give two rectangles — there should be exactly two (across and down)');
+            const wrongs = lines.length - good;
+            if (wrongs < 2) fail('GAME ' + where + ': only ' + wrongs + ' wrong lines — the round has nothing to get wrong');
+            LANGS.forEach(Lg => seq(where + ' gCut2 ' + Lg, I18N[Lg].gCut2(e.nh, e.w - e.nw), [e.nh, e.w - e.nw]));
+            /* cutPick()：整塊畫板每 1px —— 和自己的「最近的線」比 */
+            const goodLine = L => D.cutResult(e, L).ok;
+            let bad = 0, refused = 0, samples = 0;
+            for (let y = 0.5; y < D.CUT_H; y += 1){
+              for (let x = 0.5; x < W; x += 1){
+                const p = { x, y }, got = D.cutPick(e, p);
+                const ds = lines.map(L => ({ L, d:dSeg(L, p) })).sort((a, b) => a.d - b.d);
+                if (!got){
+                  /* 沒點到：一定是離每一條線都超過 hit，或在交叉點附近而且附近沒有對的線 */
+                  if (ds[0].d <= C.hit){
+                    const close = ds.filter(z => z.d - ds[0].d < C.tie && z.d <= C.hit);
+                    if (close.length === 1 || close.some(z => goodLine(z.L))) bad++;
+                  }
+                  continue;
+                }
+                const dg = dSeg(got, p);
+                if (dg > C.hit + 1e-9 || dg - ds[0].d >= C.tie) bad++;
+                else if (!goodLine(got) && ds.some(z => z.d - ds[0].d < C.tie && z.d <= C.hit && goodLine(z.L))) bad++;
+              }
+            }
+            if (bad) fail('GAME ' + where + ': cutPick() disagrees with the nearest grid line at ' + bad + ' points');
+            /* 點在對的切線上（裡面那一段，每 1px），一定切得對 */
+            lines.filter(goodLine).forEach(L => {
+              const ci = D.cutInner(e, L);
+              const len = Math.hypot(ci.x2 - ci.x1, ci.y2 - ci.y1);
+              if (!(len >= U)) fail('GAME ' + where + ': the inner part of the right cut ' + L.dir + L.k + ' is shorter than one cell');
+              for (let s = 0; s <= len; s += 1){
+                const p = { x:ci.x1 + (ci.x2 - ci.x1) * s / len, y:ci.y1 + (ci.y2 - ci.y1) * s / len };
+                samples++;
+                const got = D.cutPick(e, p);
+                if (!got || !goodLine(got)) refused++;
+              }
+              /* 缺角的邊（和對的切線在同一直線上）也算 */
+              const ext = L.dir === 'h' ? { x:x0 + (e.w - e.nw / 2) * U, y:y0 + e.nh * U } : { x:x0 + (e.w - e.nw) * U, y:y0 + e.nh * U / 2 };
+              const g2 = D.cutPick(e, ext);
+              if (!g2 || !goodLine(g2)) fail('GAME ' + where + ': a tap on the missing corner\'s edge that continues the right cut ' + L.dir + L.k + ' is not taken as that cut');
+            });
+            if (refused) fail('GAME ' + where + ': ' + refused + ' of ' + samples + ' taps right on a correct cut line are refused or taken as a wrong line');
+          });
+        }
+
+        if (arithVerified < 200) fail('GAME: only ' + arithVerified + ' calculations in the game\'s sentences were checked — the arithmetic scanner is not reading them');
+      }
 
       /* ---------- 9. 三層題庫：從題幹的數字重算一次正解 ---------- */
       Object.keys(BANK).forEach(bank => {
