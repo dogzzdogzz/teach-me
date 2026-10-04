@@ -26,6 +26,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { extractFunction } = require('./lib/gameshuffle.js');
 
 /* ================= 第二套實作 ================= */
 
@@ -533,14 +534,6 @@ module.exports = {
       find:"    { N:152, d:19 },   /* 15 ＜ 19 → 商一位 */\n    { N:486, d:54 }    /* 48 ＜ 54 → 商一位 */",
       replace:"    { N:652, d:19 },   /* 15 ＜ 19 → 商一位 */\n    { N:686, d:54 }    /* 48 ＜ 54 → 商一位 */",
       why:"no sample would give a one-digit quotient" },
-    { file:"index", via:"index", expect:"ROUNDS",
-      find:"    { kind:'mulTotal', a:213,  b:24, opts:['1278', '5112', '852', '4260'], ans:1 },",
-      replace:"    { kind:'mulTotal', a:213,  b:24, opts:['1278', '5112', '852', '4260'], ans:0 },",
-      why:"the game would mark the wrong option correct" },
-    { file:"index", via:"index", expect:"ROUNDS",
-      find:"    if (r.kind === 'mulRow2')  return String(mulPlan(r.a, r.b).r2value);",
-      replace:"    if (r.kind === 'mulRow2')  return String(mulPlan(r.a, r.b).r2);",
-      why:"the game answer would be the written row instead of the value it stands for" },
     { file:"index", via:"index", expect:"BANK",
       find:"        { stem:'213 × 24 ＝ ？',",
       replace:"        { stem:'213 × 26 ＝ ？',",
@@ -645,10 +638,6 @@ module.exports = {
       find:"852 ＋ 4260 ＝ <strong>5112</strong>。（1278 是忘記往左移",
       replace:"852 ＋ 4260 ＝ <strong>5113</strong>。（1278 是忘記往左移",
       why:"the explanation could state wrong arithmetic while the stem, options and answer stay correct" },
-    { file:"index", via:"index", expect:"ends in 0",
-      find:"    { kind:'mulRow2',  a:324,  b:13, opts:['324', '972', '3240', '4212'],  ans:2 },",
-      replace:"    { kind:'mulRow2',  a:324,  b:30, opts:['324', '972', '9720', '4212'],  ans:2 },",
-      why:"a game round could use a multiplier ending in 0 with perfectly consistent arithmetic" },
     { file:"index", via:"index", expect:"clipped by the canvas edge",
       find:"      s4rem: function(rem){ return '餘 ' + rem; },",
       replace:"      s4rem: function(rem){ return '剩下沒有分完的還有這麼多而這句話刻意寫得非常長用來測試畫布的左邊界 ' + rem + ' 個'; },",
@@ -677,6 +666,101 @@ module.exports = {
       find:"被除數有 3 位，商從第 2 位開始",
       replace:"被除數有 3 位（3 − 1 ＝ 1），商從第 2 位開始",
       why:"a minus written as U+2212 used to fall outside the operator grammar" },
+    /* ---- index.html：小遊戲（2026-10-04 改成五關五種玩法）—— 每一條新的不變量一筆 ---- */
+    { file:"index", via:"index", expect:"GAME_ORDER should be", find:"var GAME_ORDER = ['split', 'shift', 'start', 'adjust', 'long'];", replace:"var GAME_ORDER = ['split', 'start', 'shift', 'adjust', 'long'];",
+      why:"the rounds would no longer follow the order of the examples" },
+    { file:"index", via:"index", expect:"scoring: a round should give +20", find:"    var pts = gMistake ? 10 : 20;", replace:"    var pts = 20;",
+      why:"a round cleared after mistakes would still give full marks" },
+    { file:"index", via:"index", expect:"a mistake does not cost 5", find:"    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;", replace:"    elScore.textContent = gScore;",
+      why:"a mistake would cost nothing although the page says −5" },
+    { file:"index", via:"index", expect:"shown although nothing was taken", find:"'</span>' + (lost ? ' <span class=\"gminus\">' + L().gMinus + '</span>' : '');", replace:"'</span>' + (true ? ' <span class=\"gminus\">' + L().gMinus + '</span>' : '');",
+      why:"at 0 points the page would still say −5" },
+    { file:"index", via:"index", expect:"measure to the box, not the centre", find:"      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }", replace:"      if (dc < bc){ bd = dd; bc = dc; best = b; }",
+      why:"measuring to the centre gives a drop inside a big box to a small neighbour" },
+    { file:"index", via:"index", expect:"skips it and lands in the next slot", find:"    return best && !best.done ? best : null;\n  }\n\n  function roundSolved",
+      replace:"    if (best && best.done){ best = null; list.forEach(function(b){ if (!b.done && Math.abs(pt.x - b.cx) <= b.hw + pad && Math.abs(pt.y - b.cy) <= b.hh + pad) best = b; }); }\n    return best;\n  }\n\n  function roundSolved",
+      why:"a digit dropped on a filled box would slide into the box next to it" },
+    { file:"index", via:"index", expect:"under 44", find:"  var GPICK = 48;", replace:"  var GPICK = 40;", why:"pieces would be too small to pick up on a phone" },
+    { file:"index", via:"index", expect:"a column to tap for the strip", find:"SHIFT = { right:294, cw:46, nc:6, opC:4 },", replace:"SHIFT = { right:294, cw:42, nc:6, opC:4 },",
+      why:"a column to tap for the strip would be under 44px on a phone" },
+    { file:"index", via:"index", expect:"does not check its board generation", find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */\n", replace:"",
+      why:"a piece held across a restart could solve the new round and add score" },
+    { file:"index", via:"index", expect:"does not start a new board generation", find:"    gSolved = false; gMistake = false; gCtx = {}; gGen++;", replace:"    gSolved = false; gMistake = false; gCtx = {};",
+      why:"a piece held across a restart could solve the new round and add score" },
+    { file:"index", via:"index", expect:"ahead mode", find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }", replace:"    if (false){ hintLevel = 1; showHint(); }",
+      why:"ahead mode would no longer show the first hint by itself" },
+    /* 第 1 關：剪一刀 */
+    { file:"index", via:"index", expect:"splitCutX(", find:"return j % 10 === 0 ? splitColX(b, j) - SPLIT_ARR.gap / 2 : splitColX(b, j);", replace:"return j % 10 === 0 ? splitColX(b, j) : splitColX(b, j);",
+      why:"the scissors would stop at the edge of a strip instead of the middle of the wide gap" },
+    { file:"index", via:"index", expect:"a cut that is not between the tens and the ones is accepted", find:"        if (j !== T){ roundMiss(", replace:"        if (j < T && j % 10 !== 0){ roundMiss(",
+      why:"cutting inside the ones, or leaving a whole ten on the right, would be accepted" },
+    { file:"index", via:"index", expect:"ends in 0", find:"var GAME_SPLIT = [ { a:324, b:13 },", replace:"var GAME_SPLIT = [ { a:324, b:30 },",
+      why:"a multiplier ending in 0 has no ones to cut off" },
+    { file:"index", via:"index", expect:"gSplitTen", find:"個：右邊那 ' + (b - j) + ' 個裡面還有一整條十", replace:"個：右邊那 ' + (b - j - 10) + ' 個裡面還有一整條十",
+      why:"the reason for leaving a ten on the right would name the wrong count" },
+    { file:"index", via:"index", expect:"gSplitDone zh", find:"' ＝ ' + (a * (T + O)) + '。'; },", replace:"' ＝ ' + (a * (T + O) + 1) + '。'; },",
+      why:"the round's closing sum could be off by one while the cut is still right" },
+    { file:"index", via:"index", expect:"held to a left-right line", find:"        axis:'x', minX:splitCutX(e.b, 0), maxX:splitCutX(e.b, e.b),", replace:"        axis:'y', minX:splitCutX(e.b, 0), maxX:splitCutX(e.b, e.b),",
+      why:"the scissors could be dragged anywhere instead of along the gaps" },
+    /* 第 2 關：移一格 */
+    { file:"index", via:"index", expect:"a strip that is not shifted is accepted", find:"        if (k === 0){ roundMiss(d.gShift0(e.a, e.b, s, n1)); return false; }", replace:"        if (k === -1){ roundMiss(d.gShift0(e.a, e.b, s, n1)); return false; }",
+      why:"the second row would be accepted without the shift" },
+    { file:"index", via:"index", expect:"LAST digit", find:"        var rx = pt.tap ? pt.x : pt.x + (len - 1) * SHIFT.cw / 2;", replace:"        var rx = pt.x;",
+      why:"a dragged strip would be judged by its centre, not by where its last digit lands" },
+    { file:"index", via:"index", expect:"ends in 0", find:"{ a:305, b:13 }, { a:487, b:56 } ];", replace:"{ a:305, b:13 }, { a:487, b:50 } ];",
+      why:"the lesson promises the multiplier never ends in 0" },
+    { file:"index", via:"index", expect:"gShift0 en", find:"'Not shifted: then the sum is ' + n1 + ' + ' + s + ' = ' + (n1 + s) +", replace:"'Not shifted: then the sum is ' + n1 + ' + ' + s + ' = ' + (n1 + s * 10) +",
+      why:"the unshifted sum would be stated wrongly in English only" },
+    /* 第 3 關：分籃子 */
+    { file:"index", via:"index", expect:"already in basket order", find:"    if (sorted){ var x = t[1]; t[1] = t[2]; t[2] = x; }\n", replace:"",
+      why:"the tray could start already sorted into the baskets" },
+    { file:"index", via:"index", expect:"startBin() says", find:"function startBin(N, d){ return startPlan(N, d).qLen === 2 ? 0 : 1; }", replace:"function startBin(N, d){ return Math.floor(N / 10) > d ? 0 : 1; }",
+      why:"first two digits EQUAL to the divisor would be sorted as a one-digit quotient" },
+    { file:"index", via:"index", expect:"a card in the wrong basket is accepted", find:"        if (bin.i !== want){", replace:"        if (false){",
+      why:"any card would go in any basket" },
+    { file:"index", via:"index", expect:"given to the nearest basket", find:"        var bin = nearestOpen(bins, pt, 8);",
+      replace:"        var bin = bins.filter(function(b){ return Math.abs(pt.x - b.cx) <= b.hw + 8 && Math.abs(pt.y - b.cy) <= b.hh + 8; })[0];",
+      why:"a card dropped in the overlap would go to the first basket, not the nearer one" },
+    { file:"index", via:"index", expect:"do not overlap once padded", find:"START_BIN = { y:4, w:144, h:166, lbl:34, x:[4, 152],", replace:"START_BIN = { y:4, w:136, h:166, lbl:34, x:[4, 160],",
+      why:"the nearest-basket rule would stop being exercised at all" },
+    { file:"index", via:"index", expect:"gStartOne zh", find:"' —— 商從個位開始寫，只有 1 位。'; },", replace:"' —— 商從個位開始寫，只有 2 位。'; },",
+      why:"the reason would state the wrong number of digits" },
+    /* 第 4 關：調商 */
+    { file:"index", via:"index", expect:"does not start from the guess", find:"var e = pick(GAME_ADJ), tp = tryPlan(e.cur, e.d), n = tp.guess,", replace:"var e = pick(GAME_ADJ), tp = tryPlan(e.cur, e.d), n = tp.q,",
+      why:"the round would start already solved" },
+    { file:"index", via:"index", expect:"adjState(", find:"return P > cur ? 'over' : (cur - P >= d ? 'small' : 'ok');", replace:"return P > cur ? 'over' : (cur - P > d ? 'small' : 'ok');",
+      why:"a remainder EQUAL to the divisor would count as just right" },
+    { file:"index", via:"index", expect:"adding a share when it is just right is accepted", find:"          if (st === 'ok'){ roundMiss(d.gAdjAddFit(", replace:"          if (st === 'never'){ roundMiss(d.gAdjAddFit(",
+      why:"a share could be added past the end of the bar" },
+    { file:"index", via:"index", expect:"taking a share off when it does not go past is accepted", find:"          if (st !== 'over'){ roundMiss(d.gAdjRemoveFit(", replace:"          if (st === 'ok'){ roundMiss(d.gAdjRemoveFit(",
+      why:"a too-small digit could be made even smaller" },
+    { file:"index", via:"index", expect:"the first guess is already right", find:"var GAME_ADJ = [ { cur:152, d:19 },", replace:"var GAME_ADJ = [ { cur:150, d:19 },",
+      why:"a round whose first guess is right teaches no adjusting" },
+    { file:"index", via:"index", expect:"while a share is still being dragged", find:"        if (plus.busy() || last.busy()) return;\n", replace:"",
+      why:"pressing the button with a share still held would judge (and charge for) a count that is about to change" },
+    { file:"index", via:"index", expect:"runs into the cur label", find:"      addZone(B, A.x0 + e.cur * u - 1.5, A.y - 2, 3, A.h + 4, 'gend');", replace:"      addZone(B, A.x0 + e.cur * u - 1.5, A.y - 6, 3, A.h + 12, 'gend');",
+      why:"the bar-end marker would cut into the bottom of the number above it" },
+    { file:"index", via:"index", expect:"after guessing above 9", find:"{ cur:149, d:15 }, { cur:103, d:12 },", replace:"{ cur:149, d:15 }, { cur:93, d:12 },",
+      why:"the \"guess above 9, try 9 first\" rule would never come up" },
+    { file:"index", via:"index", expect:"gAdjOkSmall", find:"'，' + cur + ' − ' + P + ' ＝ ' + r + '，剩下的沒有比 ' + d + ' 小，還可以再分一份", replace:"'，' + cur + ' − ' + P + ' ＝ ' + (r + 1) + '，剩下的沒有比 ' + d + ' 小，還可以再分一份",
+      why:"the reason could state a wrong subtraction" },
+    { file:"index", via:"index", expect:"adjUnit()", find:"return (ADJ.x1 - ADJ.x0) / Math.max(cur, tp.guess * d); }", replace:"return (ADJ.x1 - ADJ.x0) / cur; }",
+      why:"a guess that is too big would draw shares off the board" },
+    /* 第 5 關：直式 */
+    { file:"index", via:"index", expect:"a box outside the current step can be filled", find:"        if (s.g !== curG){ roundMiss(d.gLongOrder(", replace:"        if (s.g > curG + 1){ roundMiss(d.gLongOrder(",
+      why:"the next step's boxes could be filled before this one" },
+    { file:"index", via:"index", expect:"longCells() is", find:"      var rd = (st.bring !== null && st.rem === 0) ? [] : digitsOf(st.rem);", replace:"      var rd = digitsOf(st.rem);",
+      why:"a 0 difference would be written although example 6 only writes the brought-down digit" },
+    { file:"index", via:"index", expect:"longCells() is", find:"      if (st.q === 0) return;   /* 商是 0：不畫乘 0、減 0（範例 6 的畫法） */\n", replace:"",
+      why:"a 0 quotient digit would ask for 'multiply by 0' boxes that example 6 never draws" },
+    { file:"index", via:"index", expect:"too big by v × d >", find:"roundMiss(v * C.d > C.cur ? d.gLongQBig(", replace:"roundMiss(v * C.d >= C.cur ? d.gLongQBig(",
+      why:"a digit whose product equals what is being divided would be called too big" },
+    { file:"index", via:"index", expect:"feature \"zero\"", find:"{ N:721, d:36 }, { N:152, d:19 }", replace:"{ N:756, d:36 }, { N:152, d:19 }",
+      why:"the \"write a 0 in the quotient\" rule would never come up" },
+    { file:"index", via:"index", expect:"gLongDone zh", find:"'。驗算：' + d + ' × ' + Q + ' ＋ ' + R + ' ＝ ' + N + '。'", replace:"'。驗算：' + d + ' × ' + Q + ' ＋ ' + R + ' ＝ ' + (N + 1) + '。'",
+      why:"the check line could be wrong while the division is right" },
+    { file:"index", via:"index", expect:"no longer overlap once padded", find:"var LONG_SLOT = 44, LONG_PAD = 4,", replace:"var LONG_SLOT = 44, LONG_PAD = 1,",
+      why:"the nearest-box rule would stop being exercised" },
   ],
 
   /* ================= review.html 產生器模擬 ================= */
@@ -1024,7 +1108,12 @@ module.exports = {
     dataEnd: '/* ---------- i18n ---------- */',
     dataReturn: '{isInt, digitsOf, roundTen, padCells, mulPlan, mulColSteps, splitPlan, ' +
                 'startPlan, tryPlan, ldPlan, ldRows, chunkPlan, lotsEn, digitsEn, ' +
-                'MUL_CASES, START_CASES, TRY_CASES, ADJ_CASES, LD_CASES, ROUNDS, roundAnswer, ' +
+                'MUL_CASES, START_CASES, TRY_CASES, ADJ_CASES, LD_CASES, ' +
+                'GPICK, shuffle, pick, sharesEn, SPLIT_H, SPLIT_ARR, SPLIT_KNOB, SPLIT_LBL, GAME_SPLIT, splitUnit, splitColX, splitCutX, splitNearest, ' +
+                'SHIFT_H, SHIFT, SHIFT_Y, SHIFT_STRIP, SHIFT_SNAP_Y, GAME_SHIFT, shiftX, ' +
+                'START_H, START_BIN, START_CARD, START_TRAY, GAME_START, startBin, startTray, ' +
+                'ADJ_H, ADJ, ADJ_TRAY, GAME_ADJ, adjUnit, adjState, ' +
+                'LONG_H, LONG_X, LONG_Y, LONG_SLOT, LONG_PAD, LONG_KEYS, GAME_LONG, longCells, ' +
                 'MUL_A_MIN, MUL_A_MAX, MUL_B_MIN, MUL_B_MAX, DIV_N_MIN, DIV_N_MAX, ' +
                 'DIV_D_MIN, DIV_D_MAX, Q_MAX, ' +
                 'CH_W, CH_H, CH_X0, CH_X1, CH_Y, CH_BARH, CH_FONT, CH_IDX_FONT, ' +
@@ -1035,7 +1124,8 @@ module.exports = {
       const {
         isInt, digitsOf, roundTen, padCells, mulPlan, mulColSteps, splitPlan,
         startPlan, tryPlan, ldPlan, ldRows, chunkPlan,
-        MUL_CASES, START_CASES, TRY_CASES, ADJ_CASES, LD_CASES, ROUNDS, roundAnswer,
+        MUL_CASES, START_CASES, TRY_CASES, ADJ_CASES, LD_CASES,
+        GAME_SPLIT, GAME_SHIFT, GAME_START, GAME_ADJ, GAME_LONG, longCells,
         MUL_A_MIN, MUL_A_MAX, MUL_B_MIN, MUL_B_MAX, DIV_N_MIN, DIV_N_MAX,
         DIV_D_MIN, DIV_D_MAX, Q_MAX,
         CH_W, CH_H, CH_X0, CH_X1, CH_Y, CH_BARH, CH_FONT, CH_IDX_FONT,
@@ -1415,47 +1505,494 @@ module.exports = {
           fail('LD_CASES: no worked example ever guesses above 9');
       }
 
-      /* ---------- 8. 遊戲關卡 ---------- */
-      if (ROUNDS.length !== 5) fail('ROUNDS: expected 5 rounds');
+      /* ---------- 8. 小遊戲（2026-10-04 改成五關五種玩法，§六之五） ----------
+         每一關用自己的算法（卷積乘法、重複減法、看前兩位）重算答案，並**照遊戲自己的規則把每一題從頭玩一次**，
+         證明一定解得完、而且解完一定是對的；頁面的純函式拿整個題庫去呼叫、再和自己的幾何比；
+         nearestOpen()、roundMiss() 從原始碼切出來真的跑；只在 RENDER 裡、切不出來的關鍵規則用原始碼形狀守住（need()）。
+         每一句說明逐個比數字，句子裡的算式逐條重算。拖拉、點選、兩根手指、capture 遺失、375px 的實際尺寸由
+         teaching-workspace/game-harness/g4-multiply-divide 的端對端測試驗，不在這裡。 */
       {
-        const kinds = ROUNDS.map(r => r.kind);
-        ['mulTotal', 'mulRow2', 'qLen', 'tryDigit', 'full'].forEach(k => {
-          if (kinds.indexOf(k) < 0) fail('ROUNDS: no round of kind ' + k);
+        const D = data, LANGS = ['zh', 'en'], W = 300;
+        const nums = t => (String(t).match(/\d+/g) || []).map(Number);
+        const seq = (where, text, want) => {
+          if (typeof text !== 'string' || /undefined|NaN|null|\[object/.test(text)) return fail('GAME ' + where + ': text has undefined/NaN/null: ' + text);
+          if (nums(text).join() !== want.join()) fail('GAME ' + where + ': numbers should read ' + want.join() + ', got ' + nums(text).join() + ' — ' + text);
+          arithProblems(text.replace(/<[^>]+>/g, '')).forEach(b => fail('GAME ' + where + ': false calculation "' + b + '" in: ' + text));
+        };
+        const near = (a, b) => Math.abs(a - b) < 1e-6;
+        const inside = (o, what, H) => { if (!(fin(o.x) && fin(o.y) && o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail('GAME ' + what + ' is outside the ' + W + '×' + H + ' board: ' + JSON.stringify(o)); };
+        const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+        const sq = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w:w, h:h });
+        const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return fail('GAME ' + what + ' ' + i + ' and ' + j + ' overlap'); };
+        /* 手機：375px 手機上卡片內寬約 290px，300 寬的畫板縮成 0.967 倍 */
+        const scale = Math.min(1.5, 290 / W);
+        const tooSmall = (what, sz) => { if (!(sz * scale >= 44)) fail('GAME ' + what + ' is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+
+        /* --- 五關的順序、RENDER、題目與提示 --- */
+        const TYPES = ['split', 'shift', 'start', 'adjust', 'long'];
+        const order = (src.match(/var GAME_ORDER = \[([^\]]*)\]/) || [])[1];
+        if (order === undefined) fail('GAME: cannot find GAME_ORDER in index.html');
+        else {
+          const types = order.split(',').map(x => x.trim().replace(/^'|'$/g, ''));
+          if (types.join() !== TYPES.join()) fail('GAME_ORDER should be ' + TYPES.join() + ' (the order of the six examples), got ' + types.join());
+        }
+        const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+        const RB = {};
+        TYPES.forEach(t => {
+          RB[t] = body(t);
+          if (!RB[t]) fail('GAME: cannot cut RENDER.' + t + ' out of index.html');
+          LANGS.forEach(L => {
+            if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('GAME: gAsks.' + t + ' missing in ' + L);
+            if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('GAME: gHints.' + t + ' missing in ' + L);
+          });
         });
-        const answers = [];
-        ROUNDS.forEach((r, i) => {
-          if (r.opts.length !== 4) fail('ROUNDS[' + i + ']: expected 4 options');
-          if (new Set(r.opts).size !== r.opts.length) fail('ROUNDS[' + i + ']: duplicate options');
-          if (!(r.ans >= 0 && r.ans < r.opts.length)) fail('ROUNDS[' + i + ']: answer index out of range');
-          const got = roundAnswer(r);
-          if (r.opts[r.ans] !== got)
-            fail('ROUNDS[' + i + ']: opts[ans] is "' + r.opts[r.ans] + '" but roundAnswer() says "' + got + '"');
-          /* 第二套實作再算一次同一個答案。 */
-          let want = null;
-          if (r.kind === 'mulTotal') want = String(mulRef(r.a, r.b));
-          else if (r.kind === 'mulRow2') want = String(mulRef(r.a, Math.floor(r.b / 10)) * 10);
-          else if (r.kind === 'qLen') want = String(startRef(r.N, r.d).qLen);
-          else if (r.kind === 'tryDigit') want = String(quotDigitRef(r.cur, r.d).q);
-          else if (r.kind === 'full'){ const x = ldRef(r.N, r.d); want = x.q + 'r' + x.rem; }
-          if (want !== null && got !== want)
-            fail('ROUNDS[' + i + ']: roundAnswer() gives "' + got + '" but the second implementation gives "' + want + '"');
-          /* ⚠️ 只驗算術的話，把一關整組換成 213 × 20 每一條都還是綠的 ——
-             可是這一課明講乘數的個位不是 0。每一關都要套範圍。 */
-          if (r.kind === 'mulTotal' || r.kind === 'mulRow2'){
-            const bad = mulInv({ a:r.a, b:r.b }, 'ROUNDS[' + i + ']');
-            if (bad) fail('ROUNDS: ' + bad);
-          }
-          if (r.kind === 'qLen' || r.kind === 'full'){
-            const bad = divInv({ N:r.N, d:r.d }, 'ROUNDS[' + i + ']');
-            if (bad) fail('ROUNDS: ' + bad);
-          }
-          if (r.kind === 'tryDigit'){
-            const bad = roundInv({ cur:r.cur, d:r.d }, 'ROUNDS[' + i + ']');
-            if (bad) fail('ROUNDS: ' + bad);
-          }
-          answers.push(r.ans);
+        const need = (k, re, what) => { if (!re.test(RB[k] || '')) fail('GAME ' + k + ': ' + what); };
+        ['GAME_SPLIT', 'GAME_SHIFT', 'GAME_START', 'GAME_ADJ', 'GAME_LONG'].forEach(k => {
+          if (!Array.isArray(D[k]) || D[k].length < 2) fail('GAME: ' + k + ' should be a pool of at least 2 entries (pick() of an empty pool crashes the round)');
         });
-        if (new Set(answers).size < 2) fail('ROUNDS: every round has its answer in the same slot');
+        /* 超前模式自動給第一層提示；兩層提示 */
+        if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(src)) fail('GAME: ahead mode no longer shows hint level 1 automatically');
+        if (!/if \(hintLevel >= 2\) gHintBtn\.disabled = true;/.test(src)) fail('GAME: the hint button is not disabled after the second level');
+        /* 重新開始／切換語言／下一關都換一個新的畫板；拿在手上的舊積木放開時什麼都不做 */
+        if (!/gSolved = false; gMistake = false; gCtx = \{\}; gGen\+\+;/.test(src)) fail('GAME: startRound() does not start a new board generation (gGen++) — a piece held across a restart could solve the new round');
+        if (!/if \(gen !== gGen\) return;/.test(src)) fail('GAME: a released piece does not check its board generation — a piece held across a restart could solve the new round');
+
+        /* --- 計分：沒犯錯 +20、犯過錯 +10；放錯一次 −5，最低 0（§三 中年級） --- */
+        if (!/var pts = gMistake \? 10 : 20;/.test(src)) fail('GAME scoring: a round should give +20 with no mistakes and +10 after mistakes');
+        {
+          const fsrc = extractFunction(src, 'roundMiss');
+          if (!fsrc) fail('GAME scoring: cannot find roundMiss() in index.html');
+          else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(([s0, want, shows]) => {
+            let r;
+            try { r = new Function('var gMistake = false, gScore = ' + s0 + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+            catch (e){ return fail('GAME scoring: roundMiss() could not run: ' + e.message); }
+            if (r.s !== want || String(r.shown) !== String(want)) fail('GAME scoring: a mistake at ' + s0 + ' leaves ' + r.s + ' — a mistake does not cost 5 (floored at 0)');
+            if ((r.html.indexOf('@MINUS@') >= 0) !== shows) fail('GAME scoring: at ' + s0 + ' points the "−5" note is ' + (shows ? 'missing' : 'shown although nothing was taken'));
+            if (r.html.indexOf('why') < 0 || !r.m) fail('GAME scoring: roundMiss() does not show the reason or record the mistake');
+          });
+        }
+        LANGS.forEach(L => {
+          const d = I18N[L];
+          if (nums(d.gPts(20)).join() !== '20' || nums(d.gPts(10)).join() !== '10') fail('GAME gPts ' + L + ' does not show the points');
+          if (nums(d.gMinus).join() !== '5') fail('GAME gMinus ' + L + ' should say 5');
+          if (nums(d.gWin(85)).indexOf(85) < 0) fail('GAME gWin ' + L + ' does not show the score');
+          if (typeof d.gClear !== 'string' || !d.gClear) fail('GAME gClear missing in ' + L);
+        });
+
+        /* --- 觸控 ≥ 44px（版面數字一律從 index.html 讀） --- */
+        tooSmall('GPICK ' + D.GPICK, D.GPICK);
+        tooSmall('the scissors (' + D.SPLIT_KNOB.size + ')', D.SPLIT_KNOB.size);
+        tooSmall('the second-row strip (' + D.SHIFT_STRIP.h + ' tall)', D.SHIFT_STRIP.h);
+        tooSmall('a column to tap for the strip (' + D.SHIFT.cw + ' wide)', D.SHIFT.cw);
+        tooSmall('a division card (' + D.START_CARD.h + ' tall)', D.START_CARD.h);
+        tooSmall('a digit card (' + D.LONG_KEYS.size + ')', D.LONG_KEYS.size);
+        tooSmall('a long-division box with its pad', D.LONG_SLOT + 2 * D.LONG_PAD);
+        [D.SPLIT_KNOB.size, D.SHIFT_STRIP.h, D.START_CARD.h, D.LONG_KEYS.size].forEach(s => { if (s < D.GPICK) fail('GAME: a piece of size ' + s + ' is smaller than GPICK ' + D.GPICK); });
+        need('adjust', /addPiece\(B, \{ w:Math\.max\(GPICK, shareW\), h:GPICK, cx:T\.plusX,/, 'the "+ one share" piece is not at least GPICK × GPICK');
+        need('adjust', /addPiece\(B, \{ w:Math\.max\(GPICK, shareW\), h:GPICK, cx:150, cy:A\.y \+ A\.h \/ 2, cls:'glast'/, 'the "last share" piece is not at least GPICK × GPICK');
+        need('long', /addPiece\(B, \{ w:LONG_KEYS\.size, h:LONG_KEYS\.size,/, 'the digit cards are not LONG_KEYS.size square');
+
+        /* --- nearestOpen()：從原始碼切出來真的跑 --- */
+        let nearestOpen = null;
+        {
+          const fsrc = extractFunction(src, 'nearestOpen');
+          if (!fsrc) fail('GAME: cannot find nearestOpen() in index.html');
+          else { try { nearestOpen = new Function(fsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('GAME: nearestOpen() could not be evaluated: ' + e.message); } }
+          if (nearestOpen){
+            const two = [ { id:0, cx:100, cy:100, hw:42, hh:42, done:false }, { id:1, cx:155, cy:100, hw:12, hh:12, done:false } ];
+            const r0 = nearestOpen(two, { x:140, y:100 }, 6);
+            if (!r0 || r0.id !== 0) fail('GAME nearestOpen(): a point inside the big box near the small one is given to the small one (measure to the box, not the centre)');
+            const done = [ { id:0, cx:100, cy:100, hw:22, hh:22, done:true }, { id:1, cx:148, cy:100, hw:22, hh:22, done:false } ];
+            if (nearestOpen(done, { x:121, y:100 }, 6) !== null) fail('GAME nearestOpen(): a drop nearest to a finished slot skips it and lands in the next slot');
+            if (nearestOpen(done, { x:300, y:300 }, 6) !== null) fail('GAME nearestOpen(): a drop far from every slot is accepted');
+            /* 兩個籃子（第 3 關）：放寬之後中間重疊 —— 重疊區裡一律判給比較近的那一個，不是陣列裡的第一個 */
+            const BN = D.START_BIN, bins = [0, 1].map(i => ({ id:i, cx:BN.x[i] + BN.w / 2, cy:BN.y + BN.h / 2, hw:BN.w / 2, hh:BN.h / 2, done:false }));
+            const gapL = BN.x[0] + BN.w, gapR = BN.x[1];
+            if (!(gapR - gapL < 2 * 8)) fail('GAME start: the baskets do not overlap once padded — the nearest-basket rule is untested');
+            for (let x = gapL - 8 + 0.25; x < gapR + 8; x += 0.5){
+              const g = nearestOpen(bins, { x, y:BN.y + BN.h / 2 }, 8), mid = (gapL + gapR) / 2;
+              if (Math.abs(x - mid) < 0.3) continue;
+              const want = x < mid ? 0 : 1;
+              if (!g || g.id !== want){ fail('GAME start: a card dropped at x = ' + x + ' between the baskets goes to ' + (g ? g.id : 'none') + ', the nearer basket is ' + want); break; }
+            }
+          }
+        }
+
+        /* --- 第 1 關：剪一刀（範例 1） --- */
+        {
+          const A = D.SPLIT_ARR, K = D.SPLIT_KNOB;
+          inside(sq(D.splitCutX(13, 13), K.y, K.size, K.size), 'split: the scissors at the right end', D.SPLIT_H);
+          inside(sq(D.splitCutX(13, 0), K.y, K.size, K.size), 'split: the scissors at the left end', D.SPLIT_H);
+          inside({ x:A.x, y:A.y, w:A.w, h:A.h }, 'split: the strips', D.SPLIT_H);
+          if (!(K.y + K.size / 2 <= A.y)) fail('GAME split: the scissors cover the strips');
+          D.SPLIT_LBL.y.forEach((y, i) => { inside({ x:4, y:y, w:292, h:D.SPLIT_LBL.h }, 'split: label row ' + i, D.SPLIT_H); if (i && y < D.SPLIT_LBL.y[i - 1] + D.SPLIT_LBL.h) fail('GAME split: label rows ' + (i - 1) + ' and ' + i + ' overlap'); });
+          if (!(D.SPLIT_LBL.y[0] >= A.y + A.h + 4)) fail('GAME split: the legend overlaps the strips');
+          D.GAME_SPLIT.forEach((e, i) => {
+            const w = 'GAME_SPLIT[' + i + '] ' + e.a + ' × ' + e.b;
+            const bad = mulInv({ a:e.a, b:e.b }, w); if (bad) return fail('GAME ' + bad);
+            if (e.b > 29) fail('GAME ' + w + ': ' + e.b + ' strips are too thin to see — keep b ≤ 29');
+            const T = e.b - e.b % 10, O = e.b % 10;
+            /* 自己的幾何：條寬 u、每十條之後多一條縫 */
+            const u = (A.w - Math.floor(e.b / 10) * A.gap) / e.b;
+            if (!near(D.splitUnit(e.b), u)) fail('GAME ' + w + ': splitUnit() is ' + D.splitUnit(e.b) + ', should be ' + u);
+            if (u < 6) fail('GAME ' + w + ': a strip is only ' + u.toFixed(1) + 'px wide');
+            const colX = k => A.x + k * u + Math.floor(k / 10) * A.gap;
+            const cuts = [];
+            for (let j = 0; j <= e.b; j++){
+              const want = j <= 0 ? A.x : j >= e.b ? A.x + A.w : j % 10 === 0 ? colX(j) - A.gap / 2 : colX(j);
+              cuts.push(want);
+              if (!near(D.splitCutX(e.b, j), want)) fail('GAME ' + w + ': splitCutX(' + j + ') is ' + D.splitCutX(e.b, j) + ', should be ' + want);
+            }
+            if (!near(colX(e.b - 1) + u, A.x + A.w)) fail('GAME ' + w + ': the last strip does not end at the right edge');
+            /* splitNearest()：每一個位置（每 0.5px）都判給最近的那一條縫 */
+            for (let x = A.x; x <= A.x + A.w; x += 0.5){
+              let best = 0, bd = Infinity;
+              cuts.forEach((c, j) => { const dd = Math.abs(c - x); if (dd < bd){ bd = dd; best = j; } });
+              const got = D.splitNearest(e.b, x);
+              if (got !== best && !near(Math.abs(cuts[got] - x), bd)){ fail('GAME ' + w + ': splitNearest(' + x + ') is ' + got + ', the nearest gap is ' + best); break; }
+            }
+            /* 照遊戲的規則：每一刀（1 ～ b−1）只有 j ＝ T 收，其他每一刀的說明都對 */
+            LANGS.forEach(L => {
+              const d = I18N[L];
+              for (let j = 1; j < e.b; j++){
+                if (j === T) continue;
+                if (j > T) seq(w + ' gSplitOnes(' + j + ') ' + L, d.gSplitOnes(e.b, j, O), [j, e.b - j, O]);
+                else if (j % 10 === 0){ seq(w + ' gSplitTen(' + j + ') ' + L, d.gSplitTen(e.b, j), [j, e.b - j, e.b - j]); if (!(e.b - j > 10)) fail('GAME ' + w + ': gSplitTen says a whole ten is left on the right, but only ' + (e.b - j) + ' are'); }
+                else seq(w + ' gSplitOdd(' + j + ') ' + L, d.gSplitOdd(e.b, j), [j, e.b - j]);
+                seq(w + ' gSplitNow(' + j + ') ' + L, d.gSplitNow(e.a, e.b, j), [j, e.a, e.b - j, e.a]);
+              }
+              seq(w + ' gSplitNow(end) ' + L, d.gSplitNow(e.a, e.b, e.b), [e.b, e.a]);
+              seq(w + ' gSplitLegend ' + L, d.gSplitLegend(e.a), [e.a]);
+              const r1 = mulRef(e.a, O), r2 = mulRef(e.a, T);
+              seq(w + ' gSplitPart(T) ' + L, d.gSplitPart(T, e.a), [e.a, T, r2]);
+              seq(w + ' gSplitPart(O) ' + L, d.gSplitPart(O, e.a), [e.a, O, r1]);
+              seq(w + ' gSplitDone ' + L, d.gSplitDone(e.a, e.b, T, O), [e.b, e.a, T, O, e.a, O, r1, e.a, T, r2, r1, r2, mulRef(e.a, e.b)]);
+              seq(w + ' gSplit2 ' + L, d.gSplit2(e.b, T, O), [2, e.b, T, O, T, T + 1]);
+              /* 標籤一行寫得下（17px 的字，畫板 292 寬） */
+              [d.gSplitLegend(e.a), d.gSplitPart(T, e.a), d.gSplitPart(O, e.a)].forEach(t => { if (estTextW(t, 17) > 292) fail('GAME ' + w + ' ' + L + ': label "' + t + '" is too wide for the board'); });
+              /* 第一排是「個」那一堆、第二排是「整十」那一堆 —— 和範例 1 的表一樣 */
+              const mp = mulPlan(e.a, e.b);
+              if (mp.r1 !== r1 || mp.r2value !== r2) fail('GAME ' + w + ': the two piles do not match the two rows of mulPlan()');
+            });
+          });
+          if (!D.GAME_SPLIT.some(e => e.b >= 20)) fail('GAME_SPLIT: no multiplier in the twenties, so the "a whole ten is still on the right" cut never comes up');
+          if (!D.GAME_SPLIT.some(e => e.b < 20)) fail('GAME_SPLIT: no multiplier in the teens');
+          if (!D.GAME_SPLIT.some(e => e.b % 10 >= 2)) fail('GAME_SPLIT: no multiplier whose ones can be cut apart');
+          need('split', /if \(j <= 0 \|\| j >= e\.b\) return false;/, 'a cut at either end is not a silent bounce');
+          need('split', /if \(j !== T\)\{ roundMiss\(/, 'a cut that is not between the tens and the ones is accepted');
+          need('split', /axis:'x', minX:splitCutX\(e\.b, 0\), maxX:splitCutX\(e\.b, e\.b\),/, 'the scissors are not held to a left-right line');
+        }
+
+        /* --- 第 2 關：移一格（範例 1 的 💬、範例 2） --- */
+        {
+          const S = D.SHIFT, Y = D.SHIFT_Y;
+          for (let c = 0; c < S.nc; c++){
+            const want = S.right - S.cw / 2 - c * S.cw;
+            if (!near(D.shiftX(c), want)) fail('GAME shift: shiftX(' + c + ') is ' + D.shiftX(c) + ', should be ' + want);
+            inside(sq(want, Y.r2, 44, 44), 'shift: column ' + c, D.SHIFT_H);
+          }
+          if (!(S.opC >= 3 && S.opC < S.nc)) fail('GAME shift: the × sign sits in column ' + S.opC + ', inside the multiplier');
+          const ys = [Y.a, Y.b, Y.r1, Y.r2, Y.sum];
+          for (let i = 1; i < ys.length; i++) if (ys[i] - ys[i - 1] < 44) fail('GAME shift: rows ' + (i - 1) + ' and ' + i + ' are closer than 44');
+          if (!(Y.rule1 >= Y.b + 22 && Y.rule1 + 3 <= Y.r1 - 22) || !(Y.rule2 >= Y.r2 + 22 && Y.rule2 + 3 <= Y.sum - 22)) fail('GAME shift: a rule line runs through a row of digits');
+          if (!(D.SHIFT_STRIP.y - D.SHIFT_STRIP.h / 2 > Y.r2 + D.SHIFT_SNAP_Y)) fail('GAME shift: the strip starts inside the snap band of the second row');
+          inside(sq(150, D.SHIFT_STRIP.y, 4 * S.cw, D.SHIFT_STRIP.h), 'shift: a four-digit strip at home', D.SHIFT_H);
+          if (!(D.SHIFT_SNAP_Y < (Y.r2 - Y.r1) && D.SHIFT_SNAP_Y < (Y.sum - Y.r2))) fail('GAME shift: the snap band of the second row reaches another row');
+          D.GAME_SHIFT.forEach((e, i) => {
+            const w = 'GAME_SHIFT[' + i + '] ' + e.a + ' × ' + e.b;
+            const bad = mulInv({ a:e.a, b:e.b }, w); if (bad) return fail('GAME ' + bad);
+            const o = e.b % 10, t = Math.floor(e.b / 10), n1 = mulRef(e.a, o), s = mulRef(e.a, t), len = String(s).length, total = mulRef(e.a, e.b);
+            if (n1 + s * 10 !== total) fail('GAME ' + w + ': the two rows do not add up to the product');
+            if (String(total).length > S.nc - 1) fail('GAME ' + w + ': the product needs ' + String(total).length + ' columns, only ' + (S.nc - 1) + ' left of the ×');
+            if (String(n1).length > S.nc) fail('GAME ' + w + ': the first row does not fit');
+            /* 照遊戲的規則：數字條的最後一個數字放在第 k 欄 —— 只有 k ＝ 1 收 */
+            for (let k = 0; k + len <= S.nc; k++){
+              LANGS.forEach(L => {
+                const d = I18N[L];
+                if (k === 0) seq(w + ' gShift0 ' + L, d.gShift0(e.a, e.b, s, n1), [n1, s, n1 + s, e.a, e.b, total, s]);
+                if (k >= 2) seq(w + ' gShiftFar(' + k + ') ' + L, d.gShiftFar(s, k), [k, s, Math.pow(10, k), s * Math.pow(10, k), s]);
+              });
+            }
+            if (len + 2 > S.nc && String(total).length + 0 > S.nc - 1) fail('GAME ' + w + ': no room for a "shifted two" mistake');
+            if (n1 + s === total) fail('GAME ' + w + ': forgetting the shift gives the right answer');
+            LANGS.forEach(L => {
+              const d = I18N[L];
+              seq(w + ' gShiftNow ' + L, d.gShiftNow(e.a, e.b, t, s), [e.a, e.b, e.a, t, s]);
+              seq(w + ' gShiftSum ' + L, d.gShiftSum(e.a, e.b, total), [e.a, e.b, total]);
+              seq(w + ' gShiftDone ' + L, d.gShiftDone(e.a, e.b, n1, s * 10, total), [s * 10, 0, n1, s * 10, total, e.a, e.b, total]);
+              seq(w + ' gShift2 ' + L, d.gShift2(e.a, t, s), [2, e.a, t, s, s * 10, s, s % 10]);
+            });
+          });
+          if (!D.GAME_SHIFT.some(e => String(mulRef(e.a, Math.floor(e.b / 10))).length === 4)) fail('GAME_SHIFT: no second row with four digits');
+          if (!D.GAME_SHIFT.some(e => Math.floor(e.b / 10) >= 2)) fail('GAME_SHIFT: every multiplier has 1 ten, so the second row is always the top number itself');
+          need('shift', /var rx = pt\.tap \? pt\.x : pt\.x \+ \(len - 1\) \* SHIFT\.cw \/ 2;/, 'the drop is not judged by where the strip\'s LAST digit lands');
+          need('shift', /if \(k === 0\)\{ roundMiss\(d\.gShift0\(/, 'a strip that is not shifted is accepted');
+          need('shift', /if \(k >= 2\)\{ roundMiss\(d\.gShiftFar\(/, 'a strip shifted two columns is accepted');
+          need('shift', /if \(Math\.abs\(pt\.y - SHIFT_Y\.r2\) > SHIFT_SNAP_Y\) return false;/, 'a drop away from the second row is not a silent bounce');
+        }
+
+        /* --- 第 3 關：分籃子（範例 3） --- */
+        {
+          const BN = D.START_BIN, C = D.START_CARD, TR = D.START_TRAY;
+          [0, 1].forEach(i => inside({ x:BN.x[i], y:BN.y, w:BN.w, h:BN.h }, 'start: basket ' + i, D.START_H));
+          if (hit({ x:BN.x[0], y:BN.y, w:BN.w, h:BN.h }, { x:BN.x[1], y:BN.y, w:BN.w, h:BN.h })) fail('GAME start: the baskets overlap');
+          const placed = [0, 1].map(k => sq(BN.x[0] + BN.w / 2, BN.y + BN.first + k * BN.step, C.w, C.h));
+          placed.forEach((p, k) => { if (!(p.x >= BN.x[0] && p.x + p.w <= BN.x[0] + BN.w && p.y >= BN.y + BN.lbl && p.y + p.h <= BN.y + BN.h)) fail('GAME start: placed card ' + k + ' sticks out of its basket or covers the label'); });
+          noHits(placed, 'start: placed cards');
+          const tray = [0, 1, 2, 3].map(i => sq((W - TR.step) / 2 + (i % 2) * TR.step, TR.y + Math.floor(i / 2) * TR.rowStep, C.w, C.h));
+          tray.forEach((p, i) => { inside(p, 'start: tray card ' + i, D.START_H); if (p.y < BN.y + BN.h + 4) fail('GAME start: tray card ' + i + ' starts inside a basket'); });
+          noHits(tray, 'start: tray cards');
+          need('start', /addPiece\(B, \{ w:START_CARD\.w, h:START_CARD\.h, cx:\(300 - START_TRAY\.step\) \/ 2 \+ \(i % 2\) \* START_TRAY\.step, cy:START_TRAY\.y \+ Math\.floor\(i \/ 2\) \* START_TRAY\.rowStep,/, 'the tray is not laid out at START_TRAY');
+          need('start', /P\.lock\(bin\.cx, BN\.y \+ BN\.first \+ bin\.n \* BN\.step\);/, 'a placed card does not stack at START_BIN.first + n × step');
+          need('start', /startTray\(set\)\.forEach\(/, 'the tray is not built through startTray()');
+          need('start', /var bin = nearestOpen\(bins, pt, 8\);/, 'a card is not given to the nearest basket');
+          need('start', /if \(bin\.i !== want\)\{/, 'a card in the wrong basket is accepted');
+          LANGS.forEach(L => {
+            const d = I18N[L];
+            [d.gBin2, d.gBin1].forEach((t, i) => {
+              if (nums(t).join() !== String(2 - i)) fail('GAME start ' + L + ': basket ' + i + ' should say ' + (2 - i) + ': ' + t);
+              if (estTextW(t, 16) > BN.w - 8) fail('GAME start ' + L + ': basket label "' + t + '" is too wide');
+            });
+          });
+          D.GAME_START.forEach((set, si) => {
+            const w = 'GAME_START[' + si + ']';
+            if (set.length !== 4) return fail('GAME ' + w + ': expected 4 cards');
+            const bins = set.map(e => startRef(e.N, e.d).qLen === 2 ? 0 : 1);
+            set.forEach((e, j) => {
+              const bad = divInv(e, w + '[' + j + ']'); if (bad) fail('GAME ' + bad);
+              if (D.startBin(e.N, e.d) !== bins[j]) fail('GAME ' + w + '[' + j + '] ' + e.N + ' ÷ ' + e.d + ': startBin() says ' + D.startBin(e.N, e.d) + ', the first two digits say ' + bins[j]);
+              /* 自己再看一次：前兩位和除數比 */
+              const p2 = Math.floor(e.N / 10), mine = p2 >= e.d ? 0 : 1;
+              if (mine !== bins[j]) fail('GAME ' + w + '[' + j + ']: second implementation disagrees');
+              if (estTextW(e.N + ' ÷ ' + e.d, 20) > C.w - 10) fail('GAME ' + w + '[' + j + ']: the card text is too wide');
+              const sp = startPlan(e.N, e.d);
+              LANGS.forEach(L => {
+                const d = I18N[L];
+                if (mine === 0){
+                  const cmp = sp.rows[1].cmp;
+                  if (cmp !== (p2 === e.d ? 0 : 1)) fail('GAME ' + w + '[' + j + ']: startPlan() compares ' + p2 + ' with ' + e.d + ' wrongly');
+                  seq(w + '[' + j + '] gStartTwo ' + L, d.gStartTwo(e.N, e.d, p2, cmp), cmp === 0 ? [e.N, e.d, p2, e.d, 1, 2] : [e.N, e.d, p2, e.d, 2]);
+                  seq(w + '[' + j + '] gStartOk ' + L, d.gStartOk(e.N, e.d, p2, 2), [e.N, e.d, p2, 2]);
+                } else {
+                  seq(w + '[' + j + '] gStartOne ' + L, d.gStartOne(e.N, e.d, p2, e.N), [e.N, e.d, p2, e.d, e.N, 1]);
+                  seq(w + '[' + j + '] gStartOk ' + L, d.gStartOk(e.N, e.d, p2, 1), [e.N, e.d, p2, 1]);
+                }
+                seq(w + '[' + j + '] gStart2 ' + L, d.gStart2(e.N, e.d, p2), [2, e.N, e.d, p2, e.d]);
+              });
+            });
+            if (bins.filter(b => b === 0).length !== 2) fail('GAME ' + w + ': expected two cards with a 2-digit quotient and two with 1');
+            /* 每一組至少一張「差一點點」的卡：前兩位剛好等於除數，或只差 1、2 */
+            if (!set.some(e => Math.abs(Math.floor(e.N / 10) - e.d) <= 2)) fail('GAME ' + w + ': no card where the first two digits are within 2 of the divisor — every card is an easy call');
+            /* 托盤不可以一開始就排好（2 位的全在前面）—— startTray() 跑 3000 次 */
+            for (let k = 0; k < 3000; k++){
+              const t = D.startTray(set);
+              if (t.length !== 4 || set.some(e => t.indexOf(e) < 0)) { fail('GAME ' + w + ': startTray() loses or duplicates a card'); break; }
+              const bb = t.map(e => D.startBin(e.N, e.d));
+              if (bb.every((b, i) => i === 0 || bb[i - 1] <= b)){ fail('GAME ' + w + ': startTray() can lay the cards out already in basket order (' + bb.join() + ')'); break; }
+            }
+          });
+          if (!D.GAME_START.some(set => set.some(e => Math.floor(e.N / 10) === e.d))) fail('GAME_START: no card whose first two digits EQUAL the divisor — "equal still goes" is never tested');
+          LANGS.forEach(L => {
+            seq('gStartNow ' + L, I18N[L].gStartNow(1, 4), [1, 4]);
+            if (nums(I18N[L].gStartDone).length) fail('GAME gStartDone ' + L + ' should not carry numbers: ' + I18N[L].gStartDone);
+          });
+        }
+
+        /* --- 第 4 關：調商（範例 4、5） --- */
+        {
+          const A = D.ADJ, T = D.ADJ_TRAY;
+          inside({ x:4, y:A.top, w:292, h:A.topH }, 'adjust: the guess line', D.ADJ_H);
+          if (!(A.top + A.topH + 24 <= A.y)) fail('GAME adjust: the guess line runs into the tick above the bar');
+          if (!(A.lblY >= A.y + A.h + 2)) fail('GAME adjust: the labels overlap the bar');
+          inside(sq(T.plusX, T.y, 4 * 30, D.GPICK), 'adjust: the widest "+ one share"', D.ADJ_H);
+          inside(sq(T.trashX, T.y, T.trashW, T.trashH), 'adjust: the bin', D.ADJ_H);
+          if (!(T.y - T.trashH / 2 > A.lblY + A.lblH + 20)) fail('GAME adjust: the tray is inside the bar\'s drop band');
+          if (hit(sq(T.plusX, T.y, 120, D.GPICK), sq(T.trashX, T.y, T.trashW + 12, T.trashH + 12))) fail('GAME adjust: the "+ one share" piece sits inside the bin\'s drop zone');
+          const dirs = new Set();
+          D.GAME_ADJ.forEach((e, i) => {
+            const w = 'GAME_ADJ[' + i + '] ' + e.cur + ' ÷ ' + e.d;
+            const bad = roundInv(e, w); if (bad) return fail('GAME ' + bad);
+            const tp = tryPlan(e.cur, e.d), ref = quotDigitRef(e.cur, e.d), rt = roundTenRef(e.d), raw = Math.floor(e.cur / rt), guess = Math.min(9, raw);
+            if (tp.rt !== rt || tp.guessRaw !== raw || tp.guess !== guess) fail('GAME ' + w + ': tryPlan() guesses ' + tp.guess + ' (raw ' + tp.guessRaw + '), rounding the divisor to ' + rt + ' gives ' + guess);
+            if (guess === ref.q) fail('GAME ' + w + ': the first guess is already right — this round is about adjusting');
+            if (guess < 1) fail('GAME ' + w + ': the guess is 0, nothing to draw');
+            dirs.add(guess > ref.q ? 'down' : 'up');
+            if (Math.abs(guess - ref.q) >= 2) dirs.add('twice');
+            if (raw > 9) dirs.add('clamped');
+            /* 自己的狀態判斷，和 adjState() 每一個 n 都比 */
+            const mine = n => n * e.d > e.cur ? 'over' : (e.cur - n * e.d >= e.d ? 'small' : 'ok');
+            for (let n = 1; n <= 10; n++) if (D.adjState(e.cur, e.d, n) !== mine(n)) fail('GAME ' + w + ': adjState(' + n + ') is ' + D.adjState(e.cur, e.d, n) + ', should be ' + mine(n));
+            /* 照遊戲的規則從試商開始玩：加一份只在 small 收、拿掉一份只在 over 收、按鈕只在 ok 收。
+               每一個走得到的狀態都要有路走到 ok，而且 ok 只有一個 —— 它就是重複減法的商 */
+            const seen = new Set(), stack = [guess], oks = new Set();
+            while (stack.length){
+              const n = stack.pop(); if (seen.has(n)) continue; seen.add(n);
+              if (n < 1 || n > 10){ fail('GAME ' + w + ': the shares can reach ' + n); continue; }
+              const st = D.adjState(e.cur, e.d, n);
+              if (st === 'ok') oks.add(n);
+              if (st === 'small') stack.push(n + 1);
+              if (st === 'over') stack.push(n - 1);
+            }
+            if (oks.size !== 1 || !oks.has(ref.q)) fail('GAME ' + w + ': playing by the rules from ' + guess + ' ends at ' + [...oks].join() + ', repeated subtraction says ' + ref.q);
+            /* 畫面：長條依 max(cur, guess × d) 縮放；每一個走得到的份數都畫在畫板裡、一份至少 GPICK 的一半寬 */
+            const u = (A.x1 - A.x0) / Math.max(e.cur, guess * e.d);
+            if (!near(D.adjUnit(e.cur, e.d), u)) fail('GAME ' + w + ': adjUnit() is ' + D.adjUnit(e.cur, e.d) + ', should be ' + u);
+            seen.forEach(n => { if (A.x0 + n * e.d * u > A.x1 + 1e-6) fail('GAME ' + w + ': ' + n + ' shares run past the end of the board'); });
+            if (e.d * u < 24) fail('GAME ' + w + ': one share is only ' + (e.d * u).toFixed(1) + 'px wide');
+            if (!(A.x0 + e.cur * u <= A.x1 + 1e-6)) fail('GAME ' + w + ': the bar runs past the board');
+            LANGS.forEach(L => {
+              const d = I18N[L];
+              seq(w + ' gAdjTry ' + L, d.gAdjTry(e.d, rt, e.cur, raw, guess), raw > guess ? [e.d, rt, e.cur, rt, raw, 9, guess] : [e.d, rt, e.cur, rt, guess]);
+              if (estTextW(d.gAdjTry(e.d, rt, e.cur, raw, guess), 15) > 2 * 288) fail('GAME ' + w + ' ' + L + ': the guess line does not fit in two lines');
+              seen.forEach(n => {
+                const P = n * e.d, st = mine(n), r = e.cur - P;
+                seq(w + ' gAdjNow(' + n + ') ' + L, d.gAdjNow(e.cur, e.d, n), [e.cur, e.d, n, n, e.d, P]);
+                seq(w + ' gAdjShares(' + n + ') ' + L, d.gAdjShares(n, P), [n, P]);
+                const lab = st === 'over' ? d.gAdjOverLbl(P - e.cur) : d.gAdjRemLbl(r);
+                seq(w + ' label(' + n + ') ' + L, lab, [st === 'over' ? P - e.cur : r]);
+                [d.gAdjShares(n, P), lab].forEach(t => { if (estTextW(t, 17) > 160) fail('GAME ' + w + ' ' + L + ': label "' + t + '" is too wide'); });
+                seq(w + ' gAdjBtn(' + n + ') ' + L, d.gAdjBtn(n), [n]);
+                seq(w + ' gAdj2(' + n + ') ' + L, d.gAdj2(st, n, e.d, P, e.cur, r),
+                    st === 'over' ? [2, n, e.d, P, e.cur] : st === 'small' ? [2, r, e.d] : [2, P, e.cur, r, e.d, n]);
+                if (st === 'over'){
+                  seq(w + ' gAdjAddOver(' + n + ') ' + L, d.gAdjAddOver(n, e.d, P, e.cur), [n, n, e.d, P, e.cur]);
+                  seq(w + ' gAdjOkOver(' + n + ') ' + L, d.gAdjOkOver(n, e.d, P, e.cur), [n, e.d, P, e.cur, 1]);
+                  if (!(P > e.cur)) fail('GAME ' + w + ': "will not go" said at ' + n + ' although ' + P + ' ≤ ' + e.cur);
+                } else {
+                  seq(w + ' gAdjRemoveFit(' + n + ') ' + L, d.gAdjRemoveFit(n, e.d, P, e.cur, r + e.d), [n, e.d, P, e.cur, r + e.d]);
+                  if (!(r + e.d >= e.d)) fail('GAME ' + w + ': impossible');
+                }
+                if (st === 'small'){
+                  seq(w + ' gAdjOkSmall(' + n + ') ' + L, d.gAdjOkSmall(n, e.d, P, e.cur, r), [n, e.d, P, e.cur, P, r, e.d, 1]);
+                  if (!(r >= e.d)) fail('GAME ' + w + ': "another share still fits" said at ' + n + ' although only ' + r + ' is left');
+                }
+                if (st === 'ok'){
+                  seq(w + ' gAdjAddFit ' + L, d.gAdjAddFit(r, e.d, n + 1, (n + 1) * e.d, e.cur), [r, e.d, n + 1, e.d, (n + 1) * e.d, e.cur]);
+                  if (!(r < e.d && (n + 1) * e.d > e.cur)) fail('GAME ' + w + ': "a whole share will not fit" is false at ' + n);
+                  seq(w + ' gAdjDone ' + L, d.gAdjDone(e.cur, e.d, n, P, r), [n, e.d, P, e.cur, e.cur, P, r, e.d, n]);
+                }
+              });
+            });
+          });
+          ['up', 'down', 'twice', 'clamped'].forEach(k => { if (!dirs.has(k)) fail('GAME_ADJ: no entry where the guess must be adjusted ' + (k === 'clamped' ? 'after guessing above 9' : k)); });
+          need('adjust', /if \(st === 'over'\)\{ roundMiss\(d\.gAdjAddOver\(/, 'adding a share when it already will not go is accepted');
+          need('adjust', /if \(st === 'ok'\)\{ roundMiss\(d\.gAdjAddFit\(/, 'adding a share when it is just right is accepted');
+          need('adjust', /if \(st !== 'over'\)\{ roundMiss\(d\.gAdjRemoveFit\(/, 'taking a share off when it does not go past is accepted');
+          need('adjust', /if \(st === 'over'\)\{ roundMiss\(d\.gAdjOkOver\(n, e\.d, P, e\.cur\)\); return; \}\n\s*if \(st === 'small'\)\{ roundMiss\(d\.gAdjOkSmall\(/, 'the button accepts a digit that is too big or too small');
+          /* 長條尾巴的記號和上面的 cur 標籤至少留 2px（碰到邊也算壓到：codex 第三輪），也不可以伸進下面的標籤列 */
+          {
+            const mk = /addZone\(B, A\.x0 \+ e\.cur \* u - 1\.5, A\.y - (\d+), 3, A\.h \+ (\d+), 'gend'\)/.exec(RB.adjust || '');
+            const tk = /addZone\(B, Math\.min\(A\.x0 \+ e\.cur \* u, 300 - 32\) - 30, A\.y - (\d+), 60, (\d+), 'gtick'/.exec(RB.adjust || '');
+            if (!mk || !tk) fail('GAME adjust: cannot read the bar-end marker or the cur label from RENDER.adjust');
+            else {
+              const mTop = A.y - Number(mk[1]), mBot = mTop + A.h + Number(mk[2]), tBot = A.y - Number(tk[1]) + Number(tk[2]);
+              if (mTop < tBot + 2) fail('GAME adjust: the bar-end marker (from y ' + mTop + ') runs into the cur label (down to y ' + tBot + ')');
+              if (mBot > A.lblY) fail('GAME adjust: the bar-end marker runs into the label row');
+              if (mBot < A.y + A.h) fail('GAME adjust: the bar-end marker does not reach the bottom of the bar');
+            }
+          }
+          need('adjust', /if \(plus\.busy\(\) \|\| last\.busy\(\)\) return;/, 'the button judges the digit while a share is still being dragged');
+          need('adjust', /var e = pick\(GAME_ADJ\), tp = tryPlan\(e\.cur, e\.d\), n = tp\.guess,/, 'the round does not start from the guess made by rounding the divisor');
+        }
+
+        /* --- 第 5 關：直式（範例 6） --- */
+        {
+          const X = D.LONG_X, Y = D.LONG_Y, h = D.LONG_SLOT / 2;
+          const keys = []; for (let v = 0; v <= 9; v++) keys.push(sq(150 + ((v % 5) - 2) * D.LONG_KEYS.step, D.LONG_KEYS.y + Math.floor(v / 5) * D.LONG_KEYS.rowStep, D.LONG_KEYS.size, D.LONG_KEYS.size));
+          keys.forEach((k, v) => inside(k, 'long: digit card ' + v, D.LONG_H));
+          noHits(keys, 'long: digit cards');
+          if (!(X.col[1] - X.col[0] >= D.LONG_SLOT + 2 && X.col[2] - X.col[1] >= D.LONG_SLOT + 2)) fail('GAME long: the columns are closer than one box');
+          const rowsY = ['q', 'n', 'm1', 's1', 'm2', 's2'].map(r => Y[r]);
+          for (let i = 1; i < rowsY.length; i++) if (rowsY[i] - rowsY[i - 1] < D.LONG_SLOT + 2) fail('GAME long: rows ' + (i - 1) + ' and ' + i + ' are closer than one box');
+          /* 放寬之後相鄰的格子會重疊（要靠 nearestOpen 挑最近的）；重疊不可以大到蓋過格子本身 */
+          if (!(D.LONG_PAD * 2 > (X.col[1] - X.col[0]) - D.LONG_SLOT)) fail('GAME long: neighbouring boxes no longer overlap once padded — the e2e overlap test would be vacuous');
+          if (!(Y.s2 + h < D.LONG_KEYS.y - D.LONG_KEYS.size / 2 - D.LONG_PAD)) fail('GAME long: the digit cards start inside the last row of boxes');
+          if (!(X.div + 32 <= X.bar && X.bar < X.col[0] - h)) fail('GAME long: the divisor or the bracket runs into the dividend');
+          if (!(X.minus + 12 <= X.col[0] - h)) fail('GAME long: the minus sign runs into the first column');
+          const zones = []; ['q', 'n', 'm1', 's1', 'm2', 's2'].forEach(r => X.col.forEach(cx => zones.push(sq(cx, Y[r], D.LONG_SLOT, D.LONG_SLOT))));
+          zones.forEach((z, i) => inside(z, 'long: box ' + i, D.LONG_H));
+          noHits(zones, 'long: boxes');
+          /* nearestOpen() 在直式的格子上：格子裡的每一個點都判給那一格 */
+          if (nearestOpen){
+            const cs = D.longCells(725, 25).cells, list = cs.map((c, i) => ({ id:i, cx:X.col[c.col], cy:Y[c.row], hw:h, hh:h, done:false }));
+            let bad = 0;
+            list.forEach(b => { for (let x = b.cx - h + 0.5; x < b.cx + h; x += 2) for (let y = b.cy - h + 0.5; y < b.cy + h; y += 2){ const g = nearestOpen(list, { x, y }, D.LONG_PAD); if (!g || g.id !== b.id) bad++; } });
+            if (bad) fail('GAME long: nearestOpen(): ' + bad + ' points inside a box are given to another box (or none)');
+          }
+          const feats = new Set();
+          D.GAME_LONG.forEach((e, i) => {
+            const w = 'GAME_LONG[' + i + '] ' + e.N + ' ÷ ' + e.d;
+            const bad = divInv(e, w); if (bad) return fail('GAME ' + bad);
+            const ref = ldRef(e.N, e.d), LC = D.longCells(e.N, e.d);
+            if (LC.Q !== ref.q || LC.R !== ref.rem) fail('GAME ' + w + ': longCells() says ' + LC.Q + ' r ' + LC.R + ', repeated subtraction says ' + ref.q + ' r ' + ref.rem);
+            /* 自己的格子清單（範例 6 的畫法）：每一輪 商；商不是 0 的話 積的每一位、差的每一位（餘 0 又要帶下來就不寫）、帶下來 */
+            const ds = digitsRef(e.N), mine = [];
+            let g = 0;
+            ref.rounds.forEach((rd, k) => {
+              const rowM = k === 0 ? 'm1' : 'm2', rowS = k === 0 ? 's1' : 's2', br = rd.col + 1 < ds.length ? ds[rd.col + 1] : null;
+              mine.push(['q', g++, rd.col, 'q', rd.q]);
+              if (rd.q === 0){ if (br !== null) fail('GAME ' + w + ': a 0 in the quotient before the last digit — the layout has no row for that'); return; }
+              const pd = digitsRef(rd.prod); pd.forEach((v, j) => mine.push(['m', g, rd.col - (pd.length - 1 - j), rowM, v])); g++;
+              const sd = (br !== null && rd.rem === 0) ? [] : digitsRef(rd.rem); sd.forEach((v, j) => mine.push(['s', g, rd.col - (sd.length - 1 - j), rowS, v])); if (sd.length) g++;
+              if (br !== null) mine.push(['b', g++, rd.col + 1, rowS, br]);
+            });
+            const got = LC.cells.map(c => [c.k, c.g, c.col, c.row, c.v]);
+            if (JSON.stringify(got) !== JSON.stringify(mine)) fail('GAME ' + w + ': longCells() is ' + JSON.stringify(got) + ', should be ' + JSON.stringify(mine));
+            if (LC.groups !== g) fail('GAME ' + w + ': longCells() counts ' + LC.groups + ' groups, should be ' + g);
+            /* 每一格都在畫板的格線上、不跑出被除數的三欄、同一列同一欄不會有兩格 */
+            const seenAt = new Set();
+            LC.cells.forEach(c => {
+              if (!(c.col >= 0 && c.col <= 2) || Y[c.row] === undefined) fail('GAME ' + w + ': a box at column ' + c.col + ', row ' + c.row + ' is off the grid');
+              const key = c.row + ':' + c.col; if (seenAt.has(key)) fail('GAME ' + w + ': two boxes at ' + key); seenAt.add(key);
+            });
+            /* 範例 6 的表格和遊戲的格子是同一張圖：ldRows() 每一列的數字要和遊戲在那一列填的一樣 */
+            const rows = ldRows(LC.plan), byRow = { prod:[], diff:[] };
+            rows.forEach(r => { if (r.kind === 'prod' || r.kind === 'diff') byRow[r.kind].push(r.cells.join('')); });
+            const gameRow = rr => LC.cells.filter(c => c.row === rr).sort((a, b) => a.col - b.col).map(c => c.v).join('');
+            const gm = ['m1', 'm2'].map(gameRow).filter(Boolean), gs = ['s1', 's2'].map(gameRow).filter(Boolean);
+            if (gm.join() !== byRow.prod.join() || gs.join() !== byRow.diff.join()) fail('GAME ' + w + ': the game fills ' + gm.join('/') + ' | ' + gs.join('/') + ' but example 6 draws ' + byRow.prod.join('/') + ' | ' + byRow.diff.join('/'));
+            if (ref.qDigits.length === 1) feats.add('one'); else feats.add('two');
+            if (ref.qDigits.indexOf(0) >= 0) feats.add('zero');
+            feats.add(ref.rem ? 'rem' : 'exact');
+            if (ref.rounds.some(rd => tryPlan(rd.cur, e.d).tries.length > 1)) feats.add('adjust');
+            if (ref.rounds.some(rd => rd.rem === 0 && rd.col < 2)) feats.add('remzero-bring');
+            /* 每一格、每一張錯的數字卡的說明 */
+            LANGS.forEach(L => {
+              const d = I18N[L];
+              seq(w + ' gLongNow ' + L, d.gLongNow(e.N, e.d, d.gLongKinds.q), [e.N, e.d]);
+              seq(w + ' gLongLine ' + L, d.gLongLine(e.N, e.d, ref.q, ref.rem), ref.rem ? [e.N, e.d, ref.q, ref.rem] : [e.N, e.d, ref.q]);
+              seq(w + ' gLongDone ' + L, d.gLongDone(e.N, e.d, ref.q, ref.rem), ref.rem ? [e.N, e.d, ref.q, ref.rem, e.d, ref.q, ref.rem, e.N] : [e.N, e.d, ref.q, e.d, ref.q, e.N]);
+              LC.cells.forEach((c, ci) => {
+                const ww = w + ' cell ' + ci + ' (' + c.k + ') ' + L;
+                for (let v = 0; v <= 9; v++){
+                  if (v === c.v) continue;
+                  if (c.k === 'q'){
+                    const P = v * e.d;
+                    if (P > c.cur) seq(ww + ' gLongQBig(' + v + ')', d.gLongQBig(c.cur, e.d, v, P), [v, e.d, P, c.cur]);
+                    else {
+                      seq(ww + ' gLongQSmall(' + v + ')', d.gLongQSmall(c.cur, e.d, v, P, c.cur - P), [v, e.d, P, c.cur, P, c.cur - P, e.d]);
+                      if (!(c.cur - P >= e.d)) fail('GAME ' + ww + ': "' + v + ' is too small" but ' + c.cur + ' − ' + P + ' is smaller than ' + e.d);
+                    }
+                  }
+                  if (c.k === 'm') seq(ww + ' gLongM(' + v + ')', d.gLongM(c.q, e.d, c.prod, v), [c.q, e.d, c.prod, v]);
+                  if (c.k === 's') seq(ww + ' gLongS(' + v + ')', d.gLongS(c.cur, c.prod, c.rem, v), [c.cur, c.prod, c.rem, v]);
+                  if (c.k === 'b') seq(ww + ' gLongBring(' + v + ')', d.gLongBring(c.v, v), [c.v, v]);
+                }
+                if (c.k === 'q') seq(ww + ' gLong2q', d.gLong2q(c.cur, e.d, c.v, c.v * e.d), [2, c.cur, e.d, c.v, c.v, e.d, c.v * e.d]);
+                if (c.k === 'm') seq(ww + ' gLong2m', d.gLong2m(c.q, e.d, c.prod), [2, c.q, e.d, c.prod]);
+                if (c.k === 's') seq(ww + ' gLong2s', d.gLong2s(c.cur, c.prod, c.rem), [2, c.cur, c.prod, c.rem]);
+                if (c.k === 'b'){ seq(ww + ' gLong2b', d.gLong2b(c.v), [2, c.v]); seq(ww + ' gLongBringNot', d.gLongBringNot(c.v), [c.v]); seq(ww + ' gLongBringTok', d.gLongBringTok(c.v), [c.v]); }
+              });
+              ['q', 'm', 's', 'b'].forEach(k => { if (typeof d.gLongKinds[k] !== 'string' || !d.gLongKinds[k]) fail('GAME gLongKinds.' + k + ' missing in ' + L); if (nums(d.gLongOrder(d.gLongKinds[k])).length) fail('GAME gLongOrder ' + L + ' carries a number'); });
+            });
+          });
+          ['one', 'two', 'zero', 'rem', 'exact', 'adjust', 'remzero-bring'].forEach(k => { if (!feats.has(k)) fail('GAME_LONG: no division with feature "' + k + '"'); });
+          need('long', /if \(s\.g !== curG\)\{ roundMiss\(d\.gLongOrder\(/, 'a box outside the current step can be filled');
+          need('long', /if \(P\.data\.bring && C\.k !== 'b'\)\{ roundMiss\(d\.gLongBringNot\(/, 'the dividend digit can be dropped into a box other than "bring down"');
+          need('long', /if \(v !== C\.v\)\{/, 'a wrong digit is accepted');
+          need('long', /roundMiss\(v \* C\.d > C\.cur \? d\.gLongQBig\(/, 'a quotient digit is not judged too big by v × d > what is being divided');
+          need('long', /var s = nearestOpen\(slots, pt, LONG_PAD\);/, 'a digit is not given to the nearest box');
+        }
       }
 
       /* ---------- 9. 題庫的神諭 ---------- */
@@ -1647,35 +2184,61 @@ module.exports = {
           push(d0.s6verify(p.d, p.q, p.rem, p.backCheck));
           push(d0.s6result(p.N, p.d, p.q, p.rem));
         });
-        ROUNDS.forEach(r => {
-          if (r.kind === 'mulTotal'){
-            const mp = mulPlan(r.a, r.b);
-            push(d0.gPrompt.mulTotal(r.a, r.b));
-            push(d0.gHint2.mulTotal(mp.r1, mp.r2value));
-          }
-          if (r.kind === 'mulRow2'){
-            const mp = mulPlan(r.a, r.b);
-            push(d0.gPrompt.mulRow2(r.a, r.b));
-            push(d0.gHint2.mulRow2(r.a, mp.tens, mp.tens * 10));
-          }
-          if (r.kind === 'qLen'){
-            const sp = startPlan(r.N, r.d), last = sp.rows[sp.rows.length - 1];
-            push(d0.gPrompt.qLen(r.N, r.d));
-            push(d0.gHint2.qLen(last.take, last.cur));
-            push(d0.gOptLen(sp.qLen));
-          }
-          if (r.kind === 'tryDigit'){
-            const tp = tryPlan(r.cur, r.d);
-            push(d0.gPrompt.tryDigit(r.cur, r.d));
-            push(d0.gHint2.tryDigit(tp.rt, tp.guessRaw));
-          }
-          if (r.kind === 'full'){
-            const p = ldPlan(r.N, r.d);
-            push(d0.gPrompt.full(r.N, r.d));
-            push(d0.gOptFull(p.q, p.rem));
-            push(d0.gHint2.full(startPlan(r.N, r.d).qLen));
-          }
+        /* 小遊戲（2026-10-04 改版）：每一關、每一個池子的句子都渲染一次，跑同一套「負號／undefined／中文緊貼數字／英文單複數」掃描 */
+        GAME_SPLIT.forEach(e => {
+          const T = e.b - e.b % 10, O = e.b % 10;
+          for (let j = 0; j <= e.b; j++) push(d0.gSplitNow(e.a, e.b, j));
+          for (let j = 1; j < e.b; j++){ push(d0.gSplitOnes(e.b, j, O)); push(d0.gSplitTen(e.b, j)); push(d0.gSplitOdd(e.b, j)); }
+          push(d0.gSplitLegend(e.a)); push(d0.gSplitPart(T, e.a)); push(d0.gSplitPart(O, e.a)); push(d0.gSplitDone(e.a, e.b, T, O)); push(d0.gSplit2(e.b, T, O));
         });
+        GAME_SHIFT.forEach(e => {
+          const o = e.b % 10, t = Math.floor(e.b / 10), n1 = e.a * o, s = e.a * t;
+          push(d0.gShiftNow(e.a, e.b, t, s)); push(d0.gShiftSum(e.a, e.b, e.a * e.b)); push(d0.gShift0(e.a, e.b, s, n1));
+          for (let k = 2; k <= 4; k++) push(d0.gShiftFar(s, k));
+          push(d0.gShiftDone(e.a, e.b, n1, s * 10, e.a * e.b)); push(d0.gShift2(e.a, t, s));
+        });
+        GAME_START.forEach(set => set.forEach(e => {
+          const p2 = Math.floor(e.N / 10);
+          push(d0.gStartTwo(e.N, e.d, p2, 0)); push(d0.gStartTwo(e.N, e.d, p2, 1)); push(d0.gStartOne(e.N, e.d, p2, e.N));
+          push(d0.gStartOk(e.N, e.d, p2, 1)); push(d0.gStartOk(e.N, e.d, p2, 2)); push(d0.gStart2(e.N, e.d, p2));
+        }));
+        for (let n = 0; n <= 4; n++) push(d0.gStartNow(n, 4));
+        push(d0.gStartDone); push(d0.gBin1); push(d0.gBin2);
+        GAME_ADJ.forEach(e => {
+          const tp = tryPlan(e.cur, e.d);
+          push(d0.gAdjTry(e.d, tp.rt, e.cur, tp.guessRaw, tp.guess));
+          for (let n = 1; n <= 9; n++){
+            const P = n * e.d, r = e.cur - P;
+            push(d0.gAdjNow(e.cur, e.d, n)); push(d0.gAdjShares(n, P)); push(d0.gAdjBtn(n));
+            if (P > e.cur){ push(d0.gAdjOverLbl(P - e.cur)); push(d0.gAdjAddOver(n, e.d, P, e.cur)); push(d0.gAdjOkOver(n, e.d, P, e.cur)); push(d0.gAdj2('over', n, e.d, P, e.cur, r)); }
+            else {
+              push(d0.gAdjRemLbl(r)); push(d0.gAdjRemoveFit(n, e.d, P, e.cur, r + e.d));
+              if (r >= e.d){ push(d0.gAdjOkSmall(n, e.d, P, e.cur, r)); push(d0.gAdj2('small', n, e.d, P, e.cur, r)); }
+              else { push(d0.gAdjAddFit(r, e.d, n + 1, (n + 1) * e.d, e.cur)); push(d0.gAdjDone(e.cur, e.d, n, P, r)); push(d0.gAdj2('ok', n, e.d, P, e.cur, r)); }
+            }
+          }
+          push(d0.gAdjPlus(e.d));
+        });
+        push(d0.gAdjLast); push(d0.gAdjTrash);
+        GAME_LONG.forEach(e => {
+          const LC = longCells(e.N, e.d);
+          push(d0.gLongLine(e.N, e.d, LC.Q, LC.R)); push(d0.gLongDone(e.N, e.d, LC.Q, LC.R));
+          ['q', 'm', 's', 'b'].forEach(k => { push(d0.gLongNow(e.N, e.d, d0.gLongKinds[k])); push(d0.gLongOrder(d0.gLongKinds[k])); });
+          LC.cells.forEach(c => {
+            for (let v = 0; v <= 9; v++){
+              if (c.k === 'q'){ const P = v * e.d; push(P > c.cur ? d0.gLongQBig(c.cur, e.d, v, P) : d0.gLongQSmall(c.cur, e.d, v, P, c.cur - P)); }
+              if (c.k === 'm') push(d0.gLongM(c.q, e.d, c.prod, v));
+              if (c.k === 's') push(d0.gLongS(c.cur, c.prod, c.rem, v));
+              if (c.k === 'b') push(d0.gLongBring(c.v, v));
+            }
+            if (c.k === 'q') push(d0.gLong2q(c.cur, e.d, c.v, c.v * e.d));
+            if (c.k === 'm') push(d0.gLong2m(c.q, e.d, c.prod));
+            if (c.k === 's') push(d0.gLong2s(c.cur, c.prod, c.rem));
+            if (c.k === 'b'){ push(d0.gLong2b(c.v)); push(d0.gLongBringNot(c.v)); push(d0.gLongBringTok(c.v)); }
+          });
+        });
+        Object.keys(d0.gAsks).forEach(k => { push(d0.gAsks[k]); push(d0.gHints[k]); });
+        push(d0.gPts(20)); push(d0.gPts(10)); push(d0.gWin(100)); push(d0.gClear);
 
         if (narrated.length < 200)
           fail('NARR: only ' + narrated.length + ' ' + L + ' strings were rendered — the sweep is not covering the page');
