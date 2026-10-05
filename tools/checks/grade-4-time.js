@@ -551,42 +551,254 @@ module.exports = {
       find:'    var t = c.start[0] * MIN_PER_HOUR + c.start[1] + c.add[0] * MIN_PER_HOUR + c.add[1];\n    return { day:Math.floor(t / MIN_PER_DAY),',
       replace:'    var t = c.start[0] * MIN_PER_HOUR + c.start[1] + c.add[0] * MIN_PER_HOUR;\n    return { day:Math.floor(t / MIN_PER_DAY),' },
 
-    /* ---------- index.html：遊戲的五關 ---------- */
-    { file:'index', expect:'the marked option is worth', via:'index',
-      find:"      opts:[{ h:4, m:20 }, { h:16, m:20 }, { h:17, m:20 }, { h:15, m:20 }], ans:1 },",
-      replace:"      opts:[{ h:4, m:20 }, { h:16, m:20 }, { h:17, m:20 }, { h:15, m:20 }], ans:2 }," },
-    { file:'index', expect:'does not offer the forgot-the-12 distractor', via:'index',
-      find:"      opts:[{ h:4, m:20 }, { h:16, m:20 }, { h:17, m:20 }, { h:15, m:20 }], ans:1 },\n",
-      replace:"      opts:[{ h:14, m:20 }, { h:16, m:20 }, { h:17, m:20 }, { h:15, m:20 }], ans:1 },\n" },
-    { file:'index', expect:'does not offer the wrong-half-of-the-day distractor', via:'index',
-      find:"      opts:[{ period:'pm', h12:9, m:5 }, { period:'am', h12:9, m:5 },",
-      replace:"      opts:[{ period:'pm', h12:9, m:5 }, { period:'pm', h12:10, m:5 }," },
-    { file:'index', expect:'is outside 13~23, so "take 12 off" is not the taught step', via:'index',
-      find:"    { kind:'to12', h24:21, m:5,", replace:"    { kind:'to12', h24:11, m:5," },
-    { file:'index', expect:'does not offer the right time on the wrong day as a distractor', via:'index',
-      find:"      opts:[{ day:1, h:0, m:30 }, { day:0, h:0, m:30 },",
-      replace:"      opts:[{ day:1, h:0, m:30 }, { day:1, h:3, m:30 }," },
-    { file:'index', expect:'does not offer the reversed-minutes distractor', via:'index',
-      find:"      opts:[{ h:5, m:15 }, { h:4, m:45 }, { h:5, m:45 }, { h:4, m:15 }], ans:1 }",
-      replace:"      opts:[{ h:5, m:16 }, { h:4, m:45 }, { h:5, m:45 }, { h:4, m:15 }], ans:1 }" },
-    { file:'index', expect:'the minutes do not need a borrow, so this round does not train the taught step', via:'index',
-      find:"    { kind:'diff', from:[9, 40], to:[14, 25],",
-      replace:"    { kind:'diff', from:[9, 20], to:[14, 25]," },
-    { file:'index', expect:'roundAnswer says', via:'index',
-      find:"    if (r.kind === 'to24') return { h:to24(r.period, r.h12), m:r.m };",
-      replace:"    if (r.kind === 'to24') return { h:r.h12, m:r.m };" },
-    { file:'index', expect:'the time line marks the answer, which gives it away', via:'index',
-      find:"    if (r.kind === 'add') return [r.start[0] * MIN_PER_HOUR + r.start[1]];",
-      replace:"    if (r.kind === 'add') return [roundAnswer(r).h * MIN_PER_HOUR + roundAnswer(r).m];" },
-    { file:'index', expect:'expected exactly the times the prompt states', via:'index',
-      find:"    if (r.kind === 'to12') return [r.h24 * MIN_PER_HOUR + r.m];",
-      replace:"    if (r.kind === 'to12') return [];" },
-    { file:'index', expect:'every game round has the answer first', via:'index',
-      find:"      opts:[{ h:4, m:20 }, { h:16, m:20 }, { h:17, m:20 }, { h:15, m:20 }], ans:1 },\n    { kind:'to12', h24:21, m:5,\n      opts:[{ period:'pm', h12:9, m:5 }, { period:'am', h12:9, m:5 },\n            { period:'pm', h12:21, m:5 }, { period:'pm', h12:8, m:5 }], ans:0 },\n    { kind:'add', start:[9, 35], add:[3, 40],\n      opts:[{ day:0, h:12, m:15 }, { day:0, h:13, m:75 },\n            { day:0, h:13, m:15 }, { day:1, h:13, m:15 }], ans:2 },\n    { kind:'add', start:[22, 40], add:[1, 50],\n      opts:[{ day:1, h:0, m:30 }, { day:0, h:0, m:30 },\n            { day:1, h:1, m:30 }, { day:0, h:23, m:30 }], ans:0 },\n    { kind:'diff', from:[9, 40], to:[14, 25],\n      opts:[{ h:5, m:15 }, { h:4, m:45 }, { h:5, m:45 }, { h:4, m:15 }], ans:1 }",
-      replace:"      opts:[{ h:16, m:20 }, { h:4, m:20 }, { h:17, m:20 }, { h:15, m:20 }], ans:0 },\n    { kind:'to12', h24:21, m:5,\n      opts:[{ period:'pm', h12:9, m:5 }, { period:'am', h12:9, m:5 },\n            { period:'pm', h12:21, m:5 }, { period:'pm', h12:8, m:5 }], ans:0 },\n    { kind:'add', start:[9, 35], add:[3, 40],\n      opts:[{ day:0, h:13, m:15 }, { day:0, h:13, m:75 },\n            { day:0, h:12, m:15 }, { day:1, h:13, m:15 }], ans:0 },\n    { kind:'add', start:[22, 40], add:[1, 50],\n      opts:[{ day:1, h:0, m:30 }, { day:0, h:0, m:30 },\n            { day:1, h:1, m:30 }, { day:0, h:23, m:30 }], ans:0 },\n    { kind:'diff', from:[9, 40], to:[14, 25],\n      opts:[{ h:4, m:45 }, { h:5, m:15 }, { h:5, m:45 }, { h:4, m:15 }], ans:0 }" },
-    { file:'index', expect:'the two hint levels print the same thing', via:'index',
-      find:"        to12: function(h24){ return '提示 2：' + h24 + ' － 12 ＝ ' + (h24 - 12) + '，所以是下午。'; },",
-      replace:"        to12: function(h24){ return '提示 1：13 時到 23 時是中午過後，減掉 12 就回到鐘面上的數字，前面要記得說下午。'; }," },
+    /* ---------- index.html：遊戲的五關（§六之五，gameChecks()） ---------- */
+    { file:'index', expect:"GAME_ORDER should be", via:'index',
+      find:"  var GAME_ORDER = ['hand', 'pack', 'add', 'borrow', 'cross'];",
+      replace:"  var GAME_ORDER = ['pack', 'hand', 'add', 'borrow', 'cross'];" },
+    { file:'index', expect:"already in increasing order", via:'index',
+      find:"    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }\n    return a;",
+      replace:"    a.sort(function(x, y){ return x - y; });\n    return a;" },
+    { file:'index', expect:"produced", via:'index',
+      find:"      var k = Math.floor(Math.random() * (j + 1));   /* 自足",
+      replace:"      var k = j - 1;   /* 自足" },
+    { file:'index', expect:"first match, not nearest", via:'index',
+      find:"if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"if (!best){ bd = dd; bc = dc; best = b; }" },
+    { file:'index', expect:"measure to the box, not the centre", via:'index',
+      find:"var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;",
+      replace:"var dd = dx * dx + dy * dy, dc = dd;" },
+    { file:'index', expect:"skips it and lands in the next box", via:'index',
+      find:"    return best && !best.done ? best : null;",
+      replace:"    return best;" },
+    { file:'index', expect:"a mistake does not cost 5", via:'index',
+      find:"    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;",
+      replace:"    gScore = Math.max(0, gScore - 0); elScore.textContent = gScore;" },
+    { file:'index', expect:"+20 with no mistakes and +10", via:'index',
+      find:"    var pts = gMistake ? 10 : 20;",
+      replace:"    var pts = 20;" },
+    { file:'index', expect:"board-generation guard", via:'index',
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */",
+      replace:"      /* 這一塊屬於已經拿掉的畫板 */" },
+    { file:'index', expect:"board-generation guard", via:'index',
+      find:"        if (gen !== gGen) return;             /* 這個鐘面",
+      replace:"        /* 這個鐘面" },
+    { file:'index', expect:"lost pointer capture does not put the piece back", via:'index',
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });",
+      replace:"" },
+    { file:'index', expect:"the dial ignores lostpointercapture", via:'index',
+      find:"      dial.addEventListener('lostpointercapture', function(ev){ finish(ev, true); });",
+      replace:"" },
+    { file:'index', expect:"ahead mode does not show hint level 1", via:'index',
+      find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }",
+      replace:"    if (mode === 'never'){ hintLevel = 1; showHint(); }" },
+    { file:'index', expect:"touch-action:none, so turning it scrolls", via:'index',
+      find:"  .gdial{border-radius:50%;touch-action:none;",
+      replace:"  .gdial{border-radius:50%;" },
+    { file:'index', expect:"only plainly written whole numbers count", via:'index',
+      find:"function readInt(s){ s = String(s).trim(); return /^(0|[1-9]\\d{0,3})$/.test(s) ? +s : null; }",
+      replace:"function readInt(s){ s = String(s).replace(/\\s+/g, ''); return /^\\d+$/.test(s) ? +s : null; }" },
+    { file:'index', expect:"each number owns its own 30° sector", via:'index',
+      find:"    var k = Math.round(deg / 30) % 12;\n    return k === 0 ? 12 : k;",
+      replace:"    var k = Math.floor(deg / 30) % 12;\n    return k === 0 ? 12 : k;" },
+    { file:'index', expect:"centre and outside → 0", via:'index',
+      find:"    if (r <= HAND_G.dead || r > HAND_G.hitR) return 0;",
+      replace:"    if (r > HAND_G.hitR) return 0;" },
+    { file:'index', expect:"the next time the hand points at", via:'index',
+      find:"    return t <= HAND_MAX ? t : -1;",
+      replace:"    return t <= HAND_MAX + 1 ? t : -1;" },
+    { file:'index', expect:"the nearest hour is", via:'index',
+      find:"  function handSnap(acc){ return Math.max(0, Math.min(HAND_MAX, Math.round(acc / 30))); }",
+      replace:"  function handSnap(acc){ return Math.max(0, Math.min(HAND_MAX, Math.floor(acc / 30))); }" },
+    { file:'index', expect:"(00:00 to 23:00)", via:'index',
+      find:"  function handClamp(acc){ return Math.max(0, Math.min(HAND_MAX * 30, acc)); }",
+      replace:"  function handClamp(acc){ return Math.max(-360, Math.min(HAND_MAX * 30, acc)); }" },
+    { file:'index', expect:"angleStep(", via:'index',
+      find:"  function angleStep(a0, a1){ var s = ((a1 - a0) % 360 + 540) % 360 - 180; return s; }",
+      replace:"  function angleStep(a0, a1){ var s = a1 - a0; return s; }" },
+    { file:'index', expect:"HAND_MAX is", via:'index',
+      find:"  var HAND_MAX = HOUR_PER_DAY - 1;",
+      replace:"  var HAND_MAX = HOUR_PER_DAY;" },
+    { file:'index', expect:"use the same clock number", via:'index',
+      find:"    [['pm', 4], ['noon', 12], ['am', 9]],",
+      replace:"    [['pm', 4], ['noon', 12], ['am', 4]]," },
+    { file:'index', expect:"one p.m., one a.m. and one noon-or-midnight", via:'index',
+      find:"    [['am', 7], ['pm', 3], ['midnight', 12]],",
+      replace:"    [['am', 7], ['am', 3], ['midnight', 12]]," },
+    { file:'index', expect:"is not a time of day", via:'index',
+      find:"    [['pm', 8], ['am', 10], ['noon', 12]],",
+      replace:"    [['pm', 8], ['am', 10], ['noon', 11]]," },
+    { file:'index', expect:"the button does not judge the hour the hand shows", via:'index',
+      find:"        if (v === w){",
+      replace:"        if (v % 12 === w % 12){" },
+    { file:'index', expect:"WHILE it is dragged", via:'index',
+      find:"        if (drag.moved) setV(handSnap(drag.acc));",
+      replace:"        if (drag.moved) drag.shown = handSnap(drag.acc);" },
+    { file:'index', expect:"counts as half a turn", via:'index',
+      find:"        if (radOf(p) <= G.dead){ drag.prev = null; return; }",
+      replace:"" },
+    { file:'index', expect:"does not turn the hand forward to it", via:'index',
+      find:"        var t = handForward(v, kk);\n        if (t >= 0) setV(t);",
+      replace:"        var t = kk;\n        if (t >= 0) setV(t);" },
+    { file:'index', expect:"a lost capture does not put the hand back", via:'index',
+      find:"        if (cancelled){ setV(dg.v0); return; }",
+      replace:"        if (cancelled){ return; }" },
+    { file:'index', expect:"before turning is not just a reminder", via:'index',
+      find:"        if (!touched && v === 0){ gMsg.textContent = d.gHandStill(rt); return; }",
+      replace:"" },
+    { file:'index', expect:"restarts the turn", via:'index',
+      find:"        if (gSolved || drag) return;          /* 只跟著第一根手指 */",
+      replace:"        if (gSolved) return;          /* 只跟著第一根手指 */" },
+    { file:'index', expect:"the dial moves with any finger", via:'index',
+      find:"        if (!drag || ev.pointerId !== drag.pid) return;\n        var p = B.toBoard(ev), dx",
+      replace:"        if (!drag) return;\n        var p = B.toBoard(ev), dx" },
+    { file:'index', expect:"do not nest", via:'index',
+      find:"  var HAND_G = { cx:150, cy:110, R:94, numR:74, numFont:20, tipR:52,",
+      replace:"  var HAND_G = { cx:150, cy:110, R:94, numR:74, numFont:20, tipR:62," },
+    { file:'index', expect:"hand buttons", via:'index',
+      find:"btnY:300, btnH:48, btnX:[6, 116], btnW:[104, 178], H:356 };",
+      replace:"btnY:300, btnH:40, btnX:[6, 116], btnW:[104, 178], H:356 };" },
+    { file:'index', expect:"overlap each other or the clock", via:'index',
+      find:"nowY:208, lineY:262,",
+      replace:"nowY:198, lineY:262," },
+    { file:'index', expect:"independently \"中午 12 點\"", via:'index',
+      find:"      gHandRead: function(period, h12){ return this.hour12(period, h12); },",
+      replace:"      gHandRead: function(period, h12){ return this.hour12(period === 'noon' ? 'pm' : period, h12); }," },
+    { file:'index', expect:"hint 2 for a p.m. time does not add 12", via:'index',
+      find:"        if (period === 'pm') return '下午 ' + h12 + ' 點：先轉滿一圈，再走到 ' + h12 + '，' + h12 + ' ＋ 12 ＝ ' + (h12 + 12) + '，是 ' + numTxt + '。';",
+      replace:"        if (period === 'pm') return '下午 ' + h12 + ' 點：先轉滿一圈，再走到 ' + h12 + '，是 ' + numTxt + '。';" },
+    { file:'index', expect:"double full stop", via:'index',
+      find:"gHandWrong: function(numTxt, isTxt, wantTxt){ return numTxt + ' is ' + isTxt + ', not ' + wantTxt + (/\\.$/.test(wantTxt) ? ' ' : '. '); },",
+      replace:"gHandWrong: function(numTxt, isTxt, wantTxt){ return numTxt + ' is ' + isTxt + ', not ' + wantTxt + '. '; }," },
+    { file:'index', expect:"PACK_BOXES should be", via:'index',
+      find:"  var PACK_BOXES = [HOUR_PER_DAY, MIN_PER_HOUR];",
+      replace:"  var PACK_BOXES = [HOUR_PER_DAY, 100];" },
+    { file:'index', expect:"needs at least one full box and a remainder", via:'index',
+      find:"{ units:['day', 'hour'], total:75 }, { units:['day', 'hour'], total:62 },",
+      replace:"{ units:['day', 'hour'], total:72 }, { units:['day', 'hour'], total:62 }," },
+    { file:'index', expect:"would never fit, so the wrong-box mistake", via:'index',
+      find:"    { units:['day', 'hour'], total:90 }, { units:['hour', 'min'], total:135 },",
+      replace:"    { units:['day', 'hour'], total:50 }, { units:['hour', 'min'], total:135 }," },
+    { file:'index', expect:"do not fit on the shelf", via:'index',
+      find:"{ units:['day', 'hour'], total:100 },",
+      replace:"{ units:['day', 'hour'], total:125 }," },
+    { file:'index', expect:"the squares spill out of the pile", via:'index',
+      find:"sq:7, pitch:9, cols:20, gridY:110,",
+      replace:"sq:7, pitch:9, cols:20, gridY:140," },
+    { file:'index', expect:"a box of the wrong size is not refused", via:'index',
+      find:"        if (sz !== f){ roundMiss(",
+      replace:"        if (sz !== f && false){ roundMiss(" },
+    { file:'index', expect:"a box that cannot be filled is not refused", via:'index',
+      find:"        if (left < f){ roundMiss(d.gPackShort(left, small, f)); return false; }",
+      replace:"" },
+    { file:'index', expect:"\"done\" with a full box still left", via:'index',
+      find:"        if (left >= f){ roundMiss(d.gPackMore(left, small, f)); return; }",
+      replace:"        if (left > f){ roundMiss(d.gPackMore(left, small, f)); return; }" },
+    { file:'index', expect:"sits on the pile's drop zone", via:'index',
+      find:"var PACK_G = { boxW:124, boxH:56, boxX:[76, 224], boxY:36,",
+      replace:"var PACK_G = { boxW:124, boxH:56, boxX:[76, 224], boxY:46," },
+    { file:'index', expect:"a number is glued to a Chinese character", via:'index',
+      find:"      gPackBox: function(f){ return '滿 ' + f + ' 一盒'; },",
+      replace:"      gPackBox: function(f){ return '滿' + f + '一盒'; }," },
+    { file:'index', expect:"1 takes the singular", via:'index',
+      find:"      gPackPile: function(r, small){ return 'Not packed yet: ' + plEn(r, this.unitName[small]); },",
+      replace:"      gPackPile: function(r, small){ return 'Not packed yet: ' + r + ' ' + this.unitName[small] + 's'; }," },
+    { file:'index', expect:"is wrong", via:'index',
+      find:"        return totalTxt + ' ＝ ' + ansTxt + '：' + total + ' ÷ ' + f + ' ＝ ' + q + ' 餘 ' + r + '，",
+      replace:"        return totalTxt + ' ＝ ' + ansTxt + '：' + total + ' ÷ ' + f + ' ＝ ' + q + ' 餘 ' + (r + 1) + '，" },
+    { file:'index', expect:"which does not carry", via:'index',
+      find:"    { units:['hour', 'min'], a:[3, 35], b:[2, 40] },",
+      replace:"    { units:['hour', 'min'], a:[3, 15], b:[2, 20] }," },
+    { file:'index', expect:"“carry at 60” would also carry", via:'index',
+      find:"    { units:['day', 'hour'], a:[3, 14], b:[1, 16] },",
+      replace:"    { units:['day', 'hour'], a:[3, 14], b:[1, 46] }," },
+    { file:'index', expect:"the answer is not a0 + b0 + 1, s − f", via:'index',
+      find:"var s = e.a[1] + e.b[1], ans = [e.a[0] + e.b[0] + 1, s - f];",
+      replace:"var s = e.a[1] + e.b[1], ans = [e.a[0] + e.b[0], s - f];" },
+    { file:'index', expect:"the no-carry answer does not get its reason", via:'index',
+      find:"        if (x0 === sum0 && x1 === s) roundMiss(",
+      replace:"        if (x0 === sum0 && x1 === s + 1) roundMiss(" },
+    { file:'index', expect:"the forgot-the-carried-1 answer does not get its reason", via:'index',
+      find:"        else if (x0 === sum0 && x1 === s - f) roundMiss(d.gAddForgot(big));",
+      replace:"" },
+    { file:'index', expect:"numbers should read", via:'index',
+      find:"        return '先算' + this.unitName[small] + '：' + a1 + ' ＋ ' + b1 + ' ＝ ' + s + '，到了 ' + f + '，",
+      replace:"        return '先算' + this.unitName[small] + '：' + a1 + ' ＋ ' + b1 + ' ＝ ' + s + '，到了 60，" },
+    { file:'index', expect:"under 44", via:'index',
+      find:"var ADD_G = { colX:[150, 236], opX:84, hdrY:20, rowY:[62, 112], numFont:28, ruleY:142, inY:154, inW:72, inH:50,",
+      replace:"var ADD_G = { colX:[150, 236], opX:84, hdrY:20, rowY:[62, 112], numFont:28, ruleY:142, inY:154, inW:72, inH:40," },
+    { file:'index', expect:"must need a borrow", via:'index',
+      find:"    { units:['day', 'hour'], a:[4, 6], b:[1, 18] },",
+      replace:"    { units:['day', 'hour'], a:[4, 20], b:[1, 18] }," },
+    { file:'index', expect:"two number cards show the same number", via:'index',
+      find:"{ units:['day', 'hour'], a:[5, 7], b:[1, 19] },",
+      replace:"{ units:['day', 'hour'], a:[4, 1], b:[1, 23] }," },
+    { file:'index', expect:"subWant is", via:'index',
+      find:"    var f = fullOf(e.units[1]), top = e.a[1] + f;\n    return [f, top, top, top - e.b[1], e.a[0] - 1 - e.b[0]];",
+      replace:"    var f = fullOf(e.units[1]), top = e.a[1] + f;\n    return [f, top, top, top - e.b[1], e.a[0] - e.b[0]];" },
+    { file:'index', expect:"cards", via:'index',
+      find:"    return [f, g, e.a[1] + f, e.a[1] + g, e.a[1] + f - e.b[1], e.a[0] - 1 - e.b[0], e.a[0] - e.b[0]];",
+      replace:"    return [f, g + 1, e.a[1] + f, e.a[1] + g, e.a[1] + f - e.b[1], e.a[0] - 1 - e.b[0], e.a[0] - e.b[0]];" },
+    { file:'index', expect:"a card in the wrong box is not refused", via:'index',
+      find:"        if (v !== want[slot.k]){ roundMiss(why(slot.k, v)); return false; }",
+      replace:"        if (v !== want[slot.k] && slot.k !== 2){ roundMiss(why(slot.k, v)); return false; }" },
+    { file:'index', expect:"sits on box", via:'index',
+      find:"    [{ s:2, x:108 }, { t:'-', x:148 },",
+      replace:"    [{ s:2, x:108 }, { t:'-', x:134 }," },
+    { file:'index', expect:"reaches line", via:'index',
+      find:"var SUB_G = { lblW:64, rowY:[54, 120, 186], slotW:54, slotH:48, pad:14,",
+      replace:"var SUB_G = { lblW:64, rowY:[54, 120, 186], slotW:54, slotH:48, pad:22," },
+    { file:'index', expect:"the overlap zone is never exercised", via:'index',
+      find:"var SUB_G = { lblW:64, rowY:[54, 120, 186], slotW:54, slotH:48, pad:14,",
+      replace:"var SUB_G = { lblW:64, rowY:[54, 120, 186], slotW:54, slotH:48, pad:6," },
+    { file:'index', expect:"SUB_LINES read", via:'index',
+      find:"    [{ t:'a0', x:80 }, { t:'-', x:102 }, { t:'1', x:124 }, { t:'-', x:146 }, { t:'b0', x:172 },",
+      replace:"    [{ t:'a0', x:80 }, { t:'-', x:102 }, { t:'b0', x:172 }," },
+    { file:'index', expect:"does not get \"1 big = f small, not g\"", via:'index',
+      find:"        if (k === 0) return v === g ? d.gBorrowFull(bN, sN, f, g) : d.gBorrowFull2(bN, sN);",
+      replace:"        if (k === 0) return d.gBorrowFull2(bN, sN);" },
+    { file:'index', expect:"hint 2 for box", via:'index',
+      find:"        if (k === 1) return a1 + ' ＋ ' + f + ' ＝ ' + top + '。';",
+      replace:"        if (k === 1) return '先把借來的加上去。';" },
+    { file:'index', expect:"加回去檢查", via:'index',
+      find:"      gBorrowBack: function(v, b1, sum, top){ return '加回去檢查：' + v + ' ＋ ' + b1 + ' ＝ ' + sum + '，不是 ' + top + '。'; },",
+      replace:"      gBorrowBack: function(v, b1, sum, top){ return '加回去檢查：' + v + ' ＋ ' + b1 + ' ＝ ' + (sum + 1) + '，不是 ' + top + '。'; }," },
+    { file:'index', expect:"needs exactly 2", via:'index',
+      find:"    [{ s:[22, 40], d:[3, 10] }, { s:[22, 45], d:[1, 20] }, { s:[20, 50], d:[2, 40] }, { s:[21, 20], d:[2, 30] }],",
+      replace:"    [{ s:[22, 40], d:[3, 10] }, { s:[22, 45], d:[1, 20] }, { s:[20, 50], d:[3, 40] }, { s:[21, 20], d:[2, 30] }]," },
+    { file:'index', expect:"only through the minutes' carry", via:'index',
+      find:"    [{ s:[19, 30], d:[6, 15] }, { s:[21, 50], d:[2, 25] },",
+      replace:"    [{ s:[19, 30], d:[6, 15] }, { s:[21, 50], d:[3, 25] }," },
+    { file:'index', expect:"carries a minute and still arrives today", via:'index',
+      find:"{ s:[19, 40], d:[3, 35] }, { s:[15, 10], d:[8, 40] }],",
+      replace:"{ s:[19, 40], d:[3, 15] }, { s:[15, 10], d:[8, 40] }]," },
+    { file:'index', expect:"crossArrive says", via:'index',
+      find:"    var raw = tk.s[1] + tk.d[1], carry = raw >= MIN_PER_HOUR ? 1 : 0, H = tk.s[0] + tk.d[0] + carry;",
+      replace:"    var raw = tk.s[1] + tk.d[1], carry = raw >= MIN_PER_HOUR ? 1 : 0, H = tk.s[0] + tk.d[0];" },
+    { file:'index', expect:"a ticket in the wrong box is not refused", via:'index',
+      find:"        if (bin.day !== crossArrive(tk).day){ roundMiss(whyOf(tk)); return false; }",
+      replace:"        if (bin.day !== (tk.s[0] + tk.d[0] >= 24 ? 1 : 0)){ roundMiss(whyOf(tk)); return false; }" },
+    { file:'index', expect:"sits in box", via:'index',
+      find:"var CROSS_G = { cardW:144, cardH:72, trayX:[76, 224], trayY:[40, 116], binX:[4, 152], binW:144, binY:160,",
+      replace:"var CROSS_G = { cardW:144, cardH:72, trayX:[76, 224], trayY:[40, 116], binX:[4, 152], binW:144, binY:146," },
+    { file:'index', expect:"small gap", via:'index',
+      find:"binX:[4, 152], binW:144, binY:160, binH:204,",
+      replace:"binX:[4, 162], binW:134, binY:160, binH:204," },
+    { file:'index', expect:"the reason does not end at", via:'index',
+      find:"            + '；時 ' + h1 + ' ＋ ' + h2 + (carry ? ' ＋ 1' : '') + ' ＝ ' + H + (H >= 24 ? '，到了 24，減掉 24 → ' : '，還沒到 24 → ') + arrTxt + '。';",
+      replace:"            + '；時 ' + h1 + ' ＋ ' + h2 + (carry ? ' ＋ 1' : '') + ' ＝ ' + H + (H >= 24 ? '，到了 24，減掉 24。' : '，還沒到 24。');" },
+    { file:'index', expect:"hint 2 gives away the arrival", via:'index',
+      find:"        return '看「' + sTxt + ' ＋ ' + dTxt + '」：分 ' + m1 + ' ＋ ' + m2 + ' ＝ ' + raw + (carry ? '，滿 60 進 1' : '') + '；時 ' + h1 + ' ＋ ' + h2 + (carry ? ' ＋ 1' : '') + ' ＝ ' + H + '。';",
+      replace:"        return '看「' + sTxt + ' ＋ ' + dTxt + '」：時 ' + H + '，' + (H >= 24 ? '隔天 ' + (H - 24) : '今天 ' + H) + ' 時 ' + ((m1 + m2) % 60) + ' 分。';" },
+
+    { file:'index', expect:"does not draw its question with pick(GAME_PACK)", via:'index',
+      find:"      var e = pick(GAME_PACK), G = PACK_G,", replace:"      var e = GAME_PACK[0], G = PACK_G," },
+    { file:'index', expect:"does not dispatch RENDER", via:'index',
+      find:"    RENDER[type](d);", replace:"    RENDER.hand(d);" },
+    { file:'index', expect:"the lap sentence that is true there", via:'index',
+      find:"    if (period === 'pm') return v < NOON_SHIFT ? 'more' : '';", replace:"    if (period === 'pm') return 'more';" },
+    { file:'index', expect:"handLineX(", via:'index',
+      find:"  function handLineX(v){ return HAND_G.x0 + (HAND_G.x1 - HAND_G.x0) * v / HOUR_PER_DAY; }",
+      replace:"  function handLineX(v){ return v ? HAND_G.x1 : HAND_G.x0; }" },
 
     /* ---------- index.html：三層題庫 ---------- */
     { file:'index', expect:'marked answer is', via:'index',
@@ -814,10 +1026,6 @@ module.exports = {
     { file:'index', expect:'the min rung carries at 60', via:'index',
       find:'      var raw = a[i] + b[i] + carry;',
       replace:"      var raw = a[i] + b[i] + carry + (a[0] === 5 && i === 1 && units[1] === 'min' ? 1 : 0);" },
-    /* 每一個選項的欄位都要驗，不只是正解。 */
-    { file:'index', expect:'has bad fields', via:'index',
-      find:"      opts:[{ period:'pm', h12:9, m:5 }, { period:'am', h12:9, m:5 },\n            { period:'pm', h12:21, m:5 }, { period:'pm', h12:8, m:5 }], ans:0 },",
-      replace:"      opts:[{ period:'pm', h12:9, m:5 }, { period:'bogus', h12:9, m:5 },\n            { period:'pm', h12:21, m:5 }, { period:'pm', h12:8, m:5 }], ans:0 }," },
     /* 光有 id 不算一支產生器：make() 也要在。 */
     { file:'review', expect:'make() functions, this config describes', via:'index',
       find:"    { id:'minToSec', cat:'convert',\n      make:function(used){",
@@ -1193,14 +1401,16 @@ module.exports = {
                 'DL_NUM_HOURS, DL_READ_HOURS, DL_PERIOD_MID, ' +
                 'minX, hourX, dlTicks, dlNumLabels, dlReadLabels, dlPeriodLabels, dlMark, spanBands, ' +
                 'DAY_CASES, CONVERT_CASES, ADD_CASES, SUB_CASES, CROSS_CASES, crossResult, ' +
-                'ROUNDS, roundAnswer, roundMarks}',
+                'GAME_ORDER, GAME_W, GAME_HAND, HAND_G, HAND_MAX, handNumXY, handAngle, handTipXY, handNumberAt, handForward, ' +
+                'handSnap, handClamp, angleStep, handExtra, handLineX, GAME_PACK, PACK_BOXES, PACK_G, packSquares, packTileXY, ' +
+                'GAME_ADD, ADD_G, GAME_SUB, otherFull, subWant, subCards, SUB_LINES, SUB_G, GAME_CROSS, crossArrive, CROSS_G}',
     optionValueMax: 2 * MIN_PER_DAY,
 
-    check: function(data, I18N, fail){
+    check: function(data, I18N, fail, src){
       checkCore(data, I18N, fail);
       checkFigure(data, I18N, fail);
       checkExamples(data, I18N, fail);
-      checkRounds(data, I18N, fail);
+      gameChecks(data, I18N, fail, src || '');
       checkBankAndSiblings(data, I18N, fail);
     }
   }
@@ -1622,7 +1832,7 @@ function checkFigure(data, I18N, fail){
   let src = '';
   try { src = fs.readFileSync(target, 'utf8'); } catch (err){ src = ''; }
   src = src.replace(/<!--[\s\S]*?-->/g, ' ');
-  ['s1fig', 's5fig', 'gFig'].forEach(id => {
+  ['s1fig', 's5fig'].forEach(id => {   // 遊戲不再用時間軸的畫布（第 1 關的時間線在鐘面那一塊畫板裡，由 gameChecks() 驗）
     const m = new RegExp('id="' + id + '"[^>]*viewBox="0 0 (\\d+) (\\d+)"').exec(src);
     if (!m) fail(`cannot find the ${id} viewBox, so its canvas-size check did not run`);
     else if (Number(m[1]) !== data.DL_W || Number(m[2]) !== data.DL_H)
@@ -1639,7 +1849,7 @@ function checkFigure(data, I18N, fail){
 /* ===================== 3. 五組範例資料 ===================== */
 function checkExamples(data, I18N, fail){
   const LANGS = ['zh', 'en'];
-  const SIZES = { DAY_CASES:6, CONVERT_CASES:5, ADD_CASES:4, SUB_CASES:4, CROSS_CASES:4, ROUNDS:5 };
+  const SIZES = { DAY_CASES:6, CONVERT_CASES:5, ADD_CASES:4, SUB_CASES:4, CROSS_CASES:4 };
   Object.keys(SIZES).forEach(key => {
     const arr = data[key];
     if (!Array.isArray(arr) || arr.length !== SIZES[key])
@@ -1928,211 +2138,599 @@ function checkExamples(data, I18N, fail){
   });
 }
 
-/* ===================== 4. 遊戲的五關 ===================== */
-function roundAnswerRef(r){
-  if (r.kind === 'to24'){
-    const h = (r.period === 'pm') ? r.h12 + NOON_SHIFT : r.h12;
-    return { kind:'clock', h:h, min:r.m, day:0, row:READ_TABLE[h] };
+/* ===================== 4. 遊戲的五關（§六之五：五關五種玩法） =====================
+   每一關**照遊戲自己的規則把題庫裡每一題玩一遍**，正解一律用這份設定檔的 READ_TABLE／addRef／subRef／
+   fromSmallRef 與自己寫的到站計算重算；版面與觸控從資料區讀；shuffle()／nearestOpen()／roundMiss()／readInt()
+   從原始碼切出來真的跑；鐘面的純函式（handNumberAt／handForward／handSnap／handClamp／angleStep）拿整個定義域去比；
+   遊戲印出來的每一段文字都進 gameText()（算式逐條重算、中文數字黏字、英文單複數、undefined／NaN）。
+   375px 手機上卡片內寬約 289px：300 寬的畫板縮成 0.963 倍 —— 拿得起來／點得到的東西要 ≥ 44 / 0.963 ≈ 45.7 個邏輯 px。
+   ⚠️ 說清楚極限：RENDER 裡「放錯就彈回」「按鈕判的是畫出來的數」那幾行是**字面釘樁**（need()），證明得了那一行還在，
+   證明不了它被接到了畫面上 —— 那一半由 teaching-workspace/game-harness/g4-time 的端對端測試（含改壞頁）負責。 */
+const { extractFunction } = require('./lib/gameshuffle.js');
+const PHONE_K = Math.min(1.5, 289 / 300);
+function gNums(text){ return (String(text).match(/\d+/g) || []).map(Number); }
+/* 把文字裡的每一條「a ＋ b － c ＝ d」（從左往右）與「a ÷ b ＝ q 餘 r」重算一次。回傳錯的那幾條。 */
+function eqProblems(text){
+  const s = String(text).replace(/＋/g, '+').replace(/[－−]/g, '-').replace(/＝/g, '=');
+  const bad = [];
+  const re = /(\d+(?: [+-] \d+)+) = (\d+)/g;
+  let m;
+  while ((m = re.exec(s))){
+    const toks = m[1].split(' ');
+    let v = +toks[0];
+    for (let i = 1; i < toks.length; i += 2) v = toks[i] === '+' ? v + Number(toks[i + 1]) : v - Number(toks[i + 1]);
+    if (v !== +m[2]) bad.push('"' + m[0] + '" is ' + v);
   }
-  if (r.kind === 'to12'){
-    const row = READ_TABLE[r.h24];
-    return { kind:'read', period:row[0], h12:row[1], min:r.m, day:0 };
+  const rd = /(\d+) ÷ (\d+) = (\d+) (?:餘|remainder) (\d+)/g;
+  while ((m = rd.exec(s))){
+    const a = +m[1], b = +m[2], q = +m[3], r = +m[4];
+    if (!(b > 0 && q * b + r === a && r >= 0 && r < b)) bad.push('"' + m[0] + '" is wrong');
   }
-  if (r.kind === 'add'){
-    const t = r.start[0] * MIN_PER_HOUR + r.start[1] + r.add[0] * MIN_PER_HOUR + r.add[1];
-    return { kind:'stamp', day:Math.floor(t / MIN_PER_DAY),
-             h:Math.floor((t % MIN_PER_DAY) / MIN_PER_HOUR), min:t % MIN_PER_HOUR };
-  }
-  if (r.kind === 'diff'){
-    const diff = (r.to[0] * MIN_PER_HOUR + r.to[1]) - (r.from[0] * MIN_PER_HOUR + r.from[1]);
-    return { kind:'dur', units:['hour', 'min'], vals:fromSmallRef(['hour', 'min'], diff), diff:diff, day:0 };
-  }
-  return { day:0 };
+  return bad;
 }
-function roundOptValue(r, o){
-  if (r.kind === 'to24') return o.h * MIN_PER_HOUR + o.m;
-  if (r.kind === 'to12'){
-    const h24 = (o.period === 'midnight') ? 0 : (o.period === 'noon') ? NOON_SHIFT
-              : (o.period === 'am') ? o.h12 : o.h12 + NOON_SHIFT;
-    return h24 * MIN_PER_HOUR + o.m;
-  }
-  if (r.kind === 'add') return o.day * MIN_PER_DAY + o.h * MIN_PER_HOUR + o.m;
-  return o.h * MIN_PER_HOUR + o.m;
-}
-function checkRounds(data, I18N, fail){
-  const LANGS = ['zh', 'en'];
-  const kinds = {};
-  (data.ROUNDS || []).forEach((r, i) => {
-    const tag = 'ROUND ' + (i + 1);
-    if (['to24', 'to12', 'add', 'diff'].indexOf(r.kind) < 0) return fail(tag + ': unknown kind "' + r.kind + '"');
-    kinds[r.kind] = (kinds[r.kind] || 0) + 1;
 
-    const want = roundAnswerRef(r);
-    const got = data.roundAnswer(r);
-    if (!got) return fail(tag + ': roundAnswer returned nothing');
-    if (r.kind === 'to24'){
-      if (['am', 'pm'].indexOf(r.period) < 0) fail(tag + ': the period is "' + r.period + '"');
-      if (!(r.h12 >= 1 && r.h12 <= 11)) fail(tag + ': the clock-face number ' + r.h12 + ' is outside 1~11');
-      if (!(r.m >= 1 && r.m <= 59)) fail(tag + ': the minutes ' + r.m + ' are outside 1~59');
-      if (got.h !== want.h || got.m !== want.min)
-        fail(tag + ': roundAnswer says ' + got.h + ':' + got.m + ', independently ' + want.h + ':' + want.min);
-      if (!(want.row && want.row[0] === r.period && want.row[1] === r.h12))
-        fail(tag + ': the stated period and clock-face number do not sit at hour ' + want.h + ' in the truth table');
-    } else if (r.kind === 'to12'){
-      if (!(r.h24 >= 13 && r.h24 <= 23))
-        fail(tag + ': h24 ' + r.h24 + ' is outside 13~23, so "take 12 off" is not the taught step');
-      if (!(r.m >= 1 && r.m <= 59)) fail(tag + ': the minutes ' + r.m + ' are outside 1~59');
-      if (got.period !== want.period || got.h12 !== want.h12 || got.m !== want.min)
-        fail(tag + ': roundAnswer says ' + got.period + ' ' + got.h12 + ', the truth table says ' +
-             want.period + ' ' + want.h12);
-    } else if (r.kind === 'add'){
-      if (!(r.start[0] >= 0 && r.start[0] <= 23 && r.start[1] >= 1 && r.start[1] <= 59))
-        fail(tag + ': the start time ' + r.start + ' is not a time with 1~59 minutes');
-      if (!(r.add[0] >= 0 && r.add[1] >= 1 && r.add[1] <= 59))
-        fail(tag + ': the amount added ' + r.add + ' is not an amount with 1~59 minutes');
-      if (got.day !== want.day || got.h !== want.h || got.m !== want.min)
-        fail(tag + ': roundAnswer says day ' + got.day + ' ' + got.h + ':' + got.m +
-             ', independently day ' + want.day + ' ' + want.h + ':' + want.min);
-      if (want.day > 1) fail(tag + ': the answer runs past the next day, which this lesson does not cover');
-      if (want.min < 1) fail(tag + ': the answer lands on 0 minutes, which this lesson never prints');
-    } else {
-      if (!(r.from[0] >= 0 && r.from[0] <= 23 && r.from[1] >= 1 && r.from[1] <= 59))
-        fail(tag + ': the start time ' + r.from + ' is not a time with 1~59 minutes');
-      if (!(r.to[0] >= 0 && r.to[0] <= 23 && r.to[1] >= 1 && r.to[1] <= 59))
-        fail(tag + ': the end time ' + r.to + ' is not a time with 1~59 minutes');
-      if (want.diff < 1) fail(tag + ': the end time is not after the start time');
-      if (got.h !== want.vals[0] || got.m !== want.vals[1])
-        fail(tag + ': roundAnswer says ' + got.h + 'h' + got.m + ', independently ' +
-             want.vals[0] + 'h' + want.vals[1]);
-      if (r.to[1] >= r.from[1])
-        fail(tag + ': the minutes do not need a borrow, so this round does not train the taught step');
-    }
-
-    /* 選項：四個、依值兩兩相異、正解就是重算出來的那一個。 */
-    if (!Array.isArray(r.opts) || r.opts.length !== 4)
-      return fail(tag + ': ' + (r.opts ? r.opts.length : 'no') + ' options, expected 4');
-    for (let k = 0; k < 4; k++){
-      if (!Object.prototype.hasOwnProperty.call(r.opts, k))
-        return fail(tag + ': option ' + k + ' is a hole in the array, so the button would be blank');
-    }
-    const vals = r.opts.map(o => roundOptValue(r, o));
-    for (let a = 0; a < 4; a++){
-      for (let b = a + 1; b < 4; b++){
-        if (vals[a] === vals[b])
-          fail(tag + ': options ' + a + ' and ' + b + ' are the same length of time (' + vals[a] + ')');
-      }
-    }
-    if (!(r.ans >= 0 && r.ans < 4)) return fail(tag + ': the answer index is out of range');
-    const wantVal = (r.kind === 'to24') ? want.h * MIN_PER_HOUR + want.min
-                  : (r.kind === 'to12') ? roundOptValue(r, { period:want.period, h12:want.h12, m:want.min })
-                  : (r.kind === 'add') ? want.day * MIN_PER_DAY + want.h * MIN_PER_HOUR + want.min
-                  : want.vals[0] * MIN_PER_HOUR + want.vals[1];
-    if (vals[r.ans] !== wantVal)
-      fail(tag + ': the marked option is worth ' + vals[r.ans] + ', recomputed ' + wantVal);
-
-    /* 每一關都要放它自己那一個有名字的誘答。 */
-    if (r.kind === 'to24'){
-      const noShift = (r.period === 'pm') ? r.h12 : r.h12 + NOON_SHIFT;
-      if (vals.indexOf(noShift * MIN_PER_HOUR + r.m) < 0)
-        fail(tag + ': does not offer the forgot-the-12 distractor, which is what this round trains');
-    }
-    if (r.kind === 'to12'){
-      if (!r.opts.some(o => o.period === 'am' && o.h12 === want.h12))
-        fail(tag + ': does not offer the wrong-half-of-the-day distractor');
-      if (!r.opts.some(o => o.h12 === r.h24))
-        fail(tag + ': does not offer the forgot-to-take-12-off distractor');
-    }
-    if (r.kind === 'add'){
-      if (!r.opts.some(o => o.day !== want.day && o.h === want.h && o.m === want.min))
-        fail(tag + ': does not offer the right time on the wrong day as a distractor');
-    }
-    if (r.kind === 'diff'){
-      const naive = [r.to[0] - r.from[0], r.from[1] - r.to[1]];
-      if (!r.opts.some(o => o.h === naive[0] && o.m === naive[1]))
-        fail(tag + ': does not offer the reversed-minutes distractor');
-    }
-
-    /* 圖上標出來的時刻只能是**題目已經給的**，不可以標到答案上。 */
-    const marks = data.roundMarks(r);
-    if (!Array.isArray(marks)) return fail(tag + ': roundMarks did not return an array');
-    const allowed = (r.kind === 'to12') ? [r.h24 * MIN_PER_HOUR + r.m]
-                  : (r.kind === 'add') ? [r.start[0] * MIN_PER_HOUR + r.start[1]]
-                  : (r.kind === 'diff') ? [r.from[0] * MIN_PER_HOUR + r.from[1],
-                                           r.to[0] * MIN_PER_HOUR + r.to[1]]
-                  : [];
-    if (marks.join(',') !== allowed.join(','))
-      fail(tag + ': the marks on the time line are [' + marks + '], expected exactly the times the prompt states [' +
-           allowed + ']');
-    marks.forEach(t => {
-      if (!(t >= 0 && t <= MIN_PER_DAY)) fail(tag + ': a mark at ' + t + ' minutes is outside one day');
-      /* 只有 add 那一種的答案是**另一個瞬間**；to12 標的就是題目給的那個時刻，
-         答案只是同一個瞬間的另一種寫法，標出來是鷹架不是洩題。 */
-      if (r.kind === 'add' && t === wantVal)
-        fail(tag + ': the time line marks the answer, which gives it away');
+function gameChecks(D, I18N, fail, src){
+  const LANGS = ['zh', 'en'], W = D.GAME_W;
+  const TYPES = ['hand', 'pack', 'add', 'borrow', 'cross'];
+  if (W !== 300) fail('GAME_W is ' + W + ', the boards are designed for 300');
+  if (!Array.isArray(D.GAME_ORDER) || D.GAME_ORDER.join() !== TYPES.join())
+    fail('GAME_ORDER should be ' + TYPES.join() + ' (the order of examples 1–5), got ' + D.GAME_ORDER);
+  const code = String(src).replace(/\/\*[\s\S]*?\*\//g, '\n');
+  const body = name => (code.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+  const B = {};
+  TYPES.forEach(t => {
+    B[t] = body(t);
+    if (!B[t]) fail('cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('gAsks.' + t + ' missing in ' + L);
+      if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('gHints.' + t + ' missing in ' + L);
     });
+  });
+  const need = (k, re, what) => { if (!re.test(B[k] || '')) fail(k + ': ' + what); };
+  /* 接線：每一關從自己的題庫抽題、startRound() 照 GAME_ORDER 叫對應的 RENDER（codex 第一輪） */
+  [['hand', 'GAME_HAND'], ['pack', 'GAME_PACK'], ['add', 'GAME_ADD'], ['borrow', 'GAME_SUB'], ['cross', 'GAME_CROSS']].forEach(([k, pool]) => {
+    if (!new RegExp('var e = pick\\(' + pool + '\\),').test(B[k] || '')) fail(k + ': does not draw its question with pick(' + pool + ')');
+  });
+  if (!/var type = GAME_ORDER\[gRound\];[\s\S]*?RENDER\[type\]\(d\);/.test(code)) fail('startRound() does not dispatch RENDER[GAME_ORDER[gRound]]');
+  const seq = (where, text, want) => {
+    if (typeof text !== 'string' || /undefined|NaN|null/.test(text)) return fail(where + ': text has undefined/NaN/null: ' + text);
+    const got = gNums(text).join();
+    if (got !== want.join()) fail(where + ': numbers should read ' + want.join() + ', got ' + got + ' — ' + text);
+  };
+  /* 每一段遊戲文字：算式重算、中文數字前後要有空白（這一課的寫法：「3 小時」）、英文 1 用單數 */
+  const say = (where, text, lang) => {
+    if (typeof text !== 'string' || /undefined|NaN|null|\[object/.test(text)) return fail(where + ': text has undefined/NaN/null: ' + text);
+    eqProblems(text).forEach(p => fail(where + ': ' + p + ' — ' + text));
+    if (lang === 'zh' && /[一-鿿]\d|\d[一-鿿]/.test(text)) fail(where + ': a number is glued to a Chinese character — ' + text);
+    const pp = pluralProblem(text, lang); if (pp) fail(where + ': ' + pp + ' — ' + text);
+  };
+  const touch = (what, sz) => { if (!(sz * PHONE_K >= 44)) fail(what + ' is ' + (sz * PHONE_K).toFixed(1) + 'px on a 375px phone — under 44'); };
+  const inside = (o, what, H) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail(what + ' is outside the ' + W + '×' + H + ' board: ' + JSON.stringify(o)); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const box = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w:w, h:h });
+  const grow = (o, p) => ({ x:o.x - p, y:o.y - p, w:o.w + 2 * p, h:o.h + 2 * p });
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return fail(what + ' ' + i + ' and ' + j + ' overlap'); };
+  ['GAME_HAND', 'GAME_PACK', 'GAME_ADD', 'GAME_SUB', 'GAME_CROSS'].forEach(k => {
+    if (!Array.isArray(D[k]) || D[k].length < 4) fail(k + ' should be a pool of at least 4 entries');
+    else for (let i = 0; i < D[k].length; i++) if (!Object.prototype.hasOwnProperty.call(D[k], i)) fail(k + '[' + i + '] is a hole in the array');
+  });
+  const h24Of = (period, h12) => { for (let h = 0; h < 24; h++) if (READ_TABLE[h][0] === period && READ_TABLE[h][1] === h12) return h; return null; };
+  const say12Ref = (L, h) => { const r = READ_TABLE[h]; if (L === 'en' && r[0] === 'noon') return '12 noon'; if (L === 'en' && r[0] === 'midnight') return '12 midnight'; return hour12Ref(L, r[0], r[1]); };
 
+  /* ---------- 共用：shuffle() 真的跑：是排列、不改輸入、永遠不會由小到大 ---------- */
+  {
+    const fsrc = extractFunction(src, 'shuffle');
+    let shuffle = null;
+    if (!fsrc) fail('cannot find shuffle() in index.html');
+    else { try { shuffle = new Function(fsrc + '\nreturn shuffle;')(); } catch (e){ fail('shuffle() could not be evaluated on its own: ' + e.message); } }
+    if (shuffle){
+      [[0, 1, 2, 3], [1, 2, 11, 24, 32, 60, 68]].forEach(input => {
+        const orders = new Set(), before = input.join();
+        for (let i = 0; i < 3000; i++){
+          const out = shuffle(input);
+          if (input.join() !== before) return fail('shuffle() mutates its input');
+          if (out.slice().sort((a, b) => a - b).join() !== input.slice().sort((a, b) => a - b).join()) return fail('shuffle() changed the set: ' + out);
+          let up = true; for (let k = 1; k < out.length; k++) if (!(out[k - 1] < out[k])) up = false;
+          if (up) return fail('shuffle() returned ' + out.join(',') + ' — already in increasing order');
+          orders.add(out.join());
+        }
+        if (input.length === 4 && orders.size !== 23) fail('shuffle() of 0,1,2,3 produced ' + orders.size + ' different orders in 3000 runs, expected all 23 orders other than increasing');
+        if (input.length > 4){
+          const seenPos = input.map(() => new Set());
+          orders.forEach(o => o.split(',').forEach((v, pos) => seenPos[pos].add(v)));
+          if (seenPos.some(st => st.size !== input.length)) fail('shuffle() of 7 cards: some card never reaches some place in the tray');
+        }
+      });
+    }
+    need('borrow', /shuffle\(subCards\(e\)\)\.forEach\(/, 'the number cards are not shuffled into the tray');
+    need('cross', /shuffle\(\[0, 1, 2, 3\]\)\.forEach\(/, 'the tickets are not shuffled into the tray');
+  }
+
+  /* ---------- 共用：nearestOpen() 真的跑（第 4 關的五格、第 5 關的兩個箱子） ---------- */
+  {
+    const fsrc = extractFunction(src, 'nearestOpen');
+    let nearestOpen = null;
+    if (!fsrc) fail('cannot find nearestOpen() in index.html');
+    else { try { nearestOpen = new Function(fsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('nearestOpen() could not be evaluated: ' + e.message); } }
+    if (nearestOpen){
+      const G = D.SUB_G, list = [];
+      (D.SUB_LINES || []).forEach((row, r) => row.forEach(tk => { if (tk.s !== undefined) list.push({ id:tk.s, cx:tk.x, cy:G.rowY[r], hw:G.slotW / 2, hh:G.slotH / 2, done:false }); }));
+      if (list.length !== 5) fail('SUB_LINES should have 5 boxes, has ' + list.length);
+      let bad = 0;
+      list.forEach(b => {
+        for (let x = b.cx - b.hw + 0.5; x < b.cx + b.hw; x += 1)
+          for (let y = b.cy - b.hh + 0.5; y < b.cy + b.hh; y += 2){ const g = nearestOpen(list, { x, y }, G.pad); if (!g || g.id !== b.id) bad++; }
+      });
+      if (bad) fail('nearestOpen(): ' + bad + ' points inside a borrow box are given to another box (or none)');
+      const a = list.filter(b => b.id === 1)[0], b3 = list.filter(b => b.id === 3)[0];
+      if (a && b3){
+        const gapT = a.cy + a.hh, gapB = b3.cy - b3.hh;
+        if (!(gapB > gapT)) fail('borrow lines 1 and 2 touch — no gap to test the overlap zone in');
+        else if (!(gapB - gapT < 2 * G.pad)) fail('the borrow pad does not reach across the gap between the lines — the overlap zone is never exercised');
+        else {
+          const py = gapT + (gapB - gapT) * 0.7, g = nearestOpen(list, { x:a.cx, y:py }, G.pad);
+          if (!g || g.id !== 3) fail('nearestOpen(): a drop between lines 1 and 2, nearer line 2, goes to ' + (g ? g.id : 'none') + ' (first match, not nearest)');
+        }
+      }
+      const C = D.CROSS_G, bins = [0, 1].map(i => ({ id:i, cx:C.binX[i] + C.binW / 2, cy:C.binY + C.binH / 2, hw:C.binW / 2, hh:C.binH / 2, done:false }));
+      const gap = C.binX[1] - (C.binX[0] + C.binW);
+      if (!(gap > 0 && gap < 12)) fail('the two cross boxes should have a small gap (0 < gap < 2 × pad 6), got ' + gap);
+      else { const px = C.binX[1] - gap * 0.3, g = nearestOpen(bins, { x:px, y:bins[0].cy }, 6); if (!g || g.id !== 1) fail('nearestOpen(): a drop in the gap nearer “next day” goes to ' + (g ? g.id : 'none')); }
+      const two = [ { id:0, cx:100, cy:100, hw:42, hh:42, done:false }, { id:1, cx:155, cy:100, hw:12, hh:12, done:false } ];
+      const r0 = nearestOpen(two, { x:140, y:100 }, 6);
+      if (!r0 || r0.id !== 0) fail('nearestOpen(): a point inside the big box near the small one is given to the small one (measure to the box, not the centre)');
+      const done = [ { id:0, cx:100, cy:100, hw:22, hh:22, done:true }, { id:1, cx:148, cy:100, hw:22, hh:22, done:false } ];
+      if (nearestOpen(done, { x:121, y:100 }, 6) !== null) fail('nearestOpen(): a drop nearest to a finished box skips it and lands in the next box');
+      if (nearestOpen(done, { x:300, y:300 }, 6) !== null) fail('nearestOpen(): a drop far from every box is accepted');
+    }
+  }
+
+  /* ---------- 共用：計分（中年級 §三：沒犯錯 +20、犯過錯 +10；放錯一次 −5，最低 0） ---------- */
+  if (!/var pts = gMistake \? 10 : 20;/.test(code)) fail('scoring: a round should give +20 with no mistakes and +10 after mistakes');
+  {
+    const fsrc = extractFunction(src, 'roundMiss');
+    if (!fsrc) fail('scoring: cannot find roundMiss() in index.html');
+    else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(([s0, want, shows]) => {
+      let r;
+      try { r = new Function('var gMistake = false, gScore = ' + s0 + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+      catch (e){ return fail('scoring: roundMiss() could not run: ' + e.message); }
+      if (r.s !== want || String(r.shown) !== String(want)) fail('scoring: a mistake at ' + s0 + ' leaves ' + r.s + ' — a mistake does not cost 5 (floored at 0)');
+      if ((r.html.indexOf('@MINUS@') >= 0) !== shows) fail('scoring: at ' + s0 + ' points the "−5" note is ' + (shows ? 'missing' : 'shown although nothing was taken'));
+      if (r.html.indexOf('why') < 0 || !r.m) fail('scoring: roundMiss() does not show the reason or record the mistake');
+    });
+  }
+  /* ---------- 共用：readInt() 真的跑（第 3 關的輸入框） ---------- */
+  {
+    const fsrc = extractFunction(src, 'readInt');
+    let readInt = null;
+    if (!fsrc) fail('cannot find readInt() in index.html');
+    else { try { readInt = new Function(fsrc + '\nreturn readInt;')(); } catch (e){ fail('readInt() could not run: ' + e.message); } }
+    if (readInt) [['4', 4], [' 15 ', 15], ['0', 0], ['', null], ['1 5', null], ['05', null], ['1.5', null], ['4.0', null], ['-3', null], ['１５', null], ['12345', null]].forEach(([s, want]) => {
+      if (readInt(s) !== want) fail('readInt("' + s + '") is ' + readInt(s) + ', expected ' + want + ' (only plainly written whole numbers count)');
+    });
+    need('add', /var x0 = readInt\(ins\[0\]\.value\), x1 = readInt\(ins\[1\]\.value\);\n\s*if \(x0 === null \|\| x1 === null\)\{ gMsg\.textContent = d\.gAddInt; return; \}/, 'a malformed or empty box is not just a reminder');
+  }
+  /* ---------- 共用：拖拉引擎與鐘面（§六之五 實作要點）—— 字面釘樁 ---------- */
+  [
+    [/var start = null, orig = null, moved = false, pid = null, gen = gGen;/, 'a piece does not remember which board it belongs to'],
+    [/gSolved = false; gMistake = false; gCtx = \{\}; gGen\+\+;/, 'startRound() does not bump gGen'],
+    [/el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/, 'a lost pointer capture does not put the piece back'],
+    [/el\.addEventListener\('pointercancel', function\(e\)\{ end\(e, true\); \}\);/, 'pointercancel does not put the piece back'],
+    [/document\.addEventListener\('pointerup', onDocEnd\);/, 'a release elsewhere on the page is not caught'],
+    [/if \(PIECE_PTR\[e\.pointerId\]\) return;/, 'the finger that pressed a piece can also count as tapping a destination'],
+    [/if \(P\.busy\(\)\) return;/, 'a tap on a destination can place a piece another finger is still dragging'],
+    [/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/, 'ahead mode does not show hint level 1 automatically']
+  ].forEach(([re, why]) => { if (!re.test(code)) fail(why); });
+  if ((code.match(/if \(gen !== gGen\) return;/g) || []).length !== 2) fail('the drag engine and the dial both need a board-generation guard: a piece or hand held across Restart could act on the new board');
+  if ((code.match(/if \(!start \|\| e\.pointerId !== pid\) return;/g) || []).length !== 2) fail('the drag follows any finger, not only the first one (move and release must both check the pointer id)');
+  if (!/\.gpiece\.locked\{[^}]*pointer-events:none/.test(src)) fail('placed pieces do not get pointer-events:none, so they block taps on what is under them');
+  if (!/\.gpiece\{[^}]*touch-action:none/.test(src)) fail('pieces do not set touch-action:none');
+  if (!/\.gdial\{[^}]*touch-action:none/.test(src)) fail('the dial does not set touch-action:none, so turning it scrolls the page');
+  ['pack', 'borrow', 'cross'].forEach(k => need(k, /useTapSelect\(B, function\(P, pt\)\{/, 'this drag round has no tap-then-tap alternative'));
+  LANGS.forEach(L => {
+    seq('gPts ' + L, I18N[L].gPts(20), [20]);
+    seq('gMinus ' + L, I18N[L].gMinus, [5]);
+    if (gNums(I18N[L].gWin(85)).indexOf(85) < 0) fail('gWin ' + L + ' does not show the score');
+    say(L + '.gClear', I18N[L].gClear, L);
+    TYPES.forEach(t => { say(L + '.gAsks.' + t, I18N[L].gAsks[t], L); say(L + '.gHints.' + t, I18N[L].gHints[t], L); });
+  });
+
+  /* ================= 第 1 關：撥短針（範例 1） ================= */
+  {
+    const G = D.HAND_G;
+    touch('the hand buttons (' + G.btnW.join('/') + '×' + G.btnH + ')', Math.min(G.btnH, G.btnW[0], G.btnW[1]));
+    inside(box(G.cx, G.cy, 2 * G.hitR, 2 * G.hitR), 'the dial (turn / tap area)', G.H);
+    inside(box(G.cx, G.cy, 2 * G.R, 2 * G.R), 'the clock face', G.H);
+    if (!(G.dead < G.tipR - G.knobR && G.tipR + G.knobR < G.numR - G.numFont / 2 && G.numR + G.numFont * 0.7 < G.R && G.R <= G.hitR))
+      fail('hand: centre ' + G.dead + ' < hand ' + G.tipR + ' < numbers ' + G.numR + ' < rim ' + G.R + ' ≤ tap area ' + G.hitR + ' do not nest');
+    if (!(G.cy + G.R < G.nowY && G.nowY + 28 < G.lineY - 20 && G.lineY + 26 < G.btnY && G.btnY + G.btnH <= G.H))
+      fail('hand: the readout, day line and buttons overlap each other or the clock');
+    if (!(G.cy + G.hitR <= G.btnY)) fail('hand: the turn area reaches the buttons');
+    const btns = [{ x:G.btnX[0], y:G.btnY, w:G.btnW[0], h:G.btnH }, { x:G.btnX[1], y:G.btnY, w:G.btnW[1], h:G.btnH }];
+    btns.forEach((b, i) => inside(b, 'hand button ' + i, G.H));
+    noHits(btns, 'hand buttons');
+    if (D.HAND_MAX !== 23) fail('HAND_MAX is ' + D.HAND_MAX + ': the hand has to reach 23 and stop there (24 is the next day)');
+    if (Math.abs(D.handLineX(0) - G.x0) > 1e-9 || Math.abs(D.handLineX(24) - G.x1) > 1e-9 || !(G.x0 >= 8 && G.x1 <= W - 8)) fail('hand: the day line does not run from x0 to x1 inside the board');
+    for (let v = 0; v <= 24; v++) if (Math.abs(D.handLineX(v) - (G.x0 + (G.x1 - G.x0) * v / 24)) > 1e-9) { fail('handLineX(' + v + ') is ' + D.handLineX(v) + ', the day line puts ' + v + ':00 at ' + (G.x0 + (G.x1 - G.x0) * v / 24)); break; }
+    /* 每一個數字在它自己的 30°、半徑 numR；字的框互不重疊 */
+    const numBox = [];
+    for (let k = 1; k <= 12; k++){
+      const p = D.handNumXY(k), a = (k % 12) * 30 * Math.PI / 180;
+      if (Math.abs(p.x - (G.cx + G.numR * Math.sin(a))) > 1e-6 || Math.abs(p.y - (G.cy - G.numR * Math.cos(a))) > 1e-6) fail('handNumXY(' + k + ') is not on its 30° step');
+      numBox.push(box(p.x, p.y, G.numFont * 0.62 * String(k).length + 2, G.numFont));
+    }
+    noHits(numBox, 'clock numbers');
+    /* 角度、尖端 */
+    for (let v = 0; v <= 23; v++){
+      if (D.handAngle(v) !== (v % 12) * 30) fail('handAngle(' + v + ') is ' + D.handAngle(v));
+      const t = D.handTipXY(v), a = (v % 12) * 30 * Math.PI / 180;
+      if (Math.abs(t.x - (G.cx + G.tipR * Math.sin(a))) > 1e-6 || Math.abs(t.y - (G.cy - G.tipR * Math.cos(a))) > 1e-6) fail('handTipXY(' + v + ') does not point at ' + (v % 12 || 12));
+    }
+    /* handNumberAt：整個點的範圍每 0.5° × 多個半徑，和「最近的數字（各自 30° 扇形）」比；字的框裡（±35%）一定是那個數字 */
+    let bad = 0;
+    for (let deg = 0; deg < 360; deg += 0.5) for (let r = 2; r <= G.hitR + 12; r += 3){
+      const a = deg * Math.PI / 180, x = G.cx + r * Math.sin(a), y = G.cy - r * Math.cos(a);
+      const want = (r <= G.dead || r > G.hitR) ? 0 : (Math.round(deg / 30) % 12 || 12);
+      if (Math.abs((deg % 30) - 15) < 0.01 && want) continue;   /* 剛好在兩個扇形的分界上：哪一邊都可以 */
+      if (D.handNumberAt(x, y) !== want) bad++;
+    }
+    if (bad) fail('handNumberAt(): ' + bad + ' points map to the wrong number (each number owns its own 30° sector; centre and outside → 0)');
+    for (let k = 1; k <= 12; k++){
+      const p = D.handNumXY(k), w2 = G.numFont * 0.62 * String(k).length / 2, h2 = G.numFont / 2;
+      [[0, 0], [-0.35, 0], [0.35, 0], [0, -0.35], [0, 0.35]].forEach(([fx, fy]) => {
+        const got = D.handNumberAt(p.x + fx * 2 * w2, p.y + fy * 2 * h2);
+        if (got !== k) fail('handNumberAt(): a tap at ' + (fx * 100) + '%,' + (fy * 100) + '% of the number ' + k + ' gives ' + got);
+      });
+    }
+    /* handForward：從每一個 v、點每一個數字 → 下一次指著它（今天之內） */
+    for (let v = 0; v <= 23; v++) for (let k = 1; k <= 12; k++){
+      let want = -1;
+      for (let t = v + 1; t <= 23; t++) if (t % 12 === k % 12){ want = t; break; }
+      if (D.handForward(v, k) !== want) fail('handForward(' + v + ', ' + k + ') is ' + D.handForward(v, k) + ', the next time the hand points at ' + k + ' today is ' + want);
+    }
+    /* handSnap／handClamp／angleStep：整個範圍 */
+    for (let acc = -400; acc <= 1200; acc += 0.5){
+      const want = Math.max(0, Math.min(23, Math.floor(acc / 30 + 0.5)));
+      if (D.handSnap(acc) !== want) { fail('handSnap(' + acc + ') is ' + D.handSnap(acc) + ', the nearest hour is ' + want); break; }
+      const c = Math.max(0, Math.min(690, acc));
+      if (D.handClamp(acc) !== c) { fail('handClamp(' + acc + ') is ' + D.handClamp(acc) + ', expected ' + c + ' (00:00 to 23:00)'); break; }
+    }
+    for (let a0 = 0; a0 < 360; a0 += 7) for (let d = -179; d <= 179; d += 11){
+      const a1 = ((a0 + d) % 360 + 360) % 360;
+      if (Math.abs(D.angleStep(a0, a1) - d) > 1e-9) { fail('angleStep(' + a0 + ', ' + a1 + ') is ' + D.angleStep(a0, a1) + ', the turn is ' + d); break; }
+    }
+    /* 題庫：每一組一個下午、一個上午、一個中午或半夜，上午和下午的數字不一樣；照遊戲的規則玩一遍 */
+    D.GAME_HAND.forEach((e, i) => {
+      const w = 'GAME_HAND[' + i + ']';
+      if (!Array.isArray(e) || e.length !== 3) return fail(w + ' should have three trains');
+      const per = e.map(x => x[0]);
+      if (per.filter(p => p === 'pm').length !== 1 || per.filter(p => p === 'am').length !== 1 || per.filter(p => p === 'noon' || p === 'midnight').length !== 1)
+        fail(w + ' should have one p.m., one a.m. and one noon-or-midnight train: ' + per);
+      const am = e.filter(x => x[0] === 'am')[0], pm = e.filter(x => x[0] === 'pm')[0];
+      if (am && pm && am[1] === pm[1]) fail(w + ': the a.m. and p.m. trains use the same clock number ' + am[1] + ' — the two lap mistakes would look the same');
+      e.forEach(tg => {
+        const h = h24Of(tg[0], tg[1]);
+        if (h === null) return fail(w + ': ' + tg + ' is not a time of day');
+        if (D.to24(tg[0], tg[1]) !== h) fail(w + ': to24(' + tg + ') is ' + D.to24(tg[0], tg[1]) + ', independently ' + h);
+        /* 撥得到：從 0 時點數字最多兩下（不是只能拖） */
+        let v = 0, taps = 0, k = h % 12 || 12;
+        while (v !== h && taps < 3){ const t = D.handForward(v, k); if (t < 0) break; v = t; taps++; }
+        if (h && v !== h) fail(w + ': ' + h + ':00 cannot be reached by tapping ' + k);
+        /* 那一個誘人的錯（下午沒多轉、上午多轉、中午沒轉、半夜轉一圈）也撥得到，而且它真的不是答案 */
+        const wrong = tg[0] === 'pm' ? tg[1] : tg[0] === 'am' ? tg[1] + 12 : tg[0] === 'noon' ? 0 : 12;
+        if (wrong === h || wrong > 23) fail(w + ': the tempting wrong time ' + wrong + ' for ' + tg + ' is not a different time today');
+        LANGS.forEach(L => {
+          const d = I18N[L], tag = L + '.' + w + ' ' + tg.join(' '), rt = d.gHandRead(tg[0], tg[1]);
+          if (rt !== say12Ref(L, h)) fail(tag + ': gHandRead prints "' + rt + '", independently "' + say12Ref(L, h) + '"');
+          say(tag + ' line', d.gHandLine(1, 3, rt), L);
+          seq(tag + ' line', d.gHandLine(2, 3, rt), [2, 3].concat(gNums(rt)));
+          const right = d.gHandRight(rt, d.hour24(h), d.s1shift[tg[0]]);
+          say(tag + ' right', right, L);
+          if (right.indexOf(rt) < 0 || right.indexOf(hour24Ref(L, h)) < 0) fail(tag + ': the right-answer message does not pair ' + rt + ' with ' + hour24Ref(L, h));
+          const h2 = d.gHand2(tg[0], tg[1], d.hour24(h));
+          say(tag + ' hint2', h2, L);
+          if (h2.indexOf(hour24Ref(L, h)) < 0) fail(tag + ': hint 2 does not end at ' + hour24Ref(L, h) + ': ' + h2);
+          if (tg[0] === 'pm' && h2.indexOf(tg[1] + (L === 'zh' ? ' ＋ 12 ＝ ' : ' + 12 = ') + (tg[1] + 12)) < 0) fail(tag + ': hint 2 for a p.m. time does not add 12');
+          /* 錯的那一句：撥到的時刻（wrong）的 12 時制說法要對，後面那一句的條件要成立 */
+          /* 撥錯的每一個時刻（0～23 除了答案）：12 時制說法要對；那一句圈數的話（handExtra）只在對這個錯成立時才出現 ——
+             自己獨立判斷：下午卻在第一圈、上午卻在第二圈、中午（任何錯都還沒轉滿那一圈）、半夜（任何錯都動過了） */
+          for (let v = 0; v <= 23; v++){
+            if (v === h) continue;
+            const rw = READ_TABLE[v], isTxt = d.gHandRead(rw[0], rw[1]);
+            if (isTxt !== say12Ref(L, v)) fail(tag + ': the wrong-answer message would call ' + v + ':00 "' + isTxt + '", independently "' + say12Ref(L, v) + '"');
+            const wantEx = tg[0] === 'pm' ? (v < 12 ? 'more' : '') : tg[0] === 'am' ? (v >= 12 ? 'less' : '') : tg[0] === 'noon' ? 'noon' : 'mid';
+            const ex = D.handExtra(tg[0], v);
+            if (ex !== wantEx) fail(tag + ': at ' + v + ':00 handExtra gives "' + ex + '", the lap sentence that is true there is "' + wantEx + '"');
+            const extra = { more:d.gHandMore, less:d.gHandLess, noon:d.gHandNoon, mid:d.gHandMid }[ex] || '';
+            const wrongTxt = d.gHandWrong(d.hour24(v), isTxt, rt) + extra;
+            say(tag + ' wrong ' + v, wrongTxt, L);
+            if (wrongTxt.indexOf(hour24Ref(L, v)) < 0 || wrongTxt.indexOf(say12Ref(L, v)) < 0 || wrongTxt.indexOf(rt) < 0) fail(tag + ': the wrong-answer message does not say ' + hour24Ref(L, v) + ' is ' + say12Ref(L, v) + ', not ' + rt);
+            if (/\.\./.test(wrongTxt)) fail(tag + ': double full stop in "' + wrongTxt + '"');
+          }
+          if (D.handExtra(tg[0], wrong) === '') fail(tag + ': the tempting wrong time ' + wrong + ':00 gets no lap sentence');
+        });
+      });
+      LANGS.forEach(L => {
+        const d = I18N[L], pairs = e.map(tg => d.gHandPair(d.gHandRead(tg[0], tg[1]), d.hour24(h24Of(tg[0], tg[1]))));
+        const all = d.gHandAll(pairs);
+        say(L + '.' + w + ' all', all, L);
+        pairs.forEach(p => { if (all.indexOf(p) < 0) fail(L + '.' + w + ': the round message misses ' + p); });
+      });
+    });
     LANGS.forEach(L => {
       const d = I18N[L];
-      const prompt = (r.kind === 'to24') ? d.gPrompt.to24(clock12Ref(L, r.period, r.h12, r.m))
-                   : (r.kind === 'to12') ? d.gPrompt.to12(clock24Ref(L, r.h24, r.m))
-                   : (r.kind === 'add') ? d.gPrompt.add(clock24Ref(L, r.start[0], r.start[1]),
-                                                        durRef(L, ['hour', 'min'], r.add))
-                   : d.gPrompt.diff(clock24Ref(L, r.from[0], r.from[1]), clock24Ref(L, r.to[0], r.to[1]));
-      const hint1 = d.gHint1[r.kind];
-      const hint2 = (r.kind === 'to24') ? d.gHint2.to24(r.period, r.h12)
-                  : (r.kind === 'to12') ? d.gHint2.to12(r.h24)
-                  : (r.kind === 'add') ? d.gHint2.add(r.start[1], r.add[1])
-                  : d.gHint2.diff(r.from[1], r.to[1]);
-      [prompt, hint1, hint2].forEach(t => {
-        if (!t || /undefined|NaN/.test(t)) fail(tag + ' ' + L + ': "' + t + '"');
-      });
-      /* 提示 2 一定要比提示 1 更接近答案 —— 兩層提示的規格。 */
-      if (hint1 === hint2) fail(tag + ' ' + L + ': the two hint levels print the same thing');
-      /* 選項印出來的字要跟第二套格式化函式逐字相同。 */
-      r.opts.forEach((o, oi) => {
-        const shown = (r.kind === 'to24') ? d.clock24(o.h, o.m)
-                    : (r.kind === 'to12') ? d.clock12(o.period, o.h12, o.m)
-                    : (r.kind === 'add') ? d.clockDay(o.day, o.h, o.m)
-                    : d.dur(['hour', 'min'], [o.h, o.m]);
-        const wantTxt = (r.kind === 'to24') ? clock24Ref(L, o.h, o.m)
-                      : (r.kind === 'to12') ? clock12Ref(L, o.period, o.h12, o.m)
-                      : (r.kind === 'add') ? clockDayRef(L, o.day, o.h, o.m)
-                      : durRef(L, ['hour', 'min'], [o.h, o.m]);
-        if (shown !== wantTxt)
-          fail(tag + ' ' + L + ' option ' + oi + ' prints "' + shown + '", independently "' + wantTxt + '"');
-      });
-      /* **每一個**選項的欄位都要合法 —— 只驗正解的話，一個 period:'bogus' 的誘答
-         會印成「8:05 undefined」而檢查全綠（codex 第二輪）。 */
-      r.opts.forEach((o, oi) => {
-        const bad = [];
-        /* 誘答可以是刻意的迷思寫法（13 時 75 分 ＝ 忘了扣掉 60），所以只擋「連一次進位
-           都放不下」的數字；正解的 1~59 由下面那一條單獨驗。 */
-        const mTop = (oi === r.ans) ? MIN_PER_HOUR - 1 : 2 * MIN_PER_HOUR - 1;
-        if (!(Number.isInteger(o.m) && o.m >= 0 && o.m <= mTop)) bad.push('m=' + o.m);
-        if (r.kind === 'to12'){
-          if (PERIOD_ORDER_REF.indexOf(o.period) < 0) bad.push('period=' + o.period);
-          if (!(Number.isInteger(o.h12) && o.h12 >= 1 && o.h12 <= HOUR_PER_DAY - 1)) bad.push('h12=' + o.h12);
-        } else {
-          if (!Number.isInteger(o.h) || o.h < 0) bad.push('h=' + o.h);
-          if (r.kind === 'add' && o.day !== 0 && o.day !== 1) bad.push('day=' + o.day);
-          if (r.kind !== 'diff' && o.h > HOUR_PER_DAY - 1) bad.push('h=' + o.h);
-        }
-        if (bad.length) fail(tag + ' option ' + oi + ' has bad fields: ' + bad.join(', '));
-      });
-      /* 正解的寫法一定要合法：時刻的分在 1~59、時間量的分不可以到 60。 */
-      const ansOpt = r.opts[r.ans];
-      if (r.kind === 'diff' && ansOpt.m >= MIN_PER_HOUR)
-        fail(tag + ': the marked answer leaves ' + ansOpt.m + ' minutes, which has to carry');
-      if (r.kind !== 'diff' && !(ansOpt.m >= 1 && ansOpt.m <= 59))
-        fail(tag + ': the marked answer has minutes outside 1~59');
+      for (let v = 0; v <= 23; v++){ const n = d.gHandNow(d.hour24(v)); say(L + '.gHandNow', n, L); if (n.indexOf(hour24Ref(L, v)) < 0) fail(L + '.gHandNow(' + v + ') does not show ' + hour24Ref(L, v)); }
+      say(L + '.gHandStill', d.gHandStill('X'), L);
+      ['gHandOk', 'gHandReset', 'gHandAria', 'gHandMore', 'gHandLess', 'gHandNoon', 'gHandMid'].forEach(k => { if (typeof d[k] !== 'string' || !d[k]) fail(L + '.' + k + ' is missing'); });
+      if (!/0/.test(d.gHandReset)) fail(L + '.gHandReset should say it goes back to 0');
     });
-  });
-  ['to24', 'to12', 'add', 'diff'].forEach(k => {
-    if (!kinds[k]) fail('ROUNDS never asks a "' + k + '" question, so that part of the lesson is untested by the game');
-  });
-  if (!(data.ROUNDS || []).some(r => roundAnswerRef(r).day === 1))
-    fail('no game round crosses midnight, so the rule this lesson adds is never played');
-  if ((data.ROUNDS || []).map(r => r.ans).every(x => x === 0)) fail('every game round has the answer first');
+    /* RENDER.hand：按鈕判的是畫出來的那一個數（v），不是「指著同一個數字」；拖的時候就畫格子上的數；點數字 ＝ 往前撥 */
+    need('hand', /if \(v === w\)\{/, 'the button does not judge the hour the hand shows');
+    need('hand', /if \(drag\.moved\) setV\(handSnap\(drag\.acc\)\);/, 'the hand does not snap to an hour WHILE it is dragged');
+    need('hand', /drag\.acc = handClamp\(drag\.acc \+ angleStep\(drag\.prev, a\)\);/, 'the turn is not added up step by step (with the 00:00–23:00 clamp)');
+    need('hand', /if \(radOf\(p\) <= G\.dead\)\{ drag\.prev = null; return; \}/, 'a drag straight through the centre counts as half a turn');
+    need('hand', /var t = handForward\(v, kk\);\n\s*if \(t >= 0\) setV\(t\);/, 'tapping a number does not turn the hand forward to it');
+    need('hand', /if \(cancelled\)\{ setV\(dg\.v0\); return; \}/, 'a lost capture does not put the hand back');
+    need('hand', /dial\.addEventListener\('lostpointercapture', function\(ev\)\{ finish\(ev, true\); \}\);/, 'the dial ignores lostpointercapture');
+    need('hand', /if \(!touched && v === 0\)\{ gMsg\.textContent = d\.gHandStill\(rt\); return; \}/, 'pressing the button before turning is not just a reminder');
+    need('hand', /if \(gSolved \|\| drag\) return;\s*var p = B\.toBoard\(ev\);\s*if \(radOf\(p\) > G\.hitR\) return;/, 'the dial follows a second finger (a new press while turning restarts the turn)');
+    need('hand', /if \(!drag \|\| ev\.pointerId !== drag\.pid\) return;\n\s*var p = B\.toBoard\(ev\), dx/, 'the dial moves with any finger');
+  }
+
+  /* ================= 第 2 關：裝箱換單位（範例 2） ================= */
+  {
+    const G = D.PACK_G;
+    if (!Array.isArray(D.PACK_BOXES) || D.PACK_BOXES.join() !== '24,60') fail('PACK_BOXES should be the two full numbers 24 and 60, got ' + D.PACK_BOXES);
+    touch('a box card (' + G.boxW + '×' + G.boxH + ')', Math.min(G.boxW, G.boxH));
+    touch('the done button (' + G.btnW + '×' + G.btnH + ')', Math.min(G.btnW, G.btnH));
+    const boxes = G.boxX.map(x => box(x, G.boxY, G.boxW, G.boxH)), pile = { x:G.pileX, y:G.pileY, w:G.pileW, h:G.pileH };
+    boxes.forEach((b, i) => { inside(b, 'pack box ' + i, G.H); if (hit(b, grow(pile, 8))) fail('pack: box ' + i + ' sits on the pile\'s drop zone'); });
+    noHits(boxes, 'pack boxes');
+    inside(pile, 'the pile', G.H);
+    const btn = { x:(W - G.btnW) / 2, y:G.btnY, w:G.btnW, h:G.btnH };
+    inside(btn, 'pack done button', G.H);
+    if (hit(btn, grow(pile, 8))) fail('pack: the done button is inside the pile\'s drop zone');
+    if (!(G.pileY + G.lblH <= G.gridY)) fail('pack: the squares start under the pile label');
+    D.GAME_PACK.forEach((e, i) => {
+      const w = 'GAME_PACK[' + i + '] ' + e.total + ' ' + (e.units || []).join('/');
+      const key = (e.units || []).join('/');
+      if (['day/hour', 'hour/min', 'min/sec'].indexOf(key) < 0) return fail(w + ': not a rung of the ladder');
+      const f = fullRef(e.units[1]), g = f === 24 ? 60 : 24, parts = fromSmallRef(e.units, e.total);
+      if (!(parts[0] >= 1 && parts[1] >= 1)) fail(w + ': needs at least one full box and a remainder (got ' + parts + ')');
+      if (e.total < g) fail(w + ': the other box (' + g + ') would never fit, so the wrong-box mistake is not on the table');
+      if (parts[0] > 4) fail(w + ': ' + parts[0] + ' boxes do not fit on the shelf (4 at most)');
+      /* 照遊戲的規則玩一遍：拿錯的盒子 → 不收；剩下 ≥ f → 收；剩下 < f → 不收；換好了只在剩下 < f 時收 */
+      let left = e.total, n = 0;
+      while (left >= f){ left -= f; n++; }
+      if (n !== parts[0] || left !== parts[1]) fail(w + ': packing boxes of ' + f + ' gives ' + n + ' and ' + left + ' left, the ladder says ' + parts);
+      /* 小方塊畫得下 */
+      const sq = D.packSquares(e.total);
+      if (sq.length !== e.total) fail(w + ': packSquares draws ' + sq.length + ' squares');
+      const inPile = sq.every(s => s.x >= G.pileX && s.y >= G.gridY && s.x + G.sq <= G.pileX + G.pileW && s.y + G.sq <= G.pileY + G.pileH);
+      if (!inPile) fail(w + ': the squares spill out of the pile');
+      for (let a = 0; a < sq.length; a++) for (let b = a + 1; b < sq.length; b++) if (hit({ x:sq[a].x, y:sq[a].y, w:G.sq, h:G.sq }, { x:sq[b].x, y:sq[b].y, w:G.sq, h:G.sq })){ fail(w + ': two squares overlap'); a = sq.length; break; }
+      /* 架子 */
+      const tiles = []; for (let k = 0; k < parts[0]; k++){ const t = D.packTileXY(k, parts[0]); tiles.push(box(t.x, t.y, G.tileW, G.tileH)); }
+      tiles.forEach((t, k) => { inside(t, w + ' shelf box ' + k, G.H); if (hit(t, btn) || hit(t, pile)) fail(w + ': shelf box ' + k + ' covers the pile or the button'); });
+      noHits(tiles, w + ': shelf boxes');
+      LANGS.forEach(L => {
+        const d = I18N[L], tag = L + '.' + w, sm = e.units[1], bg = e.units[0], tot = durRef(L, [sm], [e.total]), ans = durRef(L, e.units, parts);
+        say(tag + ' line', d.gPackLine(tot, bg, sm), L); seq(tag + ' line', d.gPackLine(tot, bg, sm), [e.total]);
+        if (d.gPackLine(tot, bg, sm).indexOf(tot) < 0) fail(tag + ': the order line does not show ' + tot);
+        say(tag + ' pile', d.gPackPile(e.total, sm), L); seq(tag + ' pile', d.gPackPile(e.total, sm), [e.total]);
+        say(tag + ' tile', d.gPackTile(bg), L); seq(tag + ' tile', d.gPackTile(bg), [1]);
+        const done = d.gPackDone(tot, e.total, f, parts[0], parts[1], ans, bg, sm);
+        say(tag + ' done', done, L); seq(tag + ' done', done, gNums(tot).concat(gNums(ans), [e.total, f, parts[0], parts[1], parts[0], parts[1]]));
+        const size = d.gPackSize(sm, bg, f, g) + (f === 24 ? d.gPackNot60 : '');
+        say(tag + ' size', size, L); seq(tag + ' size', size, [1, f, f, g].concat(f === 24 ? [60] : []));
+        let l2 = e.total;
+        while (l2 >= f){
+          say(tag + ' more', d.gPackMore(l2, sm, f), L); seq(tag + ' more', d.gPackMore(l2, sm, f), [l2, f]);
+          l2 -= f;
+          say(tag + ' one', d.gPackOne(bg, f, sm, l2), L); seq(tag + ' one', d.gPackOne(bg, f, sm, l2), [1, f, l2]);
+        }
+        say(tag + ' short', d.gPackShort(l2, sm, f), L); seq(tag + ' short', d.gPackShort(l2, sm, f), [l2, f]);
+        [e.total, l2].forEach(r => { const h2 = d.gPack2(sm, bg, f, r); say(tag + ' hint2', h2, L); seq(tag + ' hint2', h2, r >= f ? [f, r] : [f, r, f]); });
+      });
+    });
+    /* 剩下的數不一定是題庫裡出現過的那幾個：1、2 也要印得對（英文 1 用單數） */
+    LANGS.forEach(L => ['hour', 'min', 'sec'].forEach(sm => { const bg = BIG_OF[sm], f = fullRef(sm); [1, 2].forEach(r => {
+      const d = I18N[L];
+      [d.gPackPile(r, sm), d.gPackShort(r, sm, f), d.gPackOne(bg, f, sm, r), d.gPack2(sm, bg, f, r), d.gPackMore(r + f, sm, f)].forEach((t, k) => say(L + '.pack text ' + k + ' with ' + r + ' ' + sm, t, L));
+    }); }));
+    LANGS.forEach(L => {
+      [24, 60].forEach(f => { const t = I18N[L].gPackBox(f); say(L + '.gPackBox', t, L); seq(L + '.gPackBox', t, [f]); });
+      say(L + '.gPackNot60', I18N[L].gPackNot60, L);
+    });
+    ['day/hour', 'hour/min', 'min/sec'].forEach(k => { if (!D.GAME_PACK.some(e => e.units.join('/') === k)) fail('GAME_PACK never packs ' + k); });
+    need('pack', /if \(sz !== f\)\{ roundMiss\(/, 'a box of the wrong size is not refused with its reason');
+    need('pack', /if \(left < f\)\{ roundMiss\(d\.gPackShort\(left, small, f\)\); return false; \}/, 'a box that cannot be filled is not refused');
+    need('pack', /if \(left >= f\)\{ roundMiss\(d\.gPackMore\(left, small, f\)\); return; \}/, '"done" with a full box still left is not refused');
+    need('pack', /if \(!nearestOpen\(\[pile\], pt, 8\)\) return false;/, 'a drop off the pile is not sent back silently');
+    need('pack', /if \(pt\.tap\) keepSelected\(B, P\);/, 'a tapped box does not stay selected (boxes never run out)');
+  }
+
+  /* ================= 第 3 關：直式相加（範例 3） ================= */
+  {
+    const G = D.ADD_G;
+    touch('an answer box (' + G.inW + '×' + G.inH + ')', Math.min(G.inW, G.inH));
+    touch('the check button', Math.min(G.btnW, G.btnH));
+    const ins = G.colX.map(x => box(x, G.inY + G.inH / 2, G.inW, G.inH)), btn = { x:(W - G.btnW) / 2, y:G.btnY, w:G.btnW, h:G.btnH };
+    ins.concat([btn]).forEach((b, i) => inside(b, 'add box/button ' + i, G.H));
+    noHits(ins.concat([btn]), 'add boxes and button');
+    const nums = []; G.rowY.forEach(y => G.colX.forEach(x => nums.push(box(x, y, 80, 44))));
+    nums.forEach((n, i) => { inside(n, 'add number ' + i, G.H); ins.forEach(b => { if (hit(n, b)) fail('add: number ' + i + ' sits on an answer box'); }); });
+    if (!(G.rowY[1] + 22 <= G.ruleY && G.ruleY + 3 <= G.inY)) fail('add: the rule line does not sit between the numbers and the answer');
+    D.GAME_ADD.forEach((e, i) => {
+      const w = 'GAME_ADD[' + i + '] ' + JSON.stringify(e.a) + '+' + JSON.stringify(e.b);
+      const key = (e.units || []).join('/');
+      if (['day/hour', 'hour/min', 'min/sec'].indexOf(key) < 0) return fail(w + ': not a rung of the ladder');
+      const f = fullRef(e.units[1]), s = e.a[1] + e.b[1];
+      if (!(e.a[0] >= 1 && e.b[0] >= 1 && e.a[1] >= 1 && e.b[1] >= 1 && e.a[1] < f && e.b[1] < f)) fail(w + ': each value must be written properly (small part 1~' + (f - 1) + ')');
+      if (!(s >= f && s - f >= 1)) fail(w + ': the small parts make ' + s + ', which does not carry (with something left)');
+      if (f === 24 && s >= 60) fail(w + ': the hours make ' + s + ' — 60 or more, so “carry at 60” would also carry and the trap is gone');
+      const want = addRef(e.units, e.a, e.b);
+      const traps = [[e.a[0] + e.b[0], s], [e.a[0] + e.b[0], s - f], [e.a[0] + e.b[0] + 1, s]];
+      if (traps.some(t => t.join() === want.join()) || new Set(traps.map(t => t.join())).size !== 3) fail(w + ': the three named mistakes are not three different wrong answers');
+      if (!(want[0] + 2 !== traps[0][0] && want[0] + 2 !== traps[2][0])) fail(w + ': the "something else" probe collides');
+      LANGS.forEach(L => {
+        const d = I18N[L], tag = L + '.' + w, sm = e.units[1], bg = e.units[0], aT = durRef(L, e.units, e.a), bT = durRef(L, e.units, e.b), ansT = durRef(L, e.units, want);
+        say(tag + ' line', d.gAddLine(aT, bT), L); seq(tag + ' line', d.gAddLine(aT, bT), gNums(aT).concat(gNums(bT)));
+        const done = d.gAddDone(aT, bT, ansT, sm, e.a[1], e.b[1], s, f, want[1], bg, e.a[0], e.b[0], want[0]);
+        say(tag + ' done', done, L); seq(tag + ' done', done, gNums(aT).concat(gNums(bT), gNums(ansT), [e.a[1], e.b[1], s, f, 1, s, f, want[1], e.a[0], e.b[0], 1, want[0]]));
+        const nc = d.gAddNoCarry(s, f, sm, bg) + (f === 24 ? d.gAddNot60 : '');
+        say(tag + ' no carry', nc, L); seq(tag + ' no carry', nc, [s, f, 1, f - 1].concat(f === 24 ? [24, 60] : []));
+        say(tag + ' forgot', d.gAddForgot(bg), L); seq(tag + ' forgot', d.gAddForgot(bg), [1, 1]);
+        say(tag + ' keep', d.gAddKeep(s, f, sm), L); seq(tag + ' keep', d.gAddKeep(s, f, sm), [1, f, s]);
+        say(tag + ' generic', d.gAddGeneric(sm, e.a[1], e.b[1]), L); seq(tag + ' generic', d.gAddGeneric(sm, e.a[1], e.b[1]), [e.a[1], e.b[1]]);
+        const h2 = d.gAdd2(sm, bg, e.a[1], e.b[1], s, f);
+        say(tag + ' hint2', h2, L); seq(tag + ' hint2', h2, [e.a[1], e.b[1], s, f, 1, s, f, s - f]);
+      });
+    });
+    ['day/hour', 'hour/min', 'min/sec'].forEach(k => { if (!D.GAME_ADD.some(e => e.units.join('/') === k)) fail('GAME_ADD never adds ' + k); });
+    LANGS.forEach(L => { say(L + '.gAddInt', I18N[L].gAddInt, L); say(L + '.gAddNot60', I18N[L].gAddNot60, L); ['day', 'hour', 'min', 'sec'].forEach(u => { if (!I18N[L].gUnitCol[u]) fail(L + '.gUnitCol.' + u + ' missing'); }); });
+    need('add', /var s = e\.a\[1\] \+ e\.b\[1\], ans = \[e\.a\[0\] \+ e\.b\[0\] \+ 1, s - f\];/, 'the answer is not a0 + b0 + 1, s − f');
+    need('add', /if \(x0 === sum0 && x1 === s\) roundMiss\(d\.gAddNoCarry\(s, f, small, big\) \+ \(f === HOUR_PER_DAY \? d\.gAddNot60 : ''\)\);/, 'the no-carry answer does not get its reason');
+    need('add', /else if \(x0 === sum0 && x1 === s - f\) roundMiss\(d\.gAddForgot\(big\)\);/, 'the forgot-the-carried-1 answer does not get its reason');
+    need('add', /else if \(x0 === sum0 \+ 1 && x1 === s\) roundMiss\(d\.gAddKeep\(s, f, small\)\);/, 'the carried-but-kept answer does not get its reason');
+  }
+
+  /* ================= 第 4 關：排出借位（範例 4） ================= */
+  {
+    const G = D.SUB_G;
+    touch('a number card (' + G.cardW + '×' + G.cardH + ')', Math.min(G.cardW, G.cardH));
+    const slots = [], toks = [], lbls = [];
+    (D.SUB_LINES || []).forEach((row, r) => {
+      lbls.push({ r:r, b:{ x:0, y:G.rowY[r] - G.slotH / 2, w:G.lblW, h:G.slotH } });
+      row.forEach(tk => {
+        if (tk.s !== undefined) slots[tk.s] = { r:r, b:box(tk.x, G.rowY[r], G.slotW, G.slotH) };
+        else toks.push({ r:r, t:tk.t, b:box(tk.x, G.rowY[r], G.tokW, G.slotH) });
+      });
+    });
+    if ((D.SUB_LINES || []).length !== 3) fail('SUB_LINES should have three lines');
+    const toksOf = r => (D.SUB_LINES[r] || []).map(tk => tk.s !== undefined ? '□' : tk.t).join(' ');
+    if (toksOf(0) !== 'a1 + □ = □' || toksOf(1) !== '□ - b1 = □' || toksOf(2) !== 'a0 - 1 - b0 = □') fail('SUB_LINES read "' + toksOf(0) + '" / "' + toksOf(1) + '" / "' + toksOf(2) + '", expected a1 + □ = □ / □ - b1 = □ / a0 - 1 - b0 = □');
+    slots.forEach((s, i) => inside(s.b, 'borrow box ' + i, G.H));
+    noHits(slots.map(s => s.b), 'borrow boxes');
+    /* 一行之內記號依序排開、不疊在格子上；放寬的吸附區不可以蓋到別一行印出來的字或標籤（自然動作規則） */
+    (D.SUB_LINES || []).forEach((row, r) => { const xs = row.map(tk => tk.x); for (let k = 1; k < xs.length; k++) if (!(xs[k] > xs[k - 1])) fail('SUB_LINES line ' + (r + 1) + ' is not laid out left to right'); });
+    toks.forEach(t => slots.forEach((s, i) => { if (hit(t.b, s.b)) fail('borrow: the "' + t.t + '" on line ' + (t.r + 1) + ' sits on box ' + i); }));
+    lbls.forEach(l => slots.forEach((s, i) => { if (hit(l.b, s.b)) fail('borrow: the label of line ' + (l.r + 1) + ' runs into box ' + i); }));
+    slots.forEach((s, i) => {
+      const z = grow(s.b, G.pad);
+      toks.concat(lbls).forEach(t => { if (t.r !== s.r && hit(z, t.b)) fail('borrow: box ' + i + '\'s drop zone (pad ' + G.pad + ') reaches line ' + (t.r + 1) + '\'s printed ' + (t.t || 'label')); });
+    });
+    const tray = [];
+    for (let i = 0; i < 7; i++){ const row = i < 4 ? 0 : 1, col = row ? i - 4 : i, n = row ? 3 : 4; tray.push(box(W / 2 + (col - (n - 1) / 2) * G.trayStep, G.trayY[row], G.cardW, G.cardH)); }
+    tray.forEach((c, i) => { inside(c, 'borrow card ' + i, G.H); slots.forEach((s, j) => { if (hit(c, grow(s.b, G.pad))) fail('borrow: tray card ' + i + ' sits in box ' + j + '\'s drop zone'); }); });
+    noHits(tray, 'borrow tray cards');
+    D.GAME_SUB.forEach((e, i) => {
+      const w = 'GAME_SUB[' + i + '] ' + JSON.stringify(e.a) + '−' + JSON.stringify(e.b);
+      const key = (e.units || []).join('/');
+      if (['day/hour', 'hour/min', 'min/sec'].indexOf(key) < 0) return fail(w + ': not a rung of the ladder');
+      const f = fullRef(e.units[1]), g = f === 24 ? 60 : 24;
+      if (!(e.a[1] >= 1 && e.a[1] < e.b[1] && e.b[1] < f)) fail(w + ': the small part must need a borrow (a1 < b1 < ' + f + ')');
+      const want = subRef(e.units, e.a, e.b);
+      if (!(want[0] >= 1 && want[1] >= 1)) fail(w + ': the answer ' + want + ' has a 0 level');
+      const top = e.a[1] + f, slotWant = [f, top, top, top - e.b[1], e.a[0] - 1 - e.b[0]];
+      if (slotWant[3] !== want[1] || slotWant[4] !== want[0]) fail(w + ': the lines do not end at the answer ' + want);
+      if (D.subWant(e).join() !== slotWant.join()) fail(w + ': subWant is ' + D.subWant(e) + ', the borrow gives ' + slotWant);
+      const cards = D.subCards(e), wantCards = [f, g, top, e.a[1] + g, top - e.b[1], e.a[0] - 1 - e.b[0], e.a[0] - e.b[0]];
+      if (cards.slice().sort((x, y) => x - y).join() !== wantCards.slice().sort((x, y) => x - y).join()) fail(w + ': cards ' + cards + ', expected ' + wantCards);
+      if (new Set(cards).size !== cards.length) fail(w + ': two number cards show the same number ' + cards);
+      /* 照遊戲的規則：每一格剛好一張卡收 */
+      slotWant.forEach((v, k) => { const n = cards.filter(x => x === v).length; if (n !== 1) fail(w + ': box ' + k + ' is accepted by ' + n + ' cards'); });
+      LANGS.forEach(L => {
+        const d = I18N[L], tag = L + '.' + w, sm = e.units[1], bg = e.units[0], sN = UNIT_NAME[L][sm], bN = UNIT_NAME[L][bg];
+        const aT = durRef(L, e.units, e.a), bT = durRef(L, e.units, e.b), ansT = durRef(L, e.units, want);
+        say(tag + ' line', d.gBorrowLine(aT, bT), L); seq(tag + ' line', d.gBorrowLine(aT, bT), gNums(aT).concat(gNums(bT)));
+        const done = d.gBorrowDone(aT, bT, ansT, bN, sN, f, e.a[1], top, e.b[1], want[1], e.a[0], e.b[0], want[0]);
+        say(tag + ' done', done, L); seq(tag + ' done', done, gNums(aT).concat(gNums(bT), gNums(ansT), [1, f, e.a[1], f, top, top, e.b[1], want[1], 1, e.a[0], 1, e.b[0], want[0]]));
+        const rl = d.gBorrowRow(bN, d.gUnitCol[sm], d.gUnitCol[bg]);
+        if (!Array.isArray(rl) || rl.length !== 3 || gNums(rl[0]).join() !== '1' || rl[1] !== d.gUnitCol[sm] || rl[2] !== d.gUnitCol[bg]) fail(tag + ': the line labels should read borrow 1 ' + bN + ' / ' + sm + ' / ' + bg + ': ' + rl);
+        /* 每一張錯卡 × 每一格的那一句 */
+        cards.forEach(v => {
+          for (let k = 0; k < 5; k++){
+            if (v === slotWant[k]) continue;
+            let t;
+            if (k === 0) t = v === g ? d.gBorrowFull(bN, sN, f, g) : d.gBorrowFull2(bN, sN);
+            else if (k === 1 || k === 2) t = v === e.a[1] + g ? d.gBorrowAddG(v, e.a[1], g, f) : k === 2 ? d.gBorrowTop : (v > e.a[1] ? d.gBorrowSum(v, e.a[1], v - e.a[1], f) : d.gBorrowSum2(e.a[1], f));
+            else if (k === 3) t = d.gBorrowBack(v, e.b[1], v + e.b[1], top);
+            else t = v === e.a[0] - e.b[0] ? d.gBorrowBig(bN) : d.gBorrowBigBack(v, e.b[0], v + 1 + e.b[0], e.a[0]);
+            say(tag + ' card ' + v + ' in box ' + k, t, L);
+            if (k === 1 && v !== e.a[1] + g && v > e.a[1] && v - e.a[1] === f) fail(tag + ': card ' + v + ' minus ' + e.a[1] + ' IS the borrowed ' + f + ' — the reason would be false');
+            if (k === 3 && v + e.b[1] === top) fail(tag + ': card ' + v + ' + ' + e.b[1] + ' IS ' + top + ' — the add-back check would agree');
+            if (k === 4 && v !== e.a[0] - e.b[0] && v + 1 + e.b[0] === e.a[0]) fail(tag + ': card ' + v + ' adds back to ' + e.a[0]);
+          }
+        });
+        say(tag + ' full', d.gBorrowFull(bN, sN, f, g), L); seq(tag + ' full', d.gBorrowFull(bN, sN, f, g), [1, 1, f, g]);
+        for (let k = 0; k < 5; k++){ const h2 = d.gBorrow2(k, bN, sN, f, e.a[1], top, e.b[1], want[1], e.a[0], e.b[0], want[0]); say(tag + ' hint2.' + k, h2, L); if (gNums(h2).indexOf(slotWant[k]) < 0) fail(tag + ': hint 2 for box ' + k + ' does not lead to ' + slotWant[k]); }
+      });
+    });
+    ['day/hour', 'hour/min', 'min/sec'].forEach(k => { if (!D.GAME_SUB.some(e => e.units.join('/') === k)) fail('GAME_SUB never borrows on ' + k); });
+    LANGS.forEach(L => { say(L + '.gBorrowTop', I18N[L].gBorrowTop, L); if (gNums(I18N[L].gBorrowTop).length) fail(L + '.gBorrowTop prints a number although it is used for any wrong card'); });
+    need('borrow', /if \(v !== want\[slot\.k\]\)\{ roundMiss\(why\(slot\.k, v\)\); return false; \}/, 'a card in the wrong box is not refused with its reason');
+    need('borrow', /var slot = nearestOpen\(slots, pt, G\.pad\);\n\s*if \(!slot\) return false;/, 'a drop on empty space / a filled box is not sent back silently');
+    need('borrow', /if \(pt\.tap\) keepSelected\(B, P\);/, 'a tapped card does not stay selected (the cards never run out)');
+    need('borrow', /if \(k === 0\) return v === g \? d\.gBorrowFull\(bN, sN, f, g\) : d\.gBorrowFull2\(bN, sN\);/, 'the other full number in the borrow box does not get "1 big = f small, not g"');
+  }
+
+  /* ================= 第 5 關：今天到還是隔天到（範例 5） ================= */
+  {
+    const G = D.CROSS_G;
+    touch('a ticket (' + G.cardW + '×' + G.cardH + ')', Math.min(G.cardW, G.cardH));
+    const bins = [0, 1].map(i => ({ x:G.binX[i], y:G.binY, w:G.binW, h:G.binH }));
+    bins.forEach((b, i) => inside(b, 'cross box ' + i, G.H));
+    noHits(bins, 'cross boxes');
+    const tray = []; for (let i = 0; i < 4; i++) tray.push(box(G.trayX[i % 2], G.trayY[Math.floor(i / 2)], G.cardW, G.cardH));
+    tray.forEach((c, i) => { inside(c, 'ticket ' + i, G.H); bins.forEach((b, j) => { if (hit(c, grow(b, 6))) fail('cross: tray ticket ' + i + ' sits in box ' + j + '\'s drop zone'); }); });
+    noHits(tray, 'cross tray tickets');
+    bins.forEach((b, j) => {
+      const placed = [0, 1].map(n => box(b.x + b.w / 2, G.binY + G.lbl + G.gap + G.cardH / 2 + n * (G.cardH + G.gap), G.cardW, G.cardH));
+      placed.forEach((p, n) => { if (!(p.x >= b.x && p.y >= b.y + G.lbl && p.x + p.w <= b.x + b.w && p.y + p.h <= b.y + b.h)) fail('cross: placed ticket ' + n + ' does not fit inside box ' + j + ' under its label'); });
+      noHits(placed, 'cross: placed tickets in box ' + j);
+    });
+    D.GAME_CROSS.forEach((e, i) => {
+      const w = 'GAME_CROSS[' + i + ']';
+      if (!Array.isArray(e) || e.length !== 4) return fail(w + ' should have four tickets');
+      const ref = e.map(tk => {
+        const t = tk.s[0] * 60 + tk.s[1] + tk.d[0] * 60 + tk.d[1];
+        return { day:Math.floor(t / MIN_PER_DAY), h:Math.floor((t % MIN_PER_DAY) / 60), m:t % 60, hoursOnly:tk.s[0] + tk.d[0], carry:tk.s[1] + tk.d[1] >= 60 };
+      });
+      e.forEach((tk, k) => {
+        if (!(tk.s[0] >= 0 && tk.s[0] <= 23 && tk.s[1] >= 1 && tk.s[1] <= 59)) fail(w + ' ticket ' + k + ': the start time is not h:mm with 1~59 minutes');
+        if (!(tk.d[0] >= 1 && tk.d[1] >= 1 && tk.d[1] <= 59 && tk.d[0] * 60 + tk.d[1] <= 24 * 60)) fail(w + ' ticket ' + k + ': the trip is not 1 hour to 24 hours with 1~59 minutes');
+        const a = D.crossArrive(tk), r = ref[k];
+        if (a.day !== r.day || a.h !== r.h || a.m !== r.m) fail(w + ' ticket ' + k + ': crossArrive says day ' + a.day + ' ' + a.h + ':' + a.m + ', independently day ' + r.day + ' ' + r.h + ':' + r.m);
+        if (a.raw !== tk.s[1] + tk.d[1] || a.carry !== (r.carry ? 1 : 0) || a.H !== r.hoursOnly + a.carry) fail(w + ' ticket ' + k + ': crossArrive\'s working (minutes, carry, hours) is wrong');
+        if (r.m === 0) fail(w + ' ticket ' + k + ': arrives on the hour — the time would print with 0 minutes');
+        LANGS.forEach(L => {
+          const d = I18N[L], sT = clock24Ref(L, tk.s[0], tk.s[1]), dT = durRef(L, ['hour', 'min'], tk.d), arr = clockDayRef(L, r.day, r.h, r.m);
+          const why = d.gCrossWhy(sT, dT, tk.s[1], tk.d[1], a.raw, tk.s[0], tk.d[0], a.carry, a.H, d.clockDay(r.day, r.h, r.m));
+          say(L + '.' + w + ' ticket ' + k, why, L);
+          if (why.indexOf(arr) < 0) fail(L + '.' + w + ' ticket ' + k + ': the reason does not end at ' + arr + ': ' + why);
+          seq(L + '.' + w + ' ticket ' + k + ' why', why, gNums(sT).concat(gNums(dT), [tk.s[1], tk.d[1], a.raw], a.carry ? [60, 1] : [], [tk.s[0], tk.d[0]], a.carry ? [1] : [], [a.H], a.H >= 24 ? [24, 24] : [24], gNums(arr)));
+          const card = d.gCrossCard(sT, dT);
+          say(L + '.' + w + ' card ' + k, card, L);
+          if (card.indexOf(sT) < 0 || card.indexOf(dT) < 0) fail(L + '.' + w + ' ticket ' + k + ': the card does not show ' + sT + ' and ' + dT);
+          const h2 = d.gCross2(sT, dT, tk.s[1], tk.d[1], a.raw, tk.s[0], tk.d[0], a.carry, a.H);
+          say(L + '.' + w + ' hint2 ' + k, h2, L);
+          if (h2.indexOf(arr) >= 0) fail(L + '.' + w + ' ticket ' + k + ': hint 2 gives away the arrival');
+        });
+      });
+      if (ref.filter(r => r.day === 1).length !== 2) fail(w + ': ' + ref.filter(r => r.day === 1).length + ' tickets arrive the next day — needs exactly 2 (and 2 today), so the count gives nothing away');
+      if (!ref.some(r => r.day === 1 && r.hoursOnly === 23 && r.carry)) fail(w + ': no ticket reaches 24 only through the minutes\' carry — adding just the hours would sort every ticket right');
+      if (!ref.some(r => r.day === 0 && r.carry)) fail(w + ': no ticket carries a minute and still arrives today');
+      if (!ref.some(r => r.day === 1 && r.hoursOnly >= 24)) fail(w + ': no ticket crosses midnight on the hours alone');
+    });
+    LANGS.forEach(L => {
+      say(L + '.gCrossDone', I18N[L].gCrossDone, L);
+      for (let k = 0; k <= 4; k++) seq(L + '.gCrossLine', I18N[L].gCrossLine(4, k), L === 'zh' ? [k, 4] : [k, 4]);
+      if (!/今天|today/.test(I18N[L].gCrossToday) || !/隔天|next day/.test(I18N[L].gCrossNext)) fail(L + ': the two box labels do not say today / next day');
+    });
+    need('cross', /if \(bin\.day !== crossArrive\(tk\)\.day\)\{ roundMiss\(whyOf\(tk\)\); return false; \}/, 'a ticket in the wrong box is not refused with its reason');
+    need('cross', /var bin = nearestOpen\(bins, pt, 6\);\n\s*if \(!bin\) return false;/, 'a drop off both boxes is not sent back silently');
+  }
 }
 
 /* ===================== 5. 三層題庫的第二套實作 =====================
