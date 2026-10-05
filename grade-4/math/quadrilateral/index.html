@@ -124,17 +124,46 @@
   .comborow.big{border-color:var(--green);background:var(--green-soft);font-size:18px;font-weight:700;color:var(--green)}
   .comborow .tag{font-size:13px;font-weight:700;color:var(--muted);display:block}
   .comborow.big .tag{color:var(--green)}
-  .degrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
-  .degbtn{
-    border:2px solid var(--line);background:var(--card);border-radius:14px;padding:14px 10px;
-    font-size:17px;font-weight:700;cursor:pointer;color:var(--ink);text-align:center;min-height:56px;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .degbtn.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
-  .degbtn.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
-  .degbtn:disabled{cursor:default;opacity:.85}
-  .gprompt{text-align:center;font-size:20px;margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:14px;word-break:break-word}
-  .gprompt b{color:var(--blue)}
+  /* ---- 小遊戲「形狀鑑定所」：轉一轉、拉平行線、貼記號、推成等腰梯形、分家族（§六之五） ---- */
+  .gamemsg{text-align:center}
+  .game .hint{text-align:center}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 進度那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:18px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:48px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div, .gboard > svg{position:absolute}
+  .gsvg{left:0;top:0;pointer-events:none;overflow:visible}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  /* 拿得起來的紅點（第 1、2、4 關）：拿取範圍 44×44，畫出來的是中間的紅色圓點 */
+  .gknob{border-radius:50%}
+  .gknob::after{content:"";width:22px;height:22px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .gknob.locked::after{background:var(--green)}
+  /* 第 3 關：貼紙（箭頭、弧線）與貼紙的位置 */
+  .gsticker{background:var(--card);border:3px solid var(--orange);border-radius:12px}
+  .gsticker.used{visibility:hidden}
+  .gslot{border:3px dashed var(--orange);border-radius:10px;pointer-events:none}
+  .gslot.round{border-radius:50%}
+  .gslot.filled{border-color:transparent}
+  .gletter{display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:var(--ink);pointer-events:none}
+  /* 第 5 關：家族圖的框、框的名字、形狀卡 */
+  .gfam{border:3px solid var(--line);border-radius:14px;pointer-events:none}
+  .gfam.para{background:#F3F8FD;border-color:var(--blue)}
+  .gfam.rect{background:rgba(232,135,30,.10);border-color:var(--orange)}
+  .gfam.rhom{background:rgba(47,158,105,.10);border-color:var(--green)}
+  .gfam.trap{background:#FBF3F3;border-color:var(--red)}
+  .gfamlbl{display:flex;align-items:center;font-size:13px;font-weight:800;pointer-events:none;white-space:nowrap}
+  .gfamlbl.para{color:var(--blue)} .gfamlbl.rect{color:var(--orange)} .gfamlbl.rhom{color:var(--green)} .gfamlbl.trap{color:var(--red)}
+  .gfamlbl.right{justify-content:flex-end}
+  .gcard{background:var(--card);border:3px solid var(--blue);border-radius:12px}
+  .gcard svg{width:100%;height:100%;display:block;pointer-events:none}
+  .gcard.placed{border-color:var(--green)}
+  .gminus{color:var(--red);font-weight:700}
 </style>
 </head>
 <body>
@@ -270,26 +299,20 @@
   </section>
 
   <!-- 小遊戲 -->
-  <section>
+  <section class="game">
     <span class="eyebrow" data-i18n="eb7">小遊戲</span>
     <h2 data-i18n="s7h2">形狀鑑定所</h2>
-    <p class="lead" data-i18n="s7lead">看清楚圖上的記號：<strong>箭頭</strong>表示那兩邊平行，<strong>短撇</strong>表示那兩邊一樣長，<strong>小方框</strong>表示直角。</p>
-    <div class="card game">
+    <p class="lead" data-i18n="s7lead">轉出直角、拉出平行線、替平行四邊形貼記號、推出等腰梯形、把形狀分進家族 —— 五關都過就是鑑定師！記號照課本的：<strong>箭頭</strong>＝那兩邊平行，<strong>短撇</strong>＝那兩邊一樣長，<strong>小方框</strong>＝直角。</p>
+    <div class="card">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
+      <div class="gstage" id="gameStage"></div>
+      <p class="hint" id="gHint"></p>
+      <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow" style="justify-content:center">
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
-      </div>
-      <p class="hint" id="gHint" style="text-align:center"></p>
-      <p class="gprompt" id="gPrompt"></p>
-      <div class="figwrap">
-        <svg class="shapefig" id="gFig" viewBox="0 0 520 220" xmlns="http://www.w3.org/2000/svg"></svg>
-      </div>
-      <div class="degrid" id="gAnswers"></div>
-      <p id="gMsg" class="gamemsg" style="text-align:center"></p>
-      <div class="btnrow" style="justify-content:center">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -461,21 +484,276 @@
     return out;
   }
 
-  /* --- 遊戲：形狀鑑定所。五關把這一課的五件事各考一次。 --- */
-  var ROUNDS = [
-    { kind:'perp', u:[4, 3], v:[-3, 4], opts:['perp', 'para', 'neither'],         ans:0 },
-    { kind:'para', ci:1,                opts:['para', 'notpara'],                 ans:0 },
-    { kind:'name', shape:'para',        opts:['para', 'trap', 'rect', 'rhom'],    ans:0 },
-    { kind:'name', shape:'trap',        opts:['para', 'trap', 'rhom', 'square'],  ans:1 },
-    { kind:'also', shape:'square',      opts:['rect', 'trap', 'quadOnly', 'none'], ans:0 }
+  /* ============ 小遊戲「形狀鑑定所」的題庫與版面（語言無關；tools/checks/grade-4-quadrilateral.js 直接讀這一段） ============
+     五關五種玩法（docs/teaching-framework.md §六之五），每一關對應一個範例：
+     GAME_PERP  （範例 1）轉一轉：藍棒斜斜的；拖紅棒一頭的紅點繞著交點轉（停在 12 個停車位上），轉到和藍棒交出直角才收。
+                 紅棒轉成「直立的」不收（垂直看的是角，不是直不直），和藍棒疊在一起也不收。
+     GAME_PARA  （範例 2）拉平行線：方格點上有一條藍色的 AB；從兩個紅點各拉一條線到格子點，要和 AB 平行（長短不拘）。
+     GAME_MARK  （範例 3）貼記號：一個平行四邊形；八張貼紙（一個箭頭、兩個箭頭、一條弧線、兩條弧線各兩張），
+                 一樣的箭頭只能貼在**對邊**、一樣的弧線只能貼在**對角**。
+     GAME_TRAP  （範例 4）推一推：下底和左上角固定，右上角只能沿著上面那一條線左右推；推成等腰梯形才收。
+                 兩腰一樣長的位置有兩個 —— 一個是等腰梯形，另一個兩組對邊都平行（平行四邊形，不算梯形）。
+     GAME_FAM   （範例 5）分家族：五張形狀卡（畫出來的形狀＋課本的記號），放進家族圖裡**最精確**的那一格；
+                 正方形放在「長方形」和「菱形」兩圈重疊的地方，梯形放在另一個框。
+     所有收不收的規則都是這一段的純函式（perpKind／paraKind／markPick／markRule／trapKind／famRegion／famWhy），
+     檢查設定直接呼叫它們，再用自己的幾何重算比對。 */
+  var GAME_ORDER = ['perp', 'para', 'mark', 'trap', 'family'];
+  var GAME_W = 300;
+
+  /* ⚠️ 托盤一定要洗牌再畫。洗出來剛好由小到大的話，把前兩張對調（三年級 numbers 同一個做法：
+     用對調不用重洗，一定會結束，而且對調之後就不是由小到大）。 */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    var up = a.length > 1;
+    for (var i = 1; i < a.length; i++) if (!(a[i - 1] < a[i])) up = false;
+    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function inBox(b, x, y){ return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h; }
+
+  /* --- 第 1 關：轉一轉。角度只在程式裡用（停車位每 30° 一個；這一課**不算角度數**，畫面上不出現度數）。
+         s 是紅點的方向（畫面上逆時針、從右邊算起）。藍棒一定是斜的（30、60、120、150）：
+         垂直的位置也是斜的，「直立的」0／90 永遠不是答案。紅點一開始在 0（橫的）。 --- */
+  var GAME_PERP = [30, 60, 120, 150];
+  var PERP_G = { H:284, cx:150, cy:142, R:100, line:116, stop:30, start:0, dotR:5, ringIn:36, ringOut:132, knob:48, mark:18 };
+  function perpXY(s){
+    var a = s * Math.PI / 180;
+    return { x:PERP_G.cx + PERP_G.R * Math.cos(a), y:PERP_G.cy - PERP_G.R * Math.sin(a) };
+  }
+  /* 手指（或點的位置）在哪一個停車位：照方向分成 12 塊，每一個看得到的停車位自己一塊 */
+  function perpStop(x, y){
+    var a = Math.atan2(PERP_G.cy - y, x - PERP_G.cx) * 180 / Math.PI;
+    var s = Math.round(a / PERP_G.stop) * PERP_G.stop;
+    return ((s % 360) + 360) % 360;
+  }
+  /* 「點目的地」只收停車位那一圈（太靠近交點、太遠都不算點到） */
+  function perpRing(x, y){
+    var dx = x - PERP_G.cx, dy = y - PERP_G.cy, r = Math.sqrt(dx * dx + dy * dy);
+    return r >= PERP_G.ringIn && r <= PERP_G.ringOut;
+  }
+  function perpKind(base, s){
+    var rel = (((s - base) % 180) + 180) % 180;
+    if (rel === 90) return 'ok';
+    if (rel === 0) return 'same';           /* 疊在藍棒上 */
+    if (s % 180 === 0) return 'start';      /* 橫的：和一開始是同一條線（紅點只是換到另一頭），什麼都沒變 */
+    if (s % 180 === 90) return 'upright';   /* 直立的：「垂直＝一橫一直」的迷思 */
+    return 'other';
+  }
+
+  /* --- 第 2 關：拉平行線。方格點 7 × 5（c 往右、r 往下，間距 42；手機上一格約 40px）。AB 一定是斜的；
+         兩個紅點都不在 AB 那一條線上，也不在彼此的平行線上；每一個紅點至少有兩個收的格子點（長短不一樣）。 --- */
+  var PARA_G = { H:224, x0:24, y0:28, pitch:42, cols:7, rows:5, knob:48, dotR:4, startR:7 };
+  var GAME_PARA = [
+    { a:[1, 1], b:[3, 0], starts:[[6, 0], [4, 2]] },
+    { a:[0, 0], b:[1, 2], starts:[[3, 0], [6, 4]] },
+    { a:[0, 2], b:[2, 0], starts:[[4, 0], [6, 2]] },
+    { a:[1, 0], b:[3, 1], starts:[[0, 1], [4, 2]] },
+    { a:[1, 2], b:[2, 0], starts:[[4, 0], [6, 0]] },
+    { a:[3, 0], b:[5, 1], starts:[[0, 0], [2, 2]] }
   ];
-  /* 每一關的正確答案都從資料重算 —— ROUNDS.ans 只是選項的位置，
-     檢查設定會拿這個函式和它對照。 */
-  function roundAnswer(r){
-    if (r.kind === 'perp') return isPerp(r.u, r.v) ? 'perp' : (isPara(r.u, r.v) ? 'para' : 'neither');
-    if (r.kind === 'para') return PARA_CASES[r.ci].para ? 'para' : 'notpara';
-    if (r.kind === 'name') return classify(QUADS[r.shape]);
-    return ancestors(r.shape).indexOf('rect') >= 0 ? 'rect' : 'none';
+  function paraXY(c, r){ return { x:PARA_G.x0 + PARA_G.pitch * c, y:PARA_G.y0 + PARA_G.pitch * r }; }
+  /* 哪一個格子點：每一個點自己一個 pitch × pitch 的方塊；格子外面不算 */
+  function paraDot(x, y){
+    var G = PARA_G, c = Math.round((x - G.x0) / G.pitch), r = Math.round((y - G.y0) / G.pitch);
+    if (c < 0 || c >= G.cols || r < 0 || r >= G.rows) return null;
+    return [c, r];
+  }
+  /* 拖的時候紅點吸在最近的格子點上（拖出格子外就停在邊上那一個） */
+  function paraSnap(x, y){
+    var G = PARA_G;
+    var c = Math.max(0, Math.min(G.cols - 1, Math.round((x - G.x0) / G.pitch)));
+    var r = Math.max(0, Math.min(G.rows - 1, Math.round((y - G.y0) / G.pitch)));
+    return [c, r];
+  }
+  /* A、B 兩個字：畫在 AB 兩端旁邊，離點 18。依序試：和 AB 垂直的兩邊、往外延長的方向、四個斜角 ——
+     挑第一個「整個字在畫板裡、不壓到紅點的拿取範圍、不壓到 AB」的位置。 */
+  function paraLetters(e){
+    var A = paraXY(e.a[0], e.a[1]), B = paraXY(e.b[0], e.b[1]), G = PARA_G, half = MARK_G.letter / 2;
+    var u = unit([B.x - A.x, B.y - A.y]), r2 = Math.SQRT1_2;
+    function place(P, out){
+      var dirs = [[u[1], -u[0]], [-u[1], u[0]], [out * u[0], out * u[1]], [r2, -r2], [-r2, -r2], [r2, r2], [-r2, r2]];
+      for (var i = 0; i < dirs.length; i++){
+        var q = { x:P.x + dirs[i][0] * 18, y:P.y + dirs[i][1] * 18 };
+        if (q.x - half < 0 || q.x + half > GAME_W || q.y - half < 0 || q.y + half > G.H) continue;
+        if (e.starts.some(function(s){ var c = paraXY(s[0], s[1]); return Math.abs(c.x - q.x) < G.knob / 2 + half && Math.abs(c.y - q.y) < G.knob / 2 + half; })) continue;
+        if (segDist(q.x, q.y, [A.x, A.y], [B.x, B.y]) < half + 2) continue;
+        return q;
+      }
+      return null;
+    }
+    return { A:place(A, -1), B:place(B, 1) };
+  }
+  function paraKind(e, i, dot){
+    var st = e.starts[i];
+    if (dot[0] === st[0] && dot[1] === st[1]) return 'start';
+    var u = vsub(e.a, e.b), v = vsub(st, dot);
+    if (isPara(u, v)) return 'ok';
+    if (isPerp(u, v)) return 'perp';
+    return 'other';
+  }
+
+  /* --- 第 3 關：貼記號。平行四邊形 ABCD（A 左下、B 右下、C 右上、D 左上）；邊 i ＝ 第 i 個頂點到下一個，角 i 在第 i 個頂點。
+         每一個都**不是**長方形也不是菱形：相鄰的角一個尖、一個鈍，一眼看得出不一樣大。 --- */
+  var GAME_MARK = [
+    { pts:[[36, 232], [196, 232], [264, 62], [104, 62]] },
+    { pts:[[104, 232], [264, 232], [196, 62], [36, 62]] },
+    { pts:[[36, 236], [186, 236], [264, 60], [114, 60]] },
+    { pts:[[36, 224], [196, 224], [256, 74], [96, 74]] },
+    { pts:[[96, 224], [256, 224], [196, 74], [36, 74]] }
+  ];
+  var MARK_KINDS = ['p1', 'p1', 'p2', 'p2', 'a1', 'a1', 'a2', 'a2'];
+  var MARK_G = { H:392, slotW:46, slotH:38, angR:20, angIn:38, letterOut:20, letter:26, reach:24,
+                 sticker:50, trayX:[45, 115, 185, 255], trayY:[298, 360] };
+  function unit(v){ var n = Math.sqrt(len2(v)); return [v[0] / n, v[1] / n]; }
+  /* 角 i 的貼紙位置（在角裡面，沿著角平分線）和頂點字母（在角外面） */
+  function markAngle(pts, i){
+    var V = pts[i], u = unit(vsub(V, pts[(i + 3) % 4])), v = unit(vsub(V, pts[(i + 1) % 4]));
+    var b = unit([u[0] + v[0], u[1] + v[1]]);
+    return { slot:{ x:V[0] + b[0] * MARK_G.angIn, y:V[1] + b[1] * MARK_G.angIn },
+             letter:{ x:V[0] - b[0] * MARK_G.letterOut, y:V[1] - b[1] * MARK_G.letterOut } };
+  }
+  function markMid(pts, i){
+    var a = pts[i], b = pts[(i + 1) % 4];
+    return { x:(a[0] + b[0]) / 2, y:(a[1] + b[1]) / 2 };
+  }
+  function segDist(x, y, a, b){
+    var ux = b[0] - a[0], uy = b[1] - a[1], t = ((x - a[0]) * ux + (y - a[1]) * uy) / (ux * ux + uy * uy);
+    t = Math.max(0, Math.min(1, t));
+    var dx = x - (a[0] + ux * t), dy = y - (a[1] + uy * t);
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  function boxDist(x, y, cx, cy, hw, hh){
+    var ex = Math.max(0, Math.abs(x - cx) - hw), ey = Math.max(0, Math.abs(y - cy) - hh);
+    return Math.sqrt(ex * ex + ey * ey);
+  }
+  /* 貼紙放在哪裡：箭頭只看「邊」（整條邊和它的虛線框），弧線只看「角」（從頂點外面的字母、頂點，到角裡面的虛線圈）。
+     都在 reach 以內就挑最近的；沒有就回 null（放到空白處）。 */
+  function markPick(pts, kind, x, y){
+    var G = MARK_G, best = null, bd = Infinity;
+    for (var i = 0; i < 4; i++){
+      var dd;
+      if (kind.charAt(0) === 'p'){
+        var m = markMid(pts, i);
+        dd = Math.min(segDist(x, y, pts[i], pts[(i + 1) % 4]), boxDist(x, y, m.x, m.y, G.slotW / 2, G.slotH / 2));
+      } else {
+        var A = markAngle(pts, i);
+        dd = segDist(x, y, [A.letter.x, A.letter.y], [A.slot.x, A.slot.y]);
+      }
+      if (dd <= G.reach && dd < bd){ bd = dd; best = i; }
+    }
+    return best;
+  }
+  /* 貼在第 i 邊（或第 i 個角）可不可以：null ＝ 收。
+     一樣的貼紙已經貼在 at：at 是對面才收，相鄰 → adj。這一種還沒貼過、對面已經貼了另一種 → mate。已經貼好的 → full（靜靜回去）。 */
+  function markRule(state, kind, i){
+    var arr = (kind.charAt(0) === 'p') ? state.side : state.ang;
+    if (arr[i]) return { key:'full' };
+    var mate = (i + 2) % 4, at = -1;
+    for (var j = 0; j < 4; j++) if (arr[j] === kind) at = j;
+    if (at >= 0) return (at === mate) ? null : { key:'adj', at:at, mate:(at + 2) % 4 };
+    if (arr[mate] && arr[mate] !== kind) return { key:'mate', mate:mate, has:arr[mate] };
+    return null;
+  }
+
+  /* 貼錯的理由（d ＝ 那一種語言的字串）：邊叫 AB、BC、CD、DA，角叫 ∠A…；相鄰的兩邊接在哪一個頂點也說出來 */
+  function markWhy(d, kind, i, r){
+    var N = 'ABCD';
+    function side(j){ return N.charAt(j) + N.charAt((j + 1) % 4); }
+    function ang(j){ return '∠' + N.charAt(j); }
+    if (kind.charAt(0) === 'p'){
+      if (r.key === 'adj') return d.gMarkAdjSide(side(i), side(r.at), N.charAt(r.at === (i + 1) % 4 ? (i + 1) % 4 : i), side(r.mate), d.gMarkSym[kind]);
+      return d.gMarkMateSide(side(i), side(r.mate), d.gMarkSym[r.has]);
+    }
+    if (r.key === 'adj') return d.gMarkAdjAng(ang(i), ang(r.at), ang(r.mate), d.gMarkSym[kind]);
+    return d.gMarkMateAng(ang(i), ang(r.mate), d.gMarkSym[r.has]);
+  }
+
+  /* --- 第 4 關：推一推。方格間距 36；下底在 yb，從第 c0 欄到第 c1 欄；左上角在第 ca 欄、高 h 格；
+         右上角在上面那一條線上，只能停在第 ca＋1 欄到最右欄；一開始在第 cs 欄（不是答案、也不是平行四邊形）。
+         等腰梯形在 c1 −（ca − c0）；平行四邊形在 ca ＋（c1 − c0）—— 兩個都要推得到。 --- */
+  var TRAP_G = { H:252, gx:24, pitch:36, cols:8, yb:214, knob:48, band:26, dotR:3 };
+  var GAME_TRAP = [
+    { c0:0, c1:5, ca:1, h:3, cs:7 },
+    { c0:1, c1:6, ca:2, h:4, cs:3 },
+    { c0:2, c1:6, ca:1, h:3, cs:3 },
+    { c0:1, c1:5, ca:2, h:3, cs:7 },
+    { c0:0, c1:4, ca:1, h:4, cs:6 }
+  ];
+  function trapX(c){ return TRAP_G.gx + TRAP_G.pitch * c; }
+  function trapTop(e){ return TRAP_G.yb - TRAP_G.pitch * e.h; }
+  /* 頂點順序和範例 4 的 QUADS.trap 一樣：左下、左上、右上（推的那一個）、右下 ——
+     邊 0 左腰、邊 1 上底、邊 2 右腰、邊 3 下底，所以 eqGroups(pts, true) 標的就是兩腰。 */
+  function trapPts(e, cd){
+    var yb = TRAP_G.yb, yt = trapTop(e);
+    return [[trapX(e.c0), yb], [trapX(e.ca), yt], [trapX(cd), yt], [trapX(e.c1), yb]];
+  }
+  function trapCol(e, x){
+    var c = Math.round((x - TRAP_G.gx) / TRAP_G.pitch);
+    return Math.max(e.ca + 1, Math.min(TRAP_G.cols - 1, c));
+  }
+  /* 「點目的地」只收上面那一條線附近（停車位那一帶） */
+  function trapOnRail(e, x, y){
+    return Math.abs(y - trapTop(e)) <= TRAP_G.band &&
+           x >= trapX(e.ca + 1) - TRAP_G.pitch / 2 && x <= trapX(TRAP_G.cols - 1) + TRAP_G.pitch / 2;
+  }
+  function trapKind(e, cd){
+    if (cd === e.cs) return 'start';
+    var k = classify(trapPts(e, cd));
+    if (k === 'isotrap') return 'ok';
+    if (k === 'trap') return 'plain';
+    return 'para';
+  }
+
+  /* --- 第 5 關：分家族。框（畫板座標）：P 平行四邊形、Rr 長方形、Rh 菱形（兩圈重疊的地方是正方形，不寫名字）、T 梯形。
+         一點落在哪一格由 famRegion() 決定（五格互不重疊，框的名字畫在自己那一格裡）。
+         卡片的形狀用 132 × 99 的座標畫，種類由 classify() 從座標算，不看標籤。 --- */
+  var FAM_G = {
+    H:482,
+    P:{ x:4, y:4, w:292, h:242 }, Rr:{ x:70, y:40, w:140, h:166 }, Rh:{ x:150, y:40, w:142, h:166 }, T:{ x:4, y:256, w:292, h:60 },
+    lbl:{ para:{ x:12, y:9, w:150, h:26 }, rect:{ x:75, y:45, w:74, h:22 }, rhom:{ x:212, y:45, w:76, h:22 }, trap:{ x:12, y:261, w:120, h:24 } },
+    home:{ para:[37, 140], rect:[110, 140], both:[180, 140], rhom:[251, 140], trap:[200, 288] },
+    card:{ w:92, h:69 }, vb:[132, 99], placed:0.62,
+    tray:[[52, 364], [150, 364], [248, 364], [101, 440], [199, 440]]
+  };
+  var GAME_FAM = {
+    para:   [ [[10, 85], [40, 15], [122, 15], [92, 85]], [[8, 80], [30, 20], [124, 20], [102, 80]] ],
+    rect:   [ [[16, 20], [116, 20], [116, 80], [16, 80]], [[26, 14], [106, 14], [106, 86], [26, 86]] ],
+    rhom:   [ [[66, 8], [114, 44], [66, 80], [18, 44]], [[14, 84], [74, 84], [110, 36], [50, 36]] ],
+    square: [ [[36, 20], [96, 20], [96, 80], [36, 80]], [[60, 4], [96, 52], [48, 88], [12, 40]] ],
+    trap:   [ [[8, 84], [30, 20], [100, 20], [124, 84]], [[8, 84], [36, 20], [96, 20], [124, 84]] ]
+  };
+  function famRegion(x, y){
+    var G = FAM_G;
+    if (inBox(G.T, x, y)) return 'trap';
+    var r = inBox(G.Rr, x, y), h = inBox(G.Rh, x, y);
+    if (r && h) return 'both';
+    if (r) return 'rect';
+    if (h) return 'rhom';
+    if (inBox(G.P, x, y)) return 'para';
+    return null;
+  }
+  function famWant(kind){
+    return { para:'para', rect:'rect', rhom:'rhom', square:'both', trap:'trap', isotrap:'trap' }[kind] || null;
+  }
+  /* 卡片中心或手指，任一個落在它自己那一格就收；都不是的話，照卡片中心（中心不在任何一格才看手指）判 */
+  function famPick(rc, rf, want){
+    if (rc === want || rf === want) return want;
+    return rc || rf || null;
+  }
+  /* 放錯的理由：先看「平行四邊形家族還是梯形」，再看直角、四邊等長 */
+  function famWhy(kind, r){
+    if (PARA_FAMILY.indexOf(kind) < 0) return 'notPara';
+    if (r === 'trap') return 'notTrap';
+    var right = (kind === 'rect' || kind === 'square'), eq = (kind === 'rhom' || kind === 'square');
+    if ((r === 'rect' || r === 'both') && !right) return 'noRight';
+    if ((r === 'rhom' || r === 'both') && !eq) return 'noEq';
+    if (kind === 'square') return 'isBoth';
+    return right ? 'isRect' : 'isRhom';
   }
 
   /* ---------- i18n ---------- */
@@ -498,7 +776,6 @@
       eb1:'範例教學 1', eb2:'範例教學 2', eb3:'範例教學 3', eb4:'範例教學 4', eb5:'範例教學 5', eb6:'試題', eb7:'小遊戲',
       shapeName:{ para:'平行四邊形', rect:'長方形', rhom:'菱形', square:'正方形',
                   trap:'梯形', isotrap:'等腰梯形', quad:'一般四邊形' },
-      relName:{ perp:'互相垂直', para:'互相平行', neither:'既不垂直也不平行', notpara:'不平行' },
       s1h2:'垂直：兩條線交出直角',
       s1lead:'兩條直線交叉的地方如果是<strong>直角</strong>，就說這兩條線<strong>互相垂直</strong>，交點叫做<strong>垂足</strong>。⚠️ 垂直看的是<strong>那個角</strong>，不是「一條橫的、一條直的」—— 把整組轉個角度，它們還是垂直。點下面的例子，看轉過去之後直角還在不在。',
       s1chip: function(i, turned){ return turned ? '轉過的第 ' + i + ' 組' : '正正的那一組'; },
@@ -587,38 +864,88 @@
           opts:['沒有不對，它就是梯形','梯形要求「只有一組」平行，平行四邊形有兩組，所以不算','平行四邊形沒有對邊平行','梯形要四邊都不一樣長'], ans:1,
           why:'梯形的定義是<strong>只有一組</strong>對邊平行。平行四邊形兩組都平行，超過了那個「只有一組」的條件，所以不算梯形 —— 它升級成平行四邊形了。' }
       ],
-      s7h2:'形狀鑑定所', s7lead:'看清楚圖上的記號：<strong>箭頭</strong>表示那兩邊平行，<strong>短撇</strong>表示那兩邊一樣長，<strong>小方框</strong>表示直角。',
+      s7h2:'形狀鑑定所', s7lead:'轉出直角、拉出平行線、替平行四邊形貼記號、推出等腰梯形、把形狀分進家族 —— 五關都過就是鑑定師！記號照課本的：<strong>箭頭</strong>＝那兩邊平行，<strong>短撇</strong>＝那兩邊一樣長，<strong>小方框</strong>＝直角。',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
       gHintBtn:'💡 提示',
-      gPrompt:{
-        perp:'圖上這兩條線是什麼關係？',
-        para:'圖上這兩條線平行嗎？',
-        name:'這個四邊形叫什麼？',
-        also: function(name){ return name + '除了自己，還是下面哪一種？'; }
-      },
-      gOpt:{ quadOnly:'只是一般四邊形', none:'都不是' },
-      gHint1:{
-        perp:'提示 1：看交叉的地方有沒有直角的小方框。垂直和「擺得正不正」沒有關係。',
-        para:'提示 1：量兩條線之間的寬度，三個地方都一樣才是平行。',
-        name:'提示 1：先數圖上有幾組平行的箭頭 —— 兩組是平行四邊形家族，一組是梯形。',
-        also:'提示 1：把它的條件一條一條拆開，看看少掉一個條件之後還剩下什麼形狀。'
-      },
-      gHint2:{
-        perp:'提示 2：這兩條線的夾角剛好是直角，只是整組轉過一個角度而已。',
-        para:'提示 2：這兩條線的寬度從左到右都一樣，所以延長下去不會相交。',
-        name: function(pairs, eq4, right){
-          return '提示 2：這個形狀有 ' + pairs + ' 組對邊平行、'
-               + (eq4 ? '四邊都一樣長' : '四邊沒有都一樣長') + '、'
-               + (right === 4 ? '四個角都是直角' : '角不是直角') + '。';
-        },
-        also:'提示 2：正方形的四個角都是直角，而「平行四邊形＋四個直角」就是長方形。'
-      },
       gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:'答對了！+20 分！',
-      gCorrectRetry:'答對了！+10 分。',
-      gWrong:'不對喔，再試一次，−5 分。',
-      gClear:'按「下一關」看下一個形狀。',
-      gWin: function(score){ return '五個形狀都鑑定完了！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gAsks:{
+        perp:'拖紅棒那一頭的紅點，繞著交點轉，轉到紅棒和藍棒<strong>互相垂直</strong>。（也可以先點紅點，再點一個停車位。）',
+        para:'從兩個紅點各拉一條線：把紅點拖到一個格子點上，拉出來的線要和藍色的 AB <strong>平行</strong>。（也可以先點紅點，再點格子點。）',
+        mark:'替平行四邊形 ABCD 貼記號：一樣的<strong>箭頭</strong>貼在互相平行的兩邊，一樣的<strong>弧線</strong>貼在一樣大的兩個角。',
+        trap:'下底和左上角釘住了。左右推右上角的紅點，把它推成<strong>等腰梯形</strong>。（也可以先點紅點，再點上面那一條線上的停車位。）',
+        family:'把每一張形狀卡放進家族圖裡<strong>最精確</strong>的那一格：同時是長方形又是菱形的，放在兩圈<strong>重疊</strong>的地方。'
+      },
+      gHints:{
+        perp:'提示 1：垂直看的是<strong>交叉的地方是不是直角</strong>，不是看紅棒直不直、正不正。',
+        para:'提示 1：平行就是永遠不相交、寬度處處一樣 —— 照著 AB 斜的樣子拉。',
+        mark:'提示 1：平行四邊形<strong>對邊</strong>互相平行、<strong>對角</strong>一樣大 —— 一樣的貼紙一定貼在「對面」。',
+        trap:'提示 1：等腰梯形要<strong>只有一組</strong>對邊平行，而且兩腰一樣長。',
+        family:'提示 1：先數箭頭（幾組對邊平行），再看有沒有直角的小方框、短撇是不是四邊都一樣。'
+      },
+      gPerpNow:function(done){ return done ? '✅ 紅棒和藍棒交出直角了' : '紅棒還沒有和藍棒垂直'; },
+      gPerpWhy:{
+        same:'紅棒疊在藍棒上了 —— 兩根要交叉出<strong>直角</strong>，才是互相垂直。',
+        upright:'紅棒現在是直立的，可是它和斜的藍棒交出來的角<strong>不是直角</strong> —— 垂直看的是交叉的角，不是直不直。',
+        other:'交叉出來的角不是直角：一邊比直角小、一邊比直角大。'
+      },
+      gPerp2:'提示 2：直角會把交叉的地方分成<strong>四個一樣大的角</strong>。轉到紅棒和藍棒之間的四個角都一樣大為止。',
+      gPerpOk:'直角！紅棒和藍棒互相垂直 —— 兩根都是斜的，還是垂直。',
+      gParaNow:function(n, total){ return '拉好了 ' + n + ' 條（共 ' + total + ' 條）'; },
+      gParaWhy:{
+        perp:'這一條和 AB 延長之後會交出直角 —— 那是<strong>垂直</strong>，不是平行。平行的兩條線延長多遠都不會相交。',
+        other:'這一條延長下去會和 AB 相交，兩條線之間的寬度不是處處一樣，所以不平行。'
+      },
+      gPara2:function(dx, dy){
+        return '提示 2：從 A 到 B 是往右 ' + dx + ' 格、往' + (dy < 0 ? '上 ' + (-dy) : '下 ' + dy) + ' 格。從紅點照這樣走（走兩次、或往反方向走也可以）。';
+      },
+      gParaOk:'平行！',
+      gParaDone:function(diff){ return diff ? '兩條都和 AB 平行 —— 長短不一樣也沒關係，<strong>平行和長短無關</strong>。' : '兩條都和 AB 平行，寬度處處一樣。'; },
+      gMarkNow:function(n, total){ return '貼好了 ' + n + ' 張（共 ' + total + ' 張）'; },
+      gMarkSym:{ p1:'一個箭頭', p2:'兩個箭頭', a1:'一條弧線', a2:'兩條弧線' },
+      gMarkAdjSide:function(s, t, v, m, sym){
+        return s + ' 和 ' + t + ' 在 ' + v + ' 接在一起，會相交，不平行 —— 和 ' + t + ' 平行的是它的對邊 ' + m + '，' + sym + '要貼在那裡。';
+      },
+      gMarkMateSide:function(s, m, sym){ return s + ' 和它的對邊 ' + m + ' 互相平行 —— ' + m + ' 已經貼了' + sym + '，' + s + ' 要貼一樣的。'; },
+      gMarkAdjAng:function(a, b, m, sym){
+        return a + ' 和 ' + b + ' 是相鄰的兩個角，一個尖、一個鈍，不一樣大 —— 和 ' + b + ' 一樣大的是斜對面的 ' + m + '，' + sym + '要貼在那裡。';
+      },
+      gMarkMateAng:function(a, m, sym){ return a + ' 和斜對面的 ' + m + ' 一樣大 —— ' + m + ' 已經貼了' + sym + '，' + a + ' 要貼一樣的。'; },
+      gMark2:'提示 2：AB 的對邊是 CD、BC 的對邊是 DA；∠A 的斜對面是 ∠C、∠B 的斜對面是 ∠D。',
+      gMarkOk:'貼對了！',
+      gMarkDone:'兩組對邊各自平行（箭頭），斜對面的角一樣大（弧線）—— 這就是平行四邊形。',
+      gTrapNow:function(done){ return done ? '✅ 等腰梯形' : '還不是等腰梯形'; },
+      gTrapWhy:{
+        para:'兩組對邊都平行了 —— 這是<strong>平行四邊形</strong>，不再算梯形。兩腰一樣長還不夠，梯形要<strong>只有一組</strong>對邊平行。',
+        plain:function(rightLonger){ return '只有一組對邊平行，是梯形；可是右腰比左腰' + (rightLonger ? '長' : '短') + ' —— 兩腰不一樣長，還不是等腰梯形。'; }
+      },
+      gTrap2:function(n, leftRight){
+        return '提示 2：左腰從下往上，往' + (leftRight ? '右' : '左') + '偏了 ' + n + ' 格；右腰要往' + (leftRight ? '左' : '右') + '偏一樣多 —— 也是 ' + n + ' 格。';
+      },
+      gTrapOk:'只有一組對邊平行、兩腰一樣長 —— 等腰梯形！',
+      gFamNow:function(n, total){ return '放好了 ' + n + ' 張（共 ' + total + ' 張）'; },
+      gFamName:{ para:'平行四邊形', rect:'長方形', rhom:'菱形', trap:'梯形' },
+      gFamWhy:{
+        notPara:'這一張只有一組對邊平行（一組箭頭）—— 它是梯形，不是平行四邊形。',
+        notTrap:'這一張兩組對邊都平行（兩組箭頭）—— 它是平行四邊形，不算梯形。',
+        noRight:'這一張的角不是直角（沒有小方框），不能放進長方形那一圈。',
+        noEq:'這一張的四邊沒有都一樣長（短撇不一樣），不能放進菱形那一圈。',
+        isBoth:'這一張有直角、四邊又一樣長 —— 它是長方形，<strong>也是</strong>菱形，要放在兩圈重疊的地方。',
+        isRect:'這一張四個角都是直角 —— 它也是長方形，要放進長方形那一圈。',
+        isRhom:'這一張四邊都一樣長 —— 它也是菱形，要放進菱形那一圈。'
+      },
+      gFam2:{
+        para:'提示 2：只有箭頭、沒有小方框、短撇只有對邊一樣的那一張 → 只在最外面的平行四邊形裡。',
+        rect:'提示 2：有小方框、可是四邊短撇不一樣的那一張 → 長方形那一圈（不是重疊的地方）。',
+        rhom:'提示 2：四邊短撇都一樣、可是沒有小方框的那一張 → 菱形那一圈（不是重疊的地方）。',
+        square:'提示 2：有小方框、四邊短撇又都一樣的那一張 → 兩圈重疊的地方。',
+        trap:'提示 2：只有一組箭頭的那一張 → 下面的梯形框。'
+      },
+      gFamOk:'放對了！',
+      gFamDone:'正方形在兩圈重疊的地方：它是長方形，也是菱形，也是平行四邊形 —— 加了條件的，還是原來那一種。',
+      gPts:function(p){ return '＋' + p + ' 分'; },
+      gMinus:'−5 分',
+      gClear:'按「下一關」繼續。',
+      gWin:function(s){ return '🏆 五關全部過關！總分 ' + s + ' 分。'; },
       figPerp:'直角',
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
@@ -644,7 +971,6 @@
       eb1:'Example 1', eb2:'Example 2', eb3:'Example 3', eb4:'Example 4', eb5:'Example 5', eb6:'Quiz', eb7:'Game',
       shapeName:{ para:'a parallelogram', rect:'a rectangle', rhom:'a rhombus', square:'a square',
                   trap:'a trapezium', isotrap:'an isosceles trapezium', quad:'an ordinary quadrilateral' },
-      relName:{ perp:'perpendicular', para:'parallel', neither:'neither perpendicular nor parallel', notpara:'not parallel' },
       s1h2:'Perpendicular: Two Lines Meeting at a Right Angle',
       s1lead:'When two straight lines cross at a <strong>right angle</strong>, they are <strong>perpendicular</strong>, and the crossing point is called the <strong>foot</strong>. ⚠️ Perpendicular is about <strong>that angle</strong>, not about “one across and one upright” — turn the whole pair and they are still perpendicular. Tap an example and see whether the right angle survives the turn.',
       s1chip: function(i, turned){ return turned ? 'turned pair ' + i : 'the upright pair'; },
@@ -733,38 +1059,88 @@
           opts:['Nothing — it is a trapezium','A trapezium needs exactly one parallel pair; a parallelogram has two, so it does not count','A parallelogram has no parallel opposite sides','A trapezium needs all four sides to be different'], ans:1,
           why:'A trapezium is defined as having <strong>exactly one</strong> pair of parallel opposite sides. A parallelogram has both pairs, which goes past that condition, so it does not count as a trapezium — it has been promoted to a parallelogram.' }
       ],
-      s7h2:'The Shape Inspection Office', s7lead:'Read the marks on the picture: <strong>arrows</strong> mean those sides are parallel, <strong>ticks</strong> mean those sides are equal, and a <strong>small square</strong> means a right angle.',
+      s7h2:'The Shape Inspection Office', s7lead:'Turn a right angle, pull parallel lines, mark a parallelogram, push a shape into an isosceles trapezium, sort shapes into their families — clear all five rounds and you are a shape inspector! The marks are the textbook ones: <strong>arrows</strong> = those sides are parallel, <strong>ticks</strong> = those sides are equal, a <strong>small square</strong> = a right angle.',
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
       gHintBtn:'💡 Hint',
-      gPrompt:{
-        perp:'How are these two lines related?',
-        para:'Are these two lines parallel?',
-        name:'What is this quadrilateral called?',
-        also: function(name){ return 'Besides being ' + name + ', which of these is it also?'; }
-      },
-      gOpt:{ quadOnly:'just an ordinary quadrilateral', none:'none of these' },
-      gHint1:{
-        perp:'Hint 1: look for the small right-angle square at the crossing. Perpendicular has nothing to do with how the pair is placed.',
-        para:'Hint 1: measure the width between the lines — all three places the same means parallel.',
-        name:'Hint 1: count the sets of parallel arrows first — two sets is the parallelogram family, one set is a trapezium.',
-        also:'Hint 1: take its conditions apart one at a time and see what shape is left when you drop one.'
-      },
-      gHint2:{
-        perp:'Hint 2: the angle between these two lines is exactly a right angle — the whole pair has just been turned.',
-        para:'Hint 2: the width between these lines is the same from left to right, so they never meet.',
-        name: function(pairs, eq4, right){
-          return 'Hint 2: this shape has ' + pairs + ' pair(s) of parallel opposite sides, '
-               + (eq4 ? 'all four sides equal' : 'sides that are not all equal') + ', and '
-               + (right === 4 ? 'four right angles' : 'angles that are not right angles') + '.';
-        },
-        also:'Hint 2: a square has four right angles, and “a parallelogram with four right angles” is a rectangle.'
-      },
       gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst:'Correct on the first try! +20 points!',
-      gCorrectRetry:'Correct! +10 points.',
-      gWrong:'Not quite — try again. −5 points.',
-      gClear:'Press “Next round” for the next shape.',
-      gWin: function(score){ return 'All 5 shapes identified! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gAsks:{
+        perp:'Drag the red dot at the end of the red stick around the crossing until the red stick is <strong>perpendicular</strong> to the blue one. (Or tap the red dot, then tap a parking spot.)',
+        para:'Pull a line from each red dot: drag the dot onto a grid point so that the line is <strong>parallel</strong> to the blue AB. (Or tap the red dot, then tap a grid point.)',
+        mark:'Mark parallelogram ABCD: the same <strong>arrows</strong> go on two sides that are parallel, the same <strong>arcs</strong> go in two angles that are equal.',
+        trap:'The bottom and the top-left corner are pinned. Push the red top-right corner left or right until the shape is an <strong>isosceles trapezium</strong>. (Or tap the red dot, then tap a parking spot on the top line.)',
+        family:'Put each shape card in the <strong>most specific</strong> place on the family chart: a shape that is both a rectangle and a rhombus goes where the two loops <strong>overlap</strong>.'
+      },
+      gHints:{
+        perp:'Hint 1: perpendicular is about <strong>whether the crossing makes a right angle</strong> — not about whether the red stick stands upright.',
+        para:'Hint 1: parallel means never meeting, with the same width all the way — pull the line slanting the same way as AB.',
+        mark:'Hint 1: in a parallelogram <strong>opposite sides</strong> are parallel and <strong>opposite angles</strong> are equal — the same sticker always goes on the “opposite” one.',
+        trap:'Hint 1: an isosceles trapezium has <strong>exactly one pair</strong> of parallel opposite sides, and its two legs are equal.',
+        family:'Hint 1: count the arrows first (how many parallel pairs), then look for small right-angle squares and whether the ticks are the same on all four sides.'
+      },
+      gPerpNow:function(done){ return done ? '✅ The red and blue sticks make a right angle' : 'The red stick is not perpendicular yet'; },
+      gPerpWhy:{
+        same:'The red stick is lying on top of the blue one — they have to cross at a <strong>right angle</strong> to be perpendicular.',
+        upright:'The red stick stands upright now, but the angle it makes with the slanted blue stick is <strong>not a right angle</strong> — perpendicular is about the angle at the crossing, not about standing upright.',
+        other:'The angle at the crossing is not a right angle: on one side it is smaller than a right angle, on the other side bigger.'
+      },
+      gPerp2:'Hint 2: a right angle splits the crossing into <strong>four equal angles</strong>. Keep turning until all four angles between the red and blue sticks are the same size.',
+      gPerpOk:'A right angle! The red and blue sticks are perpendicular — both are slanted, and they are still perpendicular.',
+      gParaNow:function(n, total){ return n + ' of ' + total + ' lines pulled'; },
+      gParaWhy:{
+        perp:'Extend this line and AB, and they meet at a right angle — that is <strong>perpendicular</strong>, not parallel. Parallel lines never meet, however far they are extended.',
+        other:'Extend this line and it meets AB: the width between the two lines is not the same all the way, so they are not parallel.'
+      },
+      gPara2:function(dx, dy){
+        return 'Hint 2: from A to B is ' + dx + ' ' + (dx === 1 ? 'square' : 'squares') + ' right and ' + Math.abs(dy) + ' ' + (Math.abs(dy) === 1 ? 'square' : 'squares') + (dy < 0 ? ' up' : ' down') + '. Walk the same way from the red dot (twice as far, or the opposite way, works too).';
+      },
+      gParaOk:'Parallel!',
+      gParaDone:function(diff){ return diff ? 'Both lines are parallel to AB — different lengths do not matter: <strong>parallel has nothing to do with length</strong>.' : 'Both lines are parallel to AB, the same width all the way.'; },
+      gMarkNow:function(n, total){ return n + ' of ' + total + ' stickers placed'; },
+      gMarkSym:{ p1:'one arrow', p2:'two arrows', a1:'one arc', a2:'two arcs' },
+      gMarkAdjSide:function(s, t, v, m, sym){
+        return s + ' and ' + t + ' meet at ' + v + ', so they are not parallel — the side parallel to ' + t + ' is the opposite side ' + m + ', and ' + sym + ' go there.';
+      },
+      gMarkMateSide:function(s, m, sym){ return s + ' is parallel to its opposite side ' + m + ' — ' + m + ' already has ' + sym + ', so ' + s + ' needs the same.'; },
+      gMarkAdjAng:function(a, b, m, sym){
+        return a + ' and ' + b + ' are neighbouring angles, one sharp and one wide, so they are not equal — the angle equal to ' + b + ' is the opposite one, ' + m + ', and ' + sym + ' go there.';
+      },
+      gMarkMateAng:function(a, m, sym){ return a + ' is equal to the opposite angle ' + m + ' — ' + m + ' already has ' + sym + ', so ' + a + ' needs the same.'; },
+      gMark2:'Hint 2: the side opposite AB is CD and the side opposite BC is DA; the angle opposite ∠A is ∠C and the angle opposite ∠B is ∠D.',
+      gMarkOk:'Well placed!',
+      gMarkDone:'Both pairs of opposite sides are parallel (arrows) and opposite angles are equal (arcs) — that is a parallelogram.',
+      gTrapNow:function(done){ return done ? '✅ An isosceles trapezium' : 'Not an isosceles trapezium yet'; },
+      gTrapWhy:{
+        para:'Both pairs of opposite sides are parallel now — this is a <strong>parallelogram</strong>, so it stops counting as a trapezium. Equal legs are not enough: a trapezium needs <strong>exactly one</strong> parallel pair.',
+        plain:function(rightLonger){ return 'Exactly one pair is parallel, so it is a trapezium — but the right leg is ' + (rightLonger ? 'longer' : 'shorter') + ' than the left leg. The legs are not equal, so it is not isosceles yet.'; }
+      },
+      gTrap2:function(n, leftRight){
+        return 'Hint 2: going up, the left leg leans ' + n + ' ' + (n === 1 ? 'square' : 'squares') + ' to the ' + (leftRight ? 'right' : 'left') + '; the right leg has to lean the same amount the other way — ' + n + ' ' + (n === 1 ? 'square' : 'squares') + ' to the ' + (leftRight ? 'left' : 'right') + '.';
+      },
+      gTrapOk:'Exactly one parallel pair and equal legs — an isosceles trapezium!',
+      gFamNow:function(n, total){ return n + ' of ' + total + ' cards placed'; },
+      gFamName:{ para:'parallelograms', rect:'rectangles', rhom:'rhombuses', trap:'trapeziums' },
+      gFamWhy:{
+        notPara:'This card has only one pair of parallel sides (one set of arrows) — it is a trapezium, not a parallelogram.',
+        notTrap:'This card has both pairs of opposite sides parallel (two sets of arrows) — it is a parallelogram, so it does not count as a trapezium.',
+        noRight:'This card’s angles are not right angles (no small squares), so it cannot go in the rectangle loop.',
+        noEq:'This card’s four sides are not all equal (the ticks differ), so it cannot go in the rhombus loop.',
+        isBoth:'This card has right angles and four equal sides — it is a rectangle <strong>and also</strong> a rhombus, so it goes where the two loops overlap.',
+        isRect:'This card has four right angles — it is a rectangle too, so it goes in the rectangle loop.',
+        isRhom:'This card has four equal sides — it is a rhombus too, so it goes in the rhombus loop.'
+      },
+      gFam2:{
+        para:'Hint 2: the card with arrows, no small squares, and ticks that match only on opposite sides → just inside the outer parallelogram box.',
+        rect:'Hint 2: the card with small squares but ticks that are not the same on all four sides → the rectangle loop (not the overlap).',
+        rhom:'Hint 2: the card whose four sides all have the same tick but no small squares → the rhombus loop (not the overlap).',
+        square:'Hint 2: the card with small squares and the same tick on all four sides → where the two loops overlap.',
+        trap:'Hint 2: the card with only one set of arrows → the trapezium box at the bottom.'
+      },
+      gFamOk:'Well placed!',
+      gFamDone:'The square sits where the two loops overlap: it is a rectangle, a rhombus and a parallelogram — adding a condition never stops a shape being what it already was.',
+      gPts:function(p){ return '+' + p + ' points'; },
+      gMinus:'−5 points',
+      gClear:'Press “Next round” to go on.',
+      gWin:function(s){ return '🏆 All five rounds cleared! Total ' + s + ' points.'; },
       figPerp:'right angle',
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
@@ -845,11 +1221,11 @@
   var C_LINE = '#2B2A33', C_FILL = '#E3F4EB', C_EDGE = '#2F9E69';
   var C_MARK = '#E8871E', C_BAD = '#D64545';
 
-  /* 直角小方框：畫在頂點 p，沿著兩條邊各走 FIG_MARK。 */
-  function rightAngleMark(svg, p, u, v){
-    var nu = Math.sqrt(len2(u)), nv = Math.sqrt(len2(v));
-    var ax = u[0] / nu * FIG_MARK, ay = u[1] / nu * FIG_MARK;
-    var bx = v[0] / nv * FIG_MARK, by = v[1] / nv * FIG_MARK;
+  /* 直角小方框：畫在頂點 p，沿著兩條邊各走 FIG_MARK（遊戲第 1 關畫大一點：size）。 */
+  function rightAngleMark(svg, p, u, v, size){
+    var nu = Math.sqrt(len2(u)), nv = Math.sqrt(len2(v)), m = size || FIG_MARK;
+    var ax = u[0] / nu * m, ay = u[1] / nu * m;
+    var bx = v[0] / nv * m, by = v[1] / nv * m;
     svg.appendChild(svgEl('path', {
       d:'M ' + (p[0] + ax) + ' ' + (p[1] + ay) +
         ' L ' + (p[0] + ax + bx) + ' ' + (p[1] + ay + by) +
@@ -1155,108 +1531,485 @@
     });
   }
 
-  /* ===================== 小遊戲：形狀鑑定所 ===================== */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 小遊戲：形狀鑑定所（五關五種玩法，§六之五） =====================
+     轉一轉（範例 1）、拉平行線（範例 2）、貼記號（範例 3）、推一推（範例 4）、分家族（範例 5）。
+     四年級是中年級（§三）：輕度計分，答錯小扣分但不會結束 —— 一關沒犯錯 +20、犯過錯 +10；每一次「放錯並說明為什麼」−5，最低 0 分。
+     放到空白處、放回一開始的位置、放進已經貼好的位置 → 靜靜回原位，不算錯。
+     每一個拖拉都可以「先點、再點目的地」。題庫、版面常數與收不收的規則在 i18n 前面的資料區。 */
+  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加分）。二年級 length 的 codex 第一輪。 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gPromptEl = document.getElementById('gPrompt');
-  var gFig = document.getElementById('gFig');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
-  var hintLevel = 0;
+  var C_BLUE = '#3B7DD8', C_DOT = '#C9C4B8';
 
-  function roundOptText(d, r, key){
-    if (r.kind === 'perp' || r.kind === 'para') return d.relName[key];
-    if (d.gOpt[key]) return d.gOpt[key];
-    return d.shapeName[key];
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap) B.onPointTap(B.selected, B.toBoard(e));
+    });
+    gameStage.appendChild(wrap);
+    return B;
   }
-  function roundPrompt(d, r){
-    return (r.kind === 'also') ? d.gPrompt.also(d.shapeName[r.shape]) : d.gPrompt[r.kind];
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」，任何地方的 pointerup／pointercancel
+     傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
   }
-  function roundHint2(d, r){
-    if (r.kind !== 'name') return d.gHint2[r.kind];
-    var pts = QUADS[r.shape], s = sidesOf(pts), m = marksOf(pts);
-    var eq4 = (len2(s[0]) === len2(s[1]) && len2(s[1]) === len2(s[2]) && len2(s[2]) === len2(s[3]));
-    return d.gHint2.name(m.para.length, eq4, m.right.length);
+  /* 畫板上的線條層：和畫板一樣大、同一套座標，不接收指標 */
+  function boardSvg(B, H){
+    var s = svgEl('svg', { width:GAME_W, height:H, viewBox:'0 0 ' + GAME_W + ' ' + H, 'class':'gsvg' });
+    B.el.appendChild(s);
+    return s;
   }
-  function drawRound(r){
-    if (r.kind === 'perp') return drawPerpPair(gFig, r.u, r.v, false);
-    if (r.kind === 'para') return drawParaPair(gFig, PARA_CASES[r.ci], false);
-    drawQuad(gFig, QUADS[r.shape], { eq:true, legs:(r.shape === 'trap' || r.shape === 'isotrap') });
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
   }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。
+         o.follow(p)：拖的時候中心點跟著手指 p 走到哪裡（紅點吸在停車位、格子點上 —— 拖的時候就看得到吸在哪裡，
+         放開時判的就是看得到的那一個）；o.onPlace：每次位置改變（含彈回）都通知 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+      if (o.onPlace) o.onPlace(P);
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      if (o.follow){ var f = o.follow(p); P.place(f.x, f.y); }
+      else P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */
+      /* 先點選、後來又直接拖走的那一塊：拖完（放好、彈回、capture 遺失都一樣）就不再是「選起來」的 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      /* 放在哪裡看那一塊的中心點（§六之五：位置一律記中心點）；手指放開的位置另外附上（fx, fy）：
+         從貼紙、卡片邊緣拿起來，手指放在目標上，也算放到那個目標上 */
+      var fp = B.toBoard(e);
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy, fx:fp.x, fy:fp.y }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+
+  /* 計分（中年級：輕度計分，答錯小扣分但不會結束 —— §三）：這一關沒犯錯 +20、犯過錯 +10；
+     每一次「放錯並說明為什麼」−5，最低 0 分。 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的內容 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「−5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+
+  /* 畫板上的點、字母 */
+  function gDot(svg, x, y, r, fill, cls){ svg.appendChild(svgEl('circle', { cx:x, cy:y, r:r, fill:fill, 'class':cls || '' })); }
+  function letterAt(B, x, y, txt){ return addZone(B, x - MARK_G.letter / 2, y - MARK_G.letter / 2, MARK_G.letter, MARK_G.letter, 'gletter', txt); }
+  /* 角上的弧線：k 條，畫在角的裡面 */
+  function arcMark(svg, pts, i, k){
+    var V = pts[i], u = unit(vsub(V, pts[(i + 3) % 4])), v = unit(vsub(V, pts[(i + 1) % 4]));
+    var sweep = (u[0] * v[1] - u[1] * v[0]) > 0 ? 1 : 0;
+    for (var j = 0; j < k; j++){
+      var r = 16 + 6 * j;
+      svg.appendChild(svgEl('path', {
+        d:'M ' + (V[0] + u[0] * r) + ' ' + (V[1] + u[1] * r) + ' A ' + r + ' ' + r + ' 0 0 ' + sweep + ' ' + (V[0] + v[0] * r) + ' ' + (V[1] + v[1] * r),
+        fill:'none', stroke:C_MARK, 'stroke-width':3, 'class':'garc'
+      }));
+    }
+  }
+  /* 貼紙上畫的記號：箭頭（綠，像課本上平行的記號）、弧線（橘，一樣大的角） */
+  function stickerSvg(kind){
+    var s = svgEl('svg', { viewBox:'0 0 40 40', width:40, height:40 });
+    var n = kind.charAt(1) === '2' ? 2 : 1;
+    if (kind.charAt(0) === 'p'){
+      for (var j = 0; j < n; j++){
+        var x = (n === 1 ? 15 : 10) + 10 * j;
+        s.appendChild(svgEl('path', { d:'M ' + x + ' 10 L ' + (x + 11) + ' 20 L ' + x + ' 30', fill:'none', stroke:C_EDGE, 'stroke-width':4, 'stroke-linecap':'round', 'stroke-linejoin':'round' }));
+      }
+    } else {
+      s.appendChild(svgEl('path', { d:'M 34 32 L 7 32 L 23 9', fill:'none', stroke:C_LINE, 'stroke-width':2.5, 'stroke-linejoin':'round' }));
+      for (var i = 0; i < n; i++){
+        var r = 13 + 7 * i;
+        s.appendChild(svgEl('path', { d:'M ' + (7 + r) + ' 32 A ' + r + ' ' + r + ' 0 0 0 ' + (7 + r * 16 / 28.02) + ' ' + (32 - r * 23 / 28.02), fill:'none', stroke:C_MARK, 'stroke-width':3 }));
+      }
+    }
+    return s;
+  }
+
+  var RENDER = {
+    /* 第 1 關：轉一轉 —— 斜的藍棒；紅棒繞著交點轉，紅點只停在 12 個停車位上（拖的時候就吸過去）。
+       轉到和藍棒交出直角才收；疊在藍棒上、轉成直立的、其他角度 → 回原位＋為什麼。停回橫的（一開始的那一條）→ 靜靜回去。
+       也可以先點紅點、再點那一圈上的停車位。 */
+    perp: function(d){
+      var base = pick(GAME_PERP), G = PERP_G;
+      var line = trailLine(d.gPerpNow(false));
+      var B = makeBoard(GAME_W, G.H), svg = boardSvg(B, G.H);
+      for (var s = 0; s < 360; s += G.stop){ var q = perpXY(s); gDot(svg, q.x, q.y, G.dotR, C_DOT, 'gstop'); }
+      var ba = base * Math.PI / 180, bx = Math.cos(ba) * G.line, by = -Math.sin(ba) * G.line;
+      svg.appendChild(svgEl('line', { x1:G.cx - bx, y1:G.cy - by, x2:G.cx + bx, y2:G.cy + by, stroke:C_BLUE, 'stroke-width':6, 'stroke-linecap':'round', 'class':'gbase' }));
+      var red = svgEl('line', { stroke:C_BAD, 'stroke-width':6, 'stroke-linecap':'round', 'class':'gred' });
+      svg.appendChild(red);
+      gDot(svg, G.cx, G.cy, 5, C_LINE, 'gpivot');
+      var h0 = perpXY(G.start);
+      addPiece(B, { w:G.knob, h:G.knob, cx:h0.x, cy:h0.y, cls:'gknob', label:'⟳',
+        follow:function(p){ return perpXY(perpStop(p.x, p.y)); },
+        onPlace:function(P){
+          red.setAttribute('x1', 2 * G.cx - P.cx); red.setAttribute('y1', 2 * G.cy - P.cy);
+          red.setAttribute('x2', P.cx); red.setAttribute('y2', P.cy);
+        } });
+      gCtx.hint2 = function(){ return d.gPerp2; };
+      useTapSelect(B, function(P, pt){
+        if (pt.tap && !perpRing(pt.x, pt.y)) return false;   /* 點在那一圈以外：不是點停車位 */
+        var s = pt.tap ? perpStop(pt.x, pt.y) : perpStop(P.cx, P.cy);
+        var k = perpKind(base, s);
+        if (k === 'start') return false;
+        if (k !== 'ok'){ roundMiss(d.gPerpWhy[k]); return false; }
+        var q = perpXY(s);
+        P.lock(q.x, q.y);
+        red.setAttribute('stroke', C_EDGE);
+        rightAngleMark(svg, [G.cx, G.cy], [Math.cos(ba), -Math.sin(ba)], [q.x - G.cx, q.y - G.cy], G.mark);
+        line.textContent = d.gPerpNow(true);
+        roundSolved(d.gPerpOk);
+        return true;
+      });
+    },
+
+    /* 第 2 關：拉平行線 —— 方格點上一條藍色的 AB；兩個紅點各拉一條橡皮筋到格子點（拖的時候就吸在格子點上）。
+       和 AB 平行（長短不拘、方向相反也可以）才收；垂直的、其他的 → 回原位＋為什麼。拉回自己的起點 → 靜靜回去。
+       也可以先點紅點、再點格子點。 */
+    para: function(d){
+      var e = pick(GAME_PARA), G = PARA_G, n = e.starts.length, left = n;
+      var line = trailLine(d.gParaNow(0, n));
+      var B = makeBoard(GAME_W, G.H), svg = boardSvg(B, G.H);
+      for (var c = 0; c < G.cols; c++) for (var r = 0; r < G.rows; r++){ var q = paraXY(c, r); gDot(svg, q.x, q.y, G.dotR, C_DOT, 'ggrid'); }
+      var A = paraXY(e.a[0], e.a[1]), Bq = paraXY(e.b[0], e.b[1]);
+      svg.appendChild(svgEl('line', { x1:A.x, y1:A.y, x2:Bq.x, y2:Bq.y, stroke:C_BLUE, 'stroke-width':5, 'stroke-linecap':'round', 'class':'gab' }));
+      gDot(svg, A.x, A.y, 6, C_BLUE, 'gabend'); gDot(svg, Bq.x, Bq.y, 6, C_BLUE, 'gabend');
+      var lt = paraLetters(e);
+      letterAt(B, lt.A.x, lt.A.y, 'A'); letterAt(B, lt.B.x, lt.B.y, 'B');
+      var lens = [];
+      e.starts.forEach(function(st, i){
+        var p0 = paraXY(st[0], st[1]);
+        var band = svgEl('line', { x1:p0.x, y1:p0.y, x2:p0.x, y2:p0.y, stroke:C_BAD, 'stroke-width':5, 'stroke-linecap':'round', 'class':'gband' });
+        svg.appendChild(band);
+        gDot(svg, p0.x, p0.y, G.startR, '#8E2B2B', 'gstart');
+        addPiece(B, { w:G.knob, h:G.knob, cx:p0.x, cy:p0.y, cls:'gknob', label:'●', data:{ i:i, band:band },
+          follow:function(p){ var g = paraSnap(p.x, p.y); return paraXY(g[0], g[1]); },
+          onPlace:function(P){ band.setAttribute('x2', P.cx); band.setAttribute('y2', P.cy); } });
+      });
+      var ux = e.b[0] - e.a[0], uy = e.b[1] - e.a[1];
+      gCtx.hint2 = function(){ return d.gPara2(ux, uy); };
+      useTapSelect(B, function(P, pt){
+        var g = pt.tap ? paraDot(pt.x, pt.y) : paraDot(P.cx, P.cy);
+        if (!g) return false;
+        var k = paraKind(e, P.data.i, g);
+        if (k === 'start') return false;
+        if (k !== 'ok'){ roundMiss(d.gParaWhy[k]); return false; }
+        var q = paraXY(g[0], g[1]);
+        P.lock(q.x, q.y);
+        P.data.band.setAttribute('stroke', C_EDGE);
+        lens.push(len2(vsub(e.starts[P.data.i], g)));
+        left--;
+        line.textContent = d.gParaNow(n - left, n);
+        if (left === 0){
+          var ab = len2([ux, uy]);
+          roundSolved(d.gParaOk + ' ' + d.gParaDone(lens.some(function(x){ return x !== ab; })));
+        } else { roundInfo(d.gParaOk); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 3 關：貼記號 —— 平行四邊形 ABCD；八張貼紙。箭頭只看邊、弧線只看角（markPick）；
+       一樣的貼紙只能在對面（markRule）：相鄰的 → 回原位＋為什麼；已經貼好的位置 → 靜靜回去。也可以先點貼紙、再點邊或角。 */
+    mark: function(d){
+      var e = pick(GAME_MARK), G = MARK_G, pts = e.pts, total = MARK_KINDS.length, left = total;
+      var state = { side:[null, null, null, null], ang:[null, null, null, null] };
+      var line = trailLine(d.gMarkNow(0, total));
+      var B = makeBoard(GAME_W, G.H), svg = boardSvg(B, G.H);
+      svg.appendChild(svgEl('polygon', { points:pts.map(function(p){ return p[0] + ',' + p[1]; }).join(' '),
+        fill:C_FILL, stroke:C_EDGE, 'stroke-width':3, 'stroke-linejoin':'round', 'class':'gquad' }));
+      var marks = svgEl('g', {}); svg.appendChild(marks);
+      var sideSlot = [], angSlot = [];
+      for (var i = 0; i < 4; i++){
+        var m = markMid(pts, i), A = markAngle(pts, i);
+        sideSlot.push(addZone(B, m.x - G.slotW / 2, m.y - G.slotH / 2, G.slotW, G.slotH, 'gslot gside'));
+        angSlot.push(addZone(B, A.slot.x - G.angR, A.slot.y - G.angR, 2 * G.angR, 2 * G.angR, 'gslot round gang'));
+        letterAt(B, A.letter.x, A.letter.y, 'ABCD'.charAt(i));
+      }
+      MARK_KINDS.forEach(function(kind, j){
+        var P = addPiece(B, { w:G.sticker, h:G.sticker, cx:G.trayX[j % 4], cy:G.trayY[Math.floor(j / 4)], cls:'gsticker',
+          label:d.gMarkSym[kind], data:{ kind:kind } });
+        P.el.appendChild(stickerSvg(kind));
+      });
+      gCtx.hint2 = function(){ return d.gMark2; };
+      useTapSelect(B, function(P, pt){
+        var kind = P.data.kind, cand = [markPick(pts, kind, pt.x, pt.y)];
+        if (pt.fx !== undefined) cand.push(markPick(pts, kind, pt.fx, pt.fy));
+        /* 貼紙中心或手指，任一個指到「可以貼」的位置就貼在那裡；都不行就照中心（中心沒指到東西才看手指）判 */
+        var at = null, rule = null;
+        for (var c = 0; c < cand.length; c++){
+          if (cand[c] === null) continue;
+          var r = markRule(state, kind, cand[c]);
+          if (!r){ at = cand[c]; rule = null; break; }
+          if (at === null){ at = cand[c]; rule = r; }
+        }
+        if (at === null || (rule && rule.key === 'full')) return false;
+        if (rule){ roundMiss(markWhy(d, kind, at, rule)); return false; }
+        var isSide = kind.charAt(0) === 'p', k2 = kind.charAt(1) === '2' ? 2 : 1;
+        (isSide ? state.side : state.ang)[at] = kind;
+        var slot = (isSide ? sideSlot : angSlot)[at];
+        slot.classList.add('filled');
+        var sc = isSide ? markMid(pts, at) : markAngle(pts, at).slot;
+        P.lock(sc.x, sc.y); P.el.classList.add('used');
+        if (isSide) paraMark(marks, pts[at], pts[(at + 1) % 4], k2); else arcMark(marks, pts, at, k2);
+        left--;
+        line.textContent = d.gMarkNow(total - left, total);
+        if (left === 0) roundSolved(d.gMarkDone);
+        else { roundInfo(d.gMarkOk); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 4 關：推一推 —— 下底和左上角釘住；右上角的紅點只能沿著上面那一條線左右推，停在停車位上（拖的時候就吸過去），
+       形狀跟著變、平行的邊畫上箭頭。推成等腰梯形才收；兩組都平行（平行四邊形）、兩腰不一樣長 → 回原位＋為什麼。
+       停回一開始的位置 → 靜靜回去。也可以先點紅點、再點上面那一條線上的停車位。 */
+    trap: function(d){
+      var e = pick(GAME_TRAP), G = TRAP_G, yt = trapTop(e);
+      var line = trailLine(d.gTrapNow(false));
+      var B = makeBoard(GAME_W, G.H), svg = boardSvg(B, G.H);
+      for (var c = 0; c < G.cols; c++) for (var r = 0; r <= e.h; r++) gDot(svg, trapX(c), G.yb - G.pitch * r, G.dotR, C_DOT, 'ggrid');
+      svg.appendChild(svgEl('line', { x1:trapX(e.ca + 1), y1:yt, x2:trapX(G.cols - 1), y2:yt, stroke:C_DOT, 'stroke-width':3, 'stroke-dasharray':'6 5', 'class':'grail' }));
+      for (var c2 = e.ca + 1; c2 < G.cols; c2++) gDot(svg, trapX(c2), yt, 6, '#A9A396', 'gstop');
+      var poly = svgEl('polygon', { fill:C_FILL, stroke:C_EDGE, 'stroke-width':3, 'stroke-linejoin':'round', 'class':'gquad' });
+      svg.appendChild(poly);
+      var marks = svgEl('g', {}); svg.appendChild(marks);
+      [[e.c0, G.yb], [e.c1, G.yb], [e.ca, yt]].forEach(function(v){ gDot(svg, trapX(v[0]), v[1], 6, C_LINE, 'gpin'); });
+      function redraw(cd){
+        var pts = trapPts(e, cd), m = marksOf(pts);
+        poly.setAttribute('points', pts.map(function(p){ return p[0] + ',' + p[1]; }).join(' '));
+        marks.textContent = '';
+        m.para.forEach(function(pair, gi){ pair.forEach(function(si){ paraMark(marks, pts[si], pts[(si + 1) % 4], gi + 1); }); });
+        m.right.forEach(function(vi){ rightAngleMark(marks, pts[vi], vsub(pts[vi], pts[(vi + 1) % 4]), vsub(pts[vi], pts[(vi + 3) % 4])); });
+      }
+      addPiece(B, { w:G.knob, h:G.knob, cx:trapX(e.cs), cy:yt, cls:'gknob', label:'↔',
+        follow:function(p){ return { x:trapX(trapCol(e, p.x)), y:yt }; },
+        onPlace:function(P){ redraw(trapCol(e, P.cx)); } });
+      var lean = Math.abs(e.ca - e.c0);
+      gCtx.hint2 = function(){ return d.gTrap2(lean, e.ca > e.c0); };
+      useTapSelect(B, function(P, pt){
+        if (pt.tap && !trapOnRail(e, pt.x, pt.y)) return false;
+        var cd = trapCol(e, pt.tap ? pt.x : P.cx), k = trapKind(e, cd);
+        if (k === 'start') return false;
+        if (k === 'para'){ roundMiss(d.gTrapWhy.para); return false; }
+        if (k === 'plain'){ roundMiss(d.gTrapWhy.plain(Math.abs(cd - e.c1) > lean)); return false; }
+        P.lock(trapX(cd), yt);
+        var pts = trapPts(e, cd);
+        eqGroups(pts, true).forEach(function(g){ g.forEach(function(si){ tickMark(marks, pts[si], pts[(si + 1) % 4], 1); }); });
+        line.textContent = d.gTrapNow(true);
+        roundSolved(d.gTrapOk);
+        return true;
+      });
+    },
+
+    /* 第 5 關：分家族 —— 家族圖（平行四邊形的大框，裡面長方形、菱形兩圈，重疊的地方不寫名字；下面另一個梯形框）。
+       五張形狀卡（畫出來的形狀＋課本的記號），種類由 classify() 從座標算。卡片中心或手指任一個落在它最精確的那一格就收；
+       放錯 → 回原位＋為什麼（famWhy）；放到框外 → 靜靜回去。也可以先點卡片、再點那一格。 */
+    family: function(d){
+      var G = FAM_G, keys = ['para', 'rect', 'rhom', 'square', 'trap'], total = keys.length, left = total;
+      var line = trailLine(d.gFamNow(0, total));
+      var B = makeBoard(GAME_W, G.H);
+      addZone(B, G.P.x, G.P.y, G.P.w, G.P.h, 'gfam para');
+      addZone(B, G.T.x, G.T.y, G.T.w, G.T.h, 'gfam trap');
+      addZone(B, G.Rr.x, G.Rr.y, G.Rr.w, G.Rr.h, 'gfam rect');
+      addZone(B, G.Rh.x, G.Rh.y, G.Rh.w, G.Rh.h, 'gfam rhom');
+      ['para', 'rect', 'rhom', 'trap'].forEach(function(k){
+        var b = G.lbl[k];
+        addZone(B, b.x, b.y, b.w, b.h, 'gfamlbl ' + k + (k === 'rhom' ? ' right' : ''), d.gFamName[k]);
+      });
+      var cards = [];
+      shuffle(keys.map(function(k, i){ return i; })).forEach(function(ki, j){
+        var pts = pick(GAME_FAM[keys[ki]]), kind = classify(pts);
+        var P = addPiece(B, { w:G.card.w, h:G.card.h, cx:G.tray[j][0], cy:G.tray[j][1], cls:'gcard', label:'?', data:{ kind:kind } });
+        var s = svgEl('svg', { viewBox:'0 0 ' + G.vb[0] + ' ' + G.vb[1] });
+        P.el.appendChild(s);
+        drawQuad(s, pts, { eq:true, legs:TRAP_FAMILY.indexOf(kind) >= 0 });
+        cards.push(P);
+      });
+      gCtx.hint2 = function(){
+        var P = cards.filter(function(x){ return !x.locked; })[0];
+        return P ? d.gFam2[TRAP_FAMILY.indexOf(P.data.kind) >= 0 ? 'trap' : P.data.kind] : '';
+      };
+      useTapSelect(B, function(P, pt){
+        var kind = P.data.kind, want = famWant(kind);
+        var r = famPick(famRegion(pt.x, pt.y), pt.fx !== undefined ? famRegion(pt.fx, pt.fy) : null, want);
+        if (!r) return false;
+        if (r !== want){ roundMiss(d.gFamWhy[famWhy(kind, r)]); return false; }
+        P.lock(G.home[r][0], G.home[r][1]);
+        P.el.classList.add('placed');
+        P.el.style.transform += ' scale(' + G.placed + ')';
+        left--;
+        line.textContent = d.gFamNow(total - left, total);
+        if (left === 0) roundSolved(d.gFamDone);
+        else { roundInfo(d.gFamOk); refreshHint(); }
+        return true;
+      });
+    }
+  };
 
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {}; gGen++;
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
-    hintLevel = (mode === 'ahead') ? 1 : 0;
+    hintLevel = 0;
     gHintBtn.disabled = false;
-    elHint.textContent = (mode === 'ahead') ? d.gHint1[round.kind] : '';
-
-    gPromptEl.innerHTML = '<b>' + roundPrompt(d, round) + '</b>';
-    drawRound(round);
-
-    gAnswers.textContent = '';
-    round.opts.forEach(function(key, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'degbtn';
-      b.textContent = roundOptText(d, round, key);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        if (oi === round.ans){
-          var all = gAnswers.querySelectorAll('.degbtn');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry + '</span>';
-          } else {
-            gScore += 20;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst + '</span>';
-          }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + d.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gScore = Math.max(0, gScore - 5);
-          gMsg.innerHTML = '<span class="no">' + d.gWrong + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.innerHTML = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.innerHTML = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
+
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
   gHintBtn.addEventListener('click', function(){
-    var d = L(), round = ROUNDS[gRound];
+    if (hintLevel >= 2) return;
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = d.gHint1[round.kind];
-    } else {
-      elHint.textContent = roundHint2(d, round);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
