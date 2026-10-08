@@ -529,9 +529,802 @@ const BANK_ONLY_ANSWER = [
   { bank:'qsBoost', i:1, zh:'一個要再除以 2', en:'needs halving' }
 ];
 
+/* ====================== 小遊戲「圖形數實驗室接委託」（§六之五，五關五種玩法） ======================
+ * 舊版是五題選擇題（ROUNDS ＋ 四個按鈕）；2026-10-08 改成五種動手的玩法，這一段整段取代舊的 ROUNDS 檢查。
+ *
+ * 每一關都**照遊戲的規則把每一題玩一遍**，答案用這份設定自己的方法重算，不呼叫頁面算答案的函式來驗它自己：
+ *   排正方形  —— 對每一個 N、點陣上每一種 r × c，用「排出來的格子數、兩邊一不一樣長」重新判斷，和 sqJudge 逐一比；
+ *               點陣上每 0.5px「點到第幾個點」和自己的「點的那一格」比。
+ *   補 L 形    —— 把兩條長條**真的擺到格子上**（橫條佔第 n 排的前 len 格、直條佔第 n 欄的前 len 格），
+ *               看有沒有疊在一起、轉角有沒有空、合起來是不是剛好第 n ＋ 1 個 L 形，和 growJudge 逐一比；
+ *               所有放的順序都走一遍，證明一定補得完、補完一定是 L 形。
+ *   一排一排加 —— 每一排的總數用「一個一個點加上去」重算；每一張卡 × 每一格都放一次。
+ *   拼長方形  —— 綠色轉半圈之後放到那個方框，和藍色合起來剛好鋪滿 n × (n ＋ 1)，沒轉的話一定和藍色疊在一起；
+ *               rectJudge 對 0～300 每一個數和「數格子」比。
+ *   分一分    —— 每一串用上面那一套 fit-and-regenerate 的 kindRef 分類；四種各一張；誘答真的有陷阱；
+ *               每一句「為什麼」裡的數字（差、第幾個、k × k）逐一重算。
+ * 版面與觸控（375px 手機上 ≥ 44px）全部從資料區的常數讀；nearestOpen／roundMiss／shuffle／trayOrder／dropTarget
+ * 從原始碼切出來真的跑。互動的接線（第一根手指、capture 遺失、換畫板保護、先點再點）由
+ * teaching-workspace/game-harness/g4-figurate/ 的 e2e 與 broken-*.html 守住；這裡另外用原始碼形狀釘住關鍵的那幾行。
+ */
+/* 375px 手機上 300 寬的畫板縮成多少：從頁面自己的 CSS 讀 .wrap 的左右 padding、.card 的 padding 與邊框（改了 CSS 這裡跟著變） */
+function phoneScale(rawSrc, W){
+  const wrap = /\.wrap\{[^}]*padding:(\d+)px (\d+)px/.exec(rawSrc), card = /\n\s*\.card\{([^}]*)\}/.exec(rawSrc);
+  if (!wrap || !card) return null;
+  const pad = /padding:(\d+)px[;}]/.exec(card[1] + '}'), border = /border:(\d+)px/.exec(card[1]);
+  if (!pad || !border) return null;
+  return (375 - 2 * Number(wrap[2]) - 2 * Number(pad[1]) - 2 * Number(border[1])) / W;
+}
+const GAME_ORDER_REF = ['square', 'grow', 'tri', 'rect', 'kind'];
+const gameArith = require('./lib/arith.js').makeArith({
+  units: ['個', '點', '排', '顆', '張', '分'],
+  unitsEn: ['dots?', 'rows?', 'beads?', 'points?']
+});
+/* 遊戲印出來的每一句話裡真的被驗過的算式條數。⚠️ 是精確值：少一條（某一句的算式不見了）或多一條都要重新確認 */
+const GAME_EQUATIONS = 1660;
+const GAME_FINGERPRINT = '030540860e334ef4';
+
+/* 從原始碼切出一個 function 宣告（數括號），給「切出來真的跑」用 */
+function cutFunction(src, name){
+  const re = new RegExp('\\n\\s*function ' + name + '\\s*\\(', 'g');
+  const hits = src.match(re) || [];
+  if (hits.length !== 1) return { err:'function ' + name + ' is declared ' + hits.length + ' times in the page (expected exactly once)' };
+  const at = src.search(new RegExp('\\n\\s*function ' + name + '\\s*\\('));
+  const open = src.indexOf('{', at);
+  let depth = 0, i = open;
+  for (; i < src.length; i++){
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}'){ depth--; if (depth === 0) break; }
+  }
+  return { code:src.slice(at + 1, i + 1) };
+}
+
+function gameChecks(data, I18N, fail, src, rawSrc){
+  src = src.replace(/[ \t]+$/gm, '');   /* 去掉註解之後行尾會留下空白：釘樁比的是程式本身 */
+  const D = data, S = D.SQ, G = D.GROW, LD = D.LAD, RC = D.RECT, KB = D.KIND_BIN;
+  const need = (cond, msg) => { if (!cond) fail('game: ' + msg); return !!cond; };
+  const zh = I18N.zh, en = I18N.en;
+  const texts = [];   /* [tag, text, lang] —— 遊戲印出來的每一句話 */
+  const say = (tag, lang, s) => texts.push([tag + ' (' + lang + ')', s, lang]);
+  const digitsOf = s => (String(s).replace(/<[^>]+>/g, ' ').match(/\d+/g) || []).map(Number);
+  const sameNums = (tag, s, want) => need(digitsOf(s).join() === want.join(), tag + ' reads ' + digitsOf(s).join() + ', the checker computes ' + want.join() + ' — "' + String(s).slice(0, 90) + '"');
+  const sameBag = (tag, s, want) => need(digitsOf(s).slice().sort((a, b) => a - b).join() === want.slice().sort((a, b) => a - b).join(),
+    tag + ' reads ' + digitsOf(s).join() + ', the checker computes ' + want.join() + ' — "' + String(s).slice(0, 90) + '"');
+  const boxOf = (cx, cy, w, h) => ({ l:cx - w / 2, r:cx + w / 2, t:cy - h / 2, b:cy + h / 2 });
+  const overlap = (a, b, gap) => Math.min(a.r, b.r) - Math.max(a.l, b.l) > -(gap || 0) && Math.min(a.b, b.b) - Math.max(a.t, b.t) > -(gap || 0);
+  const inside = (a, W, H) => a.l >= 0 && a.t >= 0 && a.r <= W && a.b <= H;
+  const PK = phoneScale(rawSrc, D.GAME_W);
+  need(PK !== null && PK > 0.5 && PK <= 1.5, 'cannot read the phone scale from the page CSS (.wrap / .card padding and border)');
+  const touch = (w, h, tag) => need(Number.isFinite(w) && Number.isFinite(h) && Math.min(w, h) * PK >= 44, tag + ' is ' + Math.round(Math.min(w, h) * PK * 10) / 10 + 'px on a 375px phone (needs ≥ 44)');
+  /* 題庫不可以是空的、不可以有重複（空的陣列會讓下面的 every()／forEach 什麼都沒驗就過關） */
+  const pool = (name, list, min, ok) => need(Array.isArray(list) && list.length >= min && new Set(list.map(x => JSON.stringify(x))).size === list.length && list.every(ok),
+    name + ' must hold at least ' + min + ' distinct valid entries, it holds ' + JSON.stringify(list));
+  const isInt = v => Number.isInteger(v) && v > 0;
+  pool('GAME_SQ', D.GAME_SQ, 4, isInt);
+  pool('GAME_GROW', D.GAME_GROW, 2, isInt);
+  pool('GAME_TRI', D.GAME_TRI, 3, e => e && isInt(e.n) && Array.isArray(e.decoys) && e.decoys.every(isInt));
+  pool('GAME_RECT', D.GAME_RECT, 2, isInt);
+  pool('GAME_KIND', D.GAME_KIND, 4, set => Array.isArray(set) && set.every(v => Array.isArray(v) && v.every(isInt)));
+
+  /* ---- 0. 五關的順序、每一關從自己的題庫抽題 ---- */
+  need(/var GAME_ORDER = \['square', 'grow', 'tri', 'rect', 'kind'\];/.test(src), 'GAME_ORDER must be square, grow, tri, rect, kind (one per example 1–5)');
+  const PICKS = [['square', 'var N = pick(GAME_SQ)'], ['grow', 'var n = pick(GAME_GROW)'], ['tri', 'var e = pick(GAME_TRI)'],
+                 ['rect', 'var n = pick(GAME_RECT)'], ['kind', 'var set = pick(GAME_KIND)']];
+  const renderAt = name => src.indexOf('\n    ' + name + ': function(d){');
+  PICKS.forEach(([name, line], i) => {
+    const at = renderAt(name), nextAt = i + 1 < PICKS.length ? renderAt(PICKS[i + 1][0]) : src.indexOf('\n  function startRound()');
+    need(at > 0 && nextAt > at, 'RENDER.' + name + ' is missing or out of order');
+    if (at > 0 && nextAt > at) need(src.slice(at, nextAt).indexOf(line) > 0, 'RENDER.' + name + ' no longer draws from its own pool ("' + line + '")');
+  });
+  need(src.indexOf('    RENDER[type](d);') > 0 && src.indexOf('    var type = GAME_ORDER[gRound];') > 0, 'startRound no longer renders GAME_ORDER[gRound]');
+
+  /* ---- 1. 排正方形 ---- */
+  need(S.max === 9 && S.U >= 28, 'the square grid must be 9 × 9 with cells ≥ 28 (SQ = ' + JSON.stringify(S) + ')');
+  need(inside({ l:S.x0, r:S.x0 + S.max * S.U, t:S.y0, b:S.y0 + S.max * S.U }, D.GAME_W, D.SQ_H), 'the square grid spills out of its board');
+  need(S.dot < 0.5, 'square: dots touch each other (dot ratio ' + S.dot + ')');
+  const isqrt = N => { for (let i = 1; i * i <= N; i++) if (i * i === N) return i; return -1; };
+  let rectReachable = 0;
+  need(D.GAME_SQ.length >= 4, 'GAME_SQ needs at least four bead counts');
+  D.GAME_SQ.forEach(N => {
+    const n = isqrt(N);
+    if (!need(n >= 3 && n + 1 <= S.max, 'GAME_SQ ' + N + ' is not a square number whose side and side ± 1 fit the 9 × 9 grid')) return;
+    let oks = 0;
+    for (let r = 1; r <= S.max; r++) for (let c = 1; c <= S.max; c++){
+      /* 自己的判斷：排出來的格子數 ＝ r 排 × 每排 c 個（一格一格數）；正方形 ⟺ 兩邊一樣長 */
+      let cells = 0; for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) cells++;
+      const square = r === c;
+      const want = (square && cells === N) ? 'ok' : (cells === N ? 'rect' : (square ? (cells < N ? 'few' : 'many') : 'other'));
+      const got = D.sqJudge(N, r, c);
+      if (got !== want){ need(false, 'sqJudge(' + N + ', ' + r + ', ' + c + ') = ' + got + ', counting the grid gives ' + want); continue; }
+      if (want === 'ok') oks++;
+      if (want === 'rect') rectReachable++;
+      for (const lang of ['zh', 'en']){
+        const d = I18N[lang], T = 'square N=' + N + ' ' + r + '×' + c;
+        say(T + ' gSqNow', lang, d.gSqNow(N, r, c));
+        sameNums(T + ' gSqNow', d.gSqNow(N, r, c), [N, r, c, cells]);
+        if (want === 'rect'){ say(T + ' gSqRect', lang, d.gSqRect(N, r, c)); sameNums(T + ' gSqRect', d.gSqRect(N, r, c), [r, c, N]); }
+        if (want === 'few'){ say(T + ' gSqFew', lang, d.gSqFew(N, r)); sameNums(T + ' gSqFew', d.gSqFew(N, r), [r, r, cells, N - cells, N]); }
+        if (want === 'many'){ say(T + ' gSqMany', lang, d.gSqMany(N, r)); sameNums(T + ' gSqMany', d.gSqMany(N, r), [r, r, cells, cells, N, cells - N]); }
+        if (want === 'other'){ say(T + ' gSqOther', lang, d.gSqOther(N, r, c)); sameNums(T + ' gSqOther', d.gSqOther(N, r, c), [r, c, r, c, cells, N]); }
+      }
+    }
+    need(oks === 1, 'GAME_SQ ' + N + ': ' + oks + ' grid shapes are accepted, there must be exactly one');
+    for (const lang of ['zh', 'en']){
+      const d = I18N[lang];
+      say('square gSqDone ' + N, lang, d.gSqDone(N, n)); sameNums('square gSqDone ' + N, d.gSqDone(N, n), [N, n, n, n, n, N, n]);
+      say('square gSq2 ' + N, lang, d.gSq2(n - 1, n + 1)); sameNums('square gSq2 ' + N, d.gSq2(n - 1, n + 1), [n - 1, n - 1, (n - 1) * (n - 1), n + 1, n + 1, (n + 1) * (n + 1)]);
+      need((n - 1) * (n - 1) < N && (n + 1) * (n + 1) > N, 'square: hint 2 brackets ' + N + ' wrongly');
+    }
+  });
+  need(rectReachable > 0, 'no GAME_SQ entry can be laid out as a non-square rectangle on the grid, so "a rectangle is not a square" is never exercised');
+  need(src.indexOf("gCtx.hint2 = function(){ var n = Math.round(Math.sqrt(N)); return d.gSq2(n - 1, n + 1); };") > 0, 'square: hint 2 no longer brackets the side between n − 1 and n + 1');
+  /* 點到哪一格：自己的做法是「這個點落在第幾個點的那一格裡」，點陣外面夾在 1～9 */
+  const ownCell = (v0, p) => { if (p < v0) return 1; for (let i = 1; i <= S.max; i++) if (p < v0 + i * S.U) return i; return S.max; };
+  let pickBad = 0;
+  for (let x = -20; x <= D.GAME_W + 20; x += 0.5) if (D.sqCell(S.x0, x) !== ownCell(S.x0, x)) pickBad++;
+  for (let y = -20; y <= D.SQ_H + 20; y += 0.5) if (D.sqCell(S.y0, y) !== ownCell(S.y0, y)) pickBad++;
+  need(pickBad === 0, 'sqCell disagrees with "the cell of the dot you touched" at ' + pickBad + ' points');
+  for (let i = 1; i <= S.max; i++) for (let j = 1; j <= S.max; j++)
+    for (const [ox, oy] of [[0, 0], [-0.35, 0], [0.35, 0], [0, -0.35], [0, 0.35]]){
+      const p = D.sqPick({ x:S.x0 + (j - 0.5 + ox) * S.U, y:S.y0 + (i - 0.5 + oy) * S.U });
+      if (p.r !== i || p.c !== j){ need(false, 'square: touching dot (' + i + ', ' + j + ') at ' + ox + '/' + oy + ' stretches to ' + p.r + ' × ' + p.c); break; }
+    }
+  /* 拖的時候就停在點上，放開不改；按鈕只在沒有手指拖著時判斷；還沒拉就按只提醒 */
+  need(src.indexOf("        if (drag !== null) return;") > 0, 'square: "Done" must be ignored while a finger is still stretching');
+  need(src.indexOf("        if (!touched){ roundInfo(d.gSqNone); return; }") > 0, 'square: pressing "Done" before stretching must only remind, not count as a mistake');
+  need(src.indexOf("        var j = sqJudge(N, r, c);") > 0, 'square: "Done" no longer judges with sqJudge on what is drawn');
+  need(/pad\.addEventListener\('pointerdown', function\(e\)\{\s*if \(!e\.isPrimary \|\| drag !== null \|\| gSolved \|\| gen !== gGen\) return;/.test(src), 'square: the grid must follow only the first finger, and only on its own board');
+  need(src.indexOf("['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function(t){") > 0, 'square: the grid drag must end on pointerup, pointercancel and lostpointercapture');
+
+  /* ---- 2. 補 L 形 ---- */
+  need(D.GAME_GROW.every(n => n >= 2) && Math.max(...D.GAME_GROW) + 2 <= 5, 'GAME_GROW must start at 2 or more and end at 5 × 5 or less');
+  const minVx = Math.min(...G.vx), minHy = Math.min(...G.hy);
+  need(Math.abs(G.vx[0] - G.vx[1]) >= D.GPICK + 4 && Math.abs(G.hy[0] - G.hy[1]) >= D.GPICK + 4, 'grow: the two strips of one direction touch in the tray');
+  need(Math.max(...G.vx) + D.GPICK / 2 <= D.GAME_W && Math.max(...G.hy) + D.GPICK / 2 <= D.GROW_H, 'grow: a tray strip spills out of the board');
+  touch(D.GPICK, D.GPICK, 'grow: a strip\'s short side');
+  /* 自己擺：橫條佔第 n 排的第 0～len − 1 格，直條佔第 n 欄的第 0～len − 1 格 */
+  const cellsOf = (n, side, len) => { const out = []; for (let i = 0; i < len; i++) out.push(side === 'h' ? n + ',' + i : i + ',' + n); return out; };
+  const gnomon = n => { const out = []; for (let r = 0; r <= n; r++) for (let c = 0; c <= n; c++) if (Math.max(r, c) === n) out.push(r + ',' + c); return out.sort(); };
+  const ownGrow = (n, placed, side, len) => {
+    const other = side === 'h' ? 'v' : 'h';
+    if (!placed[other]) return 'first';
+    const a = cellsOf(n, other, placed[other]), b = cellsOf(n, side, len);
+    if (a.some(x => b.indexOf(x) >= 0)) return 'twice';
+    return a.concat(b).sort().join() === gnomon(n).join() ? 'done' : 'gap';
+  };
+  D.GAME_GROW.forEach(n0 => {
+    for (let n = n0; n < n0 + 2; n++){
+      const k = n + 1;
+      need(G.x0 + k * G.U <= minVx - D.GPICK / 2 - 8 && G.y0 + k * G.U <= minHy - D.GPICK / 2 - 8, 'grow n=' + n + ': the ' + k + ' × ' + k + ' square reaches into the tray');
+      /* 四條長條在托盤裡：在畫板裡、彼此不碰、不碰到 (n ＋ 1) × (n ＋ 1) 的那一塊 */
+      const homes = [];
+      [k, n].forEach((len, i) => { homes.push(boxOf(G.x0 + len * G.U / 2, G.hy[i], len * G.U, D.GPICK)); homes.push(boxOf(G.vx[i], G.y0 + len * G.U / 2, D.GPICK, len * G.U)); });
+      const sqBox = { l:G.x0, r:G.x0 + k * G.U, t:G.y0, b:G.y0 + k * G.U };
+      homes.forEach((b, i) => {
+        need(inside(b, D.GAME_W, D.GROW_H), 'grow n=' + n + ': tray strip ' + i + ' spills out of the board');
+        need(!overlap(b, sqBox, 4), 'grow n=' + n + ': tray strip ' + i + ' covers the square');
+        for (let j = i + 1; j < homes.length; j++) need(!overlap(b, homes[j], 4), 'grow n=' + n + ': tray strips ' + i + ' and ' + j + ' touch');
+      });
+      const lens = [n, k];
+      /* growJudge 逐一和自己擺的結果比；每一種放法都走一遍 */
+      const states = [{ h:0, v:0 }];
+      const seen = {};
+      const doneStates = {};
+      while (states.length){
+        const st = states.pop(), key = st.h + '/' + st.v;
+        if (seen[key]) continue;
+        seen[key] = 1;
+        let progress = 0;
+        for (const side of ['h', 'v']) for (const len of lens){
+          if (st[side]) continue;
+          const want = ownGrow(n, st, side, len), got = D.growJudge(n, st, side, len);
+          if (got !== want){ need(false, 'growJudge(n=' + n + ', ' + key + ', ' + side + len + ') = ' + got + ', laying the strips on the grid gives ' + want); continue; }
+          if (want === 'first' || want === 'done'){
+            progress++;
+            const ns = { h:st.h, v:st.v }; ns[side] = len;
+            if (want === 'done'){
+              doneStates[ns.h + '/' + ns.v] = 1;
+              need(cellsOf(n, 'h', ns.h).concat(cellsOf(n, 'v', ns.v)).sort().join() === gnomon(n).join(), 'grow n=' + n + ': an accepted L is not L-shape number ' + k);
+              need(ns.h + ns.v === 2 * k - 1, 'grow n=' + n + ': an accepted L holds ' + (ns.h + ns.v) + ' dots, not ' + k + ' + ' + k + ' − 1');
+            } else states.push(ns);
+          }
+          /* 「轉角算了兩次」「轉角空一格」那兩句要真的成立 */
+          if (want === 'twice') need(st[side === 'h' ? 'v' : 'h'] === k && len === k, 'grow: "corner counted twice" fires when the strips are not both ' + k);
+          if (want === 'gap') need(st[side === 'h' ? 'v' : 'h'] === n && len === n && cellsOf(n, 'h', n).concat(cellsOf(n, 'v', n)).indexOf(n + ',' + n) < 0, 'grow: "corner left empty" fires when the corner is covered');
+        }
+        if (!(st.h && st.v)) need(progress > 0, 'grow n=' + n + ': stuck at ' + key + ' — no strip can be placed');
+      }
+      need(Object.keys(doneStates).sort().join() === [k + '/' + n, n + '/' + k].sort().join(), 'grow n=' + n + ': the finished Ls are [' + Object.keys(doneStates) + '] (across/down), expected exactly ' + k + '/' + n + ' and ' + n + '/' + k);
+      /* 放好的位置：長條的每一個點都落在它說的那幾格的中心上 */
+      for (const side of ['h', 'v']) for (const len of lens){
+        const at = D.growSpot(n, side, len);
+        for (let i = 0; i < len; i++){
+          const px = side === 'h' ? at.x - len * G.U / 2 + (i + 0.5) * G.U : at.x, py = side === 'h' ? at.y : at.y - len * G.U / 2 + (i + 0.5) * G.U;
+          const cell = cellsOf(n, side, len)[i].split(',').map(Number);
+          if (Math.abs(px - (G.x0 + (cell[1] + 0.5) * G.U)) > 1e-9 || Math.abs(py - (G.y0 + (cell[0] + 0.5) * G.U)) > 1e-9){
+            need(false, 'growSpot(' + n + ', ' + side + ', ' + len + ') puts dot ' + i + ' off its cell'); break;
+          }
+        }
+        /* 放好的位置在接受範圍裡；托盤裡的家不在 */
+        const z = D.growZone(n, side);
+        need(Math.abs(at.x - z.cx) <= z.hw && Math.abs(at.y - z.cy) <= z.hh, 'grow n=' + n + ': the landing spot of ' + side + len + ' is outside its zone');
+        const home = side === 'h' ? { x:G.x0 + len * G.U / 2, y:G.hy[0] } : { x:G.vx[0], y:G.y0 + len * G.U / 2 };
+        for (const hh of (side === 'h' ? G.hy : G.vx)){
+          const hm = side === 'h' ? { x:home.x, y:hh } : { x:hh, y:home.y };
+          need(!(Math.abs(hm.x - z.cx) <= z.hw + G.pad && Math.abs(hm.y - z.cy) <= z.hh + G.pad), 'grow n=' + n + ': a strip sitting in the tray is already inside its zone');
+        }
+      }
+      /* 接受範圍蓋住看得到的目標：那一條手臂上每一個淡色點的中心與 ±35% */
+      for (const side of ['h', 'v']){
+        const z = D.growZone(n, side);
+        gnomon(n).map(x => x.split(',').map(Number)).filter(([r, c]) => side === 'h' ? r === n : c === n).forEach(([r, c]) => {
+          for (const [ox, oy] of [[0, 0], [-0.35, 0], [0.35, 0], [0, -0.35], [0, 0.35]]){
+            const px = G.x0 + (c + 0.5 + ox) * G.U, py = G.y0 + (r + 0.5 + oy) * G.U;
+            if (!(Math.abs(px - z.cx) <= z.hw + G.pad && Math.abs(py - z.cy) <= z.hh + G.pad)){ need(false, 'grow n=' + n + ': the pale dot (' + r + ', ' + c + ') is not inside the ' + side + ' zone'); return; }
+          }
+        });
+      }
+      for (const lang of ['zh', 'en']){
+        const d = I18N[lang], T = 'grow k=' + k;
+        say(T + ' gGrowTwice', lang, d.gGrowTwice(k)); sameNums(T + ' gGrowTwice', d.gGrowTwice(k), [k, k, k - 1]);
+        say(T + ' gGrowGap', lang, d.gGrowGap(k)); sameNums(T + ' gGrowGap', d.gGrowGap(k), [k - 1, k]);
+        say(T + ' gGrowStep', lang, d.gGrowStep(k, k * k)); sameNums(T + ' gGrowStep', d.gGrowStep(k, k * k), [k, k, k, k, k, 1, 2 * k - 1, k * k]);
+        say(T + ' gGrowDone', lang, d.gGrowDone(k, k * k)); sameNums(T + ' gGrowDone', d.gGrowDone(k, k * k), [k, k, k, 1, 2 * k - 1, k * k, k, k]);
+        say(T + ' gGrow2', lang, d.gGrow2(k)); sameNums(T + ' gGrow2', d.gGrow2(k), [k, k - 1, k, k - 1, 2 * k - 1]);
+        for (const len of lens){ say(T + ' gGrowOne', lang, d.gGrowOne(len)); sameNums(T + ' gGrowOne', d.gGrowOne(len), [len]); }
+        for (const nn of [n, k]){
+          const odd = []; for (let i = 1; i <= nn; i++) odd.push(2 * i - 1);
+          say(T + ' gGrowNow', lang, d.gGrowNow(odd.map(String), nn * nn));
+          sameNums(T + ' gGrowNow', d.gGrowNow(odd.map(String), nn * nn), odd.concat([nn * nn]));
+          need(String(D.oddList(nn)) === String(odd), 'oddList(' + nn + ') is not 1, 3, 5, …');
+        }
+      }
+    }
+  });
+  need(src.indexOf("          var j = growJudge(n, placed, side, len);") > 0, 'grow: the drop no longer asks growJudge');
+  need(src.indexOf("          if (j === 'twice'){ roundMiss(d.gGrowTwice(k)); return false; }") > 0 && src.indexOf("          if (j === 'gap'){ roundMiss(d.gGrowGap(k)); return false; }") > 0, 'grow: "corner twice" / "corner empty" no longer bounce with a reason');
+  need(/if \(B\)\{ B\.wrap\.parentNode\.removeChild\(B\.wrap\); gGen\+\+; BOARD_TAP = null; PIECE_PTR = \{\}; \}/.test(src), 'grow: rebuilding the board for the second growth must bump gGen (a strip held across the rebuild must not act on the new board)');
+
+  /* ---- 3. 一排一排加 ---- */
+  need(D.GAME_TRI.length >= 3, 'GAME_TRI needs at least three entries');
+  D.GAME_TRI.forEach((e, ei) => {
+    const n = e.n, T = 'tri #' + ei;
+    if (!need(n >= 4 && n <= 6, T + ': n=' + n + ' is outside 4..6')) return;
+    /* 自己的總數：一個一個點加上去 */
+    const tot = []; let run = 0;
+    for (let r = 1; r <= n; r++){ for (let j = 0; j < r; j++) run++; tot.push(run); }
+    need(e.decoys.length === 2 && new Set(e.decoys).size === 2 && e.decoys.every(v => tot.indexOf(v) < 0 && v >= 2 && v <= tot[n - 1] + 5), T + ': decoys ' + e.decoys + ' must be two different numbers that are no row\'s total, within 2..' + (tot[n - 1] + 5));
+    const slots = D.ladSlots(n);
+    need(slots.length === n - 1 && slots.every((s, i) => s.r === i + 2 && s.want === tot[i + 1]), T + ': ladSlots asks for ' + slots.map(s => s.want) + ', counting the dots gives ' + tot.slice(1));
+    /* 版面：每一排的點在格子左邊；格子不碰到彼此；卡片在畫板裡、不碰到格子和彼此 */
+    for (let r = 1; r <= n; r++) need(LD.x0 + r * LD.dx + 4 <= LD.slotX, T + ': row ' + r + '\'s dots run into its box');
+    need(LD.dy >= LD.slotH && LD.dy - LD.slotH < 2 * LD.pad, T + ': boxes must not overlap but their padded zones must (so nearest-box is exercised)');
+    const H = D.ladH(n), cards = n + 1;
+    const cboxes = [];
+    for (let i = 0; i < cards; i++){ const at = D.ladCardXY(i, cards, n); cboxes.push(boxOf(at.x, at.y, D.GPICK, D.GPICK)); }
+    cboxes.forEach((b, i) => {
+      need(inside(b, D.GAME_W, H), T + ': card ' + i + ' spills out of the board');
+      need(b.t >= D.ladRowY(n) + LD.slotH / 2 + 4, T + ': card ' + i + ' sits on the rows');
+      for (let j = i + 1; j < cboxes.length; j++) need(!overlap(b, cboxes[j], 4), T + ': cards ' + i + ' and ' + j + ' touch');
+    });
+    slots.forEach(s => need(s.cx + s.hw <= D.GAME_W && s.cy + s.hh <= H, T + ': box ' + s.r + ' spills out'));
+    touch(D.GPICK, D.GPICK, 'tri: a number card'); touch(LD.slotW, LD.slotH, 'tri: a box');
+    /* 托盤：每一個總數都在、加上兩張誘答；不可以由小到大 */
+    const want = tot.slice(1).concat(e.decoys).sort((a, b) => a - b).join();
+    let asc = 0;
+    for (let t = 0; t < 2000; t++){
+      const c = D.ladCards(e);
+      if (c.slice().sort((a, b) => a - b).join() !== want){ need(false, T + ': ladCards deals ' + c + ', expected the totals and decoys ' + want); break; }
+      if (c.every((v, i) => i === 0 || v >= c[i - 1])) asc++;
+    }
+    need(asc === 0, T + ': the number cards came out in increasing order ' + asc + ' times out of 2000');
+    /* 每一張卡 × 每一格：頁面的 ladAccept 收不收，和「它是不是數出來的那一排總數」逐一比；照規則玩完，每一格剛好一張卡、誘答一張都沒用上 */
+    const deck = tot.slice(1).concat(e.decoys);
+    const used = {};
+    slots.forEach(s => {
+      let takers = 0;
+      deck.forEach(v => {
+        const want = v === tot[s.r - 1], got = D.ladAccept(s, v);
+        if (got !== want) need(false, T + ': ladAccept(row ' + s.r + ', ' + v + ') = ' + got + ', counting the dots says ' + want);
+        if (got){ takers++; used[v] = 1; }
+      });
+      need(takers === 1, T + ': box ' + s.r + ' accepts ' + takers + ' of the cards, it must accept exactly one');
+    });
+    need(e.decoys.every(v => !used[v]) && tot.slice(1).every(v => used[v]), T + ': playing it out, the decoys must stay in the tray and every total must be used');
+    /* 每一張卡 × 每一格 */
+    for (const lang of ['zh', 'en']){
+      const d = I18N[lang];
+      slots.forEach(s => {
+        const prev = tot[s.r - 2];
+        tot.slice(1).concat(e.decoys).forEach(v => {
+          if (v === s.want) return;
+          need(prev + s.r !== v, T + ': the reason "' + prev + ' + ' + s.r + ' is not ' + v + '" is false');
+          say(T + ' gTriWrong', lang, d.gTriWrong(s.r, prev, v)); sameNums(T + ' gTriWrong', d.gTriWrong(s.r, prev, v), [s.r, s.r, prev, prev, s.r, prev + s.r, v]);
+        });
+        say(T + ' gTriOk', lang, d.gTriOk(s.r, s.want)); sameNums(T + ' gTriOk', d.gTriOk(s.r, s.want), [s.r, s.want]);
+        say(T + ' gTri2', lang, d.gTri2(s.r, prev)); sameNums(T + ' gTri2', d.gTri2(s.r, prev), [s.r, prev, s.r, prev + s.r]);
+      });
+      const rows = []; for (let r = 1; r <= n; r++) rows.push(String(r));
+      say(T + ' gTriDone', lang, d.gTriDone(rows, tot[n - 1], n)); sameNums(T + ' gTriDone', d.gTriDone(rows, tot[n - 1], n), rows.map(Number).concat([tot[n - 1], n, tot[n - 1]]));
+      for (let k2 = 1; k2 <= n; k2++){ say(T + ' gTriNow', lang, d.gTriNow(k2, n)); sameNums(T + ' gTriNow', d.gTriNow(k2, n), [k2, n]); }
+    }
+  });
+  need(src.indexOf("        if (!ladAccept(s, v)){ roundMiss(d.gTriWrong(s.r, triNum(s.r - 1), v)); return false; }") > 0, 'tri: a box no longer refuses a card that is not its own total');
+  need(src.indexOf("        var s = dropTarget(slots, pt, LAD.pad);") > 0, 'tri: the drop no longer picks the nearest box (dropTarget)');
+
+  /* ---- 4. 拼長方形 ---- */
+  D.GAME_RECT.forEach(n => {
+    const m = n + 1, U = RC.U, x0 = D.rectX0(n), T = 'rect n=' + n;
+    need(n >= 4 && n <= 6, T + ': outside 4..6');
+    need(x0 >= 4 && x0 + m * U <= D.GAME_W - 4, T + ': the rectangle spills sideways');
+    const tray = D.rectTray(n), tb = boxOf(tray.x, tray.y, n * U, n * U), H = D.rectH(n);
+    need(inside(tb, D.GAME_W, H) && tb.t >= RC.y0 + n * U + 8, T + ': the green triangle\'s tray box spills or covers the rectangle');
+    /* 自己的長方形：藍色是每一排的前 row ＋ 1 格；綠色放到方框裡，方框左上角在第幾欄？ */
+    const blue = []; for (let r = 0; r < n; r++) for (let c = 0; c <= r; c++) blue.push(r + ',' + c);
+    const z = D.rectZone(n), c0 = (z.cx - n * U / 2 - x0) / U, r0 = (z.cy - n * U / 2 - RC.y0) / U;
+    need(c0 === 1 && r0 === 0 && z.hw === n * U / 2 && z.hh === n * U / 2, T + ': the drop box is not the n × n box right of column 0');
+    const place = turned => D.greenCells(n, turned).map(p => (p.row + r0) + ',' + (p.col + c0));
+    const all = []; for (let r = 0; r < n; r++) for (let c = 0; c <= n; c++) all.push(r + ',' + c);
+    const turnedU = blue.concat(place(true));
+    need(new Set(turnedU).size === turnedU.length && turnedU.slice().sort().join() === all.slice().sort().join(), T + ': blue + the turned green triangle do not tile the ' + n + ' × ' + m + ' rectangle exactly');
+    need(place(false).some(x => blue.indexOf(x) >= 0), T + ': the unturned green triangle would fit too, so "turn it first" teaches nothing');
+    need(D.greenCells(n, false).length === blue.length && D.greenCells(n, false).every(p => p.col <= p.row), T + ': the green triangle does not start as the same staircase as the blue one');
+    need(Math.abs(tray.y - z.cy) > z.hh + RC.pad, T + ': the green triangle\'s home is already inside the drop box');
+    /* 接受範圍蓋住每一個淡色點（中心與 ±35%） */
+    all.filter(x => blue.indexOf(x) < 0).forEach(x => {
+      const [r, c] = x.split(',').map(Number);
+      for (const [ox, oy] of [[0, 0], [-0.35, 0], [0.35, 0], [0, -0.35], [0, 0.35]]){
+        const px = x0 + (c + 0.5 + ox) * U, py = RC.y0 + (r + 0.5 + oy) * U;
+        if (!(Math.abs(px - z.cx) <= z.hw + RC.pad && Math.abs(py - z.cy) <= z.hh + RC.pad)){ need(false, T + ': pale dot ' + x + ' is outside the drop box'); return; }
+      }
+    });
+    /* rectJudge 對 0～300 每一個數：自己數格子 */
+    const Tri = blue.length, Rct = all.length;
+    for (let v = 0; v <= 300; v++){
+      const want = v === Tri ? 'ok' : v === Rct ? 'whole' : v === n * n ? 'sq' : 'other';
+      if (D.rectJudge(n, v) !== want){ need(false, 'rectJudge(' + n + ', ' + v + ') = ' + D.rectJudge(n, v) + ', counting dots gives ' + want); break; }
+    }
+    for (const lang of ['zh', 'en']){
+      const d = I18N[lang];
+      say(T + ' gRectNow', lang, d.gRectNow(n)); sameNums(T + ' gRectNow', d.gRectNow(n), [n]);
+      say(T + ' gRectNow2', lang, d.gRectNow2(n, m)); sameNums(T + ' gRectNow2', d.gRectNow2(n, m), [n, m]);
+      say(T + ' gRectFit', lang, d.gRectFit(n, m)); sameNums(T + ' gRectFit', d.gRectFit(n, m), [n, m, n, m, Rct]);
+      say(T + ' gRectWhole', lang, d.gRectWhole(Rct)); sameNums(T + ' gRectWhole', d.gRectWhole(Rct), [Rct, 2]);
+      say(T + ' gRectSq', lang, d.gRectSq(n)); sameNums(T + ' gRectSq', d.gRectSq(n), [n, n, n * n, n, m, n, n]);
+      for (const v of [Tri - 1, Tri + 1, 7]){ say(T + ' gRectOther', lang, d.gRectOther(n, m, v)); sameNums(T + ' gRectOther', d.gRectOther(n, m, v), [v, n, m, Rct]); }
+      say(T + ' gRectDone', lang, d.gRectDone(n, m, Tri)); sameNums(T + ' gRectDone', d.gRectDone(n, m, Tri), [n, m, Rct, Rct, 2, Tri, n, Tri]);
+      say(T + ' gRect2a', lang, d.gRect2a(n, m)); sameNums(T + ' gRect2a', d.gRect2a(n, m), [n, m]);
+      say(T + ' gRect2b', lang, d.gRect2b(n, m)); sameNums(T + ' gRect2b', d.gRect2b(n, m), [n, m, Rct]);
+    }
+  });
+  touch(Math.min(...D.GAME_RECT) * RC.U, Math.min(...D.GAME_RECT) * RC.U, 'rect: the green triangle');
+  const INTS = [['21', 21], [' 21 ', 21], ['0', 0], ['021', null], ['2 1', null], ['2.1', null], ['', null], ['21a', null], ['-21', null], ['２１', null], ['12345', null]];
+  INTS.forEach(([s, v]) => need(D.readInt(s) === v, 'readInt("' + s + '") = ' + D.readInt(s) + ', expected ' + v));
+  need(src.indexOf("        if (!turned){ roundMiss(d.gRectNoTurn); return false; }") > 0, 'rect: an unturned triangle must bounce with a reason');
+  need(src.indexOf("        if (gSolved || fit || G.busy()) return;") > 0, 'rect: the turn button must do nothing while a finger holds the triangle');
+  need(src.indexOf("        var j = rectJudge(n, v);") > 0 && src.indexOf("        if (v === null){ gMsg.textContent = d.gRectInt; return; }") > 0, 'rect: the number box no longer judges with rectJudge / no longer only reminds on a malformed number');
+  need(src.indexOf("        greenCells(n, false).forEach(function(p){") > 0 && src.indexOf("turn:function(){ return turned ? ' rotate(180deg)' : ''; }") > 0, 'rect: the green triangle must be drawn unturned and turned by a CSS half turn');
+
+  /* ---- 5. 分一分 ---- */
+  need(String(D.KIND_ORDER) === 'tri,sq,arith,other', 'KIND_ORDER must be tri, sq, arith, other');
+  const triRefTab = [], sqRefTab = [];
+  for (let i = 1; i <= 40; i++){ triRefTab.push(triRef(i)); sqRefTab.push(sqRef(i)); }
+  need(D.GAME_KIND.length >= 4, 'GAME_KIND needs at least four sets');
+  D.GAME_KIND.forEach((set, si) => {
+    const T = 'kind set ' + si;
+    const kinds = set.map(v => kindRef(v));
+    need(set.length === 4 && set.every(v => v.length === 4) && kinds.slice().sort().join() === 'arith,other,sq,tri', T + ': must hold one run of each kind, it holds ' + kinds);
+    set.forEach((vals, vi) => {
+      const g = gapsRef(vals), k = kinds[vi], w = D.kindWhy(vals);
+      const wantK = k === 'tri' ? triRefTab.indexOf(vals[0]) + 1 : (k === 'sq' ? sqRefTab.indexOf(vals[0]) + 1 : 0);
+      need(w.kind === k && w.v === vals[0] && String(w.gaps) === String(g) && w.k === wantK, T + ': kindWhy(' + vals + ') = ' + JSON.stringify(w) + ', the checker says ' + k + ' with gaps ' + g + ', position ' + wantK);
+      if (k === 'tri'){
+        need(w.k === triRefTab.indexOf(vals[0]) + 1 && g.every((x, i) => i === 0 || x - g[i - 1] === 1), T + ': the triangular run ' + vals + ' does not start at triangular number #' + w.k + ', or its gaps do not grow by 1');
+      }
+      if (k === 'sq'){
+        need(w.k === sqRefTab.indexOf(vals[0]) + 1 && w.k * w.k === vals[0] && g.every((x, i) => i === 0 || x - g[i - 1] === 2), T + ': the square run ' + vals + ' does not start at ' + w.k + ' × ' + w.k + ' or its gaps do not grow by 2');
+      }
+      if (k === 'arith'){
+        /* 陷阱：前兩個數剛好是連著的兩個三角形數或正方形數 */
+        const t0 = triRefTab.indexOf(vals[0]), s0 = sqRefTab.indexOf(vals[0]);
+        need((t0 >= 0 && triRefTab[t0 + 1] === vals[1]) || (s0 >= 0 && sqRefTab[s0 + 1] === vals[1]), T + ': the equal-gap run ' + vals + ' does not start like a shape-number run, so it sets no trap');
+      }
+      if (k === 'other'){
+        need(triRefTab.indexOf(vals[0]) < 0 && sqRefTab.indexOf(vals[0]) < 0 && g.every((x, i) => i === 0 || x > g[i - 1]), T + ': the run ' + vals + ' must have growing gaps and start with a number that is neither triangular nor square ("' + vals[0] + ' is neither…")');
+      }
+      for (const lang of ['zh', 'en']){
+        const d = I18N[lang];
+        const why = d.gKindWhy[k](w.gaps, w.v, w.k);
+        const wantD = k === 'tri' ? (lang === 'zh' ? g.concat([1, w.k, vals[0]]) : g.concat([vals[0], w.k]))
+                    : k === 'sq' ? (lang === 'zh' ? g.concat([2, vals[0], w.k, w.k]) : g.concat([vals[0], w.k, w.k]))
+                    : k === 'arith' ? [g[0]] : g.concat([vals[0]]);
+        say(T + ' why ' + vals, lang, why); sameNums(T + ' why ' + vals, why, wantD);
+        D.KIND_ORDER.filter(b => b !== k).forEach(b => {
+          const s = d.gKindWrong(d.kindName[b], why);
+          say(T + ' gKindWrong', lang, s); sameNums(T + ' gKindWrong ' + vals + '→' + b, s, wantD);
+        });
+        say(T + ' card', lang, d.gKindList(vals)); sameNums(T + ' card', d.gKindList(vals), vals);
+        say(T + ' gKind2', lang, d.gKind2(d.gKindList(vals), g)); sameNums(T + ' gKind2', d.gKind2(d.gKindList(vals), g), vals.concat(g));
+      }
+    });
+    let ans = 0;
+    for (let t = 0; t < 2000; t++){
+      const tr = D.kindTray(set);
+      if (tr.map(String).sort().join('|') !== set.map(String).sort().join('|')){ need(false, T + ': kindTray deals a different set'); break; }
+      if (tr.every((v, i) => kindRef(v) === D.KIND_ORDER[i])) ans++;
+    }
+    need(ans === 0, T + ': the tray started with every card under its own box ' + ans + ' times out of 2000');
+  });
+  const bins = D.kindBins();
+  need(bins.length === 4 && bins.every((b, i) => b.kind === D.KIND_ORDER[i]), 'kindBins is not one box per kind in KIND_ORDER');
+  const bboxes = bins.map(b => ({ l:b.x, r:b.x + KB.w, t:b.y, b:b.y + KB.h }));
+  bboxes.forEach((b, i) => {
+    need(inside(b, D.GAME_W, D.KIND_H), 'kind: box ' + i + ' spills out');
+    for (let j = i + 1; j < 4; j++) need(!overlap(b, bboxes[j]), 'kind: boxes ' + i + ' and ' + j + ' overlap');
+    const pc = { x:bins[i].cx, y:bins[i].y + KB.lbl + (KB.h - KB.lbl) / 2 }, pb = boxOf(pc.x, pc.y, D.KIND_CARD.w, D.KIND_CARD.h);
+    need(pb.l >= b.l + 2 && pb.r <= b.r - 2 && pb.t >= b.t + KB.lbl - 2 && pb.b <= b.b, 'kind: a placed card does not fit under the label of box ' + i);
+  });
+  need(KB.pad * 2 > bboxes[1].l - bboxes[0].r && KB.pad * 2 > bboxes[2].t - bboxes[0].b, 'kind: neighbouring boxes\' padded zones must overlap (so nearest-box is exercised)');
+  for (let i = 0; i < 4; i++){
+    const at = D.kindTrayXY(i), cb = boxOf(at.x, at.y, D.KIND_CARD.w, D.KIND_CARD.h);
+    need(inside(cb, D.GAME_W, D.KIND_H), 'kind: tray card ' + i + ' spills out');
+    bboxes.forEach((b, j) => need(!(Math.abs(at.x - bins[j].cx) <= bins[j].hw + KB.pad && Math.abs(at.y - bins[j].cy) <= bins[j].hh + KB.pad), 'kind: tray card ' + i + ' already sits in box ' + j + '\'s zone'));
+    for (let j = i + 1; j < 4; j++){ const o = D.kindTrayXY(j); need(!overlap(cb, boxOf(o.x, o.y, D.KIND_CARD.w, D.KIND_CARD.h), 4), 'kind: tray cards ' + i + ' and ' + j + ' touch'); }
+  }
+  touch(D.KIND_CARD.w, D.KIND_CARD.h, 'kind: a card');
+  need(src.indexOf("        if (kindOf(vals) !== b.kind){ roundMiss(d.gKindWrong(d.kindName[b.kind], why(vals))); return false; }") > 0, 'kind: a box no longer refuses a card of another kind');
+  need(src.indexOf("        var b = dropTarget(bins, pt, KIND_BIN.pad);") > 0, 'kind: the drop no longer picks the nearest box');
+
+  /* ---- 6. 從原始碼切出來真的跑 ---- */
+  const cut = name => { const c = cutFunction(src, name); if (c.err) fail('game: ' + c.err); return c.code; };
+  const nearestCode = cut('nearestOpen'), dropCode = cut('dropTarget'), missCode = cut('roundMiss'), shuffleCode = cut('shuffle'), trayCode = cut('trayOrder');
+  if (nearestCode && dropCode){
+    const nearestOpen = new Function(nearestCode + '; return nearestOpen;')();
+    const dropTarget = new Function('nearestOpen', dropCode + '; return dropTarget;')(nearestOpen);
+    /* 自己的最近：到方框的距離（框裡是 0），一樣近比到中心 */
+    const ownNearest = (list, p, pad) => {
+      let best = null, bd = Infinity, bc = Infinity;
+      for (const b of list){
+        const ex = Math.max(0, Math.abs(p.x - b.cx) - b.hw), ey = Math.max(0, Math.abs(p.y - b.cy) - b.hh);
+        if (Math.abs(p.x - b.cx) > b.hw + pad || Math.abs(p.y - b.cy) > b.hh + pad) continue;
+        const dd = Math.hypot(ex, ey), dc = Math.hypot(p.x - b.cx, p.y - b.cy);
+        if (dd < bd - 1e-9 || (Math.abs(dd - bd) < 1e-9 && dc < bc)){ bd = dd; bc = dc; best = b; }
+      }
+      return best;
+    };
+    let bad = 0, overlapPts = 0;
+    const sweep = (list, pad, x0, x1, y0, y1) => {
+      for (let x = x0; x <= x1; x += 1) for (let y = y0; y <= y1; y += 1){
+        list.forEach(b => { b.done = false; });
+        const got = nearestOpen(list, { x, y }, pad), want = ownNearest(list, { x, y }, pad);
+        if (got !== want) bad++;
+        if (list.filter(b => Math.abs(x - b.cx) <= b.hw + pad && Math.abs(y - b.cy) <= b.hh + pad).length > 1) overlapPts++;
+      }
+    };
+    const ls = D.ladSlots(6);
+    sweep(ls, LD.pad, ls[0].cx - ls[0].hw - LD.pad - 2, ls[0].cx + ls[0].hw + LD.pad + 2, ls[0].cy - 40, ls[ls.length - 1].cy + 40);
+    const kb = D.kindBins();
+    sweep(kb, KB.pad, -2, D.GAME_W + 2, -2, kb[3].y + KB.h + 14);
+    need(bad === 0 && overlapPts > 100, 'nearestOpen (cut from the page) disagrees with the nearest box at ' + bad + ' points (' + overlapPts + ' points in overlapping zones swept)');
+    /* 最近的那一格已經放好 → 不收（不可以跳到旁邊的空格） */
+    ls.forEach(b => { b.done = false; });
+    ls[1].done = true;
+    need(nearestOpen(ls, { x:ls[1].cx, y:ls[1].cy - ls[1].hh + 1 }, LD.pad) === null, 'nearestOpen must refuse when the nearest box is already filled (it must not judge it again or hand the drop to a neighbour)');
+    /* 中心不在任何一格 → 看手指 */
+    ls.forEach(b => { b.done = false; });
+    need(dropTarget(ls, { x:-50, y:-50, fx:ls[0].cx, fy:ls[0].cy }, LD.pad) === ls[0] && dropTarget(ls, { x:ls[2].cx, y:ls[2].cy, fx:ls[0].cx, fy:ls[0].cy }, LD.pad) === ls[2] &&
+         dropTarget(ls, { x:-50, y:-50 }, LD.pad) === null, 'dropTarget must use the piece centre first and the finger only when the centre hits nothing');
+  }
+  if (missCode){
+    for (const start of [0, 5, 20]){
+      const env = { gMistake:false, gScore:start, elScore:{ textContent:'' }, gMsg:{ innerHTML:'' } };
+      const run = new Function('env', 'L', 'var gMistake = env.gMistake, gScore = env.gScore, elScore = env.elScore, gMsg = env.gMsg;\n' + missCode +
+        '\nroundMiss("why"); env.gMistake = gMistake; env.gScore = gScore;');
+      run(env, () => ({ gMinus:'MINUS' }));
+      const wantScore = Math.max(0, start - 5), showsMinus = /MINUS/.test(env.gMsg.innerHTML);
+      need(env.gMistake === true && env.gScore === wantScore && String(env.elScore.textContent) === String(wantScore) && showsMinus === (start >= 5) && /class="no"/.test(env.gMsg.innerHTML),
+        'roundMiss at ' + start + ' points gives score ' + env.gScore + ', mistake ' + env.gMistake + ', shows the penalty ' + showsMinus + ' (expected ' + wantScore + ', true, ' + (start >= 5) + ')');
+    }
+    for (const lang of ['zh', 'en']) need(!/[-−－]\s*5/.test(I18N[lang].gMinus) && digitsOf(I18N[lang].gMinus).join() === '5', 'gMinus (' + lang + ') must say five points are taken without writing a negative number');
+  }
+  if (shuffleCode && trayCode){
+    const shuffle = new Function(shuffleCode + '; return shuffle;')();
+    const base = [1, 2, 3, 4, 5, 6, 7];
+    let perm = true;
+    for (let t = 0; t < 500; t++){ const a = shuffle(base); if (a.slice().sort((p, q) => p - q).join() !== base.join() || base.join() !== '1,2,3,4,5,6,7') perm = false; }
+    need(perm, 'shuffle (cut from the page) is not a permutation, or it changes its input');
+    /* trayOrder 和一個「不洗牌」的 shuffle 一起跑：剛好是答案的排法時一定要被換掉 */
+    const trayOrder = new Function('shuffle', trayCode + '; return trayOrder;')(a => a.slice());
+    const r1 = trayOrder([3, 6, 10, 15], a => a.every((v, i) => i === 0 || v >= a[i - 1]));
+    need(r1.join() === '6,3,10,15', 'trayOrder leaves an answer-ordered tray as it is (got ' + r1 + ')');
+    const r2 = trayOrder([6, 3, 10], a => a.every((v, i) => i === 0 || v >= a[i - 1]));
+    need(r2.join() === '6,3,10', 'trayOrder changes a tray that was not in answer order (got ' + r2 + ')');
+  }
+
+  /* 托盤的「不可以一開始就是答案」：把頁面的資料區整段重跑一次，shuffle 換成「一定排成答案」的版本 ——
+     隨機抽 2000 次只是機率（7 張卡由小到大是 1/5040），這裡是確定的 */
+  const dStart = rawSrc.indexOf('/* ---------- 語言無關的資料 ---------- */'), dEnd = rawSrc.indexOf('/* ---------- i18n ---------- */');
+  const shufDecl = (cutFunction(rawSrc, 'shuffle').code || '');
+  if (need(dStart > 0 && dEnd > dStart && shufDecl, 'cannot cut the data block / shuffle out of the page')){
+    const block = rawSrc.slice(dStart, dEnd).replace(shufDecl, 'function shuffle(a){ return __forced(a); }');
+    const run = forced => new Function('__forced', block + '\nreturn { ladCards:ladCards, kindTray:kindTray, kindOf:kindOf, KIND_ORDER:KIND_ORDER };')(forced);
+    const asc = run(a => a.slice().sort((x, y) => x - y));
+    D.GAME_TRI.forEach(e => { const c = asc.ladCards(e); need(c.some((v, i) => i > 0 && v < c[i - 1]), 'tri: when the shuffle happens to come out in increasing order, ladCards keeps it (' + c + ')'); });
+    const lay = run(a => a.slice().sort((x, y) => D.KIND_ORDER.indexOf(kindRef(x)) - D.KIND_ORDER.indexOf(kindRef(y))));
+    D.GAME_KIND.forEach(set => { const t = lay.kindTray(set); need(t.some((v, i) => kindRef(v) !== D.KIND_ORDER[i]), 'kind: when the shuffle happens to put every card under its own box, kindTray keeps it'); });
+  }
+
+  /* ---- 7. 拖拉引擎的關鍵幾行（行為由 e2e 與 broken-*.html 守住；這裡守「沒有被悄悄拿掉」） ---- */
+  const PINS = [
+    ["      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;", 'pieces must follow only the first finger, and never on a board that was rebuilt'],
+    ["      if (gen !== gGen) return;\n", 'a piece released after its board was rebuilt must do nothing'],
+    ["    el.addEventListener('lostpointercapture', function(e){ end(e, true); });", 'lost pointer capture must put a piece back'],
+    ["      if (!e.isPrimary) return;\n", 'a second finger must not tap the board'],
+    ["    gSolved = false; gMistake = false; gCtx = {}; gGen++; BOARD_TAP = null; PIECE_PTR = {};", 'startRound must reset the round and bump the board generation'],
+    ["    if (mode === 'ahead'){ hintLevel = 1; showHint(); }", 'ahead mode must show hint level 1 automatically'],
+    ["      if (P.busy()) return;\n", 'tap-then-tap must not drop a piece another finger is dragging']
+  ];
+  PINS.forEach(([line, why]) => need(src.indexOf(line) > 0, why + ' (missing: ' + line.trim().slice(0, 70) + ')'));
+  for (const name of ['addPiece', 'useTapSelect', 'makeBoard', 'roundSolved', 'startRound', 'showHint']) cut(name);
+
+  /* ---- 8. 每一句話 ---- */
+  for (const lang of ['zh', 'en']){
+    const d = I18N[lang];
+    GAME_ORDER_REF.forEach(t => {
+      need(typeof d.gAsks[t] === 'string' && d.gAsks[t].length > 10, 'gAsks.' + t + ' (' + lang + ') is missing');
+      need(typeof d.gHints[t] === 'string' && d.gHints[t].length > 10, 'gHints.' + t + ' (' + lang + ') is missing');
+      say('gAsks.' + t, lang, d.gAsks[t]); say('gHints.' + t, lang, d.gHints[t]);
+    });
+    for (const k of ['gSqGrid', 'gSqBtn', 'gSqNone', 'gGreen', 'gTurnBtn', 'gRectNoTurn', 'gRectAsk', 'gRectUnit', 'gRectOkBtn', 'gRectInAria', 'gRectInt', 'gKindDone', 'gClear', 'gMinus'])
+      say(k, lang, d[k]);
+    say('gPts', lang, d.gPts(20)); say('gWin', lang, d.gWin(100)); say('gKindNow', lang, d.gKindNow(3));
+    for (const v of [3, 10, 21]) say('gTriCard', lang, d.gTriCard(v));
+    for (const len of [2, 5]){ say('gBarH', lang, d.gBarH(len)); say('gBarV', lang, d.gBarV(len)); }
+  }
+  let verified = 0;
+  for (const [tag, s, lang] of texts){
+    for (const p of textProblems(s, lang, 'game ' + tag)) fail(p);
+    const ar = gameArith(s);
+    for (const p of ar.problems) fail('game ' + tag + ': ' + p);
+    verified += ar.verified;
+  }
+  /* 條數之外連「驗過的是哪些算式」一起釘（排序後 sha1）：拿掉一條、再補一條別的，條數一樣，驗的卻是別的宣稱 */
+  const fp = require('crypto').createHash('sha1').update(gameArith.verifiedAll().join('\n')).digest('hex').slice(0, 16);
+  need(verified === GAME_EQUATIONS && fp === GAME_FINGERPRINT, 'the game\'s texts contain ' + verified + ' checkable equations (fingerprint ' + fp + '), the checker pins ' +
+       GAME_EQUATIONS + ' (' + GAME_FINGERPRINT + ') — a text that lost or swapped its equation is not a pass');
+  /* 正向對照：這三條一定要在「驗過」的清單裡（補 L 形的奇數和、拼長方形的 n × (n ＋ 1) 與 ÷ 2），證明掃描器真的讀到了遊戲的句子 */
+  const seenEq = gameArith.verifiedAll();
+  for (const e of ['1 + 3 + 5 = 9', '6 * 7 = 42', '42 / 2 = 21']) need(seenEq.indexOf(e) >= 0, 'the game equation scanner never verified "' + e + '"');
+}
+
 module.exports = {
   /* ================= 刻意改壞測試 ================= */
   breaks: [
+    /* --- 小遊戲（§六之五，五關五種玩法）：每一筆把一條規則改壞，gameChecks 要抓到 --- */
+    { file:"index", via:"index", expect:"sqJudge(",
+      find:"    if (r === c && r * c === N) return 'ok';",
+      replace:"    if (r * c === N) return 'ok';",
+      why:"a rectangle with the right number of beads would count as a square" },
+    { file:"index", via:"index", expect:"sqJudge(",
+      find:"    if (r === c) return r * c < N ? 'few' : 'many';",
+      replace:"    if (r === c) return r * c < N ? 'many' : 'few';",
+      why:"too few beads would be told it is too many" },
+    { file:"index", via:"index", expect:"sqCell disagrees",
+      find:"Math.floor((p - v0) / SQ.U) + 1",
+      replace:"Math.round((p - v0) / SQ.U) + 1",
+      why:"touching the left half of a dot would pick the dot before it" },
+    { file:"index", via:"index", expect:"is not a square number",
+      find:"  var GAME_SQ = [16, 25, 36, 49];",
+      replace:"  var GAME_SQ = [16, 25, 36, 48];",
+      why:"48 beads cannot make a square, so the round could never be solved" },
+    { file:"index", via:"index", expect:"never exercised",
+      find:"  var GAME_SQ = [16, 25, 36, 49];",
+      replace:"  var GAME_SQ = [25, 49, 25, 49];",
+      why:"no bead count could be laid out as a rectangle, so 'a rectangle is not a square' is never met" },
+    { file:"index", via:"index", expect:"no longer judges with sqJudge",
+      find:"        var j = sqJudge(N, r, c);",
+      replace:"        var j = sqJudge(N, r, r);",
+      why:"Done would judge the rows twice instead of rows and columns" },
+    { file:"index", via:"index", expect:"only remind",
+      find:"        if (!touched){ roundInfo(d.gSqNone); return; }",
+      replace:"        if (!touched){ roundMiss(d.gSqNone); return; }",
+      why:"pressing Done before stretching would cost points" },
+    { file:"index", via:"index", expect:"ignored while a finger is still stretching",
+      find:"        if (drag !== null) return;",
+      replace:"",
+      why:"Done pressed while another finger stretches would judge a half-made shape" },
+    { file:"index", via:"index", expect:"growJudge(",
+      find:"    if (other + len === 2 * n + 1) return 'done';",
+      replace:"    if (other + len >= 2 * n + 1) return 'done';",
+      why:"two full strips with the corner counted twice would finish the L" },
+    { file:"index", via:"index", expect:"growJudge(",
+      find:"    return other + len > 2 * n + 1 ? 'twice' : 'gap';",
+      replace:"    return other + len > 2 * n + 1 ? 'gap' : 'twice';",
+      why:"the reasons for 'corner twice' and 'corner empty' would be swapped" },
+    { file:"index", via:"index", expect:"puts dot",
+      find:"    return side === 'h' ? { x:G.x0 + len * G.U / 2, y:G.y0 + n * G.U + G.U / 2 }",
+      replace:"    return side === 'h' ? { x:G.x0 + (len + 1) * G.U / 2, y:G.y0 + n * G.U + G.U / 2 }",
+      why:"a placed strip would sit half a dot off the grid" },
+    { file:"index", via:"index", expect:"is not inside the h zone",
+      find:"      ? { side:'h', cx:G.x0 + k * G.U / 2, cy:G.y0 + n * G.U + G.U / 2, hw:k * G.U / 2, hh:G.U / 2, done:false }",
+      replace:"      ? { side:'h', cx:G.x0 + k * G.U / 2, cy:G.y0 + n * G.U + G.U / 2, hw:(k - 2) * G.U / 2, hh:G.U / 2, done:false }",
+      why:"dropping a strip on the far end of the pale row would be silently refused" },
+    { file:"index", via:"index", expect:"touch",
+      find:"  var GROW = { x0:20, y0:12, U:28, vx:[200, 258], hy:[194, 252], pad:12, dot:0.3 }",
+      replace:"  var GROW = { x0:20, y0:12, U:28, vx:[200, 240], hy:[194, 252], pad:12, dot:0.3 }",
+      why:"the two upright strips would overlap in the tray" },
+    { file:"index", via:"index", expect:"must start at 2",
+      find:"  var GAME_GROW = [2, 3];",
+      replace:"  var GAME_GROW = [2, 4];",
+      why:"growing 4 twice would reach 6 × 6, which runs into the tray" },
+    { file:"index", via:"index", expect:"no longer bounce with a reason",
+      find:"          if (j === 'twice'){ roundMiss(d.gGrowTwice(k)); return false; }",
+      replace:"          if (j === 'twice'){ return false; }",
+      why:"the corner-counted-twice strip would bounce without saying why or costing anything" },
+    { file:"index", via:"index", expect:"must bump gGen",
+      find:"        if (B){ B.wrap.parentNode.removeChild(B.wrap); gGen++; BOARD_TAP = null; PIECE_PTR = {}; }",
+      replace:"        if (B){ B.wrap.parentNode.removeChild(B.wrap); BOARD_TAP = null; PIECE_PTR = {}; }",
+      why:"a strip held across the second growth would act on the new board" },
+    { file:"index", via:"index", expect:"run into its box",
+      find:"slotX:198, slotW:64",
+      replace:"slotX:168, slotW:64",
+      why:"the 6-dot row would run under its box" },
+    { file:"index", via:"index", expect:"decoys",
+      find:"{ n:5, decoys:[9, 14] }",
+      replace:"{ n:5, decoys:[10, 14] }",
+      why:"a decoy equal to a real total would be accepted in that row and the tray would have two right cards" },
+    { file:"index", via:"index", expect:"ladSlots asks for",
+      find:"      out.push({ r:r, want:triNum(r), cx:",
+      replace:"      out.push({ r:r, want:triNum(r) + r, cx:",
+      why:"each box would want the next row's total" },
+    { file:"index", via:"index", expect:"ladCards keeps it",
+      find:"      for (var i = 1; i < a.length; i++) if (a[i] < a[i - 1]) return false;\n      return true;",
+      replace:"      return false;",
+      why:"the number cards could start in increasing order" },
+    { file:"index", via:"index", expect:"trayOrder leaves",
+      find:"    if (a.length > 1 && isAnswer(a)){ var t = a[0]; a[0] = a[1]; a[1] = t; }",
+      replace:"",
+      why:"a tray that came out in the answer order would stay that way" },
+    { file:"index", via:"index", expect:"ladAccept(",
+      find:"  function ladAccept(slot, v){ return v === slot.want; }",
+      replace:"  function ladAccept(slot, v){ return v >= slot.want; }",
+      why:"a box would also take any bigger number, so the row-by-row sums would no longer be the rule" },
+    { file:"index", via:"index", expect:"GAME_GROW must hold",
+      find:"  var GAME_GROW = [2, 3];",
+      replace:"  var GAME_GROW = [];",
+      why:"an empty pool would make every growth check loop over nothing" },
+    { file:"index", via:"index", expect:"GAME_RECT must hold",
+      find:"  var GAME_RECT = [5, 6];",
+      replace:"  var GAME_RECT = [6];",
+      why:"one rectangle size only would make the round the same every time and thin the checks" },
+    { file:"index", via:"index", expect:"on a 375px phone",
+      find:"  .card{\n    background:var(--card);border:1px solid var(--line);border-radius:20px;\n    padding:22px;",
+      replace:"  .card{\n    background:var(--card);border:1px solid var(--line);border-radius:20px;\n    padding:40px;",
+      why:"a fatter card padding would shrink the 48-unit pieces under 44px on a phone" },
+    { file:"index", via:"index", expect:"refuses a card that is not its own total",
+      find:"        if (!ladAccept(s, v)){ roundMiss(",
+      replace:"        if (false){ roundMiss(",
+      why:"any number card would be accepted in any box" },
+    { file:"index", via:"index", expect:"the drop box is not",
+      find:"  function rectZone(n){ var U = RECT.U; return { cx:rectX0(n) + U + n * U / 2,",
+      replace:"  function rectZone(n){ var U = RECT.U; return { cx:rectX0(n) + n * U / 2,",
+      why:"the green triangle would be accepted one column too far left, on top of the blue one" },
+    { file:"index", via:"index", expect:"do not tile",
+      find:"        out.push(turned ? { row:n - 1 - row, col:n - 1 - col } : { row:row, col:col });",
+      replace:"        out.push(turned ? { row:row, col:n - 1 - col } : { row:row, col:col });",
+      why:"the turned triangle would be a mirror image, which does not fill the gap" },
+    { file:"index", via:"index", expect:"rectJudge(",
+      find:"    if (v === triNum(n)) return 'ok';",
+      replace:"    if (v === triNum(n) || v === rectDots(n)) return 'ok';",
+      why:"forgetting to divide by 2 would be accepted" },
+    { file:"index", via:"index", expect:"readInt(\"021\")",
+      find:"/^(0|[1-9]\\d{0,3})$/",
+      replace:"/^\\d{1,4}$/",
+      why:"a leading zero would be read as a number" },
+    { file:"index", via:"index", expect:"unturned triangle must bounce",
+      find:"        if (!turned){ roundMiss(d.gRectNoTurn); return false; }\n",
+      replace:"",
+      why:"the unturned triangle would be accepted" },
+    { file:"index", via:"index", expect:"turn button must do nothing",
+      find:"        if (gSolved || fit || G.busy()) return;",
+      replace:"        if (gSolved || fit) return;",
+      why:"the triangle could be turned while another finger drops it" },
+    { file:"index", via:"index", expect:"sets no trap",
+      find:"[1, 4, 7, 10]",
+      replace:"[2, 5, 8, 11]",
+      why:"the equal-gap card would no longer look like square numbers at the start" },
+    { file:"index", via:"index", expect:"must have growing gaps",
+      find:"[2, 4, 7, 11]",
+      replace:"[3, 5, 8, 12]",
+      why:"'3 is neither triangular nor square' would be false" },
+    { file:"index", via:"index", expect:"kindWhy(",
+      find:"k:kind === 'tri' ? whichTri(v) : (kind === 'sq' ? whichSq(v) : 0) };",
+      replace:"k:kind === 'tri' ? whichTri(v) + 1 : (kind === 'sq' ? whichSq(v) : 0) };",
+      why:"the reason would name the wrong position of the first triangular number" },
+    { file:"index", via:"index", expect:"does not fit under the label",
+      find:"w:142, h:94, lbl:38, pad:10 }",
+      replace:"w:142, h:94, lbl:52, pad:10 }",
+      why:"a placed card would hang out of its box" },
+    { file:"index", via:"index", expect:"already sits in box",
+      find:"KIND_TRAY = { x:[75, 225], y:[234, 292] }",
+      replace:"KIND_TRAY = { x:[75, 225], y:[200, 292] }",
+      why:"a card would start inside a box's drop zone" },
+    { file:"index", via:"index", expect:"refuses a card of another kind",
+      find:"        if (kindOf(vals) !== b.kind){",
+      replace:"        if (false){",
+      why:"every card would be accepted in every box" },
+    { file:"index", via:"index", expect:"gSqFew reads",
+      find:"'，還剩 ' + (N - r * r) + ' 顆沒排進去",
+      replace:"'，還剩 ' + (N - r) + ' 顆沒排進去",
+      why:"the leftover beads would be N − r instead of N − r × r" },
+    { file:"index", via:"index", expect:"gGrowStep reads",
+      find:"轉角只算一次，' + k + ' ＋ ' + k + ' － 1 ＝ ' + (2 * k - 1) + ' 個點，一共 '",
+      replace:"轉角只算一次，' + k + ' ＋ ' + k + ' － 1 ＝ ' + (2 * k) + ' 個點，一共 '",
+      why:"the L-shape would be counted with the corner twice" },
+    { file:"index", via:"index", expect:"gRectWhole reads",
+      find:"return R + ' is the whole rectangle",
+      replace:"return (R / 2) + ' is the whole rectangle",
+      why:"the English reason would name half the rectangle as the whole" },
+    { file:"index", via:"index", expect:"why",
+      find:"starting from ' + v + ', the ' + ordEn(k) + ' triangular number",
+      replace:"starting from ' + v + ', the ' + ordEn(k + 1) + ' triangular number",
+      why:"the English reason would call the first number the wrong position" },
+    { file:"index", via:"index", expect:"gTri2 reads",
+      find:"return '第 ' + r + ' 排：' + prev + ' ＋ ' + r + ' ＝ ' + (prev + r) + '。';",
+      replace:"return '第 ' + r + ' 排：' + prev + ' ＋ ' + r + ' ＝ ' + (prev + r + 1) + '。';",
+      why:"hint 2 would add the row wrongly" },
+    { file:"index", via:"index", expect:"gMinus (zh)",
+      find:"      gMinus:'扣 5 分',",
+      replace:"      gMinus:'－5 分',",
+      why:"the penalty would be written as a negative number, which grade 4 has not met" },
+    { file:"index", via:"index", expect:"plural after 1",
+      find:"' = ' + p + ' ' + plEn(p, 'bead'); },",
+      replace:"' = ' + p + ' beads'; },",
+      why:"the 1 × 1 start would read '1 beads'" },
+    { file:"index", via:"index", expect:"nearestOpen (cut from the page) disagrees",
+      find:"      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"      if (!best){ bd = dd; bc = dc; best = b; }",
+      why:"a drop in the overlap would go to the first box in order, not the nearer one" },
+    { file:"index", via:"index", expect:"must refuse when the nearest box is already filled",
+      find:"    return best && !best.done ? best : null;",
+      replace:"    return best;",
+      why:"a drop on a filled box would be judged again" },
+    { file:"index", via:"index", expect:"dropTarget must use",
+      find:"    var t = nearestOpen(list, pt, pad);\n    if (t || pt.fx === undefined) return t;\n    return nearestOpen(list, { x:pt.fx, y:pt.fy }, pad);",
+      replace:"    if (pt.fx !== undefined) return nearestOpen(list, { x:pt.fx, y:pt.fy }, pad);\n    return nearestOpen(list, pt, pad);",
+      why:"the finger would win over the piece centre" },
+    { file:"index", via:"index", expect:"roundMiss at 0",
+      find:"    var lost = gScore >= 5 ? 5 : 0;",
+      replace:"    var lost = 5;",
+      why:"at 0 points a mistake would still say a penalty was taken" },
+    { file:"index", via:"index", expect:"not a permutation",
+      find:"      var t = a[j]; a[j] = a[k]; a[k] = t;",
+      replace:"      var t = a[j]; a[j] = a[k];",
+      why:"shuffling would duplicate cards and lose others" },
+    { file:"index", via:"index", expect:"first finger",
+      find:"      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;",
+      replace:"      if (P.locked || gSolved || start || gen !== gGen) return;",
+      why:"a second finger could pick up a piece" },
+    { file:"index", via:"index", expect:"rebuilt must do nothing",
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */\n",
+      replace:"",
+      why:"a piece held across Restart could act on the new board" },
+    { file:"index", via:"index", expect:"lost pointer capture",
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+      replace:"",
+      why:"a piece could get stuck when capture is lost" },
+    { file:"index", via:"index", expect:"GAME_ORDER must",
+      find:"  var GAME_ORDER = ['square', 'grow', 'tri', 'rect', 'kind'];",
+      replace:"  var GAME_ORDER = ['square', 'tri', 'grow', 'rect', 'kind'];",
+      why:"the rounds would stop following examples 1–5" },
+    { file:"index", via:"index", expect:"draws from its own pool",
+      find:"      var N = pick(GAME_SQ), r = 1",
+      replace:"      var N = pick([16, 25]), r = 1",
+      why:"round 1 would stop drawing from GAME_SQ" },
+    { file:"index", via:"index", expect:"ahead mode",
+      find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }",
+      replace:"",
+      why:"ahead mode would stop giving hint 1 automatically" },
     /* --- 圖形數本身：公式改壞，走幾何的參考實作要抓到 --- */
     { file:"index", via:"index", expect:"counting the dots gives",
       find:"  function sqNum(n){ return n * n; }",
@@ -655,18 +1448,6 @@ module.exports = {
       find:"    { id:'arith', vals:[3, 7, 11, 15, 19] }",
       replace:"    { id:'arith', vals:[3, 7, 11, 15, 20] }",
       why:"the contrast run would stop having equal gaps, so example 5 would compare nothing" },
-    { file:"index", via:"index", expect:"opts[ans] is",
-      find:"    { kind:'sqNth',    n:5,  opts:['25', '10', '16', '20'], ans:0 },",
-      replace:"    { kind:'sqNth',    n:5,  opts:['25', '10', '16', '20'], ans:1 },",
-      why:"the first round would mark the adding-instead-of-multiplying mistake as correct" },
-    { file:"index", via:"index", expect:"the checker computes",
-      find:"    if (r.kind === 'sqNth') return String(sqNum(r.n));",
-      replace:"    if (r.kind === 'sqNth') return String(sqNum(r.n) + 1);",
-      why:"the game would score a different number from the one the lesson teaches" },
-    { file:"index", via:"index", expect:"shows a picture for a",
-      find:"    if (r.kind === 'sqGrow') return { kind:'sq', n:r.n + 1, hi:r.n + 1 };\n    return null;",
-      replace:"    if (r.kind === 'sqGrow') return { kind:'sq', n:r.n + 1, hi:r.n + 1 };\n    return { kind:'tri', n:3, hi:0 };",
-      why:"the backwards question would show the answer as a picture to count" },
 
     /* --- 題庫神諭 --- */
     { file:"index", via:"index", expect:"the answers of the zh bank say",
@@ -1183,7 +1964,11 @@ module.exports = {
     dataReturn: '{sqNum, triNum, sqGap, triGap, gnomonSize, rectDots, oddList, oddSum, ' +
                 'whichSq, whichTri, isSq, isTri, gapsOf, allSame, isRunOf, kindOf, plEn, ordEn, ' +
                 'FIG_W, FIG_H, FIG_PAD, STEP_MAX, DOT_RATIO, gridPlan, dotsSq, dotsTri, dotsRect, dotPlan, ' +
-                'S1_NS, S2_N, S3_NS, S4_NS, S5_RUNS, patternGuess, ROUNDS, roundAnswer, roundFig}',
+                'S1_NS, S2_N, S3_NS, S4_NS, S5_RUNS, patternGuess, ' +
+                'GPICK, GAME_W, shuffle, trayOrder, SQ, SQ_H, GAME_SQ, sqCell, sqPick, sqJudge, ' +
+                'GROW, GROW_H, GAME_GROW, growZone, growSpot, growJudge, LAD, GAME_TRI, ladRowY, ladCardY, ladH, ladSlots, ladAccept, ladCards, ladCardXY, ' +
+                'RECT, GAME_RECT, rectX0, rectZone, rectTray, rectH, greenCells, rectJudge, readInt, ' +
+                'KIND_ORDER, KIND_BIN, KIND_CARD, KIND_TRAY, KIND_H, GAME_KIND, kindBins, kindTray, kindTrayXY, kindWhy}',
     optionValueMax: OPT_MAX_REF,
 
     check: function(data, I18N, fail, rawSrc){
@@ -1465,49 +2250,8 @@ module.exports = {
         }
       });
 
-      /* ---- 6. 遊戲關卡：答案由資料重算，位置要分散 ---- */
-      const ROUNDS = data.ROUNDS;
-      const spread = {};
-      const kindsSeen = [];
-      ROUNDS.forEach((r, i) => {
-        const want = data.roundAnswer(r);
-        if (want === null){ fail('round ' + i + ' (' + r.kind + ') has no computable answer'); return; }
-        /* ⚠️ 順序：設定檔自己重算的那一條要**先**比。排在後面的話，任何把 roundAnswer
-           改壞的改動都會先撞上「opts[ans] 對不上」，獨立神諭就從來沒有被證明過。 */
-        const ref = r.kind === 'sqNth' ? String(sqRef(r.n))
-                  : r.kind === 'triNth' ? String(triRef(r.n))
-                  : r.kind === 'sqGrow' ? String(sqRef(r.n + 1) - sqRef(r.n))
-                  : r.kind === 'triWhich' ? String(whichTriRef(r.v))
-                  : r.kind === 'kind' ? kindRef(r.vals) : null;
-        if (ref === null) fail('round ' + i + ': the checker has no independent answer for kind ' + r.kind);
-        else if (ref !== String(want)) fail('round ' + i + ' (' + r.kind + '): the page answers "' + want + '", the checker computes "' + ref + '"');
-        if (String(r.opts[r.ans]) !== String(want))
-          fail('round ' + i + ' (' + r.kind + '): opts[ans] is "' + r.opts[r.ans] + '" but the data gives "' + want + '"');
-        if (r.opts.length !== 4 || new Set(r.opts).size !== 4) fail('round ' + i + ': options are not four distinct entries');
-        spread[r.ans] = (spread[r.ans] || 0) + 1;
-        kindsSeen.push(r.kind);
-        const fig = data.roundFig(r);
-        if (fig){
-          if (['sq', 'tri', 'rect'].indexOf(fig.kind) < 0) fail('round ' + i + ': the picture kind is ' + fig.kind);
-          if (!(fig.n >= 1 && fig.n <= N_FIG_REF)) fail('round ' + i + ': the picture would draw n=' + fig.n + ', outside the drawable range');
-          else {
-            const bad = checkPlan(data.dotPlan(fig.kind, fig.n), fig.kind, fig.n, R, 'round ' + i + ' fig');
-            if (bad.length) fail(bad[0]);
-          }
-        }
-      });
-      if (Object.keys(spread).length < 3)
-        fail('the game answers are all bunched into ' + Object.keys(spread).length + ' slot(s); spread them across the options');
-      for (const k of ['sqNth', 'triNth', 'sqGrow', 'triWhich', 'kind'])
-        if (kindsSeen.indexOf(k) < 0) fail('the game no longer has a "' + k + '" round');
-      /* 反過來問的那兩關刻意不給圖 —— 給了圖就變成數排數。 */
-      ROUNDS.forEach((r, i) => {
-        const fig = data.roundFig(r);
-        if (r.kind === 'triWhich' && fig) fail('round ' + i + ' shows a picture for a "which one is it" question, which gives the answer away');
-        if (r.kind === 'kind' && fig) fail('round ' + i + ' shows a picture for a "what kind is it" question, which gives the answer away');
-        if ((r.kind === 'sqNth' || r.kind === 'triNth' || r.kind === 'sqGrow') && !fig)
-          fail('round ' + i + ' (' + r.kind + ') lost its picture');
-      });
+      /* ---- 6. 遊戲：五關五種玩法（gameChecks，見檔案上方） ---- */
+      gameChecks(data, I18N, fail, src, rawSrc);
 
       /* ---- 7. 字典：分類名稱逐字比對（拿字典比字典等於自己比自己） ---- */
       for (const lang of ['zh', 'en']){
@@ -1581,24 +2325,7 @@ module.exports = {
         push('s5thVals', d.s5thVals);
         push('s5thGaps', d.s5thGaps);
         push('s5thGaps2', d.s5thGaps2);
-        /* 遊戲：每一關的題目、兩層提示、選項文字。 */
-        ROUNDS.forEach(r => {
-          const key = r.kind === 'kind' ? 'kindQ' : r.kind;
-          if (r.kind === 'sqNth'){ push('gPrompt.sqNth', d.gPrompt.sqNth(r.n)); push('gHint2.sqNth', d.gHint2.sqNth(r.n)); }
-          if (r.kind === 'triNth'){ push('gPrompt.triNth', d.gPrompt.triNth(r.n)); push('gHint2.triNth', d.gHint2.triNth(r.n)); }
-          if (r.kind === 'sqGrow'){ push('gPrompt.sqGrow', d.gPrompt.sqGrow(r.n)); push('gHint2.sqGrow', d.gHint2.sqGrow(r.n)); }
-          if (r.kind === 'triWhich'){ push('gPrompt.triWhich', d.gPrompt.triWhich(r.v)); push('gHint2.triWhich', d.gHint2.triWhich(r.v)); }
-          if (r.kind === 'kind'){
-            push('gPrompt.kindQ', d.gPrompt.kindQ(r.vals.join(lang === 'zh' ? '、' : ', ')));
-            push('gHint2.kindQ', d.gHint2.kindQ(data.gapsOf(r.vals)));
-          }
-          push('gHint1', d.gHint1[key]);
-          r.opts.forEach(o => push('gOpt', r.kind === 'kind' ? d.kindName[o] : String(o)));
-        });
-        for (const lost of [0, 5]) push('gWrong', d.gWrong(lost));
-        push('gWin', d.gWin(100));
-        push('gCorrectFirst', d.gCorrectFirst);
-        push('gCorrectRetry', d.gCorrectRetry);
+        /* 遊戲的每一句話由 gameChecks 自己渲染、自己驗（另一份算式計數 GAME_EQUATIONS）。 */
         /* 題庫 */
         ['qs', 'qsAdv', 'qsBoost'].forEach(bank => {
           d[bank].forEach((q, i) => {

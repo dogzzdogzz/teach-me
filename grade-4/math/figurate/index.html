@@ -124,17 +124,46 @@
     margin-top:12px;background:var(--orange-soft);border:2px solid var(--orange);border-radius:14px;
     padding:10px 16px;font-size:15px;text-align:center;color:var(--orange);
   }
-  .degrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
-  .degbtn{
-    border:2px solid var(--line);background:var(--card);border-radius:14px;padding:14px 10px;
-    font-size:17px;font-weight:700;cursor:pointer;color:var(--ink);text-align:center;min-height:56px;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .degbtn.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
-  .degbtn.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
-  .degbtn:disabled{cursor:default;opacity:.85}
-  .gprompt{text-align:center;font-size:20px;margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:14px;word-break:break-word}
-  .gprompt b{color:var(--blue)}
+  /* --- 小遊戲（§六之五）：畫板固定 300 寬的邏輯尺寸，整塊等比縮放 --- */
+  .game .stats{justify-content:center}
+  .gamemsg{text-align:center}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div{position:absolute}
+  .gboard > svg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+  .gsq{touch-action:none;cursor:crosshair}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gpiece svg{display:block;pointer-events:none}
+  .gbar{border-radius:12px;background-color:rgba(232,135,30,.14);background-repeat:no-repeat}
+  .gbar.locked{background-color:transparent}
+  .gtri{border-radius:10px;background-color:rgba(47,158,105,.10)}
+  .gtri.locked{background-color:transparent}
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-size:16px;font-weight:800;color:var(--ink);white-space:nowrap}
+  .gcard.placed{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gkey{background:var(--card);border:3px solid var(--blue);border-radius:12px;font-size:22px;font-weight:800;color:var(--blue)}
+  .gkey.placed{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gslot{display:flex;align-items:center;justify-content:center;border:3px dashed var(--blue);border-radius:10px;background:var(--blue-soft);
+    font-size:22px;font-weight:800;color:var(--blue);pointer-events:none}
+  .gslot.filled{border-style:solid;border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gbin{border:3px dashed #C9BFA9;border-radius:14px;background:var(--card);pointer-events:none}
+  .gbinlbl{display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--ink);pointer-events:none;text-align:center;line-height:1.1;padding:0 6px}
+  .gaction{display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap}
+  .gaction .btn{min-height:48px;min-width:48px}
+  .ginput{width:84px;height:48px;border:3px dashed var(--orange);border-radius:10px;background:var(--orange-soft);font-size:24px;font-weight:800;text-align:center;color:var(--ink);padding:0;font-family:inherit}
+  .ginput.filled{border-style:solid;border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .glabel{font-size:18px;font-weight:700}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
+  @keyframes gflash{0%,100%{opacity:1}50%{opacity:.2}}
+  .gflash{animation:gflash 1s ease-in-out infinite}
+  .gtrail, .gcard, .gkey, .gslot, .gbinlbl, #gMsg{font-family:"Helvetica Neue",Arial,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif}
 </style>
 </head>
 <body>
@@ -281,27 +310,20 @@
   </section>
 
   <!-- 小遊戲 -->
-  <section class="game">
+  <section>
     <span class="eyebrow" data-i18n="eb7">小遊戲</span>
     <h2 data-i18n="s7h2">圖形數實驗室接委託</h2>
-    <p class="lead" data-i18n="s7lead">五個委託，每一個都先問自己：<strong>這是正方形數還是三角形數？要往前算還是反過來算？</strong></p>
-    <div class="card">
+    <p class="lead" data-i18n="s7lead">五個委託五種玩法：排正方形、補 L 形、一排一排加、拼長方形、分一分。放錯只扣一點分，隨時可以再試！</p>
+    <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
-      </div>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint" style="text-align:center"></p>
-      <p class="gprompt" id="gPrompt"></p>
-      <div class="figwrap">
-        <svg class="dotfig" id="gFig" viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg"></svg>
-      </div>
-      <p class="figcap" id="gCap"></p>
-      <div class="degrid" id="gAnswers"></div>
-      <p id="gMsg" class="gamemsg" style="text-align:center"></p>
+      <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow" style="justify-content:center">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -501,33 +523,159 @@
     return vals[0] + (vals.length - 1) * gapsOf(vals)[0];
   }
 
-  /* --- 遊戲：五個委託。每一關的答案都由 roundAnswer() 從資料重算，
-         opts 只是選項的位置。 --- */
-  var ROUNDS = [
-    { kind:'sqNth',    n:5,  opts:['25', '10', '16', '20'], ans:0 },
-    { kind:'triNth',   n:6,  opts:['42', '36', '21', '15'], ans:2 },
-    { kind:'sqGrow',   n:4,  opts:['8', '9', '7', '5'],     ans:1 },
-    { kind:'triWhich', v:28, opts:['8', '6', '7', '14'],    ans:2 },
-    { kind:'kind',     vals:[1, 4, 9, 16], opts:['tri', 'arith', 'sq', 'other'], ans:2 }
-  ];
-  function roundAnswer(r){
-    if (r.kind === 'sqNth') return String(sqNum(r.n));
-    if (r.kind === 'triNth') return String(triNum(r.n));
-    if (r.kind === 'sqGrow') return String(sqGap(r.n));
-    if (r.kind === 'triWhich'){
-      var w = whichTri(r.v);
-      return w < 0 ? null : String(w);
+  /* ============ 小遊戲「圖形數實驗室接委託」的題庫與版面（§六之五；tools/checks/grade-4-figurate.js 直接讀這一段） ============
+     五關五種玩法，對應五個範例：
+     - 排正方形（範例 1）：N 顆珠子；在 9 × 9 的點陣上拉出「r 排、每排 c 個」（按住拖、或點一個點，拖的時候就停在點上）。
+       按「排好了」才判斷：r ＝ c 而且 r × c ＝ N 才收 —— N 是第 r 個正方形數。剛好 N 顆的長方形不收（排數和每排個數不一樣）。
+     - 補 L 形（範例 2）：n × n 的正方形要長成 (n ＋ 1) × (n ＋ 1)；托盤有橫的 n ＋ 1 個、n 個，直的 n ＋ 1 個、n 個四條長條（拿得完）。
+       兩條拼成 L 形：**一條 n ＋ 1、一條 n** 才收（轉角只算一次）；兩條都是 n ＋ 1 → 轉角算了兩次；兩條都是 n → 轉角空一格。
+       第一條放哪一個長度都可以（放好的位置從最左／最上排起）。一關長大兩次（n → n ＋ 1 → n ＋ 2）。
+     - 一排一排加（範例 3）：第 n 個三角形，每一排右邊一格「到這一排一共幾個」，第 1 排已經寫好 1；
+       數字卡是第 2～n 排的總數再加兩張誘答（都不是任何一排的總數），每一格只收它自己的總數。
+     - 拼長方形（範例 4）：藍色的第 n 個三角形畫好了；綠色一樣大的三角形一開始和藍色同一個方向，要先按「↻ 轉半圈」
+       再拖到淡色的點上 —— 沒轉不收。拼好之後在輸入框打「一個三角形有幾個點」：n × (n ＋ 1) ÷ 2。
+     - 分一分（範例 5）：四張「一串數字」卡分進 三角形數／正方形數／每次加一樣多／以上都不是，每一組四種各一張；
+       「每次加一樣多」那一張開頭一定像圖形數（1、4…／4、9…／3、6…／6、10…），「以上都不是」那一張的差也在長大，
+       可是第一個數不是任何一種圖形數。
+     版面一律是畫板上的 px（畫板 GAME_W 寬），位置一律記中心點。拿得起來的東西至少 GPICK × GPICK。 */
+  var GPICK = 48, GAME_W = 300;
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
     }
-    if (r.kind === 'kind') return kindOf(r.vals);
-    return null;
+    return a;
   }
-  /* 哪幾關要畫圖，以及畫哪一張。反過來問「第幾個」的那一關刻意不給圖 ——
-     給了圖就變成數排數，那一關的重點是**往上一排一排加**。 */
-  function roundFig(r){
-    if (r.kind === 'sqNth') return { kind:'sq', n:r.n, hi:0 };
-    if (r.kind === 'triNth') return { kind:'tri', n:r.n, hi:0 };
-    if (r.kind === 'sqGrow') return { kind:'sq', n:r.n + 1, hi:r.n + 1 };
-    return null;
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  /* 托盤不可以一開始就是答案的排法：洗牌之後剛好是（isAnswer 說是），就把前兩個交換 */
+  function trayOrder(list, isAnswer){
+    var a = shuffle(list);
+    if (a.length > 1 && isAnswer(a)){ var t = a[0]; a[0] = a[1]; a[1] = t; }
+    return a;
+  }
+
+  /* 第 1 關：排正方形。點陣左上角 (SQ.x0, SQ.y0)，一格 SQ.U，最多 SQ.max 排、每排 SQ.max 個。 */
+  var SQ = { x0:15, y0:8, U:30, max:9, dot:0.3 }, SQ_H = 286;
+  var GAME_SQ = [16, 25, 36, 49];
+  /* 點到哪裡 → 第幾排／第幾個：第 i 個點的那一整格（含點本身）就是 i，每一個看得到的點自己一格，不四捨五入跨點 */
+  function sqCell(v0, p){ return Math.max(1, Math.min(SQ.max, Math.floor((p - v0) / SQ.U) + 1)); }
+  function sqPick(pt){ return { c:sqCell(SQ.x0, pt.x), r:sqCell(SQ.y0, pt.y) }; }
+  /* 'ok' 正方形而且剛好 N 顆；'rect' 剛好 N 顆可是不是正方形；'few'／'many' 正方形可是太少／太多；'other' 兩樣都不對 */
+  function sqJudge(N, r, c){
+    if (r === c && r * c === N) return 'ok';
+    if (r * c === N) return 'rect';
+    if (r === c) return r * c < N ? 'few' : 'many';
+    return 'other';
+  }
+
+  /* 第 2 關：補 L 形。正方形左上角 (GROW.x0, GROW.y0)，一格 GROW.U；直的長條放在右邊兩欄（中心 x ＝ vx），橫的放在下面兩排（中心 y ＝ hy）。 */
+  var GROW = { x0:20, y0:12, U:28, vx:[200, 258], hy:[194, 252], pad:12, dot:0.3 }, GROW_H = 286;
+  var GAME_GROW = [2, 3];   /* 從 n × n 開始，連長兩次：n → n ＋ 1 → n ＋ 2（最大 5 × 5） */
+  /* 長大成 (n ＋ 1) × (n ＋ 1) 時，下面那一排（side 'h'）和右邊那一欄（side 'v'）的方框 */
+  function growZone(n, side){
+    var G = GROW, k = n + 1;
+    return side === 'h'
+      ? { side:'h', cx:G.x0 + k * G.U / 2, cy:G.y0 + n * G.U + G.U / 2, hw:k * G.U / 2, hh:G.U / 2, done:false }
+      : { side:'v', cx:G.x0 + n * G.U + G.U / 2, cy:G.y0 + k * G.U / 2, hw:G.U / 2, hh:k * G.U / 2, done:false };
+  }
+  /* 一條 len 個的長條放好之後的中心：橫的從最左邊排起、直的從最上面排起 */
+  function growSpot(n, side, len){
+    var G = GROW;
+    return side === 'h' ? { x:G.x0 + len * G.U / 2, y:G.y0 + n * G.U + G.U / 2 }
+                        : { x:G.x0 + n * G.U + G.U / 2, y:G.y0 + len * G.U / 2 };
+  }
+  /* placed ＝ { h:已經放好的橫條長度或 0, v:直條長度或 0 }。再放一條 side／len 會怎樣：
+     'first' 第一條（n 或 n ＋ 1 都可以）；'done' 兩條加起來 2n ＋ 1（轉角只算一次）；'twice' 轉角算了兩次；'gap' 轉角空一格 */
+  function growJudge(n, placed, side, len){
+    var other = side === 'h' ? placed.v : placed.h;
+    if (!other) return 'first';
+    if (other + len === 2 * n + 1) return 'done';
+    return other + len > 2 * n + 1 ? 'twice' : 'gap';
+  }
+
+  /* 第 3 關：一排一排加。第 r 排的點從 (LAD.x0, 第 r 排中線) 往右排，格子在右邊；數字卡托盤兩排。 */
+  var LAD = { x0:14, y0:8, dx:28, dy:50, dot:0.3, slotX:198, slotW:64, slotH:46, pad:10, trayGap:14, cardStep:58, rowStep:58 };
+  var GAME_TRI = [ { n:5, decoys:[9, 14] }, { n:6, decoys:[12, 20] }, { n:6, decoys:[9, 16] }, { n:5, decoys:[8, 16] } ];
+  function ladRowY(r){ return LAD.y0 + (r - 0.5) * LAD.dy; }
+  /* 托盤兩排卡片的中心 y：緊接在第 n 排的格子下面 */
+  function ladCardY(n, row){ return ladRowY(n) + LAD.slotH / 2 + LAD.trayGap + GPICK / 2 + row * LAD.rowStep; }
+  function ladH(n){ return ladCardY(n, 1) + GPICK / 2 + 8; }
+  /* 第 2～n 排的格子（第 1 排已經寫好 1） */
+  function ladSlots(n){
+    var out = [];
+    for (var r = 2; r <= n; r++)
+      out.push({ r:r, want:triNum(r), cx:LAD.slotX + LAD.slotW / 2, cy:ladRowY(r), hw:LAD.slotW / 2, hh:LAD.slotH / 2, done:false });
+    return out;
+  }
+  /* 這一格收不收這張卡：只收它自己那一排的總數 */
+  function ladAccept(slot, v){ return v === slot.want; }
+  /* 數字卡：每一排的總數 ＋ 兩張誘答，洗牌，不可以一開始就由小到大 */
+  function ladCards(e){
+    var vals = [];
+    for (var r = 2; r <= e.n; r++) vals.push(triNum(r));
+    return trayOrder(vals.concat(e.decoys), function(a){
+      for (var i = 1; i < a.length; i++) if (a[i] < a[i - 1]) return false;
+      return true;
+    });
+  }
+  /* 第 i 張卡在托盤的哪裡：第一排放 4 張，其餘放第二排，每一排置中 */
+  function ladCardXY(i, count, n){
+    var row = i < 4 ? 0 : 1, inRow = row === 0 ? Math.min(4, count) : count - 4, col = row === 0 ? i : i - 4;
+    return { x:GAME_W / 2 + (col - (inRow - 1) / 2) * LAD.cardStep, y:ladCardY(n, row) };
+  }
+
+  /* 第 4 關：拼長方形。n 排、每排 n ＋ 1 個的長方形置中；藍色是每一排的前 row ＋ 1 個，綠色（淡色的點）是其餘的。 */
+  var RECT = { y0:10, U:26, dot:0.3, pad:14, gap:22 };
+  var GAME_RECT = [5, 6];
+  function rectX0(n){ return (GAME_W - (n + 1) * RECT.U) / 2; }
+  /* 綠色那一塊的方框：第 1～n 欄、第 0～n − 1 排 */
+  function rectZone(n){ var U = RECT.U; return { cx:rectX0(n) + U + n * U / 2, cy:RECT.y0 + n * U / 2, hw:n * U / 2, hh:n * U / 2, done:false }; }
+  function rectTray(n){ return { x:GAME_W / 2, y:RECT.y0 + n * RECT.U + RECT.gap + n * RECT.U / 2 }; }
+  function rectH(n){ return RECT.y0 + 2 * n * RECT.U + RECT.gap + 10; }
+  /* 綠色三角形在自己 n × n 的方框裡：沒轉的時候和藍色同一個方向（第 row 排是前 row ＋ 1 個）；
+     轉半圈之後 (row, col) → (n − 1 − row, n − 1 − col)，變成每一排的後 row ＋ 1 個，剛好補滿 */
+  function greenCells(n, turned){
+    var out = [];
+    for (var row = 0; row < n; row++)
+      for (var col = 0; col <= row; col++)
+        out.push(turned ? { row:n - 1 - row, col:n - 1 - col } : { row:row, col:col });
+    return out;
+  }
+  /* 打好的數字：'ok' 一個三角形；'whole' 整個長方形（忘了除以 2）；'sq' 算成 n × n；'other' 其他 */
+  function rectJudge(n, v){
+    if (v === triNum(n)) return 'ok';
+    if (v === rectDots(n)) return 'whole';
+    if (v === n * n) return 'sq';
+    return 'other';
+  }
+  /* 只收寫法正常的整數（前後空白可以），「3 4」「034」「3.4」都不收 */
+  function readInt(s){ s = String(s).trim(); return /^(0|[1-9]\d{0,3})$/.test(s) ? +s : null; }
+
+  /* 第 5 關：分一分。四個箱子 2 × 2（照 KIND_ORDER），托盤 2 × 2。 */
+  var KIND_ORDER = ['tri', 'sq', 'arith', 'other'];
+  var KIND_BIN = { x:[4, 154], y:[4, 104], w:142, h:94, lbl:38, pad:10 }, KIND_CARD = { w:132, h:GPICK }, KIND_TRAY = { x:[75, 225], y:[234, 292] }, KIND_H = 322;
+  var GAME_KIND = [
+    [ [3, 6, 10, 15],  [4, 9, 16, 25],   [1, 4, 7, 10],  [2, 4, 7, 11] ],
+    [ [1, 3, 6, 10],   [9, 16, 25, 36],  [3, 6, 9, 12],  [2, 5, 10, 17] ],
+    [ [6, 10, 15, 21], [1, 4, 9, 16],    [4, 9, 14, 19], [5, 7, 10, 14] ],
+    [ [10, 15, 21, 28], [16, 25, 36, 49], [6, 10, 14, 18], [5, 8, 13, 20] ]
+  ];
+  function kindBins(){
+    return KIND_ORDER.map(function(k, i){
+      var B = KIND_BIN, x = B.x[i % 2], y = B.y[i < 2 ? 0 : 1];
+      return { i:i, kind:k, x:x, y:y, cx:x + B.w / 2, cy:y + B.h / 2, hw:B.w / 2, hh:B.h / 2, done:false };
+    });
+  }
+  /* 托盤：第 i 個位置在第 i % 2 欄、第 floor(i / 2) 排，和箱子同一個排法。洗牌後不可以每一張剛好在自己的箱子下面 */
+  function kindTray(set){
+    return trayOrder(set, function(a){ return a.every(function(v, i){ return kindOf(v) === KIND_ORDER[i]; }); });
+  }
+  function kindTrayXY(i){ return { x:KIND_TRAY.x[i % 2], y:KIND_TRAY.y[i < 2 ? 0 : 1] }; }
+  /* 這一串為什麼是它那一種：字典的 gKindWhy[kind](gaps, v, k) 用 —— k 是第一個數是第幾個三角形數／正方形數（另外兩種用不到） */
+  function kindWhy(vals){
+    var kind = kindOf(vals), v = vals[0];
+    return { kind:kind, gaps:gapsOf(vals), v:v, k:kind === 'tri' ? whichTri(v) : (kind === 'sq' ? whichSq(v) : 0) };
   }
 
   /* ---------- i18n ---------- */
@@ -609,7 +757,7 @@
         return '這一串是<strong>' + kind + '</strong>。每一個差是 ' + gaps.join('、') + ' —— <strong>差一直在長大</strong>，所以「規律偵探社」的兩條公式在這裡<strong>不能用</strong>。';
       },
       s5narrArith:function(gaps){
-        return '這一串的差都是 <strong>' + gaps[0] + '</strong>，<strong>每一個差都一樣</strong> —— 這種才可以用「規律偵探社」的公式。它不是圖形數。';
+        return '這一串的差都是 <strong>' + gaps[0] + '</strong>，<strong>每一個差都一樣</strong> —— 這種才可以用「規律偵探社」的公式。它不是連著的三角形數或正方形數。';
       },
       s5calcBad:function(first, n, gap, guess, real){
         return '用上一課的公式：' + first + ' ＋ ' + (n - 1) + ' × ' + gap + ' ＝ ' + guess + '，可是真正的第 ' + n + ' 個是 ' + real + '。';
@@ -629,35 +777,82 @@
       cAll:'全部答對 🏆', cGood:'很不錯，錯的看一下說明。', cTry:'回到上面的範例再玩一次吧。',
 
       s7h2:'圖形數實驗室接委託',
-      s7lead:'五個委託，每一個都先問自己：<strong>這是正方形數還是三角形數？要往前算還是反過來算？</strong>',
+      s7lead:'五個委託五種玩法：排正方形、補 L 形、一排一排加、拼長方形、分一分。放錯只扣一點分，隨時可以再試！',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
       gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gPrompt:{
-        sqNth:function(n){ return '第 <strong>' + n + '</strong> 個正方形數是多少？'; },
-        triNth:function(n){ return '第 <strong>' + n + '</strong> 個三角形數是多少？'; },
-        sqGrow:function(n){ return '從第 <strong>' + n + '</strong> 個正方形數長到第 <strong>' + (n + 1) + '</strong> 個，要補幾個點？'; },
-        triWhich:function(v){ return '<strong>' + v + '</strong> 是第幾個三角形數？'; },
-        kindQ:function(list){ return '<strong>' + list + '</strong> 是哪一種？'; }
+      gAsks:{
+        square:'委託 1：把珠子排成一個正方形，一顆都不剩。按住點陣拖（或點一個點），拉出幾排、每排幾個，再按「排好了」。',
+        grow:'委託 2：把正方形長大一圈。拿兩條長條補在右邊和下面（拖過去，或先點長條、再點淡色的點），拼成一個 L 形。',
+        tri:'委託 3：三角形一排比一排多 1 個。把數字卡放進每一排右邊的格子：到這一排為止，一共幾個點？',
+        rect:'委託 4：兩個一樣的三角形拼成一個長方形。先把綠色的轉半圈，再放到淡色的點上；拼好之後算一個三角形有幾個點。',
+        kind:'委託 5：每一串數字是哪一種？把卡片放進對的箱子（拖過去，或先點卡片、再點箱子）。'
       },
-      gHint1:{
-        sqNth:'正方形數是「幾排 × 每排幾個」，兩個數字一樣。',
-        triNth:'兩個一樣的三角形拼成長方形，算完長方形再除以 2。',
-        sqGrow:'補上去的是一個 L 形：橫的一排和直的一排，轉角只算一次。',
-        triWhich:'從 1 開始一排一排加上去：1、1 ＋ 2、1 ＋ 2 ＋ 3…，加到它為止。',
-        kindQ:'先把每一個差都算出來，看看差都一樣還是在長大。'
+      gHints:{
+        square:'正方形的排數和每排的個數一樣多：找一個數，自己乘自己剛好是珠子的個數。',
+        grow:'L 形有橫的一邊和直的一邊，兩邊一樣長，可是轉角那一個點只能算一次。',
+        tri:'到這一排一共幾個 ＝ 上一排的總數 ＋ 這一排的個數；每往下一排就多 1 個。',
+        rect:'把一個三角形轉半圈，剛好補滿另一個旁邊的空位。長方形好算，算完再除以 2。',
+        kind:'先算出每一個差：差都一樣？每次多 1？每次多 2？再看第一個數是不是三角形數或正方形數。'
       },
-      gHint2:{
-        sqNth:function(n){ return '算式是 ' + n + ' × ' + n + '。'; },
-        triNth:function(n){ return '長方形是 ' + n + ' × ' + (n + 1) + '，別忘了再除以 2。'; },
-        sqGrow:function(n){ return '橫的 ' + (n + 1) + ' 個、直的 ' + (n + 1) + ' 個，轉角重複算了一次。'; },
-        triWhich:function(v){ return '一排一排加：1、3、6、10、15、21…，看看加到第幾排會是 ' + v + '。'; },
-        kindQ:function(gaps){ return '每一個差是 ' + gaps.join('、') + '。'; }
-      },
-      gCorrectFirst:'一次就對，＋20 分！',
-      gCorrectRetry:'修好了，＋10 分。',
-      gWrong:function(lost){ return lost > 0 ? '再看一次題目和提示，扣 ' + lost + ' 分。' : '再看一次題目和提示。'; },
+      gPts:function(p){ return '＋' + p + ' 分'; },
+      gMinus:'扣 5 分',
       gClear:'可以接下一個委託了。',
       gWin:function(s){ return '五個委託全部交件！總分 ' + s + ' 分 🏆'; },
+
+      gSqNow:function(N, r, c){ return '珠子 ' + N + ' 顆　排了 ' + r + ' × ' + c + ' ＝ ' + (r * c) + ' 顆'; },
+      gSqGrid:'點陣：按住拖，拉出幾排、每排幾個',
+      gSqBtn:'排好了',
+      gSqNone:'先拉一拉：按住點陣往右下拖，或點一個點。',
+      gSqRect:function(N, r, c){ return r + ' 排、每排 ' + c + ' 個剛好是 ' + N + ' 顆，可是那是長方形：正方形的排數和每排的個數要一樣多。'; },
+      gSqFew:function(N, r){ return r + ' × ' + r + ' ＝ ' + (r * r) + '，還剩 ' + (N - r * r) + ' 顆沒排進去（珠子有 ' + N + ' 顆）。'; },
+      gSqMany:function(N, r){ return r + ' × ' + r + ' ＝ ' + (r * r) + '，要 ' + (r * r) + ' 顆珠子，可是只有 ' + N + ' 顆，少了 ' + (r * r - N) + ' 顆。'; },
+      gSqOther:function(N, r, c){ return r + ' 排、每排 ' + c + ' 個不是正方形（排數和每排的個數不一樣），而且 ' + r + ' × ' + c + ' ＝ ' + (r * c) + '，不是 ' + N + '。'; },
+      gSqDone:function(N, n){ return N + ' ＝ ' + n + ' × ' + n + '：排成 ' + n + ' 排、每排 ' + n + ' 個。' + N + ' 是第 ' + n + ' 個正方形數。'; },
+      gSq2:function(lo, hi){ return lo + ' × ' + lo + ' ＝ ' + (lo * lo) + ' 太少，' + hi + ' × ' + hi + ' ＝ ' + (hi * hi) + ' 太多，答案在中間。'; },
+
+      gGrowNow:function(list, total){ return list.join(' ＋ ') + ' ＝ ' + total + ' 個點'; },
+      gBarH:function(len){ return '橫的長條，' + len + ' 個點'; },
+      gBarV:function(len){ return '直的長條，' + len + ' 個點'; },
+      gGrowOne:function(len){ return '放好 ' + len + ' 個點了，再補另一邊。'; },
+      gGrowTwice:function(k){ return '兩條都是 ' + k + ' 個：轉角那一個點被算了兩次，疊在一起了。一條 ' + k + ' 個，另一條只要 ' + (k - 1) + ' 個。'; },
+      gGrowGap:function(k){ return '兩條都只有 ' + (k - 1) + ' 個：轉角會空一格。要有一條是 ' + k + ' 個。'; },
+      gGrowStep:function(k, total){ return '補上第 ' + k + ' 個 L 形：橫的 ' + k + ' 個、直的 ' + k + ' 個，轉角只算一次，' + k + ' ＋ ' + k + ' － 1 ＝ ' + (2 * k - 1) + ' 個點，一共 ' + total + ' 個。再長大一圈！'; },
+      gGrowDone:function(k, total){ return '補上第 ' + k + ' 個 L 形：' + k + ' ＋ ' + k + ' － 1 ＝ ' + (2 * k - 1) + ' 個點。加上去的點數都是奇數，一共 ' + total + ' ＝ ' + k + ' × ' + k + ' 個。'; },
+      gGrow2:function(k){ return '橫的放 ' + k + ' 個，直的就只放 ' + (k - 1) + ' 個（轉角已經有了）：' + k + ' ＋ ' + (k - 1) + ' ＝ ' + (2 * k - 1) + ' 個點。'; },
+
+      gTriNow:function(k, n){ return '算好 ' + k + ' / ' + n + ' 排'; },
+      gTriCard:function(v){ return '數字卡 ' + v; },
+      gTriWrong:function(r, prev, v){ return '第 ' + r + ' 排有 ' + r + ' 個點：上一排為止一共 ' + prev + ' 個，' + prev + ' ＋ ' + r + ' ＝ ' + (prev + r) + '，不是 ' + v + '。'; },
+      gTriOk:function(r, total){ return '到第 ' + r + ' 排一共 ' + total + ' 個點。'; },
+      gTriDone:function(list, total, n){ return list.join(' ＋ ') + ' ＝ ' + total + '：第 ' + n + ' 個三角形數是 ' + total + '。'; },
+      gTri2:function(r, prev){ return '第 ' + r + ' 排：' + prev + ' ＋ ' + r + ' ＝ ' + (prev + r) + '。'; },
+
+      gRectNow:function(n){ return '藍色和綠色都是第 ' + n + ' 個三角形數'; },
+      gRectNow2:function(n, m){ return n + ' 排、每排 ' + m + ' 個的長方形'; },
+      gGreen:'綠色的三角形',
+      gTurnBtn:'↻ 轉半圈',
+      gRectNoTurn:'沒有轉的話，兩個階梯朝同一邊，拼不成長方形：先按「↻ 轉半圈」。',
+      gRectFit:function(n, m){ return '拼好了：' + n + ' 排、每排 ' + m + ' 個的長方形，' + n + ' × ' + m + ' ＝ ' + (n * m) + ' 個點。一個三角形有幾個點？'; },
+      gRectAsk:'一個三角形有', gRectUnit:'個點', gRectOkBtn:'好了', gRectInAria:'一個三角形有幾個點',
+      gRectInt:'請打一個整數，不要有空格、小數點或開頭的 0。',
+      gRectWhole:function(R){ return R + ' 是整個長方形 —— 那是兩個三角形拼起來的，一個要再除以 2。'; },
+      gRectSq:function(n){ return n + ' × ' + n + ' ＝ ' + (n * n) + ' 不對：長方形是 ' + n + ' 排、每排 ' + (n + 1) + ' 個（兩個階梯錯開一格），不是 ' + n + ' 排、每排 ' + n + ' 個。'; },
+      gRectOther:function(n, m, v){ return '不是 ' + v + '。長方形有 ' + n + ' × ' + m + ' ＝ ' + (n * m) + ' 個點，一個三角形是它的一半。'; },
+      gRectDone:function(n, m, T){ return n + ' × ' + m + ' ＝ ' + (n * m) + '，' + (n * m) + ' ÷ 2 ＝ ' + T + '：第 ' + n + ' 個三角形數是 ' + T + '。'; },
+      gRect2a:function(n, m){ return '按「↻ 轉半圈」，再把綠色的三角形放到淡色的點上：藍色加綠色會是 ' + n + ' 排、每排 ' + m + ' 個的長方形。'; },
+      gRect2b:function(n, m){ return '長方形是 ' + n + ' × ' + m + ' ＝ ' + (n * m) + ' 個點，一個三角形是它的一半。'; },
+
+      gKindNow:function(k){ return '分好了 ' + k + ' / 4 張'; },
+      gKindList:function(vals){ return vals.join('、'); },
+      gKindWhy:{
+        tri:function(gaps, v, k){ return '差是 ' + gaps.join('、') + '，每次多 1，從第 ' + k + ' 個三角形數 ' + v + ' 開始：是連著的三角形數。'; },
+        sq:function(gaps, v, k){ return '差是 ' + gaps.join('、') + '，每次多 2，' + v + ' ＝ ' + k + ' × ' + k + '：是連著的正方形數。'; },
+        arith:function(gaps){ return '差都是 ' + gaps[0] + '：每次加一樣多，不是連著的三角形數或正方形數。'; },
+        other:function(gaps, v){ return '差是 ' + gaps.join('、') + '，在長大，可是 ' + v + ' 不是三角形數，也不是正方形數。'; }
+      },
+      gKindWrong:function(bin, why){ return '不是「' + bin + '」：' + why; },
+      gKindDone:'四串都分好了！差在長大的不一定是圖形數，要看它是不是連著的三角形數或正方形數。',
+      gKind2:function(list, gaps){ return '「' + list + '」的差是 ' + gaps.join('、') + '。'; },
 
       nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
@@ -786,7 +981,7 @@
         return 'This run is made of <strong>' + kind + '</strong>. The gaps are ' + gaps.join(', ') + ' — <strong>they keep growing</strong>, so the two formulas from “The Pattern Detectives” are <strong>off limits</strong> here.';
       },
       s5narrArith:function(gaps){
-        return 'Every gap in this run is <strong>' + gaps[0] + '</strong>, so <strong>the gaps are all the same</strong> — that is the kind the Pattern Detectives’ formula is for. It is not a shape number.';
+        return 'Every gap in this run is <strong>' + gaps[0] + '</strong>, so <strong>the gaps are all the same</strong> — that is the kind the Pattern Detectives’ formula is for. It is not a run of triangular or square numbers.';
       },
       s5calcBad:function(first, n, gap, guess, real){
         return 'Using the earlier formula: ' + first + ' + ' + (n - 1) + ' × ' + gap + ' = ' + guess + ', but the real ' + ordEn(n) + ' one is ' + real + '.';
@@ -806,35 +1001,82 @@
       cAll:'All correct 🏆', cGood:'Nicely done — read the ones you missed.', cTry:'Go back up to the examples and try once more.',
 
       s7h2:'Orders for the Shape-Number Lab',
-      s7lead:'Five orders. For each one, ask yourself first: <strong>is this a square number or a triangular number, and am I going forwards or backwards?</strong>',
-      gRoundLabel:'Order', gRoundUnit:'of 5', gScoreLabel:'Score',
+      s7lead:'Five orders, five ways to play: build a square, add an L-shape, add up the rows, make a rectangle, sort the runs. A mistake only costs a few points — try again any time!',
+      gRoundLabel:'Order', gRoundUnit:'', gScoreLabel:'Score',
       gHintBtn:'💡 Hint', gNextBtn:'Next order', gRestartBtn:'Start again',
-      gPrompt:{
-        sqNth:function(n){ return 'What is the <strong>' + ordEn(n) + '</strong> square number?'; },
-        triNth:function(n){ return 'What is the <strong>' + ordEn(n) + '</strong> triangular number?'; },
-        sqGrow:function(n){ return 'Growing from the <strong>' + ordEn(n) + '</strong> square number to the <strong>' + ordEn(n + 1) + '</strong>, how many dots get added?'; },
-        triWhich:function(v){ return 'Which position is <strong>' + v + '</strong> in the triangular numbers?'; },
-        kindQ:function(list){ return 'What kind of run is <strong>' + list + '</strong>?'; }
+      gAsks:{
+        square:'Order 1: arrange the beads into a square with none left over. Press on the dot grid and drag (or tap a dot) to set the rows and how many per row, then press “Done”.',
+        grow:'Order 2: grow the square by one. Put two strips down the right side and along the bottom (drag them, or tap a strip and then the pale dots) to make an L-shape.',
+        tri:'Order 3: each row of the triangle holds one more than the row above. Put a number card in the box beside each row: how many dots are there down to that row?',
+        rect:'Order 4: two identical triangles make a rectangle. Turn the green one half way round first, then put it on the pale dots; once it fits, work out how many dots one triangle has.',
+        kind:'Order 5: what kind of run is each one? Put each card in the right box (drag it, or tap the card and then the box).'
       },
-      gHint1:{
-        sqNth:'A square number is “rows × per row”, and those two numbers are equal.',
-        triNth:'Two identical triangles make a rectangle — work out the rectangle, then divide by 2.',
-        sqGrow:'What gets added is an L-shape: one row across and one down, with the corner counted once.',
-        triWhich:'Add the rows from 1: 1, 1 + 2, 1 + 2 + 3… and keep going until you land on it.',
-        kindQ:'Work out every gap first, then see whether they stay the same or keep growing.'
+      gHints:{
+        square:'A square has as many rows as dots in each row: find a number that times itself makes the number of beads.',
+        grow:'An L-shape has a side across and a side down, both the same length, but the corner dot may only be counted once.',
+        tri:'Down to this row = the total down to the row above + the dots in this row; each row down holds one more.',
+        rect:'Turn one triangle half way round and it fills the gap beside the other exactly. A rectangle is easy to count — then divide by 2.',
+        kind:'Work out every gap first: are they all the same? One more each time? Two more each time? Then check whether the first number is a triangular or a square number.'
       },
-      gHint2:{
-        sqNth:function(n){ return 'The sum is ' + n + ' × ' + n + '.'; },
-        triNth:function(n){ return 'The rectangle is ' + n + ' × ' + (n + 1) + ' — do not forget to divide by 2.'; },
-        sqGrow:function(n){ return (n + 1) + ' across and ' + (n + 1) + ' down, with the corner counted twice.'; },
-        triWhich:function(v){ return 'Row by row: 1, 3, 6, 10, 15, 21… see which row lands on ' + v + '.'; },
-        kindQ:function(gaps){ return 'The gaps are ' + gaps.join(', ') + '.'; }
-      },
-      gCorrectFirst:'Right first time, +20!',
-      gCorrectRetry:'Fixed it, +10.',
-      gWrong:function(lost){ return lost > 0 ? 'Look at the question and the hint once more, ' + lost + ' off.' : 'Look at the question and the hint once more.'; },
+      gPts:function(p){ return '+' + p + ' points'; },
+      gMinus:'5 points off',
       gClear:'Ready for the next order.',
       gWin:function(s){ return 'All five orders delivered! Total score ' + s + ' 🏆'; },
+
+      gSqNow:function(N, r, c){ var p = r * c; return N + ' beads · placed ' + r + ' × ' + c + ' = ' + p + ' ' + plEn(p, 'bead'); },
+      gSqGrid:'Dot grid: press and drag to set the rows and how many per row',
+      gSqBtn:'Done',
+      gSqNone:'Stretch it first: press on the dot grid and drag down to the right, or tap a dot.',
+      gSqRect:function(N, r, c){ return r + ' ' + plEn(r, 'row') + ' of ' + c + ' is exactly ' + N + ' beads, but that is a rectangle: a square needs as many rows as beads in each row.'; },
+      gSqFew:function(N, r){ var left = N - r * r; return r + ' × ' + r + ' = ' + (r * r) + ', so ' + left + ' ' + plEn(left, 'bead') + (left === 1 ? ' is' : ' are') + ' still left over (there are ' + N + ' beads).'; },
+      gSqMany:function(N, r){ var short = r * r - N; return r + ' × ' + r + ' = ' + (r * r) + ' needs ' + (r * r) + ' beads, but there are only ' + N + ', so ' + short + ' ' + plEn(short, 'bead') + ' short.'; },
+      gSqOther:function(N, r, c){ return r + ' ' + plEn(r, 'row') + ' of ' + c + ' is not a square (the rows and the beads per row differ), and ' + r + ' × ' + c + ' = ' + (r * c) + ', not ' + N + '.'; },
+      gSqDone:function(N, n){ return N + ' = ' + n + ' × ' + n + ': ' + n + ' rows of ' + n + '. ' + N + ' is the ' + ordEn(n) + ' square number.'; },
+      gSq2:function(lo, hi){ return lo + ' × ' + lo + ' = ' + (lo * lo) + ' is too few and ' + hi + ' × ' + hi + ' = ' + (hi * hi) + ' is too many; the answer is in between.'; },
+
+      gGrowNow:function(list, total){ return list.join(' + ') + ' = ' + total + ' dots'; },
+      gBarH:function(len){ return 'Strip across, ' + len + ' dots'; },
+      gBarV:function(len){ return 'Strip down, ' + len + ' dots'; },
+      gGrowOne:function(len){ return 'That is ' + len + ' dots in place — now fill the other side.'; },
+      gGrowTwice:function(k){ return 'Both strips hold ' + k + ': the corner dot gets counted twice and the strips overlap. One strip of ' + k + ', and the other only needs ' + (k - 1) + '.'; },
+      gGrowGap:function(k){ return 'Both strips hold only ' + (k - 1) + ': the corner would be left empty. One of them has to hold ' + k + '.'; },
+      gGrowStep:function(k, total){ return 'L-shape number ' + k + ' is in: ' + k + ' across and ' + k + ' down, with the corner counted once, so ' + k + ' + ' + k + ' − 1 = ' + (2 * k - 1) + ' dots, ' + total + ' in all. Grow it once more!'; },
+      gGrowDone:function(k, total){ return 'L-shape number ' + k + ' is in: ' + k + ' + ' + k + ' − 1 = ' + (2 * k - 1) + ' dots. Every L-shape added an odd number of dots, and there are ' + total + ' = ' + k + ' × ' + k + ' in all.'; },
+      gGrow2:function(k){ return 'Put ' + k + ' across and only ' + (k - 1) + ' down (the corner is already there): ' + k + ' + ' + (k - 1) + ' = ' + (2 * k - 1) + ' dots.'; },
+
+      gTriNow:function(k, n){ return 'Rows done: ' + k + ' / ' + n; },
+      gTriCard:function(v){ return 'Number card ' + v; },
+      gTriWrong:function(r, prev, v){ return 'Row ' + r + ' holds ' + r + ' dots: down to the row above there ' + (prev === 1 ? 'is ' : 'are ') + prev + ', and ' + prev + ' + ' + r + ' = ' + (prev + r) + ', not ' + v + '.'; },
+      gTriOk:function(r, total){ return 'Down to row ' + r + ' there are ' + total + ' dots.'; },
+      gTriDone:function(list, total, n){ return list.join(' + ') + ' = ' + total + ': the ' + ordEn(n) + ' triangular number is ' + total + '.'; },
+      gTri2:function(r, prev){ return 'Row ' + r + ': ' + prev + ' + ' + r + ' = ' + (prev + r) + '.'; },
+
+      gRectNow:function(n){ return 'Blue and green are each the ' + ordEn(n) + ' triangular number'; },
+      gRectNow2:function(n, m){ return 'A rectangle of ' + n + ' rows of ' + m; },
+      gGreen:'The green triangle',
+      gTurnBtn:'↻ Turn half way',
+      gRectNoTurn:'Without turning it, both staircases face the same way and cannot make a rectangle: press “↻ Turn half way” first.',
+      gRectFit:function(n, m){ return 'It fits: a rectangle of ' + n + ' rows of ' + m + ', ' + n + ' × ' + m + ' = ' + (n * m) + ' dots. How many dots does one triangle have?'; },
+      gRectAsk:'One triangle has', gRectUnit:'dots', gRectOkBtn:'Done', gRectInAria:'How many dots one triangle has',
+      gRectInt:'Please type one whole number, with no spaces, no decimal point and no leading 0.',
+      gRectWhole:function(R){ return R + ' is the whole rectangle — that is two triangles fitted together, so one of them needs dividing by 2.'; },
+      gRectSq:function(n){ return n + ' × ' + n + ' = ' + (n * n) + ' is not it: the rectangle is ' + n + ' rows of ' + (n + 1) + ' (the two staircases sit one step apart), not ' + n + ' rows of ' + n + '.'; },
+      gRectOther:function(n, m, v){ return 'Not ' + v + '. The rectangle holds ' + n + ' × ' + m + ' = ' + (n * m) + ' dots, and one triangle is half of it.'; },
+      gRectDone:function(n, m, T){ return n + ' × ' + m + ' = ' + (n * m) + ', and ' + (n * m) + ' ÷ 2 = ' + T + ': the ' + ordEn(n) + ' triangular number is ' + T + '.'; },
+      gRect2a:function(n, m){ return 'Press “↻ Turn half way”, then put the green triangle on the pale dots: blue and green together make a rectangle of ' + n + ' rows of ' + m + '.'; },
+      gRect2b:function(n, m){ return 'The rectangle is ' + n + ' × ' + m + ' = ' + (n * m) + ' dots, and one triangle is half of it.'; },
+
+      gKindNow:function(k){ return 'Cards sorted: ' + k + ' / 4'; },
+      gKindList:function(vals){ return vals.join(', '); },
+      gKindWhy:{
+        tri:function(gaps, v, k){ return 'The gaps are ' + gaps.join(', ') + ', one more each time, starting from ' + v + ', the ' + ordEn(k) + ' triangular number: these are triangular numbers in a row.'; },
+        sq:function(gaps, v, k){ return 'The gaps are ' + gaps.join(', ') + ', two more each time, and ' + v + ' = ' + k + ' × ' + k + ': these are square numbers in a row.'; },
+        arith:function(gaps){ return 'Every gap is ' + gaps[0] + ': the same gap every time, so it is not a run of triangular or square numbers.'; },
+        other:function(gaps, v){ return 'The gaps are ' + gaps.join(', ') + ' and they grow, but ' + v + ' is neither a triangular number nor a square number.'; }
+      },
+      gKindWrong:function(bin, why){ return 'Not “' + bin + '”: ' + why; },
+      gKindDone:'All four runs are sorted! A run whose gaps grow is not always a shape number — it has to be triangular numbers or square numbers in a row.',
+      gKind2:function(list, gaps){ return 'The gaps of “' + list + '” are ' + gaps.join(', ') + '.'; },
 
       nextH2:'Three things that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
@@ -1184,123 +1426,555 @@
     });
   }
 
-  /* ===================== 小遊戲：接委託 ===================== */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 小遊戲：圖形數實驗室接委託（五關五種玩法，§六之五） =====================
+     中年級的輕度計分（§三）：一關沒犯錯 +20、犯過錯 +10；每一次「放錯並說明為什麼」−5，最低 0 分。
+     放到空白處只是手滑：靜靜回原位，不算錯。每一個拖拉都可以「先點東西、再點目的地」；
+     第 1 關沒有東西可以拿，「按住點陣拖、或點一個點」本身就是排；第 4 關的輸入框只提醒寫法，寫法不對不算錯。
+     題庫與版面常數在 i18n 前面的資料區。 */
+  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  /* 第幾次畫畫板：重新開始、切換語言、下一關、第 2 關的「再長大一圈」都會換一個新的畫板。還拿在手上的舊積木放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一塊畫板過關、加分；二年級 length 的 codex 抓到的）。 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gPromptEl = document.getElementById('gPrompt');
-  var gFig = document.getElementById('gFig');
-  var gCap = document.getElementById('gCap');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
-  var hintLevel = 0;
+  var GAME_ORDER = ['square', 'grow', 'tri', 'rect', 'kind'];
 
-  function roundKey(r){ return r.kind === 'kind' ? 'kindQ' : r.kind; }
-  function roundPromptText(d, r){
-    if (r.kind === 'sqNth') return d.gPrompt.sqNth(r.n);
-    if (r.kind === 'triNth') return d.gPrompt.triNth(r.n);
-    if (r.kind === 'sqGrow') return d.gPrompt.sqGrow(r.n);
-    if (r.kind === 'triWhich') return d.gPrompt.triWhich(r.v);
-    return d.gPrompt.kindQ(r.vals.join(lang === 'zh' ? '、' : ', '));
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null, onBoardTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    /* 點畫板（不是點在積木上）：只認第一根手指，按下和放開在同一個地方才算「點一下」 */
+    board.addEventListener('pointerdown', function(e){
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (!e.isPrimary) return;   /* 第二根手指：不理 —— 第一根手指按在畫板外、按鈕或積木上時也一樣 */
+      BOARD_TAP = { id:e.pointerId, x:e.clientX, y:e.clientY, far:false };
+    });
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      var t = BOARD_TAP, pt = B.toBoard(e);
+      if (t && t.id === e.pointerId) BOARD_TAP = null;
+      /* 「點目的地」只認第一根手指的「點一下」：別的手指放開、或滑動之後放開，都不算（不然想捲動也會被扣分） */
+      if (!t || t.id !== e.pointerId) return;
+      if (t.far || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10) return;   /* 中途離開按下去的地方超過 10px 就不是「點一下」 */
+      if (B.selected && B.onPointTap){ B.onPointTap(B.selected, pt); return; }
+      if (B.onBoardTap && !gSolved) B.onBoardTap(pt);
+    });
+    gameStage.appendChild(wrap);
+    return B;
   }
-  function roundOptText(d, r, key){
-    return r.kind === 'kind' ? d.kindName[key] : String(key);
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」；BOARD_TAP 記「按在畫板上的第一根手指」。
+     任何地方的 pointerup／pointercancel 傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {}, BOARD_TAP = null;
+  function clearPtr(e){ delete PIECE_PTR[e.pointerId]; if (BOARD_TAP && BOARD_TAP.id === e.pointerId) BOARD_TAP = null; }
+  window.addEventListener('pointerup', clearPtr);
+  window.addEventListener('pointercancel', clearPtr);
+  window.addEventListener('pointerdown', function(e){ delete PIECE_PTR[e.pointerId]; }, true);
+  window.addEventListener('pointermove', function(e){
+    if (BOARD_TAP && BOARD_TAP.id === e.pointerId && Math.hypot(e.clientX - BOARD_TAP.x, e.clientY - BOARD_TAP.y) > 10) BOARD_TAP.far = true;
+  });
+  /* 指標離開視窗時收不到 pointermove：一離開就當成走遠了（滑鼠拖出視窗再回來放開，不算點一下） */
+  window.addEventListener('pointerout', function(e){ if (BOARD_TAP && BOARD_TAP.id === e.pointerId && !e.relatedTarget) BOARD_TAP.far = true; });
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
   }
-  function roundHint2(d, r){
-    if (r.kind === 'sqNth') return d.gHint2.sqNth(r.n);
-    if (r.kind === 'triNth') return d.gHint2.triNth(r.n);
-    if (r.kind === 'sqGrow') return d.gHint2.sqGrow(r.n);
-    if (r.kind === 'triWhich') return d.gHint2.triWhich(r.v);
-    return d.gHint2.kindQ(gapsOf(r.vals));
+  /* 一張 SVG（不設 viewBox：寬高就是畫板 px）。圖上只有 <circle>／<rect>，字一律寫在 HTML 裡 */
+  function plainSvg(w, h){
+    var s = document.createElementNS(NS, 'svg');
+    s.setAttribute('width', w); s.setAttribute('height', h);
+    s.setAttribute('aria-hidden', 'true');
+    return s;
   }
+  function gSvg(B){ var s = plainSvg(B.W, B.H); B.el.appendChild(s); return s; }
+  function dot(svg, cx, cy, r, fill){ svg.appendChild(svgEl('circle', { cx:cx, cy:cy, r:r, fill:fill })); }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, cls, aria){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = text;
+    if (aria) b.setAttribute('aria-label', aria);
+    row.appendChild(b);
+    return b;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。
+         o.turn(P)：額外的 transform（第 4 關的「轉半圈」）；o.onPlace：每次位置改變（含彈回）都通知 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)' + (o.turn ? o.turn(P) : '');
+      if (o.onPlace) o.onPlace(P);
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣） */
+      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */
+      /* 先點選、後來又直接拖走的那一塊：拖完就不再是「選起來」的，不然下一次點目的地會多放一次 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的積木一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      /* 放在哪裡看那一塊的中心點；手指放開的位置另外附上（fx, fy）：從長條、卡片邊緣拿起來，手指放在目標上也算 */
+      var fp = B.toBoard(e);
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy, fx:fp.x, fy:fp.y }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（三年級 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+  /* 中心點落在哪一格；中心不在任何一格的範圍裡，再看手指放開的位置（從邊緣拿起來的卡片） */
+  function dropTarget(list, pt, pad){
+    var t = nearestOpen(list, pt, pad);
+    if (t || pt.fx === undefined) return t;
+    return nearestOpen(list, { x:pt.fx, y:pt.fy }, pad);
+  }
+
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「−5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+
+  var RENDER = {
+    /* 第 1 關：排正方形（範例 1）—— 9 × 9 的淡色點陣，左上角固定；按住拖或點一個點，拉出 r 排、每排 c 個（拖的時候就停在點上）。
+       按「排好了」才判斷：r ＝ c 而且 r × c ＝ N 才收。改形狀不算錯；還沒拉就按、另一根手指還拖著時按都只提醒／不理。 */
+    square: function(d){
+      var N = pick(GAME_SQ), r = 1, c = 1, touched = false, U = SQ.U, M = SQ.max, drag = null, gen = gGen;
+      var line = trailLine(d.gSqNow(N, r, c));
+      var B = makeBoard(GAME_W, SQ_H);
+      var svg = gSvg(B);
+      var pad = addZone(B, 0, 0, GAME_W, SQ_H, 'gsq');
+      pad.setAttribute('aria-label', d.gSqGrid);
+      function draw(){
+        svg.textContent = '';
+        svg.appendChild(svgEl('rect', { x:SQ.x0 + 2, y:SQ.y0 + 2, width:c * U - 4, height:r * U - 4, rx:8,
+          fill:'#FDF0E0', stroke:'#E8871E', 'stroke-width':3 }));
+        for (var i = 1; i <= M; i++) for (var j = 1; j <= M; j++)
+          dot(svg, SQ.x0 + (j - 0.5) * U, SQ.y0 + (i - 0.5) * U, U * SQ.dot, (i <= r && j <= c) ? C_DOT : C_HIDE);
+        line.textContent = d.gSqNow(N, r, c);
+      }
+      function setTo(pt){
+        var p = sqPick(pt);
+        touched = true;
+        if (p.r !== r || p.c !== c){ r = p.r; c = p.c; draw(); }
+      }
+      draw();
+      /* 自己處理按住拖：只跟著第一根手指；capture 遺失、在別處放開都只是結束（形狀就停在畫面上那一個） */
+      function stopDrag(){
+        if (!drag) return;
+        drag = null;
+        document.removeEventListener('pointerup', onDocEnd);
+        document.removeEventListener('pointercancel', onDocEnd);
+      }
+      function onDocEnd(e){ if (drag && e.pointerId === drag) stopDrag(); }
+      pad.addEventListener('pointerdown', function(e){
+        if (!e.isPrimary || drag !== null || gSolved || gen !== gGen) return;
+        e.preventDefault();
+        drag = e.pointerId;
+        try { pad.setPointerCapture(e.pointerId); } catch(err){}
+        document.addEventListener('pointerup', onDocEnd);
+        document.addEventListener('pointercancel', onDocEnd);
+        setTo(B.toBoard(e));
+      });
+      pad.addEventListener('pointermove', function(e){
+        if (drag === null || e.pointerId !== drag || gSolved || gen !== gGen) return;
+        setTo(B.toBoard(e));
+      });
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function(t){
+        pad.addEventListener(t, function(e){ if (drag !== null && e.pointerId === drag) stopDrag(); });
+      });
+      gCtx.hint2 = function(){ var n = Math.round(Math.sqrt(N)); return d.gSq2(n - 1, n + 1); };
+      var row = actionRow();
+      var go = actionBtn(row, d.gSqBtn);
+      go.addEventListener('click', function(){
+        if (gSolved || gen !== gGen) return;
+        if (drag !== null) return;   /* 另一根手指還拖著：形狀還沒定，不判、不扣分 */
+        if (!touched){ roundInfo(d.gSqNone); return; }
+        var j = sqJudge(N, r, c);
+        if (j === 'ok'){
+          go.disabled = true;
+          roundSolved(d.gSqDone(N, r));
+          return;
+        }
+        if (j === 'rect') roundMiss(d.gSqRect(N, r, c));
+        else if (j === 'few') roundMiss(d.gSqFew(N, r));
+        else if (j === 'many') roundMiss(d.gSqMany(N, r));
+        else roundMiss(d.gSqOther(N, r, c));
+      });
+    },
+
+    /* 第 2 關：補 L 形（範例 2）—— n × n 的正方形，淡色的點是下一個 L 形的位子；托盤有橫的 n ＋ 1、n 個，直的 n ＋ 1、n 個。
+       兩條拼成 L 形：一條 n ＋ 1、一條 n 才收（轉角只算一次）。第一條哪一個長度都可以；
+       第二條：兩條都是 n ＋ 1 → 轉角算了兩次；兩條都是 n → 轉角空一格。橫條只看下面那一排、直條只看右邊那一欄，放到別處靜靜回去。
+       補好之後換一塊新的畫板再長大一次（n ＋ 1 → n ＋ 2）。 */
+    grow: function(d){
+      var n = pick(GAME_GROW), times = 0, G = GROW, U = G.U, list = oddList(n);
+      var line = trailLine(d.gGrowNow(list.map(String), sqNum(n)));
+      var B = null;
+      function build(){
+        if (B){ B.wrap.parentNode.removeChild(B.wrap); gGen++; BOARD_TAP = null; PIECE_PTR = {}; }
+        var k = n + 1, placed = { h:0, v:0 }, myGen = gGen;
+        B = makeBoard(GAME_W, GROW_H);
+        var svg = gSvg(B);
+        for (var row = 0; row <= n; row++) for (var col = 0; col <= n; col++){
+          var kk = Math.max(row, col) + 1;
+          var fill = kk === k ? C_HIDE : C_DOT;
+          dot(svg, G.x0 + (col + 0.5) * U, G.y0 + (row + 0.5) * U, U * G.dot, fill);
+        }
+        var zones = { h:growZone(n, 'h'), v:growZone(n, 'v') };
+        function bar(side, len, slot){
+          var horiz = side === 'h', r0 = U * G.dot;
+          var o = horiz ? { w:len * U, h:GPICK, cx:G.x0 + len * U / 2, cy:G.hy[slot] }
+                        : { w:GPICK, h:len * U, cx:G.vx[slot], cy:G.y0 + len * U / 2 };
+          o.cls = 'gbar'; o.label = horiz ? d.gBarH(len) : d.gBarV(len); o.data = { side:side, len:len };
+          var P = addPiece(B, o);
+          P.el.style.backgroundImage = 'radial-gradient(circle, ' + C_NEW + ' ' + r0 + 'px, transparent ' + (r0 + 0.5) + 'px)';
+          P.el.style.backgroundSize = horiz ? (U + 'px ' + GPICK + 'px') : (GPICK + 'px ' + U + 'px');
+          P.el.style.backgroundRepeat = horiz ? 'repeat-x' : 'repeat-y';
+          return P;
+        }
+        var hl = shuffle([k, n]), vl = shuffle([k, n]);
+        var bars = [bar('h', hl[0], 0), bar('h', hl[1], 1), bar('v', vl[0], 0), bar('v', vl[1], 1)];
+        function inZone(z, p){ return Math.abs(p.x - z.cx) <= z.hw + G.pad && Math.abs(p.y - z.cy) <= z.hh + G.pad; }
+        gCtx.hint2 = function(){ return d.gGrow2(k); };
+        useTapSelect(B, function(P, pt){
+          if (myGen !== gGen) return false;
+          var side = P.data.side, len = P.data.len, z = zones[side];
+          if (!(inZone(z, pt) || (pt.fx !== undefined && inZone(z, { x:pt.fx, y:pt.fy })))) return false;
+          if (z.done) return false;
+          var j = growJudge(n, placed, side, len);
+          if (j === 'twice'){ roundMiss(d.gGrowTwice(k)); return false; }
+          if (j === 'gap'){ roundMiss(d.gGrowGap(k)); return false; }
+          var at = growSpot(n, side, len);
+          P.lock(at.x, at.y);
+          placed[side] = len; z.done = true;
+          if (j === 'first'){ roundInfo(d.gGrowOne(len)); return true; }
+          /* 'done'：這一個 L 形補好了 */
+          bars.forEach(function(Q){ if (!Q.locked){ Q.lock(Q.homeX, Q.homeY); Q.el.style.visibility = 'hidden'; } });   /* 用不到的長條收起來，不讓它看起來像圖的一部分 */
+          n = k; times++; list = oddList(n);
+          line.textContent = d.gGrowNow(list.map(String), sqNum(n));
+          if (times >= 2){ roundSolved(d.gGrowDone(k, sqNum(k))); return true; }
+          roundInfo(d.gGrowStep(k, sqNum(k)));
+          build();
+          refreshHint();
+          return true;
+        });
+      }
+      build();
+    },
+
+    /* 第 3 關：一排一排加（範例 3）—— 第 n 個三角形，每一排右邊一格「到這一排一共幾個」，第 1 排寫好 1。
+       數字卡（拿得完）：第 2～n 排的總數 ＋ 兩張誘答，洗牌、不可以由小到大。每一格只收自己的總數；
+       放錯 → 「上一排為止 prev 個，prev ＋ r ＝ …，不是 v」。格子上下相鄰、放寬之後重疊：挑最近的那一格。 */
+    tri: function(d){
+      var e = pick(GAME_TRI), n = e.n, filled = 1;
+      var line = trailLine(d.gTriNow(1, n));
+      var B = makeBoard(GAME_W, ladH(n));
+      var svg = gSvg(B);
+      for (var r = 1; r <= n; r++)
+        for (var j = 0; j < r; j++)
+          dot(svg, LAD.x0 + (j + 0.5) * LAD.dx, ladRowY(r), LAD.dx * LAD.dot, r === n ? C_NEW : C_DOT);
+      var first = addZone(B, LAD.slotX, ladRowY(1) - LAD.slotH / 2, LAD.slotW, LAD.slotH, 'gslot filled', '1');
+      first.setAttribute('aria-hidden', 'true');
+      var slots = ladSlots(n);
+      slots.forEach(function(s){ s.el = addZone(B, s.cx - s.hw, s.cy - s.hh, 2 * s.hw, 2 * s.hh, 'gslot', '?'); });
+      var vals = ladCards(e);
+      vals.forEach(function(v, i){
+        var at = ladCardXY(i, vals.length, n);
+        addPiece(B, { w:GPICK, h:GPICK, cx:at.x, cy:at.y, text:String(v), cls:'gkey', label:d.gTriCard(v), data:{ v:v } });
+      });
+      function firstOpen(){ for (var i = 0; i < slots.length; i++) if (!slots[i].done) return slots[i]; return null; }
+      gCtx.hint2 = function(){ var s = firstOpen(); return s ? d.gTri2(s.r, triNum(s.r - 1)) : ''; };
+      useTapSelect(B, function(P, pt){
+        var s = dropTarget(slots, pt, LAD.pad);
+        if (!s) return false;
+        var v = P.data.v;
+        if (!ladAccept(s, v)){ roundMiss(d.gTriWrong(s.r, triNum(s.r - 1), v)); return false; }
+        s.done = true;
+        s.el.className = 'gslot filled'; s.el.textContent = String(v);
+        P.lock(s.cx, s.cy); P.el.style.visibility = 'hidden';
+        filled++;
+        line.textContent = d.gTriNow(filled, n);
+        if (filled === n){
+          var rows = [];
+          for (var q = 1; q <= n; q++) rows.push(String(q));
+          Array.prototype.forEach.call(B.el.querySelectorAll('.gkey'), function(x){ x.classList.add('locked'); });
+          roundSolved(d.gTriDone(rows, triNum(n), n));
+        } else { roundInfo(d.gTriOk(s.r, v)); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 4 關：拼長方形（範例 4）—— 藍色的第 n 個三角形畫好了（n 排、每排 n ＋ 1 格的長方形的左下半），淡色的點是另一半。
+       綠色一樣大的三角形一開始和藍色同一個方向：按「↻ 轉半圈」轉 180°，再拖到淡色的點上（或先點它、再點淡色的點）。
+       沒轉 → 不收＋說為什麼；放到別處 → 靜靜回去。拼好之後打「一個三角形有幾個點」：n × (n ＋ 1) ÷ 2。
+       打整個長方形 → 「要再除以 2」；打 n × n → 「每排是 n ＋ 1 個」；寫法不正常只提醒、不算錯。 */
+    rect: function(d){
+      var n = pick(GAME_RECT), m = n + 1, U = RECT.U, x0 = rectX0(n), turned = false, fit = false;
+      var line = trailLine(d.gRectNow(n));
+      var B = makeBoard(GAME_W, rectH(n));
+      var svg = gSvg(B);
+      for (var row = 0; row < n; row++)
+        for (var col = 0; col <= n; col++)
+          dot(svg, x0 + (col + 0.5) * U, RECT.y0 + (row + 0.5) * U, U * RECT.dot, col <= row ? C_DOT : C_HIDE);
+      var zone = rectZone(n), tray = rectTray(n);
+      var pic = plainSvg(n * U, n * U);
+      function drawGreen(){
+        pic.textContent = '';
+        greenCells(n, false).forEach(function(p){ dot(pic, (p.col + 0.5) * U, (p.row + 0.5) * U, U * RECT.dot, C_B); });
+      }
+      drawGreen();
+      var G = addPiece(B, { w:n * U, h:n * U, cx:tray.x, cy:tray.y, cls:'gtri', label:d.gGreen, data:{},
+        turn:function(){ return turned ? ' rotate(180deg)' : ''; } });
+      G.el.appendChild(pic);
+      gCtx.hint2 = function(){ return fit ? d.gRect2b(n, m) : d.gRect2a(n, m); };
+      useTapSelect(B, function(P, pt){
+        var hit = nearestOpen([zone], pt, RECT.pad) || (pt.fx !== undefined && nearestOpen([zone], { x:pt.fx, y:pt.fy }, RECT.pad));
+        if (!hit) return false;
+        if (!turned){ roundMiss(d.gRectNoTurn); return false; }
+        zone.done = true; fit = true;
+        P.lock(zone.cx, zone.cy);
+        turnBtn.disabled = true;
+        line.textContent = d.gRectNow2(n, m);
+        roundInfo(d.gRectFit(n, m));
+        askRow.style.display = '';
+        refreshHint();
+        return true;
+      });
+      var row1 = actionRow();
+      var turnBtn = actionBtn(row1, d.gTurnBtn, 'ghost');
+      turnBtn.addEventListener('click', function(){
+        if (gSolved || fit || G.busy()) return;   /* 另一根手指還拿著它：不轉，放下去的一定是看得到的那個方向 */
+        turned = !turned;
+        G.place(G.cx, G.cy);
+      });
+      var askRow = actionRow();
+      askRow.style.display = 'none';
+      var lab = document.createElement('span'); lab.className = 'glabel'; lab.textContent = d.gRectAsk; askRow.appendChild(lab);
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.className = 'ginput';
+      inp.setAttribute('inputmode', 'numeric'); inp.setAttribute('autocomplete', 'off'); inp.setAttribute('aria-label', d.gRectInAria);
+      askRow.appendChild(inp);
+      var lab2 = document.createElement('span'); lab2.className = 'glabel'; lab2.textContent = d.gRectUnit; askRow.appendChild(lab2);
+      var ok = actionBtn(askRow, d.gRectOkBtn);
+      function submit(){
+        if (gSolved || !fit) return;
+        var v = readInt(inp.value);
+        if (v === null){ gMsg.textContent = d.gRectInt; return; }
+        var j = rectJudge(n, v);
+        if (j === 'ok'){
+          inp.disabled = true; inp.classList.add('filled'); ok.disabled = true;
+          roundSolved(d.gRectDone(n, m, v));
+          return;
+        }
+        if (j === 'whole') roundMiss(d.gRectWhole(v));
+        else if (j === 'sq') roundMiss(d.gRectSq(n));
+        else roundMiss(d.gRectOther(n, m, v));
+      }
+      ok.addEventListener('click', submit);
+      inp.addEventListener('keydown', function(ev){ if (ev.key === 'Enter'){ ev.preventDefault(); submit(); } });
+    },
+
+    /* 第 5 關：分一分（範例 5）—— 四張「一串數字」卡分進四個箱子（三角形數／正方形數／每次加一樣多／以上都不是）。
+       哪一張進哪一個箱子由 kindOf() 判；放錯 → 彈回＋這一串的差和它到底是什麼。箱子相鄰、放寬之後重疊：挑最近的箱子；
+       一個箱子只收一張，已經放好的箱子 → 靜靜回去。 */
+    kind: function(d){
+      var set = pick(GAME_KIND), placed = 0, C = KIND_CARD;
+      var line = trailLine(d.gKindNow(0));
+      var B = makeBoard(GAME_W, KIND_H);
+      var bins = kindBins();
+      bins.forEach(function(b){
+        addZone(B, b.x, b.y, KIND_BIN.w, KIND_BIN.h, 'gbin');
+        addZone(B, b.x, b.y, KIND_BIN.w, KIND_BIN.lbl, 'gbinlbl', d.kindName[b.kind]);
+      });
+      var cards = kindTray(set).map(function(vals, i){
+        var at = kindTrayXY(i);
+        return addPiece(B, { w:C.w, h:C.h, cx:at.x, cy:at.y, text:d.gKindList(vals), cls:'gcard', label:d.gKindList(vals), data:{ vals:vals } });
+      });
+      function why(vals){ var w = kindWhy(vals); return d.gKindWhy[w.kind](w.gaps, w.v, w.k); }
+      gCtx.hint2 = function(){
+        for (var i = 0; i < cards.length; i++) if (!cards[i].locked){ var vs = cards[i].data.vals; return d.gKind2(d.gKindList(vs), gapsOf(vs)); }
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var b = dropTarget(bins, pt, KIND_BIN.pad);
+        if (!b) return false;
+        var vals = P.data.vals;
+        if (kindOf(vals) !== b.kind){ roundMiss(d.gKindWrong(d.kindName[b.kind], why(vals))); return false; }
+        b.done = true; placed++;
+        P.lock(b.cx, b.y + KIND_BIN.lbl + (KIND_BIN.h - KIND_BIN.lbl) / 2);
+        P.el.classList.add('placed');
+        line.textContent = d.gKindNow(placed);
+        if (placed === bins.length) roundSolved(d.gKindDone);
+        else { roundInfo(why(vals)); refreshHint(); }
+        return true;
+      });
+    }
+  };
 
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {}; gGen++; BOARD_TAP = null; PIECE_PTR = {};   /* 上一關沒收尾的手指不帶到下一關 */
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
-    hintLevel = (mode === 'ahead') ? 1 : 0;
+    hintLevel = 0;
     gHintBtn.disabled = false;
-    elHint.textContent = (mode === 'ahead') ? d.gHint1[roundKey(round)] : '';
-
-    gPromptEl.innerHTML = '<b>' + roundPromptText(d, round) + '</b>';
-
-    var fig = roundFig(round);
-    if (fig){
-      drawDots(gFig, dotPlan(fig.kind, fig.n), function(p){ return (fig.hi && p.k === fig.hi) ? C_NEW : C_DOT; });
-      gFig.style.display = '';
-      gCap.textContent = fig.kind === 'sq'
-        ? d.capSq(fig.n, sqNum(fig.n))
-        : d.capTri(fig.n, triNum(fig.n));
-    } else {
-      gFig.textContent = '';
-      gFig.style.display = 'none';
-      gCap.textContent = '';
-    }
-
-    gAnswers.textContent = '';
-    round.opts.forEach(function(key, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'degbtn';
-      b.textContent = roundOptText(d, round, key);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        if (oi === round.ans){
-          var all = gAnswers.querySelectorAll('.degbtn');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry + '</span>';
-          } else {
-            gScore += 20;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst + '</span>';
-          }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + d.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          /* 分數不會低於 0，所以訊息要說**真的扣了幾分** —— 永遠印「－5 分」的話，
-             分數是 0 的時候畫面和程式對不上，而且四年級還沒學負數。 */
-          var lost = Math.min(5, gScore);
-          gScore -= lost;
-          gMsg.innerHTML = '<span class="no">' + d.gWrong(lost) + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
+
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
   gHintBtn.addEventListener('click', function(){
-    var d = L(), round = ROUNDS[gRound];
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = d.gHint1[roundKey(round)];
-    } else {
-      elHint.textContent = roundHint2(d, round);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
