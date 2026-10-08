@@ -25,6 +25,7 @@
  */
 
 const fs = require('fs');
+const { extractFunction } = require('./lib/gameshuffle.js');
 const path = require('path');
 
 const OPT_MAX_REF = 99;
@@ -702,36 +703,316 @@ module.exports = {
       replace:"  var TWO_OVER_K = 5;",
       why:"no item would sit exactly on the threshold, so “exactly k does not count” is never shown" },
 
-    /* --- 遊戲關卡 --- */
-    { file:"index", via:"index", expect:"round 0",
-      find:"    { kind:'read', ds:0, at:2, opts:['5', '6', '4', '7'], ans:1 },",
-      replace:"    { kind:'read', ds:0, at:2, opts:['5', '6', '4', '7'], ans:0 },",
-      why:"the scored answer would no longer be the value the chart shows" },
-    { file:"index", via:"index", expect:"round 2",
-      find:"    { kind:'rows', ds:2, opts:['6', '4', '9', '8'], ans:3 },",
-      replace:"    { kind:'rows', ds:2, opts:['6', '4', '9', '8'], ans:2 },",
-      why:"“at least how many cells” would be scored on a taller grid than the fewest" },
-    { file:"index", via:"index", expect:"round 3",
-      find:"    { kind:'seg',  segAt:3, opts:['up:2', 'down:3', 'up:3', 'flat:0'], ans:2 },",
-      replace:"    { kind:'seg',  segAt:3, opts:['up:2', 'down:3', 'up:3', 'flat:0'], ans:1 },",
-      why:"the stretch would be scored as falling when the chart shows it rising" },
-    { file:"index", via:"index", expect:"round 4",
-      find:"    { kind:'gap',  ds:0, opts:['4', '8', '3', '5'], ans:0 }",
-      replace:"    { kind:'gap',  ds:0, opts:['4', '8', '3', '5'], ans:1 }",
-      why:"the two-step answer would be the sum instead of the difference" },
-    { file:"index", via:"index", expect:"the game answers are all bunched",
-      find:"    { kind:'rows', ds:2, opts:['6', '4', '9', '8'], ans:3 },\n    { kind:'seg',  segAt:3, opts:['up:2', 'down:3', 'up:3', 'flat:0'], ans:2 },\n    { kind:'gap',  ds:0, opts:['4', '8', '3', '5'], ans:0 }",
-      replace:"    { kind:'rows', ds:2, opts:['4', '8', '9', '6'], ans:1 },\n    { kind:'seg',  segAt:3, opts:['up:2', 'up:3', 'down:3', 'flat:0'], ans:1 },\n    { kind:'gap',  ds:0, opts:['8', '4', '3', '5'], ans:1 }",
-      why:"all five rounds would put the answer in the same slot" },
-    { file:"index", via:"index", expect:"the game no longer has a \"rows\" round",
-      find:"    { kind:'rows', ds:2, opts:['6', '4', '9', '8'], ans:3 },",
-      replace:"    { kind:'read', ds:2, at:2, opts:['6', '4', '9', '8'], ans:3 },",
-      why:"the drawing half of the lesson would drop out of the game entirely" },
-    { file:"index", via:"index", expect:"opts[ans] is \"8\" but the data gives",
-      find:"    if (r.kind === 'rows') return String(gridRows(vals));",
-      replace:"    if (r.kind === 'rows') return String(vals.length);",
-      why:"the grid-height round would be scored on the number of items" },
-
+    /* --- 小遊戲「統計圖工作室接訂單」（§六之五，2026-10-08） --- */
+    { file:"index", via:"index", expect:"does not check its board generation",
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */\n",
+      replace:"",
+      why:"a cell held across Restart could stack itself onto the new chart" },
+    { file:"index", via:"index", expect:"losing pointer capture no longer puts the piece back",
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+      replace:"",
+      why:"a piece whose capture is lost would stay stuck mid-drag" },
+    { file:"index", via:"index", expect:"can be picked up by a second finger",
+      find:"if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;",
+      replace:"if (P.locked || gSolved || start || gen !== gGen) return;",
+      why:"a second finger could pick a piece up" },
+    { file:"index", via:"index", expect:"placed pieces still catch taps",
+      find:".gpiece.locked{cursor:default;pointer-events:none}",
+      replace:".gpiece.locked{cursor:default}",
+      why:"a placed card would block taps on what is under it" },
+    { file:"index", via:"index", expect:"a second finger can start a board tap",
+      find:"      if (!e.isPrimary) return;   /* 第二根手指",
+      replace:"      /* 第二根手指",
+      why:"a second finger could tap the board (move the ✂️)" },
+    { file:"index", via:"index", expect:"no longer snaps to a grid line while it is dragged",
+      find:"if (o.axis === 'y') P.place(orig.x, o.snapY(orig.y + dy));",
+      replace:"if (o.axis === 'y') P.place(orig.x, orig.y + dy);",
+      why:"the ✂️ would float between lines while dragged, so release would judge something not shown" },
+    { file:"index", via:"index", expect:"does not clear the hint",
+      find:"    elHint.textContent = '';   /* 過關了",
+      replace:"    /* 過關了",
+      why:"the level-2 hint would keep saying how many cells are still missing on a solved board (verifier finding)" },
+    { file:"index", via:"index", expect:"a round should give +20",
+      find:"    var pts = gMistake ? 10 : 20;",
+      replace:"    var pts = 20;",
+      why:"mistakes would cost nothing at the end of a round" },
+    { file:"index", via:"index", expect:"a mistake does not cost 5 (floored at 0)",
+      find:"    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;",
+      replace:"    gScore = gScore - 5; elScore.textContent = gScore;",
+      why:"the score could go negative" },
+    { file:"index", via:"index", expect:"shown although nothing was taken",
+      find:"    var lost = gScore >= 5 ? 5 : 0;",
+      replace:"    var lost = 5;",
+      why:"at 0 points the message would still say −5" },
+    { file:"index", via:"index", expect:"ahead mode no longer shows hint level 1",
+      find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }",
+      replace:"    if (mode === 'ahead'){ hintLevel = 0; }",
+      why:"ahead mode would lose its automatic first hint" },
+    { file:"index", via:"index", expect:"not disabled after the second level",
+      find:"    if (hintLevel >= 2) gHintBtn.disabled = true;\n",
+      replace:"",
+      why:"the hint button would keep counting past level 2" },
+    { file:"index", via:"index", expect:"does not start a new board generation",
+      find:"gSolved = false; gMistake = false; gCtx = {}; gGen++;",
+      replace:"gSolved = false; gMistake = false; gCtx = {};",
+      why:"pieces of the old board would stay live" },
+    { file:"index", via:"index", expect:"does not really shuffle",
+      find:"      var k = Math.floor(Math.random() * (j + 1));",
+      replace:"      var k = j;",
+      why:"the shuffle would leave every tray in order" },
+    { file:"index", via:"index", expect:"stack drop zones: a drop at",
+      find:"      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"      if (!best){ bd = dd; bc = dc; best = b; }",
+      why:"the first padded box in array order would win over the nearer one" },
+    { file:"index", via:"index", expect:"measure to the box, not the centre",
+      find:"      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;",
+      replace:"      var dd = dx * dx + dy * dy, dc = dd;",
+      why:"a drop would go to the nearest centre, not the box it is in" },
+    { file:"index", via:"index", expect:"skips it and lands in the next slot",
+      find:"    return best && !best.done ? best : null;",
+      replace:"    return best && !best.done ? best : (best ? list.filter(function(b){ return !b.done; })[0] || null : null);",
+      why:"a drop on a filled box would slide into another box" },
+    { file:"index", via:"index", expect:"grid line",
+      find:"    for (var r = 0; r <= rows; r++) lines.push({ r:r, y:y1 - r * cellH });",
+      replace:"    for (var r = 0; r <= rows; r++) lines.push({ r:r, y:y1 - r * cellH - 2 });",
+      why:"the grid would float off the cells the bars are made of" },
+    { file:"index", via:"index", expect:"does not top out on grid line",
+      find:"  function gBarTop(ch, v){ return ch.y1 - v * ch.cellH; }",
+      replace:"  function gBarTop(ch, v){ return ch.y1 - (v + 1) * ch.cellH; }",
+      why:"every bar would end one line too high, so the picture would no longer determine the answer" },
+    { file:"index", via:"index", expect:"GCH.gap is",
+      find:"  var GCH = { x0:40, numDx:7, gap:0.3, itemDy:20 };",
+      replace:"  var GCH = { x0:40, numDx:7, gap:0.02, itemDy:20 };",
+      why:"the bars would touch each other" },
+    { file:"index", via:"index", expect:"is not inside its slot",
+      find:"x:x0 + (i + 0.5) * slot - barW / 2, w:barW",
+      replace:"x:x0 + (i + 0.5) * slot - barW / 3, w:barW",
+      why:"the bars would sit off-centre in their columns" },
+    { file:"index", via:"index", expect:"stackRefuse() says",
+      find:"  function stackRefuse(vals, have, i){ return have[i] < vals[i] ? null",
+      replace:"  function stackRefuse(vals, have, i){ return have[i] <= vals[i] ? null",
+      why:"a bar could be stacked one cell taller than the table" },
+    { file:"index", via:"index", expect:"the column judged is not the one dropped on",
+      find:"why = stackRefuse(e.vals, have, i), name",
+      replace:"why = stackRefuse(e.vals.map(function(){ return 9; }), have, i), name",
+      why:"every column would take cells up to the top of the grid (codex r1 #1)" },
+    { file:"index", via:"index", expect:"does not cover the table cell, the bar and the name",
+      find:"    var top = GTBL.y, bot = ch.itemY + 8;",
+      replace:"    var top = ch.y0, bot = ch.itemY + 8;",
+      why:"dropping a cell on the table number (a natural target) would be refused" },
+    { file:"index", via:"index", expect:"no pad, so the columns",
+      find:"  var STACK = { rows:7, x1:292, y0:72, cellH:28, pad:6, blockY:330 }",
+      replace:"  var STACK = { rows:7, x1:292, y0:72, cellH:28, pad:0, blockY:330 }",
+      why:"a drop just outside a column would be refused and the nearest rule never runs" },
+    { file:"index", via:"index", expect:"do not fit a 6-cell grid",
+      find:"    { id:'pet',   keys:['dog', 'cat', 'fish', 'bird'],        vals:[4, 2, 6, 1] },",
+      replace:"    { id:'pet',   keys:['dog', 'cat', 'fish', 'bird'],        vals:[4, 2, 7, 1] },",
+      why:"a bar would reach the top of the grid (the round would also teach that the grid must be exactly that tall)" },
+    { file:"index", via:"index", expect:"does not stay selected after a tap-then-tap placement",
+      find:"        if (pt.tap){ B.selected = P; P.el.classList.add('sel'); }",
+      replace:"        if (false){ B.selected = P; P.el.classList.add('sel'); }",
+      why:"tap-then-tap would need two taps per cell" },
+    { file:"index", via:"index", expect:"gStackZero (zh): numbers should read 0,0",
+      find:"return '「' + name + '」表上寫 0 ' + unit + '：0 就是一格都不疊",
+      replace:"return '「' + name + '」表上寫 1 ' + unit + '：0 就是一格都不疊",
+      why:"the reason would misquote the table" },
+    { file:"index", via:"index", expect:"the \"full\" reason never says",
+      find:"表上寫 ' + v + ' ' + unit + '，已經疊到 ' + v + ' 格了 —— 再疊就太高了。'",
+      replace:"表上寫 ' + v + ' ' + unit + '，已經疊到 ' + v + ' 格了 —— 再疊一格吧。'",
+      why:"the reason would stop saying why the cell was refused" },
+    { file:"index", via:"index", expect:"readRefuse() for card",
+      find:"  function readRefuse(vals, i, x){ return x === vals[i] ? null",
+      replace:"  function readRefuse(vals, i, x){ return x >= vals[i] ? null",
+      why:"a card bigger than the bar would be accepted" },
+    { file:"index", via:"index", expect:"a wrong card is accepted",
+      find:"x = P.data.v, name = d.item[e.keys[i]], why = readRefuse(e.vals, i, x);",
+      replace:"x = v, name = d.item[e.keys[i]], why = readRefuse(e.vals, i, x);",
+      why:"every card would be judged as if it were the right one (codex r1 #2)" },
+    { file:"index", via:"index", expect:"readWhy(",
+      find:"  function readWhy(v, x){ return v === 0 ? 'zero' : x === v + 1 ? 'line' :",
+      replace:"  function readWhy(v, x){ return v === 0 ? 'zero' : x === v - 1 ? 'line' :",
+      why:"the counted-the-lines reason would be given for the wrong card" },
+    { file:"index", via:"index", expect:"can be filled again through its bar",
+      find:"        slots[i].done = cols[i].done = true;",
+      replace:"        slots[i].done = true;",
+      why:"a filled item could be filled again by dropping on its bar" },
+    { file:"index", via:"index", expect:"the bars themselves are no longer drop targets",
+      find:"      var targets = slots.concat(cols);",
+      replace:"      var targets = slots;",
+      why:"dropping a card on the bar it reads (a natural target) would be refused" },
+    { file:"index", via:"index", expect:"does not cover the whole bar up to the top line",
+      find:"    var top = ch.y0 - ch.cellH / 2, bot = ch.itemY + 8;",
+      replace:"    var top = ch.y0 + ch.cellH, bot = ch.itemY + 8;",
+      why:"dropping a card on the top of a tall bar would be refused" },
+    { file:"index", via:"index", expect:"the \"high\" reason never says",
+      find:"' 那麼高：它的頂端在 ' + x + ' 那一條線的下面。'",
+      replace:"' 那麼高：它的頂端在 ' + x + ' 那一條線的上面。'",
+      why:"the too-high reason would point the wrong way" },
+    { file:"index", via:"index", expect:"read drop zones: only",
+      find:"  var READ = { rows:8, x1:292, y0:14, cellH:24, slotY:266, slotW:52, slotH:48, pad:10,",
+      replace:"  var READ = { rows:8, x1:292, y0:14, cellH:24, slotY:266, slotW:52, slotH:48, pad:0,",
+      why:"a drop just outside a box would be refused" },
+    { file:"index", via:"index", expect:"sits inside a drop zone",
+      find:"keysY:[328, 384], keyStep:56 }",
+      replace:"keysY:[298, 384], keyStep:56 }",
+      why:"a digit card would start inside a box's drop zone" },
+    { file:"index", via:"index", expect:"cutRefuse() at line",
+      find:"  function cutRefuse(vals, k){ var need = gridRows(vals); return k === need ? null",
+      replace:"  function cutRefuse(vals, k){ var need = gridRows(vals); return k >= need ? null",
+      why:"a grid taller than needed would be accepted as the fewest" },
+    { file:"index", via:"index", expect:"a cut other than the fewest-that-fit is accepted",
+      find:"        var why = cutRefuse(e.vals, k);",
+      replace:"        var why = cutRefuse(e.vals, need);",
+      why:"Cut would always accept" },
+    { file:"index", via:"index", expect:"the line judged (k) is not updated",
+      find:"if (nk !== k && !gSolved){ k = nk; draw(); }",
+      replace:"if (nk !== k && !gSolved){ draw(); }",
+      why:"the ✂️ would move while Cut still judged the old line (codex r1 #4)" },
+    { file:"index", via:"index", expect:"does not snap to the grid line it is nearest to",
+      find:"snapY:function(y){ return gBarTop(ch, cutLevel(ch, y)); },",
+      replace:"snapY:function(y){ return y; },",
+      why:"the ✂️ would not sit on the line being judged" },
+    { file:"index", via:"index", expect:"goes to line",
+      find:"Math.round((ch.y1 - y) / ch.cellH)",
+      replace:"Math.floor((ch.y1 - y) / ch.cellH)",
+      why:"a tap just under a line would pick the line below" },
+    { file:"index", via:"index", expect:"is not counted as a tap on the paper",
+      find:"p.y >= ch.y0 - ch.cellH / 2 && p.y <= ch.y1 + ch.cellH / 2",
+      replace:"p.y >= ch.y0 && p.y <= ch.y1",
+      why:"a tap just above the top line or below line 0 would do nothing" },
+    { file:"index", via:"index", expect:"reaches under it",
+      find:"  function cutOnPaper(ch, p){ return p.x >= 0 && p.x <= ch.x1 && ",
+      replace:"  function cutOnPaper(ch, p){ return p.x >= 0 && p.x <= ch.x1 + 6 && ",
+      why:"the paper zone would reach under the ✂️" },
+    { file:"index", via:"index", expect:"can judge while the ✂️ is still being dragged",
+      find:"        if (scis.busy()) return;   /* 另一根手指還拖著 ✂️：還沒停好，不判、不扣分 */\n",
+      replace:"",
+      why:"Cut could judge a half-dragged ✂️" },
+    { file:"index", via:"index", expect:"does not start at the top of the paper",
+      find:"name = d.item[e.keys[top]], k = ch.rows;",
+      replace:"name = d.item[e.keys[top]], k = need;",
+      why:"the ✂️ would start on the answer" },
+    { file:"index", via:"index", expect:"no longer follows the lesson rule \"still draw 1 cell\"",
+      find:"var need = gridRows(vals); return k === need",
+      replace:"var need = maxOf(vals); return k === need",
+      why:"an all-0 table would be cut to 0 cells, against the lesson's own rule" },
+    { file:"index", via:"index", expect:"leaves no \"too few\" and \"too many\"",
+      find:"    { id:'fruit', keys:['apple', 'banana', 'grape', 'melon'], vals:[4, 6, 2, 3] },",
+      replace:"    { id:'fruit', keys:['apple', 'banana', 'grape', 'melon'], vals:[4, 8, 2, 3] },",
+      why:"the fewest cells would be one line under the top, so “too many” has only one place" },
+    { file:"index", via:"index", expect:"gCutFew (zh): numbers should read",
+      find:"return k + ' 格不夠：最多的是「'",
+      replace:"return (k + 1) + ' 格不夠：最多的是「'",
+      why:"the reason would misquote the cut" },
+    { file:"index", via:"index", expect:"the \"more\" reason never says",
+      find:"' 格畫得下，可是最上面會空著 —— 題目問的是格子「最少」要幾格。'",
+      replace:"' 格畫得下，可是最上面會空著 —— 再剪低一點。'",
+      why:"the too-many reason would stop naming “at least”" },
+    { file:"index", via:"index", expect:"sortRefuse() for stretch",
+      find:"  function sortRefuse(vals, s, b){ var want = segBin(vals, s); return b === want ? null : want; }",
+      replace:"  function sortRefuse(vals, s, b){ var want = segBin(vals, s); return null; }",
+      why:"any basket would take any card" },
+    { file:"index", via:"index", expect:"the stretch or basket judged is not the one dropped",
+      find:"bad = sortRefuse(e.vals, s, bin.i)",
+      replace:"bad = sortRefuse(e.vals, s, segBin(e.vals, s))",
+      why:"any basket would take any card (codex r1 #3)" },
+    { file:"index", via:"index", expect:"already in basket order",
+      find:"    if (sorted) t.reverse();",
+      replace:"    t.sort(function(p, q){ return segBin(vals, p) - segBin(vals, q); });",
+      why:"the tray would start already sorted" },
+    { file:"index", via:"index", expect:"segBin() puts stretch",
+      find:"  function segBin(vals, i){ return SEG_DIRS.indexOf(segDir(vals[i], vals[i + 1])); }",
+      replace:"  function segBin(vals, i){ return SEG_DIRS.indexOf(segDir(vals[i + 1], vals[i])); }",
+      why:"reading right to left (the misconception) would become the rule" },
+    { file:"index", via:"index", expect:"does not say only",
+      find:"'點變高了，是變多' : dir === 'down' ? '點變低了，是變少'",
+      replace:"'點變高了，是變少' : dir === 'down' ? '點變低了，是變少'",
+      why:"the reason would name the wrong direction" },
+    { file:"index", via:"index", expect:"the padded baskets never overlap",
+      find:"x:[2, 102, 202], first:240, step:30, pad:8 }",
+      replace:"x:[2, 102, 202], first:240, step:30, pad:2 }",
+      why:"a drop in the gap between baskets would be refused" },
+    { file:"index", via:"index", expect:"no \"flat\" stretch",
+      find:"vals:[3, 5, 5, 2, 4] },",
+      replace:"vals:[3, 5, 6, 2, 4] },",
+      why:"a week without a level stretch never needs the third basket" },
+    { file:"index", via:"index", expect:"starts inside a basket's drop zone",
+      find:"SEG_TRAY = { x:[76, 224], y:[378, 432] }",
+      replace:"SEG_TRAY = { x:[76, 224], y:[352, 432] }",
+      why:"a card would start inside a basket" },
+    { file:"index", via:"index", expect:"the dots are not drawn at the tops of the bars",
+      find:"cy:gBarTop(ch, e.vals[c.i]), r:DOT_R",
+      replace:"cy:gBarTop(ch, e.vals[c.i]) - 4, r:DOT_R",
+      why:"the dots would float above their values" },
+    { file:"index", via:"index", expect:"twoWhy(",
+      find:"    if (e.kind === 'total' && n === hi) return 'tall';\n",
+      replace:"",
+      why:"typing the tallest bar for “altogether” would get a generic reason" },
+    { file:"index", via:"index", expect:"parseCount(\" 12 \")",
+      find:"    s = String(s).trim();\n",
+      replace:"",
+      why:"a trailing space would make a right answer a reminder" },
+    { file:"index", via:"index", expect:"parseCount(\"012\")",
+      find:"/^(0|[1-9][0-9]{0,2})$/",
+      replace:"/^([0-9]{1,3})$/",
+      why:"a leading 0 would be read as a number" },
+    { file:"index", via:"index", expect:"not just a reminder",
+      find:"if (v === null){ roundNote(d.gTwoBadInput); return; }",
+      replace:"if (v === null){ roundMiss(d.gTwoBadInput); return; }",
+      why:"a mistyped number would cost 5 points" },
+    { file:"index", via:"index", expect:"the least is 0",
+      find:"{ kind:'gap',   id:'pet',   keys:['dog', 'cat', 'fish', 'bird'],        vals:[6, 2, 4, 7] }",
+      replace:"{ kind:'gap',   id:'pet',   keys:['dog', 'cat', 'fish', 'bird'],        vals:[6, 0, 4, 7] }",
+      why:"“only wrote the most” would also be the right answer" },
+    { file:"index", via:"index", expect:"gTwoDoneTotal (zh): numbers should read",
+      find:"return list.join(' ＋ ') + ' ＝ ' + s + '，一共 '",
+      replace:"return list.join(' ＋ ') + ' ＝ ' + (s + 1) + '，一共 '",
+      why:"the worked sum would be wrong" },
+    { file:"index", via:"index", expect:"GAME gTwoDoneTotal:",
+      find:"      gTwoDoneTotal:function(list, s, unit){ return list.join(' + ') + ' = ' + s +",
+      replace:"      gTwoDoneTotal:function(list, s, unit){ return list.join(' × ') + ' = ' + s +",
+      why:"the English worked sum would multiply (digits unchanged — only the arithmetic check sees it)" },
+    { file:"index", via:"index", expect:"English plural after 1",
+      find:"return name + ': ' + v + ' ' + plEn(v, 'cell') + ', so ' + v",
+      replace:"return name + ': ' + v + ' cells, so ' + v",
+      why:"“1 cells” would show for a bar of 1" },
+    { file:"index", via:"index", expect:"must never say \"格子剛好要\"",
+      find:"        cut:'最多的那一項是幾個，就至少要幾格。',",
+      replace:"        cut:'格子剛好要和最多的那一項一樣多。',",
+      why:"the hint would teach the grid size as an exact rule" },
+    { file:"index", via:"index", expect:"the chart to work from is not",
+      find:"      gBars(svg, ch, e.vals);\n      gItems(svg, ch, e.keys);\n      capLine(d.cap(d.dsName[e.id], unit));\n      var row = actionRow();",
+      replace:"      gBars(svg, ch, [0, 0, 0, 0]);\n      gItems(svg, ch, e.keys);\n      capLine(d.cap(d.dsName[e.id], unit));\n      var row = actionRow();",
+      why:"the child would be scored against bars that are not drawn (codex r1 #5)" },
+    { file:"index", via:"index", expect:"the stretches are not drawn from one day",
+      find:"y2:gBarTop(ch, e.vals[s + 1]),",
+      replace:"y2:gBarTop(ch, e.vals[s]),",
+      why:"every stretch would look level (codex r1 #6)" },
+    { file:"index", via:"index", expect:"points on the paper are not a tap on the paper",
+      find:"  function cutOnPaper(ch, p){ return p.x >= 0 && p.x <= ch.x1 && ",
+      replace:"  function cutOnPaper(ch, p){ return p.x >= 0 && p.x <= ch.x1 && !(p.x > 100 && p.x < 110) && ",
+      why:"a strip of the paper would ignore taps (codex r1 #7)" },
+    { file:"index", via:"index", expect:"a held Enter key hands the same answer in",
+      find:"if (ev.key === 'Enter' && !ev.repeat) submit();",
+      replace:"if (ev.key === 'Enter') submit();",
+      why:"every key repeat of a held Enter would hand the answer in again; only the lastBad guard would then stop the deduction — each of the two guards is pinned on its own (codex r2 #2)" },
+    { file:"index", via:"index", expect:"handing in the same wrong answer again",
+      find:"        if (v === lastBad) return;\n",
+      replace:"",
+      why:"a double tap on Hand in would cost 10" },
+    { file:"index", via:"index", expect:"the table does not print the round",
+      find:"'glbl gl-num', String(e.vals[c.i])",
+      replace:"'glbl gl-num', String(e.vals[c.i] + 1)",
+      why:"the table would not match the chart the child is asked to build" },
+    { file:"index", via:"index", expect:"the grid lines and their numbers are not drawn from gChart()",
+      find:"      t.textContent = String(L.r);",
+      replace:"      t.textContent = String(L.r + 1);",
+      why:"every axis number would be one too high" },
+    { file:"index", via:"index", expect:"drawn cell by cell from the bottom line",
+      find:"gRect(svg, c.x, ch.y1 - (r + 1) * ch.cellH, c.w, ch.cellH,",
+      replace:"gRect(svg, c.x, ch.y1 - (r + 2) * ch.cellH, c.w, ch.cellH,",
+      why:"the bars would float one cell off the axis" },
+    /* --- 小遊戲 end --- */
     /* --- 字典（項目名／單位詞） --- */
     { file:"index", via:"index", expect:"the item dictionary",
       find:"        juice:'果汁', milk:'牛奶', soda:'汽水', tea:'紅茶',\n        red:'紅', blue:'藍', green:'綠', yellow:'黃',\n        mon:'週一', tue:'週二', wed:'週三', thu:'週四', fri:'週五'",
@@ -1534,11 +1815,14 @@ module.exports = {
                 'countOver, countDir, s1Steps, s1Where, plEn, plotBox, chartPlan, linePlan, ' +
                 'FIG_W, FIG_H, PAD_L, PAD_R, PAD_T, PAD_B, GAP_RATIO, AXIS_NUM_DX, AXIS_NUM_FS, ' +
                 'ITEM_FS, ITEM_DY, DOT_R, UNIT, DATASETS, READ_DS, TWO_DS, DRAW, DRAW_ROWS, LINE, ' +
-                'TWO_QS, TWO_OVER_K, ROUNDS, roundVals, roundAnswer}',
+                'TWO_QS, TWO_OVER_K, GPICK, shuffle, GCH, gChart, gBarTop, GTBL, STACK, STACK_H, GAME_STACK, stackCols, ' +
+                'stackRefuse, READ, READ_H, GAME_READ, readSlots, readCols, readWhy, readRefuse, CUTP, CUTP_H, GAME_CUT, cutLevel, cutOnPaper, cutRefuse, ' +
+                'SEG, SEG_DIRS, SEG_BIN, SEG_CARD, SEG_TRAY, SEG_H, GAME_SEG, segBin, segTray, sortRefuse, ' +
+                'TWO, TWO_H, GAME_TWO, twoAnswer, parseCount, twoWhy}',
     optionValueMax: OPT_MAX_REF,
 
     check: function(data, I18N, fail, src){
-      const { DATASETS, DRAW, DRAW_ROWS, LINE, ROUNDS, UNIT, TWO_QS, TWO_OVER_K, READ_DS, TWO_DS } = data;
+      const { DATASETS, DRAW, DRAW_ROWS, LINE, UNIT, TWO_QS, TWO_OVER_K, READ_DS, TWO_DS } = data;
       const R = FIG_REF.index;
 
       /* ---- 1. 版面常數必須對得上獨立寫死的規格 ---- */
@@ -1676,26 +1960,542 @@ module.exports = {
       if (twoVals.indexOf(TWO_OVER_K) < 0)
         fail('TWO_OVER_K=' + TWO_OVER_K + ' must land exactly on one of the bars, otherwise "exactly k does not count" is never shown');
 
-      /* ---- 8. 遊戲關卡：答案由資料重算，位置要分散 ---- */
-      const spread = {};
-      ROUNDS.forEach((r, i) => {
-        const want = data.roundAnswer(r);
-        if (want === null){ fail('round ' + i + ' (' + r.kind + ') has no computable answer'); return; }
-        if (String(r.opts[r.ans]) !== String(want))
-          fail('round ' + i + ' (' + r.kind + '): opts[ans] is "' + r.opts[r.ans] + '" but the data gives "' + want + '"');
-        if (r.opts.length !== 4 || new Set(r.opts).size !== 4) fail('round ' + i + ': options are not four distinct entries');
-        const vals = data.roundVals(r);
-        if (r.kind === 'read' && !(r.at >= 0 && r.at < vals.length)) fail('round ' + i + ': at is out of range');
-        if (r.kind === 'seg' && !(r.segAt >= 0 && r.segAt + 1 < vals.length)) fail('round ' + i + ': segAt is out of range');
-        if (r.kind === 'most' && soleMaxRef(vals) < 0) fail('round ' + i + ': the tallest bar is not unique');
-        if (r.kind === 'gap' && (soleMaxRef(vals) < 0 || soleMinRef(vals) < 0)) fail('round ' + i + ': the most or the least is not unique');
-        spread[r.ans] = (spread[r.ans] || 0) + 1;
-      });
-      if (Object.keys(spread).length < 3)
-        fail('the game answers are all bunched into ' + Object.keys(spread).length + ' slot(s); spread them across the options');
-      const KINDS = ROUNDS.map(r => r.kind);
-      for (const k of ['read', 'most', 'rows', 'seg', 'gap'])
-        if (KINDS.indexOf(k) < 0) fail('the game no longer has a "' + k + '" round');
+      /* ---- 8. 小遊戲「統計圖工作室接訂單」（2026-10-08 改成五關五種玩法，§六之五） ----
+         每一關用這份設定自己的讀法重算答案（格線由上往下算、排序找最多、自己判斷往上往下），並照遊戲的規則把題庫每一題玩一遍：
+         疊長條把每一欄疊到滿再多疊一格、讀回表格把 0～9 每一張卡放進每一格、剪格子紙把剪刀停在每一條線按「剪下去」、
+         分一分把每一張卡放進每一個籃子、算一算把 0～60 每一個數打進去。
+         頁面的純函式（gChart／gBarTop／stackCols／readSlots／readCols／readWhy／cutLevel／cutOnPaper／segBin／segTray／
+         twoAnswer／parseCount／twoWhy）拿整個題庫去呼叫、再和自己的算法比；nearestOpen()、roundMiss()、shuffle() 從原始碼切出來真的跑；
+         只在 RENDER 裡、切不出來的關鍵規則用原始碼形狀守住（need()）。每一句說明逐個比數字，再交給第 10 段的文字與算式掃描。
+         拖拉、點選、兩根手指、capture 遺失、375px 的實際尺寸由 teaching-workspace/game-harness/g4-chart 的端對端測試驗。 */
+      const GAME_NARR = [];
+      {
+        const D = data, LANGS = ['zh', 'en'], W = 300, EPSG = 1e-9;
+        const gsrc = src.replace(/<!--[\s\S]*?-->/g, ' ');
+        const fin = v => typeof v === 'number' && isFinite(v);
+        const nums = t => (String(t).replace(/<[^>]+>/g, '').match(/\d+/g) || []).map(Number);
+        /* 一句畫面上的話：數字逐個比，然後交給第 10 段（英文單複數、中文黏數字、負號、算式逐條重算） */
+        const say = (where, lang, text, want) => {
+          if (typeof text !== 'string' || !text || /undefined|NaN|null|\[object/.test(text)){ fail('GAME ' + where + ' (' + lang + '): text is empty or has undefined/NaN/null: ' + text); return; }
+          if (want && nums(text).join() !== want.join()) fail('GAME ' + where + ' (' + lang + '): numbers should read ' + want.join() + ', got ' + nums(text).join() + ' — ' + text);
+          GAME_NARR.push(['GAME ' + where, text, lang]);
+        };
+        /* 理由的話要說對那一種錯：每一種理由都要有自己的關鍵詞，而且不可以有同一組裡別種理由的關鍵詞 */
+        const SEM = {
+          stack:{ zero:{ zh:'一格都不疊', en:'no cells at all' }, full:{ zh:'太高', en:'too tall' } },
+          read:{ zero:{ zh:'0 格', en:'0 cells' }, line:{ zh:'格線', en:'grid lines' }, high:{ zh:'下面', en:'below' }, low:{ zh:'上面', en:'above' } },
+          cut:{ few:{ zh:'不夠', en:'not enough' }, more:{ zh:'最少', en:'fewest' } },
+          two:{ tall:{ zh:'最高的那一條', en:'tallest' }, sum:{ zh:'把最多和最少加起來', en:'adds the most and the least' }, most:{ zh:'減掉最少', en:'take away the smallest' },
+                high:{ zh:'太多', en:'too many' }, low:{ zh:'太少', en:'too few' } }
+        };
+        const means = (group, kind, lang, text) => {
+          const G = SEM[group], plain = String(text).replace(/<[^>]+>/g, '');
+          if (plain.indexOf(G[kind][lang]) < 0) fail('GAME ' + group + ' (' + lang + '): the "' + kind + '" reason never says "' + G[kind][lang] + '": ' + plain);
+          for (const other of Object.keys(G)) if (other !== kind && plain.indexOf(G[other][lang]) >= 0)
+            fail('GAME ' + group + ' (' + lang + '): the "' + kind + '" reason also says "' + G[other][lang] + '" (the "' + other + '" reason): ' + plain);
+        };
+        const scale = Math.min(1.5, 289 / W);   /* 375px 手機上卡片內寬約 289px，300 寬的畫板縮成約 0.963 倍 */
+        const tooSmall = (what, sz) => { if (!(sz * scale >= 44)) fail('GAME ' + what + ' is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+        const inside = (o, what, H) => { if (!(fin(o.x) && fin(o.y) && o.x >= -EPSG && o.y >= -EPSG && o.x + o.w <= W + EPSG && o.y + o.h <= H + EPSG)) fail('GAME ' + what + ' is outside the ' + W + '×' + H + ' board: ' + JSON.stringify(o)); };
+        const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > EPSG && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > EPSG;
+        const sq = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w:w, h:h });
+        const zbox = (z, pad) => ({ x:z.cx - z.hw - (pad || 0), y:z.cy - z.hh - (pad || 0), w:2 * (z.hw + (pad || 0)), h:2 * (z.hh + (pad || 0)) });
+        const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])){ fail('GAME ' + what + ' ' + i + ' and ' + j + ' overlap'); return; } };
+        const fits = (text, fs, room, what) => { if (estTextW(text, fs) > room) fail('GAME ' + what + ' "' + text + '" is about ' + Math.round(estTextW(text, fs)) + 'px wide at ' + fs + 'px, but only ' + room + 'px is drawn for it'); };
+        const unitIn = (n, id, lang) => unitPlRef(n, UNIT_REF[lang][id], lang);
+        const itemOf = (lang, k) => ITEM_REF[lang][k];
+
+        /* --- 五關的順序、RENDER、題目與提示 --- */
+        const TYPES = ['stack', 'read', 'cut', 'sort', 'two'];
+        const order = (gsrc.match(/var GAME_ORDER = \[([^\]]*)\]/) || [])[1];
+        if (order === undefined) fail('GAME: cannot find GAME_ORDER in index.html');
+        else {
+          const types = order.split(',').map(x => x.trim().replace(/^'|'$/g, ''));
+          if (types.join() !== TYPES.join()) fail('GAME_ORDER should be ' + TYPES.join() + ' (examples 1, 2, 3, 4, 5), got ' + types.join());
+        }
+        const body = name => (gsrc.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+        const RB = {};
+        TYPES.forEach(t => {
+          RB[t] = body(t);
+          if (!RB[t]) fail('GAME: cannot cut RENDER.' + t + ' out of index.html');
+          LANGS.forEach(L => {
+            const a = I18N[L].gAsks && I18N[L].gAsks[t];
+            if (typeof a !== 'string' || !a) fail('GAME: gAsks.' + t + ' missing in ' + L);
+            else say('gAsks.' + t, L, a);
+            const h = I18N[L].gHints && I18N[L].gHints[t];
+            if (t === 'two'){
+              if (!h || typeof h.total !== 'string' || typeof h.gap !== 'string') fail('GAME: gHints.two needs a total and a gap strategy in ' + L);
+              else { say('gHints.two.total', L, h.total); say('gHints.two.gap', L, h.gap); }
+            } else if (typeof h !== 'string' || !h) fail('GAME: gHints.' + t + ' missing in ' + L);
+            else say('gHints.' + t, L, h);
+          });
+        });
+        const need = (k, re, what) => { if (!re.test(RB[k] || '')) fail('GAME ' + k + ': ' + what); };
+        if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(gsrc)) fail('GAME: ahead mode no longer shows hint level 1 automatically');
+        if (!/if \(hintLevel >= 2\) gHintBtn\.disabled = true;/.test(gsrc)) fail('GAME: the hint button is not disabled after the second level');
+        if (!/if \(typeof h1 !== 'string'\) h1 = h1\[gCtx\.kind\];/.test(gsrc)) fail('GAME: the round-5 strategy hint no longer follows the question kind');
+        if (!/gSolved = false; gMistake = false; gCtx = \{\}; gGen\+\+;/.test(gsrc)) fail('GAME: startRound() does not start a new board generation (gGen++) — a piece held across a restart could act on the new round');
+        if (!/if \(gen !== gGen\) return;/.test(gsrc)) fail('GAME: a released piece does not check its board generation — a piece held across a restart could act on the new round');
+        if (!/if \(!e\.isPrimary \|\| P\.locked \|\| gSolved \|\| start \|\| gen !== gGen\) return;/.test(gsrc)) fail('GAME: a piece can be picked up by a second finger, a locked piece, or a piece from an old board');
+        if (!/el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/.test(gsrc)) fail('GAME: losing pointer capture no longer puts the piece back');
+        if (!/\.gpiece\.locked\{[^}]*pointer-events:none/.test(gsrc)) fail('GAME: placed pieces still catch taps (pointer-events)');
+        if (!/if \(!e\.isPrimary\) return;   \/\* 第二根手指/.test(gsrc)) fail('GAME: a second finger can start a board tap');
+        if (!/if \(o\.axis === 'y'\) P\.place\(orig\.x, o\.snapY\(orig\.y \+ dy\)\);/.test(gsrc)) fail('GAME: the ✂️ no longer snaps to a grid line while it is dragged');
+        ['stack', 'read', 'cut', 'sort'].forEach(t => need(t, /useTapSelect\(B, function\(P, pt\)\{/, 'the round has no tap-then-tap alternative'));
+        /* 畫出來的圖就是那一題的資料（codex 第一輪 #5）：格線與數字、一格一格的長條、表格的數字都從同一份 e.vals／ch 來 */
+        if (!/lines\.forEach\(function\(L\)\{\s*if \(L\.r > top\) return;\s*svg\.appendChild\(svgEl\('line', \{ x1:ch\.x0, y1:L\.y, x2:ch\.x1, y2:L\.y,[\s\S]{0,260}t\.textContent = String\(L\.r\);/.test(gsrc)) fail('GAME: the grid lines and their numbers are not drawn from gChart()');
+        if (!/for \(var r = 0; r < vals\[c\.i\]; r\+\+\)\s*gRect\(svg, c\.x, ch\.y1 - \(r \+ 1\) \* ch\.cellH, c\.w, ch\.cellH,/.test(gsrc)) fail('GAME: the bars are not drawn cell by cell from the bottom line');
+        if (!/addZone\(B, c\.sx, y \+ h, ch\.slot, h, 'glbl gl-num', String\(e\.vals\[c\.i\]\)\);/.test(gsrc)) fail('GAME: the table does not print the round\'s own values');
+        need('stack', /gBars\(svg, ch, have, /, 'the stacked chart does not show what was stacked');
+        need('stack', /gTable\(B, ch, e\);/, 'the stack round has no table');
+        need('read', /gGrid\(svg, ch\);\s*gBars\(svg, ch, e\.vals\);\s*gItems\(svg, ch, e\.keys\);/, 'the chart to read is not the round\'s own values on a numbered grid');
+        need('cut', /gTable\(B, ch, e\);/, 'the cut round has no table');
+        need('cut', /gGrid\(svg, ch, need\);\s*gBars\(svg, ch, e\.vals,/, 'after the cut the bars drawn are not the table\'s values on the cut grid');
+        need('two', /gGrid\(svg, ch\);\s*gBars\(svg, ch, e\.vals\);\s*gItems\(svg, ch, e\.keys\);/, 'the chart to work from is not the round\'s own values on a numbered grid');
+        ['GAME_STACK', 'GAME_READ', 'GAME_CUT', 'GAME_SEG', 'GAME_TWO'].forEach(k => {
+          if (!Array.isArray(D[k]) || D[k].length < 4) fail('GAME: ' + k + ' should be a pool of at least 4 entries');
+        });
+
+        /* --- 計分：沒犯錯 +20、犯過錯 +10；放錯一次 −5，最低 0（§三 中年級） --- */
+        {
+          const rs = extractFunction(gsrc, 'roundSolved');
+          if (!rs || !/elHint\.textContent = '';/.test(rs)) fail('GAME: roundSolved() does not clear the hint — a level-2 hint ("still N cells to go") stays on the solved board');
+        }
+        if (!/var pts = gMistake \? 10 : 20;/.test(gsrc)) fail('GAME scoring: a round should give +20 with no mistakes and +10 after mistakes');
+        {
+          const fsrc = extractFunction(gsrc, 'roundMiss');
+          if (!fsrc) fail('GAME scoring: cannot find roundMiss() in index.html');
+          else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(([s0, want, shows]) => {
+            let r;
+            try { r = new Function('var gMistake = false, gScore = ' + s0 + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+            catch (e){ return fail('GAME scoring: roundMiss() could not run: ' + e.message); }
+            if (r.s !== want || String(r.shown) !== String(want)) fail('GAME scoring: a mistake at ' + s0 + ' leaves ' + r.s + ' — a mistake does not cost 5 (floored at 0)');
+            if ((r.html.indexOf('@MINUS@') >= 0) !== shows) fail('GAME scoring: at ' + s0 + ' points the "−5" note is ' + (shows ? 'missing' : 'shown although nothing was taken'));
+            if (r.html.indexOf('why') < 0 || !r.m) fail('GAME scoring: roundMiss() does not show the reason or record the mistake');
+          });
+        }
+        /* 打字的寫法不對只是提醒：不可以走 roundMiss（不扣分、不記錯） */
+        need('two', /if \(v === null\)\{ roundNote\(d\.gTwoBadInput\); return; \}/, 'a badly written number is not just a reminder');
+        if (/function roundNote\(text\)\{[^}]*(gMistake|gScore)/.test(gsrc)) fail('GAME: roundNote() changes the score or records a mistake');
+        LANGS.forEach(L => {
+          const d = I18N[L];
+          if (nums(d.gPts(20)).join() !== '20' || nums(d.gPts(10)).join() !== '10') fail('GAME gPts ' + L + ' does not show the points');
+          if (nums(d.gMinus).join() !== '5') fail('GAME gMinus ' + L + ' should say 5');
+          say('gWin', L, d.gWin(85), [85]);
+          say('gClear', L, d.gClear, []);
+        });
+
+        /* --- shuffle()：切出來真的跑，必須是排列、而且真的會換順序 --- */
+        let shuffleFn = null;
+        {
+          const fsrc = extractFunction(gsrc, 'shuffle');
+          if (!fsrc) fail('GAME: cannot find shuffle() in index.html');
+          else { try { shuffleFn = new Function(fsrc + '\nreturn shuffle;')(); } catch (e){ fail('GAME: shuffle() could not be evaluated: ' + e.message); } }
+          if (shuffleFn){
+            const seen = new Set();
+            for (let i = 0; i < 400; i++){
+              const a = [1, 2, 3, 4], r = shuffleFn(a);
+              if (r.slice().sort().join() !== '1,2,3,4' || a.join() !== '1,2,3,4'){ fail('GAME shuffle(): not a permutation of its input (or it changed the input)'); break; }
+              seen.add(r.join());
+            }
+            if (seen.size < 20) fail('GAME shuffle(): only ' + seen.size + ' of 24 orders in 400 draws — it does not really shuffle');
+          }
+        }
+
+        /* --- nearestOpen()：從原始碼切出來真的跑 --- */
+        let nearestOpen = null;
+        {
+          const fsrc = extractFunction(gsrc, 'nearestOpen');
+          if (!fsrc) fail('GAME: cannot find nearestOpen() in index.html');
+          else { try { nearestOpen = new Function(fsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('GAME: nearestOpen() could not be evaluated: ' + e.message); } }
+          if (nearestOpen){
+            const two = [{ id:0, cx:100, cy:100, hw:60, hh:20 }, { id:1, cx:170, cy:100, hw:10, hh:10 }];
+            const r0 = nearestOpen(two, { x:155, y:100 }, 6);
+            if (!r0 || r0.id !== 0) fail('GAME nearestOpen(): a point inside the big box near the small one is given to the small one (measure to the box, not the centre)');
+            const done = [{ id:0, cx:100, cy:100, hw:20, hh:20, done:true }, { id:1, cx:142, cy:100, hw:20, hh:20 }];
+            if (nearestOpen(done, { x:119, y:100 }, 6) !== null) fail('GAME nearestOpen(): a drop nearest to a finished slot skips it and lands in the next slot');
+            if (nearestOpen(done, { x:300, y:300 }, 6) !== null) fail('GAME nearestOpen(): a drop far from every slot is accepted');
+            const edge = [{ id:0, cx:100, cy:100, hw:20, hh:20 }];
+            if (!nearestOpen(edge, { x:125.5, y:100 }, 6)) fail('GAME nearestOpen(): a drop inside the pad is refused');
+            if (nearestOpen(edge, { x:126.5, y:100 }, 6)) fail('GAME nearestOpen(): a drop outside the pad is accepted');
+          }
+        }
+        /* 自己的「最近的方框」：到方框的距離最小；一樣近比到中心 */
+        const nearestBox = (list, p, pad) => {
+          let best = null, bd = Infinity, bc = Infinity;
+          for (const b of list){
+            const dx = Math.abs(p.x - b.cx), dy = Math.abs(p.y - b.cy);
+            if (dx > b.hw + pad || dy > b.hh + pad) continue;
+            const dd = Math.hypot(Math.max(0, dx - b.hw), Math.max(0, dy - b.hh)), dc = Math.hypot(dx, dy);
+            if (dd < bd - 1e-9 || (Math.abs(dd - bd) < 1e-9 && dc < bc)){ bd = dd; bc = dc; best = b; }
+          }
+          return best;
+        };
+        /* 一整片區域每 0.5px 問頁面的 nearestOpen 和自己的 nearestBox；重疊的地方（兩個以上的方框收得到）至少要有幾個點 */
+        const sweep = (what, list, pad, x0, x1, y0, y1, minOverlap) => {
+          if (!nearestOpen) return;
+          let n = 0, overlap = 0;
+          for (let y = y0; y <= y1; y += 0.5) for (let x = x0; x <= x1; x += 0.5){
+            const p = { x:x, y:y }, got = nearestOpen(list, p, pad), want = nearestBox(list, p, pad);
+            if (got !== want){ fail('GAME ' + what + ': a drop at (' + x + ', ' + y + ') goes to ' + (got ? got.i : 'nothing') + ', the nearest box is ' + (want ? want.i : 'nothing')); return; }
+            /* 嚴格在兩個放寬的方框裡面才算重疊 —— 只是共用一條邊不算（不然沒有 pad 的相鄰方框也會被算成重疊） */
+            if (list.filter(b => Math.abs(x - b.cx) < b.hw + pad && Math.abs(y - b.cy) < b.hh + pad).length > 1) overlap++;
+            n++;
+          }
+          if (overlap < minOverlap) fail('GAME ' + what + ': only ' + overlap + ' of ' + n + ' sampled points lie where two padded boxes overlap — the nearest-box rule is never exercised');
+        };
+
+        /* --- 遊戲裡的統計圖：自己的排版（格線由上往下算：y ＝ y0 ＋ (rows − r) × cellH） --- */
+        const GCH_REF = { x0:40, numDx:7, gap:0.3, itemDy:20 };
+        for (const k of Object.keys(GCH_REF)) if (D.GCH[k] !== GCH_REF[k]) fail('GAME: GCH.' + k + ' is ' + D.GCH[k] + ', the spec says ' + GCH_REF[k]);
+        const checkChart = (what, n, rows, x1, y0, cellH, H) => {
+          const ch = D.gChart(n, rows, x1, y0, cellH), slot = (x1 - GCH_REF.x0) / n;
+          if (ch.rows !== rows || ch.lines.length !== rows + 1 || ch.cols.length !== n){ fail('GAME ' + what + ': gChart() has ' + ch.lines.length + ' lines and ' + ch.cols.length + ' columns'); return ch; }
+          ch.lines.forEach(Lr => { if (Math.abs(Lr.y - (y0 + (rows - Lr.r) * cellH)) > EPSG) fail('GAME ' + what + ': grid line ' + Lr.r + ' sits at y=' + Lr.y + ', the reference gives ' + (y0 + (rows - Lr.r) * cellH)); });
+          /* ⚠️ 圖決定得了答案：v 格高的長條，頂端一定剛好在第 v 條格線上 */
+          for (let v = 0; v <= rows; v++)
+            if (Math.abs(D.gBarTop(ch, v) - (y0 + (rows - v) * cellH)) > EPSG) fail('GAME ' + what + ': a bar ' + v + ' cells tall does not top out on grid line ' + v);
+          ch.cols.forEach((c, i) => {
+            const sx = GCH_REF.x0 + i * slot;
+            if (Math.abs(c.sx - sx) > EPSG || Math.abs(c.cx - (sx + slot / 2)) > EPSG) fail('GAME ' + what + ': column ' + i + ' is not centred in its own slot');
+            if (!(c.x > c.sx + 2 && c.x + c.w < c.sx + slot - 2 && Math.abs(c.x + c.w / 2 - c.cx) < EPSG)) fail('GAME ' + what + ': bar ' + i + ' is not inside its slot with a gap on both sides');
+          });
+          if (Math.abs(ch.itemY - (y0 + rows * cellH + GCH_REF.itemDy)) > EPSG) fail('GAME ' + what + ': the item names are not ' + GCH_REF.itemDy + 'px under the axis');
+          if (y0 - 6.5 < 0 || ch.itemY + 4 > H) fail('GAME ' + what + ': the top axis number or the item names fall off the board');
+          if (!(cellH * scale >= 16)) fail('GAME ' + what + ': cells are only ' + (cellH * scale).toFixed(1) + 'px tall on a phone — too small to count');
+          return ch;
+        };
+        /* 一份題庫資料：項目在字典裡、單位詞在 UNIT 裡、數值是 0 ～ rows 的整數 */
+        const checkSet = (what, e, n, rows) => {
+          if (!e || !Array.isArray(e.keys) || !Array.isArray(e.vals) || e.keys.length !== n || e.vals.length !== n){ fail('GAME ' + what + ': needs ' + n + ' items and ' + n + ' values'); return false; }
+          if (!UNIT_REF.zh[e.id] || INDEX_UNIT_KEYS.indexOf(e.id) < 0) fail('GAME ' + what + ': scenario ' + e.id + ' is not one the lesson page names');
+          e.keys.forEach(k => LANGS.forEach(L => { if (!ITEM_REF[L][k] || I18N[L].item[k] !== ITEM_REF[L][k]) fail('GAME ' + what + ': item ' + k + ' has no pinned ' + L + ' name'); }));
+          if (!e.vals.every(v => Number.isInteger(v) && v >= 0 && v <= rows)){ fail('GAME ' + what + ': values ' + e.vals + ' do not fit a ' + rows + '-cell grid'); return false; }
+          return true;
+        };
+        /* 表格（第 1、3 關）：兩排放得進圖的上面；每一格的字放得進那一欄 */
+        const checkTable = (what, ch, sets) => {
+          const T = D.GTBL;
+          if (!(T.y >= 0 && T.y + 2 * T.rowH <= ch.y0 - 8)) fail('GAME ' + what + ': the table runs into the top of the chart');
+          LANGS.forEach(L => {
+            fits(I18N[L].gTblItem, 11, ch.x0 - 4, what + ' table header (' + L + ')');
+            fits(I18N[L].gTblCount, 11, ch.x0 - 4, what + ' table header (' + L + ')');
+            sets.forEach(e => e.keys.forEach(k => fits(itemOf(L, k), 13, ch.slot - 2, what + ' table name (' + L + ')')));
+          });
+          if (!/\.glbl\.gl-head\{[^}]*font-size:11px/.test(gsrc) || !/\.glbl\.gl-name\{font-size:13px\}/.test(gsrc)) fail('GAME: the table header / names are not drawn at 11px / 13px, so the width checks above are not about what is drawn');
+        };
+        const itemNamesFit = (what, ch, sets) => LANGS.forEach(L => sets.forEach(e => e.keys.forEach(k => fits(itemOf(L, k), 13, ch.slot - 2, what + ' item name under the axis (' + L + ')'))));
+
+        /* ===== 第 1 關：疊長條 ===== */
+        {
+          const S = D.STACK, H = D.STACK_H, ch = checkChart('stack', 4, S.rows, S.x1, S.y0, S.cellH, H);
+          checkTable('stack', ch, D.GAME_STACK);
+          itemNamesFit('stack', ch, D.GAME_STACK);
+          const blk = sq(150, S.blockY, 56, D.GPICK);
+          inside(blk, 'stack: the cell block', H);
+          tooSmall('stack: the cell block', Math.min(56, D.GPICK));
+          need('stack', /addPiece\(B, \{ w:56, h:GPICK, cx:150, cy:STACK\.blockY, cls:'gblock'/, 'the cell block is not 56 × GPICK in the middle of the tray');
+          if (!new RegExp('\\.gblock::after\\{[^}]*width:44px;height:' + S.cellH + 'px').test(gsrc) || Math.abs(ch.barW - 44) > 1) fail('GAME stack: the block drawn in the tray is not the size of one cell on the chart');
+          const zones = D.stackCols(ch);
+          zones.forEach((z, i) => {
+            if (Math.abs(z.cx - ch.cols[i].cx) > EPSG || Math.abs(z.hw - ch.slot / 2) > EPSG) fail('GAME stack: column ' + i + '\'s drop zone is not exactly its slot');
+            if (!(z.cy - z.hh <= D.GTBL.y && z.cy + z.hh >= ch.itemY + 4)) fail('GAME stack: column ' + i + '\'s drop zone does not cover the table cell, the bar and the name');
+            if (hit(zbox(z, S.pad), blk)) fail('GAME stack: column ' + i + '\'s drop zone reaches the block in the tray');
+          });
+          if (!(S.pad > 0)) fail('GAME stack: no pad, so the columns\' zones never overlap and the nearest-column rule is never exercised');
+          sweep('stack drop zones', zones, S.pad, 30, 300, 0, 300, 400);
+          need('stack', /var z = nearestOpen\(zones, pt, STACK\.pad\);\s*if \(!z\) return false;/, 'a drop is not given to the nearest column (or a miss is not silent)');
+          need('stack', /var i = z\.i, why = stackRefuse\(e\.vals, have, i\), name = d\.item\[e\.keys\[i\]\];\s*if \(why\)\{ roundMiss\(why === 'zero' \? d\.gStackZero\(name, unit\) : d\.gStackFull\(name, e\.vals\[i\], unit\)\); return false; \}\s*have\[i\]\+\+;/, 'a full column (or a 0 column) still takes another cell, the column judged is not the one dropped on, or the reason does not match');
+          need('stack', /if \(doneN\(\) === todo\)\{/, 'the round does not finish when every column matches the table');
+          need('stack', /if \(pt\.tap\)\{ B\.selected = P; P\.el\.classList\.add\('sel'\); \}/, 'the block does not stay selected after a tap-then-tap placement');
+          need('stack', /var have = e\.vals\.map\(function\(\)\{ return 0; \}\);/, 'the chart does not start empty');
+          let zeros = 0, plain = 0;
+          D.GAME_STACK.forEach((e, ei) => {
+            if (!checkSet('stack[' + ei + ']', e, 4, S.rows - 1)) return;
+            const todo = e.vals.filter(v => v > 0).length, sum = e.vals.reduce((a, b) => a + b, 0);
+            if (todo < 3) fail('GAME stack[' + ei + ']: only ' + todo + ' bars to stack');
+            if (sum > 16) fail('GAME stack[' + ei + ']: ' + sum + ' cells to stack — too many drags for one round');
+            if (e.vals.indexOf(0) >= 0) zeros++; else plain++;
+            /* 照規則玩一遍：每一欄疊到表上的數字，每一格都收；再多疊一格 → 不收、說為什麼 */
+            const have = [0, 0, 0, 0];
+            for (let i = 0; i < 4; i++){
+              for (let k = 0; k < e.vals[i]; k++){
+                if (D.stackRefuse(e.vals, have, i) !== null) fail('GAME stack[' + ei + ']: stackRefuse() refuses column ' + i + ' at ' + k + ' cells, before it reaches ' + e.vals[i]);
+                have[i]++;
+                LANGS.forEach(L => say('gStack2', L, I18N[L].gStack2(itemOf(L, e.keys[i]), e.vals[i], k, UNIT_REF[L][e.id]), [e.vals[i], k, e.vals[i] - k]));
+              }
+              LANGS.forEach(L => {
+                const name = itemOf(L, e.keys[i]), u = UNIT_REF[L][e.id];
+                const ref = D.stackRefuse(e.vals, have, i), want = e.vals[i] === 0 ? 'zero' : 'full';
+                if (ref !== want) fail('GAME stack[' + ei + ']: stackRefuse() says "' + ref + '" for one cell more than ' + e.vals[i] + ' on column ' + i + ', it should be "' + want + '"');
+                if (e.vals[i] === 0){ say('gStackZero', L, I18N[L].gStackZero(name, u), [0, 0]); means('stack', 'zero', L, I18N[L].gStackZero(name, u)); }
+                else { say('gStackFull', L, I18N[L].gStackFull(name, e.vals[i], u), [e.vals[i], e.vals[i]]); means('stack', 'full', L, I18N[L].gStackFull(name, e.vals[i], u)); }
+              });
+            }
+            if (have.join() !== e.vals.join()) fail('GAME stack[' + ei + ']: replaying the rules does not end with the table');
+            LANGS.forEach(L => {
+              for (let n = 0; n <= todo; n++) say('gStackNow', L, I18N[L].gStackNow(n, todo), [n, todo]);
+              say('gStackDone', L, I18N[L].gStackDone(e.vals.map(String)), e.vals);
+            });
+          });
+          if (zeros < 2 || plain < 2) fail('GAME stack: the pool needs at least two tables with a 0 item (the "stack nothing" case) and two without — got ' + zeros + ' and ' + plain);
+        }
+
+        /* ===== 第 2 關：讀回表格 ===== */
+        {
+          const S = D.READ, H = D.READ_H, ch = checkChart('read', 4, S.rows, S.x1, S.y0, S.cellH, H);
+          itemNamesFit('read', ch, D.GAME_READ);
+          const slots = D.readSlots(ch), cols = D.readCols(ch);
+          slots.forEach((z, i) => {
+            if (Math.abs(z.cx - ch.cols[i].cx) > EPSG) fail('GAME read: box ' + i + ' is not under its bar');
+            if (Math.abs(z.hw * 2 - S.slotW) > EPSG || Math.abs(z.hh * 2 - S.slotH) > EPSG) fail('GAME read: box ' + i + ' is not slotW × slotH');
+            inside(zbox(z), 'read: box ' + i, H);
+            tooSmall('read: a box to drop a card in', Math.min(S.slotW, S.slotH));
+            if (!(z.cy - z.hh > ch.itemY + 6)) fail('GAME read: box ' + i + ' runs into the item names');
+          });
+          noHits(slots.map(z => zbox(z)), 'read: boxes');
+          cols.forEach((z, i) => {
+            if (Math.abs(z.cx - ch.cols[i].cx) > EPSG || Math.abs(z.hw - ch.slot / 2) > EPSG) fail('GAME read: bar ' + i + '\'s drop zone is not its slot');
+            if (!(z.cy - z.hh <= ch.y0 - ch.cellH / 2 + EPSG && z.cy + z.hh >= ch.itemY + 4)) fail('GAME read: bar ' + i + '\'s drop zone does not cover the whole bar up to the top line and its name');
+            if (hit(zbox(z), zbox(slots[i]))) fail('GAME read: bar ' + i + '\'s zone and its box overlap unpadded');
+          });
+          const keys = [];
+          for (let j = 0; j <= 9; j++) keys.push(sq(150 + ((j < 5 ? j : j - 5) - 2) * S.keyStep, S.keysY[j < 5 ? 0 : 1], D.GPICK, D.GPICK));
+          keys.forEach((k, j) => inside(k, 'read: digit card ' + j, H));
+          noHits(keys, 'read: digit cards');
+          tooSmall('read: a digit card', D.GPICK);
+          keys.forEach((k, j) => slots.concat(cols).forEach(z => { if (hit(k, zbox(z, S.pad))) fail('GAME read: digit card ' + j + ' sits inside a drop zone'); }));
+          need('read', /addPiece\(B, \{ w:GPICK, h:GPICK, cx:150 \+ \(col - 2\) \* READ\.keyStep, cy:READ\.keysY\[row\], text:String\(j\), cls:'gkey', data:\{ v:j \} \}\);/, 'the digit cards are not laid out the way this check assumes');
+          sweep('read drop zones', slots.concat(cols), S.pad, 20, 300, 0, 310, 200);
+          need('read', /var targets = slots\.concat\(cols\);/, 'the bars themselves are no longer drop targets');
+          need('read', /var i = z\.i, v = e\.vals\[i\], x = P\.data\.v, name = d\.item\[e\.keys\[i\]\], why = readRefuse\(e\.vals, i, x\);\s*if \(why\)\{\s*roundMiss\(why === 'zero' \? d\.gReadZero\(name, x\) : why === 'line' \? d\.gReadLine\(name, x\) : why === 'high' \? d\.gReadHigh\(name, x\) : d\.gReadLow\(name, x\)\);\s*return false;/, 'a wrong card is accepted (the value judged is not the card dropped, or not the item dropped on), or its reason is not the one readRefuse() picked');
+          need('read', /slots\[i\]\.done = cols\[i\]\.done = true;/, 'a filled item can be filled again through its bar');
+          need('read', /gGrid\(svg, ch\);\s*gBars\(svg, ch, e\.vals\);/, 'the chart is not drawn with its numbered grid');
+          let zeros = 0;
+          D.GAME_READ.forEach((e, ei) => {
+            if (!checkSet('read[' + ei + ']', e, 4, Math.min(S.rows, 9))) return;
+            if (e.vals.indexOf(0) >= 0) zeros++;
+            if (e.vals.filter(v => v > 0 && v + 1 <= 9).length < 2) fail('GAME read[' + ei + ']: the "counted the lines" card cannot be tried on enough bars');
+            e.vals.forEach((v, i) => {
+              if (D.readRefuse(e.vals, i, v) !== null) fail('GAME read[' + ei + ']: readRefuse() refuses the right card ' + v + ' for item ' + i);
+              for (let x = 0; x <= 9; x++){
+                if (x === v) continue;
+                const want = v === 0 ? 'zero' : x === v + 1 ? 'line' : x > v ? 'high' : 'low';
+                const got = D.readWhy(v, x), gotR = D.readRefuse(e.vals, i, x);
+                if (got !== want){ fail('GAME read: readWhy(' + v + ', ' + x + ') is "' + got + '", the reason should be "' + want + '"'); continue; }
+                if (gotR !== want){ fail('GAME read: readRefuse() for card ' + x + ' on a bar of ' + v + ' is "' + gotR + '", it should be "' + want + '"'); continue; }
+                /* 理由的話要對：說「頂端在 x 那一條線的下面」就真的要 v < x */
+                if ((want === 'high' && !(v < x)) || (want === 'low' && !(v > x))) fail('GAME read: the reason for ' + x + ' on a bar of ' + v + ' says the wrong side of the line');
+                LANGS.forEach(L => {
+                  const name = itemOf(L, e.keys[i]), d = I18N[L];
+                  if (want === 'zero') say('gReadZero', L, d.gReadZero(name, x), [0, 0, x]);
+                  else if (want === 'line') say('gReadLine', L, d.gReadLine(name, x), [x, 0]);
+                  else if (want === 'high') say('gReadHigh', L, d.gReadHigh(name, x), [x, x]);
+                  else say('gReadLow', L, d.gReadLow(name, x), [x, x]);
+                  means('read', want, L, { zero:d.gReadZero, line:d.gReadLine, high:d.gReadHigh, low:d.gReadLow }[want](name, x));
+                });
+              }
+              LANGS.forEach(L => {
+                say('gReadOk', L, I18N[L].gReadOk(itemOf(L, e.keys[i]), v, UNIT_REF[L][e.id]), [v, v]);
+                say('gRead2', L, I18N[L].gRead2(itemOf(L, e.keys[i]), v), [v]);
+              });
+            });
+            LANGS.forEach(L => {
+              for (let n = 0; n <= 4; n++) say('gReadNow', L, I18N[L].gReadNow(n, 4), [n, 4]);
+              say('gReadDone', L, I18N[L].gReadDone(e.vals.map(String)), e.vals);
+            });
+          });
+          if (zeros < 2) fail('GAME read: the pool needs at least two charts with a 0 bar (the "no cells is 0" case)');
+        }
+
+        /* ===== 第 3 關：剪格子紙 ===== */
+        {
+          const S = D.CUTP, H = D.CUTP_H, ch = checkChart('cut', 4, S.rows, S.x1, S.y0, S.cellH, H);
+          checkTable('cut', ch, D.GAME_CUT);
+          itemNamesFit('cut', ch, D.GAME_CUT);
+          for (let k = 0; k <= S.rows; k++){
+            const sc = sq(S.scisX, D.gBarTop(ch, k), D.GPICK, D.GPICK);
+            inside(sc, 'cut: the ✂️ at line ' + k, H);
+            if (sc.x <= ch.x1 + 1) fail('GAME cut: the ✂️ covers the paper');
+          }
+          tooSmall('cut: the ✂️', D.GPICK);
+          /* 每一條線管它上下各半格：點、拖到哪裡，就是最近的那一條（自己的判斷：由上往下數） */
+          for (let y = ch.y0 - ch.cellH; y <= ch.y1 + ch.cellH; y += 0.25){
+            const t = (y - ch.y0) / ch.cellH, frac = t - Math.floor(t);
+            if (Math.abs(frac - 0.5) < 1e-6) continue;   /* 正好在兩條線中間：兩條一樣近，不判 */
+            const want = Math.max(0, Math.min(S.rows, S.rows - Math.round(t)));
+            if (D.cutLevel(ch, y) !== want){ fail('GAME cut: a ✂️ at y=' + y + ' goes to line ' + D.cutLevel(ch, y) + ', the nearest line is ' + want); break; }
+          }
+          for (let k = 0; k <= S.rows; k++){
+            const y = D.gBarTop(ch, k);
+            [-0.49, -0.35, 0, 0.35, 0.49].forEach(f => [2, ch.x0 - 10, (ch.x0 + ch.x1) / 2, ch.x1].forEach(x => {
+              if (!D.cutOnPaper(ch, { x:x, y:y + f * ch.cellH })) fail('GAME cut: a tap ' + f + ' of a cell from line ' + k + ' at x=' + x + ' is not counted as a tap on the paper');
+            }));
+          }
+          if (D.cutOnPaper(ch, { x:S.scisX - D.GPICK / 2 + 2, y:(ch.y0 + ch.y1) / 2 })) fail('GAME cut: a tap in the ✂️ column moves the ✂️ — the paper zone reaches under it');
+          /* 整張格子紙（含縱軸數字、上下各半格）每 0.5px 都要算點到；格子紙右邊（✂️ 那一欄）一點都不算（codex 第一輪 #7） */
+          {
+            let holes = 0, leaks = 0, firstHole = null;
+            for (let y = ch.y0 - ch.cellH / 2; y <= ch.y1 + ch.cellH / 2 + EPSG; y += 0.5){
+              for (let x = 0; x <= ch.x1 + EPSG; x += 0.5) if (!D.cutOnPaper(ch, { x:x, y:y })){ holes++; if (!firstHole) firstHole = x + ',' + y; }
+              for (const x of [ch.x1 + 1e-6, ch.x1 + 0.1, ch.x1 + 0.25]) if (D.cutOnPaper(ch, { x:x, y:y })) leaks++;   /* 緊貼右緣（codex 第二輪） */
+              for (let x = ch.x1 + 0.5; x <= W; x += 0.5) if (D.cutOnPaper(ch, { x:x, y:y })) leaks++;
+            }
+            if (holes) fail('GAME cut: ' + holes + ' points on the paper are not a tap on the paper (first at ' + firstHole + ')');
+            if (leaks) fail('GAME cut: ' + leaks + ' points right of the paper count as a tap on it');
+          }
+          need('cut', /snapY:function\(y\)\{ return gBarTop\(ch, cutLevel\(ch, y\)\); \}/, 'the ✂️ does not snap to the grid line it is nearest to');
+          need('cut', /var top = soleMaxIndex\(e\.vals\), need = gridRows\(e\.vals\), name = d\.item\[e\.keys\[top\]\], k = ch\.rows;/, 'the answer is not the fewest-that-fit, or the ✂️ does not start at the top of the paper');
+          need('cut', /if \(scis\.busy\(\)\) return;/, '"Cut" can judge while the ✂️ is still being dragged');
+          need('cut', /var why = cutRefuse\(e\.vals, k\);\s*if \(why\)\{ roundMiss\(why === 'few' \? d\.gCutFew\(k, name, need, unit\) : d\.gCutMore\(k\)\); return; \}/, 'a cut other than the fewest-that-fit is accepted, or the reason is on the wrong side');
+          /* 判斷的 k 就是畫面上的那一條（codex 第一輪 #4）：✂️ 每停一次就把 k 換成它所在的線，虛線、讀數都畫 k */
+          need('cut', /onPlace:function\(P\)\{ var nk = cutLevel\(ch, P\.cy\); if \(nk !== k && !gSolved\)\{ k = nk; draw\(\); \} \} \}\);/, 'the line judged (k) is not updated from where the ✂️ stops');
+          need('cut', /var y = gBarTop\(ch, k\);\s*svg\.appendChild\(svgEl\('line', \{ x1:ch\.x0 - 2, y1:y, x2:ch\.x1 \+ 2, y2:y,[\s\S]{0,120}\}\)\);\s*line\.textContent = d\.gCutNow\(k\);/, 'the dashed cut line or the readout does not show the line being judged');
+          need('cut', /function setK\(nk\)\{ nk = Math\.max\(0, Math\.min\(ch\.rows, nk\)\); scis\.rehome\(CUTP\.scisX, gBarTop\(ch, nk\)\); \}/, 'tap / ▲ ▼ do not move the ✂️ onto a grid line');
+          need('cut', /if \(pt\.tap && !cutOnPaper\(ch, pt\)\) return false;/, 'a tap beside the paper still moves the ✂️');
+          /* 全部都是 0 的時候還是要畫 1 格（這一課自己的規則，範例 3 的 s3note）：0 格不算夠、1 格剛好（codex 第二輪 #5 的情形；題庫不會出，規則照樣釘住） */
+          if (D.cutRefuse([0, 0, 0, 0], 1) !== null || D.cutRefuse([0, 0, 0, 0], 0) !== 'few') fail('GAME cut: for an all-0 table, cutRefuse() no longer follows the lesson rule "still draw 1 cell"');
+          D.GAME_CUT.forEach((e, ei) => {
+            if (!checkSet('cut[' + ei + ']', e, 4, S.rows)) return;
+            const hi = maxRef(e.vals), at = soleMaxRef(e.vals);
+            if (at < 0){ fail('GAME cut[' + ei + ']: the biggest item is not unique, so "the biggest is …" has two answers'); return; }
+            if (!(hi >= 2 && hi <= S.rows - 2)) fail('GAME cut[' + ei + ']: the fewest cells (' + hi + ') leaves no "too few" and "too many" on either side, or equals the starting height');
+            if (D.gridRows(e.vals) !== rowsRef(e.vals)) fail('GAME cut[' + ei + ']: gridRows disagrees with the reference');
+            for (let k = 0; k <= S.rows; k++){
+              const refK = k === hi ? null : k < hi ? 'few' : 'more';
+              if (D.cutRefuse(e.vals, k) !== refK) fail('GAME cut[' + ei + ']: cutRefuse() at line ' + k + ' is "' + D.cutRefuse(e.vals, k) + '", it should be "' + refK + '" (fewest that fit: ' + hi + ')');
+              LANGS.forEach(L => {
+                const d = I18N[L], name = itemOf(L, e.keys[at]);
+                say('gCutNow', L, d.gCutNow(k), [k, k]);
+                if (k < hi){ say('gCutFew', L, d.gCutFew(k, name, hi, UNIT_REF[L][e.id]), [k, hi, k]); means('cut', 'few', L, d.gCutFew(k, name, hi, UNIT_REF[L][e.id])); }
+                else if (k > hi){ say('gCutMore', L, d.gCutMore(k), [k]); means('cut', 'more', L, d.gCutMore(k)); }
+              });
+            }
+            LANGS.forEach(L => {
+              say('gCutDone', L, I18N[L].gCutDone(hi, itemOf(L, e.keys[at]), UNIT_REF[L][e.id]), [hi, hi]);
+              say('gCut2', L, I18N[L].gCut2(itemOf(L, e.keys[at]), hi, UNIT_REF[L][e.id]), [hi]);
+            });
+          });
+        }
+
+        /* ===== 第 4 關：分一分 ===== */
+        {
+          const S = D.SEG, BN = D.SEG_BIN, H = D.SEG_H, ch = checkChart('sort', 5, S.rows, S.x1, S.y0, S.cellH, H);
+          itemNamesFit('sort', ch, D.GAME_SEG);
+          if (D.SEG_DIRS.join() !== 'up,down,flat') fail('GAME sort: the baskets should be up, down, flat (left to right)');
+          const bins = [0, 1, 2].map(i => ({ i:i, cx:BN.x[i] + BN.w / 2, cy:BN.y + BN.h / 2, hw:BN.w / 2, hh:BN.h / 2 }));
+          bins.forEach((b, i) => { inside(zbox(b), 'sort: basket ' + i, H); if (!(b.cy - b.hh >= ch.itemY + 4)) fail('GAME sort: basket ' + i + ' runs into the day names'); });
+          noHits(bins.map(b => zbox(b)), 'sort: baskets');
+          if (!(BN.pad > BN.x[1] - (BN.x[0] + BN.w))) fail('GAME sort: the padded baskets never overlap, so the nearest-basket rule is never exercised');
+          need('sort', /return \{ i:i, cx:BN\.x\[i\] \+ BN\.w \/ 2, cy:BN\.y \+ BN\.h \/ 2, hw:BN\.w \/ 2, hh:BN\.h \/ 2, n:0, done:false \};/, 'the baskets\' drop zones are not the drawn baskets');
+          sweep('sort baskets', bins, BN.pad, 0, 300, BN.y - BN.pad - 2, BN.y + BN.h + BN.pad + 2, 100);
+          const cards = [0, 1, 2, 3].map(j => sq(D.SEG_TRAY.x[j % 2], D.SEG_TRAY.y[Math.floor(j / 2)], D.SEG_CARD.w, D.SEG_CARD.h));
+          cards.forEach((c, j) => { inside(c, 'sort: card ' + j, H); bins.forEach(b => { if (hit(c, zbox(b, BN.pad))) fail('GAME sort: card ' + j + ' starts inside a basket\'s drop zone'); }); });
+          noHits(cards, 'sort: cards');
+          tooSmall('sort: a card', Math.min(D.SEG_CARD.w, D.SEG_CARD.h));
+          need('sort', /addPiece\(B, \{ w:SEG_CARD\.w, h:SEG_CARD\.h, cx:SEG_TRAY\.x\[j % 2\], cy:SEG_TRAY\.y\[Math\.floor\(j \/ 2\)\],/, 'the cards are not laid out the way this check assumes');
+          need('sort', /var bin = nearestOpen\(bins, pt, BN\.pad\);\s*if \(!bin\) return false;/, 'a drop is not given to the nearest basket');
+          need('sort', /var s = P\.data\.s, bad = sortRefuse\(e\.vals, s, bin\.i\), va = e\.vals\[s\], vb = e\.vals\[s \+ 1\];\s*if \(bad !== null\)\{ roundMiss\(d\.gSegWrong\(nm\(s\), nm\(s \+ 1\), va, vb, SEG_DIRS\[bad\]\)\); return false; \}/, 'a card in the wrong basket is accepted (the stretch or basket judged is not the one dropped), or the reason names the wrong direction');
+          need('sort', /text:d\.gSegCard\(nm\(s\), nm\(s \+ 1\)\), cls:'gcard', data:\{ s:s \} \}\);/, 'a card\'s label is not the stretch it is judged as');
+          /* 畫出來的每一段：從第 s 天的點連到第 s + 1 天的點（codex 第一輪 #6） */
+          need('sort', /var a = ch\.cols\[s\], b = ch\.cols\[s \+ 1\];\s*svg\.appendChild\(svgEl\('line', \{ x1:a\.cx, y1:gBarTop\(ch, e\.vals\[s\]\), x2:b\.cx, y2:gBarTop\(ch, e\.vals\[s \+ 1\]\),/, 'the stretches are not drawn from one day\'s dot to the next day\'s dot');
+          need('sort', /segTray\(e\.vals\)\.forEach\(/, 'the tray is not dealt by segTray()');
+          need('sort', /cy:gBarTop\(ch, e\.vals\[c\.i\]\), r:DOT_R/, 'the dots are not drawn at the tops of the bars');
+          LANGS.forEach(L => ['up', 'down', 'flat'].forEach(dir => fits(I18N[L].gBin[dir], 15, BN.w - 6, 'sort basket label (' + L + ')')));
+          let maxPer = 0;
+          D.GAME_SEG.forEach((e, ei) => {
+            if (!checkSet('sort[' + ei + ']', e, 5, S.rows)) return;
+            const dirs = segDirsRef(e.vals);
+            ['up', 'down', 'flat'].forEach(w => { if (dirs.indexOf(w) < 0) fail('GAME sort[' + ei + ']: no "' + w + '" stretch, so that basket is never needed'); });
+            [0, 1, 2].forEach(b => { maxPer = Math.max(maxPer, dirs.filter(w => w === ['up', 'down', 'flat'][b]).length); });
+            for (let s = 0; s < 4; s++){
+              if (D.segBin(e.vals, s) !== ['up', 'down', 'flat'].indexOf(dirs[s])) fail('GAME sort[' + ei + ']: segBin() puts stretch ' + s + ' in the wrong basket');
+              for (let b = 0; b < 3; b++){
+                const refB = b === ['up', 'down', 'flat'].indexOf(dirs[s]) ? null : ['up', 'down', 'flat'].indexOf(dirs[s]);
+                if (D.sortRefuse(e.vals, s, b) !== refB) fail('GAME sort[' + ei + ']: sortRefuse() for stretch ' + s + ' in basket ' + b + ' is ' + D.sortRefuse(e.vals, s, b) + ', it should be ' + refB);
+              }
+              const va = e.vals[s], vb = e.vals[s + 1];
+              LANGS.forEach(L => {
+                const d = I18N[L], a = itemOf(L, e.keys[s]), b = itemOf(L, e.keys[s + 1]);
+                const card = d.gSegCard(a, b);
+                fits(card, 15, D.SEG_CARD.w - 10, 'sort card (' + L + ')');
+                fits(card, 13, BN.w - 16, 'sort card in a basket (' + L + ')');
+                say('gSegWrong', L, d.gSegWrong(a, b, va, vb, dirs[s]), [va, vb]);
+                /* 理由要說對方向：往上的一段說「變高、變多」，不可以說成別的 */
+                const w = d.gSegWrong(a, b, va, vb, dirs[s]), words = L === 'zh' ? { up:'變多', down:'變少', flat:'沒有變' } : { up:'more', down:'fewer', flat:'nothing changed' };
+                for (const k of ['up', 'down', 'flat']) if ((w.indexOf(words[k]) >= 0) !== (k === dirs[s])) fail('GAME sort (' + L + '): the reason for ' + a + ' → ' + b + ' does not say only "' + words[dirs[s]] + '": ' + w);
+                say('gSegOk', L, d.gSegOk(a, b, dirs[s], Math.abs(vb - va), UNIT_REF[L][e.id]), dirs[s] === 'flat' ? [] : [Math.abs(vb - va)]);
+                say('gSeg2', L, d.gSeg2(a, b, va, vb), [va, vb]);
+              });
+            }
+            /* 托盤：每一次都是 0～3 的排列，而且從來不是照籃子的順序 */
+            for (let t = 0; t < 3000; t++){
+              const tr = D.segTray(e.vals);
+              if (tr.slice().sort().join() !== '0,1,2,3'){ fail('GAME sort[' + ei + ']: segTray() is not a permutation of the four stretches'); break; }
+              const bs = tr.map(s => ['up', 'down', 'flat'].indexOf(dirs[s]));
+              if (bs.every((b, k) => k === 0 || bs[k - 1] <= b)){ fail('GAME sort[' + ei + ']: segTray() dealt the cards already in basket order (' + tr + ')'); break; }
+            }
+          });
+          LANGS.forEach(L => { for (let n = 0; n <= 4; n++) say('gSortNow', L, I18N[L].gSortNow(n, 4), [n, 4]); say('gSortDone', L, I18N[L].gSortDone, []); });
+          if (BN.first - 13 < BN.y + BN.lbl || BN.first + (maxPer - 1) * BN.step + 13 > BN.y + BN.h - 2) fail('GAME sort: ' + maxPer + ' sorted cards do not fit inside one basket under its label');
+        }
+
+        /* ===== 第 5 關：算一算 ===== */
+        {
+          const S = D.TWO, H = D.TWO_H, ch = checkChart('two', 4, S.rows, S.x1, S.y0, S.cellH, H);
+          itemNamesFit('two', ch, D.GAME_TWO);
+          const kinds = { total:0, gap:0 };
+          D.GAME_TWO.forEach((e, ei) => {
+            if (!checkSet('two[' + ei + ']', e, 4, S.rows)) return;
+            if (!(e.kind in kinds)){ fail('GAME two[' + ei + ']: kind ' + e.kind); return; }
+            kinds[e.kind]++;
+            const hi = maxRef(e.vals), lo = minRef(e.vals), sum = sumRef(e.vals), want = e.kind === 'total' ? sum : hi - lo;
+            if (D.twoAnswer(e) !== want) fail('GAME two[' + ei + ']: twoAnswer() is ' + D.twoAnswer(e) + ', the reference gives ' + want);
+            if (e.kind === 'gap'){
+              if (soleMaxRef(e.vals) < 0 || soleMinRef(e.vals) < 0) fail('GAME two[' + ei + ']: "the most" or "the least" is not unique');
+              if (lo < 1) fail('GAME two[' + ei + ']: the least is 0, so "only wrote the most" is also the right answer');
+            } else if (e.vals.filter(v => v > 0).length < 2) fail('GAME two[' + ei + ']: the total is just one bar');
+            /* 照規則打 0～60 每一個數：只有正解收；每一個錯的數都有一句對的理由 */
+            for (let n = 0; n <= 60; n++){
+              if (n === want) continue;
+              const ref = (e.kind === 'total' && n === hi) ? 'tall' : (e.kind === 'gap' && n === hi + lo) ? 'sum' : (e.kind === 'gap' && n === hi) ? 'most' : n > want ? 'high' : 'low';
+              const got = D.twoWhy(e, n);
+              if (got !== ref){ fail('GAME two[' + ei + ']: twoWhy(' + n + ') is "' + got + '", it should be "' + ref + '"'); continue; }
+              if ((ref === 'high' && !(n > want)) || (ref === 'low' && !(n < want))) fail('GAME two[' + ei + ']: ' + n + ' is called too ' + ref);
+              LANGS.forEach(L => {
+                const d = I18N[L], f = { tall:d.gTwoTall, sum:d.gTwoSum, most:d.gTwoMost, high:d.gTwoHigh, low:d.gTwoLow }[ref];
+                if (n % 7 === 0 || ref !== 'high') say('gTwo.' + ref, L, f(n), [n]);
+                means('two', ref, L, f(n));
+              });
+            }
+            LANGS.forEach(L => {
+              const d = I18N[L], u = UNIT_REF[L][e.id];
+              say('gTwoAsk.' + e.kind, L, d.gTwoAsk[e.kind](u));
+              if (e.kind === 'total'){
+                say('gTwoDoneTotal', L, d.gTwoDoneTotal(e.vals.map(String), sum, u), e.vals.concat([sum, sum]));
+                say('gTwo2.total', L, d.gTwo2.total(e.vals.map(String)), e.vals);
+              } else {
+                say('gTwoDoneGap', L, d.gTwoDoneGap(hi, lo, u), [hi, lo, hi - lo, hi - lo]);
+                say('gTwo2.gap', L, d.gTwo2.gap(hi, lo), [hi, lo]);
+              }
+            });
+          });
+          if (kinds.total < 2 || kinds.gap < 2) fail('GAME two: the pool needs at least two "altogether" and two "most minus least" charts, got ' + kinds.total + ' / ' + kinds.gap);
+          /* 打字：只收寫法正常的整數 */
+          const TT = [['12', 12], [' 12 ', 12], ['0', 0], ['7', 7], ['012', null], ['1 2', null], ['1.5', null], ['', null], ['-3', null], ['１２', null], ['12a', null], ['1000', null]];
+          TT.forEach(([s, w]) => { if (D.parseCount(s) !== w) fail('GAME two: parseCount("' + s + '") is ' + D.parseCount(s) + ', it should be ' + w); });
+          need('two', /if \(v === twoAnswer\(e\)\)\{/, 'the typed answer is not compared with twoAnswer()');
+          need('two', /var why = twoWhy\(e, v\);\s*lastBad = v;\s*roundMiss\(why === 'tall' \? d\.gTwoTall\(v\) : why === 'sum' \? d\.gTwoSum\(v\) : why === 'most' \? d\.gTwoMost\(v\) : why === 'high' \? d\.gTwoHigh\(v\) : d\.gTwoLow\(v\)\);/, 'a wrong number is accepted, or its reason is not the one twoWhy() picked');
+          need('two', /inp\.setAttribute\('inputmode', 'numeric'\)/, 'the answer box does not bring up the number pad on a phone');
+          need('two', /var v = parseCount\(inp\.value\);/, 'the number judged is not what is in the answer box');
+          need('two', /if \(ev\.key === 'Enter' && !ev\.repeat\) submit\(\);/, 'a held Enter key hands the same answer in again and again');
+          need('two', /if \(v === lastBad\) return;/, 'handing in the same wrong answer again (a double tap) costs another 5');
+          need('two', /lastBad = v;\s*roundMiss\(/, 'the last wrong answer is not remembered');
+          LANGS.forEach(L => say('gTwoBadInput', L, I18N[L].gTwoBadInput, [0]));
+          if (!/\.ginput\{width:104px;height:52px/.test(gsrc)) fail('GAME two: the answer box is not 104 × 52');
+          tooSmall('two: the answer box', 52);
+        }
+      }
 
       /* ---- 9. 字典：項目名、情境名、單位詞逐字比對 ---- */
       for (const lang of ['zh', 'en']){
@@ -1717,7 +2517,7 @@ module.exports = {
 
       /* ---- 10. 旁白真的渲染出來再掃 ----
          拼接出來的字（'一個' + unit + '換成'）在原始碼裡看不出來會黏在一起。 */
-      const narrated = [];
+      const narrated = GAME_NARR.slice();   /* 小遊戲的每一句（第 8 段照題庫渲染出來的）一起掃 */
       for (const lang of ['zh', 'en']){
         const d = I18N[lang];
         const push = (tag, s) => narrated.push([tag + ' (' + lang + ')', s, lang]);
@@ -1782,34 +2582,6 @@ module.exports = {
         push('s5calcOver', d.s5calcOver(TWO_OVER_K, overRef(twoVals, TWO_OVER_K)));
         push('s5resultOver', d.s5resultOver(overRef(twoVals, TWO_OVER_K)));
         for (const k of TWO_QS) push('s5chip', d.s5chip[k]);
-        /* 遊戲：每一關的題目、兩層提示、選項文字。 */
-        ROUNDS.forEach(r => {
-          const vals = data.roundVals(r);
-          const keys = (r.kind === 'seg') ? LINE.keys : DATASETS[r.ds].keys;
-          const id = (r.kind === 'seg') ? LINE.id : DATASETS[r.ds].id;
-          if (r.kind === 'read') push('gPrompt.read', d.gPrompt.read(d.item[keys[r.at]], UNIT[lang][id]));
-          if (r.kind === 'most') push('gPrompt.most', d.gPrompt.most());
-          if (r.kind === 'rows') push('gPrompt.rows', d.gPrompt.rows());
-          if (r.kind === 'seg')  push('gPrompt.seg', d.gPrompt.seg(d.item[keys[r.segAt]], d.item[keys[r.segAt + 1]]));
-          if (r.kind === 'gap')  push('gPrompt.gap', d.gPrompt.gap());
-          push('gHint1', d.gHint1[r.kind]);
-          if (r.kind === 'read') push('gHint2.read', d.gHint2.read(vals[r.at]));
-          if (r.kind === 'most') push('gHint2.most', d.gHint2.most(d.item[keys[soleMaxRef(vals)]], maxRef(vals)));
-          if (r.kind === 'rows') push('gHint2.rows', d.gHint2.rows(rowsRef(vals)));
-          if (r.kind === 'seg')  push('gHint2.seg', d.gHint2.seg(vals[r.segAt], vals[r.segAt + 1]));
-          if (r.kind === 'gap')  push('gHint2.gap', d.gHint2.gap(maxRef(vals), minRef(vals)));
-          r.opts.forEach(o => {
-            if (r.kind === 'most') push('gOpt', d.item[o]);
-            else if (r.kind === 'seg'){
-              const p = String(o).split(':');
-              push('gSegOpt', d.gSegOpt(p[0], Number(p[1])));
-            } else push('gOpt', String(o));
-          });
-        });
-        for (const lost of [0, 5]) push('gWrong', d.gWrong(lost));
-        push('gWin', d.gWin(100));
-        push('gCorrectFirst', d.gCorrectFirst);
-        push('gCorrectRetry', d.gCorrectRetry);
         /* 題庫 */
         ['qs', 'qsAdv', 'qsBoost'].forEach(bank => {
           d[bank].forEach((q, i) => {
