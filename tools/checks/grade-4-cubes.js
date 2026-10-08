@@ -30,7 +30,7 @@ const crypto = require('crypto');
 /* ---------- 0) 參考常數：獨立寫死的第二份，不從課程頁讀 ---------- */
 const FIG_W_REF = 460, FIG_H_REF = 300;
 const U_REF = 30, DEPTH_REF = 0.5;
-const MINI_U_REF = 14, MINI_W_REF = 108, MINI_H_REF = 84;
+const MINI_U_REF = 14, MINI_W_REF = 80, MINI_H_REF = 84;
 const WHICH_U_REF = 24, WHICH_CX_REF = [0.125, 0.375, 0.625, 0.875], WHICH_TONES_REF = ['c', 'd', 'e', 'a'];
 const PAIR_CX_A_REF = 0.27, PAIR_CX_B_REF = 0.73;
 const MAX_SIDE_REF = 4, MAX_HEIGHT_REF = 4, MAX_CUBES_REF = 40;
@@ -43,8 +43,6 @@ const STACKS_REF = {
   box8:   [[2, 2], [2, 2]], hill7:[[3, 2], [1, 1]], ridge10:[[2, 3, 2], [1, 1, 1]], cube12:[[3, 3], [3, 3]],
   step8:  [[2, 1, 0], [2, 2, 1]], twist7:[[2, 3], [1, 1]], peak7:[[4, 2], [1, 0]],
   tower4: [[4]], flat6:[[1, 1, 1], [1, 1, 1]], block7:[[2, 2], [2, 1]], row4:[[1, 1, 1, 1]],
-  game8:  [[3, 2], [2, 1]], stair6:[[3, 2, 1]], five5:[[1, 1, 1], [1, 1, 0]], eight8:[[3, 1], [2, 2]],
-  seven7: [[2, 2, 1], [1, 1, 0]], bar7:[[3, 2, 2]]
 };
 const S1_REF = ['one', 'row3', 'tower3', 'sq4', 'L4'];
 const S2_REF = ['box8', 'hill7', 'ridge10', 'cube12'];
@@ -191,17 +189,17 @@ const SIBLING_RULES = [
   { text:'看不到的方塊也要數', files:{ index:8, reference:6, review:1 } },
   { text:'上面有方塊的地方，下面每一層都有', files:{ index:9, reference:5, review:1, parents:4 } },
   { text:'比體積就是比塊數', files:{ index:5, reference:8, review:2, parents:2 } },
-  { text:'不會浮在空中', files:{ index:6, reference:3, parents:2 } },
+  { text:'不會浮在空中', files:{ index:7, reference:3, parents:2 } },
   { text:'幾塊就是幾立方公分', files:{ index:4, reference:2, parents:2 } },
   { text:'邊長 1 公分的正方體', files:{ index:8, reference:9, review:2, parents:4 } },
   { text:'不一定比較大', files:{ index:6 } },
-  { text:'高的不一定大', files:{ index:6, reference:5, review:3, parents:4 } }
+  { text:'高的不一定大', files:{ index:7, reference:5, review:3, parents:4 } }
 ];
 const SIBLING_RULES_EN = [
-  { text:'idden cubes count too', files:{ index:7, reference:5, review:1, parents:3 } },
+  { text:'idden cubes count too', files:{ index:8, reference:5, review:1, parents:3 } },
   { text:'every layer below', files:{ index:6, reference:3, review:1, parents:3 } },
   { text:'omparing volumes means comparing', files:{ index:4, reference:4, review:2, parents:1 } },
-  { text:'never float', files:{ index:4, reference:2, parents:1 } },
+  { text:'never float', files:{ index:5, reference:2, parents:1 } },
   { text:'cube with 1 cm edges', files:{ index:5, reference:5, review:2, parents:1 } },
   /* review.html 的英文用的是 'taller does not mean bigger'（釘在 renderCheck 裡：每一題該說的時候都要說），所以這裡它是 0。 */
   { text:'not always bigger', files:{ index:2, reference:2, parents:1 } }
@@ -494,6 +492,522 @@ function figProblems(fig, label){
   return out;
 }
 
+/* ---------- 8) 小遊戲「盤點站出任務」（2026-10-08 改成五關五種玩法，§六之五） ----------
+   每一關用自己的算法（展成一塊一塊數、射線法看得到幾塊、自己的投影、自己的「最近的方框」）重算答案，
+   並**照遊戲自己的規則把每一題從頭玩一次**，證明一定解得完、而且解完一定是對的；
+   頁面的純函式（buildJudge／buildCells／pileOrigin／floorCells／matchDiff／matchZones／noIdentity／layerJudge／layerSlots／
+   sortRank／sortTray／tapPick／tapSame）拿整個題庫去呼叫、再和自己的比；nearestOpen()、roundMiss()、roundSolved()、shuffle()
+   從原始碼切出來真的跑；只在 RENDER 裡、切不出來的收／不收規則用原始碼形狀守住（need()）。每一句說明逐個比數字。
+   ⚠️ 畫面要決定得了答案（LESSONS 2026-09-03）：遊戲裡畫的每一堆，除了「每一格最上面那一塊看得到」，
+   還要**圖是唯一的** —— 同樣格數、每格 0～4 層的所有高度圖裡，沒有第二堆畫出一模一樣的圖（看得到的每一點是哪一個面）。
+   拖拉、點選、兩根手指、capture 遺失、375px 的實際尺寸由 teaching-workspace/game-harness/g4-cubes 的端對端測試驗。 */
+const { extractFunction } = require('./lib/gameshuffle.js');
+const gameArith = require('./lib/arith.js').makeArith({ units:['塊', '立方公分', '層', '格'], unitsEn:['cubes?', 'cubic centimetres?', 'layers?', 'squares?'] });
+/* 看得到的畫面：每一個取樣點（每格 8 × 8，偏離所有的邊）最後留在上面的是哪一個面（面的種類＋四個頂點）。
+   畫的順序：後排先、低層先、左邊先；同一塊先上面、再前面、再右面 —— 後畫的蓋前畫的。 */
+const IMAGE_CACHE = {};
+function imageRef(H){
+  const S = 8, R = H.length, C = H[0].length;
+  const cubes = cubeListRef(H).sort((p, q) => (q.b - p.b) || (p.h - q.h) || (p.c - q.c));
+  const W = Math.ceil((C + DEPTH_REF * R) * S) + 1, Hh = Math.ceil((MAX_HEIGHT_REF + DEPTH_REF * R) * S) + 1;
+  const P = (c, h, b) => ({ u:c + DEPTH_REF * b, v:h + DEPTH_REF * b });
+  const inside = (p, poly) => { let s = 0; for (let i = 0; i < 4; i++){ const a = poly[i], q = poly[(i + 1) % 4]; const cr = (q.u - a.u) * (p.v - a.v) - (q.v - a.v) * (p.u - a.u); if (cr === 0) return false; const g = cr > 0 ? 1 : -1; if (!s) s = g; else if (g !== s) return false; } return true; };
+  const own = new Array(W * Hh).fill('');
+  cubes.forEach(k => {
+    const { c, h, b } = k;
+    [['top', [P(c, h + 1, b), P(c + 1, h + 1, b), P(c + 1, h + 1, b + 1), P(c, h + 1, b + 1)]],
+     ['front', [P(c, h, b), P(c + 1, h, b), P(c + 1, h + 1, b), P(c, h + 1, b)]],
+     ['right', [P(c + 1, h, b), P(c + 1, h, b + 1), P(c + 1, h + 1, b + 1), P(c + 1, h + 1, b)]]].forEach(([t, poly]) => {
+      const key = t + poly.map(q => q.u + ',' + q.v).join(';');
+      const u0 = Math.min(...poly.map(q => q.u)), u1 = Math.max(...poly.map(q => q.u)), v0 = Math.min(...poly.map(q => q.v)), v1 = Math.max(...poly.map(q => q.v));
+      for (let i = Math.floor(u0 * S); i < Math.ceil(u1 * S); i++) for (let j = Math.floor(v0 * S); j < Math.ceil(v1 * S); j++){
+        if (inside({ u:(i + 0.37) / S, v:(j + 0.21) / S }, poly)) own[j * W + i] = key;
+      }
+    });
+  });
+  return own.join('|');
+}
+function allHRef(R, C, mx){
+  const out = [], tot = Math.pow(mx + 1, R * C);
+  for (let z = 0; z < tot; z++){ let y = z; const H = []; for (let r = 0; r < R; r++){ const row = []; for (let c = 0; c < C; c++){ row.push(y % (mx + 1)); y = Math.floor(y / (mx + 1)); } H.push(row); } out.push(H); }
+  return out;
+}
+/* 這張圖在「同樣格數、每格 0～MAX_HEIGHT 層」的所有堆裡是不是唯一的 */
+function uniqueImageRef(H){
+  const key = H.length + 'x' + H[0].length;
+  if (!IMAGE_CACHE[key]){ const m = new Map(); allHRef(H.length, H[0].length, MAX_HEIGHT_REF).forEach(G => { const im = imageRef(G); m.set(im, (m.get(im) || 0) + 1); }); IMAGE_CACHE[key] = m; }
+  return IMAGE_CACHE[key].get(imageRef(H)) === 1;
+}
+function gameChecks(D, I18N, fail, rawSrc){
+  const src = String(rawSrc).replace(/<!--[\s\S]*?-->/g, ' ');
+  const LANGS = ['zh', 'en'], W = 300;
+  const J = JSON.stringify;
+  const fin = v => typeof v === 'number' && isFinite(v);
+  const nums = t => (String(t).replace(/<[^>]+>/g, ' ').match(/\d+/g) || []).map(Number);
+  const seq = (where, text, want) => {
+    if (typeof text !== 'string' || /undefined|NaN|null|\[object/.test(text)) return fail('GAME ' + where + ': text has undefined/NaN/null: ' + text);
+    if (nums(text).join() !== want.join()) fail('GAME ' + where + ': numbers should read ' + want.join() + ', got ' + nums(text).join() + ' — ' + text);
+    gameArith(text).problems.forEach(b => fail('GAME ' + where + ': ' + b + ' in: ' + text));
+    textProblems(text, where.indexOf('(en)') >= 0 ? 'en' : 'zh', 'GAME ' + where).forEach(fail);
+  };
+  const rect = (x, y, w, h) => ({ x, y, w, h });
+  const inside = (o, what, H) => { if (!(fin(o.x) && fin(o.y) && o.x >= 0 && o.y >= 0 && o.x + o.w <= W + 1e-9 && o.y + o.h <= H + 1e-9)) fail('GAME ' + what + ' is outside the ' + W + '×' + H + ' board: ' + J(o)); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i], list[j])) return fail('GAME ' + what + ' ' + i + ' and ' + j + ' overlap'); };
+  const boxOf = z => rect(z.cx - z.hw, z.cy - z.hh, 2 * z.hw, 2 * z.hh);
+  /* 375px 手機：卡片內寬約 289px，300 寬的畫板縮成約 0.963 倍 */
+  const scale = Math.min(1.5, 289 / W);
+  const tooSmall = (what, sz) => { if (!(sz * scale >= 44)) fail('GAME ' + what + ' is ' + (sz * scale).toFixed(1) + 'px on a 375px phone — under 44'); };
+  /* 自己的投影：一堆畫在 box 裡置中，每一個面的每一個頂點都要在 box 裡（留 2px） */
+  const originRef = (H, box, u, ext) => { const e = ext || extentRef(H); return { X0:box.x + (box.w - e.w * u) / 2, Y0:box.y + (box.h + e.h * u) / 2 }; };
+  const pileFits = (H, box, u, what, ext) => {
+    const o = originRef(H, box, u, ext), got = D.pileOrigin(H, box, u, ext);
+    if (Math.abs(got.X0 - o.X0) > 1e-9 || Math.abs(got.Y0 - o.Y0) > 1e-9) fail('GAME ' + what + ': pileOrigin() is not the centred origin');
+    cubeListRef(H).forEach(k => Object.values(facesRef(k, o.X0, o.Y0, u)).forEach(poly => poly.forEach(p => {
+      if (!(p.x >= box.x + 2 && p.x <= box.x + box.w - 2 && p.y >= box.y + 2 && p.y <= box.y + box.h - 2)) fail('GAME ' + what + ': the pile ' + J(H) + ' is drawn outside its box');
+    })));
+  };
+  /* 畫在遊戲裡的每一堆：合法、每一格最上面看得到、而且圖是唯一的 */
+  const pictured = (H, what) => {
+    if (!validRef(H)) return fail('GAME ' + what + ': ' + J(H) + ' is not a valid pile');
+    if (!allTopsVisibleRef(H)) fail('GAME ' + what + ': ' + J(H) + ' hides a whole column behind the others, so it cannot be counted from the picture');
+    if (!uniqueImageRef(H)) fail('GAME ' + what + ': ' + J(H) + ' draws the same picture as another pile of the same size — the picture does not determine the pile');
+  };
+
+  /* --- 五關的順序與 RENDER --- */
+  const TYPES = ['build', 'match', 'layers', 'sort', 'tap'];
+  const order = (src.match(/var GAME_ORDER = \[([^\]]*)\]/) || [])[1];
+  if (order === undefined) fail('GAME: cannot find GAME_ORDER in index.html');
+  else if (order.split(',').map(x => x.trim().replace(/^'|'$/g, '')).join() !== TYPES.join()) fail('GAME_ORDER should be ' + TYPES.join() + ' (examples 1–2, 3, 3, 4, 4)');
+  const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+  const RB = {};
+  TYPES.forEach(t => {
+    RB[t] = stripJsComments(body(t));
+    if (!RB[t]) fail('GAME: cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t])) fail('GAME: gAsks.' + t + ' missing in ' + L);
+      if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && I18N[L].gHints[t])) fail('GAME: gHints.' + t + ' missing in ' + L);
+    });
+  });
+  const need = (k, re, what) => { if (!re.test(RB[k] || '')) fail('GAME ' + k + ': ' + what); };
+  ['GAME_BUILD', 'GAME_MATCH', 'GAME_LAYERS', 'GAME_SORT', 'GAME_TAP'].forEach(k => {
+    if (!Array.isArray(D[k]) || D[k].length < 3) fail('GAME: ' + k + ' should be a pool of at least 3 entries');
+  });
+  if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(src)) fail('GAME: ahead mode no longer shows hint level 1 automatically');
+  if (!/if \(hintLevel >= 2\) gHintBtn\.disabled = true;/.test(src)) fail('GAME: the hint button is not disabled after the second level');
+  if (!/gSolved = false; gMistake = false; gCtx = \{\}; gGen\+\+;/.test(src)) fail('GAME: startRound() does not start a new board generation (gGen++) — a piece held across a restart could solve the new round');
+  if (!/if \(gen !== gGen\) return;/.test(src)) fail('GAME: a released piece does not check its board generation — a piece held across a restart could solve the new round');
+  if (!/if \(!e\.isPrimary \|\| P\.locked \|\| gSolved \|\| start \|\| gen !== gGen\) return;/.test(src)) fail('GAME: a second finger can pick up a piece (pointerdown must require isPrimary)');
+  if (!/if \(!e\.isPrimary\) return;   \/\* 第二根手指/.test(src)) fail('GAME: a second finger can start a board tap (board pointerdown must require isPrimary)');
+  if (!/el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/.test(src)) fail('GAME: lostpointercapture does not put the piece back');
+  /* document 上的放開保險：只在拖拉開始時掛上、結束時（stopGesture() 與 end() 兩處）拿掉 —— 不然 capture 失敗時積木會卡死，或監聽越積越多 */
+  {
+    const ap = stripJsComments(extractFunction(src, 'addPiece') || '');
+    if (!ap) fail('GAME: cannot find addPiece() in index.html');
+    /* 三個地方各自切出來：pointerdown 的回呼裝一次，stopGesture() 與 end() 各拿掉一次（codex 第二輪：只數總數會放過搬錯地方的寫法） */
+    const pd = (ap.match(/el\.addEventListener\('pointerdown', function\(e\)\{([\s\S]*?)\n    \}\);\n    el\.addEventListener\('pointermove'/) || [])[1] || '';
+    const sg = extractFunction(ap, 'stopGesture') || '', en = extractFunction(ap, 'end') || '';
+    if (!pd || !sg || !en) fail('GAME: cannot cut the pointerdown handler, stopGesture() or end() out of addPiece()');
+    const cnt = (txt, re) => (txt.match(re) || []).length;
+    /* 而且要在所有的 return 守衛之後、真的開始拖的那一行後面緊接著裝（codex 第三輪：裝在守衛前面，被拒絕的 pointerdown 也會留下監聽） */
+    if (!/start = B\.toBoard\(e\); orig = \{ x:P\.cx, y:P\.cy \}; moved = false;\n\s*document\.addEventListener\('pointerup', onDocEnd\);\n\s*document\.addEventListener\('pointercancel', onDocEnd\);\s*$/.test(pd)) fail('GAME: the document-level release listeners must be installed right after the drag really starts (after every guard), as the last statements of pointerdown');
+    ['pointerup', 'pointercancel'].forEach(ev => {
+      const add = new RegExp("document\\.addEventListener\\('" + ev + "', onDocEnd\\);", 'g'), rm = new RegExp("document\\.removeEventListener\\('" + ev + "', onDocEnd\\);", 'g');
+      if (cnt(pd, add) !== 1 || cnt(ap, add) !== 1) fail('GAME: the document-level ' + ev + ' fallback must be installed exactly once, inside the pointerdown handler');
+      if (cnt(sg, rm) !== 1 || cnt(en, rm) !== 1 || cnt(ap, rm) !== 2) fail('GAME: the document-level ' + ev + ' listener must be removed once in stopGesture() and once in end()');
+    });
+  }
+
+  /* --- 計分（§三 中年級）：roundMiss() 與 roundSolved() 切出來真的跑 --- */
+  if (!/var pts = gMistake \? 10 : 20;/.test(src)) fail('GAME scoring: a round should give +20 with no mistakes and +10 after mistakes');
+  {
+    const fsrc = extractFunction(src, 'roundMiss');
+    if (!fsrc) fail('GAME scoring: cannot find roundMiss() in index.html');
+    else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(([s0, want, shows]) => {
+      let r;
+      try { r = new Function('var gMistake = false, gScore = ' + s0 + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+      catch (e){ return fail('GAME scoring: roundMiss() could not run: ' + e.message); }
+      if (r.s !== want || String(r.shown) !== String(want)) fail('GAME scoring: a mistake at ' + s0 + ' leaves ' + r.s + ' — a mistake does not cost 5 (floored at 0)');
+      if ((r.html.indexOf('@MINUS@') >= 0) !== shows) fail('GAME scoring: at ' + s0 + ' points the "−5" note is ' + (shows ? 'missing' : 'shown although nothing was taken'));
+      if (r.html.indexOf('why') < 0 || !r.m) fail('GAME scoring: roundMiss() does not show the reason or record the mistake');
+    });
+    const ssrc = extractFunction(src, 'roundSolved');
+    if (!ssrc) fail('GAME scoring: cannot find roundSolved() in index.html');
+    else [[false, 0, 20, 0], [true, 15, 25, 1], [false, 80, 100, 4]].forEach(([mis, s0, want, rd]) => {
+      let r;
+      try { r = new Function('var gSolved = false, gMistake = ' + mis + ', gScore = ' + s0 + ', gRound = ' + rd + ', GAME_ORDER = [1,2,3,4,5], elScore = {}, gMsg = {}, gNext = { disabled:true }, gHintBtn = { disabled:false }, gameStage = { querySelectorAll:function(){ return []; } };\n' +
+        'function L(){ return { gPts:function(p){ return "@" + p + "@"; }, gWin:function(s){ return "WIN" + s; }, gClear:"CLEAR" }; }\n' + ssrc + '\nroundSolved("ok"); roundSolved("again"); return { s:gScore, html:gMsg.innerHTML, next:gNext.disabled, hint:gHintBtn.disabled, solved:gSolved };')(); }
+      catch (e){ return fail('GAME scoring: roundSolved() could not run: ' + e.message); }
+      if (r.s !== want) fail('GAME scoring: roundSolved() with mistake=' + mis + ' from ' + s0 + ' gives ' + r.s + ', expected ' + want + ' (and only once)');
+      if (!r.solved || !r.hint || r.html.indexOf('again') >= 0) fail('GAME scoring: roundSolved() must solve once and disable the hint');
+      if ((rd === 4) !== /WIN/.test(r.html) || (rd === 4) !== r.next) fail('GAME scoring: the last round must show the win line and keep Next disabled; other rounds enable Next');
+    });
+  }
+  LANGS.forEach(L => {
+    const d = I18N[L];
+    if (nums(d.gPts(20)).join() !== '20' || nums(d.gPts(10)).join() !== '10') fail('GAME gPts ' + L + ' does not show the points');
+    if (nums(d.gMinus).join() !== '5') fail('GAME gMinus ' + L + ' should say 5');
+    if (nums(d.gWin(85)).indexOf(85) < 0) fail('GAME gWin ' + L + ' does not show the score');
+    if (typeof d.gClear !== 'string' || !d.gClear) fail('GAME gClear missing in ' + L);
+  });
+
+  /* --- shuffle()、nearestOpen()：切出來真的跑 --- */
+  let shuffleFn = null, nearestOpen = null;
+  {
+    const fsrc = extractFunction(src, 'shuffle');
+    if (!fsrc) fail('GAME: cannot find shuffle() in index.html');
+    else { try { shuffleFn = new Function(fsrc + '\nreturn shuffle;')(); } catch (e){ fail('GAME: shuffle() could not be evaluated: ' + e.message); } }
+    if (shuffleFn){
+      const seen = new Set();
+      for (let i = 0; i < 400; i++){
+        const a = [1, 2, 3, 4], r = shuffleFn(a);
+        if (r.slice().sort().join() !== '1,2,3,4' || a.join() !== '1,2,3,4'){ fail('GAME shuffle(): not a permutation of its input (or it changed the input)'); break; }
+        seen.add(r.join());
+      }
+      if (seen.size < 20) fail('GAME shuffle(): only ' + seen.size + ' of 24 orders in 400 draws — it does not really shuffle');
+    }
+    const nsrc = extractFunction(src, 'nearestOpen');
+    if (!nsrc) fail('GAME: cannot find nearestOpen() in index.html');
+    else { try { nearestOpen = new Function(nsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('GAME: nearestOpen() could not be evaluated: ' + e.message); } }
+    if (nearestOpen){
+      const two = [{ id:0, cx:100, cy:100, hw:60, hh:20 }, { id:1, cx:170, cy:100, hw:10, hh:10 }];
+      const r0 = nearestOpen(two, { x:155, y:100 }, 6);
+      if (!r0 || r0.id !== 0) fail('GAME nearestOpen(): a point inside the big box near the small one is given to the small one (measure to the box, not the centre)');
+      const done = [{ id:0, cx:100, cy:100, hw:20, hh:20, done:true }, { id:1, cx:142, cy:100, hw:20, hh:20 }];
+      if (nearestOpen(done, { x:119, y:100 }, 6) !== null) fail('GAME nearestOpen(): a drop nearest to a finished slot skips it and lands in the next slot');
+      if (nearestOpen(done, { x:300, y:300 }, 6) !== null) fail('GAME nearestOpen(): a drop far from every slot is accepted');
+      const pair = [{ id:0, cx:100, cy:100, hw:20, hh:20 }, { id:1, cx:142, cy:100, hw:20, hh:20 }];
+      const r1 = nearestOpen(pair, { x:123, y:100 }, 6);
+      if (!r1 || r1.id !== 1) fail('GAME nearestOpen(): a drop in the overlap nearer the second box goes to the first');
+      const edge = [{ id:0, cx:100, cy:100, hw:20, hh:20 }];
+      if (!nearestOpen(edge, { x:125.5, y:100 }, 6)) fail('GAME nearestOpen(): a drop inside the pad is refused');
+      if (nearestOpen(edge, { x:126.5, y:100 }, 6)) fail('GAME nearestOpen(): a drop outside the pad is accepted');
+    }
+  }
+  /* 自己的「最近的方框」 */
+  const nearestBox = (list, p, pad) => {
+    let best = null, bd = Infinity, bc = Infinity;
+    for (const b of list){
+      const dx = Math.abs(p.x - b.cx), dy = Math.abs(p.y - b.cy);
+      if (dx > b.hw + pad || dy > b.hh + pad) continue;
+      const dd = Math.hypot(Math.max(0, dx - b.hw), Math.max(0, dy - b.hh)), dc = Math.hypot(dx, dy);
+      if (dd < bd - 1e-9 || (Math.abs(dd - bd) < 1e-9 && dc < bc)){ bd = dd; bc = dc; best = b; }
+    }
+    return best;
+  };
+  /* 一排相鄰的格子：整塊畫板每 1px 和自己的最近方框比 */
+  const sweepNearest = (zones, pad, H, what) => {
+    if (!nearestOpen) return;
+    let bad = 0;
+    for (let x = 0; x <= W; x += 1) for (let y = 0; y <= H; y += 1){
+      const a = nearestOpen(zones, { x, y }, pad), b = nearestBox(zones, { x, y }, pad);
+      if (a !== b) bad++;
+    }
+    if (bad) fail('GAME ' + what + ': nearestOpen() disagrees with the nearest box at ' + bad + ' board points');
+  };
+
+  /* --- 觸控與畫板的大小（全部從資料區讀） --- */
+  tooSmall('GPICK ' + D.GPICK, D.GPICK);
+  tooSmall('a mat square', D.BUILD.cell);
+  tooSmall('a digit card', D.LAYER_KEYS.size);
+  tooSmall('a layer box', D.LAYERS.slot);
+  tooSmall('a sort card', Math.min(D.SORT.cardW, D.SORT.cardH));
+  tooSmall('a pile frame to tap', Math.min(D.TAP.frameW, D.TAP.frameH));
+  need('build', /addPiece\(B, \{ w:GPICK \+ 8, h:GPICK \+ 8, cx:s0\.cx, cy:s0\.cy,/, 'the cube source is not GPICK + 8 square at buildSrc()');
+  need('layers', /addPiece\(B, \{ w:LAYER_KEYS\.size, h:LAYER_KEYS\.size,/, 'the digit cards are not LAYER_KEYS.size square');
+  need('sort', /addPiece\(B, \{ w:SORT\.cardW, h:SORT\.cardH, cx:slots\[k\]\.cx, cy:SORT\.trayY,/, 'the sort cards are not SORT.cardW × SORT.cardH in the tray');
+  need('match', /addPiece\(B, \{ w:cd\.w, h:cd\.h, cx:cl3\[k\]\.x \+ cl3\[k\]\.w \/ 2, cy:MATCH\.trayY,/, 'the height-map cards are not matchCard() sized in the tray');
+  if (D.MINI_W > D.SORT.cardW - 6 || D.MINI_H > D.SORT.cardH - 6) fail('GAME: the mini drawing (' + D.MINI_W + '×' + D.MINI_H + ') does not fit inside a sort card');
+  if (src.indexOf('P.el.appendChild(miniSvg(set[pi]));') < 0 || !/var plan = miniPlan\(H\);[\s\S]{0,200}plan\.cubes\.forEach\(function\(k\)\{ drawCube\(s, k, 'a'\); \}\);/.test(src)) fail('GAME sort: the cards are not drawn with miniPlan()');
+
+  /* ================= 第 1 關：照圖疊 ================= */
+  {
+    const BU = D.BUILD, boxes = D.buildBoxes();
+    boxes.forEach((b, i) => inside(b, 'build panel ' + i, D.BUILD_H));
+    noHits(boxes, 'build panels');
+    D.GAME_BUILD.forEach((T, ti) => {
+      const what = 'GAME_BUILD[' + ti + '] ' + J(T);
+      pictured(T, what);
+      const n = volumeRef(T), hid = hiddenRef(T), v = visibleCountRef(T);
+      if (T.length !== 2 || T[0].length > 3 || maxHRef(T) > 3) fail('GAME ' + what + ': keep the copy pile to 2 rows, at most 3 squares wide and 3 high');
+      if (n < 6 || n > 10) fail('GAME ' + what + ': ' + n + ' cubes — the copy pile should take 6 to 10 cubes');
+      if (hid < 2) fail('GAME ' + what + ': only ' + hid + ' hidden — the copy round must make the child place at least 2 cubes that the picture does not show');
+      if (T.some(row => row.every(x => x === 0)) || T[0].some((x, c) => T.every(row => row[c] === 0))) fail('GAME ' + what + ': an empty row or column would make the mat bigger than the pile');
+      /* 兩邊畫在同一個 ext 下，各自在自己的框裡 */
+      const ext = extentRef(T);
+      boxes.forEach((b, i) => pileFits(T, b, BU.unit, what + ' panel ' + i, ext));
+      boxes.forEach((b, i) => {
+        const o = originRef(T, b, BU.unit, ext), fc = D.floorCells(T, o.X0, o.Y0, BU.unit);
+        if (fc.length !== T.length * T[0].length) fail('GAME ' + what + ': floorCells() should give one square per mat square');
+        fc.forEach(f => {
+          const bb = T.length - 1 - f.r, want = [[f.c, bb], [f.c + 1, bb], [f.c + 1, bb + 1], [f.c, bb + 1]].map(([c, b2]) => projRef(c, 0, b2, o.X0, o.Y0, BU.unit));
+          if (!want.every((p, k) => samePt(p, f.poly[k]))) fail('GAME ' + what + ': floor square ' + f.r + ',' + f.c + ' is not where the table square is');
+          f.poly.forEach(p => { if (!(p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h)) fail('GAME ' + what + ': the floor grid leaves panel ' + i); });
+        });
+      });
+      /* 方格：一格一個、相鄰、在畫板裡、不碰到方塊來源 */
+      const cells = D.buildCells(T), C = T[0].length, R = T.length, s0 = D.buildSrc(T);
+      if (cells.length !== R * C) fail('GAME ' + what + ': buildCells() should give ' + R * C + ' squares');
+      cells.forEach((cl, i) => {
+        if (cl.r !== Math.floor(i / C) || cl.c !== i % C) fail('GAME ' + what + ': buildCells() is not in reading order (back row first)');
+        const want = { cx:BU.matCx - C * BU.cell / 2 + (cl.c + 0.5) * BU.cell, cy:BU.matTop + (cl.r + 0.5) * BU.cell };
+        if (Math.abs(cl.cx - want.cx) > 1e-9 || Math.abs(cl.cy - want.cy) > 1e-9 || cl.hw !== BU.cell / 2 || cl.hh !== BU.cell / 2) fail('GAME ' + what + ': square ' + i + ' is not on the mat grid');
+        inside(boxOf(cl), what + ' square ' + i, D.BUILD_H);
+      });
+      noHits(cells.map(boxOf), what + ' squares');
+      const srcBox = rect(s0.cx - (D.GPICK + 8) / 2, s0.cy - (D.GPICK + 8) / 2, D.GPICK + 8, D.GPICK + 8);
+      inside(srcBox, what + ' cube source', D.BUILD_H);
+      cells.forEach((cl, i) => { const pb = boxOf(cl); if (hit(rect(pb.x - BU.pad, pb.y - BU.pad, pb.w + 2 * BU.pad, pb.h + 2 * BU.pad), srcBox)) fail('GAME ' + what + ': the cube source sits inside the drop zone of square ' + i); });
+      boxes.forEach((b, i) => { if (hit(b, rect(BU.matCx - C * BU.cell / 2, BU.matTop - 24, C * BU.cell, R * BU.cell + 48))) fail('GAME ' + what + ': the mat runs into panel ' + i); });
+      if (BU.matTop + R * BU.cell + 24 > D.BUILD_H) fail('GAME ' + what + ': the "front" label falls off the board');
+      if (W > 0) sweepNearest(cells, BU.pad, D.BUILD_H, what + ' mat');
+      /* buildJudge 和自己的規則比：每一種 built 狀態、每一格 */
+      const want = (built, r, c) => T[r][c] === 0 ? 'empty' : built[r][c] >= T[r][c] ? 'full' : 'ok';
+      const states = allHRef(R, C, 3).filter(G => G.every((row, r) => row.every((x, c) => x <= T[r][c])));
+      states.forEach(G => cells.forEach(cl => { if (D.buildJudge(T, G, cl.r, cl.c) !== want(G, cl.r, cl.c)) fail('GAME ' + what + ': buildJudge(' + J(G) + ', ' + cl.r + ', ' + cl.c + ') disagrees'); }));
+      /* 照遊戲的規則玩：任意的順序，每一步把「收」的那一塊放上去；剛好 n 塊時和圖一樣，之前都不一樣 */
+      let rnd = lcg(1000 + ti);
+      for (let g = 0; g < 60; g++){
+        const built = D.emptyLike(T); let k = 0;
+        while (true){
+          const okCells = cells.filter(cl => D.buildJudge(T, built, cl.r, cl.c) === 'ok');
+          if (!okCells.length) break;
+          const cl = okCells[Math.floor(rnd() * okCells.length)];
+          built[cl.r][cl.c]++; k++;
+          if (D.sameStack(built, T) !== (k === n)) { fail('GAME ' + what + ': sameStack() says done at ' + k + ' of ' + n); break; }
+        }
+        if (k !== n || !eqJ(built, T)) { fail('GAME ' + what + ': playing by the rules stops at ' + k + ' cubes, not ' + n); break; }
+      }
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        seq('build done (' + L + ')', d.gBuildDone(n, v, hid), [n, n, v, hid]);
+        if (v + hid !== n) fail('GAME ' + what + ': seen + hidden is not the total');
+        T.forEach(row => row.forEach(x => { if (x) seq('build full (' + L + ')', d.gBuildFull(x), [x]); }));
+        for (let k = 1; k <= 3; k++) seq('build hint 2 (' + L + ')', d.gBuild2(k), [k]);
+        seq('build line (' + L + ')', d.gBuildNow(n), [n]);
+        seq('build line 1 (' + L + ')', d.gBuildNow(1), [1]);
+      });
+    });
+    LANGS.forEach(L => { if (nums(I18N[L].gBuildEmpty).length) fail('GAME gBuildEmpty (' + L + ') should not carry a number'); });
+    need('build', /var j = buildJudge\(T, built, cl\.r, cl\.c\);\s*if \(j === 'empty'\)\{ roundMiss\(d\.gBuildEmpty\); return false; \}\s*if \(j === 'full'\)\{ roundMiss\(d\.gBuildFull\(T\[cl\.r\]\[cl\.c\]\)\); return false; \}\s*built\[cl\.r\]\[cl\.c\]\+\+;/, 'the drop handler no longer refuses an empty square / a full square before placing');
+    need('build', /var cl = nearestOpen\(cells, pt, BUILD\.pad\);\s*if \(!cl\) return false;/, 'a drop away from the mat is not a silent bounce');
+    need('build', /if \(sameStack\(built, T\)\)\{[\s\S]*?roundSolved\(d\.gBuildDone\(n, vis\.visible, vis\.hidden\)\);/, 'the round is not solved exactly when the pile equals the picture');
+    need('build', /B\.onPointTap = function\(P, pt\)\{\s*if \(P\.busy\(\) \|\| gSolved\) return;\s*place\(P,/, 'tap-then-tap no longer places with the cube kept selected (or ignores a held cube)');
+  }
+
+  /* ================= 第 2 關：配高度圖 ================= */
+  {
+    const MA = D.MATCH, cl3 = D.matchCols();
+    if (cl3.length !== 3) fail('GAME match: three columns');
+    cl3.forEach((c, i) => inside(c.box, 'match pile box ' + i, D.MATCH_H));
+    noHits(cl3.map(c => c.box), 'match pile boxes');
+    D.GAME_MATCH.forEach((set, si) => {
+      const what = 'GAME_MATCH[' + si + ']';
+      if (!Array.isArray(set) || set.length !== 3) return fail('GAME ' + what + ': three piles');
+      set.forEach((H, i) => { pictured(H, what + '[' + i + ']'); pileFits(H, cl3[i].box, MA.unit, what + '[' + i + ']'); });
+      if (new Set(set.map(H => H.length + 'x' + H[0].length)).size !== 1) fail('GAME ' + what + ': the three piles must have the same grid size');
+      if (new Set(set.map(volumeRef)).size !== 1) fail('GAME ' + what + ': the three piles must have the same number of cubes (otherwise the total gives the match away)');
+      if (new Set(set.map(H => cellsRef(H).slice().sort().join())).size !== 1) fail('GAME ' + what + ': the three piles must use the same column heights in different places');
+      if (new Set(set.map(J)).size !== 3) fail('GAME ' + what + ': two piles are the same');
+      if (new Set(set.map(imageRef)).size !== 3) fail('GAME ' + what + ': two piles look the same');
+      /* matchDiff 和自己的「第一個不一樣的格子」比 */
+      set.forEach((A, a) => set.forEach((B, b) => {
+        let want = null;
+        for (let r = 0; r < A.length && !want; r++) for (let c = 0; c < A[0].length; c++) if (A[r][c] !== B[r][c]){ want = { r, c, a:A[r][c], b:B[r][c] }; break; }
+        if (J(D.matchDiff(A, B)) !== J(want)) fail('GAME ' + what + ': matchDiff(' + a + ', ' + b + ') = ' + J(D.matchDiff(A, B)) + ', expected ' + J(want));
+        if (want) LANGS.forEach(L => seq('match bad (' + L + ')', I18N[L].gMatchBad(want.a, want.b), [want.a, want.b]));
+      }));
+      const cd = D.matchCard(set[0]), zones = D.matchZones(set);
+      if (cd.w !== set[0][0].length * MA.cellPx + 2 * MA.cardPad || cd.h !== set[0].length * MA.cellPx + 2 * MA.cardPad) fail('GAME ' + what + ': matchCard() size is wrong');
+      tooSmall(what + ' a height-map card', Math.min(cd.w, cd.h));
+      zones.forEach((z, i) => {
+        const zb = boxOf(z), c = cl3[i].box;
+        if (!(zb.x <= c.x && zb.y <= c.y && zb.x + zb.w >= c.x + c.w && zb.y + zb.h >= c.y + c.h)) fail('GAME ' + what + ': the drop zone of column ' + i + ' does not cover the drawn pile');
+        if (!(z.slotCy - cd.h / 2 >= MA.slotY && z.slotCy + cd.h / 2 <= zb.y + zb.h)) fail('GAME ' + what + ': the frame under pile ' + i + ' is outside its drop zone');
+        inside(zb, what + ' drop zone ' + i, D.MATCH_H);
+      });
+      noHits(zones.map(boxOf), what + ' drop zones');
+      const tray = cl3.map(c => rect(c.x + c.w / 2 - cd.w / 2, MA.trayY - cd.h / 2, cd.w, cd.h));
+      tray.forEach((t, k) => { inside(t, what + ' tray card ' + k, D.MATCH_H); zones.forEach(z => { const zb = boxOf(z); if (hit(t, rect(zb.x - MA.pad, zb.y - MA.pad, zb.w + 2 * MA.pad, zb.h + 2 * MA.pad))) fail('GAME ' + what + ': tray card ' + k + ' sits in a drop zone'); }); });
+      noHits(tray, what + ' tray cards');
+      sweepNearest(zones, MA.pad, D.MATCH_H, what + ' columns');
+      /* 照規則玩：任一張卡只收進自己的那一欄 */
+      set.forEach((A, a) => zones.forEach((z, b) => { if ((D.matchDiff(A, set[z.i]) === null) !== (a === b)) fail('GAME ' + what + ': card ' + a + ' would be accepted by column ' + b); }));
+      LANGS.forEach(L => seq('match done (' + L + ')', I18N[L].gMatchDone(volumeRef(set[0])), [volumeRef(set[0])]));
+    });
+    const seen = new Set();
+    for (let i = 0; i < 600; i++){
+      const o = D.noIdentity(3);
+      if (o.slice().sort().join() !== '0,1,2'){ fail('GAME noIdentity(): not a permutation'); break; }
+      if (o.join() === '0,1,2'){ fail('GAME noIdentity(): the tray started in answer order'); break; }
+      seen.add(o.join());
+    }
+    if (seen.size !== 5) fail('GAME noIdentity(): only ' + seen.size + ' of the 5 non-answer orders appear in 600 draws');
+    need('match', /var diff = matchDiff\(set\[P\.data\.i\], set\[z\.i\]\);\s*if \(diff\)\{\s*P\.cellEls\[diff\.r \* C \+ diff\.c\]\.classList\.add\('bad'\);\s*roundMiss\(d\.gMatchBad\(diff\.a, diff\.b\)\);\s*return false;/, 'a card on the wrong pile is not refused with the red square and its reason');
+    need('match', /var z = nearestOpen\(zones, pt, MATCH\.pad\);\s*if \(!z\) return false;/, 'a drop away from the columns is not a silent bounce');
+    need('match', /noIdentity\(3\)\.map\(function\(pi, k\)/, 'the tray is not dealt with noIdentity()');
+    need('match', /if \(!left\)\{ flashOnly\(\[\]\); roundSolved\(d\.gMatchDone\(volume\(set\[0\]\)\)\); \}/, 'the round is not solved once all three cards are placed');
+  }
+
+  /* ================= 第 3 關：分層數 ================= */
+  {
+    const LA = D.LAYERS, LK = D.LAYER_KEYS;
+    inside(LA.box, 'layers pile box', D.LAYERS_H);
+    const keys = [];
+    for (let v = 0; v <= 9; v++) keys.push(rect(150 + ((v % 5) - 2) * LK.step - LK.size / 2, LK.y + Math.floor(v / 5) * LK.rowStep - LK.size / 2, LK.size, LK.size));
+    keys.forEach((k, i) => inside(k, 'digit card ' + i, D.LAYERS_H));
+    noHits(keys, 'digit cards');
+    if (src.indexOf('cx:150 + ((v % 5) - 2) * LAYER_KEYS.step, cy:LAYER_KEYS.y + Math.floor(v / 5) * LAYER_KEYS.rowStep') < 0) fail('GAME layers: the digit cards are not laid out from LAYER_KEYS');
+    D.GAME_LAYERS.forEach((H, hi) => {
+      const what = 'GAME_LAYERS[' + hi + '] ' + J(H);
+      pictured(H, what);
+      pileFits(H, LA.box, LA.unit, what);
+      const lc = layersRef(H), m = lc.length;
+      if (J(D.layerCounts(H)) !== J(lc)) fail('GAME ' + what + ': layerCounts() disagrees');
+      if (m < 3 || m > 3) fail('GAME ' + what + ': use piles exactly 3 layers high (three boxes fit the board)');
+      if (lc.some(c => c > 9)) fail('GAME ' + what + ': a layer has more than 9 cubes — no single digit card for it');
+      if (new Set(lc).size < 2) fail('GAME ' + what + ': every layer has the same count — counting the squares would always work');
+      /* 第 1 層一定有看不到的方塊 —— 只數看得到的會少 */
+      const vis = visibleSetRef(H), hidden1 = cubeListRef(H).filter(k => k.h === 0 && !vis.has(k.c + ',' + k.h + ',' + k.b)).length;
+      if (hidden1 < 1) fail('GAME ' + what + ': layer 1 has no hidden cube, so counting only what you see would also work');
+      const R = H.length, C = H[0].length;
+      const hb = rect(LA.box.x + (LA.box.w - C * LA.hcell) / 2, LA.hmapY + 22, C * LA.hcell, R * LA.hcell);
+      inside(hb, what + ' height map', D.LAYERS_H);
+      const slots = D.layerSlots(H);
+      if (slots.length !== m) fail('GAME ' + what + ': one box per layer');
+      slots.forEach((S, i) => {
+        if (S.L !== i + 1) fail('GAME ' + what + ': layerSlots() must list layer 1 first');
+        if (Math.abs(S.cy - (LA.rowTop + (m - S.L) * LA.rowStep + LA.slot / 2)) > 1e-9) fail('GAME ' + what + ': layer ' + S.L + ' is not in its row (layer 1 at the bottom)');
+        inside(boxOf(S), what + ' layer box ' + S.L, D.LAYERS_H);
+        inside(rect(LA.slotX - LA.lblW - 2, S.cy - 11, LA.lblW, 22), what + ' layer label ' + S.L, D.LAYERS_H);
+        inside(rect(LA.slotX + LA.slot + 4, S.cy - 11, LA.unitW, 22), what + ' unit label ' + S.L, D.LAYERS_H);
+        if (hit(rect(LA.slotX - LA.lblW - 2, S.cy - 11, LA.lblW, 22), LA.box)) fail('GAME ' + what + ': the layer label runs into the picture');
+        keys.forEach((k, j) => { const sb = boxOf(S); if (hit(k, rect(sb.x - LA.pad, sb.y - LA.pad, sb.w + 2 * LA.pad, sb.h + 2 * LA.pad))) fail('GAME ' + what + ': digit card ' + j + ' sits in the drop zone of layer ' + S.L); });
+      });
+      noHits(slots.map(boxOf), what + ' layer boxes');
+      keys.forEach((k, j) => { if (hit(k, hb)) fail('GAME ' + what + ': digit card ' + j + ' covers the height map'); });
+      sweepNearest(slots, LA.pad, D.LAYERS_H, what + ' layer boxes');
+      for (let L = 1; L <= m; L++) for (let v = 0; v <= 9; v++){
+        const want = v === lc[L - 1] ? 'ok' : v > lc[L - 1] ? 'more' : 'less';
+        if (D.layerJudge(H, L, v) !== want) fail('GAME ' + what + ': layerJudge(' + L + ', ' + v + ') should be ' + want);
+        const c = lc[L - 1];
+        LANGS.forEach(lang => {
+          const d = I18N[lang];
+          if (want === 'more') seq('layer more (' + lang + ')', d.gLayerMore(L, v, c), lang === 'zh' ? [L, v, L, c] : [L, v, c, L]);
+          if (want === 'less') seq('layer less (' + lang + ')', d.gLayerLess(L, v, c), lang === 'zh' ? [L, v, c, L] : [L, v, c, L]);
+        });
+      }
+      LANGS.forEach(lang => {
+        const d = I18N[lang], n = volumeRef(H);
+        seq('layers done (' + lang + ')', d.gLayersDone(lc, n), lc.concat([n, n]));
+        if (gameArith(d.gLayersDone(lc, n)).verified !== 1) fail('GAME layers done (' + lang + '): the sum should be one checked equation');
+        lc.forEach((c, i) => { seq('layer ok (' + lang + ')', d.gLayerOk(i + 1, c), [i + 1, c]); seq('layer hint 2 (' + lang + ')', d.gLayer2(i + 1), [i + 1]); });
+      });
+    });
+    LANGS.forEach(L => { [1, 2, 3].forEach(k => { if (nums(I18N[L].gLayerName(k)).join() !== String(k)) fail('GAME gLayerName(' + k + ') (' + L + ') should name the layer'); }); });
+    /* 單複數：1 只有在誘答與正解貼得很近時才出現，題庫不一定走得到 —— 直接拿 1 去渲染 */
+    LANGS.forEach(L => { const d = I18N[L]; [[1, 1, 0], [2, 1, 1], [3, 2, 1]].forEach(([l, v, c]) => { textProblems(d.gLayerMore(l, v, c), L, 'GAME layer more ' + l + ',' + v + ',' + c).forEach(fail); textProblems(d.gLayerLess(l, v, c), L, 'GAME layer less ' + l + ',' + v + ',' + c).forEach(fail); textProblems(d.gLayerOk(l, 1), L, 'GAME layer ok').forEach(fail); }); textProblems(d.gBuild2(1), L, 'GAME build hint 2').forEach(fail); textProblems(d.gBuildNow(1), L, 'GAME build line').forEach(fail); textProblems(d.gMatchBad(2, 1), L, 'GAME match bad').forEach(fail); });
+    need('layers', /var v = P\.data\.v, c = lc\[S\.L - 1\], j = layerJudge\(H, S\.L, v\);\s*if \(j === 'more'\)\{ roundMiss\(d\.gLayerMore\(S\.L, v, c\)\); return false; \}\s*if \(j === 'less'\)\{ roundMiss\(d\.gLayerLess\(S\.L, v, c\)\); return false; \}/, 'a wrong count is not refused with its reason');
+    need('layers', /var S = nearestOpen\(slots, pt, LAYERS\.pad\);\s*if \(!S\) return false;/, 'a drop away from the boxes is not a silent bounce');
+    need('layers', /roundSolved\(d\.gLayersDone\(lc, volume\(H\)\)\);/, 'the round is not solved with the layer sum');
+  }
+
+  /* ================= 第 4 關：排大小 ================= */
+  {
+    const SO = D.SORT, slots = D.sortSlots();
+    if (slots.length !== 3) fail('GAME sort: three boxes');
+    slots.forEach((S, i) => {
+      if (Math.abs(S.cx - (i * (SO.slotW + SO.gap) + SO.slotW / 2)) > 1e-9 || S.hw !== SO.slotW / 2 || S.hh !== SO.slotH / 2) fail('GAME sort: box ' + i + ' is not where it is drawn');
+      inside(boxOf(S), 'sort box ' + i, D.SORT_H);
+      inside(rect(S.x, SO.lblY, SO.slotW, SO.lblH), 'sort label ' + i, D.SORT_H);
+      if (SO.cardW > SO.slotW || SO.cardH > SO.slotH) fail('GAME sort: a card does not fit in a box');
+    });
+    noHits(slots.map(boxOf), 'sort boxes');
+    sweepNearest(slots, SO.pad, D.SORT_H, 'sort boxes');
+    const tray = slots.map(S => rect(S.cx - SO.cardW / 2, SO.trayY - SO.cardH / 2, SO.cardW, SO.cardH));
+    tray.forEach((t, k) => { inside(t, 'sort tray card ' + k, D.SORT_H); slots.forEach(S => { const sb = boxOf(S); if (hit(t, rect(sb.x - SO.pad, sb.y - SO.pad, sb.w + 2 * SO.pad, sb.h + 2 * SO.pad))) fail('GAME sort: tray card ' + k + ' sits in a drop zone'); }); });
+    noHits(tray, 'sort tray cards');
+    D.GAME_SORT.forEach((set, si) => {
+      const what = 'GAME_SORT[' + si + ']';
+      if (!Array.isArray(set) || set.length !== 3) return fail('GAME ' + what + ': three piles');
+      const vols = set.map(volumeRef), hts = set.map(maxHRef);
+      set.forEach((H, i) => {
+        pictured(H, what + '[' + i + ']');
+        const mp = D.miniPlan(H);
+        if (!mp.fits) fail('GAME ' + what + '[' + i + ']: does not fit the card drawing');
+        pileFits(H, rect(0, 0, D.MINI_W, D.MINI_H), D.MINI_U, what + '[' + i + '] card');
+      });
+      if (new Set(vols).size !== 3) fail('GAME ' + what + ': the three piles must have different numbers of cubes (' + vols.join(',') + ')');
+      const tallest = hts.indexOf(Math.max(...hts));
+      if (hts.filter(h => h === hts[tallest]).length !== 1) fail('GAME ' + what + ': there must be one tallest pile');
+      if (vols[tallest] === Math.max(...vols)) fail('GAME ' + what + ': the tallest pile has the most cubes — "taller is not always bigger" is never tested');
+      set.forEach((H, i) => { const want = vols.filter(v => v < vols[i]).length; if (D.sortRank(set, i) !== want) fail('GAME ' + what + ': sortRank(' + i + ') should be ' + want); });
+      const seen = new Set();
+      for (let g = 0; g < 600; g++){
+        const o = D.sortTray(set);
+        if (o.slice().sort().join() !== '0,1,2'){ fail('GAME ' + what + ': sortTray() is not a permutation'); break; }
+        const ranks = o.map(i => vols.filter(v => v < vols[i]).length);
+        if (ranks.join() === '0,1,2'){ fail('GAME ' + what + ': the tray started sorted (fewest to most from left to right)'); break; }
+        seen.add(o.join());
+      }
+      if (seen.size !== 5) fail('GAME ' + what + ': sortTray() deals only ' + seen.size + ' of the 5 unsorted orders');
+      const ranked = vols.slice().sort((a, b) => a - b);
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        seq('sort done (' + L + ')', d.gSortDone(ranked[0], ranked[1], ranked[2]), ranked);
+        vols.forEach(a => {
+          seq('sort more (' + L + ')', d.gSortMore(a), [a]); seq('sort less (' + L + ')', d.gSortLess(a), [a]); seq('sort ok (' + L + ')', d.gSortOk(a), [a]);
+        });
+      });
+    });
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      if (!(L === 'zh' ? /多/.test(d.gSortMore(5)) && /少/.test(d.gSortLess(5)) && !/少/.test(d.gSortMore(5)) : /more/.test(d.gSortMore(5)) && /fewer/.test(d.gSortLess(5)) && !/fewer/.test(d.gSortMore(5)))) fail('GAME gSortMore/gSortLess (' + L + ') say more/fewer the wrong way round');
+      if (!Array.isArray(d.gSortLbl) || d.gSortLbl.length !== 3) fail('GAME gSortLbl (' + L + ') needs three labels');
+    });
+    need('sort', /var a = volume\(set\[P\.data\.i\]\), want = volume\(set\[byRank\[S\.i\]\]\);\s*if \(sortRank\(set, P\.data\.i\) !== S\.i\)\{ roundMiss\(a > want \? d\.gSortMore\(a\) : d\.gSortLess\(a\)\); return false; \}/, 'a pile in the wrong box is not refused with more/fewer');
+    need('sort', /var S = nearestOpen\(slots, pt, SORT\.pad\);\s*if \(!S\) return false;/, 'a drop away from the boxes is not a silent bounce');
+    need('sort', /sortTray\(set\)\.map\(function\(pi, k\)/, 'the tray is not dealt with sortTray()');
+    need('sort', /if \(placed === 3\)\{ flashOnly\(\[\]\); roundSolved\(d\.gSortDone\(/, 'the round is not solved once all three are placed');
+  }
+
+  /* ================= 第 5 關：找一樣大 ================= */
+  {
+    const TA = D.TAP, frames = D.tapFrames();
+    inside(TA.baseBox, 'tap base box', D.TAP_H);
+    frames.forEach((f, i) => inside(f, 'tap frame ' + i, D.TAP_H));
+    noHits(frames.concat([TA.baseBox]), 'tap frames');
+    /* tapPick 整塊畫板每 1px 和自己的「點在哪一個框裡」比 */
+    let bad = 0;
+    for (let x = -2; x <= W + 2; x++) for (let y = -2; y <= D.TAP_H + 2; y++){
+      let want = -1;
+      frames.forEach((f, i) => { if (x >= f.x && x <= f.x + f.w && y >= f.y && y <= f.y + f.h) want = i; });
+      if (D.tapPick({ x, y }) !== want) bad++;
+    }
+    if (bad) fail('GAME tap: tapPick() disagrees with the drawn frames at ' + bad + ' points');
+    D.GAME_TAP.forEach((e, ei) => {
+      const what = 'GAME_TAP[' + ei + ']', n = volumeRef(e.base);
+      pictured(e.base, what + ' base'); pileFits(e.base, TA.baseBox, TA.baseUnit, what + ' base');
+      if (!Array.isArray(e.cands) || e.cands.length !== 4) return fail('GAME ' + what + ': four piles');
+      e.cands.forEach((H, i) => { pictured(H, what + '[' + i + ']'); pileFits(H, frames[i], TA.unit, what + '[' + i + ']'); if (D.tapSame(e.base, H) !== (volumeRef(H) === n)) fail('GAME ' + what + ': tapSame(' + i + ') is wrong'); });
+      const same = e.cands.filter(H => volumeRef(H) === n), diff = e.cands.filter(H => volumeRef(H) !== n);
+      if (same.length !== 2) fail('GAME ' + what + ': exactly two piles must match A (' + same.length + ')');
+      same.forEach(H => { if (eqJ(H, e.base)) fail('GAME ' + what + ': a matching pile is A itself — nothing was rearranged'); });
+      if (!same.some(H => maxHRef(H) !== maxHRef(e.base) || footprintRef(H) !== footprintRef(e.base))) fail('GAME ' + what + ': no matching pile is taller/flatter than A');
+      if (!diff.some(H => maxHRef(H) === maxHRef(e.base) || footprintRef(H) === footprintRef(e.base))) fail('GAME ' + what + ': no different pile looks like A (same height or same base)');
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        seq('tap done (' + L + ')', d.gTapDone(n), [n, n]); seq('tap hint 2 (' + L + ')', d.gTap2(n), [n, n]); seq('tap ok (' + L + ')', d.gTapOk(n), [n]);
+        diff.forEach(H => seq('tap bad (' + L + ')', d.gTapBad(volumeRef(H), n), [volumeRef(H), n]));
+        seq('tap line (' + L + ')', d.gTapNow(1), [1, 2]);
+      });
+    });
+    need('tap', /var i = tapPick\(pt\);\s*if \(i < 0 \|\| done\[i\]\) return;/, 'a tap in a gap or on a found pile is not ignored');
+    need('tap', /if \(!tapSame\(e\.base, H\)\)\{ roundMiss\(d\.gTapBad\(volume\(H\), n\)\); return; \}/, 'a pile with a different count is not refused with its reason');
+    need('tap', /if \(found === 2\) roundSolved\(d\.gTapDone\(n\)\);/, 'the round is not solved after both matching piles');
+  }
+}
+
 module.exports = {
   /* ================= 刻意改壞測試 ================= */
   breaks: [
@@ -559,10 +1073,6 @@ module.exports = {
       replace:"      tallerIsBigger:true,",
       why:"the narration would never say 'taller is not bigger'" },
 
-    { file:"index", via:"index", expect:"hides a whole column behind the others",
-      find:"    game8:  [[3, 2], [2, 1]],",
-      replace:"    game8:  [[1, 0], [2, 2]],",
-      why:"the counting round would show a pile whose back column is completely hidden, so no child could count it from the picture" },
     { file:"index", via:"index", expect:"allTopsVisible() disagrees",
       find:"    H.forEach(function(row, r){ row.forEach(function(x, c){ if (x > 0 && !byKey[c + ',' + (x - 1) + ',' + (R - 1 - r)]) ok = false; }); });",
       replace:"    H.forEach(function(row, r){ row.forEach(function(x, c){ if (x > 1 && !byKey[c + ',' + (x - 1) + ',' + (R - 1 - r)]) ok = false; }); });",
@@ -587,10 +1097,6 @@ module.exports = {
       find:"      if (!allTopsVisible(H)) return null;     // 一整格藏在後面的話，圖上數不出來",
       replace:"      // (removed)",
       why:"the generators could draw piles whose back column is completely hidden" },
-    { file:"index", via:"index", expect:"carries the wrong unit for a count question",
-      find:"    if (r.kind === 'count' || r.kind === 'hidden') return d.cubesText(key);\n    return d.volText(key);",
-      replace:"    return d.volText(key);",
-      why:"a round asking 'how many cubes' would answer in cubic centimetres" },
     { file:"parents", via:"index", expect:"SIBLING: \"高的不一定大\"",
       find:"<strong>比體積就是比塊數</strong>，高的不一定大，搬動重排體積不變。課本上這些是拿真的積木疊、數、比；網站上用的是畫出來的方塊堆、「透視」按鈕和「高度圖」（從上面看，每一格疊幾塊）。',",
       replace:"<strong>比體積就是比塊數</strong>，搬動重排體積不變。課本上這些是拿真的積木疊、數、比；網站上用的是畫出來的方塊堆、「透視」按鈕和「高度圖」（從上面看，每一格疊幾塊）。',",
@@ -620,30 +1126,6 @@ module.exports = {
       find:"          why:'高度圖每一格加起來：4 ＋ 2 ＋ 2 ＋ 1 ＝ <strong>9</strong>，體積 9 立方公分。",
       replace:"          why:'高度圖每一格加起來：4 ＋ 2 ＋ 2 ＋ 1 ＝ <strong>8</strong>，體積 9 立方公分。",
       why:"an explanation with a wrong sum" },
-    { file:"index", via:"index", expect:"the counting round must hide at least one cube",
-      find:"    { kind:'count',   stack:'game8' },",
-      replace:"    { kind:'count',   stack:'stair6' },",
-      why:"a counting round with nothing hidden would lose the 'only what you see' distractor" },
-    { file:"index", via:"index", expect:"exactly one candidate must have volume 6",
-      find:"    { kind:'which',   target:6, cands:['stair6', 'block7', 'five5', 'eight8'] },",
-      replace:"    { kind:'which',   target:6, cands:['stair6', 'flat6', 'five5', 'eight8'] },",
-      why:"two candidates would have the target volume, so a correct choice could be marked wrong" },
-    { file:"index", via:"index", expect:"the moved pile must keep the same number of cubes",
-      find:"    { kind:'move',    A:'seven7', B:'bar7' }",
-      replace:"    { kind:'move',    A:'seven7', B:'flat6' }",
-      why:"the 'moved' pile would have a different number of cubes" },
-    { file:"index", via:"index", expect:"the answer is not the volume",
-      find:"    if (r.kind === 'count') return opts.indexOf(visibility(stack(r.stack)).total);",
-      replace:"    if (r.kind === 'count') return opts.indexOf(visibility(stack(r.stack)).visible);",
-      why:"the counting round would be keyed to the visible count" },
-    { file:"index", via:"index", expect:"does not offer the visible count",
-      find:"      return numOpts(vis.total, [vis.visible, footprint(stack(r.stack)), vis.total + 1], 1, MAX_CUBES);",
-      replace:"      return numOpts(vis.total, [footprint(stack(r.stack)), vis.total + 1], 1, MAX_CUBES);",
-      why:"the headline misconception would no longer be offered as a distractor" },
-    { file:"index", via:"index", expect:"game figure caption",
-      find:"      gCapSingle:'📦 每一塊都是 1 立方公分',",
-      replace:"      gCapSingle:'📦 每一塊都是 1 立方公分，一共 8 塊',",
-      why:"the caption would print the answer of the counting round" },
 
     /* --- 旁白 --- */
     { file:"index", via:"index", expect:"missing space between Chinese and a digit",
@@ -797,7 +1279,224 @@ module.exports = {
     { file:"review", via:"review", expect:"floor line",
       find:"    return { kind:'single', w:FIG_W, h:FIG_H, floorY:plan.box.y + plan.box.h + 0.5, stacks:[{ H:H, tone:'a', plan:plan }] };",
       replace:"    return { kind:'single', w:FIG_W, h:FIG_H, floorY:plan.box.y + plan.box.h + 12, stacks:[{ H:H, tone:'a', plan:plan }] };",
-      why:"the floor line would float below the pile" }
+      why:"the floor line would float below the pile" },
+    /* --- 小遊戲：盤點站出任務（2026-10-08，五關五種玩法） --- */
+    { file:"index", via:"index", expect:"installed right after the drag really starts",
+      find:"      PIECE_PTR[e.pointerId] = true;\n      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣；codex 第一輪） */\n      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;\n      e.preventDefault();\n      pid = e.pointerId;\n      try { el.setPointerCapture(e.pointerId); } catch(err){}\n      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;\n      document.addEventListener('pointerup', onDocEnd);\n      document.addEventListener('pointercancel', onDocEnd);\n    });",
+      replace:"      PIECE_PTR[e.pointerId] = true;\n      document.addEventListener('pointercancel', onDocEnd);\n      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣；codex 第一輪） */\n      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;\n      e.preventDefault();\n      pid = e.pointerId;\n      try { el.setPointerCapture(e.pointerId); } catch(err){}\n      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;\n      document.addEventListener('pointerup', onDocEnd);\n    });",
+      why:"the pointercancel fallback would be installed before the guards, so a refused second finger leaves a listener behind" },
+    { file:"index", via:"index", expect:"pointercancel fallback must be installed exactly once",
+      find:"      document.addEventListener('pointerup', onDocEnd);\n      document.addEventListener('pointercancel', onDocEnd);\n    });",
+      replace:"      document.addEventListener('pointerup', onDocEnd);\n    });\n    document.addEventListener('pointercancel', onDocEnd);",
+      why:"the pointercancel fallback would be installed outside the drag, once per piece" },
+    { file:"index", via:"index", expect:"listener must be removed once in stopGesture() and once in end()",
+      find:"    function stopGesture(){\n      if (!start) return;\n      start = null; pid = null;\n      document.removeEventListener('pointerup', onDocEnd);\n      document.removeEventListener('pointercancel', onDocEnd);\n      el.classList.remove('dragging');\n    }\n    P.busy = function(){ return !!start; };\n    el.addEventListener('pointerdown', function(e){\n      PIECE_PTR[e.pointerId] = true;\n      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣；codex 第一輪） */\n      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;\n      e.preventDefault();\n      pid = e.pointerId;\n      try { el.setPointerCapture(e.pointerId); } catch(err){}\n      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;\n      document.addEventListener('pointerup', onDocEnd);\n      document.addEventListener('pointercancel', onDocEnd);\n    });\n    el.addEventListener('pointermove', function(e){\n      if (!start || e.pointerId !== pid) return;\n      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;\n      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }\n      if (!moved) return;\n      P.place(orig.x + dx, orig.y + dy);\n    });\n    function end(e, cancelled){\n      if (!start || e.pointerId !== pid) return;\n      start = null; pid = null;\n      document.removeEventListener('pointerup', onDocEnd);\n      document.removeEventListener('pointercancel', onDocEnd);\n      el.classList.remove('dragging');\n",
+      replace:"    function stopGesture(){\n      if (!start) return;\n      start = null; pid = null;\n      document.removeEventListener('pointerup', onDocEnd);\n      document.removeEventListener('pointercancel', onDocEnd);\n      document.removeEventListener('pointerup', onDocEnd);\n      document.removeEventListener('pointercancel', onDocEnd);\n      el.classList.remove('dragging');\n    }\n    P.busy = function(){ return !!start; };\n    el.addEventListener('pointerdown', function(e){\n      PIECE_PTR[e.pointerId] = true;\n      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣；codex 第一輪） */\n      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;\n      e.preventDefault();\n      pid = e.pointerId;\n      try { el.setPointerCapture(e.pointerId); } catch(err){}\n      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;\n      document.addEventListener('pointerup', onDocEnd);\n      document.addEventListener('pointercancel', onDocEnd);\n    });\n    el.addEventListener('pointermove', function(e){\n      if (!start || e.pointerId !== pid) return;\n      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;\n      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }\n      if (!moved) return;\n      P.place(orig.x + dx, orig.y + dy);\n    });\n    function end(e, cancelled){\n      if (!start || e.pointerId !== pid) return;\n      start = null; pid = null;\n      el.classList.remove('dragging');\n",
+      why:"(relocation) both removals moved into stopGesture(), none left in end(): totals unchanged" },
+    { file:"index", via:"index", expect:"fallback must be installed exactly once, inside the pointerdown handler",
+      find:"      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;\n      document.addEventListener('pointerup', onDocEnd);\n",
+      replace:"      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;\n",
+      why:"a released piece whose capture failed would stay stuck mid-drag" },
+    { file:"index", via:"index", expect:"removed once in stopGesture() and once in end()",
+      find:"      start = null; pid = null;\n      document.removeEventListener('pointerup', onDocEnd);\n      document.removeEventListener('pointercancel', onDocEnd);\n      el.classList.remove('dragging');\n    }\n",
+      replace:"      start = null; pid = null;\n      el.classList.remove('dragging');\n    }\n",
+      why:"document listeners would pile up whenever a held piece is locked" },
+    { file:"index", via:"index", expect:"removed once in stopGesture() and once in end()",
+      find:"      start = null; pid = null;\n      document.removeEventListener('pointerup', onDocEnd);\n      document.removeEventListener('pointercancel', onDocEnd);\n      el.classList.remove('dragging');\n      if (gen",
+      replace:"      start = null; pid = null;\n      el.classList.remove('dragging');\n      if (gen",
+      why:"document listeners would pile up after every drag" },
+    { file:"index", via:"index", expect:"bad english singular",
+      find:"' does not have ' + v + ' ' + plEn(v, 'cube') + ': only '",
+      replace:"' does not have ' + v + ' cubes: only '",
+      why:"'does not have 1 cubes' (only reachable if a layer count of 0 is ever pooled)" },
+    { file:"index", via:"index", expect:"buildJudge(",
+      find:"    if (target[r][c] === 0) return 'empty';",
+      replace:"    if (false) return 'empty';",
+      why:"a cube could go on a square the picture leaves empty" },
+    { file:"index", via:"index", expect:"buildJudge(",
+      find:"    if (built[r][c] >= target[r][c]) return 'full';",
+      replace:"    if (built[r][c] > target[r][c]) return 'full';",
+      why:"one cube too many would be accepted on every square" },
+    { file:"index", via:"index", expect:"only 1 hidden",
+      find:"    [[3, 3], [2, 0]],\n",
+      replace:"    [[2, 2], [1, 1]],\n",
+      why:"a copy pile with one hidden cube barely exercises 'hidden cubes count too'" },
+    { file:"index", via:"index", expect:"hides a whole column behind the others",
+      find:"    [[3, 3], [2, 0]],\n",
+      replace:"    [[1, 0], [2, 2]],\n",
+      why:"a copy pile whose back column is completely hidden cannot be read off the picture" },
+    { file:"index", via:"index", expect:"draws the same picture as another pile",
+      find:"    [[3, 3], [2, 0]],\n",
+      replace:"    [[0, 3, 2], [2, 2, 0]],\n",
+      why:"every top is visible, but the same picture also fits a pile with one more hidden cube" },
+    { file:"index", via:"index", expect:"refuses an empty square",
+      find:"        if (j === 'empty'){ roundMiss(d.gBuildEmpty); return false; }",
+      replace:"        if (j === 'empty'){ return false; }",
+      why:"a cube on an empty square would bounce without its reason or penalty" },
+    { file:"index", via:"index", expect:"solved exactly when",
+      find:"        if (sameStack(built, T)){",
+      replace:"        if (n >= volume(T) - 1){",
+      why:"the round would be cleared one cube early" },
+    { file:"index", via:"index", expect:"not on the mat grid",
+      find:"cy:BUILD.matTop + (r + 0.5) * BUILD.cell, hw:BUILD.cell / 2",
+      replace:"cy:BUILD.matTop + (rows(H) - r - 0.5) * BUILD.cell, hw:BUILD.cell / 2",
+      why:"the back row of the mat would be drawn at the front" },
+    { file:"index", via:"index", expect:"under 44",
+      find:"cell:58, matTop:200",
+      replace:"cell:40, matTop:200",
+      why:"mat squares too small for a finger on a phone" },
+    { file:"index", via:"index", expect:"cube source sits inside the drop zone",
+      find:"srcX:258, pad:6",
+      replace:"srcX:214, pad:6",
+      why:"picking up the cube would start inside a square's drop zone" },
+    { file:"index", via:"index", expect:"drawn outside its box",
+      find:"boxY:26, boxH:140, boxW:146",
+      replace:"boxY:26, boxH:80, boxW:146",
+      why:"the copy picture would spill out of its panel" },
+    { file:"index", via:"index", expect:"tap-then-tap no longer places",
+      find:"      B.onPointTap = function(P, pt){\n        if (P.busy() || gSolved) return;\n        place(P, { x:pt.x, y:pt.y, tap:true });",
+      replace:"      B.onPointTap = function(P, pt){\n        place(P, { x:pt.x, y:pt.y, tap:true });",
+      why:"a tap while another finger drags the cube would also place one" },
+    { file:"index", via:"index", expect:"same number of cubes",
+      find:"[[[3, 2], [1, 1]], [[2, 3], [1, 1]], [[3, 1], [2, 1]]],",
+      replace:"[[[3, 2], [1, 1]], [[2, 3], [1, 1]], [[3, 1], [2, 2]]],",
+      why:"the totals would give one match away" },
+    { file:"index", via:"index", expect:"matchDiff(",
+      find:"      if (card[r][c] !== pile[r][c]) return { r:r, c:c, a:card[r][c], b:pile[r][c] };",
+      replace:"      if (card[r][c] !== pile[r][c]) return { r:r, c:c, a:pile[r][c], b:card[r][c] };",
+      why:"the reason would say the card's number is the pile's" },
+    { file:"index", via:"index", expect:"wrong pile is not refused",
+      find:"        if (diff){\n          P.cellEls",
+      replace:"        if (diff && false){\n          P.cellEls",
+      why:"any card would be accepted on any pile" },
+    { file:"index", via:"index", expect:"the tray started in answer order",
+      find:"    if (o.every(function(v, i){ return v === i; })){ var t = o[0]; o[0] = o[1]; o[1] = t; }\n",
+      replace:"",
+      why:"the cards could start under their own piles" },
+    { file:"index", via:"index", expect:"does not cover the drawn pile",
+      find:"      var top = MATCH.boxY, bottom",
+      replace:"      var top = MATCH.slotY, bottom",
+      why:"dropping a card on the drawn pile itself would be ignored" },
+    { file:"index", via:"index", expect:"two piles look the same",
+      find:"[[[2, 2], [1, 1]], [[2, 1], [2, 1]], [[2, 1], [1, 2]]]",
+      replace:"[[[2, 2], [1, 1]], [[2, 1], [2, 1]], [[2, 1], [2, 1]]]",
+      why:"two of the three piles would be the same pile" },
+    { file:"index", via:"index", expect:"layerJudge(",
+      find:"    return v === n ? 'ok' : v > n ? 'more' : 'less';",
+      replace:"    return v >= n ? 'ok' : 'less';",
+      why:"a count that is too big would be accepted" },
+    { file:"index", via:"index", expect:"a wrong count is not refused",
+      find:"        if (j === 'less'){ roundMiss(d.gLayerLess(S.L, v, c)); return false; }",
+      replace:"        if (j === 'less'){ return false; }",
+      why:"too small a count would bounce with no reason" },
+    { file:"index", via:"index", expect:"layer 1 has no hidden cube",
+      find:"    [[3, 3, 1], [1, 1, 0]],\n    [[1, 3, 2], [1, 2, 0]],",
+      replace:"    [[3, 2, 1], [0, 0, 0]],\n    [[1, 3, 2], [1, 2, 0]],",
+      why:"a pile whose bottom layer can all be seen does not test hidden cubes" },
+    { file:"index", via:"index", expect:"not in its row",
+      find:"cy:LAYERS.rowTop + (m - L) * LAYERS.rowStep + LAYERS.slot / 2",
+      replace:"cy:LAYERS.rowTop + (L - 1) * LAYERS.rowStep + LAYERS.slot / 2",
+      why:"layer 1 would be drawn at the top" },
+    { file:"index", via:"index", expect:"layer label runs into the picture",
+      find:"pad:6, lblW:56, unitW:36",
+      replace:"pad:6, lblW:70, unitW:36",
+      why:"the layer label would sit on the picture" },
+    { file:"index", via:"index", expect:"sortRank(",
+      find:"    set.forEach(function(H){ if (volume(H) < v) k++; });",
+      replace:"    set.forEach(function(H){ if (volume(H) <= v) k++; });",
+      why:"every rank would be off by one" },
+    { file:"index", via:"index", expect:"the tray started sorted",
+      find:"    if (sortRank(set, o[0]) === 0 && sortRank(set, o[1]) === 1){ var t = o[0]; o[0] = o[1]; o[1] = t; }\n",
+      replace:"",
+      why:"the cards could start already sorted" },
+    { file:"index", via:"index", expect:"tallest pile has the most",
+      find:"    [[[4]], [[2, 1], [1, 1]], [[1, 1, 1], [1, 1, 1]]],",
+      replace:"    [[[4, 3]], [[2, 1], [1, 1]], [[1, 1, 1], [1, 1, 1]]],",
+      why:"'taller is not always bigger' would not be tested" },
+    { file:"index", via:"index", expect:"wrong box is not refused",
+      find:"        if (sortRank(set, P.data.i) !== S.i){",
+      replace:"        if (false){",
+      why:"any pile would be accepted in any box" },
+    { file:"index", via:"index", expect:"say more/fewer the wrong way round",
+      find:"比這一格要放的那一堆多。'; },",
+      replace:"比這一格要放的那一堆少。'; },",
+      why:"the reason would say 'fewer' for a pile that has more" },
+    { file:"index", via:"index", expect:"exactly two piles must match A",
+      find:"[[[3, 3]], [[2, 2], [2, 1]], [[1, 1, 1], [1, 1, 1]], [[3, 2]]] },",
+      replace:"[[[3, 3]], [[2, 2], [2, 1]], [[1, 1, 1], [1, 1, 1]], [[3, 2, 1]]] },",
+      why:"three piles would match A while the counter says 2" },
+    { file:"index", via:"index", expect:"tapPick() disagrees",
+      find:"    for (var i = 0; i < f.length; i++) if (pt.x >= f[i].x && pt.x <= f[i].x + f[i].w",
+      replace:"    for (var i = 0; i < f.length; i++) if (pt.x >= f[i].x + 12 && pt.x <= f[i].x + f[i].w",
+      why:"a tap on the left part of a drawn frame would be ignored" },
+    { file:"index", via:"index", expect:"different count is not refused",
+      find:"        if (!tapSame(e.base, H)){ roundMiss(d.gTapBad(volume(H), n)); return; }",
+      replace:"        if (false){ roundMiss(d.gTapBad(volume(H), n)); return; }",
+      why:"any pile would count as the same as A" },
+    { file:"index", via:"index", expect:"no matching pile is taller/flatter",
+      find:"    { base:[[2, 1], [1, 1]], cands:[[[2, 1], [2, 1]], [[3, 2]], [[3, 1]], [[1, 1, 1], [1, 1, 0]]] }",
+      replace:"    { base:[[2, 1], [1, 1]], cands:[[[2, 1], [2, 1]], [[1, 2], [1, 1]], [[3, 1]], [[1, 1], [2, 1]]] }",
+      why:"the matching piles would only be A turned around, not a real rearrangement" },
+    { file:"index", via:"index", expect:"nearestOpen()",
+      find:"      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"      if (!best){ bd = dd; bc = dc; best = b; }",
+      why:"the first square in array order would win over the nearer one" },
+    { file:"index", via:"index", expect:"nearestOpen()",
+      find:"      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;",
+      replace:"      var dd = dx * dx + dy * dy, dc = dd;",
+      why:"nearest would be measured to the centre, not the box" },
+    { file:"index", via:"index", expect:"board generation",
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */\n",
+      replace:"",
+      why:"a cube held across a restart could act on the new board" },
+    { file:"index", via:"index", expect:"second finger can pick up",
+      find:"      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;",
+      replace:"      if (P.locked || gSolved || start || gen !== gGen) return;",
+      why:"a second finger could drag a piece" },
+    { file:"index", via:"index", expect:"lostpointercapture",
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+      replace:"",
+      why:"a piece could get stuck when capture is lost" },
+    { file:"index", via:"index", expect:"GAME scoring",
+      find:"    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;",
+      replace:"    gScore = gScore - 5; elScore.textContent = gScore;",
+      why:"the score could go below 0" },
+    { file:"index", via:"index", expect:"+20 with no mistakes and +10",
+      find:"    var pts = gMistake ? 10 : 20;",
+      replace:"    var pts = 20;",
+      why:"a round with mistakes would still give +20" },
+    { file:"index", via:"index", expect:"does not really shuffle",
+      find:"      var k = Math.floor(Math.random() * (j + 1));   /* 自足",
+      replace:"      var k = j;   /* 自足",
+      why:"shuffle() would return its input" },
+    { file:"index", via:"index", expect:"ahead mode",
+      find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }",
+      replace:"    if (mode === 'aheadX'){ hintLevel = 1; showHint(); }",
+      why:"ahead mode would lose its automatic hint" },
+    { file:"index", via:"index", expect:"build done (en)",
+      find:" cubic centimetres. The picture shows ' + v + ' cubes and ",
+      replace:" cubic centimetres. The picture shows ' + n + ' cubes and ",
+      why:"the English summary would say all the cubes can be seen" },
+    { file:"index", via:"index", expect:"layer more (zh)",
+      find:"高度圖裡疊到第 ' + L + ' 層的只有 ' + c + ' 格",
+      replace:"高度圖裡疊到第 ' + L + ' 層的只有 ' + v + ' 格",
+      why:"the reason would repeat the wrong count" },
+    { file:"index", via:"index", expect:"match bad (zh)",
+      find:"'紅框那一格：高度圖寫 ' + a + '，這一堆那一格疊 ' + b + ' 層。'",
+      replace:"'紅框那一格：高度圖寫 ' + b + '，這一堆那一格疊 ' + a + ' 層。'",
+      why:"the reason would swap the card's and the pile's numbers" },
+    { file:"index", via:"index", expect:"tap bad (en)",
+      find:"'This pile has ' + a + ' cubes and A has ' + n +",
+      replace:"'This pile has ' + n + ' cubes and A has ' + n +",
+      why:"the reason would give A's count for the wrong pile" },
+    { file:"index", via:"index", expect:"layers done (zh)",
+      find:"' ＝ ' + n + ' 塊。高度圖每一格",
+      replace:"' ＝ ' + (n + 1) + ' 塊。高度圖每一格",
+      why:"the layer sum would not add up" },
+    { file:"index", via:"index", expect:"sort: the cards are not drawn with miniPlan()",
+      find:"        P.el.appendChild(miniSvg(set[pi]));",
+      replace:"        P.el.appendChild(pileSvg(set[pi], 60, 60, 14, 'a'));",
+      why:"the cards would be drawn some other way, so the miniPlan() checks would not cover them" }
   ],
 
   /* ================= review.html 的產生器模擬 ================= */
@@ -1056,7 +1755,9 @@ module.exports = {
     dataReturn: '{FIG_W, FIG_H, U, DEPTH, MINI_U, MINI_W, MINI_H, RASTER, MAX_SIDE, MAX_HEIGHT, MAX_CUBES, PAIR_CX_A, PAIR_CX_B, ' +
                 'rows, cols, maxH, volume, footprint, cellList, layerCounts, sum, cubesOf, drawOrder, unitPt, facesOf, inConvex, extent, visibility, validStack, ' +
                 'toPx, stackPlan, singlePlan, pairPlan, miniPlan, allTopsVisible, STACKS, stack, S1_CASES, S2_CASES, S3_CASES, S4_CASES, comparePlan, QUIZ_FIGS, plEn, ' +
-                'COMPARE_KEYS, ROUNDS, numOpts, roundOptions, roundAnswer, roundOptText}',
+                'GPICK, shuffle, pick, sameStack, emptyLike, pileOrigin, floorCells, GAME_BUILD, BUILD, BUILD_H, buildBoxes, buildCells, buildSrc, buildJudge, ' +
+                'GAME_MATCH, MATCH, MATCH_H, matchCols, matchCard, matchZones, matchDiff, noIdentity, GAME_LAYERS, LAYERS, LAYER_KEYS, LAYERS_H, layerSlots, layerJudge, ' +
+                'GAME_SORT, SORT, SORT_H, sortSlots, sortRank, sortTray, GAME_TAP, TAP, TAP_H, tapFrames, tapPick, tapSame}',
     optionValueMax: MAX_CUBES_REF,
 
     check: function(data, I18N, fail, rawSrc){
@@ -1073,10 +1774,9 @@ module.exports = {
       /* 看函式本體（Function.prototype.toString）去掉註解之後的字面：這是**字面掃描**，死字串裡的那一句它擋不住；
          取樣點對不對的真正證明是上面幾百堆和射線法**完全相等**，這一條只擋「順手改掉」。 */
       if (stripJsComments(String(data.visibility)).indexOf('u:(i + 0.5) / RASTER, v:(j + 0.25) / RASTER') < 0) fail('the sample offsets must be (i + 0.5)/RASTER and (j + 0.25)/RASTER so no sample lands on a face edge');
-      if (countOf(src, 'viewBox="0 0 ' + FIG_W_REF + ' ' + FIG_H_REF + '"') !== 5)
-        fail('expected 5 figure canvases in the lesson markup (four examples + the game), found ' + countOf(src, 'viewBox="0 0 ' + FIG_W_REF + ' ' + FIG_H_REF + '"'));
+      if (countOf(src, 'viewBox="0 0 ' + FIG_W_REF + ' ' + FIG_H_REF + '"') !== 4)
+        fail('expected 4 figure canvases in the lesson markup (the four examples; the game draws on its own boards), found ' + countOf(src, 'viewBox="0 0 ' + FIG_W_REF + ' ' + FIG_H_REF + '"'));
       if (src.indexOf('max-width:' + FIG_W_REF + 'px;height:' + FIG_H_REF + 'px') < 0) fail('the .cubefig CSS size must match the viewBox');
-      if (src.indexOf('.degbtn svg{width:' + MINI_W_REF + 'px;height:' + MINI_H_REF + 'px') < 0) fail('the .degbtn svg CSS size must match the mini canvas');
 
       /* ---------- 2) 塊數、每格、每層、看得到：和參考實作逐一比對 ---------- */
       const libIds = Object.keys(STACKS_REF);
@@ -1172,8 +1872,8 @@ module.exports = {
       S3_REF.forEach(id => checkSingle(STACKS_REF[id], 'S3 ' + id));
       S4_REF.forEach(row => checkPair(STACKS_REF[row[1]], STACKS_REF[row[2]], 'S4 ' + row[0]));
       /* 小圖。 */
-      ['stair6', 'block7', 'five5', 'eight8', 'cube12', 'tower4'].forEach(function(id){
-        const H = STACKS_REF[id], mp = data.miniPlan(H), e = extentRef(H);
+      [].concat(...(data.GAME_SORT || [])).forEach(function(H){
+        const id = JSON.stringify(H), mp = data.miniPlan(H), e = extentRef(H);
         const X0 = (MINI_W_REF - e.w * MINI_U_REF) / 2, Y0 = (MINI_H_REF + e.h * MINI_U_REF) / 2;
         if (mp.w !== MINI_W_REF || mp.h !== MINI_H_REF) fail('miniPlan(' + id + ') canvas is wrong');
         if (mp.fits !== (e.w * MINI_U_REF <= MINI_W_REF && e.h * MINI_U_REF <= MINI_H_REF)) fail('miniPlan(' + id + ').fits is wrong');
@@ -1192,7 +1892,6 @@ module.exports = {
       S1_REF.forEach(function(id){ if (volumeRef(STACKS_REF[id]) !== S1_VOL[id]) fail('S1 ' + id + ' must have ' + S1_VOL[id] + ' cubes'); });
       /* 每一張圖裡的每一堆：每一格最上面那一塊都看得到（性質先驗，逐字比對放後面）。 */
       const pictured = new Set([].concat(data.S1_CASES || [], data.S2_CASES || [], data.S3_CASES || [], (data.S4_CASES || []).map(c => c.A), (data.S4_CASES || []).map(c => c.B), Object.values(data.QUIZ_FIGS || {})));
-      data.ROUNDS.forEach(r => { ['stack', 'A', 'B'].forEach(k => { if (r[k]) pictured.add(r[k]); }); (r.cands || []).forEach(id => pictured.add(id)); });
       pictured.forEach(function(id){
         const H = data.STACKS[id];
         if (!H){ fail('pictured pile ' + id + ' is not in STACKS'); return; }
@@ -1273,87 +1972,8 @@ module.exports = {
         });
       });
 
-      /* ---------- 10) 遊戲 ---------- */
-      if (data.ROUNDS.length !== 5) fail('the game has five stocktake sheets');
-      if (!eqJ(data.COMPARE_KEYS, COMPARE_KEYS_REF)) fail('COMPARE_KEYS must be the four conclusions');
-      const kinds = {};
-      data.ROUNDS.forEach(function(r, i){
-        kinds[r.kind] = (kinds[r.kind] || 0) + 1;
-        const label = 'ROUNDS[' + i + ']', opts = data.roundOptions(r), ans = data.roundAnswer(r);
-        if (ans < 0 || ans >= opts.length) fail(label + ': roundAnswer() found no unique answer');
-        if (opts.length !== 4) fail(label + ': needs four options');
-        if (r.kind === 'count'){
-          const H = data.STACKS[r.stack];
-          if (!H) { fail(label + ': unknown pile'); return; }
-          if (hiddenRef(H) < 1) fail(label + ': the counting round must hide at least one cube');
-          if (!fourDistinctNums(opts)) fail(label + ': options are not four distinct whole numbers');
-          if (opts[ans] !== volumeRef(H)) fail(label + ': the answer is not the volume');
-          if (opts.indexOf(visibleCountRef(H)) < 0) fail(label + ': does not offer the visible count');
-          checkSingle(H, label);
-        }
-        if (r.kind === 'hidden'){
-          const H = data.STACKS[r.stack];
-          if (!H) { fail(label + ': unknown pile'); return; }
-          if (hiddenRef(H) < 1) fail(label + ': nothing is hidden');
-          if (!fourDistinctNums(opts)) fail(label + ': options are not four distinct whole numbers');
-          if (opts[ans] !== hiddenRef(H)) fail(label + ': the answer is not the hidden count');
-          checkSingle(H, label);
-        }
-        if (r.kind === 'compare'){
-          const HA = data.STACKS[r.A], HB = data.STACKS[r.B];
-          if (!HA || !HB) { fail(label + ': unknown pile'); return; }
-          if (!eqJ(opts, COMPARE_KEYS_REF)) fail(label + ': options must be the four conclusions');
-          const a = volumeRef(HA), b = volumeRef(HB);
-          if (opts[ans] !== (a > b ? 'aBigger' : b > a ? 'bBigger' : 'same')) fail(label + ': the answer is not who really has more cubes');
-          if (!(maxHRef(HA) > maxHRef(HB) && a < b)) fail(label + ': the compare round should show a taller pile that is smaller');
-          checkPair(HA, HB, label);
-        }
-        if (r.kind === 'which'){
-          const Hs = r.cands.map(id => data.STACKS[id]);
-          if (Hs.some(H => !H)) { fail(label + ': unknown pile'); return; }
-          const vols = Hs.map(volumeRef), hits = vols.filter(v => v === r.target).length;
-          if (hits !== 1) fail(label + ': exactly one candidate must have volume ' + r.target + ', found ' + hits);
-          if (new Set(vols).size !== 4) fail(label + ': candidate volumes must all differ');
-          if (vols[ans] !== r.target) fail(label + ': the answer is not the target pile');
-          Hs.forEach(function(H, k){ if (!data.miniPlan(H).fits) fail(label + ': candidate ' + k + ' does not fit the mini canvas'); });
-        }
-        if (r.kind === 'move'){
-          const HA = data.STACKS[r.A], HB = data.STACKS[r.B];
-          if (!HA || !HB) { fail(label + ': unknown pile'); return; }
-          if (volumeRef(HA) !== volumeRef(HB)) fail(label + ': the moved pile must keep the same number of cubes');
-          if (eqJ(HA, HB)) fail(label + ': the moved pile must be a different arrangement');
-          if (!fourDistinctNums(opts)) fail(label + ': options are not four distinct whole numbers');
-          if (opts[ans] !== volumeRef(HA)) fail(label + ': the answer is not the volume');
-          checkPair(HA, HB, label);
-        }
-      });
-      if (!(kinds.count && kinds.hidden && kinds.compare && kinds.which && kinds.move)) fail('the game must cover count/hidden/compare/which/move');
-      /* 選項的單位要跟著題目問的東西走：問「幾塊」印「塊」，問「幾立方公分」印「立方公分」。 */
-      ['zh', 'en'].forEach(function(lang){
-        const d = I18N[lang];
-        data.ROUNDS.forEach(function(r, i){
-          if (r.kind === 'which') return;
-          data.roundOptions(r).forEach(function(key){
-            const txt = data.roundOptText(d, r, key);
-            if (r.kind === 'compare'){ if (txt !== d.compareOpt[key]) fail('ROUNDS[' + i + '] (' + lang + ') compare option is not the conclusion text'); return; }
-            const want = (r.kind === 'move') ? d.volText(key) : d.cubesText(key);
-            if (txt !== want) fail('ROUNDS[' + i + '] (' + lang + ') option "' + txt + '" carries the wrong unit for a ' + r.kind + ' question');
-            const okShape = (r.kind === 'move') ? (lang === 'zh' ? /^\d+ 立方公分$/ : /^\d+ cubic centimetres?$/) : (lang === 'zh' ? /^\d+ 塊$/ : /^\d+ cubes?$/);
-            if (!okShape.test(txt)) fail('ROUNDS[' + i + '] (' + lang + ') option "' + txt + '" has an unexpected shape');
-          });
-        });
-      });
-      ['zh', 'en'].forEach(function(lang){
-        const d = I18N[lang];
-        [d.gCapSingle, d.gCapPair, d.gCapMove].forEach(function(cap, i){
-          if (/\d/.test(String(cap).replace(/1 立方公分|1 cubic centimetre/g, ''))) fail('game figure caption ' + i + ' (' + lang + ') contains a digit: ' + cap);
-        });
-        ['count', 'hidden', 'compare', 'which', 'move'].forEach(function(k){
-          if (typeof d.gHint1[k] !== 'string') fail('gHint1.' + k + ' missing in ' + lang);
-          if (typeof d.gHint2[k] !== 'function') fail('gHint2.' + k + ' must be a function in ' + lang);
-        });
-        COMPARE_KEYS_REF.forEach(k => { if (typeof d.compareOpt[k] !== 'string') fail('compareOpt.' + k + ' missing in ' + lang); });
-      });
+      /* ---------- 10) 遊戲：盤點站出任務（五關五種玩法；見上面的 gameChecks） ---------- */
+      gameChecks(data, I18N, fail, rawSrc);
 
       /* ---------- 11) 旁白：真的渲染出來再掃 ---------- */
       const narrated = [];
@@ -1403,18 +2023,9 @@ module.exports = {
           if (numbersIn(guess).slice().sort().join() !== [cp.tallA, cp.tallB, cp.footA, cp.footB].slice().sort().join()) fail('example 4 guess narration must print exactly the two heights and two footprints, nothing else (' + lang + ')');
           if (d.s4result(cp) !== (lang === 'zh' ? { A:'甲 ＞ 乙', B:'甲 ＜ 乙', same:'甲 ＝ 乙' }[cp.who] : { A:'A > B', B:'A < B', same:'A = B' }[cp.who])) fail('example 4 result line is wrong (' + lang + ')');
         });
-        data.ROUNDS.forEach(function(r){
-          if (r.kind === 'which'){ narrated.push([lang, 'gPrompt', d.gPrompt.which(r.target)]); narrated.push([lang, 'gHint2', d.gHint2.which(r.target)]); }
-          else {
-            narrated.push([lang, 'gPrompt', d.gPrompt[r.kind]]);
-            if (r.kind === 'count' || r.kind === 'hidden'){ const H = STACKS_REF[r.stack]; narrated.push([lang, 'gHint2', d.gHint2[r.kind](visibleCountRef(H), volumeRef(H))]); }
-            else if (r.kind === 'compare') narrated.push([lang, 'gHint2', d.gHint2.compare(volumeRef(STACKS_REF[r.A]), volumeRef(STACKS_REF[r.B]))]);
-            else narrated.push([lang, 'gHint2', d.gHint2.move(volumeRef(STACKS_REF[r.A]))]);
-          }
-        });
         [0, 1, 4, 7].forEach(n => { narrated.push([lang, 'cubesText', d.cubesText(n)]); narrated.push([lang, 'volText', d.volText(n)]); });
         narrated.push([lang, 's2calc1', d.s2calc(1, 0, 1)]);   // 只有 1 會錯的英文單複數
-        narrated.push([lang, 'gWrong0', d.gWrong(0)]); narrated.push([lang, 'gWrong5', d.gWrong(5)]); narrated.push([lang, 'gWin', d.gWin(100)]);
+        narrated.push([lang, 'gWin', d.gWin(100)]);
         narrated.push([lang, 'caseName', d.caseName(1)]); narrated.push([lang, 'layerText1', d.layerText(1, 1)]);
       });
       narrated.forEach(function(row){

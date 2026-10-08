@@ -128,18 +128,52 @@
   }
   .hmap span.on{background:var(--orange-soft);border-color:var(--orange);color:var(--orange)}
   .hmap span.on.b{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
-  .degrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
-  .degbtn{
-    border:2px solid var(--line);background:var(--card);border-radius:14px;padding:14px 10px;
-    font-size:17px;font-weight:700;cursor:pointer;color:var(--ink);text-align:center;min-height:56px;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .degbtn svg{width:108px;height:84px;display:block}
-  .degbtn.right{border-color:var(--green);background:var(--green-soft);color:var(--green)}
-  .degbtn.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
-  .degbtn:disabled{cursor:default;opacity:.85}
-  .gprompt{text-align:center;font-size:20px;margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:14px;word-break:break-word}
-  .gprompt b{color:var(--blue)}
+  /* ---- 小遊戲「盤點站出任務」：照圖疊、配高度圖、分層數、排大小、找一樣大（§六之五） ---- */
+  .game .stats{justify-content:center}
+  .gamemsg{text-align:center}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div{position:absolute}
+  .gsvg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece svg{pointer-events:none;display:block}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gpanel{border:2px solid var(--line);border-radius:14px;background:var(--card);pointer-events:none}
+  .gpanel.found{border:3px solid var(--green);background:var(--green-soft)}
+  .gdrop{border:3px dashed #C9BFA9;border-radius:12px;pointer-events:none}
+  .gdrop.filled{border-style:solid;border-color:var(--green);background:var(--green-soft)}
+  .gcell{display:flex;align-items:center;justify-content:center;border:2px solid #C9BFA9;background:var(--card);
+    font-size:24px;font-weight:800;color:var(--orange);pointer-events:none}
+  .gcell.full{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gcell.sm{font-size:17px;color:var(--blue);border-width:1.5px}
+  .gsrc{background:var(--orange-soft);border:3px solid var(--orange);border-radius:12px}
+  .ghmap{background:var(--card);border:3px solid var(--blue);border-radius:10px;display:grid;padding:4px;gap:2px}
+  .ghmap span{display:flex;align-items:center;justify-content:center;background:var(--blue-soft);color:var(--blue);
+    font-size:16px;font-weight:800;border-radius:4px}
+  .ghmap span.off{background:transparent}
+  .ghmap span.bad{outline:3px solid var(--red);outline-offset:-1px;color:var(--red)}
+  .gkey{background:var(--card);border:3px solid var(--blue);border-radius:12px;font-size:24px;font-weight:800;color:var(--blue)}
+  .gslot{display:flex;align-items:center;justify-content:center;border:3px dashed var(--blue);border-radius:10px;background:var(--blue-soft);
+    font-size:24px;font-weight:800;color:var(--blue);pointer-events:none}
+  .gslot.filled{border-style:solid;border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px}
+  .gcard.placed{border-color:var(--green);background:var(--green-soft)}
+  .glbl{display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--muted);pointer-events:none;white-space:nowrap}
+  .glbl.gl-r{justify-content:flex-end}
+  .glbl.gl-l{justify-content:flex-start}
+  .glbl.gl-in{color:var(--ink)}
+  .glbl.gl-sm{font-size:14px}
+  .gtick{display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:var(--green);pointer-events:none}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
+  @keyframes gflash{0%,100%{opacity:1}50%{opacity:.25}}
+  .gflash{animation:gflash 1s ease-in-out infinite}
 </style>
 </head>
 <body>
@@ -268,27 +302,20 @@
   </section>
 
   <!-- 小遊戲 -->
-  <section class="game">
+  <section>
     <span class="eyebrow" data-i18n="eb7">小遊戲</span>
     <h2 data-i18n="s7h2">盤點站出任務</h2>
-    <p class="lead" data-i18n="s7lead">五張盤點單。每一張先問自己：<strong>要數全部、數看不到的，還是比大小？</strong></p>
-    <div class="card">
+    <p class="lead" data-i18n="s7lead">五張盤點單、五種做法：照圖疊、配高度圖、分層數、排大小、找一樣大。放錯只扣一點分，隨時可以再試！</p>
+    <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
-      </div>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint" style="text-align:center"></p>
-      <p class="gprompt" id="gPrompt"></p>
-      <div class="figwrap">
-        <svg class="cubefig" id="gFig" viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg"></svg>
-      </div>
-      <p class="figcap" id="gCap"></p>
-      <div class="degrid" id="gAnswers"></div>
-      <p id="gMsg" class="gamemsg" style="text-align:center"></p>
+      <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow" style="justify-content:center">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -339,7 +366,7 @@
   var FIG_W = 460, FIG_H = 300;
   var U = 30;              // 一格幾像素
   var DEPTH = 0.5;         // 往後一排在畫布上偏多少格（右上方向）
-  var MINI_U = 14, MINI_W = 108, MINI_H = 84;   // 遊戲選項裡的小圖
+  var MINI_U = 14, MINI_W = 80, MINI_H = 84;    // 遊戲「排大小」卡片裡的小圖
   var RASTER = 4;          // 每一格取幾個取樣點（見上面的說明）
   var MAX_SIDE = 4, MAX_HEIGHT = 4, MAX_CUBES = 40;
   var PAIR_CX_A = 0.27, PAIR_CX_B = 0.73;      // 兩堆並排時各自的中心（占畫布寬的比例）
@@ -530,13 +557,7 @@
     tower4: [[4]],
     flat6:  [[1, 1, 1], [1, 1, 1]],
     block7: [[2, 2], [2, 1]],
-    row4:   [[1, 1, 1, 1]],
-    game8:  [[3, 2], [2, 1]],
-    stair6: [[3, 2, 1]],
-    five5:  [[1, 1, 1], [1, 1, 0]],
-    eight8: [[3, 1], [2, 2]],
-    seven7: [[2, 2, 1], [1, 1, 0]],
-    bar7:   [[3, 2, 2]]
+    row4:   [[1, 1, 1, 1]]
   };
   function stack(id){ return STACKS[id]; }
 
@@ -570,67 +591,191 @@
   /* --- 英文的單複數。**只有 1 會錯**，所以助手住在「語言無關」這一區。 --- */
   function plEn(n, w){ return n === 1 ? w : w + 's'; }
 
-  /* --- 遊戲：五張盤點單。每一關的答案都由 roundAnswer() 從資料重算。 --- */
-  var COMPARE_KEYS = ['aBigger', 'bBigger', 'same', 'measure'];
-  var ROUNDS = [
-    { kind:'count',   stack:'game8' },
-    { kind:'hidden',  stack:'cube12' },
-    { kind:'compare', A:'tower4', B:'block7' },
-    { kind:'which',   target:6, cands:['stair6', 'block7', 'five5', 'eight8'] },
-    { kind:'move',    A:'seven7', B:'bar7' }
-  ];
-  /* 整數選項：正解 ＋ 指定的誘答，去重、範圍 1~MAX_CUBES，不夠就 ±1、±2…補。 */
-  function numOpts(correct, cands, lo, hi){
-    var out = [correct], seen = {};
-    seen[correct] = true;
-    function add(v){
-      if (out.length >= 4 || seen[v] || typeof v !== 'number' || v !== Math.floor(v) || v < lo || v > hi) return;
-      seen[v] = true; out.push(v);
+  /* --- 遊戲：盤點站出任務（2026-10-08 改成五關五種玩法，§六之五）。題庫與版面常數放在這裡（語言無關、不碰 DOM），
+         收不收的規則全部是純函式，設定檔拿整個題庫去呼叫、照規則重玩。畫板一律 300 寬的邏輯座標，整塊縮放。
+     GAME_BUILD：照圖疊（範例 1、2）—— 左邊畫一堆，右邊空的；把方塊拖到下面的「從上面看」方格，一次放一塊、落在那一格最上面。
+       圖上那一格疊到幾層就只能放幾塊（多放、放到圖上空的格子都會彈回）；疊得和圖一模一樣才過關。
+       每一堆都至少藏 2 塊（看不到的也要放進去，下面才撐得住上面），每一格最上面那一塊都看得到。
+     GAME_MATCH：配高度圖（範例 3 高度圖）—— 三堆塊數一樣、只是每一格疊的層數換了位置；三張高度圖卡拖到對的那一堆。
+       只看總數分不出來，一定要一格一格對（高度圖最上面一排是後面那一排）。
+     GAME_LAYERS：分層數（範例 3 分層數）—— 畫一堆＋它的高度圖；數字卡 0～9（拿不完）放進「第 L 層 □ 塊」。
+       第 L 層的塊數 ＝ 高度圖裡疊到 L 層以上的格子數；第 1 層一定有看不到的方塊。
+     GAME_SORT：排大小（範例 4 高的不一定大）—— 三張畫著一堆方塊的卡，放進「最少／中間／最多」；三堆塊數都不一樣，
+       而且最高的那一堆不是最多的。托盤洗牌後不可以已經是答案的排法。
+     GAME_TAP：找一樣大（範例 4 搬動重排）—— 甲和四堆；點出和甲一樣大的每一堆（剛好兩堆，形狀都和甲不一樣），
+       另外兩堆一堆和甲一樣高或一樣占地、塊數卻不一樣。「點一下」本身就是答案，所以這一關沒有拖拉。 */
+  var GPICK = 48;
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
     }
-    cands.forEach(add);
-    for (var k = 1; out.length < 4 && k <= 20; k++){ add(correct + k); add(correct - k); }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function sameStack(A, B){ return JSON.stringify(A) === JSON.stringify(B); }
+  function emptyLike(H){ return H.map(function(row){ return row.map(function(){ return 0; }); }); }
+  /* 一堆畫在方框 box 裡（置中），一格 unit 像素；ext 不給就用自己的大小（照圖疊的兩邊用同一個 ext 才對得齊）。 */
+  function pileOrigin(H, box, unit, ext){
+    var e = ext || extent(H);
+    return { X0:box.x + (box.w - e.w * unit) / 2, Y0:box.y + (box.h + e.h * unit) / 2 };
+  }
+  /* 桌面上的方格（第 0 層的底），斜投影的平行四邊形，畫在照圖疊的兩堆下面，讓「從上面看」的方格對得上圖。 */
+  function floorCells(H, X0, Y0, unit){
+    var out = [], R = rows(H);
+    for (var r = 0; r < R; r++) for (var c = 0; c < cols(H); c++){
+      var b = R - 1 - r;
+      out.push({ r:r, c:c, poly:[unitPt(c, 0, b), unitPt(c + 1, 0, b), unitPt(c + 1, 0, b + 1), unitPt(c, 0, b + 1)].map(function(p){ return toPx(p, X0, Y0, unit); }) });
+    }
     return out;
   }
-  function roundOptions(r){
-    var vis;
-    if (r.kind === 'count'){
-      vis = visibility(stack(r.stack));
-      return numOpts(vis.total, [vis.visible, footprint(stack(r.stack)), vis.total + 1], 1, MAX_CUBES);
-    }
-    if (r.kind === 'hidden'){
-      vis = visibility(stack(r.stack));
-      return numOpts(vis.hidden, [0, vis.total, vis.visible], 0, MAX_CUBES);
-    }
-    if (r.kind === 'compare') return COMPARE_KEYS;
-    if (r.kind === 'which') return r.cands;
-    var v = volume(stack(r.A));
-    return numOpts(v, [v + 1, v - 1, maxH(stack(r.B))], 1, MAX_CUBES);
+
+  /* 第 1 關：照圖疊 */
+  var GAME_BUILD = [
+    [[3, 2], [2, 1]],
+    [[3, 3], [2, 0]],
+    [[2, 2, 1], [1, 1, 0]],
+    [[3, 2, 1], [2, 1, 0]],
+    [[2, 3, 1], [1, 2, 0]],
+    [[1, 3, 2], [0, 2, 0]]
+  ];
+  var BUILD = { unit:24, lblY:2, lblH:22, boxY:26, boxH:140, boxW:146, gap:8, cell:58, matTop:200, matCx:118, srcX:258, pad:6 };
+  var BUILD_H = 344;
+  function buildBoxes(){ return [{ x:0, y:BUILD.boxY, w:BUILD.boxW, h:BUILD.boxH }, { x:BUILD.boxW + BUILD.gap, y:BUILD.boxY, w:BUILD.boxW, h:BUILD.boxH }]; }
+  /* 「從上面看」的方格：最上面一排是後面那一排（和高度圖一樣）。每一格記中心與半寬，給 nearestCell 用。 */
+  function buildCells(H){
+    var R = rows(H), C = cols(H), x0 = BUILD.matCx - C * BUILD.cell / 2, out = [];
+    for (var r = 0; r < R; r++) for (var c = 0; c < C; c++)
+      out.push({ r:r, c:c, cx:x0 + (c + 0.5) * BUILD.cell, cy:BUILD.matTop + (r + 0.5) * BUILD.cell, hw:BUILD.cell / 2, hh:BUILD.cell / 2 });
+    return out;
   }
-  /* 正解的索引。找不到唯一的答案就回 －1（設定檔會抓）。 */
-  function roundAnswer(r){
-    var opts = roundOptions(r);
-    if (r.kind === 'count') return opts.indexOf(visibility(stack(r.stack)).total);
-    if (r.kind === 'hidden') return opts.indexOf(visibility(stack(r.stack)).hidden);
-    if (r.kind === 'compare'){
-      var cp = comparePlan(stack(r.A), stack(r.B));
-      return opts.indexOf(cp.who === 'A' ? 'aBigger' : cp.who === 'B' ? 'bBigger' : 'same');
-    }
-    if (r.kind === 'which'){
-      var hits = [];
-      opts.forEach(function(id, i){ if (volume(stack(id)) === r.target) hits.push(i); });
-      return hits.length === 1 ? hits[0] : -1;
-    }
-    /* move：搬完之後塊數不變，答案是搬前的體積（設定檔會驗兩堆真的一樣多）。 */
-    return volume(stack(r.B)) === volume(stack(r.A)) ? opts.indexOf(volume(stack(r.A))) : -1;
+  function buildSrc(H){ return { cx:BUILD.srcX, cy:BUILD.matTop + rows(H) * BUILD.cell / 2 }; }
+  /* 放一塊到 (r, c)：'ok' ＝ 收；'empty' ＝ 圖上那一格沒有方塊；'full' ＝ 那一格已經和圖一樣高了。 */
+  function buildJudge(target, built, r, c){
+    if (target[r][c] === 0) return 'empty';
+    if (built[r][c] >= target[r][c]) return 'full';
+    return 'ok';
   }
 
-  /* 問「幾塊」的關卡選項用「塊」，問「幾立方公分」的用「立方公分」——單位要跟著題目問的東西走。
-     d 是當下語言的字典；這裡只組字串，不碰 DOM。 */
-  function roundOptText(d, r, key){
-    if (r.kind === 'compare') return d.compareOpt[key];
-    if (r.kind === 'count' || r.kind === 'hidden') return d.cubesText(key);
-    return d.volText(key);
+  /* 第 2 關：配高度圖（每一組三堆，同樣的層數換位置，所以塊數一樣） */
+  var GAME_MATCH = [
+    [[[3, 2], [1, 1]], [[2, 3], [1, 1]], [[3, 1], [2, 1]]],
+    [[[3, 2], [2, 1]], [[2, 3], [2, 1]], [[2, 2], [3, 1]]],
+    [[[3, 3], [2, 1]], [[3, 2], [3, 1]], [[3, 1], [3, 2]]],
+    [[[2, 2], [1, 1]], [[2, 1], [2, 1]], [[2, 1], [1, 2]]]
+  ];
+  var MATCH = { unit:20, lblY:0, colW:96, colGap:6, boxY:4, boxH:122, slotY:134, cellPx:26, cardPad:6, trayY:268, pad:4 };
+  var MATCH_H = 312;
+  function matchCols(){
+    var out = [];
+    for (var i = 0; i < 3; i++){
+      var x = i * (MATCH.colW + MATCH.colGap);
+      out.push({ i:i, x:x, w:MATCH.colW, box:{ x:x, y:MATCH.boxY, w:MATCH.colW, h:MATCH.boxH } });
+    }
+    return out;
   }
+  function matchCard(H){ return { w:cols(H) * MATCH.cellPx + 2 * MATCH.cardPad, h:rows(H) * MATCH.cellPx + 2 * MATCH.cardPad }; }
+  /* 放卡的地方：整欄（畫著的那一堆＋下面的虛線框），四邊放寬 pad。 */
+  function matchZones(set){
+    var cd = matchCard(set[0]);
+    return matchCols().map(function(col){
+      var top = MATCH.boxY, bottom = MATCH.slotY + cd.h + 8;
+      return { i:col.i, cx:col.x + col.w / 2, cy:(top + bottom) / 2, hw:col.w / 2, hh:(bottom - top) / 2, slotCy:MATCH.slotY + cd.h / 2 + 4 };
+    });
+  }
+  /* 卡和堆不一樣時，第一個（照讀高度圖的順序）不一樣的格子：{ r, c, a ＝ 卡上寫的, b ＝ 這一堆疊的 }；一樣回 null。 */
+  function matchDiff(card, pile){
+    for (var r = 0; r < rows(card); r++) for (var c = 0; c < cols(card); c++)
+      if (card[r][c] !== pile[r][c]) return { r:r, c:c, a:card[r][c], b:pile[r][c] };
+    return null;
+  }
+  /* 托盤的順序：第 k 張卡在第 k 欄下面就等於把答案排好了 —— 洗牌，洗出原順序就把前兩張換掉。 */
+  function noIdentity(n){
+    var idx = [];
+    for (var i = 0; i < n; i++) idx.push(i);
+    var o = shuffle(idx);
+    if (o.every(function(v, i){ return v === i; })){ var t = o[0]; o[0] = o[1]; o[1] = t; }
+    return o;
+  }
+
+  /* 第 3 關：分層數 */
+  var GAME_LAYERS = [
+    [[2, 3, 2], [1, 2, 0]],
+    [[3, 3, 1], [1, 1, 0]],
+    [[1, 3, 2], [1, 2, 0]],
+    [[3, 2, 2], [1, 1, 0]],
+    [[2, 2, 3], [2, 1, 0]]
+  ];
+  var LAYERS = { unit:22, box:{ x:0, y:4, w:150, h:134 }, hmapY:146, hcell:30, slotX:210, slot:50, rowTop:8, rowStep:60, pad:6, lblW:56, unitW:36 };
+  var LAYER_KEYS = { size:48, step:58, y:282, rowStep:58 };
+  var LAYERS_H = 368;
+  /* 第 L 層（L ＝ 1 在最下面）的空格：畫在右邊一欄，最上面是最高的那一層。 */
+  function layerSlots(H){
+    var m = maxH(H), out = [];
+    for (var L = 1; L <= m; L++)
+      out.push({ L:L, cx:LAYERS.slotX + LAYERS.slot / 2, cy:LAYERS.rowTop + (m - L) * LAYERS.rowStep + LAYERS.slot / 2, hw:LAYERS.slot / 2, hh:LAYERS.slot / 2 });
+    return out;
+  }
+  /* 第 L 層放 v：'ok'；'more' ＝ v 比真的多；'less' ＝ v 比真的少。 */
+  function layerJudge(H, L, v){
+    var n = layerCounts(H)[L - 1];
+    return v === n ? 'ok' : v > n ? 'more' : 'less';
+  }
+
+  /* 第 4 關：排大小（三堆塊數都不一樣；最高的那一堆不是最多的） */
+  var GAME_SORT = [
+    [[[4]], [[2, 1], [1, 1]], [[1, 1, 1], [1, 1, 1]]],
+    [[[1, 1, 1], [1, 1, 0]], [[3, 3]], [[2, 2], [2, 1]]],
+    [[[3, 2]], [[1, 1, 1], [1, 1, 1]], [[2, 2, 1], [1, 1, 0]]],
+    [[[4, 1]], [[2, 2], [1, 1]], [[2, 1, 1], [1, 1, 1]]]
+  ];
+  var SORT = { lblY:0, lblH:22, slotY:24, slotW:94, slotH:100, gap:9, cardW:88, cardH:92, trayY:202, pad:4, unit:14 };
+  var SORT_H = 256;
+  function sortSlots(){
+    var out = [];
+    for (var i = 0; i < 3; i++){
+      var x = i * (SORT.slotW + SORT.gap);
+      out.push({ i:i, x:x, cx:x + SORT.slotW / 2, cy:SORT.slotY + SORT.slotH / 2, hw:SORT.slotW / 2, hh:SORT.slotH / 2 });
+    }
+    return out;
+  }
+  /* 第 i 堆排第幾（0 ＝ 最少）。 */
+  function sortRank(set, i){
+    var v = volume(set[i]), k = 0;
+    set.forEach(function(H){ if (volume(H) < v) k++; });
+    return k;
+  }
+  /* 托盤：照左到右的順序就是由少到多 ＝ 答案排好了 —— 洗出那個順序就把前兩張換掉。 */
+  function sortTray(set){
+    var o = shuffle([0, 1, 2]);
+    if (sortRank(set, o[0]) === 0 && sortRank(set, o[1]) === 1){ var t = o[0]; o[0] = o[1]; o[1] = t; }
+    return o;
+  }
+
+  /* 第 5 關：找一樣大 */
+  var GAME_TAP = [
+    { base:[[2, 2], [1, 1]], cands:[[[3, 3]], [[2, 2], [2, 1]], [[1, 1, 1], [1, 1, 1]], [[3, 2]]] },
+    { base:[[3, 2, 1]], cands:[[[3, 2, 2]], [[1, 1, 1], [1, 1, 1]], [[3, 1, 1]], [[2, 1], [2, 1]]] },
+    { base:[[2, 1], [1, 1]], cands:[[[2, 1], [2, 1]], [[3, 2]], [[3, 1]], [[1, 1, 1], [1, 1, 0]]] }
+  ];
+  var TAP = { baseBox:{ x:60, y:4, w:180, h:112 }, unit:18, baseUnit:20, frameW:144, frameH:100, frameY:124, gapX:12, gapY:8 };
+  var TAP_H = 336;
+  function tapFrames(){
+    var out = [];
+    for (var i = 0; i < 4; i++){
+      var x = (i % 2) * (TAP.frameW + TAP.gapX), y = TAP.frameY + Math.floor(i / 2) * (TAP.frameH + TAP.gapY);
+      out.push({ i:i, x:x, y:y, w:TAP.frameW, h:TAP.frameH });
+    }
+    return out;
+  }
+  /* 點到哪一個框：點在框裡（含邊線）才算；框和框中間的縫不算點到。 */
+  function tapPick(pt){
+    var f = tapFrames();
+    for (var i = 0; i < f.length; i++) if (pt.x >= f[i].x && pt.x <= f[i].x + f[i].w && pt.y >= f[i].y && pt.y <= f[i].y + f[i].h) return i;
+    return -1;
+  }
+  function tapSame(base, H){ return volume(base) === volume(H); }
 
   /* ---------- i18n ---------- */
   var I18N = {
@@ -727,37 +872,60 @@
       quizCap:'📦 每一塊都是 1 立方公分；看不到的方塊也在',
 
       s7h2:'盤點站出任務',
-      s7lead:'五張盤點單。每一張先問自己：<strong>要數全部、數看不到的，還是比大小？</strong>',
+      s7lead:'五張盤點單、五種做法：照圖疊、配高度圖、分層數、排大小、找一樣大。放錯只扣一點分，隨時可以再試！',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
       gHintBtn:'💡 提示', gNextBtn:'下一關', gRestartBtn:'重新開始',
-      compareOpt:{ aBigger:'甲的體積比較大', bBigger:'乙的體積比較大', same:'一樣大', measure:'比不出來，要用尺量' },
-      gPrompt:{
-        count:'客人送來一堆方塊，每一塊都是 1 立方公分。<strong>一共有幾塊</strong>（看不到的也要數）？',
-        hidden:'這一堆方塊，從這個方向看，<strong>有幾塊是看不到的</strong>？',
-        compare:'左邊橘色是甲、右邊藍色是乙。<strong>誰的體積比較大？</strong>',
-        which:function(n){ return '客人要體積剛好 <strong>' + n + ' 立方公分</strong>的那一堆。下面四堆，哪一堆是？'; },
-        move:'左邊橘色是原來的一堆，每一塊都是 1 立方公分，客人把它<strong>全部搬動重新排</strong>成右邊藍色的樣子。搬完之後，體積是幾立方公分？'
+      gAsks:{
+        build:'照左邊的圖疊一堆一模一樣的：把右下角的小方塊拖到下面的方格（從上面看），一次放一塊。也可以先點小方塊，再點方格。',
+        match:'三堆的塊數一樣多。把每一張高度圖拖到它畫的那一堆（或先點卡、再點那一堆）。高度圖最上面一排是後面那一排。',
+        layers:'一層一層數：把數字卡放進「第幾層有幾塊」的格子（或先點數字、再點格子）。',
+        sort:'三堆方塊從少排到多：把卡片放進「最少／中間／最多」（或先點卡、再點格子）。',
+        tap:'下面四堆裡，哪幾堆的體積和甲一樣大？一堆一堆點出來（點一下就是選它）。'
       },
-      gHint1:{
-        count:'先看高度圖的想法：每一格疊幾塊，一格一格加起來。',
-        hidden:'先數看得到的，再想：上面有方塊的地方，下面每一層都有。',
-        compare:'不要看誰比較高，數塊數。',
-        which:'每一堆各數一次塊數，看不到的也要數。',
-        move:'搬動重排的時候，有沒有多一塊或少一塊？'
+      gHints:{
+        build:'方塊不會浮在空中：上面有方塊的地方，下面每一層都有 —— 就算圖上看不到，也要放。從後面那一排開始，一格一格對著圖疊。',
+        match:'只看總數分不出來，三堆都一樣多。一格一格對：高度圖最上面一排是後面那一排，寫幾就疊幾層。',
+        layers:'第幾層有幾塊 ＝ 高度圖裡疊到那一層（寫的數字一樣大或更大）的格子有幾格。看不到的方塊也要算。',
+        sort:'每一堆都數一數有幾塊（看不到的也要數），再排。高的不一定多。',
+        tap:'先數甲有幾塊，再一堆一堆數。塊數一樣就是一樣大 —— 長得像不像、高不高都不算。'
       },
-      gHint2:{
-        count:function(v, n){ return '看得到 ' + v + ' 塊，可是藏在後面和下面的也要算。全部加起來比 ' + v + ' 多。'; },
-        hidden:function(v, n){ return '一共 ' + n + ' 塊，看得到 ' + v + ' 塊 —— 相減就是看不到的。'; },
-        compare:function(a, b){ return '甲 ' + a + ' 塊、乙 ' + b + ' 塊，比塊數就對了。'; },
-        which:function(n){ return '只有一堆剛好 ' + n + ' 塊，其他的都多一塊或少一塊以上。'; },
-        move:function(n){ return '一塊都沒有多、也沒有少，還是 ' + n + ' 塊。'; }
-      },
-      gCapSingle:'📦 每一塊都是 1 立方公分',
-      gCapPair:'📦 左邊橘色是甲，右邊藍色是乙',
-      gCapMove:'📦 左邊是搬之前，右邊是搬之後',
-      gCorrectFirst:'一次就對，＋20 分！',
-      gCorrectRetry:'修好了，＋10 分。',
-      gWrong:function(lost){ return lost > 0 ? '再看一次題目和提示，扣 ' + lost + ' 分。' : '再看一次題目和提示。'; },
+      gTarget:'照這個疊', gMine:'你疊的', gBack:'後', gFront:'前', gSrc:'方塊',
+      gBuildNow:function(n){ return '已經疊了 ' + n + ' 塊'; },
+      gBuildEmpty:'圖上這一格沒有方塊，這裡不放。',
+      gBuildFull:function(h){ return '圖上這一格只疊 ' + h + ' 層，已經放滿了。'; },
+      gBuild2:function(k){ return '閃的那一格還要再放 ' + k + ' 塊。'; },
+      gBuildDone:function(n, v, hid){ return '疊好了！一共 ' + n + ' 塊，體積 ' + n + ' 立方公分。圖上看得到 ' + v + ' 塊，還有 ' + hid + ' 塊藏在後面或下面 —— 不放它們，上面的方塊就撐不住。'; },
+      gMatchNow:function(k){ return '配好了 ' + k + ' / 3 張'; },
+      gMatchCard:'高度圖卡',
+      gMatchBad:function(a, b){ return '紅框那一格：高度圖寫 ' + a + '，這一堆那一格疊 ' + b + ' 層。'; },
+      gMatchOk:'對了：每一格的層數都一樣。',
+      gMatch2:'閃的那一張高度圖，是閃的那一堆。',
+      gMatchDone:function(n){ return '三張都配好了！三堆都是 ' + n + ' 塊，只看總數分不出來 —— 高度圖一格一格寫清楚，才知道是哪一堆。'; },
+      gLayerName:function(L){ return '第 ' + L + ' 層'; },
+      gLayerUnit:'塊',
+      gHmapCap:'高度圖',
+      gLayersNow:function(ls){ return ls.length ? ls.join(' ＋ ') : '第 1 層 …'; },
+      gLayerMore:function(L, v, c){ return '第 ' + L + ' 層沒有 ' + v + ' 塊：高度圖裡疊到第 ' + L + ' 層的只有 ' + c + ' 格。'; },
+      gLayerLess:function(L, v, c){ return '第 ' + L + ' 層不只 ' + v + ' 塊：高度圖裡有 ' + c + ' 格疊到第 ' + L + ' 層，看不到的也要算。'; },
+      gLayerOk:function(L, c){ return '對了：第 ' + L + ' 層 ' + c + ' 塊。'; },
+      gLayer2:function(L){ return '第 ' + L + ' 層：數一數高度圖裡閃的格子。'; },
+      gLayersDone:function(layers, n){ return '分層數：' + layers.join(' ＋ ') + ' ＝ ' + n + ' 塊。高度圖每一格加起來也是 ' + n + ' 塊 —— 兩種數法，同一堆方塊。'; },
+      gSortLbl:['最少', '中間', '最多'],
+      gSortCard:'一堆方塊',
+      gSortNow:function(k){ return '排好了 ' + k + ' / 3 堆'; },
+      gSortMore:function(a){ return '這一堆有 ' + a + ' 塊，比這一格要放的那一堆多。'; },
+      gSortLess:function(a){ return '這一堆有 ' + a + ' 塊，比這一格要放的那一堆少。'; },
+      gSortOk:function(a){ return '對了：這一堆 ' + a + ' 塊。'; },
+      gSort2:'閃的那一堆，放進閃的那一格。',
+      gSortDone:function(a, b, c){ return '排好了：' + a + ' 塊 ＜ ' + b + ' 塊 ＜ ' + c + ' 塊。最高的那一堆不是最多的 —— 高的不一定大，要數過才知道。'; },
+      gBase:'甲',
+      gTapNow:function(k){ return '找到 ' + k + ' / 2 堆'; },
+      gTapBad:function(a, n){ return '這一堆有 ' + a + ' 塊，甲有 ' + n + ' 塊 —— 塊數不一樣，體積就不一樣。'; },
+      gTapOk:function(n){ return '對了：這一堆也是 ' + n + ' 塊。'; },
+      gTap2:function(n){ return '甲有 ' + n + ' 塊。找也是 ' + n + ' 塊的那兩堆。'; },
+      gTapDone:function(n){ return '找到了！這兩堆和甲一樣都是 ' + n + ' 塊，體積都是 ' + n + ' 立方公分 —— 把方塊搬動重新排，塊數沒變，體積就沒變。'; },
+      gPts:function(p){ return '＋' + p + ' 分'; },
+      gMinus:'−5 分',
       gClear:'可以接下一張盤點單了。',
       gWin:function(s){ return '五張盤點單全部完成！總分 ' + s + ' 分 🏆'; },
 
@@ -904,37 +1072,60 @@
       quizCap:'📦 Every cube is 1 cubic centimetre; the hidden cubes are there too',
 
       s7h2:'Jobs for the stocktake crew',
-      s7lead:'Five stocktake sheets. For each one, ask yourself first: <strong>count them all, count the hidden ones, or compare?</strong>',
+      s7lead:'Five stocktake sheets, five ways to work: copy the pile, match the height map, count by layer, sort by size, find the equals. A wrong move only costs a little — try again any time!',
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
       gHintBtn:'💡 Hint', gNextBtn:'Next round', gRestartBtn:'Start over',
-      compareOpt:{ aBigger:'A has the bigger volume', bBigger:'B has the bigger volume', same:'The same volume', measure:'Cannot tell without a ruler' },
-      gPrompt:{
-        count:'A customer delivers a pile of cubes, each 1 cubic centimetre. <strong>How many cubes are there in all</strong> (hidden ones included)?',
-        hidden:'Looking at this pile from this side, <strong>how many cubes cannot be seen</strong>?',
-        compare:'Orange on the left is A, blue on the right is B. <strong>Which has the bigger volume?</strong>',
-        which:function(n){ return 'A customer wants the pile whose volume is exactly <strong>' + n + ' cubic centimetres</strong>. Which of the four piles below is it?'; },
-        move:'Orange on the left is the original pile, and every cube has a volume of 1 cubic centimetre; the customer <strong>moved every cube</strong> into the blue arrangement on the right. What is the volume after the move?'
+      gAsks:{
+        build:'Build a pile exactly like the picture on the left: drag the cube at the bottom right onto the grid below (seen from above), one cube at a time. Or tap the cube, then tap a square.',
+        match:'All three piles have the same number of cubes. Drag each height map onto the pile it describes (or tap the card, then the pile). The top row of a height map is the back row.',
+        layers:'Count layer by layer: put a number card in each layer’s box — how many cubes that layer has (or tap a number, then a box).',
+        sort:'Sort the three piles from fewest to most cubes: put each card in “fewest / middle / most” (or tap the card, then the box).',
+        tap:'Which of the four piles below have the same volume as A? Tap each one (a tap picks it).'
       },
-      gHint1:{
-        count:'Think height map: how many cubes in each square, added square by square.',
-        hidden:'Count the ones you can see, then remember: wherever there is a cube on top, every layer below is filled.',
-        compare:'Do not look at which is taller — count the cubes.',
-        which:'Count each pile, hidden cubes included.',
-        move:'Did any cube get added or taken away in the move?'
+      gHints:{
+        build:'Cubes never float: wherever there is a cube on top, every layer below is filled — place those cubes too, even where you cannot see them. Start at the back row and copy square by square.',
+        match:'The totals cannot tell them apart — all three are the same. Check square by square: the top row of the height map is the back row, and each number says how many layers.',
+        layers:'Cubes in a layer = how many squares of the height map reach that layer (their number is that big or bigger). Hidden cubes count too.',
+        sort:'Count the cubes in each pile (hidden ones too), then sort. Taller does not mean more.',
+        tap:'Count A first, then each pile. Same number of cubes means the same volume — looks and height do not count.'
       },
-      gHint2:{
-        count:function(v, n){ return 'You can see ' + v + ' ' + plEn(v, 'cube') + ', but the ones behind and underneath count too. The total is more than ' + v + '.'; },
-        hidden:function(v, n){ return 'There are ' + n + ' cubes in all and ' + v + ' can be seen — subtract to get the hidden ones.'; },
-        compare:function(a, b){ return 'A has ' + a + ' ' + plEn(a, 'cube') + ' and B has ' + b + ' ' + plEn(b, 'cube') + '; compare the counts.'; },
-        which:function(n){ return 'Only one pile has exactly ' + n + ' cubes; every other pile is off by at least one.'; },
-        move:function(n){ return 'Not one cube was added or taken away, so it is still ' + n + ' cubes.'; }
-      },
-      gCapSingle:'📦 Every cube is 1 cubic centimetre',
-      gCapPair:'📦 Orange on the left is A, blue on the right is B',
-      gCapMove:'📦 Before the move on the left, after the move on the right',
-      gCorrectFirst:'Right first time, +20 points!',
-      gCorrectRetry:'Fixed it, +10 points.',
-      gWrong:function(lost){ return lost > 0 ? 'Read the question and the hint again, −' + lost + ' points.' : 'Read the question and the hint again.'; },
+      gTarget:'Copy this', gMine:'Your pile', gBack:'back', gFront:'front', gSrc:'cube',
+      gBuildNow:function(n){ return n + ' ' + plEn(n, 'cube') + ' placed'; },
+      gBuildEmpty:'That square is empty in the picture — nothing goes there.',
+      gBuildFull:function(h){ return 'That square is only ' + h + ' high in the picture, and it is full already.'; },
+      gBuild2:function(k){ return 'The flashing square still needs ' + k + ' more ' + plEn(k, 'cube') + '.'; },
+      gBuildDone:function(n, v, hid){ return 'Done! ' + n + ' cubes in all, a volume of ' + n + ' cubic centimetres. The picture shows ' + v + ' cubes and ' + hid + ' more are hidden behind or underneath — without them the cubes on top would have nothing to stand on.'; },
+      gMatchNow:function(k){ return k + ' / 3 matched'; },
+      gMatchCard:'height-map card',
+      gMatchBad:function(a, b){ return 'The red square: the height map says ' + a + ', but that square of this pile is ' + b + ' ' + plEn(b, 'layer') + ' high.'; },
+      gMatchOk:'Yes — every square has the same number of layers.',
+      gMatch2:'The flashing height map belongs to the flashing pile.',
+      gMatchDone:function(n){ return 'All three matched! Every pile has ' + n + ' cubes, so the total alone cannot tell them apart — the height map, square by square, does.'; },
+      gLayerName:function(L){ return 'layer ' + L; },
+      gLayerUnit:'',
+      gHmapCap:'height map',
+      gLayersNow:function(ls){ return ls.length ? ls.join(' + ') : 'layer 1 …'; },
+      gLayerMore:function(L, v, c){ return 'Layer ' + L + ' does not have ' + v + ' ' + plEn(v, 'cube') + ': only ' + c + ' ' + plEn(c, 'square') + ' of the height map ' + (c === 1 ? 'reaches' : 'reach') + ' layer ' + L + '.'; },
+      gLayerLess:function(L, v, c){ return 'Layer ' + L + ' has more than ' + v + ': ' + c + ' ' + plEn(c, 'square') + ' of the height map ' + (c === 1 ? 'reaches' : 'reach') + ' layer ' + L + ', hidden cubes included.'; },
+      gLayerOk:function(L, c){ return 'Yes: layer ' + L + ' has ' + c + ' ' + plEn(c, 'cube') + '.'; },
+      gLayer2:function(L){ return 'Layer ' + L + ': count the flashing squares of the height map.'; },
+      gLayersDone:function(layers, n){ return 'Layer by layer: ' + layers.join(' + ') + ' = ' + n + ' cubes. The height map adds up to ' + n + ' cubes too — two ways of counting, one pile.'; },
+      gSortLbl:['fewest', 'middle', 'most'],
+      gSortCard:'a pile of cubes',
+      gSortNow:function(k){ return k + ' / 3 sorted'; },
+      gSortMore:function(a){ return 'This pile has ' + a + ' cubes — more than the pile that belongs in this box.'; },
+      gSortLess:function(a){ return 'This pile has ' + a + ' cubes — fewer than the pile that belongs in this box.'; },
+      gSortOk:function(a){ return 'Yes: this pile has ' + a + ' cubes.'; },
+      gSort2:'The flashing pile goes in the flashing box.',
+      gSortDone:function(a, b, c){ return 'Sorted: ' + a + ' cubes < ' + b + ' cubes < ' + c + ' cubes. The tallest pile does not have the most — taller does not mean bigger; count to be sure.'; },
+      gBase:'A',
+      gTapNow:function(k){ return k + ' / 2 found'; },
+      gTapBad:function(a, n){ return 'This pile has ' + a + ' cubes and A has ' + n + ' — a different number of cubes means a different volume.'; },
+      gTapOk:function(n){ return 'Yes: this pile has ' + n + ' cubes too.'; },
+      gTap2:function(n){ return 'A has ' + n + ' cubes. Find the two piles that also have ' + n + '.'; },
+      gTapDone:function(n){ return 'Found them! Both piles have ' + n + ' cubes, just like A — a volume of ' + n + ' cubic centimetres each. Moving the cubes around does not change how many there are, so the volume stays the same.'; },
+      gPts:function(p){ return '+' + p + ' points'; },
+      gMinus:'−5 points',
       gClear:'Ready for the next stocktake sheet.',
       gWin:function(s){ return 'All five sheets done! Final score ' + s + ' 🏆'; },
 
@@ -1306,128 +1497,524 @@
     });
   }
 
-  /* ===================== 小遊戲：盤點單 ===================== */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 小遊戲：盤點站出任務（五關五種玩法，§六之五） =====================
+     中年級的輕度計分（§三）：一關沒犯錯 +20、犯過錯 +10；每一次「放錯並說明為什麼」−5，最低 0 分。
+     放到空白處只是手滑：靜靜回原位，不算錯。每一個拖拉都可以「先點東西、再點目的地」；
+     第 5 關沒有東西可以拿，「點一下那一堆」本身就是答案。題庫、版面常數與收不收的規則在 i18n 前面的資料區。
+     拖拉引擎沿用 grade-4 area（第一根手指、capture 遺失、document 上的放開保險、nearestOpen() 量到方框、PIECE_PTR、換畫板保護 gGen）。 */
+  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加分；二年級 length 的 codex 抓到的）。 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gPromptEl = document.getElementById('gPrompt');
-  var gFig = document.getElementById('gFig');
-  var gCap = document.getElementById('gCap');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
-  var hintLevel = 0;
+  var GAME_ORDER = ['build', 'match', 'layers', 'sort', 'tap'];
 
-  function roundPromptText(d, r){
-    if (r.kind === 'which') return d.gPrompt.which(r.target);
-    return d.gPrompt[r.kind];
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null, onBoardTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    /* 點畫板（不是點在積木上）：只認第一根手指，按下和放開在同一個地方才算「點一下」 */
+    board.addEventListener('pointerdown', function(e){
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (!e.isPrimary) return;   /* 第二根手指：不理 —— 第一根手指按在畫板外、按鈕或積木上時也一樣（codex 第一輪） */
+      BOARD_TAP = { id:e.pointerId, x:e.clientX, y:e.clientY, far:false };
+    });
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      var t = BOARD_TAP, pt = B.toBoard(e);
+      if (t && t.id === e.pointerId) BOARD_TAP = null;
+      /* 「點目的地」也一樣只認第一根手指的「點一下」：別的手指放開、或滑動之後放開，都不算（不然想捲動也會被扣分） */
+      if (!t || t.id !== e.pointerId) return;
+      if (t.far || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10) return;   /* 中途離開按下去的地方超過 10px 就不是「點一下」 */
+      if (B.selected && B.onPointTap){ B.onPointTap(B.selected, pt); return; }
+      if (B.onBoardTap && !gSolved) B.onBoardTap(pt);
+    });
+    gameStage.appendChild(wrap);
+    return B;
   }
-  function roundHint2(d, r){
-    var vis;
-    if (r.kind === 'count'){ vis = visibility(stack(r.stack)); return d.gHint2.count(vis.visible, vis.total); }
-    if (r.kind === 'hidden'){ vis = visibility(stack(r.stack)); return d.gHint2.hidden(vis.visible, vis.total); }
-    if (r.kind === 'compare') return d.gHint2.compare(volume(stack(r.A)), volume(stack(r.B)));
-    if (r.kind === 'which') return d.gHint2.which(r.target);
-    return d.gHint2.move(volume(stack(r.A)));
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」；BOARD_TAP 記「按在畫板上的第一根手指」。
+     任何地方的 pointerup／pointercancel 傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {}, BOARD_TAP = null;
+  function clearPtr(e){ delete PIECE_PTR[e.pointerId]; if (BOARD_TAP && BOARD_TAP.id === e.pointerId) BOARD_TAP = null; }
+  window.addEventListener('pointerup', clearPtr);
+  window.addEventListener('pointercancel', clearPtr);
+  window.addEventListener('pointerdown', function(e){ delete PIECE_PTR[e.pointerId]; }, true);
+  window.addEventListener('pointermove', function(e){
+    if (BOARD_TAP && BOARD_TAP.id === e.pointerId && Math.hypot(e.clientX - BOARD_TAP.x, e.clientY - BOARD_TAP.y) > 10) BOARD_TAP.far = true;
+  });
+  /* 指標離開視窗時收不到 pointermove：一離開就當成走遠了（滑鼠拖出視窗再回來放開，不算點一下） */
+  window.addEventListener('pointerout', function(e){ if (BOARD_TAP && BOARD_TAP.id === e.pointerId && !e.relatedTarget) BOARD_TAP.far = true; });
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
   }
-  function drawRoundFig(d, r){
-    gFig.textContent = '';
-    if (r.kind === 'count' || r.kind === 'hidden'){
-      drawSingle(gFig, stack(r.stack), 'a', false);
-      gCap.textContent = d.gCapSingle;
-    } else if (r.kind === 'compare'){
-      drawPairFig(gFig, stack(r.A), stack(r.B));
-      gCap.textContent = d.gCapPair;
-    } else if (r.kind === 'move'){
-      drawPairFig(gFig, stack(r.A), stack(r.B));
-      gCap.textContent = d.gCapMove;
-    } else {
-      /* which：大畫布不畫東西，四堆各畫在自己的選項裡。 */
-      gCap.textContent = d.gCapSingle;
+  /* 畫板上的一張 SVG（整塊畫板大小，不接指標） */
+  function gSvg(B){
+    var s = document.createElementNS(NS, 'svg');
+    s.setAttribute('class', 'gsvg');
+    s.setAttribute('width', B.W); s.setAttribute('height', B.H);
+    s.setAttribute('viewBox', '0 0 ' + B.W + ' ' + B.H);
+    s.setAttribute('aria-hidden', 'true');
+    B.el.appendChild(s);
+    return s;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
     }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣；codex 第一輪） */
+      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */
+      /* 先點選、後來又直接拖走的那一塊：拖完就不再是「選起來」的，不然下一次點目的地會多放一次 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的積木一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
   }
-  function drawCandidate(btn, H){
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 拿不完的東西（方塊、數字卡）放好之後回托盤，也不再是選起來的 */
+  function backHome(B, P){ P.home(); P.el.classList.remove('sel'); if (B.selected === P) B.selected = null; }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（三年級 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「−5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+
+  /* ---- 畫方塊：座標一律來自資料區的 stackPlan／pileOrigin／floorCells ---- */
+  function drawPileAt(host, H, X0, Y0, unit, tone){
+    stackPlan(H, X0, Y0, unit).cubes.forEach(function(k){ drawCube(host, k, tone); });
+  }
+  /* 一張小 SVG，一堆方塊畫在正中間（排大小的卡片、方塊來源） */
+  function pileSvg(H, w, h, unit, tone){
+    var s = svgEl('svg', { width:w, height:h, viewBox:'0 0 ' + w + ' ' + h, 'aria-hidden':'true' });
+    var o = pileOrigin(H, { x:0, y:0, w:w, h:h }, unit);
+    drawPileAt(s, H, o.X0, o.Y0, unit, tone);
+    return s;
+  }
+  /* 排大小的卡片：miniPlan 的小圖（每一塊都畫） */
+  function miniSvg(H){
     var plan = miniPlan(H);
-    var svg = svgEl('svg', { viewBox:'0 0 ' + plan.w + ' ' + plan.h });
-    plan.cubes.forEach(function(k){ drawCube(svg, k, 'a'); });
-    btn.appendChild(svg);
+    var s = svgEl('svg', { width:plan.w, height:plan.h, viewBox:'0 0 ' + plan.w + ' ' + plan.h, 'aria-hidden':'true' });
+    plan.cubes.forEach(function(k){ drawCube(s, k, 'a'); });
+    return s;
   }
+  /* 第二層提示：只讓這幾個東西閃 */
+  function flashOnly(list){
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.gflash'), function(x){ x.classList.remove('gflash'); });
+    list.forEach(function(x){ if (x) x.classList.add('gflash'); });
+  }
+
+  var RENDER = {
+    /* 第 1 關：照圖疊 —— 左邊畫目標，右邊畫「你疊的」；方塊拖到下面「從上面看」的方格，一次一塊、落在那一格最上面（範例 1、2）。
+       圖上那一格空的 → 彈回＋「這裡不放」；那一格已經和圖一樣高 → 彈回＋「只疊 h 層」。疊得和圖一模一樣才過關。
+       方格相鄰、放寬之後會重疊：挑最近的那一格（量到方框）。先點 🧊 之後它一直選著，可以一格一格點下去。 */
+    build: function(d){
+      var T = pick(GAME_BUILD), built = emptyLike(T), n = 0, U = BUILD.unit;
+      var line = trailLine(d.gBuildNow(0));
+      var B = makeBoard(300, BUILD_H);
+      var boxes = buildBoxes();
+      addZone(B, boxes[0].x, BUILD.lblY, boxes[0].w, BUILD.lblH, 'glbl', d.gTarget);
+      addZone(B, boxes[1].x, BUILD.lblY, boxes[1].w, BUILD.lblH, 'glbl', d.gMine);
+      boxes.forEach(function(b){ addZone(B, b.x, b.y, b.w, b.h, 'gpanel'); });
+      var svg = gSvg(B), ext = extent(T);
+      var o0 = pileOrigin(T, boxes[0], U, ext), o1 = pileOrigin(T, boxes[1], U, ext);
+      [o0, o1].forEach(function(o){
+        floorCells(T, o.X0, o.Y0, U).forEach(function(f){
+          svg.appendChild(svgEl('path', { d:facePath(f.poly), fill:'none', stroke:'#C9BFA9', 'stroke-width':1.5 }));
+        });
+      });
+      drawPileAt(svg, T, o0.X0, o0.Y0, U, 'a');
+      var mine = svgEl('g', {});
+      svg.appendChild(mine);
+      function redraw(){ mine.textContent = ''; drawPileAt(mine, built, o1.X0, o1.Y0, U, 'b'); }
+      var cells = buildCells(T), C = cols(T), R = rows(T), mx = BUILD.matCx - C * BUILD.cell / 2;
+      addZone(B, mx, BUILD.matTop - 22, C * BUILD.cell, 20, 'glbl', d.gBack);
+      addZone(B, mx, BUILD.matTop + R * BUILD.cell + 2, C * BUILD.cell, 20, 'glbl', d.gFront);
+      cells.forEach(function(cl){ cl.el = addZone(B, cl.cx - cl.hw, cl.cy - cl.hh, cl.hw * 2, cl.hh * 2, 'gcell', ''); });
+      var s0 = buildSrc(T);
+      var src = addPiece(B, { w:GPICK + 8, h:GPICK + 8, cx:s0.cx, cy:s0.cy, cls:'gsrc', label:d.gSrc });
+      src.el.appendChild(pileSvg([[1]], 50, 50, 26, 'a'));
+      gCtx.hint2 = function(){
+        var need = null;
+        cells.forEach(function(cl){ if (!need && built[cl.r][cl.c] < T[cl.r][cl.c]) need = cl; });
+        if (!need) return '';
+        flashOnly([need.el]);
+        return d.gBuild2(T[need.r][need.c] - built[need.r][need.c]);
+      };
+      function place(P, pt){
+        var cl = nearestOpen(cells, pt, BUILD.pad);
+        if (!cl) return false;
+        var j = buildJudge(T, built, cl.r, cl.c);
+        if (j === 'empty'){ roundMiss(d.gBuildEmpty); return false; }
+        if (j === 'full'){ roundMiss(d.gBuildFull(T[cl.r][cl.c])); return false; }
+        built[cl.r][cl.c]++; n++;
+        cl.el.textContent = String(built[cl.r][cl.c]);
+        if (built[cl.r][cl.c] === T[cl.r][cl.c]) cl.el.classList.add('full');
+        redraw();
+        line.textContent = d.gBuildNow(n);
+        P.home();
+        if (sameStack(built, T)){
+          flashOnly([]);
+          P.lock(P.homeX, P.homeY);
+          var vis = visibility(T);
+          roundSolved(d.gBuildDone(n, vis.visible, vis.hidden));
+        } else refreshHint();
+        return true;
+      }
+      useTapSelect(B, place);
+      /* 先點 🧊 再點方格：放好之後 🧊 繼續選著，不用每一塊都重點一次（點 🧊 本身、或拖走它，才取消） */
+      B.onPointTap = function(P, pt){
+        if (P.busy() || gSolved) return;
+        place(P, { x:pt.x, y:pt.y, tap:true });
+      };
+    },
+
+    /* 第 2 關：配高度圖 —— 三堆塊數一樣，只是層數換了位置；三張高度圖卡拖到它描述的那一堆（範例 3 高度圖）。
+       放錯 → 彈回＋卡上第一個對不上的格子圍紅框，說「高度圖寫 a，這一堆那一格疊 b 層」。放對 → 卡片停在那一堆下面的框裡。
+       整欄（畫著的那一堆＋下面的框）都是放卡的地方；三欄放寬之後在縫裡重疊：挑最近的那一欄。 */
+    match: function(d){
+      var set = pick(GAME_MATCH), cl3 = matchCols(), zones = matchZones(set), cd = matchCard(set[0]), left = 3;
+      var line = trailLine(d.gMatchNow(0));
+      var B = makeBoard(300, MATCH_H);
+      cl3.forEach(function(c, i){
+        zones[i].panel = addZone(B, c.box.x, c.box.y, c.box.w, c.box.h, 'gpanel');
+        addZone(B, c.x + (c.w - cd.w) / 2 - 4, MATCH.slotY, cd.w + 8, cd.h + 8, 'gdrop');
+      });
+      var svg = gSvg(B);
+      set.forEach(function(H, i){ var o = pileOrigin(H, cl3[i].box, MATCH.unit); drawPileAt(svg, H, o.X0, o.Y0, MATCH.unit, 'a'); });
+      var R = rows(set[0]), C = cols(set[0]), cellIn = MATCH.cellPx - 2;
+      var cards = noIdentity(3).map(function(pi, k){
+        var P = addPiece(B, { w:cd.w, h:cd.h, cx:cl3[k].x + cl3[k].w / 2, cy:MATCH.trayY, cls:'ghmap', label:d.gMatchCard, data:{ i:pi } });
+        P.el.style.gridTemplateColumns = 'repeat(' + C + ', ' + cellIn + 'px)';
+        P.el.style.gridTemplateRows = 'repeat(' + R + ', ' + cellIn + 'px)';
+        P.cellEls = [];
+        set[pi].forEach(function(row){ row.forEach(function(x){
+          var sp = document.createElement('span');
+          sp.textContent = x > 0 ? String(x) : '';
+          if (!x) sp.className = 'off';
+          P.el.appendChild(sp); P.cellEls.push(sp);
+        }); });
+        return P;
+      });
+      function clearBad(){ cards.forEach(function(P){ P.cellEls.forEach(function(sp){ sp.classList.remove('bad'); }); }); }
+      gCtx.hint2 = function(){
+        var P = null;
+        cards.forEach(function(Q){ if (!P && !Q.locked) P = Q; });
+        if (!P) return '';
+        flashOnly([P.el, zones[P.data.i].panel]);
+        return d.gMatch2;
+      };
+      useTapSelect(B, function(P, pt){
+        var z = nearestOpen(zones, pt, MATCH.pad);
+        if (!z) return false;
+        clearBad();
+        var diff = matchDiff(set[P.data.i], set[z.i]);
+        if (diff){
+          P.cellEls[diff.r * C + diff.c].classList.add('bad');
+          roundMiss(d.gMatchBad(diff.a, diff.b));
+          return false;
+        }
+        z.done = true; left--;
+        P.lock(z.cx, z.slotCy); P.el.classList.add('placed');
+        line.textContent = d.gMatchNow(3 - left);
+        if (!left){ flashOnly([]); roundSolved(d.gMatchDone(volume(set[0]))); }
+        else { roundInfo(d.gMatchOk); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 3 關：分層數 —— 一堆方塊＋它的高度圖；數字卡 0～9（拿不完）放進「第 L 層 □ 塊」（範例 3 分層數）。
+       只收那一層真的塊數；放錯 → 彈回＋說高度圖裡疊到第 L 層的有幾格（多算、少算各一句）。
+       幾層的空格上下相鄰、放寬之後會重疊：挑最近的那一格；已經填好的那一格靜靜彈回。 */
+    layers: function(d){
+      var H = pick(GAME_LAYERS), lc = layerCounts(H), m = lc.length, got = [], LB = LAYERS.box;
+      function trail(){ return d.gLayersNow(lc.map(function(c, i){ return got[i] === undefined ? '□' : String(c); })); }
+      var line = trailLine(trail());
+      var B = makeBoard(300, LAYERS_H);
+      addZone(B, LB.x, LB.y, LB.w, LB.h, 'gpanel');
+      var svg = gSvg(B), o = pileOrigin(H, LB, LAYERS.unit);
+      drawPileAt(svg, H, o.X0, o.Y0, LAYERS.unit, 'a');
+      var R = rows(H), C = cols(H), hx = LB.x + (LB.w - C * LAYERS.hcell) / 2, hy = LAYERS.hmapY + 22;
+      addZone(B, LB.x, LAYERS.hmapY, LB.w, 20, 'glbl', d.gHmapCap);
+      var hcells = [];
+      H.forEach(function(row, r){ row.forEach(function(x, c){
+        var z = addZone(B, hx + c * LAYERS.hcell, hy + r * LAYERS.hcell, LAYERS.hcell, LAYERS.hcell, 'gcell sm', x > 0 ? String(x) : '');
+        hcells.push({ el:z, x:x });
+      }); });
+      var slots = layerSlots(H);
+      slots.forEach(function(S){
+        addZone(B, LAYERS.slotX - LAYERS.lblW - 2, S.cy - 11, LAYERS.lblW, 22, 'glbl gl-r gl-sm', d.gLayerName(S.L));
+        S.el = addZone(B, S.cx - S.hw, S.cy - S.hh, S.hw * 2, S.hh * 2, 'gslot', '?');
+        addZone(B, LAYERS.slotX + LAYERS.slot + 4, S.cy - 11, LAYERS.unitW, 22, 'glbl gl-l gl-sm', d.gLayerUnit);
+      });
+      var keys = [];
+      for (var v = 0; v <= 9; v++){
+        keys.push(addPiece(B, { w:LAYER_KEYS.size, h:LAYER_KEYS.size, cx:150 + ((v % 5) - 2) * LAYER_KEYS.step, cy:LAYER_KEYS.y + Math.floor(v / 5) * LAYER_KEYS.rowStep,
+                                text:String(v), cls:'gkey', label:String(v), data:{ v:v } }));
+      }
+      gCtx.hint2 = function(){
+        var S = null;
+        slots.forEach(function(Q){ if (!S && !Q.done) S = Q; });
+        if (!S) return '';
+        flashOnly(hcells.filter(function(h){ return h.x >= S.L; }).map(function(h){ return h.el; }).concat([S.el]));
+        return d.gLayer2(S.L);
+      };
+      useTapSelect(B, function(P, pt){
+        var S = nearestOpen(slots, pt, LAYERS.pad);
+        if (!S) return false;
+        var v = P.data.v, c = lc[S.L - 1], j = layerJudge(H, S.L, v);
+        if (j === 'more'){ roundMiss(d.gLayerMore(S.L, v, c)); return false; }
+        if (j === 'less'){ roundMiss(d.gLayerLess(S.L, v, c)); return false; }
+        S.done = true; got[S.L - 1] = v;
+        S.el.textContent = String(v); S.el.classList.add('filled');
+        backHome(B, P);
+        line.textContent = trail();
+        if (got.filter(function(x){ return x !== undefined; }).length === m){
+          flashOnly([]);
+          keys.forEach(function(K){ K.lock(K.homeX, K.homeY); });
+          roundSolved(d.gLayersDone(lc, volume(H)));
+        } else { roundInfo(d.gLayerOk(S.L, c)); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 4 關：排大小 —— 三張畫著一堆方塊的卡，放進「最少／中間／最多」（範例 4）。三堆塊數都不一樣，最高的那一堆不是最多的。
+       每一格只收排在那裡的那一堆；放錯 → 彈回＋說這一堆幾塊、比這一格要放的多還是少。托盤洗牌後不會已經排好。 */
+    sort: function(d){
+      var set = pick(GAME_SORT), slots = sortSlots(), placed = 0;
+      var line = trailLine(d.gSortNow(0));
+      var B = makeBoard(300, SORT_H);
+      slots.forEach(function(S, i){
+        addZone(B, S.x, SORT.lblY, SORT.slotW, SORT.lblH, 'glbl', d.gSortLbl[i]);
+        S.el = addZone(B, S.x, SORT.slotY, SORT.slotW, SORT.slotH, 'gdrop');
+      });
+      var byRank = [];
+      set.forEach(function(H, i){ byRank[sortRank(set, i)] = i; });
+      var cards = sortTray(set).map(function(pi, k){
+        var P = addPiece(B, { w:SORT.cardW, h:SORT.cardH, cx:slots[k].cx, cy:SORT.trayY, cls:'gcard', label:d.gSortCard, data:{ i:pi } });
+        P.el.appendChild(miniSvg(set[pi]));
+        return P;
+      });
+      gCtx.hint2 = function(){
+        for (var r = 0; r < 3; r++){
+          var P = cards.filter(function(Q){ return Q.data.i === byRank[r]; })[0];
+          if (!P.locked){ flashOnly([P.el, slots[r].el]); return d.gSort2; }
+        }
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var S = nearestOpen(slots, pt, SORT.pad);
+        if (!S) return false;
+        var a = volume(set[P.data.i]), want = volume(set[byRank[S.i]]);
+        if (sortRank(set, P.data.i) !== S.i){ roundMiss(a > want ? d.gSortMore(a) : d.gSortLess(a)); return false; }
+        S.done = true; placed++;
+        S.el.classList.add('filled');
+        P.lock(S.cx, S.cy); P.el.classList.add('placed');
+        line.textContent = d.gSortNow(placed);
+        if (placed === 3){ flashOnly([]); roundSolved(d.gSortDone(volume(set[byRank[0]]), volume(set[byRank[1]]), volume(set[byRank[2]]))); }
+        else { roundInfo(d.gSortOk(a)); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 5 關：找一樣大 —— 甲和四堆；點出和甲塊數一樣的每一堆（剛好兩堆，形狀都和甲不一樣；範例 4 搬動重排）。
+       點到塊數不一樣的 → 說這一堆幾塊、甲幾塊；點到已經找到的、或框和框中間的縫 → 什麼都不做。
+       「點一下」本身就是答案，這一關沒有東西可以拖。 */
+    tap: function(d){
+      var e = pick(GAME_TAP), n = volume(e.base), found = 0, done = [], BB = TAP.baseBox;
+      var line = trailLine(d.gTapNow(0));
+      var B = makeBoard(300, TAP_H);
+      addZone(B, BB.x, BB.y, BB.w, BB.h, 'gpanel');
+      addZone(B, BB.x + 4, BB.y + 4, 28, 22, 'glbl gl-in', d.gBase);
+      var frames = tapFrames();
+      frames.forEach(function(f){ f.el = addZone(B, f.x, f.y, f.w, f.h, 'gpanel'); });
+      var svg = gSvg(B), ob = pileOrigin(e.base, BB, TAP.baseUnit);
+      drawPileAt(svg, e.base, ob.X0, ob.Y0, TAP.baseUnit, 'a');
+      e.cands.forEach(function(H, i){ var o = pileOrigin(H, frames[i], TAP.unit); drawPileAt(svg, H, o.X0, o.Y0, TAP.unit, 'b'); });
+      gCtx.hint2 = function(){ return d.gTap2(n); };
+      B.onBoardTap = function(pt){
+        var i = tapPick(pt);
+        if (i < 0 || done[i]) return;
+        var H = e.cands[i];
+        if (!tapSame(e.base, H)){ roundMiss(d.gTapBad(volume(H), n)); return; }
+        done[i] = true; found++;
+        frames[i].el.classList.add('found');
+        addZone(B, frames[i].x + frames[i].w - 30, frames[i].y + 2, 28, 28, 'gtick', '✓');
+        line.textContent = d.gTapNow(found);
+        if (found === 2) roundSolved(d.gTapDone(n));
+        else { roundInfo(d.gTapOk(n)); refreshHint(); }
+      };
+    }
+  };
 
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {}; gGen++; BOARD_TAP = null; PIECE_PTR = {};   /* 上一關沒收尾的手指不帶到下一關 */
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
-    hintLevel = (mode === 'ahead') ? 1 : 0;
+    hintLevel = 0;
     gHintBtn.disabled = false;
-    elHint.textContent = (mode === 'ahead') ? d.gHint1[round.kind] : '';
-
-    gPromptEl.innerHTML = '<b>' + roundPromptText(d, round) + '</b>';
-    drawRoundFig(d, round);
-
-    var opts = roundOptions(round), ans = roundAnswer(round);
-    gAnswers.textContent = '';
-    opts.forEach(function(key, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'degbtn';
-      if (round.kind === 'which') drawCandidate(b, stack(key));
-      else b.textContent = roundOptText(d, round, key);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        if (oi === ans){
-          var all = gAnswers.querySelectorAll('.degbtn');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry + '</span>';
-          } else {
-            gScore += 20;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst + '</span>';
-          }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + d.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          /* 分數不會低於 0，所以訊息要說真的扣了幾分；四年級也還沒學負數。 */
-          var lost = Math.min(5, gScore);
-          gScore -= lost;
-          gMsg.innerHTML = '<span class="no">' + d.gWrong(lost) + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
+
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
   gHintBtn.addEventListener('click', function(){
-    var d = L(), round = ROUNDS[gRound];
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = d.gHint1[round.kind];
-    } else {
-      elHint.textContent = roundHint2(d, round);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
