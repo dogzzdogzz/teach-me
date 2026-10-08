@@ -12,6 +12,8 @@
  * 3) 搬法是不是剛體。範例 2 的每一步 doMove 都要保持全等（用參考實作驗）、頂點還是整數、
  *    而且還在方格紙上；三個任務用 BFS 證明真的走得到。
  * 4) 版面。每一張圖的每一個頂點、每一個字母都要在畫布裡（四個邊），兩個圖形的外框不可以重疊。
+ * 5) 小遊戲（§六之五，五關五種玩法）：gameChecks() 照遊戲自己的規則把每一關的題庫玩一遍，正解用上面的參考實作重算；
+ *    「放在哪裡」的函式掃過整個畫板和自己的距離比；版面、觸控從資料區讀；shuffle／sortTray／roundMiss／roundSolved 從原始碼切出來真的跑。
  *
  * ⚠️ 這一課教的規則有前提，設定檔必須分開驗：
  *    - 「該用哪一種搬法」只對**沒有對稱**的圖形有唯一答案 —— 圖形庫的每一個圖形都要證明
@@ -35,7 +37,6 @@ const LABEL_BOX_W_REF = 10, LABEL_BOX_H_REF = 14;   // 一個字母的字框（1
 const LABEL_R_REF = 15;           // 字母中心離頂點多遠
 const LABEL_EDGE_REF = 6;         // 字母中心離任何一條邊至少這麼遠
 const SCALE_K_REF = 2;
-const MINI_W_REF = 108, MINI_H_REF = 84;
 const LEN_MIN_REF = 1, LEN_MAX_REF = 40, DEG_MIN_REF = 1, DEG_MAX_REF = 179, BIG_MAX_REF = 200;
 /* 圖形庫的第二份。id 的順序也釘死。 */
 const SHAPES_REF = {
@@ -62,8 +63,8 @@ const RECT_PAIRS_REF = [
 ];
 const ANGLE_POOL_REF = [30, 40, 45, 50, 60, 70, 75, 80, 100, 110, 120, 130, 140, 150];
 /* 驗算器在 data.check 跑完之後應該驗過的算式條數與指紋（裝上去的時候用實測值填）。 */
-const VERIFIED_REF = 28;
-const FINGERPRINT_REF = '15ee0d1650c7b37c1d803990a2a7bbdeb23af6f1';
+const VERIFIED_REF = 90;   // 28 before the game rebuild; the game's area sentences (gStretch*) add 62
+const FINGERPRINT_REF = '44efeec698d604faa1d5ba6f1dd7106f9296212d';
 
 /* ---------- 1) 參考實作：八種擺法與全等 ---------- */
 function rot90(p){ return [-p[1], p[0]]; }
@@ -281,18 +282,18 @@ const BANK_EXPECTED = {
 /* ---------- 5) 四頁一起釘的措辭 ----------
    ⚠️ min 要寫**當下真實的出現次數**，不是「至少 1」。 */
 const SIBLING_RULES = [
-  { text:'疊起來能完全重合', files:{ index:12, reference:8, parents:4 } },
+  { text:'疊起來能完全重合', files:{ index:11, reference:8, parents:4 } },
   { text:'不改變形狀和大小', files:{ index:8, reference:6, review:2, parents:4 } },
   { text:'對應邊一樣長、對應角一樣大', files:{ index:6, reference:4, parents:4 } },
-  { text:'面積一樣不一定全等', files:{ index:3, reference:4, parents:2 } },
+  { text:'面積一樣不一定全等', files:{ index:4, reference:4, parents:2 } },
   { text:'反過來不成立', files:{ index:2, reference:2 } },
   { text:'鏡子裡的樣子', files:{ index:4, reference:3, review:2 } },
   { text:'放大縮小不是搬法', files:{ index:1, reference:2, review:1, parents:2 } }
 ];
 const SIBLING_RULES_EN = [
   { text:'fits exactly on top of the other', files:{ index:6, reference:2, parents:1 } },
-  { text:'neither shape nor size', files:{ index:10, reference:2, review:3, parents:4 } },
-  { text:'matching sides are the same length', files:{ index:5, reference:3, review:2, parents:2 } },
+  { text:'neither shape nor size', files:{ index:11, reference:2, review:3, parents:4 } },
+  { text:'matching sides are the same length', files:{ index:7, reference:3, review:2, parents:2 } },
   { text:'reverse is not true', files:{ index:1, reference:1 } }
 ];
 /* 一個字都不可以出現的句子（都是假話，連當誘答都不可以）。 */
@@ -691,34 +692,197 @@ module.exports = {
       find:"面積一樣不一定全等 —— 6 × 4 和 8 × 3 都是 24，可是疊起來不會重合','長方形都全等'], ans:2,",
       replace:"面積一樣不一定全等 —— 6 × 4 和 8 × 3 都是 25，可是疊起來不會重合','長方形都全等'], ans:2,",
       why:"the correct option would carry a wrong product" },
-    { file:"index", via:"index", expect:"ROUNDS[0]",
-      find:"      cands:[ mapPts(shapeById('P5').pts, MATS[4].m), scaleP(shapeById('P5').pts, SCALE_K),\n              shapeById('P5').alt, shapeById('L4').pts ] },",
-      replace:"      cands:[ mapPts(shapeById('P5').pts, MATS[4].m), mapPts(shapeById('P5').pts, MATS[1].m),\n              shapeById('P5').alt, shapeById('L4').pts ] },",
-      why:"two candidates would be congruent to the target, so a correct choice could be marked wrong" },
-    { file:"index", via:"index", expect:"ROUNDS[1]",
-      find:"    { kind:'moveName', shape:'T34', mat:6 },",
-      replace:"    { kind:'moveName', shape:'T34', mat:0 },",
-      why:"the 'which move' round would show an unmoved copy" },
-    { file:"index", via:"index", expect:"ROUNDS[3]",
-      find:"    { kind:'rectPair', A:rect(4, 4), B:rect(8, 2) },",
-      replace:"    { kind:'rectPair', A:rect(4, 4), B:rect(8, 3) },",
-      why:"the two rectangles would no longer have the same area, so the customer's claim would not even be tempting" },
-    { file:"index", via:"index", expect:"less than two squares apart",
-      find:"    { kind:'rectPair', A:rect(4, 4), B:rect(8, 2) },",
-      replace:"    { kind:'rectPair', A:rect(6, 4), B:rect(8, 3) },",
-      why:"the two rectangles would fill the row and touch, reading as one shape (the first draft did exactly this)" },
-    { file:"index", via:"index", expect:"not the move actually used",
-      find:"      return opts.indexOf(rel === 'same' ? 'slide' : rel);",
-      replace:"      return opts.indexOf('turn');",
-      why:"the answer would be hard-coded instead of computed from the shapes" },
-    { file:"index", via:"index", expect:"the mini canvas is 108×84",
-      find:"  var MINI_CELL = 12, MINI_COLS = 9, MINI_ROWS = 7;   // 遊戲選項裡的小圖",
-      replace:"  var MINI_CELL = 12, MINI_COLS = 5, MINI_ROWS = 4;   // 遊戲選項裡的小圖",
-      why:"the enlarged candidate would not fit inside its little canvas" },
-    { file:"index", via:"index", expect:"game figure caption",
-      find:"      gCapPair:'📐 左邊橘色、右邊藍色',",
-      replace:"      gCapPair:'📐 左邊橘色、右邊藍色（4 × 4 和 8 × 2）',",
-      why:"the caption under the game figure would print the rectangle sizes from the question" },
+
+    /* --- 小遊戲（§六之五）：每一條收不收的規則、版面、計分、引擎各改壞一次 --- */
+    { file:"index", via:"index", expect:"sortKind() says",
+      find:"    return scaleFactor(T, P) ? 'scale' : 'shape';",
+      replace:"    return 'shape';",
+      why:"an enlarged copy would be called a different shape, so its reason would talk about squares instead of size" },
+    { file:"index", via:"index", expect:"the different-shape card covers",
+      find:"  var GAME_SORT = { ids:['L4', 'P5', 'T34', 'TRAP'],",
+      replace:"  var GAME_SORT = { ids:['L4', 'P5', 'T34', 'TRAP', 'Q2'],",
+      why:"Q2's alt covers 6 squares, not 5, so 'both are n squares' would be false (the e2e found this)" },
+    { file:"index", via:"index", expect:"answer order",
+      find:"    if (w === 'yes,yes,yes,no,no'){ var x = t[2]; t[2] = t[3]; t[3] = x; }\n",
+      replace:"",
+      why:"two flipped cards swapped keep the congruent-first answer order" },
+    { file:"index", via:"index", expect:"sortRegion(",
+      find:"    if (inBox(B.no, x, y)) return 'no';\n",
+      replace:"",
+      why:"a card dropped on 'not congruent' would never count" },
+    { file:"index", via:"index", expect:"sortPick(",
+      find:"    if (rc === want || rf === want) return want;",
+      replace:"    if (rc === want) return want;",
+      why:"a card held by its edge with the finger on the right box would be refused" },
+    { file:"index", via:"index", expect:"slot 0 and slot 1 overlap",
+      find:"                 slots:[[36, 60], [104, 60], [36, 110], [104, 110]],",
+      replace:"                 slots:[[36, 60], [60, 60], [36, 110], [104, 110]],",
+      why:"two placed cards would sit on top of each other" },
+    { file:"index", via:"index", expect:"sort tray",
+      find:"                 tray:[[50, 306], [150, 306], [250, 306], [100, 400], [200, 400]] };",
+      replace:"                 tray:[[50, 306], [120, 306], [250, 306], [100, 400], [200, 400]] };",
+      why:"two copies would overlap in the tray" },
+    { file:"index", via:"index", expect:"moveKind() says",
+      find:"    if (ms.indexOf(0) >= 0) return 'ok';",
+      replace:"    if (ms.length) return 'ok';",
+      why:"a shape facing the wrong way would fit the outline" },
+    { file:"index", via:"index", expect:"following hint 2",
+      find:"    var r = flip ? matMul(m, MATS[4].m) : m;",
+      replace:"    var r = m;",
+      why:"hint 2 would count turns from the wrong starting direction after a flip" },
+    { file:"index", via:"index", expect:"leaves the squared paper",
+      find:"    { shape:'L4',   mat:1, at:[6, 2] },",
+      replace:"    { shape:'L4',   mat:1, at:[9, 2] },",
+      why:"the outline would run off the squared paper" },
+    { file:"index", via:"index", expect:"nothing to turn or flip",
+      find:"    { shape:'P5',   mat:4, at:[6, 2] },",
+      replace:"    { shape:'P5',   mat:0, at:[6, 2] },",
+      why:"a job would need no turn and no flip" },
+    { file:"index", via:"index", expect:"moveHit(",
+      find:"    return boxDist(x, y, b.x + b.w / 2, b.y + b.h / 2, b.w / 2, b.h / 2) <= MOVE_G.reach;",
+      replace:"    return boxDist(x, y, b.x + b.w / 2, b.y + b.h / 2, b.w / 2, b.h / 2) <= MOVE_G.reach + 30;",
+      why:"a drop far from the outline would count as dropping into it" },
+    { file:"index", via:"index", expect:"moveTurn() is not",
+      find:"  function moveTurn(P){ return anchor(mapPts(P, MATS[1].m)); }",
+      replace:"  function moveTurn(P){ return anchor(mapPts(P, MATS[3].m)); }",
+      why:"the ↺ button would turn clockwise" },
+    { file:"index", via:"index", expect:"must use ↺",
+      find:"moveBtn:{ left:'← 左 1 格', right:'→ 右 1 格', up:'↑ 上 1 格', down:'↓ 下 1 格', turn:'↺ 旋轉 90°'",
+      replace:"moveBtn:{ left:'← 左 1 格', right:'→ 右 1 格', up:'↑ 上 1 格', down:'↓ 下 1 格', turn:'↻ 旋轉 90°'",
+      why:"example 2's button would show a clockwise arrow for an anticlockwise turn" },
+    { file:"index", via:"index", expect:"plain letter order",
+      find:"    { pts:shapeById('DART').pts, mat:3 },",
+      replace:"    { pts:shapeById('DART').pts, mat:1 },",
+      why:"the matching would be A↔E, B↔F… — the round would not teach that letters are not the matching" },
+    { file:"index", via:"index", expect:"matchPick(",
+      find:"      if (dd <= G.reach && dd < bd){ bd = dd; best = j; }",
+      replace:"      if (dd <= G.reach && best === null){ bd = dd; best = j; }",
+      why:"a drop between two vertices would go to the first one, not the nearer one" },
+    { file:"index", via:"index", expect:"tapping letter",
+      find:"                        boxDist(x, y, v.letB.x, v.letB.y, G.letter / 2, G.letter / 2));",
+      replace:"                        1e9);",
+      why:"tapping a vertex's letter would not count as tapping the vertex" },
+    { file:"index", via:"index", expect:"matchWhy says",
+      find:"    if (isRight(A, i) !== isRight(B, j)) return { key:'right', aRight:isRight(A, i) };\n",
+      replace:"",
+      why:"the right-angle clue would never be given" },
+    { file:"index", via:"index", expect:"sits on a side",
+      find:"  var MATCH_G = { H:180, cell:24, lx:34, rRight:266, yb:138, knob:48, reach:30, letterR:22, letter:24 };",
+      replace:"  var MATCH_G = { H:180, cell:24, lx:34, rRight:266, yb:138, knob:48, reach:30, letterR:8, letter:24 };",
+      why:"letters would sit on the sides" },
+    { file:"index", via:"index", expect:"same length",
+      find:"    { pts:[[0, 0], [6, 0], [3, 4], [0, 4]], mat:1 },",
+      replace:"    { pts:[[0, 0], [8, 0], [5, 4], [0, 4]], mat:1 },",
+      why:"two 5 cm sides: a card would fit two sides" },
+    { file:"index", via:"index", expect:"sidesPick(",
+      find:"      if (dd <= G.reach && dd < bd){ bd = dd; best = k; }",
+      replace:"      if (dd <= G.reach && best === null){ bd = dd; best = k; }",
+      why:"a card dropped between two sides would go to the first one, not the nearer one" },
+    { file:"index", via:"index", expect:"sidesPick(",
+      find:"      var dd = Math.min(segDist(x, y, e.pb, e.qb), boxDist(x, y, e.box.x, e.box.y, G.box.w / 2, G.box.h / 2));",
+      replace:"      var dd = boxDist(x, y, e.box.x, e.box.y, G.box.w / 2, G.box.h / 2);",
+      why:"a card dropped on the side itself would be ignored" },
+    { file:"index", via:"index", expect:"sits on a side",
+      find:"    var d = Math.abs(n.x) * hw + Math.abs(n.y) * hh + gap;",
+      replace:"    var d = gap;",
+      why:"the boxes and lengths would sit on the sides" },
+    { file:"index", via:"index", expect:"stretchKind(",
+      find:"    if (w === e[1] && h === e[0]) return 'turned';\n",
+      replace:"",
+      why:"the orange rectangle turned a quarter would count as 'not congruent'" },
+    { file:"index", via:"index", expect:"hint 2 names",
+      find:"      if (h <= G.rows && stretchKind(e, w, h) === 'ok') return [w, h];",
+      replace:"      if (h <= G.rows) return [w, h];",
+      why:"hint 2 could name a congruent or impossible rectangle" },
+    { file:"index", via:"index", expect:"stretchPt(",
+      find:"    var G = STRETCH_G, c = Math.round((x - G.x0) / G.pitch), r = Math.round((G.yb - y) / G.pitch);",
+      replace:"    var G = STRETCH_G, c = Math.floor((x - G.x0) / G.pitch), r = Math.round((G.yb - y) / G.pitch);",
+      why:"a tap just left of a grid point would land one column short" },
+    { file:"index", via:"index", expect:"no rectangle with the same area",
+      find:"  var GAME_STRETCH = [[6, 2],",
+      replace:"  var GAME_STRETCH = [[7, 2], [6, 2],",
+      why:"7 × 2 has no other rectangle on this grid" },
+    { file:"index", via:"index", expect:"scoring: a mistake",
+      find:"    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;",
+      replace:"    gScore = Math.max(0, gScore - 0); elScore.textContent = gScore;",
+      why:"a wrong drop would cost nothing" },
+    { file:"index", via:"index", expect:"roundSolved()",
+      find:"    var pts = gMistake ? 10 : 20;",
+      replace:"    var pts = 20;",
+      why:"a round with mistakes would still give +20" },
+    { file:"index", via:"index", expect:"shuffle()",
+      find:"      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */",
+      replace:"      var k = j;   /* 自足：檢查工具會把這個函式單獨切出來執行 */",
+      why:"the trays would start in their own order" },
+    { file:"index", via:"index", expect:"board-generation guard",
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */\n",
+      replace:"",
+      why:"a card held across Restart could score on the new board" },
+    { file:"index", via:"index", expect:"lostpointercapture",
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+      replace:"",
+      why:"a piece whose capture is lost would stay stuck" },
+    { file:"index", via:"index", expect:"gMatchSep",
+      find:"      gMatchSep:', ',",
+      replace:"      gMatchSep:'、',",
+      why:"the English closing line would use a Chinese list comma" },
+    { file:"index", via:"index", expect:"gSortWhy.shape",
+      find:"        shape:function(n){ return '這一張和藍色都是 ' + n + ' 格，",
+      replace:"        shape:function(n){ return '這一張和藍色都是一樣多格，",
+      why:"the reason would stop naming how many squares" },
+    { file:"index", via:"index", expect:"gSidesWhy",
+      find:"', so it lands on side ' + right + ', not side ' + here + '.';",
+      replace:"', so it lands on side ' + right + '.';",
+      why:"the reason would not say which side the card was dropped on" },
+    { file:"index", via:"index", expect:"must not draw squared paper",
+      find:"      gShape(svg, plan.a, C_AF, C_A, false, 'gshapeA');\n      gShape(svg, plan.b, C_BF, C_B, false, 'gshapeB');\n      var slots",
+      replace:"      gGrid(svg, 0, 400, 12, 16, 22);\n      gShape(svg, plan.a, C_AF, C_A, false, 'gshapeA');\n      gShape(svg, plan.b, C_BF, C_B, false, 'gshapeB');\n      var slots",
+      why:"squared paper would let the child count the right shape instead of matching" },
+    { file:"index", via:"index", expect:"does not snap while dragging",
+      find:"        follow:function(q){ var g = stretchSnap(q.x, q.y); return stretchXY(g[0], g[1]); },\n",
+      replace:"",
+      why:"the corner would float between grid points while dragging" },
+    { file:"index", via:"index", expect:"buttons still act",
+      find:"          if (gSolved || piece.locked || piece.busy()) return;",
+      replace:"          if (gSolved) return;",
+      why:"the shape could be turned in the middle of a drag" },
+    { file:"index", via:"index", expect:"under 44",
+      find:"  var SIDES_G = { H:426, u:22, leftCY:76, rightCY:256, trayY:396, card:{ w:66, h:48 },",
+      replace:"  var SIDES_G = { H:426, u:22, leftCY:76, rightCY:256, trayY:396, card:{ w:66, h:44 },",
+      why:"the length cards would be under 44px on a phone" },
+    { file:"index", via:"index", expect:"side 0 length",
+      find:"  function sidesLen(P, i){ return Math.round(Math.sqrt(edgeSq(P, i, (i + 1) % P.length))); }",
+      replace:"  function sidesLen(P, i){ return Math.round(Math.sqrt(edgeSq(P, i, (i + 1) % P.length))) + 1; }",
+      why:"the written lengths would not match the drawn sides" },
+
+    { file:"index", via:"index", expect:"is not drawn as its own polygon",
+      find:"    return Q.map(function(p){ return { x:G.pad + (p[0] + ox) * G.cell, y:G.pad + (G.gridN - (p[1] + oy)) * G.cell }; });",
+      replace:"    return Q.map(function(p){ return { x:G.pad + (p[0] + ox) * G.cell, y:G.pad + (G.gridN - (p[0] + oy)) * G.cell }; });",
+      why:"the cards would draw a different polygon from the one that decides their box" },
+    { file:"index", via:"index", expect:"stretched to the card",
+      find:"  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px}",
+      replace:"  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px}\n  .gcard svg{width:100%;height:100%}",
+      why:"the card art would be stretched, so a congruent card would look bigger than the customer shape (codex round 1)" },
+    { file:"index", via:"index", expect:"exactly once and redraw",
+      find:"          if (t[0] === 'turn'){ cur = moveTurn(cur); turns++; } else { cur = moveFlip(cur); flips++; }",
+      replace:"          if (t[0] === 'turn'){ cur = moveTurn(moveTurn(cur)); turns++; } else { cur = moveFlip(cur); flips++; }",
+      why:"one press of ↺ would turn the shape twice" },
+    { file:"index", via:"index", expect:"not the snapped corner",
+      find:"        onPlace:function(P){ var g = stretchSnap(P.cx, P.cy); draw(g[0], g[1]); } });",
+      replace:"        onPlace:function(P){ draw(1, 1); } });",
+      why:"the rectangle would not follow the corner while dragging" },
+    { file:"index", via:"index", expect:"must include its edge",
+      find:"      if (dd <= G.reach && dd < bd){ bd = dd; best = j; }",
+      replace:"      if (dd < G.reach && dd < bd){ bd = dd; best = j; }",
+      why:"a drop exactly at the edge of a vertex's zone would be ignored" },
+    { file:"index", via:"index", expect:"tap-then-tap: tapping a destination",
+      find:"      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });",
+      replace:"      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y });",
+      why:"a destination tap would be judged like a drag release" },
+    { file:"index", via:"index", expect:"each left label must print",
+      find:"        addZone(B, e.lbl.x - G.lbl.w / 2, e.lbl.y - G.lbl.h / 2, G.lbl.w, G.lbl.h, 'glen', d.gCm(e.len));",
+      replace:"        addZone(B, e.lbl.x - G.lbl.w / 2, e.lbl.y - G.lbl.h / 2, G.lbl.w, G.lbl.h, 'glen', d.gCm(plan.edges[0].len));",
+      why:"every left side would show the same length" },
 
     /* --- 旁白 --- */
     { file:"index", via:"index", expect:"missing space between Chinese and a digit",
@@ -1161,14 +1325,18 @@ module.exports = {
   data: {
     dataStart: '/* ---------- 語言無關的資料 ---------- */',
     dataEnd: '/* ---------- i18n ---------- */',
-    dataReturn: '{FIG_W, FIG_H, CELL, COLS, ROWS, GX0, GY0, MINI_CELL, MINI_COLS, MINI_ROWS, MINI_W, MINI_H, ' +
+    dataReturn: '{FIG_W, FIG_H, CELL, COLS, ROWS, GX0, GY0, ' +
                 'LABEL_R, LABEL_FONT, DOT_R, LINE_W, MARK_LEN, ARC_R, PAIR_LEFT_X, PAIR_Y, PAIR_RIGHT_END, SCALE_K, ' +
                 'px, py, MATS, applyMat, mapPts, translate, bbox, anchor, sameCycle, findMoves, relation, isCongruent, moveOnto, ' +
                 'scaleP, scaleFactor, shoelace2, areaCells, axisAligned, perimGrid, edgeLen, edgeSq, cornerVecs, isRight, isReflex, sameAngle, ' +
                 'SHAPES, shapeById, rect, L12, pairLayout, pairPlan, toPx, polyPath, BASE1, S1_CASES, ' +
                 'PUZZLE_SHAPE, PUZZLE_START, PUZZLES, puzzleTarget, inGrid, doMove, moveKindOf, puzzleSolved, MOVE_ACTS, ' +
                 'CORR_SHAPES, LABELS_A, LABELS_B, labelOrder, labelOf, edgeName, labelPos, arcOf, cornerMark, corrPlan, edgesAt, ' +
-                'S4_CASES, shapeDesc, QUIZ_FIGS, plEn, isAreEn, MOVE_KEYS, RECT_STATEMENTS, ROUNDS, roundOptions, roundAnswer, candidatePlan, centrePlan}',
+                'S4_CASES, shapeDesc, QUIZ_FIGS, plEn, isAreEn, ' +
+                'GAME_ORDER, GAME_W, SORT_G, GAME_SORT, sortKind, sortWant, sortDeal, sortArt, sortRegion, sortPick, ' +
+                'MOVE_G, GAME_MOVE, moveTarget, moveTurn, moveFlip, moveKind, movePlan, moveBox, moveHit, ' +
+                'MATCH_G, GAME_MATCH, matchPlan, matchPick, matchWhy, SIDES_G, GAME_SIDES, sidesPlan, sidesPick, ' +
+                'STRETCH_G, GAME_STRETCH, stretchXY, stretchPt, stretchSnap, stretchKind, stretchAlt}',
     optionValueMax: BIG_MAX_REF,
 
     check: function(data, I18N, fail, rawSrc){
@@ -1181,11 +1349,9 @@ module.exports = {
       if (data.GX0 < MARGIN_REF - 2 || data.GY0 < MARGIN_REF) fail('the grid must leave a margin inside the canvas');
       if (data.px(0) !== GX0_REF || data.py(0) !== GY0_REF + ROWS_REF * CELL_REF) fail('px()/py() do not map grid corners to the canvas');
       if (data.SCALE_K !== SCALE_K_REF) fail('the enlargement factor is ' + SCALE_K_REF);
-      if (countOf(src, 'viewBox="0 0 ' + FIG_W_REF + ' ' + FIG_H_REF + '"') !== 5)
-        fail('expected 5 figure canvases in the lesson markup (four examples + the game), found ' + countOf(src, 'viewBox="0 0 ' + FIG_W_REF + ' ' + FIG_H_REF + '"'));
+      if (countOf(src, 'viewBox="0 0 ' + FIG_W_REF + ' ' + FIG_H_REF + '"') !== 4)
+        fail('expected 4 figure canvases in the lesson markup (the four examples; the game draws its own boards), found ' + countOf(src, 'viewBox="0 0 ' + FIG_W_REF + ' ' + FIG_H_REF + '"'));
       if (src.indexOf('max-width:' + FIG_W_REF + 'px;height:' + FIG_H_REF + 'px') < 0) fail('the .gridfig CSS size must match the viewBox');
-      if (data.MINI_W !== MINI_W_REF || data.MINI_H !== MINI_H_REF) fail('the mini canvas is ' + MINI_W_REF + '×' + MINI_H_REF);
-      if (src.indexOf('.degbtn svg{width:' + MINI_W_REF + 'px;height:' + MINI_H_REF + 'px') < 0) fail('the .degbtn svg CSS size must match the mini canvas');
 
       /* ---------- 2) 八種擺法：和參考實作逐一比對 ---------- */
       if (data.MATS.length !== 8) fail('MATS must list the eight placements');
@@ -1527,78 +1693,9 @@ module.exports = {
         });
       });
 
-      /* ---------- 10) 遊戲 ---------- */
-      if (data.ROUNDS.length !== 5) fail('the game has five job sheets');
-      const kinds = {};
-      data.ROUNDS.forEach(function(r, i){
-        kinds[r.kind] = (kinds[r.kind] || 0) + 1;
-        const label = 'ROUNDS[' + i + ']', opts = data.roundOptions(r), ans = data.roundAnswer(r);
-        if (ans < 0 || ans >= opts.length) fail(label + ': roundAnswer() found no unique answer');
-        if (opts.length !== 4) fail(label + ': needs four options');
-        if (r.kind === 'which'){
-          const T = SHAPES_REF[r.target] ? SHAPES_REF[r.target].pts : null;
-          if (!T) { fail(label + ': unknown target shape'); return; }
-          const ansRef = whichAnsRef(T, r.cands);
-          if (ansRef < 0) fail(label + ': not exactly one candidate is congruent to the target');
-          if (ans !== ansRef) fail(label + ': roundAnswer() disagrees with the reference');
-          if (ansRef >= 0 && relationRef(T, r.cands[ansRef]) === 'same') fail(label + ': the congruent candidate is an unmoved copy, so the round is trivial');
-          r.cands.forEach(function(C, k){
-            const cp = data.candidatePlan(C);
-            if (!cp.fits) fail(label + ': candidate ' + k + ' does not fit the mini canvas');
-            cp.pts.forEach(p => { if (p.x < 0 || p.x > cp.w || p.y < 0 || p.y > cp.h) fail(label + ': candidate ' + k + ' is drawn outside the mini canvas'); });
-            if (!intPoly(C)) fail(label + ': candidate ' + k + ' has non-integer vertices');
-            for (let j = k + 1; j < r.cands.length; j++) if (congRef(C, r.cands[j])) fail(label + ': candidates ' + k + ' and ' + j + ' are congruent to each other');
-          });
-          const centre = data.centrePlan(T);
-          centre.forEach(p => { if (p[0] < 0 || p[0] > COLS_REF || p[1] < 0 || p[1] > ROWS_REF) fail(label + ': the target leaves the grid'); });
-          if (!samePolyRef(anchorRef(centre), anchorRef(T))) fail(label + ': centrePlan() changes the target');
-        }
-        if (r.kind === 'moveName'){
-          const S = SHAPES_REF[r.shape] ? SHAPES_REF[r.shape].pts : null;
-          if (!S) { fail(label + ': unknown shape'); return; }
-          const rel = relationRef(S, placeRef(S, r.mat));
-          if (rel === 'same') fail(label + ': the moved copy is unmoved');
-          if (opts.join() !== MOVE_KEYS_REF.join()) fail(label + ': options must be the four moves');
-          if (opts[ans] !== rel) fail(label + ': the answer is not the move actually used (' + rel + ')');
-          if (!trivialSymRef(S)) fail(label + ': the shape has a symmetry');
-        }
-        if (r.kind === 'corrSide'){
-          const plan = data.corrPlan(r.ci), e = plan.edges[r.edge];
-          if (!e) { fail(label + ': edge index out of range'); return; }
-          const lay = corrLayoutRef(plan.id, plan.mat);
-          const order = labelOrderRef(plan.B), want = [];
-          for (let k = 0; k < 4; k++) want.push(edgeNameRef(plan.B, LABELS_B_REF, order[k], order[(k + 1) % 4]));
-          if (opts.join() !== want.join()) fail(label + ': options are not the four sides of the right shape in letter order');
-          if (opts[ans] !== edgeNameRef(plan.B, LABELS_B_REF, e.i, e.j)) fail(label + ': the answer is not the matching side');
-          if (!lay) fail(label + ': no layout');
-        }
-        if (r.kind === 'rectPair' || r.kind === 'moveName'){
-          const pr = r.kind === 'rectPair' ? [r.A, r.B] : [SHAPES_REF[r.shape].pts, placeRef(SHAPES_REF[r.shape].pts, r.mat)];
-          /* 兩個圖形中間至少空兩格，不然畫面上會黏成一個圖形（第一版 6 × 4 和 8 × 3 就黏在一起）。 */
-          if (data.pairPlan(pr[0], pr[1], false).gap < 2) fail(label + ': the two shapes are less than two squares apart');
-        }
-        if (r.kind === 'rectPair'){
-          const areaEq = areaRef(r.A) === areaRef(r.B), cong = congRef(r.A, r.B);
-          if (!areaEq) fail(label + ': the two rectangles must have the same area, or the customer’s claim is not tempting');
-          if (cong) fail(label + ': the two rectangles must not be congruent');
-          if (opts.join() !== RECT_KEYS_REF.join()) fail(label + ': options must be the four statements');
-          if (opts[ans] !== 'areaSameNotCong') fail(label + ': the true statement is "same area, not congruent"');
-        }
-      });
-      if (!(kinds.which >= 1 && kinds.moveName && kinds.corrSide && kinds.rectPair)) fail('the game must cover which/moveName/corrSide/rectPair');
-      ['zh', 'en'].forEach(function(lang){
-        const d = I18N[lang];
-        [d.gCapWhich, d.gCapPair, d.gCapCorr].forEach(function(cap, i){
-          if (/\d/.test(String(cap))) fail('game figure caption ' + i + ' (' + lang + ') contains a digit: ' + cap);
-          if (/翻|轉|平移|放大|flip|turn|slide|enlarg/i.test(String(cap))) fail('game figure caption ' + i + ' (' + lang + ') names a move');
-        });
-        ['which', 'moveName', 'corrSide', 'rectPair'].forEach(function(k){
-          if (typeof d.gHint1[k] !== 'string') fail('gHint1.' + k + ' missing in ' + lang);
-          if (k === 'which' ? typeof d.gHint2[k] !== 'string' : typeof d.gHint2[k] !== 'function') fail('gHint2.' + k + ' has the wrong shape in ' + lang);
-        });
-        MOVE_KEYS_REF.forEach(k => { if (typeof d.moveName[k] !== 'string') fail('moveName.' + k + ' missing in ' + lang); });
-        RECT_KEYS_REF.forEach(k => { if (typeof d.rectStatement[k] !== 'string') fail('rectStatement.' + k + ' missing in ' + lang); });
-      });
+      /* ---------- 10) 遊戲：五關五種玩法（gameChecks，檔案最後面） ---------- */
+      /* 讀不懂（例如圖形有對稱，找不到唯一的擺法）就 fail-closed，不讓整份檢查在半路丟例外 */
+      try { gameChecks(data, I18N, fail, src); } catch (e){ fail('game checks threw: ' + e.message); }
 
       /* ---------- 11) 旁白：真的渲染出來再掃 ---------- */
       const narrated = [];
@@ -1656,14 +1753,32 @@ module.exports = {
           if (c.id === 'areaOnly' && !(lang === 'zh' ? /面積一樣，可是不全等/.test(narr) : /same area, yet not congruent/.test(narr))) fail('the same-area case must say so');
           if (c.id === 'perimOnly' && !(lang === 'zh' ? /周長一樣也不保證全等/.test(narr) : /same perimeter does not guarantee/.test(narr))) fail('the same-perimeter case must say so');
         });
-        data.ROUNDS.forEach(function(r){
-          if (r.kind === 'which'){ narrated.push([lang, 'gPrompt', d.gPrompt.which]); narrated.push([lang, 'gHint2', d.gHint2.which]); }
-          else if (r.kind === 'moveName'){ narrated.push([lang, 'gPrompt', d.gPrompt.moveName]); narrated.push([lang, 'gHint2', d.gHint2.moveName(d.moveShort.flip)]); }
-          else if (r.kind === 'corrSide'){ const plan = data.corrPlan(r.ci), e = plan.edges[r.edge]; narrated.push([lang, 'gPrompt', d.gPrompt.corrSide(e.nameA)]); narrated.push([lang, 'gHint2', d.gHint2.corrSide(plan.verts[e.i].labelA, plan.verts[e.i].labelB, e.nameB)]); }
-          else { const a = bboxRef(r.A), b = bboxRef(r.B); narrated.push([lang, 'gPrompt', d.gPrompt.rectPair(a.w, a.h, b.w, b.h)]); narrated.push([lang, 'gHint2', d.gHint2.rectPair(areaRef(r.A))]); }
+        /* 遊戲：每一關所有會說出來的句子都真的渲染一次 */
+        data.GAME_SORT.ids.forEach(id => { narrated.push([lang, 'gSortWhy.shape', d.gSortWhy.shape(areaRef(SHAPES_REF[id].pts))]); });
+        narrated.push([lang, 'gSortWhy.scale', d.gSortWhy.scale(SCALE_K_REF)], [lang, 'gSort2.scale', d.gSort2.scale(SCALE_K_REF)]);
+        [0, 1, 5].forEach(k => narrated.push([lang, 'gSortNow', d.gSortNow(k, 5)]));
+        [[0, 0], [1, 0], [0, 1], [4, 2]].forEach(r => narrated.push([lang, 'gMoveNow', d.gMoveNow(r[0], r[1])]));
+        [true, false].forEach(f => [0, 1, 2, 3].forEach(k => narrated.push([lang, 'gMove2', d.gMove2(f, k)])));
+        ['turn', 'flip'].forEach(r => narrated.push([lang, 'gMoveOk', d.gMoveOk(r)]));
+        [[0, 4], [1, 3], [3, 3]].forEach(r => { narrated.push([lang, 'gMatchNow', d.gMatchNow(r[0], r[1])]); narrated.push([lang, 'gSidesNow', d.gSidesNow(r[0], r[1])]); });
+        narrated.push([lang, 'gMatchDone', d.gMatchDone(['A↔G', 'B↔H'].join(d.gMatchSep))], [lang, 'gMatch2', d.gMatch2('A', 'G')], [lang, 'gMatchOk', d.gMatchOk('A', 'G')]);
+        data.GAME_SIDES.forEach(e => {
+          const plan = data.sidesPlan(e);
+          plan.edges.forEach(ed => {
+            narrated.push([lang, 'gCm', d.gCm(ed.len)], [lang, 'gSides2', d.gSides2(ed.nameB, ed.nameA, ed.len)]);
+            const va = plan.verts[ed.i], vb = plan.verts[ed.j];
+            narrated.push([lang, 'gSidesWhy', d.gSidesWhy(ed.len, ed.nameA, va.la, va.lb, vb.la, vb.lb, ed.nameB, plan.edges[(ed.i + 1) % plan.edges.length].nameB)]);
+          });
         });
-        narrated.push([lang, 'gWrong0', d.gWrong(0)]);
-        narrated.push([lang, 'gWrong5', d.gWrong(5)]);
+        data.GAME_STRETCH.forEach(e => {
+          const a = data.stretchAlt(e);
+          if (!a) return;   /* 沒有答案的題目由 gameChecks 回報 */
+          narrated.push([lang, 'gStretch2', d.gStretch2(e[0], e[1], a[0], a[1])], [lang, 'gStretchOk', d.gStretchOk(a[0], a[1], e[0] * e[1])],
+                        [lang, 'gStretchWhy.same', d.gStretchWhy.same(e[0], e[1])], [lang, 'gStretchWhy.turned', d.gStretchWhy.turned(e[0], e[1])],
+                        [lang, 'gStretchWhy.area', d.gStretchWhy.area(1, 2, e[0], e[1])], [lang, 'gStretchNow', d.gStretchNow(e[0], e[1])]);
+        });
+        [[1, 1], [2, 1], [1, 2]].forEach(r => narrated.push([lang, 'gStretchNow', d.gStretchNow(r[0], r[1])]));
+        narrated.push([lang, 'gPts', d.gPts(20)], [lang, 'gMinus', d.gMinus]);
         narrated.push([lang, 'gWin', d.gWin(100)]);
         narrated.push([lang, 'caseName', d.caseName(1)]);
         narrated.push([lang, 'taskName', d.taskName(3)]);
@@ -1808,3 +1923,542 @@ module.exports = {
     }
   }
 };
+
+/* ================= 小遊戲「搬家公司出任務」（§六之五：五關五種玩法） =================
+   每一關照遊戲自己的規則（頁面資料區的純函式）把題庫的每一題玩一遍，正解一律用這份設定**自己的實作**重算：
+   八種擺法 placeRef／全等 congRef／轉還是翻 relationRef／字母 labelOrderRef／角 isRightRef、sameAngleRef（上面的參考實作），
+   距離與方框用這裡自己的公式，掃過整個畫板和頁面的「放在哪裡」比對。版面、觸控大小從資料區讀。 */
+const { extractFunction } = require('./lib/gameshuffle.js');
+/* 375px 手機上畫板的縮放：卡片 16＋內距 22×2＋邊框 → 舞台約 286px 寬（e2e 在 375px 實際量到 48 × k ≈ 45.8）。取下界。 */
+const PHONE_K = Math.min(1.5, 286 / 300);
+const GAME_TYPES = ['sort', 'move', 'match', 'sides', 'stretch'];
+
+function gameChecks(D, I18N, fail, src){
+  const LANGS = ['zh', 'en'], W = D.GAME_W;
+  if (W !== 300) fail('GAME_W is ' + W + ', the boards are designed for 300');
+  if (!Array.isArray(D.GAME_ORDER) || D.GAME_ORDER.join() !== GAME_TYPES.join())
+    fail('GAME_ORDER should be ' + GAME_TYPES.join() + ' (the order of the examples), got ' + D.GAME_ORDER);
+  const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+  const B = {};
+  GAME_TYPES.forEach(t => {
+    B[t] = body(t);
+    if (!B[t]) fail('cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t].trim())) fail('gAsks.' + t + ' missing in ' + L);
+      if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && /^(提示 1|Hint 1)/.test(I18N[L].gHints[t]))) fail('gHints.' + t + ' missing in ' + L + ' (it must start with 提示 1 / Hint 1)');
+    });
+  });
+  const need = (k, re, what) => { if (!re.test(B[k] || '')) fail(k + ': ' + what); };
+  const touch = (what, sz) => { if (!(sz * PHONE_K >= 44)) fail(what + ' is ' + (sz * PHONE_K).toFixed(1) + 'px on a 375px phone — under 44'); };
+  const cbox = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w:w, h:h });
+  const inside = (o, what, H) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail(what + ' is outside the ' + W + '×' + H + ' board: ' + JSON.stringify(o)); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i][1], list[j][1])) return fail(what + ': ' + list[i][0] + ' and ' + list[j][0] + ' overlap'); };
+  const dRef = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
+  const segDistRef = (p, a, b) => {
+    const ux = b.x - a.x, uy = b.y - a.y, L2 = ux * ux + uy * uy;
+    let t = ((p.x - a.x) * ux + (p.y - a.y) * uy) / L2; t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - a.x - ux * t, p.y - a.y - uy * t);
+  };
+  const boxDistRef = (p, b) => Math.hypot(Math.max(0, b.x - p.x, p.x - (b.x + b.w)), Math.max(0, b.y - p.y, p.y - (b.y + b.h)));
+  /* 一條線段有沒有穿過方框（取樣 200 點） */
+  const segHitsBox = (a, b, o) => { for (let t = 0; t <= 1; t += 0.005){ const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t; if (x > o.x && x < o.x + o.w && y > o.y && y < o.y + o.h) return true; } return false; };
+  const textOk = (where, s) => { if (typeof s !== 'string' || !s.trim() || /undefined|NaN|null|\[object/.test(s)) fail(where + ': bad text: ' + s); };
+  const has = (where, s, words) => words.forEach(w => { if (String(s).indexOf(w) < 0) fail(where + ' should say "' + w + '": ' + s); });
+  const own8 = P => [0, 1, 2, 3, 4, 5, 6, 7].map(i => anchorRef(placeRef(P, i)));
+  const sameAnch = (A, Bq) => samePolyRef(anchorRef(A), anchorRef(Bq));
+  const turnOnly = (A, Bq) => [0, 1, 2, 3].some(i => sameAnch(placeRef(A, i), Bq));
+
+  /* ---------- 共用：shuffle()／sortTray() 真的跑 ---------- */
+  let shuffle = null;
+  {
+    const fsrc = extractFunction(src, 'shuffle');
+    if (!fsrc) fail('cannot find shuffle() in index.html');
+    else { try { shuffle = new Function(fsrc + '\nreturn shuffle;')(); } catch (e){ fail('shuffle() could not be evaluated on its own: ' + e.message); } }
+    if (shuffle){
+      [[0, 1, 2], [0, 1, 2, 3], [0, 1, 2, 3, 4]].forEach(input => {
+        const seen = {}, before = input.join(), perms = new Set();
+        for (let i = 0; i < 4000; i++){
+          const out = shuffle(input);
+          if (input.join() !== before) return fail('shuffle() mutates its input');
+          if (out.slice().sort((a, b) => a - b).join() !== before) return fail('shuffle() changed the set: ' + out);
+          if (out.join() === before) return fail('shuffle() returned ' + out.join(',') + ' — a tray would start in its own order');
+          out.forEach((v, p) => { seen[v + '@' + p] = true; });
+          perms.add(out.join());
+        }
+        const n = input.length, fact = [1, 1, 2, 6, 24, 120][n];
+        if (n <= 4 && perms.size !== fact - 1) fail('shuffle() of ' + n + ' items produced ' + perms.size + ' orders, expected every order except the increasing one (' + (fact - 1) + ')');
+        for (let v = 0; v < n; v++) for (let p = 0; p < n; p++) if (!seen[v + '@' + p]) return fail('shuffle(): item ' + v + ' never lands at position ' + p);
+      });
+    }
+    const tsrc = extractFunction(src, 'sortTray');
+    let sortTray = null;
+    if (!tsrc) fail('cannot find sortTray() in index.html');
+    else if (shuffle){ try { sortTray = new Function('shuffle', 'sortWant', tsrc + '\nreturn sortTray;')(shuffle, D.sortWant); } catch (e){ fail('sortTray() could not be evaluated: ' + e.message); } }
+    if (sortTray){
+      const deal = D.sortDeal('L4', 1, 4, 6, 0), seenW = new Set();
+      for (let i = 0; i < 4000; i++){
+        const t = sortTray(deal);
+        if (t.slice().sort().join() !== '0,1,2,3,4') { fail('sortTray() is not a permutation: ' + t); break; }
+        const w = t.map(k => D.sortWant(deal[k].kind)).join();
+        if (w === 'yes,yes,yes,no,no'){ fail('sortTray() laid the cards out in the answer order (congruent first)'); break; }
+        seenW.add(w);
+      }
+      if (seenW.size !== 9) fail('sortTray(): expected every yes/no layout except the answer order (9), saw ' + seenW.size);
+    }
+    need('sort', /sortTray\(deal\)\.forEach\(function\(ci, j\)\{/, 'the copies are not laid out through sortTray()');
+    need('sides', /shuffle\(plan\.edges\.map\(function\(e, k\)\{ return k; \}\)\)\.forEach\(/, 'the length cards are not shuffled into the tray');
+  }
+  /* ---------- 共用：計分（中年級 §三：沒犯錯 +20、犯過錯 +10；放錯一次 −5，最低 0）---------- */
+  if (!/var pts = gMistake \? 10 : 20;/.test(src)) fail('scoring: a round should give +20 with no mistakes and +10 after mistakes');
+  {
+    const fsrc = extractFunction(src, 'roundMiss');
+    if (!fsrc) fail('scoring: cannot find roundMiss() in index.html');
+    else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(([s0, want, shows]) => {
+      let r;
+      try { r = new Function('var gMistake = false, gScore = ' + s0 + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+      catch (e){ return fail('scoring: roundMiss() could not run: ' + e.message); }
+      if (r.s !== want || String(r.shown) !== String(want)) fail('scoring: a mistake at ' + s0 + ' leaves ' + r.s + ' — a mistake does not cost 5 (floored at 0)');
+      if ((r.html.indexOf('@MINUS@') >= 0) !== shows) fail('scoring: at ' + s0 + ' points the "−5" note is ' + (shows ? 'missing' : 'shown although nothing was taken'));
+      if (r.html.indexOf('why') < 0 || !r.m) fail('scoring: roundMiss() does not show the reason or record the mistake');
+    });
+    const ssrc = extractFunction(src, 'roundSolved');
+    if (!ssrc) fail('scoring: cannot find roundSolved() in index.html');
+    else [[false, 20], [true, 10]].forEach(([mis, pts]) => {
+      let r;
+      try { r = new Function('var gSolved = false, gMistake = ' + mis + ', gScore = 15, elScore = {}, gMsg = {}, gCtx = {}, gRound = 0, GAME_ORDER = [1,2,3,4,5], gHintBtn = {}, gNext = { disabled:true };' +
+              'var gameStage = { querySelectorAll:function(){ return []; } }; function L(){ return { gPts:function(p){ return "@" + p + "@"; }, gWin:function(){ return "W"; }, gClear:"C" }; }\n' + ssrc +
+              '\nroundSolved("ok"); roundSolved("again"); return { s:gScore, html:gMsg.innerHTML, next:gNext.disabled, solved:gSolved };')(); }
+      catch (e){ return fail('scoring: roundSolved() could not run: ' + e.message); }
+      if (r.s !== 15 + pts || r.html.indexOf('@' + pts + '@') < 0 || r.next || !r.solved) fail('scoring: roundSolved() with mistake=' + mis + ' does not give +' + pts + ' exactly once and enable Next');
+    });
+  }
+  /* ---------- 共用：拖拉引擎（字面釘樁；真正的行為由 e2e 和改壞頁證明） ---------- */
+  if (!/if \(gen !== gGen\) return;/.test(src) || !/var start = null, orig = null, moved = false, pid = null, gen = gGen;/.test(src))
+    fail('the drag engine has no board-generation guard: a piece held across Restart could act on the new board');
+  if (!/gSolved = false; gMistake = false; gCtx = \{\}; gGen\+\+;/.test(src)) fail('startRound() does not bump gGen');
+  if ((src.match(/if \(!start \|\| e\.pointerId !== pid\) return;/g) || []).length !== 2) fail('the drag engine does not follow only the first finger (move and end must both check pointerId)');
+  if (!/document\.addEventListener\('pointerup', onDocEnd\);\n\s*document\.addEventListener\('pointercancel', onDocEnd\);/.test(src)) fail('the drag engine has no document-level release while dragging');
+  if (!/el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/.test(src)) fail('the drag engine does not put a piece back on lostpointercapture');
+  if (!/el\.addEventListener\('pointercancel', function\(e\)\{ end\(e, true\); \}\);/.test(src)) fail('the drag engine does not put a piece back on pointercancel');
+  if (!/\.gpiece\.locked\{cursor:default;pointer-events:none\}/.test(src)) fail('placed pieces still take pointer events');
+  if (!/\.gpiece\{[^}]*touch-action:none/.test(src)) fail('pieces do not set touch-action:none');
+  if (!/if \(P\.busy\(\)\) return;/.test(src)) fail('a tap-then-tap destination is taken while another finger still drags that piece');
+  if (!/if \(o\.follow\)\{ var f = o\.follow\(p\); P\.place\(f\.x, f\.y\); \}/.test(src)) fail('the drag engine does not snap a knob while it is being dragged (o.follow)');
+  GAME_TYPES.forEach(t => { if ((B[t].match(/useTapSelect\(B, function\(P, pt\)\{/g) || []).length !== 1) fail(t + ': the round does not install its drop / tap-then-tap handler (useTapSelect)'); });
+  GAME_TYPES.forEach(t => { if (!/roundSolved\(/.test(B[t])) fail(t + ': the round never calls roundSolved()'); if (!/roundMiss\(/.test(B[t])) fail(t + ': the round never refuses a wrong drop with a reason'); });
+  if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(src)) fail('ahead mode does not show hint level 1 automatically');
+  /* 「先點、再點」真的跑一次（codex 第一輪：只釘字面，onPointTap 變成空的也會過） */
+  {
+    const fsrc = extractFunction(src, 'useTapSelect');
+    if (!fsrc) fail('cannot find useTapSelect() in index.html');
+    else {
+      try {
+        const run = new Function('var gSolved = false;\n' + fsrc + '\nreturn function(solved){ gSolved = solved; return useTapSelect; };')();
+        const cls = () => { const set = new Set(); return { add:c => set.add(c), remove:c => set.delete(c), has:c => set.has(c) }; };
+        const mk = busy => ({ el:{ classList:cls() }, busy:() => busy });
+        const calls = [], Bd = {}, use = run(false), drop = (P, pt) => { calls.push([P, pt]); return true; };
+        use(Bd, drop);
+        const p1 = mk(false), p2 = mk(false), pb = mk(true);
+        Bd.onTap(p1);
+        if (Bd.selected !== p1 || !p1.el.classList.has('sel')) fail('tap-then-tap: tapping a piece does not select it with an outline');
+        Bd.onTap(p2);
+        if (Bd.selected !== p2 || p1.el.classList.has('sel') || !p2.el.classList.has('sel')) fail('tap-then-tap: tapping another piece does not move the selection');
+        Bd.onTap(p2);
+        if (Bd.selected !== null || p2.el.classList.has('sel')) fail('tap-then-tap: tapping the selected piece again does not deselect it');
+        Bd.onTap(p1); Bd.onPointTap(p1, { x:1, y:2 });
+        if (calls.length !== 1 || calls[0][0] !== p1 || calls[0][1].x !== 1 || calls[0][1].y !== 2 || calls[0][1].tap !== true) fail('tap-then-tap: tapping a destination does not try the drop there with tap:true');
+        if (Bd.selected !== null || p1.el.classList.has('sel')) fail('tap-then-tap: the selection is not cleared after the destination tap');
+        Bd.onTap(pb); Bd.onPointTap(pb, { x:1, y:2 });
+        if (calls.length !== 1) fail('tap-then-tap: a destination tap is taken while another finger is dragging that piece');
+        if (Bd.onDrop !== drop) fail('tap-then-tap: the drag drop handler is not the same rule as the tap');
+        const Bd2 = {}, calls2 = [];
+        run(true)(Bd2, (P, pt) => { calls2.push(pt); return true; });
+        Bd2.onTap(p1); Bd2.onPointTap(p1, { x:1, y:1 });
+        if (calls2.length) fail('tap-then-tap: a destination tap still acts after the round is solved');
+      } catch (e){ fail('useTapSelect() could not be run: ' + e.message); }
+    }
+  }
+  if (!/gameStage\.textContent = '';/.test(src)) fail('startRound() does not clear the stage before rendering');
+  if (!/\.gtool\{[^}]*min-height:48px/.test(src)) fail('the turn / flip buttons must be at least 48px tall');
+  LANGS.forEach(L => {
+    if (!/20/.test(I18N[L].gPts(20))) fail('gPts ' + L + ' does not show the points');
+    if (!/5/.test(I18N[L].gMinus)) fail('gMinus ' + L + ' does not say 5');
+    if (String(I18N[L].gWin(85)).indexOf('85') < 0) fail('gWin ' + L + ' does not show the score');
+  });
+
+  /* ================= 第 1 關：驗貨 ================= */
+  {
+    const G = D.SORT_G, GS = D.GAME_SORT;
+    if (!(GS.ids.length >= 3)) fail('GAME_SORT needs at least 3 customer shapes');
+    const dealt = [];
+    GS.ids.forEach(id => {
+      const S = SHAPES_REF[id];
+      if (!S) return fail('GAME_SORT: unknown shape ' + id);
+      if (!trivialSymRef(S.pts)) fail('GAME_SORT ' + id + ' has a symmetry, so "turned" and "flipped" copies could coincide');
+      /* 「都是 n 格，可是形狀不一樣」：alt 的格數一定要一樣，而且不全等、也不是放大（e2e 第一輪抓到 Q2／DART 的 alt 格數不一樣） */
+      if (areaRef(S.alt) !== areaRef(S.pts)) fail('GAME_SORT ' + id + ': the different-shape card covers ' + areaRef(S.alt) + ' squares, not ' + areaRef(S.pts) + ' — "the same number of squares" would be false');
+      if (congRef(S.pts, S.alt) || scaleFactorRef(S.pts, S.alt)) fail('GAME_SORT ' + id + ': alt is congruent to or an enlargement of the shape');
+      GS.turns.forEach(t => GS.flips.forEach(f => GS.flipTurns.forEach(g => GS.scaleMats.forEach(s => {
+        const deal = D.sortDeal(id, t, f, g, s), lbl = 'GAME_SORT ' + id + ' [' + [t, f, g, s] + ']';
+        dealt.push(deal);
+        if (deal.length !== 5) return fail(lbl + ': five cards expected');
+        const own = deal.map(c => congRef(S.pts, c.P) ? (turnOnly(S.pts, c.P) ? 'turn' : 'flip') : scaleFactorRef(S.pts, c.P) === 2 ? 'scale' : 'shape');
+        if (deal.map(c => c.kind).join() !== own.join()) fail(lbl + ': sortKind() says ' + deal.map(c => c.kind) + ', the reference says ' + own);
+        if (own.join() !== 'turn,flip,flip,scale,shape') fail(lbl + ': the five cards must be turned, flipped, flipped+turned, enlarged, different shape — got ' + own);
+        if (deal.filter(c => D.sortWant(c.kind) === 'yes').length !== 3) fail(lbl + ': three congruent cards expected');
+        deal.forEach((c, i) => {
+          if (sameAnch(c.P, S.pts)) fail(lbl + ': card ' + i + ' is an unmoved copy');
+          const b = bboxRef(c.P);
+          if (b.w > G.gridN || b.h > G.gridN) fail(lbl + ': card ' + i + ' does not fit the ' + G.gridN + '×' + G.gridN + ' card grid');
+          D.sortArt(c.P).forEach(q => { if (q.x < G.pad - 1e-9 || q.y < G.pad - 1e-9 || q.x > G.pad + G.gridN * G.cell + 1e-9 || q.y > G.pad + G.gridN * G.cell + 1e-9) fail(lbl + ': card ' + i + ' drawn off its grid'); });
+          /* 畫出來的每一個頂點，用自己的算法重算一次（codex 第一輪：只驗範圍和跨度，畫錯形狀也會過） */
+          if (JSON.stringify(D.sortArt(c.P)) !== JSON.stringify(sortArtRef(c.P, G))) fail(lbl + ': card ' + i + ' is not drawn as its own polygon on the ' + G.cell + 'px grid');
+          for (let j = i + 1; j < 5; j++) if (sameAnch(c.P, deal[j].P)) fail(lbl + ': cards ' + i + ' and ' + j + ' look the same');
+        });
+        /* 同一個格子大小：放大的那一張畫出來要真的比較大（不可以縮到卡片裡） */
+        const art = D.sortArt(deal[3].P), tb = D.sortArt(S.pts);
+        const span = Q => Math.max(...Q.map(q => q.x)) - Math.min(...Q.map(q => q.x)) + Math.max(...Q.map(q => q.y)) - Math.min(...Q.map(q => q.y));
+        if (Math.abs(span(art) - 2 * span(tb)) > 1e-9) fail(lbl + ': the enlarged card is not drawn twice as big as the customer shape');
+      }))));
+    });
+    GS.ids.forEach(id => { if (JSON.stringify(D.sortArt(SHAPES_REF[id].pts)) !== JSON.stringify(sortArtRef(SHAPES_REF[id].pts, G))) fail('the customer shape ' + id + ' is not drawn as itself'); });
+    /* 卡片裡的圖和藍色那一格一樣大：卡片減掉邊框剛好是 gridN 格；圖用固定的寬高畫（不可以 100% 拉伸） */
+    if (G.card - 2 * G.border !== G.gridN * G.cell + 2 * G.pad) fail('the card content (' + (G.card - 2 * G.border) + ') is not exactly the art size (' + (G.gridN * G.cell + 2 * G.pad) + ') — a card would be drawn at a different square size from the customer shape');
+    if (!new RegExp('\\.gcard\\{[^}]*border:' + G.border + 'px').test(src)) fail('the .gcard border must be SORT_G.border px');
+    need('sort', /var aw = G\.gridN \* G\.cell \+ 2 \* G\.pad, s = svgEl\('svg', \{ width:aw, height:aw, viewBox:'0 0 ' \+ aw \+ ' ' \+ aw \}\);/, 'the card art must be drawn at a fixed size, not stretched to the card');
+    if (/\.gcard svg\{[^}]*width:100%/.test(src)) fail('the card art is stretched to the card (width:100%)');
+    if (G.target.h < G.tlblH + G.gridN * G.cell + 2 * G.pad) fail('the customer box is shorter than its name plus its art');
+    /* 版面 */
+    inside(G.target, 'the customer box', G.H);
+    ['yes', 'no'].forEach(k => inside(G.bins[k], 'the ' + k + ' box', G.H));
+    noHits([['target', G.target], ['yes', G.bins.yes], ['no', G.bins.no]], 'sort layout');
+    const tray = G.tray.map((p, i) => ['card ' + i, cbox(p[0], p[1], G.card, G.card)]);
+    tray.forEach(t => inside(t[1], t[0], G.H));
+    noHits(tray.concat([['target', G.target], ['yes', G.bins.yes], ['no', G.bins.no]]), 'sort tray');
+    touch('a sort card', G.card);
+    if (G.slots.length < 4) fail('each box needs room for four cards');
+    const ps = G.card * G.placed;
+    ['yes', 'no'].forEach(k => {
+      const b = G.bins[k], sl = G.slots.map((s, i) => ['slot ' + i, cbox(b.x + s[0], b.y + s[1], ps, ps)]);
+      sl.forEach(s => { const o = s[1]; if (!(o.x >= b.x && o.y >= b.y + G.lblH && o.x + o.w <= b.x + b.w && o.y + o.h <= b.y + b.h)) fail('sort: ' + k + ' ' + s[0] + ' leaves its box or covers its name'); });
+      noHits(sl, 'sort ' + k + ' slots');
+    });
+    /* 放在哪一個框：整個畫板每 1px 和自己的 inBox 比 */
+    for (let x = 0; x <= W; x++) for (let y = 0; y <= G.H; y++){
+      const q = { x:x, y:y }, own = boxDistRef(q, G.bins.yes) === 0 ? 'yes' : boxDistRef(q, G.bins.no) === 0 ? 'no' : null;
+      if (D.sortRegion(x, y) !== own){ fail('sortRegion(' + x + ',' + y + ') is ' + D.sortRegion(x, y) + ', expected ' + own); x = W + 1; break; }
+    }
+    ['yes', 'no'].forEach(want => [null, 'yes', 'no'].forEach(c => [null, 'yes', 'no'].forEach(f => {
+      const own = (c === want || f === want) ? want : c !== null ? c : f;
+      if (D.sortPick(c, f, want) !== own) fail('sortPick(' + c + ',' + f + ',' + want + ') should be ' + own + ' (card centre OR finger on the right box takes it; else the centre, then the finger)');
+    })));
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      ['yes', 'no'].forEach(k => textOk('gSortBin.' + k + ' ' + L, d.gSortBin[k]));
+      has('gSortWhy.turn ' + L, d.gSortWhy.turn, [L === 'zh' ? '轉了方向' : 'turned', L === 'zh' ? '全等' : 'congruent']);
+      has('gSortWhy.flip ' + L, d.gSortWhy.flip, [L === 'zh' ? '翻過來' : 'flipped over', L === 'zh' ? '全等' : 'congruent']);
+      has('gSortWhy.scale ' + L, d.gSortWhy.scale(2), ['2', L === 'zh' ? '不全等' : 'not congruent']);
+      GS.ids.forEach(id => has('gSortWhy.shape ' + L, d.gSortWhy.shape(areaRef(SHAPES_REF[id].pts)), [String(areaRef(SHAPES_REF[id].pts)), L === 'zh' ? '不全等' : 'not congruent']));
+      ['turn', 'flip', 'shape'].forEach(k => has('gSort2.' + k + ' ' + L, d.gSort2[k], [L === 'zh' ? '提示 2' : 'Hint 2', D.sortWant(k) === 'yes' ? (L === 'zh' ? '→ 全等' : '→ congruent') : (L === 'zh' ? '→ 不全等' : '→ not congruent')]));
+      has('gSort2.scale ' + L, d.gSort2.scale(2), ['2', L === 'zh' ? '→ 不全等' : '→ not congruent']);
+    });
+    need('sort', /roundMiss\(kind === 'scale' \? d\.gSortWhy\.scale\(SCALE_K\) : kind === 'shape' \? d\.gSortWhy\.shape\(areaCells\(T\)\) : d\.gSortWhy\[kind\]\);/, 'the wrong-box reason is not picked by the card\'s kind');
+    need('sort', /var r = sortPick\(sortRegion\(pt\.x, pt\.y\), pt\.fx !== undefined \? sortRegion\(pt\.fx, pt\.fy\) : null, want\);\n\s*if \(!r\) return false;\n\s*if \(r !== want\)\{/, 'the drop handler does not follow silent / wrong / right in that order');
+  }
+
+  /* ================= 第 2 關：搬進虛線框 ================= */
+  {
+    const G = D.MOVE_G;
+    if (!(D.GAME_MOVE.length >= 6)) fail('GAME_MOVE should hold at least 6 jobs');
+    const kinds = new Set();
+    D.GAME_MOVE.forEach((e, ei) => {
+      const S = SHAPES_REF[e.shape], lbl = 'GAME_MOVE[' + ei + ']';
+      if (!S) return fail(lbl + ': unknown shape');
+      if (!trivialSymRef(S.pts)) fail(lbl + ': the shape has a symmetry');
+      if (e.mat === 0) fail(lbl + ': the outline faces the same way as the shape — nothing to turn or flip');
+      const T = D.moveTarget(e), Tref = placeRef(S.pts, e.mat), b = bboxRef(T);
+      if (!sameAnch(T, Tref)) fail(lbl + ': moveTarget() is not placement ' + e.mat);
+      if (b.minX < 0 || b.minY < 0 || b.maxX > G.cols || b.maxY > G.rows) fail(lbl + ': the outline leaves the squared paper');
+      kinds.add(e.mat < 4 ? 'turn' : 'flip');
+      /* 從每一種方向放進去：收 ⟺ 一模一樣；只轉就到得了 → turn；其餘 → flip。提示照做一定到得了。 */
+      own8(S.pts).forEach((P, pi) => {
+        const k = D.moveKind(P, T), want = sameAnch(P, Tref) ? 'ok' : turnOnly(P, Tref) ? 'turn' : 'flip';
+        if (k !== want) fail(lbl + ' orientation ' + pi + ': moveKind() says ' + k + ', the reference says ' + want);
+        if (k === 'ok') return;
+        const m = D.movePlan(P, T);
+        let Q = P;
+        if (m.flip) Q = D.moveFlip(Q);
+        for (let t = 0; t < m.turns; t++) Q = D.moveTurn(Q);
+        if (!sameAnch(Q, Tref)) fail(lbl + ' orientation ' + pi + ': following hint 2 (flip ' + m.flip + ', ' + m.turns + ' turns) does not reach the outline');
+        if (m.flip !== (want === 'flip') || !(m.turns >= 0 && m.turns <= 3)) fail(lbl + ' orientation ' + pi + ': hint 2 says flip=' + m.flip + ' but the shape needs a ' + want);
+        /* 最少的按法：沒有更短的 */
+        for (let t = 0; t < m.turns; t++){ let Q2 = m.flip ? D.moveFlip(P) : P; for (let u = 0; u < t; u++) Q2 = D.moveTurn(Q2); if (sameAnch(Q2, Tref)) fail(lbl + ': hint 2 is not the shortest way'); }
+      });
+      /* 托盤：每一種方向都放得下、拿得起來 */
+      own8(S.pts).forEach(P => {
+        const bb = bboxRef(P), o = cbox(G.trayX, G.trayY, bb.w * G.cell, bb.h * G.cell);
+        inside(o, lbl + ' the shape in the tray', G.H);
+        if (o.y < G.yTop + G.rows * G.cell + 8) fail(lbl + ': the shape in the tray reaches the squared paper');
+        touch(lbl + ' the shape (narrow side)', Math.min(bb.w, bb.h) * G.cell);
+      });
+      /* 放進去的範圍：整個畫板每 1px 和自己的距離比 */
+      const yb = G.yTop + G.rows * G.cell, box = { x:G.x0 + b.minX * G.cell, y:yb - b.maxY * G.cell, w:b.w * G.cell, h:b.h * G.cell };
+      const mb = D.moveBox(T);
+      if (JSON.stringify(mb) !== JSON.stringify(box)) fail(lbl + ': moveBox() is not the outline box');
+      for (let x = 0; x <= W; x += 1) for (let y = 0; y <= G.H; y += 1){
+        if (D.moveHit(T, x, y) !== (boxDistRef({ x:x, y:y }, box) <= G.reach)){ fail(lbl + ': moveHit(' + x + ',' + y + ') disagrees with the outline box'); x = W + 1; break; }
+      }
+    });
+    if (!(kinds.has('turn') && kinds.has('flip'))) fail('GAME_MOVE must hold jobs that need only a turn and jobs that need a flip');
+    {
+      const P = SHAPES_REF.L4.pts;
+      if (!sameAnch(D.moveTurn(P), placeRef(P, 1))) fail('moveTurn() is not a quarter turn (the ↺ direction)');
+      if (!sameAnch(D.moveFlip(P), placeRef(P, 4))) fail('moveFlip() is not the left-right flip');
+    }
+    if (D.GAME_MOVE.some(e => e.mat === 0)) fail('GAME_MOVE has an unmoved job');
+    if (!/var k = moveKind\(cur, T\);\n\s*if \(k !== 'ok'\)\{ roundMiss\(d\.gMoveWhy\[k\]\); return false; \}/.test(B.move)) fail('move: the drop handler does not refuse a wrong-facing shape with its own reason');
+    if (!/if \(gSolved \|\| piece\.locked \|\| piece\.busy\(\)\) return;/.test(B.move)) fail('move: the turn / flip buttons still act after the fit or during a drag');
+    if (!/if \(t\[0\] === 'turn'\)\{ cur = moveTurn\(cur\); turns\+\+; \} else \{ cur = moveFlip\(cur\); flips\+\+; \}\n\s*var sz = size\(\);\n\s*piece\.resize\(sz\.w, sz\.h\);\n\s*redraw\(\);/.test(B.move))
+      fail('move: a button press must turn (or flip) the shape exactly once and redraw it (the e2e proves the drawn result)');
+    if ((B.move.match(/moveTurn\(|moveFlip\(/g) || []).length !== 2) fail('move: moveTurn / moveFlip must be called only by their own button');
+    LANGS.forEach(L => {
+      const d = I18N[L];
+      if (d.gMoveTurn.indexOf('↺') < 0 || d.gMoveFlip.indexOf('⇋') < 0) fail('gMoveTurn / gMoveFlip ' + L + ' lost their symbols');
+      if (d.moveBtn.turn.indexOf('↺') < 0) fail('example 2 turn button (' + L + ') must use ↺ — MATS[1] turns anticlockwise');
+      has('gMoveWhy.turn ' + L, d.gMoveWhy.turn, [L === 'zh' ? '轉一轉' : 'turn it']);
+      has('gMoveWhy.flip ' + L, d.gMoveWhy.flip, [L === 'zh' ? '翻過來' : 'flip it over']);
+      [true, false].forEach(f => [0, 1, 2, 3].forEach(k => {
+        if (!f && k === 0) return;
+        const s = d.gMove2(f, k);
+        textOk('gMove2 ' + L, s);
+        if (f !== (s.indexOf('⇋') >= 0)) fail('gMove2(' + f + ',' + k + ') ' + L + ' does not say whether to flip: ' + s);
+        if (k && s.indexOf(String(k)) < 0) fail('gMove2(' + f + ',' + k + ') ' + L + ' does not say how many turns: ' + s);
+      }));
+    });
+  }
+
+  /* ================= 第 3 關：連一連（對應頂點） ================= */
+  {
+    const G = D.MATCH_G;
+    if (!(D.GAME_MATCH.length >= 6)) fail('GAME_MATCH should hold at least 6 pairs');
+    touch('a match knob', G.knob);
+    const hl = G.letter / 2;
+    D.GAME_MATCH.forEach((e, ei) => {
+      const lbl = 'GAME_MATCH[' + ei + ']', A0 = anchorRef(e.pts), n = A0.length;
+      if (!trivialSymRef(A0)) fail(lbl + ': the shape has a symmetry, so the matching would not be unique');
+      if (e.mat === 0) fail(lbl + ': the right shape is not moved');
+      const plan = D.matchPlan(e);
+      if (!sameAnch(plan.B, placeRef(A0, e.mat))) fail(lbl + ': the right shape is not placement ' + e.mat);
+      /* 頂點 i 對應頂點 i：自己的擺法把 A 的第 i 點送到 B 的第 i 點 */
+      const img = anchorRef(placeRef(A0, e.mat)), BB = anchorRef(plan.B);
+      img.forEach((p, i) => { if (p.join() !== BB[i].join()) fail(lbl + ': vertex ' + i + ' does not land on vertex ' + i); });
+      plan.verts.forEach((v, i) => {
+        if (v.la !== labelOfRef(plan.A, LABELS_A_REF, i) || v.lb !== labelOfRef(plan.B, LABELS_B_REF, i)) fail(lbl + ': letters disagree with the reference order');
+      });
+      const LB0 = n === 4 ? LABELS_B_REF : ['D', 'E', 'F'];
+      if (plan.verts.every(v => LB0.indexOf(v.lb) === LABELS_A_REF.indexOf(v.la))) fail(lbl + ': the matching is the plain letter order — the round would not teach that letters are not the matching');
+      /* 版面：紅點不疊、字母不疊、字母不壓邊、都在畫板裡；字母離自己的頂點最近 */
+      const kb = plan.verts.map(v => ['knob ' + v.la, cbox(v.a.x, v.a.y, G.knob, G.knob)]);
+      kb.forEach(k => inside(k[1], lbl + ' ' + k[0], G.H));
+      noHits(kb, lbl + ' knobs');
+      const lets = [];
+      plan.verts.forEach(v => { lets.push([v.la, cbox(v.letA.x, v.letA.y, G.letter, G.letter), 'a']); lets.push([v.lb, cbox(v.letB.x, v.letB.y, G.letter, G.letter), 'b']); });
+      lets.forEach(l => inside(l[1], lbl + ' letter ' + l[0], G.H));
+      noHits(lets, lbl + ' letters');
+      lets.forEach(l => {
+        const pts = plan.verts.map(v => v[l[2]]);
+        for (let i = 0; i < n; i++) if (segHitsBox(pts[i], pts[(i + 1) % n], l[1])) fail(lbl + ': letter ' + l[0] + ' sits on a side');
+        const c = { x:l[1].x + hl, y:l[1].y + hl }, own = plan.verts.find(v => (l[2] === 'a' ? v.la : v.lb) === l[0])[l[2]];
+        if (pts.some(q => dRef(c, q) < dRef(c, own) - 1e-9)) fail(lbl + ': letter ' + l[0] + ' is nearer another vertex than its own');
+      });
+      /* 放在哪一個頂點：每 1px 和自己的距離（頂點或它的字母框）比；字母框裡一定是自己 */
+      for (let x = 0; x <= W; x++) for (let y = 0; y <= G.H; y++){
+        const q = { x:x, y:y };
+        let best = null, bd = Infinity;
+        plan.verts.forEach((v, j) => { const dd = Math.min(dRef(q, v.b), boxDistRef(q, cbox(v.letB.x, v.letB.y, G.letter, G.letter))); if (dd <= G.reach && dd < bd){ bd = dd; best = j; } });
+        const got = D.matchPick(plan, x, y);
+        /* 一樣近（角平分線上）的兩個目標，浮點數可能讓兩邊挑不同的那一個：差不到 1e-6 不算錯。
+           剛好在 reach 邊界上（差不到 1e-9）的點也放過 —— 含不含邊界另外用整數座標的點驗（codex 第一輪）。 */
+        const dGot = got === null ? null : Math.min(dRef(q, plan.verts[got].b), boxDistRef(q, cbox(plan.verts[got].letB.x, plan.verts[got].letB.y, G.letter, G.letter)));
+        if (got !== best && !(got !== null && best !== null && Math.abs(dGot - bd) < 1e-6) && !(got === null && Math.abs(bd - G.reach) < 1e-9) && !(best === null && Math.abs(dGot - G.reach) < 1e-9)){ fail(lbl + ': matchPick(' + x + ',' + y + ') is ' + got + ', expected ' + best); x = W + 1; break; }
+      }
+      plan.verts.forEach((v, j) => {
+        const o = cbox(v.letB.x, v.letB.y, G.letter, G.letter);
+        for (let x = Math.ceil(o.x); x <= o.x + o.w; x++) for (let y = Math.ceil(o.y); y <= o.y + o.h; y++) if (D.matchPick(plan, x, y) !== j){ fail(lbl + ': tapping letter ' + v.lb + ' does not pick ' + v.lb); return; }
+        if (D.matchPick(plan, v.b.x, v.b.y) !== j) fail(lbl + ': the dot of ' + v.lb + ' does not pick it');
+        /* 範圍含邊界：剛好 reach 遠（整數座標，距離算得精確）的點要收，再遠 1px 就不收 —— 只在那個方向附近沒有別的目標時驗 */
+        const zd = (p, u) => Math.min(dRef(p, u.b), boxDistRef(p, cbox(u.letB.x, u.letB.y, G.letter, G.letter)));
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(dv => {
+          const q = { x:v.b.x + dv[0] * G.reach, y:v.b.y + dv[1] * G.reach }, q2 = { x:q.x + dv[0], y:q.y + dv[1] };
+          if (zd(q, v) < G.reach || plan.verts.some((u, k) => k !== j && zd(q, u) <= G.reach + 2)) return;
+          if (D.matchPick(plan, q.x, q.y) !== j) fail(lbl + ': a drop exactly ' + G.reach + 'px from the dot of ' + v.lb + ' is not taken (the zone must include its edge)');
+          if (zd(q2, v) > G.reach && D.matchPick(plan, q2.x, q2.y) !== null) fail(lbl + ': a drop beyond reach of ' + v.lb + ' is still taken');
+        });
+      });
+      /* 每一個拉錯的組合：理由用自己的判斷重算，而且一定有具體的線索（不准只說「碰不到」） */
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++){
+        if (i === j) continue;
+        const w = D.matchWhy(plan, i, j);
+        const ea = sortNum([edgeSqOwn(plan.A, i, -1), edgeSqOwn(plan.A, i, 1)]), eb = sortNum([edgeSqOwn(plan.B, j, -1), edgeSqOwn(plan.B, j, 1)]);
+        const want = isRightRef(plan.A, i) !== isRightRef(plan.B, j) ? 'right' : !sameAngleRef(plan.A, i, plan.B, j) ? 'angle' : ea.join() !== eb.join() ? 'edge' : 'none';
+        if (w.key !== want) fail(lbl + ' ' + plan.verts[i].la + '→' + plan.verts[j].lb + ': matchWhy says ' + w.key + ', the reference says ' + want);
+        if (want === 'none') fail(lbl + ' ' + plan.verts[i].la + '→' + plan.verts[j].lb + ': no concrete clue tells these apart — pick another shape');
+        if (w.key === 'right' && w.aRight !== isRightRef(plan.A, i)) fail(lbl + ': the right-angle clue names the wrong vertex');
+        LANGS.forEach(L => {
+          const d = I18N[L], s = w.key === 'right' ? d.gMatchWhy.right(plan.verts[i].la, plan.verts[j].lb, w.aRight) : d.gMatchWhy[w.key](plan.verts[i].la, plan.verts[j].lb);
+          has(lbl + ' gMatchWhy.' + w.key + ' ' + L, s, [plan.verts[i].la, plan.verts[j].lb]);
+          has(lbl + ' gMatchWhy.' + w.key + ' ' + L, s, [{ right:L === 'zh' ? '直角' : 'right angle', angle:L === 'zh' ? '不一樣大' : 'not the same size', edge:L === 'zh' ? '長短不一樣' : 'not the same lengths', none:'' }[w.key]]);
+        });
+      }
+    });
+    if (!/var j = cand\.indexOf\(i\) >= 0 \? i : \(cand\[0\] !== null \? cand\[0\] : \(cand\.length > 1 \? cand\[1\] : null\)\);\n\s*if \(j === null \|\| taken\[j\]\) return false;/.test(B.match))
+      fail('match: the drop handler must take the finger or the dot centre, and leave empty space / joined vertices silent');
+    LANGS.forEach(L => { if (I18N[L].gMatchSep !== (L === 'zh' ? '、' : ', ')) fail('gMatchSep ' + L + ' is the wrong list separator'); });
+  }
+
+  /* ================= 第 4 關：對應邊 ================= */
+  {
+    const G = SIDES_G_OF(D);
+    if (!(D.GAME_SIDES.length >= 6)) fail('GAME_SIDES should hold at least 6 pairs');
+    touch('a length card', Math.min(G.card.w, G.card.h));
+    if (/gGrid\(|ggridline/.test(B.sides)) fail('sides: the round must not draw squared paper — the lengths have to come from matching');
+    if (!/addZone\(B, e\.lbl\.x - G\.lbl\.w \/ 2, e\.lbl\.y - G\.lbl\.h \/ 2, G\.lbl\.w, G\.lbl\.h, 'glen', d\.gCm\(e\.len\)\);/.test(B.sides)) fail('sides: each left label must print its own side\'s length');
+    if (!/text:d\.gCm\(plan\.edges\[k\]\.len\), label:d\.gCm\(plan\.edges\[k\]\.len\),[\s\S]*?data:\{ k:k \}/.test(B.sides)) fail('sides: each card must print the length of the side it belongs to (data.k)');
+    D.GAME_SIDES.forEach((e, ei) => {
+      const lbl = 'GAME_SIDES[' + ei + ']', A0 = anchorRef(e.pts), n = A0.length;
+      if (!trivialSymRef(A0)) fail(lbl + ': the shape has a symmetry');
+      if (e.mat === 0) fail(lbl + ': the right shape is not moved');
+      const lens = A0.map((p, i) => { const q = A0[(i + 1) % n], s = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2, r = Math.round(Math.sqrt(s)); return r * r === s ? r : null; });
+      if (lens.some(v => v === null)) fail(lbl + ': a side is not a whole number of centimetres');
+      if (new Set(lens).size !== n) fail(lbl + ': two sides have the same length, so a card could fit two sides');
+      const plan = D.sidesPlan(e);
+      if (!sameAnch(plan.B, placeRef(A0, e.mat))) fail(lbl + ': the right shape is not placement ' + e.mat);
+      const img = anchorRef(placeRef(A0, e.mat)), BB = anchorRef(plan.B);
+      img.forEach((p, i) => { if (p.join() !== BB[i].join()) fail(lbl + ': vertex ' + i + ' does not land on vertex ' + i); });
+      plan.edges.forEach((ed, k) => {
+        if (ed.len !== lens[k]) fail(lbl + ': side ' + k + ' length ' + ed.len + ', expected ' + lens[k]);
+        if (ed.nameA !== edgeNameRef(plan.A, LABELS_A_REF, k, (k + 1) % n) || ed.nameB !== edgeNameRef(plan.B, LABELS_B_REF, k, (k + 1) % n)) fail(lbl + ': side names disagree with the reference');
+        /* 畫出來的長度和寫的公分數成比例 */
+        if (Math.abs(dRef(ed.pa, ed.qa) - ed.len * G.u) > 1e-6 || Math.abs(dRef(ed.pb, ed.qb) - ed.len * G.u) > 1e-6) fail(lbl + ': side ' + ed.nameA + ' is not drawn ' + ed.len + ' × ' + G.u + 'px');
+      });
+      plan.verts.forEach((v, i) => { if (v.la !== labelOfRef(plan.A, LABELS_A_REF, i) || v.lb !== labelOfRef(plan.B, LABELS_B_REF, i)) fail(lbl + ': letters disagree with the reference'); });
+      /* 版面：長度、框、字母都在畫板裡、互不重疊、不壓在邊上；框在圖形外面 */
+      const items = [];
+      plan.edges.forEach(ed => { items.push(['len ' + ed.nameA, cbox(ed.lbl.x, ed.lbl.y, G.lbl.w, G.lbl.h), plan.a]); items.push(['box ' + ed.nameB, cbox(ed.box.x, ed.box.y, G.box.w, G.box.h), plan.b]); });
+      plan.verts.forEach(v => { items.push(['letter ' + v.la, cbox(v.letA.x, v.letA.y, G.letter, G.letter), plan.a]); items.push(['letter ' + v.lb, cbox(v.letB.x, v.letB.y, G.letter, G.letter), plan.b]); });
+      items.forEach(it => {
+        inside(it[1], lbl + ' ' + it[0], G.H);
+        for (let i = 0; i < n; i++) if (segHitsBox(it[2][i], it[2][(i + 1) % n], it[1])) fail(lbl + ': ' + it[0] + ' sits on a side');
+        if (pointInPoly({ x:it[1].x + it[1].w / 2, y:it[1].y + it[1].h / 2 }, it[2])) fail(lbl + ': ' + it[0] + ' is inside the shape');
+      });
+      noHits(items, lbl + ' sides layout');
+      /* 每一個長度貼在它自己那一條邊旁邊（離自己的邊最近） */
+      plan.edges.forEach((ed, k) => {
+        const c = ed.lbl, dk = segDistRef(c, ed.pa, ed.qa);
+        plan.edges.forEach((o, j) => { if (j !== k && segDistRef(c, o.pa, o.qa) < dk - 1e-9) fail(lbl + ': the length of ' + ed.nameA + ' is nearer side ' + o.nameA); });
+        const cb2 = ed.box, db = segDistRef(cb2, ed.pb, ed.qb);
+        plan.edges.forEach((o, j) => { if (j !== k && segDistRef(cb2, o.pb, o.qb) < db - 1e-9) fail(lbl + ': the box of ' + ed.nameB + ' is nearer side ' + o.nameB); });
+      });
+      /* 放在哪一條邊：每 1px 和自己的距離（邊或它的框）比；框裡一定是自己 */
+      for (let x = 0; x <= W; x++) for (let y = 0; y <= G.H; y++){
+        const q = { x:x, y:y };
+        let best = null, bd = Infinity;
+        plan.edges.forEach((ed, k) => { const dd = Math.min(segDistRef(q, ed.pb, ed.qb), boxDistRef(q, cbox(ed.box.x, ed.box.y, G.box.w, G.box.h))); if (dd <= G.reach && dd < bd){ bd = dd; best = k; } });
+        const got = D.sidesPick(plan, x, y);
+        const eg = got === null ? null : plan.edges[got], dGot = eg && Math.min(segDistRef(q, eg.pb, eg.qb), boxDistRef(q, cbox(eg.box.x, eg.box.y, G.box.w, G.box.h)));
+        if (got !== best && !(got !== null && best !== null && Math.abs(dGot - bd) < 1e-6) && !(got === null && Math.abs(bd - G.reach) < 1e-9) && !(best === null && Math.abs(dGot - G.reach) < 1e-9)){ fail(lbl + ': sidesPick(' + x + ',' + y + ') is ' + got + ', expected ' + best); x = W + 1; break; }
+      }
+      plan.edges.forEach((ed, k) => {
+        const o = cbox(ed.box.x, ed.box.y, G.box.w, G.box.h);
+        for (let x = Math.ceil(o.x); x <= o.x + o.w; x++) for (let y = Math.ceil(o.y); y <= o.y + o.h; y++) if (D.sidesPick(plan, x, y) !== k){ fail(lbl + ': a drop inside the box of ' + ed.nameB + ' does not pick it'); return; }
+      });
+      /* 托盤 */
+      const xs = n === 4 ? [39, 113, 187, 261] : [76, 150, 224];
+      const tr = xs.map((x, i) => ['card ' + i, cbox(x, G.trayY, G.card.w, G.card.h)]);
+      tr.forEach(t => inside(t[1], lbl + ' ' + t[0], G.H));
+      noHits(tr.concat(items.map(it => [it[0], it[1]])), lbl + ' tray');
+      const bot = Math.max(...plan.b.map(q => q.y), ...plan.edges.map(ed => ed.box.y + G.box.h / 2));
+      if (bot > G.trayY - G.card.h / 2 - 4) fail(lbl + ': the right shape runs into the tray');
+      /* 每一個放錯的組合：理由說的對應是真的 */
+      plan.edges.forEach((ed, k) => plan.edges.forEach((o, s) => {
+        if (s === k) return;
+        const va = plan.verts[ed.i], vb = plan.verts[ed.j];
+        LANGS.forEach(L => {
+          const t = I18N[L].gSidesWhy(ed.len, ed.nameA, va.la, va.lb, vb.la, vb.lb, ed.nameB, o.nameB);
+          has(lbl + ' gSidesWhy ' + L, t, [String(ed.len), ed.nameA, va.la, va.lb, vb.la, vb.lb, ed.nameB, o.nameB]);
+          if (ed.nameB === o.nameB) fail(lbl + ': the reason names the same side twice');
+          if (ed.nameA.split('').sort().join() !== [va.la, vb.la].sort().join() || ed.nameB.split('').sort().join() !== [va.lb, vb.lb].sort().join()) fail(lbl + ': the reason\'s vertex pairs do not make up the named sides');
+        });
+      }));
+    });
+    if (!/var s = cand\.indexOf\(k\) >= 0 \? k : \(cand\[0\] !== null \? cand\[0\] : \(cand\.length > 1 \? cand\[1\] : null\)\);\n\s*if \(s === null \|\| filled\[s\]\) return false;/.test(B.sides))
+      fail('sides: the drop handler must take the finger or the card centre, and leave empty space / filled boxes silent');
+    LANGS.forEach(L => { if (I18N[L].gCm(6) !== (L === 'zh' ? '6 公分' : '6 cm')) fail('gCm ' + L + ' must read "6 ' + (L === 'zh' ? '公分' : 'cm') + '"'); });
+  }
+
+  /* ================= 第 5 關：拉一拉 ================= */
+  {
+    const G = D.STRETCH_G;
+    const stretchXYRef = (c, r) => ({ x:G.x0 + c * G.pitch, y:G.yb - r * G.pitch });
+    for (let c = 0; c <= G.cols; c++) for (let r = 0; r <= G.rows; r++){ const a = D.stretchXY(c, r), b = stretchXYRef(c, r); if (a.x !== b.x || a.y !== b.y) fail('stretchXY(' + c + ',' + r + ') is not on the drawn grid'); }
+    touch('the stretch knob', G.knob);
+    if (G.start.join() !== '1,1') fail('the blue rectangle starts at 1 × 1');
+    const kn = c => cbox(stretchXYRef(c[0], c[1]).x, stretchXYRef(c[0], c[1]).y, G.knob, G.knob);
+    inside(kn([G.cols, G.rows]), 'the knob at the far corner', G.H);
+    inside(kn([1, 1]), 'the knob at 1 × 1', G.H);
+    if (!(D.GAME_STRETCH.length >= 6)) fail('GAME_STRETCH should hold at least 6 rectangles');
+    D.GAME_STRETCH.forEach(e => {
+      const lbl = 'GAME_STRETCH ' + e.join('×'), n = e[0] * e[1];
+      if (G.x0 + e[0] * G.pitch > W || G.oyb - e[1] * G.pitch < 0) fail(lbl + ': the orange rectangle does not fit above the grid');
+      if (G.oyb + 4 > G.yb - G.rows * G.pitch - G.knob / 2) fail(lbl + ': the orange rectangle reaches the knob\'s top row');
+      const sols = [];
+      for (let w = 0; w <= G.cols; w++) for (let h = 0; h <= G.rows; h++){
+        const own = (w < 1 || h < 1 || (w === 1 && h === 1)) ? 'start' : w * h !== n ? 'area' : (w === e[0] && h === e[1]) ? 'same' : (w === e[1] && h === e[0]) ? 'turned' : 'ok';
+        const got = D.stretchKind(e, w, h);
+        if (got !== own) fail(lbl + ': stretchKind(' + w + ',' + h + ') is ' + got + ', expected ' + own);
+        if (own === 'ok') sols.push([w, h]);
+      }
+      if (!sols.length) fail(lbl + ': no rectangle with the same area and a different shape can be pulled on this grid');
+      if (e[0] === e[1]) fail(lbl + ': a square turned is itself — the "turned, so congruent" trap would not exist');
+      else if (!(e[1] <= G.cols && e[0] <= G.rows)) fail(lbl + ': the orange rectangle turned (' + e[1] + ' × ' + e[0] + ') cannot be pulled, so the "turned, so congruent" trap is never met');
+      const alt = D.stretchAlt(e);
+      if (!alt || D.stretchKind(e, alt[0], alt[1]) !== 'ok') fail(lbl + ': hint 2 names ' + alt + ', which is not an answer');
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        has(lbl + ' gStretch2 ' + L, d.gStretch2(e[0], e[1], alt[0], alt[1]), [String(n), alt[0] + ' × ' + alt[1]]);
+        has(lbl + ' gStretchWhy.same ' + L, d.gStretchWhy.same(e[0], e[1]), [L === 'zh' ? '全等' : 'congruent']);
+        has(lbl + ' gStretchWhy.turned ' + L, d.gStretchWhy.turned(e[0], e[1]), [e[1] + ' × ' + e[0], L === 'zh' ? '轉一下' : 'turn']);
+        sols.forEach(s => has(lbl + ' gStretchOk ' + L, d.gStretchOk(s[0], s[1], n), [String(n), s[0] + ' × ' + s[1]]));
+      });
+    });
+    /* 點到哪一個格子點：每 1px 和自己的「最近的點」比；方格外半格以上 → 沒有 */
+    for (let x = 0; x <= W; x++) for (let y = 0; y <= G.H; y++){
+      const c = Math.round((x - G.x0) / G.pitch), r = Math.round((G.yb - y) / G.pitch);
+      let own = null;
+      if (c >= 0 && c <= G.cols && r >= 0 && r <= G.rows){
+        /* 自己算最近的點（不用四捨五入）：逐點比距離 */
+        let bd = Infinity;
+        for (let cc = 0; cc <= G.cols; cc++) for (let rr = 0; rr <= G.rows; rr++){ const q = stretchXYRef(cc, rr), dd = Math.hypot(x - q.x, y - q.y); if (dd < bd - 1e-9){ bd = dd; own = [cc, rr]; } }
+        if (Math.abs(x - stretchXYRef(own[0], own[1]).x) > G.pitch / 2 + 1e-9 || Math.abs(y - stretchXYRef(own[0], own[1]).y) > G.pitch / 2 + 1e-9) own = null;
+      }
+      const got = D.stretchPt(x, y);
+      const tie = Math.abs(((x - G.x0) / G.pitch) % 1) === 0.5 || Math.abs(((G.yb - y) / G.pitch) % 1) === 0.5;
+      if (!tie && JSON.stringify(got) !== JSON.stringify(own)){ fail('stretchPt(' + x + ',' + y + ') is ' + got + ', expected ' + own); x = W + 1; break; }
+      const sn = D.stretchSnap(x, y);
+      if (!(sn[0] >= 1 && sn[1] >= 1 && sn[0] <= G.cols && sn[1] <= G.rows)) { fail('stretchSnap(' + x + ',' + y + ') leaves the grid or goes under 1 × 1'); x = W + 1; break; }
+    }
+    if (!/var g = pt\.tap \? stretchPt\(pt\.x, pt\.y\) : stretchSnap\(P\.cx, P\.cy\);/.test(B.stretch)) fail('stretch: a release must be judged at the point that is shown (stretchSnap of the knob), a tap at the tapped point');
+    if (!/follow:function\(q\)\{ var g = stretchSnap\(q\.x, q\.y\); return stretchXY\(g\[0\], g\[1\]\); \}/.test(B.stretch)) fail('stretch: the knob does not snap while dragging');
+    /* 看到的就是判的：拖的時候畫出來（藍色、面積那一行）和放開時判的，都是 stretchSnap(紅點中心) 的同一組 */
+    if (!/onPlace:function\(P\)\{ var g = stretchSnap\(P\.cx, P\.cy\); draw\(g\[0\], g\[1\]\); \}/.test(B.stretch)) fail('stretch: what is drawn while dragging is not the snapped corner');
+    if (!/rect\.setAttribute\('d', ptsPath\(\[a, \{ x:b\.x, y:a\.y \}, b, \{ x:a\.x, y:b\.y \}\]\)\);\n\s*line\.textContent = d\.gStretchNow\(w, h\);/.test(B.stretch)) fail('stretch: draw(w, h) must draw w × h and print the same w × h');
+  }
+}
+function edgeSqOwn(P, i, dir){ const n = P.length, j = (i + dir + n) % n; return (P[j][0] - P[i][0]) ** 2 + (P[j][1] - P[i][1]) ** 2; }
+function SIDES_G_OF(D){ return D.SIDES_G; }
+/* 卡片上的圖：gridN × gridN 的格子，圖形靠格線置中（第二份算法，不呼叫頁面） */
+function sortArtRef(P, G){
+  const Q = anchorRef(P), b = bboxRef(Q), ox = Math.floor((G.gridN - b.w) / 2), oy = Math.floor((G.gridN - b.h) / 2);
+  return Q.map(p => ({ x:G.pad + (p[0] + ox) * G.cell, y:G.pad + (G.gridN - (p[1] + oy)) * G.cell }));
+}
