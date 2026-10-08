@@ -145,6 +145,48 @@
   .degbtn:disabled{cursor:default;opacity:.85}
   .gprompt{text-align:center;font-size:20px;margin-top:14px;background:var(--blue-soft);border-radius:14px;padding:14px;word-break:break-word}
   .gprompt b{color:var(--blue)}
+  /* ---- 小遊戲「三角形鑑定所」：點出銳角、轉一轉、選小棒、九宮格、釘板（§六之五） ---- */
+  .gamemsg{text-align:center}
+  .game .hint{text-align:center}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .ghold{width:100%}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 進度那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:18px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:48px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div, .gboard > svg{position:absolute}
+  .gsvg{left:0;top:0;pointer-events:none;overflow:visible}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gdone{min-height:48px;min-width:120px}
+  /* 拿得起來的紅點（第 2、5 關）：拿取範圍 48×48，畫出來的是中間的紅色圓點 */
+  .gknob{border-radius:50%}
+  .gknob::after{content:"";width:22px;height:22px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .gknob.locked::after{background:var(--green)}
+  /* 第 3 關：小棒、空位、預覽框 */
+  .gstick{flex-direction:column;gap:3px;background:var(--card);border:2px solid var(--line);border-radius:10px}
+  .gsticklbl{font-size:13px;font-weight:800;line-height:1;pointer-events:none}
+  .gbar{display:block;height:12px;border-radius:6px;background:var(--orange);pointer-events:none}
+  .gslot{border:3px dashed var(--orange);border-radius:10px;pointer-events:none}
+  .gslot.filled{border-color:transparent}
+  .gprev{border:2px solid var(--line);border-radius:12px;background:var(--card);pointer-events:none}
+  /* 第 4 關：九宮格、卡片、章 */
+  .ghead{display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:800;color:var(--blue);background:var(--blue-soft);border:1px solid var(--line);pointer-events:none;line-height:1.1}
+  .ghead.row{font-size:13px}
+  .ghead.corner{color:var(--muted);font-size:11px}
+  .gcell{border:1px solid var(--line);background:var(--card);pointer-events:none}
+  .gcard{background:var(--card);border:3px solid var(--blue);border-radius:10px}
+  .gcard svg{width:100%;height:100%;display:block;pointer-events:none}
+  .gcard.placed{border-color:var(--green)}
+  .gstamp{flex-direction:column;background:var(--red-soft);color:var(--red);border:3px solid var(--red);border-radius:10px;font-size:12px;font-weight:800;line-height:1.15;text-align:center;white-space:nowrap}
+  .gstamp::before{content:"✗";font-size:15px}
+  .gstamp.placed{background:var(--red-soft)}
+  .gminus{color:var(--red);font-weight:700}
+  .gnote{color:var(--orange);font-weight:700}
 </style>
 </head>
 <body>
@@ -294,23 +336,17 @@
   <section class="game">
     <span class="eyebrow" data-i18n="eb7">小遊戲</span>
     <h2 data-i18n="s7h2">三角形鑑定所</h2>
-    <p class="lead" data-i18n="s7lead">看清楚圖上的記號：<strong>橘色的弧</strong>標的是最大的那個角，<strong>小方框</strong>表示那個角剛好是直角，<strong>短撇</strong>表示那幾條邊一樣長。</p>
+    <p class="lead" data-i18n="s7lead">五關五種玩法：點出銳角、把邊轉到碰在一起、用小棒圍三角形、把三角形放進九宮格、在釘板上拉出指定的三角形。記號照課本的：<strong>小方框</strong>＝直角，<strong>短撇</strong>＝那幾條邊一樣長。第 1 關只要「點一下」；其他關可以拖，也可以先點東西、再點要放的地方。</p>
     <div class="card">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
-      </div>
-      <p class="hint" id="gHint" style="text-align:center"></p>
-      <p class="gprompt" id="gPrompt"></p>
-      <div class="figwrap">
-        <svg class="shapefig" id="gFig" viewBox="0 0 520 220" xmlns="http://www.w3.org/2000/svg"></svg>
-      </div>
-      <div class="degrid" id="gAnswers"></div>
-      <p id="gMsg" class="gamemsg" style="text-align:center"></p>
+      <div class="gstage" id="gameStage"></div>
+      <p class="hint" id="gHint"></p>
+      <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow" style="justify-content:center">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -538,22 +574,226 @@
     'obtuse-scalene':'obtuseScalene','obtuse-iso':'obtuseIso','obtuse-equi':null
   };
 
-  /* --- 遊戲：三角形鑑定所。五關把這一課的五件事各考一次。 --- */
-  var ROUNDS = [
-    { kind:'angle',  tri:'obtuseScalene', rot:18, opts:['acute', 'right', 'obtuse', 'noIdea'],           ans:2 },
-    { kind:'side',   tri:'acuteEqui',     rot:22, opts:['equi', 'iso', 'scalene', 'rightName'],          ans:0 },
-    { kind:'acutes', tri:'rightScalene',  rot:0,  opts:['0', '1', '2', '3'],                             ans:2 },
-    { kind:'cannot', opts:['right-equi', 'right-iso', 'acute-equi', 'obtuse-iso'],                       ans:0 },
-    { kind:'also',   side:'equi',         opts:['iso', 'scalene', 'rightName', 'none'],                  ans:0 }
+  /* --- 遊戲：三角形鑑定所（五關五種玩法，§六之五）。五關對應範例 1～5：
+     ACUTE_POOL （範例 1）點出銳角：三個三角形（銳角、直角、鈍角三角形各一個，順序洗過），把每一個銳角點出來再按「點好了」。
+                 點到直角（有小方框）或鈍角 → 為什麼；點過的再點一下取消。三個都至少有兩個銳角 ——
+                 只有三個角都是銳角的那一個才叫銳角三角形。
+     MEET_POOL  （範例 2）轉一轉：底邊一端已經是直角，轉另一端那一條邊，讓兩條邊碰在一起圍成三角形。
+                 停在直角（一開始的位置）兩條邊平行、碰不到；轉得比直角還開更碰不到 —— 所以另一個角一定是銳角。
+     STICK_SETS （範例 3）選小棒：六根標了長度的小棒，三根放進三個空位，依序圍出正三角形、
+                 剛好兩條一樣長的等腰三角形、不等邊三角形。（任三根都圍得起來：最短 4 公分兩根加起來比最長 7 公分長。）
+     GRID_POOL  （範例 4）九宮格：四張畫出來的三角形卡放進「依角 × 依邊（最精確）」的格子，
+                 兩張「畫不出來」的章蓋在不存在的那兩格。
+     PIN_BASES  （範例 5）釘板：底邊釘住，把頂點拉到釘子上，做出指定的「依角＋依邊」三角形（兩次）。
+     畫面決定答案：除了有小方框的直角，每一個角不是 ≤ 75 度就是 ≥ 105 度（檢查設定逐一量過），一眼分得出銳角、鈍角。
+     所有收不收的規則都是這一段的純函式，檢查設定直接呼叫它們，再用自己的幾何重算比對。 --- */
+  var GAME_ORDER = ['acute', 'meet', 'sticks', 'grid', 'pin'];
+  var GAME_W = 300;
+
+  /* ⚠️ 托盤一定要洗牌再畫。洗出來剛好由小到大的話，把前兩張對調（三年級 numbers 同一個做法）。 */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    var up = a.length > 1;
+    for (var i = 1; i < a.length; i++) if (!(a[i - 1] < a[i])) up = false;
+    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function inBox(b, x, y){ return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h; }
+  /* 點到框的距離（框裡是 0）：相鄰兩格的吸附範圍重疊時，挑「最近」的那一格，不是陣列裡第一個。 */
+  function boxDist(b, x, y){ return Math.sqrt(Math.pow(Math.max(0, b.x - x, x - (b.x + b.w)), 2) + Math.pow(Math.max(0, b.y - y, y - (b.y + b.h)), 2)); }
+  function vUnit(u){ var n = Math.sqrt(u[0] * u[0] + u[1] * u[1]); return n === 0 ? [0, 0] : [u[0] / n, u[1] / n]; }
+
+  /* 把三個平方邊長畫進一個框（等比縮放、置中）。借 triLayout 的排法：pts[2] 是最大角、邊的順序和 tickPlan 一致。 */
+  function gameFit(sq, rot, bx){
+    var pts = triLayout(sq, rot);
+    var xs = pts.map(function(p){ return p[0]; }), ys = pts.map(function(p){ return p[1]; });
+    var x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys);
+    var bw = Math.max.apply(null, xs) - x0, bh = Math.max.apply(null, ys) - y0;
+    var k = Math.min((bx.w - 2 * bx.pad) / bw, (bx.h - 2 * bx.pad) / bh);
+    var ox = bx.x + (bx.w - bw * k) / 2, oy = bx.y + (bx.h - bh * k) / 2;
+    return pts.map(function(p){ return [ox + (p[0] - x0) * k, oy + (p[1] - y0) * k]; });
+  }
+  /* 第 i 個頂點的角是哪一種（從平方邊長算，不看座標）：兩條鄰邊的平方和 － 對邊平方 的正負號。
+     triLayout 的邊：pts0→pts1 平方最大（r）、pts1→pts2 最小（p）、pts2→pts0 中間（q），
+     所以 pts0 的對邊是 p、pts1 的對邊是 q、pts2 的對邊是 r。 */
+  function cornerKinds(sq){
+    var s = sortSq(sq), p = s[0], q = s[1], r = s[2];
+    function k(a, b, c){ var d = a + b - c; return d > 0 ? 'acute' : (d === 0 ? 'right' : 'obtuse'); }
+    return [k(q, r, p), k(p, r, q), k(p, q, r)];
+  }
+
+  /* --- 第 1 關：點出銳角。每一個角的「點的範圍」是一個圓：圓心在頂點往角裡面 zoneIn 的地方，
+         所以點在頂點上、點在角裡面畫的虛線弧上都算。 --- */
+  var ACUTE_POOL = {
+    acute:  [[36, 36, 36], [25, 25, 36], [16, 25, 25], [12, 18, 22], [9, 11, 14]],
+    right:  [[9, 16, 25], [16, 16, 32], [4, 16, 20]],
+    obtuse: [[16, 25, 64], [9, 25, 49], [16, 16, 48], [25, 25, 64]]
+  };
+  var ACUTE_ROTS = [0, 25, 50, 75, 100, 130, 160, 200, 235, 270, 300, 330];
+  var ACUTE_G = { H:270, box:{ x:0, y:0, w:300, h:270, pad:36 }, zoneR:30, zoneIn:14, arcR:26, mark:14 };
+  function acuteZones(pts){
+    return pts.map(function(V, i){
+      var a = vUnit([pts[(i + 1) % 3][0] - V[0], pts[(i + 1) % 3][1] - V[1]]);
+      var b = vUnit([pts[(i + 2) % 3][0] - V[0], pts[(i + 2) % 3][1] - V[1]]);
+      var bi = vUnit([a[0] + b[0], a[1] + b[1]]);
+      return { x:V[0] + bi[0] * ACUTE_G.zoneIn, y:V[1] + bi[1] * ACUTE_G.zoneIn };
+    });
+  }
+  function acutePick(pts, x, y){
+    var z = acuteZones(pts), best = null, bd = 1e9;
+    for (var i = 0; i < 3; i++){
+      var dd = Math.sqrt((x - z[i].x) * (x - z[i].x) + (y - z[i].y) * (y - z[i].y));
+      if (dd <= ACUTE_G.zoneR && dd < bd){ bd = dd; best = i; }
+    }
+    return best;
+  }
+
+  /* --- 第 2 關：轉一轉。F 是固定的那一端（那裡已經是直角，邊直直往上），P 是轉的那一端。
+         b 是 P 那一個角（從 P 往 F 的方向量起，往上轉）；停車位每 15 度一個，15～165。
+         一開始停在 90（兩條邊都直立 —— 平行，範例 2 的第一種畫法）。 --- */
+  var MEET_POOL = [{ fx:100, px:164 }, { fx:200, px:136 }, { fx:104, px:160 }, { fx:196, px:140 }];
+  var MEET_G = { H:300, y:268, R:104, stop:15, min:15, max:165, start:90, knob:48, ringIn:64, ringOut:146, mark:16, arcR:26 };
+  function meetSide(e){ return e.fx < e.px ? -1 : 1; }
+  function meetXY(e, b){
+    var s = meetSide(e), a = b * Math.PI / 180;
+    return { x:e.px + MEET_G.R * s * Math.cos(a), y:MEET_G.y - MEET_G.R * Math.sin(a) };
+  }
+  /* 指標位置 → 最近的停車位（每一個看得到的點各佔自己的 ±7.5 度）。底邊下面算到最近的一端。 */
+  function meetStop(e, x, y){
+    var s = meetSide(e), dx = s * (x - e.px), dy = MEET_G.y - y;
+    var b = Math.atan2(dy, dx) * 180 / Math.PI;
+    if (b < 0) b = dx >= 0 ? 0 : 180;
+    var st = Math.round(b / MEET_G.stop) * MEET_G.stop;
+    return Math.max(MEET_G.min, Math.min(MEET_G.max, st));
+  }
+  function meetRing(e, x, y){
+    var dd = Math.sqrt((x - e.px) * (x - e.px) + (y - MEET_G.y) * (y - MEET_G.y));
+    return dd >= MEET_G.ringIn && dd <= MEET_G.ringOut && y <= MEET_G.y + 12;
+  }
+  function meetKind(b){ return b === MEET_G.start ? 'start' : (b < 90 ? 'ok' : 'wide'); }
+  function meetApex(e, b){ return { x:e.fx, y:MEET_G.y - Math.abs(e.px - e.fx) * Math.tan(b * Math.PI / 180) }; }
+
+  /* --- 第 3 關：選小棒。長度是整數公分，判斷只比整數。 --- */
+  var STICK_SETS = [[6, 6, 6, 4, 5, 7], [5, 5, 5, 4, 6, 7], [7, 7, 7, 4, 5, 6], [4, 4, 4, 5, 6, 7]];
+  var STICK_TARGETS = ['equi', 'iso', 'scalene'];
+  var STICK_G = { H:374, cm:17, pieceH:48, padW:16, slotX:10, slotW:146, slotH:46, slotY:[46, 98, 150], reach:18,
+                  prev:{ x:166, y:42, w:128, h:156, pad:16 }, trayX:[78, 222], trayY:[242, 296, 350] };
+  function stickW(n){ return n * STICK_G.cm + STICK_G.padW; }
+  function stickSlotBox(i){ return { x:STICK_G.slotX, y:STICK_G.slotY[i], w:STICK_G.slotW, h:STICK_G.slotH }; }
+  function stickSlot(x, y){
+    var best = null, bd = 1e9;
+    for (var i = 0; i < STICK_G.slotY.length; i++){
+      var dd = boxDist(stickSlotBox(i), x, y);
+      if (dd <= STICK_G.reach && dd < bd){ bd = dd; best = i; }
+    }
+    return best;
+  }
+  /* 放在哪一個空位：小棒中心或手指，先看中心；中心落在已經放了的空位（或沒有空位）時再看手指 ——
+     拿著長棒的一端、手指放在空的空位上，也要收（不可以因為中心剛好在別的空位上就彈回去）。 */
+  function stickPick(c, f, filled){
+    if (c !== null && !filled[c]) return c;
+    if (f !== null && !filled[f]) return f;
+    return null;
+  }
+  function stickKind(lens){
+    var s = lens.slice().sort(function(a, b){ return a - b; });
+    if (s[0] === s[2]) return 'equi';
+    return (s[0] === s[1] || s[1] === s[2]) ? 'iso' : 'scalene';
+  }
+  /* 'ok'；要「剛好兩條一樣長」卻圍成正三角形 → 'alsoIso'（它也是等腰三角形，不扣分、說明為什麼不收）；
+     其他 → 圍出來的那一種（扣分、說明）。 */
+  function stickJudge(target, lens){
+    var k = stickKind(lens);
+    if (k === target) return 'ok';
+    if (target === 'iso' && k === 'equi') return 'alsoIso';
+    return k;
+  }
+
+  /* --- 第 4 關：九宮格。格子相鄰不重疊，點在哪一格就是哪一格。 --- */
+  var GRID_POOL = {
+    'acute-scalene':[[12, 18, 22], [9, 11, 14]], 'acute-iso':[[25, 25, 36], [16, 25, 25]], 'acute-equi':[[36, 36, 36]],
+    'right-scalene':[[9, 16, 25], [4, 16, 20]], 'right-iso':[[16, 16, 32]],
+    'obtuse-scalene':[[16, 25, 64], [9, 25, 49]], 'obtuse-iso':[[16, 16, 48], [25, 25, 64]]
+  };
+  var GRID_G = { H:366, x0:6, hw:60, cw:76, y0:6, hh:30, rh:62, card:{ w:72, h:58 }, stamp:{ w:72, h:50 },
+                 tray:[[54, 264], [150, 264], [246, 264], [54, 330]], stampAt:[[150, 330], [246, 330]], placed:0.94,
+                 mini:{ pad:6, mark:8, tick:8 } };
+  /* 卡片很小：最長的邊一律橫放（轉 0 或 180 度），三角形才撐得滿卡片、記號看得清楚 */
+  var GRID_ROTS = [0, 180];
+  function gridCellBox(ai, si){ return { x:GRID_G.x0 + GRID_G.hw + si * GRID_G.cw, y:GRID_G.y0 + GRID_G.hh + ai * GRID_G.rh, w:GRID_G.cw, h:GRID_G.rh }; }
+  function gridCell(x, y){
+    for (var ai = 0; ai < 3; ai++) for (var si = 0; si < 3; si++){
+      if (inBox(gridCellBox(ai, si), x, y)) return ANGLE_KEYS[ai] + '-' + SIDE_KEYS[si];
+    }
+    return null;
+  }
+  /* 卡片中心或手指任一個落在對的格子就收；都不對就照中心（中心不在格子裡才看手指）判。 */
+  function gridPick(c, f, want){ return (c === want || f === want) ? want : (c || f); }
+  /* 卡片放錯格子的理由：依角先講（列），再講依邊（欄）。正三角形放進等腰那一欄 → 'alsoIso'（不扣分）。 */
+  function gridWhy(sq, cell){
+    var p = cell.split('-'), a = angleClass(sq), s = sideClass(sq);
+    if (p[0] !== a) return { key:'ang', real:a, put:p[0] };
+    if (s === 'equi' && p[1] === 'iso') return { key:'alsoIso' };
+    return { key:'side', real:s, put:p[1] };
+  }
+
+  /* --- 第 5 關：釘板。每一個釘子是一個整數格點，所以三條邊的平方都是整數 —— 用這一課自己的
+         angleClass／sideClass 判，完全精確。釘板上做不出正三角形（目標不會出現它）。
+         ⚠️ 畫面要決定得了答案：最大的角離直角不到 15 度（又不是直角）的時候，看不出是銳角還是鈍角 ——
+         那種位置**只有依角判錯**時不扣分，說明它其實是哪一種（'fuzzy'）。 --- */
+  var PIN_G = { H:268, ox:24, oy:26, pitch:36, cols:8, rows:7, knob:48, fuzzy:15, mark:12 };
+  var PIN_BASES = [
+    { a:[1, 5], b:[5, 5], start:[2, 2] }, { a:[2, 5], b:[6, 5], start:[5, 2] },
+    { a:[1, 4], b:[5, 4], start:[2, 1] }, { a:[2, 4], b:[6, 4], start:[5, 1] }
   ];
-  /* 每一關的答案都從資料重算 —— ROUNDS.ans 只是選項的位置，
-     檢查設定會拿這個函式和它對照。 */
-  function roundAnswer(r){
-    if (r.kind === 'angle')  return angleClass(TRI[r.tri].sq);
-    if (r.kind === 'side')   return sideClass(TRI[r.tri].sq);
-    if (r.kind === 'acutes') return String(acuteCount(TRI[r.tri].sq));
-    if (r.kind === 'cannot') return r.opts.filter(function(c){ return GRID[c] === null; })[0];
-    return sideAlso(r.side).length ? sideAlso(r.side)[0] : 'none';
+  var PIN_TARGETS = [
+    [['right', 'iso'], ['obtuse', 'iso'], ['acute', 'iso']],
+    [['right', 'scalene'], ['obtuse', 'scalene']]
+  ];
+  function pinXY(g){ return { x:PIN_G.ox + PIN_G.pitch * g[0], y:PIN_G.oy + PIN_G.pitch * g[1] }; }
+  function pinSnap(x, y){
+    var c = Math.round((x - PIN_G.ox) / PIN_G.pitch), r = Math.round((y - PIN_G.oy) / PIN_G.pitch);
+    return [Math.max(0, Math.min(PIN_G.cols - 1, c)), Math.max(0, Math.min(PIN_G.rows - 1, r))];
+  }
+  /* 點目的地：點在釘板範圍（最外圈釘子再往外半格）裡才算，回傳最近的釘子 */
+  function pinDot(x, y){
+    var h = PIN_G.pitch / 2;
+    if (x < PIN_G.ox - h || x > PIN_G.ox + PIN_G.pitch * (PIN_G.cols - 1) + h ||
+        y < PIN_G.oy - h || y > PIN_G.oy + PIN_G.pitch * (PIN_G.rows - 1) + h) return null;
+    return pinSnap(x, y);
+  }
+  /* 三條邊的平方，順序：AB、B 到頂點、頂點到 A */
+  function pinSq(e, g){
+    function d2(u, v){ return (u[0] - v[0]) * (u[0] - v[0]) + (u[1] - v[1]) * (u[1] - v[1]); }
+    return [d2(e.a, e.b), d2(e.b, g), d2(g, e.a)];
+  }
+  function pinFlat(e, g){ return (e.b[0] - e.a[0]) * (g[1] - e.a[1]) - (e.b[1] - e.a[1]) * (g[0] - e.a[0]) === 0; }
+  function pinFuzzy(sq){
+    var s = sortSq(sq), dd = s[0] + s[1] - s[2];
+    if (dd === 0) return false;
+    return Math.abs(dd / (2 * Math.sqrt(s[0] * s[1]))) < Math.sin(PIN_G.fuzzy * Math.PI / 180);
+  }
+  function pinKind(e, g, tgt){
+    if (g[0] === e.start[0] && g[1] === e.start[1]) return 'start';
+    if (pinFlat(e, g)) return 'flat';
+    var sq = pinSq(e, g), a = angleClass(sq), s = sideClass(sq);
+    if (a === tgt[0] && s === tgt[1]) return 'ok';
+    if (a !== tgt[0] && s === tgt[1] && pinFuzzy(sq)) return 'fuzzy';
+    return 'miss';
+  }
+  /* 頂點 i（0 ＝ A、1 ＝ B、2 ＝ 頂點）是直角嗎 —— 整數內積是 0 */
+  function pinRight(e, g){
+    var P = [e.a, e.b, g];
+    for (var i = 0; i < 3; i++){
+      var u = [P[(i + 1) % 3][0] - P[i][0], P[(i + 1) % 3][1] - P[i][1]], v = [P[(i + 2) % 3][0] - P[i][0], P[(i + 2) % 3][1] - P[i][1]];
+      if (u[0] * v[0] + u[1] * v[1] === 0) return i;
+    }
+    return -1;
   }
 
   /* ---------- i18n ---------- */
@@ -689,38 +929,103 @@
           why:'依角和依邊是<strong>兩種不同的分法</strong>，每個三角形兩邊都各有一個名字。把一個直角的兩條邊做成一樣長，就得到<strong>等腰直角三角形</strong> —— 兩個名字同時成立。' }
       ],
       s7h2:'三角形鑑定所',
-      s7lead:'看清楚圖上的記號：<strong>橘色的弧</strong>標的是最大的那個角，<strong>小方框</strong>表示那個角剛好是直角，<strong>短撇</strong>表示那幾條邊一樣長。',
+      s7lead:'五關五種玩法：點出銳角、把邊轉到碰在一起、用小棒圍三角形、把三角形放進九宮格、在釘板上拉出指定的三角形。記號照課本的：<strong>小方框</strong>＝直角，<strong>短撇</strong>＝那幾條邊一樣長。第 1 關只要「點一下」；其他關可以拖，也可以先點東西、再點要放的地方。',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
       gHintBtn:'💡 提示',
-      gPrompt:{
-        angle:'圖上這個三角形，<strong>依角</strong>分類叫什麼？',
-        side:'圖上這個三角形，<strong>依邊</strong>分類，<strong>最精確</strong>的名字是什麼？',
-        acutes:'圖上這個三角形裡面，有幾個<strong>銳角</strong>？',
-        cannot:'下面哪一種三角形<strong>畫不出來</strong>？',
-        also:'一個<strong>正三角形</strong>，除了正三角形，還可以叫它什麼？'
+      gAsks:{
+        acute:'把這個三角形的<strong>每一個銳角</strong>都點出來，再按「點好了」。',
+        meet:'左右兩條邊都直直往上，<strong>碰不到</strong>。轉動紅點那一條邊，讓兩條邊<strong>碰在一起</strong>，圍成一個三角形。',
+        grid:'把每一張三角形卡放進九宮格裡它的那一格；兩個「畫不出來」的章，蓋在<strong>不存在</strong>的那兩格。'
       },
-      gOpt:{ noIdea:'沒辦法判斷，要知道邊長才行', none:'沒有別的名字了', rightName:'直角三角形' },
-      gCell: function(ang, side){ return ang.replace('三角形', '') + '的' + side; },
-      gHint1:{
-        angle:'先找最大的那個角（橘色的弧），拿它和直角比。',
-        side:'數短撇：撇數一樣的邊就一樣長。',
-        acutes:'先看最大的那個角是什麼，剩下兩個角一定比它小。',
-        cannot:'三條邊一樣長的話，三個角會怎麼樣？',
-        also:'正三角形的三條邊都一樣長 —— 那它符不符合「至少兩條一樣長」？'
+      gHints:{
+        acute:'提示 1：一個角一個角看，拿它和直角比：比直角小的才是銳角。有小方框的是直角，比直角還開的是鈍角。',
+        meet:'提示 1：固定的那一端已經是直角了。另一端的角要比直角大、一樣大、還是比直角小，兩條邊才會靠過去？',
+        sticks:'提示 1：看小棒上寫的長度，數一數一樣長的有幾根。',
+        grid:'提示 1：每一張卡分兩次 —— 最大的那一個角決定哪一列，數有幾條邊一樣長決定哪一欄。',
+        pin:'提示 1：拖紅點的時候看記號 —— 小方框＝直角，短撇＝一樣長；沒有小方框的話，看最大的那一個角比直角開還是比直角小。'
       },
-      gHint2:{
-        angle: function(word){ return '最大的那個角是' + word + '。'; },
-        side: function(n){ return '一樣長的邊有 ' + n + ' 條。'; },
-        acutes:'直角和鈍角合起來最多只有一個，其他都是銳角。',
-        cannot:'正三角形一定是銳角三角形，所以「直角的正三角形」和「鈍角的正三角形」都不存在。',
-        also:'三條都一樣長，當然也「至少兩條一樣長」。'
-      },
+      gPts: function(p){ return '＋' + p + ' 分'; },
+      gMinus:'−5 分',
       gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:'一次就對！＋20 分。',
-      gCorrectRetry:'答對了！＋10 分。',
-      gWrong:'不對喔，再想一次。－5 分。',
-      gClear:'按「下一關」看下一個三角形。',
-      gWin: function(score){ return '五個都鑑定完了！總分 ' + score + ' 分 🏆 按「重新開始」可以再玩一次。'; },
+      gClear:'按「下一關」繼續。',
+      gWin: function(score){ return '五關都過了！總分 ' + score + ' 分 🏆 你是三角形鑑定師了。按「重新開始」可以再玩一次。'; },
+      gAcuteBtn:'點好了',
+      gAcuteNow: function(i, n){ return '第 ' + i + ' / ' + n + ' 個三角形'; },
+      gAcuteList: function(list){ return '三個三角形的銳角：' + list.join('、') + ' 個'; },
+      gAcuteWhy:{
+        right:'這個角有<strong>小方框</strong>，它剛好是直角，不是銳角。',
+        obtuse:'這個角張得<strong>比直角還開</strong>，它是鈍角，不是銳角。'
+      },
+      gAcuteMissing:'還有銳角沒點到。<strong>每一個三角形都至少有兩個銳角</strong> —— 再找找看。',
+      gAcuteOk: function(n, name){ return n === 3 ? '對！三個角都是銳角 —— 這是' + name + '。' : '對！有 ' + n + ' 個銳角，可是最大的那一個角不是銳角 —— 這是' + name + '。'; },
+      gAcuteAll:'三個都至少有兩個銳角，所以「有銳角」不能當理由：要<strong>三個角都是</strong>銳角才叫銳角三角形。',
+      gAcute2: function(n){ return '提示 2：這一個三角形有 ' + n + ' 個銳角。'; },
+      gMeetNow: function(ok){ return ok ? '✅ 碰到了，圍成三角形' : '兩條邊還沒碰在一起'; },
+      gMeetWhy:{ wide:'這個角比直角還大（鈍角）：兩條邊張得比平行還開，只會越離越遠，<strong>碰不到</strong>。' },
+      gMeetOk:'碰到了！這個角是<strong>銳角</strong> —— 一個三角形裡，<strong>直角和鈍角合起來最多只有一個</strong>，另一個角只能是銳角。',
+      gMeet2:'提示 2：把紅點往底邊那邊轉下來，讓那個角比直角小。',
+      gStickAsk: function(t){
+        return t === 'equi' ? '用三根小棒圍出一個<strong>正三角形</strong>。'
+          : t === 'iso' ? '用三根小棒圍出一個<strong>等腰三角形</strong>，而且<strong>剛好兩條</strong>邊一樣長。'
+          : '用三根小棒圍出一個<strong>不等邊三角形</strong>。';
+      },
+      gStickNow: function(i, n){ return '圍好 ' + i + ' / ' + n + ' 個'; },
+      gStickLen: function(n){ return n + ' 公分'; },
+      gStickWhy: function(t, got){
+        var g = got === 'equi' ? '三根<strong>都一樣長</strong>，這是正三角形' : got === 'iso' ? '有<strong>兩根一樣長</strong>，這是等腰三角形' : '三根<strong>都不一樣長</strong>，這是不等邊三角形';
+        var w = t === 'equi' ? '正三角形要三根都一樣長。' : t === 'iso' ? '這一次要剛好兩根一樣長。' : '不等邊三角形要三根都不一樣長。';
+        return g + '。' + w + '三根都放回去，再選一次。';
+      },
+      gStickAlsoIso:'三根都一樣長是正三角形 —— 它<strong>也是</strong>等腰三角形（至少兩條一樣長）沒錯，可是這一次要<strong>剛好兩條</strong>一樣長。不扣分，再選一次。',
+      gStickOk: function(t){ return t === 'equi' ? '三條邊都一樣長：正三角形！' : t === 'iso' ? '剛好兩條邊一樣長：等腰三角形！' : '三條邊都不一樣長：不等邊三角形！'; },
+      gStickAll:'依邊分類就是數有幾條邊一樣長。',
+      gStick2: function(t, set){
+        var c = {}; set.forEach(function(n){ c[n] = (c[n] || 0) + 1; });
+        var three = +Object.keys(c).filter(function(k){ return c[k] >= 3; })[0];
+        return t === 'equi' ? '提示 2：三根都選 ' + three + ' 公分的。'
+          : t === 'iso' ? '提示 2：選兩根 ' + three + ' 公分的，再配一根不一樣長的。'
+          : '提示 2：三根要都不一樣長，' + three + ' 公分的最多只能用一根。';
+      },
+      gGridCorner:'角＼邊',
+      gGridRow:{ acute:'銳角', right:'直角', obtuse:'鈍角' },
+      gGridCol:{ scalene:'不等邊', iso:'等腰', equi:'正三角形' },
+      gStampLbl:'畫不出來',
+      gGridNow: function(i, n){ return '放好 ' + i + ' / ' + n + ' 張'; },
+      gGridAng: function(real, put){
+        var r = { acute:'三個角都是銳角', right:'最大的那一個角是直角（有小方框）', obtuse:'最大的那一個角比直角還開，是鈍角' }[real];
+        var p = { acute:'銳角', right:'直角', obtuse:'鈍角' }[put];
+        return '這一張' + r + '，不是放在「' + p + '」那一列。';
+      },
+      gGridSide: function(real, put){
+        var r = { scalene:'三條邊都不一樣長（沒有短撇）', iso:'剛好兩條邊一樣長（兩條有短撇）', equi:'三條邊都一樣長（三條都有短撇）' }[real];
+        var p = { scalene:'不等邊', iso:'等腰', equi:'正三角形' }[put];
+        return '這一張' + r + '，不是放在「' + p + '」那一欄。';
+      },
+      gGridAlsoIso:'正三角形<strong>也是</strong>等腰三角形（至少兩條一樣長）沒錯 —— 可是九宮格每一格放的是<strong>最精確</strong>的名字：三條都一樣長，放「正三角形」那一欄。不扣分，再放一次。',
+      gGridStamp: function(a, s){
+        return s === 'equi'
+          ? '正三角形三個角一樣大，都是銳角 —— 銳角的正三角形畫得出來，這一格不是空的。'
+          : '這一格畫得出來（範例教學 4 的九宮格裡它有一個例子）。畫不出來的，是三個角一定一樣大的那一種三角形。';
+      },
+      gGridOk:'放對了！', gGridOkStamp:'蓋對了！這一格真的畫不出來。',
+      gGridDone:'九宮格完成：依角、依邊各分一次。正三角形<strong>一定是銳角三角形</strong>，所以有兩格是空的。',
+      gGrid2: function(word, side){ return '提示 2：還沒放的第一張，最大的那一個角是' + word + '，' + { scalene:'沒有一樣長的邊', iso:'剛好兩條邊一樣長', equi:'三條邊都一樣長' }[side] + '。'; },
+      gGrid2Stamp:'提示 2：畫不出來的兩格都在「正三角形」那一欄。',
+      gPinAsk: function(a, s){ return '拉紅點，做出一個依角是<strong>' + { acute:'銳角三角形', right:'直角三角形', obtuse:'鈍角三角形' }[a] + '</strong>、依邊是<strong>' + { iso:'等腰三角形', scalene:'不等邊三角形' }[s] + '</strong>的三角形。'; },
+      gPinNow: function(i, n){ return '做好 ' + i + ' / ' + n + ' 個'; },
+      gPinWhy: function(a, s, ta, ts){
+        var out = [];
+        if (a !== ta) out.push({ acute:'三個角都是銳角', right:'有一個直角（小方框）', obtuse:'最大的那一個角比直角還開（鈍角）' }[a] + '，依角是' + { acute:'銳角三角形', right:'直角三角形', obtuse:'鈍角三角形' }[a]);
+        if (s !== ts) out.push((s === 'iso' ? '有兩條邊一樣長（短撇）' : '三條邊都不一樣長（沒有短撇）') + '，依邊是' + (s === 'iso' ? '等腰三角形' : '不等邊三角形'));
+        return '這一個' + out.join('；') + '。和題目要的不一樣。';
+      },
+      gPinFuzzy: function(a){ return '這個角很接近直角，可是沒有小方框，所以不是直角 —— 它其實是' + (a === 'acute' ? '銳角' : '鈍角') + '。太接近了看不清楚，不扣分，拉得更明顯一點。'; },
+      gPinOk: function(a, s){ return '做到了：' + { acute:'銳角三角形', right:'直角三角形', obtuse:'鈍角三角形' }[a] + '，同時也是' + { iso:'等腰三角形', scalene:'不等邊三角形' }[s] + '！'; },
+      gPinDone:'兩種分法各分一次，兩個名字合起來就是它最完整的名字。',
+      gPin2: function(a, s){
+        return '提示 2：' + { right:'直角 —— 讓頂點在 A 或 B 的正上方，或讓兩條邊交出小方框', obtuse:'鈍角 —— 讓頂點貼近底邊（只高一格），而且在 A 和 B 中間', acute:'銳角 —— 讓頂點在底邊正中間的上方，拉得比底邊的一半還高' }[a] +
+          '；' + { iso:'等腰 —— 讓頂點在 AB 正中間的上方，兩條斜邊就一樣長', scalene:'不等邊 —— 讓頂點偏向一邊，再看短撇：要選一條短撇都沒有的位置' }[s] + '。';
+      },
       figBig:'最大的角', figRight:'直角',
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
@@ -856,38 +1161,102 @@
           why:'Sorting by angles and sorting by sides are <strong>two different sortings</strong>, and every triangle gets one name from each. Make the two sides of a right angle equal and you get an <strong>isosceles right triangle</strong> — both names at once.' }
       ],
       s7h2:'The Triangle Inspection Office',
-      s7lead:'Read the marks in the figure: the <strong>orange arc</strong> marks the biggest angle, a <strong>small square</strong> means that angle is exactly a right angle, and <strong>tick marks</strong> show which sides are equal.',
+      s7lead:'Five rounds, five ways to play: tap the acute angles, turn a side until the two sides meet, build triangles from sticks, sort triangles into the nine-square grid, and pull out a named triangle on a pinboard. The marks are the textbook ones: a <strong>small square</strong> = a right angle, <strong>tick marks</strong> = those sides are equal. Round 1 is just tapping; in the other rounds you can drag, or tap a piece and then tap where it goes.',
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
       gHintBtn:'💡 Hint',
-      gPrompt:{
-        angle:'<strong>By angles</strong>, what is the triangle in the figure called?',
-        side:'<strong>By sides</strong>, what is the <strong>most specific</strong> name for the triangle in the figure?',
-        acutes:'How many <strong>acute angles</strong> are inside the triangle in the figure?',
-        cannot:'Which kind of triangle <strong>cannot be drawn</strong>?',
-        also:'Besides equilateral, what else can you call an <strong>equilateral triangle</strong>?'
+      gAsks:{
+        acute:'Tap <strong>every acute angle</strong> of this triangle, then press “Done”.',
+        meet:'Both sides go straight up, so they <strong>never meet</strong>. Turn the side with the red dot until the two sides <strong>meet</strong> and close up a triangle.',
+        grid:'Put each triangle card into its own square of the nine-square grid; stamp the two “can’t draw” stamps on the two squares that <strong>do not exist</strong>.'
       },
-      gOpt:{ noIdea:'No way to tell — you would need the side lengths', none:'There is no other name', rightName:'A right triangle' },
-      gCell: function(ang, side){ return ang.replace(/^an? /, '') + ' and ' + side.replace(/^an? /, ''); },
-      gHint1:{
-        angle:'Find the biggest angle (the orange arc) and compare it with a right angle.',
-        side:'Count the ticks: sides with the same number of ticks are equal.',
-        acutes:'Work out what the biggest angle is first — the other two must be smaller.',
-        cannot:'If all three sides are equal, what happens to the three angles?',
-        also:'An equilateral triangle has three equal sides — does that satisfy “at least two equal”?'
+      gHints:{
+        acute:'Hint 1: Look at one angle at a time and compare it with a right angle: only angles smaller than a right angle are acute. A small square means a right angle; wider than a right angle is obtuse.',
+        meet:'Hint 1: The fixed end is already a right angle. Does the other angle have to be bigger than, equal to, or smaller than a right angle for the two sides to lean together?',
+        sticks:'Hint 1: Read the lengths on the sticks and count how many are equal.',
+        grid:'Hint 1: Sort every card twice — the biggest angle decides the row, and the number of equal sides decides the column.',
+        pin:'Hint 1: Watch the marks while you drag — a small square = a right angle, tick marks = equal sides; with no small square, see whether the biggest angle is wider or narrower than a right angle.'
       },
-      gHint2:{
-        angle: function(word){ return 'The biggest angle is ' + word + '.'; },
-        side: function(n){ return 'The number of equal sides is ' + n + '.'; },
-        acutes:'There is at most one right or obtuse angle between them; everything else is acute.',
-        cannot:'An equilateral triangle is always acute, so neither “a right equilateral” nor “an obtuse equilateral” exists.',
-        also:'All three equal certainly means at least two equal.'
-      },
+      gPts: function(p){ return '+' + p + ' points'; },
+      gMinus:'−5 points',
       gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst:'First try! +20 points.',
-      gCorrectRetry:'Correct! +10 points.',
-      gWrong:'Not quite — try again. −5 points.',
-      gClear:'Press “Next round” for the next triangle.',
-      gWin: function(score){ return 'All five identified! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gClear:'Press “Next round” to go on.',
+      gWin: function(score){ return 'All five rounds cleared! Final score: ' + score + ' 🏆 You are a triangle inspector now. Press “Restart” to play again.'; },
+      gAcuteBtn:'Done',
+      gAcuteNow: function(i, n){ return 'Triangle ' + i + ' of ' + n; },
+      gAcuteList: function(list){ return 'Acute angles in the three triangles: ' + list.join(', '); },
+      gAcuteWhy:{
+        right:'This angle has a <strong>small square</strong>: it is exactly a right angle, not acute.',
+        obtuse:'This angle opens <strong>wider than a right angle</strong>: it is obtuse, not acute.'
+      },
+      gAcuteMissing:'Some acute angles are still untapped. <strong>Every triangle has at least two acute angles</strong> — look again.',
+      gAcuteOk: function(n, name){ return n === 3 ? 'Yes! All three angles are acute — this is ' + name + '.' : 'Yes! It has ' + n + ' acute angles, but its biggest angle is not acute — this is ' + name + '.'; },
+      gAcuteAll:'All three had at least two acute angles, so “it has acute angles” is no reason at all: <strong>all three</strong> angles must be acute to make an acute triangle.',
+      gAcute2: function(n){ return 'Hint 2: This triangle has ' + n + ' acute angles.'; },
+      gMeetNow: function(ok){ return ok ? '✅ They meet — a triangle' : 'The two sides have not met yet'; },
+      gMeetWhy:{ wide:'That angle is bigger than a right angle (obtuse): the two sides open even wider than parallel and only get further apart — they <strong>never meet</strong>.' },
+      gMeetOk:'They meet! This angle is <strong>acute</strong> — a triangle has <strong>at most one right or obtuse angle in total</strong>, so the other angle can only be acute.',
+      gMeet2:'Hint 2: Turn the red dot down towards the base, so that angle becomes smaller than a right angle.',
+      gStickAsk: function(t){
+        return t === 'equi' ? 'Build <strong>an equilateral triangle</strong> from three sticks.'
+          : t === 'iso' ? 'Build <strong>an isosceles triangle</strong> with <strong>exactly two</strong> equal sides.'
+          : 'Build <strong>a scalene triangle</strong> from three sticks.';
+      },
+      gStickNow: function(i, n){ return i + ' of ' + n + ' built'; },
+      gStickLen: function(n){ return n + ' cm'; },
+      gStickWhy: function(t, got){
+        var g = got === 'equi' ? 'All three sticks <strong>are equal</strong>: that is an equilateral triangle' : got === 'iso' ? '<strong>Two sticks are equal</strong>: that is an isosceles triangle' : '<strong>No two sticks</strong> are equal: that is a scalene triangle';
+        var w = t === 'equi' ? 'An equilateral triangle needs all three equal.' : t === 'iso' ? 'This time we need exactly two equal.' : 'A scalene triangle needs all three different.';
+        return g + '. ' + w + ' All three go back — pick again.';
+      },
+      gStickAlsoIso:'Three equal sticks make an equilateral triangle — and yes, it <strong>is</strong> isosceles too (at least two equal). But this time we need <strong>exactly two</strong> equal. No points lost — pick again.',
+      gStickOk: function(t){ return t === 'equi' ? 'All three sides equal: equilateral!' : t === 'iso' ? 'Exactly two sides equal: isosceles!' : 'No two sides equal: scalene!'; },
+      gStickAll:'Sorting by sides is counting how many sides are equal.',
+      gStick2: function(t, set){
+        var c = {}; set.forEach(function(n){ c[n] = (c[n] || 0) + 1; });
+        var three = +Object.keys(c).filter(function(k){ return c[k] >= 3; })[0];
+        return t === 'equi' ? 'Hint 2: Take all three ' + three + ' cm sticks.'
+          : t === 'iso' ? 'Hint 2: Take two ' + three + ' cm sticks and one stick of a different length.'
+          : 'Hint 2: All three must be different, so use at most one ' + three + ' cm stick.';
+      },
+      gGridCorner:'∠ ＼ sides',
+      gGridRow:{ acute:'acute', right:'right', obtuse:'obtuse' },
+      gGridCol:{ scalene:'scalene', iso:'isosceles', equi:'equilateral' },
+      gStampLbl:'can’t draw',
+      gGridNow: function(i, n){ return i + ' of ' + n + ' placed'; },
+      gGridAng: function(real, put){
+        var r = { acute:'all three angles are acute', right:'the biggest angle is a right angle (small square)', obtuse:'the biggest angle opens wider than a right angle — obtuse' }[real];
+        return 'On this card ' + r + ', so it does not go in the “' + put + '” row.';
+      },
+      gGridSide: function(real, put){
+        var r = { scalene:'no two sides are equal (no ticks)', iso:'exactly two sides are equal (two sides ticked)', equi:'all three sides are equal (all three ticked)' }[real];
+        var p = { scalene:'scalene', iso:'isosceles', equi:'equilateral' }[put];
+        return 'On this card ' + r + ', so it does not go in the “' + p + '” column.';
+      },
+      gGridAlsoIso:'An equilateral triangle <strong>is</strong> isosceles too — but every square of the grid holds the <strong>most specific</strong> name: three equal sides go in the “equilateral” column. No points lost — try again.',
+      gGridStamp: function(a, s){
+        return s === 'equi'
+          ? 'An equilateral triangle has three equal angles, all acute — an acute equilateral triangle can be drawn, so this square is not empty.'
+          : 'This square can be drawn (Example 4’s grid shows one). The ones that cannot are the kind whose three angles are always equal.';
+      },
+      gGridOk:'Right square!', gGridOkStamp:'Right — that square really cannot be drawn.',
+      gGridDone:'Grid complete: sorted once by angles and once by sides. An equilateral triangle is <strong>always acute</strong>, which is why two squares are empty.',
+      gGrid2: function(word, side){ return 'Hint 2: On the first card still waiting, the biggest angle is ' + word + ', and ' + { scalene:'no two sides are equal', iso:'exactly two sides are equal', equi:'all three sides are equal' }[side] + '.'; },
+      gGrid2Stamp:'Hint 2: Both empty squares are in the “equilateral” column.',
+      gPinAsk: function(a, s){ return 'Pull the red dot to make a triangle that is <strong>' + { acute:'an acute triangle', right:'a right triangle', obtuse:'an obtuse triangle' }[a] + '</strong> by angles and <strong>' + { iso:'an isosceles triangle', scalene:'a scalene triangle' }[s] + '</strong> by sides.'; },
+      gPinNow: function(i, n){ return i + ' of ' + n + ' made'; },
+      gPinWhy: function(a, s, ta, ts){
+        var out = [];
+        if (a !== ta) out.push({ acute:'all three angles are acute', right:'it has a right angle (small square)', obtuse:'its biggest angle opens wider than a right angle (obtuse)' }[a] + ', so by angles it is ' + { acute:'an acute triangle', right:'a right triangle', obtuse:'an obtuse triangle' }[a]);
+        if (s !== ts) out.push((s === 'iso' ? 'two sides are equal (tick marks)' : 'no two sides are equal (no tick marks)') + ', so by sides it is ' + (s === 'iso' ? 'an isosceles triangle' : 'a scalene triangle'));
+        return 'In this one ' + out.join('; and ') + '. That is not what was asked.';
+      },
+      gPinFuzzy: function(a){ return 'That angle is very close to a right angle, but there is no small square, so it is not one — it is actually ' + (a === 'acute' ? 'acute' : 'obtuse') + '. Too close to see clearly, so no points lost; make it clearer.'; },
+      gPinOk: function(a, s){ return 'Done: ' + { acute:'an acute triangle', right:'a right triangle', obtuse:'an obtuse triangle' }[a] + ', and at the same time ' + { iso:'an isosceles triangle', scalene:'a scalene triangle' }[s] + '!'; },
+      gPinDone:'Each sorting once — the two names together are its fullest name.',
+      gPin2: function(a, s){
+        return 'Hint 2: ' + { right:'right — put the corner straight above A or B, or make two sides meet in a small square', obtuse:'obtuse — put the corner just one row above the base, somewhere between A and B', acute:'acute — put the corner straight above the middle of the base, higher than half the base' }[a] +
+          '; ' + { iso:'isosceles — put the corner straight above the middle of AB so the two slanted sides are equal', scalene:'scalene — move the corner off-centre, then check the ticks: pick a pin where no side has a tick mark' }[s] + '.';
+      },
       figBig:'biggest angle', figRight:'right angle',
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
@@ -1324,113 +1693,597 @@
     });
   }
 
-  /* ===================== 小遊戲：三角形鑑定所 ===================== */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 小遊戲：三角形鑑定所（五關五種玩法，§六之五） =====================
+     點出銳角（範例 1）、轉一轉（範例 2）、選小棒（範例 3）、九宮格（範例 4）、釘板（範例 5）。
+     四年級是中年級（§三）：輕度計分，答錯小扣分但不會結束 —— 一關沒犯錯 +20、犯過錯 +10；每一次「放錯並說明為什麼」−5，最低 0 分。
+     放到空白處、放回一開始的位置、放進已經放好的位置 → 靜靜回原位，不算錯。
+     每一個拖拉都可以「先點、再點目的地」；第 1 關本身就是「點一下」。題庫、版面常數與收不收的規則在 i18n 前面的資料區。 */
+  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  /* 第幾次畫畫板：重新開始、切換語言、下一關、關卡裡換下一題都會換一個新的畫板。還拿在手上的舊積木放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的畫板過關、加分）。二年級 length 的 codex 第一輪。 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gPromptEl = document.getElementById('gPrompt');
-  var gFig = document.getElementById('gFig');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
-  var hintLevel = 0;
+  var C_BLUE = '#3B7DD8', C_DOT = '#C9C4B8', C_OFF = '#8E8A80';
 
-  function roundOptText(d, r, key){
-    if (d.gOpt[key]) return d.gOpt[key];
-    if (r.kind === 'acutes') return key;
-    if (r.kind === 'cannot'){
-      var p = key.split('-');
-      return d.gCell(d.angName[p[0]], d.sideName[p[1]]);
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = document.getElementById('gameStage').clientWidth || W;   /* 畫板可能放在關卡的 holder 裡：一律量整個舞台 */
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, selected:null, onTap:null, onDrop:null, onPointTap:null, onFreeTap:null, downId:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    /* 第 1 關的「點一下」：要在畫板上按下、同一根手指在畫板上放開才算（capture 遺失後漂來的放開不算） */
+    board.addEventListener('pointerdown', function(e){
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.downId === null) B.downId = e.pointerId;
+    });
+    board.addEventListener('pointerup', function(e){
+      var mine = B.downId === e.pointerId;
+      if (mine) B.downId = null;
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (B.selected && B.onPointTap){ B.onPointTap(B.selected, B.toBoard(e)); return; }
+      if (mine && B.onFreeTap && !gSolved) B.onFreeTap(B.toBoard(e));
+    });
+    board.addEventListener('pointercancel', function(e){ if (B.downId === e.pointerId) B.downId = null; });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」（capture 遺失之後，那一下 pointerup 會落在畫板上）。
+     整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {};
+  function clearPiecePtr(e){ delete PIECE_PTR[e.pointerId]; }
+  window.addEventListener('pointerup', clearPiecePtr);
+  window.addEventListener('pointercancel', clearPiecePtr);
+  window.addEventListener('pointerdown', clearPiecePtr, true);
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 畫板上的線條層：和畫板一樣大、同一套座標，不接收指標 */
+  function boardSvg(B, H){
+    var s = svgEl('svg', { width:GAME_W, height:H, viewBox:'0 0 ' + GAME_W + ' ' + H, 'class':'gsvg' });
+    B.el.appendChild(s);
+    return s;
+  }
+  /* 關卡的固定零件（問句、進度、畫板、按鈕）放在 gHold 裡；同一關換下一題時只換 gHold 的內容 */
+  function stageReset(){ gameStage.textContent = ''; }
+  function askLine(html){ var p = document.createElement('p'); p.className = 'gask'; p.innerHTML = html; gameStage.appendChild(p); return p; }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。
+         o.follow(p)：拖的時候中心點跟著手指 p 走到哪裡（吸在停車位、釘子上 —— 拖的時候就看得到吸在哪裡，
+         放開時判的就是看得到的那一個）；o.onPlace：每次位置改變（含彈回）都通知 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+      if (o.onPlace) o.onPlace(P);
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
     }
-    if (d.angName[key]) return capName(d.angName[key]);
-    return capName(d.sideName[key]);
-  }
-  function roundHint2(d, r){
-    if (r.kind === 'angle') return d.gHint2.angle(d.angWord[angleClass(TRI[r.tri].sq)]);
-    if (r.kind === 'side'){
-      var s = sortSq(TRI[r.tri].sq);
-      var n = (s[0] === s[1] && s[1] === s[2]) ? 3 : ((s[0] === s[1] || s[1] === s[2]) ? 2 : 0);
-      return d.gHint2.side(n);
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      if (P.locked || gSolved || start) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      if (o.follow){ var f = o.follow(p); P.place(f.x, f.y); }
+      else P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      /* 放在哪裡看那一塊的中心點；手指放開的位置另外附上（fx, fy）：從邊緣拿起來、手指放在目標上，也算放到那個目標上 */
+      var fp = B.toBoard(e);
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy, fx:fp.x, fy:fp.y }))) P.home();
     }
-    return d.gHint2[r.kind];
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
   }
-  function drawRound(r){
-    if (!r.tri){ gFig.textContent = ''; gFig.style.display = 'none'; return; }
-    gFig.style.display = '';
-    drawTri(gFig, TRI[r.tri].sq, r.rot, { big:r.kind !== 'side' });
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
   }
+
+  /* 計分（中年級：輕度計分，答錯小扣分但不會結束 —— §三）：這一關沒犯錯 +20、犯過錯 +10；
+     每一次「放錯並說明為什麼」−5，最低 0 分。 */
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走：每做對一步就重寫，不留過期的內容 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「−5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  function roundNote(text){ gMsg.innerHTML = '<span class="gnote">' + text + '</span>'; }   /* 不收、不扣分的說明 */
+
+  function gDot(svg, x, y, r, fill, cls){ svg.appendChild(svgEl('circle', { cx:x, cy:y, r:r, fill:fill, 'class':cls || '' })); }
+  function polyStr(pts){ return pts.map(function(p){ return p[0] + ',' + p[1]; }).join(' '); }
+  /* 遊戲裡的三角形：邊、短撇（tickPlan，邊的順序和 triLayout 一致）、直角的小方框（最大角 pts[2]） */
+  function gameTri(svg, pts, sq, mk, tk){
+    svg.appendChild(svgEl('polygon', { points:polyStr(pts), fill:C_FILL, stroke:C_EDGE, 'stroke-width':3, 'stroke-linejoin':'round', 'class':'gtri' }));
+    tickPlan(sq).forEach(function(g, ei){ if (g) gTicks(svg, pts[ei], pts[(ei + 1) % 3], g, tk); });
+    if (angleClass(sq) === 'right') gSquare(svg, pts[2], pts[0], pts[1], mk);
+  }
+  function gSquare(svg, V, P1, P2, s){
+    var a = vUnit([P1[0] - V[0], P1[1] - V[1]]), b = vUnit([P2[0] - V[0], P2[1] - V[1]]);
+    svg.appendChild(svgEl('path', {
+      d:'M ' + (V[0] + a[0] * s) + ' ' + (V[1] + a[1] * s) + ' L ' + (V[0] + (a[0] + b[0]) * s) + ' ' + (V[1] + (a[1] + b[1]) * s) +
+        ' L ' + (V[0] + b[0] * s) + ' ' + (V[1] + b[1] * s), fill:'none', stroke:C_MARK, 'stroke-width':2.5, 'class':'gsq' }));
+  }
+  function gTicks(svg, A, Bp, k, len){
+    var u = vUnit([Bp[0] - A[0], Bp[1] - A[1]]), cx = (A[0] + Bp[0]) / 2, cy = (A[1] + Bp[1]) / 2;
+    var px = -u[1] * len / 2, py = u[0] * len / 2;
+    for (var i = 0; i < k; i++){
+      var off = (i - (k - 1) / 2) * 5;
+      svg.appendChild(svgEl('line', { x1:cx + u[0] * off - px, y1:cy + u[1] * off - py, x2:cx + u[0] * off + px, y2:cy + u[1] * off + py,
+        stroke:C_MARK, 'stroke-width':2, 'class':'gtick' }));
+    }
+  }
+  function gArc(svg, V, P1, P2, r, attrs){
+    var a = vUnit([P1[0] - V[0], P1[1] - V[1]]), b = vUnit([P2[0] - V[0], P2[1] - V[1]]);
+    var cr = a[0] * b[1] - a[1] * b[0];
+    var at = { d:'M ' + (V[0] + a[0] * r) + ' ' + (V[1] + a[1] * r) + ' A ' + r + ' ' + r + ' 0 0 ' + (cr > 0 ? 1 : 0) + ' ' +
+      (V[0] + b[0] * r) + ' ' + (V[1] + b[1] * r), fill:'none' };
+    for (var k in attrs) at[k] = attrs[k];
+    var p = svgEl('path', at);
+    svg.appendChild(p);
+    return p;
+  }
+
+  var RENDER = {
+    /* 第 1 關：點出銳角 —— 三個三角形一個一個來（銳角、直角、鈍角三角形各一個，順序洗過）。
+       點一個角＝說「這是銳角」：是銳角就畫上橘色的弧（再點一下取消）；直角、鈍角 → 為什麼。
+       點好了按「點好了」：還有銳角沒點到 → 為什麼；點齊了 → 下一個。這一關本身就是「點一下」，沒有拖拉。 */
+    acute: function(d){
+      var order = shuffle([0, 1, 2]).map(function(i){ return ANGLE_KEYS[i]; }), step = 0, found = [];
+      askLine(d.gAsks.acute);
+      var line = trailLine(d.gAcuteNow(1, 3));
+      var holder = document.createElement('div'); holder.className = 'ghold'; gameStage.appendChild(holder);
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'btn gdone'; btn.textContent = d.gAcuteBtn;
+      var cur = null;
+      function build(){
+        gGen++;
+        holder.textContent = '';
+        var keep = gameStage; gameStage = holder;
+        var sq = pick(ACUTE_POOL[order[step]]), rot = pick(ACUTE_ROTS), G = ACUTE_G;
+        var B = makeBoard(GAME_W, G.H), svg = boardSvg(B, G.H);
+        gameStage = keep;
+        var pts = gameFit(sq, rot, G.box), kinds = cornerKinds(sq), z = acuteZones(pts), on = [false, false, false], arcs = [];
+        gameTri(svg, pts, sq, G.mark, 12);
+        pts.forEach(function(V, i){
+          var P1 = pts[(i + 1) % 3], P2 = pts[(i + 2) % 3];
+          arcs.push(gArc(svg, V, P1, P2, G.arcR, { stroke:C_OFF, 'stroke-width':2.5, 'stroke-dasharray':'4 3', 'class':'gcorner' }));
+        });
+        cur = { sq:sq, kinds:kinds, on:on, need:kinds.filter(function(k){ return k === 'acute'; }).length };
+        B.onFreeTap = function(p){
+          var i = acutePick(pts, p.x, p.y);
+          if (i === null) return;
+          if (kinds[i] !== 'acute'){ roundMiss(d.gAcuteWhy[kinds[i]]); return; }
+          on[i] = !on[i];
+          arcs[i].setAttribute('stroke', on[i] ? C_MARK : C_OFF);
+          arcs[i].setAttribute('stroke-width', on[i] ? 5 : 2.5);
+          arcs[i].setAttribute('stroke-dasharray', on[i] ? 'none' : '4 3');
+          arcs[i].setAttribute('class', on[i] ? 'gcorner on' : 'gcorner');
+          line.textContent = d.gAcuteNow(step + 1, 3);
+          gMsg.textContent = '';
+        };
+        btn.disabled = false;
+      }
+      btn.addEventListener('click', function(){
+        if (gSolved || !cur) return;
+        var n = cur.on.filter(Boolean).length;
+        if (n < cur.need){ roundMiss(d.gAcuteMissing); return; }
+        found.push(n);
+        var cls = angleClass(cur.sq);
+        if (step === 2){
+          btn.disabled = true;
+          line.textContent = d.gAcuteList(found);
+          roundSolved(d.gAcuteOk(n, d.angName[cls]) + ' ' + d.gAcuteAll);
+          return;
+        }
+        roundInfo(d.gAcuteOk(n, d.angName[cls]));
+        step++;
+        build();
+        line.textContent = d.gAcuteNow(step + 1, 3);
+        refreshHint();
+      });
+      build();
+      gameStage.appendChild(btn);
+      gCtx.hint2 = function(){ return cur ? d.gAcute2(cur.need) : ''; };
+    },
+
+    /* 第 2 關：轉一轉 —— 底邊一端已經是直角（小方框、邊直直往上）；另一端的紅點繞著那一端轉，
+       停在每 15 度一個的停車位上（拖的時候就吸過去，邊跟著轉、碰到的話三角形馬上畫出來）。
+       轉成銳角才收（兩條邊碰在一起）；比直角還開 → 為什麼；停回直角（一開始的位置）→ 靜靜回去。
+       也可以先點紅點、再點那一圈上的停車位。 */
+    meet: function(d){
+      var e = pick(MEET_POOL), G = MEET_G, s = meetSide(e);
+      askLine(d.gAsks.meet);
+      var line = trailLine(d.gMeetNow(false));
+      var B = makeBoard(GAME_W, G.H), svg = boardSvg(B, G.H);
+      var F = [e.fx, G.y], P = [e.px, G.y];
+      var fill = svgEl('polygon', { fill:C_FILL, stroke:'none', 'class':'gfill' }); svg.appendChild(fill);
+      for (var b = G.min; b <= G.max; b += G.stop){ var q = meetXY(e, b); gDot(svg, q.x, q.y, 5, C_DOT, 'gstop'); }
+      svg.appendChild(svgEl('line', { x1:F[0], y1:G.y, x2:P[0], y2:G.y, stroke:C_LINE, 'stroke-width':4, 'stroke-linecap':'round', 'class':'gbase' }));
+      svg.appendChild(svgEl('line', { x1:F[0], y1:G.y, x2:F[0], y2:6, stroke:C_BLUE, 'stroke-width':4, 'stroke-linecap':'round', 'class':'gfixed' }));
+      gSquare(svg, F, P, [F[0], 0], G.mark);
+      var red = svgEl('line', { stroke:C_BAD, 'stroke-width':4, 'stroke-linecap':'round', 'class':'gred' }); svg.appendChild(red);
+      gDot(svg, F[0], G.y, 5, C_LINE, 'gend'); gDot(svg, P[0], G.y, 6, C_LINE, 'gpivot');
+      var arcG = svgEl('g', {}); svg.appendChild(arcG);
+      function exitPt(b){
+        var a = b * Math.PI / 180, ux = s * Math.cos(a), uy = -Math.sin(a), lo = 0, hi = 2000;
+        for (var i = 0; i < 40; i++){
+          var m = (lo + hi) / 2, x = P[0] + ux * m, y = G.y + uy * m;
+          if (x >= 0 && x <= GAME_W && y >= 0 && y <= G.H) lo = m; else hi = m;
+        }
+        return [P[0] + ux * lo, G.y + uy * lo];
+      }
+      function redraw(b){
+        var ap = b < 90 ? meetApex(e, b) : null, end = ap ? [ap.x, ap.y] : exitPt(b);
+        red.setAttribute('x1', P[0]); red.setAttribute('y1', G.y); red.setAttribute('x2', end[0]); red.setAttribute('y2', end[1]);
+        red.setAttribute('stroke', ap ? C_EDGE : C_BAD);
+        fill.setAttribute('points', ap ? polyStr([F, P, end]) : '');
+        arcG.textContent = '';
+        if (ap) gArc(arcG, P, F, end, G.arcR, { stroke:C_MARK, 'stroke-width':3, 'class':'garc' });
+      }
+      var h0 = meetXY(e, G.start);
+      addPiece(B, { w:G.knob, h:G.knob, cx:h0.x, cy:h0.y, cls:'gknob', label:'⟳',
+        follow:function(p){ return meetXY(e, meetStop(e, p.x, p.y)); },
+        onPlace:function(Pc){ redraw(meetStop(e, Pc.cx, Pc.cy)); } });
+      gCtx.hint2 = function(){ return d.gMeet2; };
+      useTapSelect(B, function(Pc, pt){
+        if (pt.tap && !meetRing(e, pt.x, pt.y)) return false;   /* 點在那一圈以外：不是點停車位 */
+        var b = pt.tap ? meetStop(e, pt.x, pt.y) : meetStop(e, Pc.cx, Pc.cy);
+        var k = meetKind(b);
+        if (k === 'start') return false;
+        if (k !== 'ok'){ roundMiss(d.gMeetWhy[k]); return false; }
+        var q = meetXY(e, b);
+        Pc.lock(q.x, q.y);
+        line.textContent = d.gMeetNow(true);
+        roundSolved(d.gMeetOk);
+        return true;
+      });
+    },
+
+    /* 第 3 關：選小棒 —— 六根標了長度的小棒，三根放進三個空位；三個都放好才判斷：
+       圍成這一題要的那一種 → 下一題（正三角形 → 剛好兩條一樣長的等腰三角形 → 不等邊三角形）；
+       不是 → 三根都回托盤＋為什麼（要「剛好兩條」卻圍成正三角形不扣分，說明它也是等腰三角形）。
+       空位的吸附範圍上下重疊：挑最近的那一個。也可以先點小棒、再點空位。 */
+    sticks: function(d){
+      var set = pick(STICK_SETS), step = 0, G = STICK_G;
+      var ask = askLine(d.gStickAsk(STICK_TARGETS[0]));
+      var line = trailLine(d.gStickNow(0, 3));
+      var holder = document.createElement('div'); holder.className = 'ghold'; gameStage.appendChild(holder);
+      var last = null;
+      function build(){
+        gGen++;
+        holder.textContent = '';
+        var keep = gameStage; gameStage = holder;
+        var B = makeBoard(GAME_W, G.H), svg = boardSvg(B, G.H);
+        gameStage = keep;
+        var target = STICK_TARGETS[step], slots = [null, null, null], slotEls = [];
+        for (var i = 0; i < 3; i++){ var bx = stickSlotBox(i); slotEls.push(addZone(B, bx.x, bx.y, bx.w, bx.h, 'gslot')); }
+        var pv = G.prev;
+        addZone(B, pv.x, pv.y, pv.w, pv.h, 'gprev');
+        var prevG = svgEl('g', {}); svg.appendChild(prevG);
+        if (last) gameTri(prevG, gameFit(last, 0, pv), last, 12, 10);
+        var pieces = [];
+        shuffle(set.map(function(n, i){ return i; })).forEach(function(si, j){
+          var n = set[si], w = stickW(n);
+          var Pc = addPiece(B, { w:w, h:G.pieceH, cx:G.trayX[j % 2], cy:G.trayY[Math.floor(j / 2)], cls:'gstick', label:d.gStickLen(n), data:{ n:n } });
+          var lab = document.createElement('span'); lab.className = 'gsticklbl'; lab.textContent = d.gStickLen(n);
+          var bar = document.createElement('span'); bar.className = 'gbar'; bar.style.width = (n * G.cm) + 'px';
+          Pc.el.appendChild(lab); Pc.el.appendChild(bar);
+          pieces.push(Pc);
+        });
+        function reset(){
+          for (var i = 0; i < 3; i++){
+            if (slots[i]){ var Pc = slots[i]; Pc.locked = false; Pc.el.classList.remove('locked'); Pc.home(); slots[i] = null; }
+            slotEls[i].classList.remove('filled');
+          }
+          prevG.textContent = '';
+        }
+        gCtx.hint2 = function(){ return d.gStick2(target, set); };
+        useTapSelect(B, function(Pc, pt){
+          var at = stickPick(stickSlot(pt.x, pt.y), pt.fx !== undefined ? stickSlot(pt.fx, pt.fy) : null, slots);
+          if (at === null) return false;
+          var bx = stickSlotBox(at);
+          Pc.lock(bx.x + bx.w / 2, bx.y + bx.h / 2);
+          slots[at] = Pc; slotEls[at].classList.add('filled');
+          if (slots.some(function(x){ return !x; })){ gMsg.textContent = ''; return true; }
+          var lens = slots.map(function(x){ return x.data.n; }), k = stickJudge(target, lens);
+          var sq = lens.map(function(n){ return n * n; });
+          prevG.textContent = '';
+          gameTri(prevG, gameFit(sq, 0, pv), sq, 12, 10);
+          if (k === 'alsoIso'){ roundNote(d.gStickAlsoIso); reset(); return true; }
+          if (k !== 'ok'){ roundMiss(d.gStickWhy(target, k)); reset(); return true; }
+          last = sq;
+          if (step === 2){
+            line.textContent = d.gStickNow(3, 3);
+            roundSolved(d.gStickOk(target) + ' ' + d.gStickAll);
+            return true;
+          }
+          roundInfo(d.gStickOk(target));
+          step++;
+          ask.innerHTML = d.gStickAsk(STICK_TARGETS[step]);
+          line.textContent = d.gStickNow(step, 3);
+          build();
+          refreshHint();
+          return true;
+        });
+      }
+      build();
+    },
+
+    /* 第 4 關：九宮格 —— 依角三列 × 依邊三欄（最精確的名字）。四張畫出來的三角形卡（課本的記號：小方框、短撇），
+       放進它的那一格；兩張「畫不出來」的章蓋在不存在的兩格（正三角形配直角、配鈍角）。
+       放錯 → 回原位＋為什麼（先講依角、再講依邊；正三角形放進等腰那一欄不扣分，說明為什麼放「正三角形」）；
+       放到格子外、已經放好的格子 → 靜靜回去。卡片中心或手指任一個落在對的格子就收。也可以先點、再點格子。 */
+    grid: function(d){
+      var G = GRID_G, cellsOk = Object.keys(GRID_POOL), others = cellsOk.filter(function(c){ return c !== 'acute-equi'; });
+      /* 正三角形那一張每次都有（它是「正三角形那一欄只有銳角那一格」的主角，也是「放進等腰那一欄」那個迷思的考點），
+         其他六種抽三種；四張再洗一次：托盤不會照九宮格的順序排 */
+      var picks = ['acute-equi'].concat(shuffle(others.map(function(c, i){ return i; })).slice(0, 3).map(function(i){ return others[i]; }));
+      picks.sort(function(a, b){ return cellsOk.indexOf(a) - cellsOk.indexOf(b); });   /* 先照九宮格的順序排好，洗出來才保證不是這個順序 */
+      var cards = shuffle([0, 1, 2, 3]).map(function(i){ return picks[i]; });
+      var total = 6, left = total, filled = {};
+      askLine(d.gAsks.grid);
+      var line = trailLine(d.gGridNow(0, total));
+      var B = makeBoard(GAME_W, G.H);
+      addZone(B, G.x0, G.y0, G.hw, G.hh, 'ghead corner', d.gGridCorner);
+      SIDE_KEYS.forEach(function(sk, si){ addZone(B, G.x0 + G.hw + si * G.cw, G.y0, G.cw, G.hh, 'ghead', d.gGridCol[sk]); });
+      ANGLE_KEYS.forEach(function(ak, ai){
+        addZone(B, G.x0, G.y0 + G.hh + ai * G.rh, G.hw, G.rh, 'ghead row', d.gGridRow[ak]);
+        SIDE_KEYS.forEach(function(sk, si){ var bx = gridCellBox(ai, si); addZone(B, bx.x, bx.y, bx.w, bx.h, 'gcell'); });
+      });
+      var pieces = [];
+      cards.forEach(function(cell, j){
+        var sq = pick(GRID_POOL[cell]), rot = pick(GRID_ROTS);
+        var Pc = addPiece(B, { w:G.card.w, h:G.card.h, cx:G.tray[j][0], cy:G.tray[j][1], cls:'gcard', label:'△', data:{ sq:sq, cell:cell } });
+        var s2 = svgEl('svg', { viewBox:'0 0 ' + G.card.w + ' ' + G.card.h });
+        Pc.el.appendChild(s2);
+        gameTri(s2, gameFit(sq, rot, { x:0, y:0, w:G.card.w, h:G.card.h, pad:G.mini.pad }), sq, G.mini.mark, G.mini.tick);
+        pieces.push(Pc);
+      });
+      G.stampAt.forEach(function(xy){
+        pieces.push(addPiece(B, { w:G.stamp.w, h:G.stamp.h, cx:xy[0], cy:xy[1], cls:'gstamp', text:d.gStampLbl, data:{ stamp:true } }));
+      });
+      gCtx.hint2 = function(){
+        var P0 = pieces.filter(function(x){ return !x.locked && !x.data.stamp; })[0];
+        if (!P0) return d.gGrid2Stamp;
+        var sq = P0.data.sq;
+        return d.gGrid2(d.angWord[angleClass(sq)], sideClass(sq));
+      };
+      useTapSelect(B, function(Pc, pt){
+        var c = gridCell(pt.x, pt.y), f = pt.fx !== undefined ? gridCell(pt.fx, pt.fy) : null;
+        var at;
+        if (Pc.data.stamp){
+          at = (c && !filled[c] && GRID[c] === null) ? c : ((f && !filled[f] && GRID[f] === null) ? f : (c || f));
+          if (!at || filled[at]) return false;
+          if (GRID[at] !== null){ var p = at.split('-'); roundMiss(d.gGridStamp(p[0], p[1])); return false; }
+        } else {
+          at = gridPick(c, f, Pc.data.cell);
+          if (!at || filled[at]) return false;
+          if (at !== Pc.data.cell){
+            var w = gridWhy(Pc.data.sq, at);
+            if (w.key === 'alsoIso'){ roundNote(d.gGridAlsoIso); return false; }
+            roundMiss(w.key === 'ang' ? d.gGridAng(w.real, w.put) : d.gGridSide(w.real, w.put));
+            return false;
+          }
+        }
+        filled[at] = true;
+        var q = at.split('-'), bx = gridCellBox(ANGLE_KEYS.indexOf(q[0]), SIDE_KEYS.indexOf(q[1]));
+        Pc.lock(bx.x + bx.w / 2, bx.y + bx.h / 2);
+        Pc.el.classList.add('placed');
+        Pc.el.style.transform += ' scale(' + G.placed + ')';
+        left--;
+        line.textContent = d.gGridNow(total - left, total);
+        if (left === 0) roundSolved(d.gGridDone);
+        else { roundInfo(Pc.data.stamp ? d.gGridOkStamp : d.gGridOk); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 5 關：釘板 —— 底邊 AB 釘住，紅點是第三個頂點，只停在釘子上（拖的時候就吸過去，三角形和記號跟著變：
+       小方框＝直角、短撇＝一樣長）。做出這一題要的「依角＋依邊」才收，兩題。
+       不對 → 回原位＋為什麼；最大的角太接近直角而依角判錯 → 不扣分、說它其實是哪一種；
+       放回起點、放在 AB 那一條線上（圍不成三角形）→ 靜靜回去。也可以先點紅點、再點釘子。 */
+    pin: function(d){
+      var step = 0, G = PIN_G, tgts = [pick(PIN_TARGETS[0]), pick(PIN_TARGETS[1])];
+      var ask = askLine(d.gPinAsk(tgts[0][0], tgts[0][1]));
+      var line = trailLine(d.gPinNow(0, 2));
+      var holder = document.createElement('div'); holder.className = 'ghold'; gameStage.appendChild(holder);
+      function build(){
+        gGen++;
+        holder.textContent = '';
+        var keep = gameStage; gameStage = holder;
+        var B = makeBoard(GAME_W, G.H), svg = boardSvg(B, G.H);
+        gameStage = keep;
+        var e = pick(PIN_BASES), tgt = tgts[step];
+        for (var c = 0; c < G.cols; c++) for (var r = 0; r < G.rows; r++){ var q = pinXY([c, r]); gDot(svg, q.x, q.y, 4, C_DOT, 'gpin'); }
+        var A = pinXY(e.a), Bq = pinXY(e.b);
+        var tri = svgEl('polygon', { fill:C_FILL, stroke:C_EDGE, 'stroke-width':3, 'stroke-linejoin':'round', 'class':'gtri' }); svg.appendChild(tri);
+        var marks = svgEl('g', {}); svg.appendChild(marks);
+        svg.appendChild(svgEl('line', { x1:A.x, y1:A.y, x2:Bq.x, y2:Bq.y, stroke:C_LINE, 'stroke-width':4, 'stroke-linecap':'round', 'class':'gbase' }));
+        gDot(svg, A.x, A.y, 6, C_LINE, 'gend'); gDot(svg, Bq.x, Bq.y, 6, C_LINE, 'gend');
+        function redraw(g){
+          var V = pinXY(g), P3 = [[A.x, A.y], [Bq.x, Bq.y], [V.x, V.y]];
+          marks.textContent = '';
+          if (pinFlat(e, g)){ tri.setAttribute('points', ''); return; }
+          tri.setAttribute('points', polyStr(P3));
+          var sq = pinSq(e, g), seen = {}, grp = 0;
+          sq.slice().sort(function(a, b){ return a - b; }).forEach(function(v){
+            if (seen[v] !== undefined) return;
+            var n = sq.filter(function(x){ return x === v; }).length;
+            if (n < 2){ seen[v] = 0; return; }
+            seen[v] = ++grp;
+          });
+          sq.forEach(function(v, i){ if (seen[v]) gTicks(marks, P3[i], P3[(i + 1) % 3], seen[v], 10); });
+          var ri = pinRight(e, g);
+          if (ri >= 0) gSquare(marks, P3[ri], P3[(ri + 1) % 3], P3[(ri + 2) % 3], G.mark);
+        }
+        var s0 = pinXY(e.start);
+        addPiece(B, { w:G.knob, h:G.knob, cx:s0.x, cy:s0.y, cls:'gknob', label:'●',
+          follow:function(p){ return pinXY(pinSnap(p.x, p.y)); },
+          onPlace:function(Pc){ redraw(pinSnap(Pc.cx, Pc.cy)); } });
+        gCtx.hint2 = function(){ return d.gPin2(tgt[0], tgt[1]); };
+        useTapSelect(B, function(Pc, pt){
+          var g = pt.tap ? pinDot(pt.x, pt.y) : pinSnap(Pc.cx, Pc.cy);
+          if (!g) return false;
+          var k = pinKind(e, g, tgt);
+          if (k === 'start' || k === 'flat') return false;
+          var sq = pinSq(e, g);
+          if (k === 'fuzzy'){ roundNote(d.gPinFuzzy(angleClass(sq))); return false; }
+          if (k === 'miss'){ roundMiss(d.gPinWhy(angleClass(sq), sideClass(sq), tgt[0], tgt[1])); return false; }
+          var q = pinXY(g);
+          Pc.lock(q.x, q.y);
+          if (step === 1){
+            line.textContent = d.gPinNow(2, 2);
+            roundSolved(d.gPinOk(tgt[0], tgt[1]) + ' ' + d.gPinDone);
+            return true;
+          }
+          roundInfo(d.gPinOk(tgt[0], tgt[1]));
+          step++;
+          ask.innerHTML = d.gPinAsk(tgts[1][0], tgts[1][1]);
+          line.textContent = d.gPinNow(1, 2);
+          build();
+          refreshHint();
+          return true;
+        });
+      }
+      build();
+    }
+  };
 
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {}; gGen++;
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
-    hintLevel = (mode === 'ahead') ? 1 : 0;
+    hintLevel = 0;
     gHintBtn.disabled = false;
-    elHint.textContent = (mode === 'ahead') ? d.gHint1[round.kind] : '';
-
-    gPromptEl.innerHTML = '<b>' + d.gPrompt[round.kind] + '</b>';
-    drawRound(round);
-
-    gAnswers.textContent = '';
-    round.opts.forEach(function(key, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'degbtn';
-      b.textContent = roundOptText(d, round, key);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        if (oi === round.ans){
-          var all = gAnswers.querySelectorAll('.degbtn');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry + '</span>';
-          } else {
-            gScore += 20;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst + '</span>';
-          }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + d.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gScore = Math.max(0, gScore - 5);
-          gMsg.innerHTML = '<span class="no">' + d.gWrong + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+    elHint.textContent = '';
+    stageReset();
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕） */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.innerHTML = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
+
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
   gHintBtn.addEventListener('click', function(){
-    var d = L(), round = ROUNDS[gRound];
+    if (hintLevel >= 2) return;
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = d.gHint1[round.kind];
-    } else {
-      elHint.textContent = roundHint2(d, round);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */

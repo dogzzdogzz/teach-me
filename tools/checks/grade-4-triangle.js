@@ -293,6 +293,577 @@ function countOf(text, needle){
 function num(v){ return typeof v === 'number' && Number.isFinite(v); }
 function int(v){ return num(v) && Number.isInteger(v); }
 
+/* ================= 小遊戲「三角形鑑定所」（§六之五：五關五種玩法） =================
+   每一關照遊戲自己的規則（頁面資料區的純函式）把題庫的每一題玩一遍；正解一律用這份設定**自己的幾何**重算：
+   角度用 placeRef／layoutRef 排出來再用 atan2 量（anglesDegRef）、整數釘板用整數內積與平方長度、小棒只比整數。
+   畫板座標、點／放的範圍、觸控大小都從資料區讀，用這裡自己的距離公式掃過整個畫板驗。 */
+const { extractFunction } = require('./lib/gameshuffle.js');
+/* 375px 手機上畫板的縮放：卡片 16＋內距 22×2＋邊框 → 舞台約 286px 寬。取下界。 */
+const PHONE_K = Math.min(1.5, 286 / 300);
+const GAME_TYPES = ['acute', 'meet', 'sticks', 'grid', 'pin'];
+const ANG_ZH = { acute:'銳角', right:'直角', obtuse:'鈍角' };
+const SIDE_ZH = { equi:'正三角形', iso:'等腰', scalene:'不等邊' };
+const SIDE_EN = { equi:'equilateral', iso:'isosceles', scalene:'scalene' };
+/* 看得出銳角、鈍角：每一個角不是直角，就要 ≤ 75 度或 ≥ 105 度 */
+function clearAngles(degs){ return degs.every(a => Math.abs(a - 90) < 1e-7 || a <= 75 + 1e-9 || a >= 105 - 1e-9); }
+function fitRef(sq, rot, bx){ return layoutRef(sq, rot, bx.w, bx.h, bx.pad).map(p => [p[0] + bx.x, p[1] + bx.y]); }
+function angClassOfDeg(a){ return Math.abs(a - 90) < 1e-7 ? 'right' : (a < 90 ? 'acute' : 'obtuse'); }
+
+function gameChecks(D, I18N, fail, src){
+  const LANGS = ['zh', 'en'], W = D.GAME_W;
+  if (W !== 300) fail('GAME_W is ' + W + ', the boards are designed for 300');
+  if (!Array.isArray(D.GAME_ORDER) || D.GAME_ORDER.join() !== GAME_TYPES.join())
+    fail('GAME_ORDER should be ' + GAME_TYPES.join() + ' (the order of the five examples), got ' + D.GAME_ORDER);
+  const code = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const body = name => code((src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '');
+  const B = {};
+  GAME_TYPES.forEach(t => {
+    B[t] = body(t);
+    if (!B[t]) fail('cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && /^(提示 1|Hint 1)/.test(I18N[L].gHints[t]))) fail('gHints.' + t + ' missing in ' + L + ' (it must start with 提示 1 / Hint 1)');
+    });
+  });
+  ['acute', 'meet', 'grid'].forEach(t => LANGS.forEach(L => { if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t].trim())) fail('gAsks.' + t + ' missing in ' + L); }));
+  /* 原始碼形狀釘樁。⚠️ 釘樁證明「那一行寫著」，證明不了「那一行會執行」（codex 第一輪）：所以再加兩道 ——
+     釘住的那一行在那一關裡只能出現一次（不可以在死碼裡留一份副本）、關卡裡不可以有 if (false) 之類的關掉寫法。
+     真正證明「會執行」的是 e2e（合成 PointerEvent 的瀏覽器測試）和它的改壞頁面。 */
+  const need = (k, re, what) => {
+    const g = new RegExp(re.source, 'g'), n = ((B[k] || '').match(g) || []).length;
+    if (n !== 1) fail(k + ': ' + what + (n > 1 ? ' (the pinned line appears ' + n + ' times — a dead copy could satisfy the pin)' : ''));
+  };
+  /* 關掉的分支（任何空白寫法）：if (false)、if(0)、if ( 0 === 1 )、&& false、false &&、true || 都算。
+     字串常值的內容先遮掉（codex 第三輪：'if (false)' 寫在字串裡不可以誤報）。
+     ⚠️ 這仍然是字面掃描（沒有 JS 剖析器可用，站上不放外部依賴）：「先 return 再寫一份」或「放進一個沒有人呼叫的函式」掃不到 ——
+     那種改法由 e2e 擋（改壞頁 Bdead：釘住的那一行留在一個沒有人呼叫的函式裡、活的那一行改鬆，config 全綠、e2e 8/8 紅）。 */
+  const isSwitchedOff = body => {
+    const b = body.replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`/g, '""').replace(/\s+/g, ' ');
+    return /\bif ?\( ?(false|0|!1|null|undefined|0 ?===? ?1|1 ?===? ?0|""|'') ?\)|&& ?false\b|\bfalse ?&&|\btrue ?\|\|/.test(b);
+  };
+  ['if (false){ x(); }', 'if(false) x();', 'if ( false ) {', 'if (0) y();', 'if (0 === 1) y();', 'if (1==0) y();', "if ('') y();", 'if (a && false) y();',
+   'if (false && a) y();', 'if (true || a) y();', 'if (\n  false\n) y();', 'if (null) y();', 'if (undefined) y();', 'if (!1) y();'].forEach(t => {
+    if (!isSwitchedOff(t)) fail('isSwitchedOff() misses: ' + t);
+  });
+  ['var t = "if (false)";', "x('&& false');", 'var u = `true || x`;', 'if (falsey) y();', 'if (a === 0) y();', 'if (n < cur.need) y();', 'if (truex || a) y();'].forEach(t => {
+    if (isSwitchedOff(t)) fail('isSwitchedOff() false positive on: ' + t);
+  });
+  GAME_TYPES.forEach(t => { if (isSwitchedOff(B[t] || '')) fail(t + ': the round contains a switched-off branch (if (false) …)'); });
+  const touch = (what, sz) => { if (!(sz * PHONE_K >= 44)) fail(what + ' is ' + (sz * PHONE_K).toFixed(1) + 'px on a 375px phone — under 44'); };
+  const box = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w:w, h:h });
+  const inside = (o, what, H) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail(what + ' is outside the ' + W + '×' + H + ' board: ' + JSON.stringify(o)); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i][1], list[j][1])) return fail(what + ': ' + list[i][0] + ' and ' + list[j][0] + ' overlap'); };
+  const boxDistRef = (x, y, b) => Math.hypot(Math.max(0, b.x - x, x - (b.x + b.w)), Math.max(0, b.y - y, y - (b.y + b.h)));
+  const textOk = (where, s) => { if (typeof s !== 'string' || !s.trim() || /undefined|NaN|null|\[object/.test(s)) fail(where + ': bad text: ' + s); };
+  const has = (where, s, words) => words.forEach(w => { if (String(s).indexOf(w) < 0) fail(where + ' should say "' + w + '": ' + s); });
+  const hasNot = (where, s, words) => words.forEach(w => { if (String(s).indexOf(w) >= 0) fail(where + ' must not say "' + w + '": ' + s); });
+  const near = (a, b, e) => Math.abs(a - b) <= (e || 1e-6);
+
+  /* ---------- 共用：shuffle() 真的跑：是排列、不改輸入、永遠不會由小到大，每一張到過每一個位置 ---------- */
+  {
+    const fsrc = extractFunction(src, 'shuffle');
+    let shuffle = null;
+    if (!fsrc) fail('cannot find shuffle() in index.html');
+    else { try { shuffle = new Function(fsrc + '\nreturn shuffle;')(); } catch (e){ fail('shuffle() could not be evaluated on its own: ' + e.message); } }
+    if (shuffle){
+      [[0, 1, 2], [0, 1, 2, 3], [0, 1, 2, 3, 4, 5, 6]].forEach(input => {
+        const seen = {}, before = input.join(), perms = new Set();
+        for (let i = 0; i < 6000; i++){
+          const out = shuffle(input);
+          if (input.join() !== before) return fail('shuffle() mutates its input');
+          if (out.slice().sort((a, b) => a - b).join() !== before) return fail('shuffle() changed the set: ' + out);
+          if (out.join() === before) return fail('shuffle() returned ' + out.join(',') + ' — a tray would start in order');
+          out.forEach((v, p) => { seen[v + '@' + p] = true; });
+          perms.add(out.join());
+        }
+        const n = input.length, fact = [1, 1, 2, 6, 24][n];
+        if (n <= 4 && perms.size !== fact - 1) fail('shuffle() of ' + n + ' items produced ' + perms.size + ' orders, expected every order except the increasing one (' + (fact - 1) + ')');
+        for (let v = 0; v < n; v++) for (let p = 0; p < n; p++) if (!seen[v + '@' + p]) return fail('shuffle(): item ' + v + ' never lands at position ' + p);
+      });
+    }
+    /* 托盤的洗法：第 1 關三個三角形的順序、第 3 關小棒、第 4 關卡片（抽四張之後再洗一次） */
+    need('acute', /shuffle\(\[0, 1, 2\]\)/, 'the three triangles are not shuffled');
+    need('sticks', /shuffle\(set\.map\(/, 'the stick tray is not shuffled');
+    need('grid', /var picks = \['acute-equi'\]\.concat\(shuffle\(others\.map\(function\(c, i\)\{ return i; \}\)\)\.slice\(0, 3\)\.map\(function\(i\)\{ return others\[i\]; \}\)\);\s*picks\.sort\(function\(a, b\)\{ return cellsOk\.indexOf\(a\) - cellsOk\.indexOf\(b\); \}\);[^\n]*\n\s*var cards = shuffle\(\[0, 1, 2, 3\]\)\.map\(function\(i\)\{ return picks\[i\]; \}\);/, 'the grid cards must be the equilateral card plus three random others, re-shuffled');
+    {
+      const keysOrder = Object.keys(D.GRID_POOL || {}), want = ['acute', 'right', 'obtuse'].reduce((acc, a) => acc.concat(['scalene', 'iso', 'equi'].map(x => a + '-' + x)), []).filter(c => keysOrder.indexOf(c) >= 0);
+      if (keysOrder.join() !== want.join()) fail('GRID_POOL keys must be in the grid\'s reading order (the tray sort relies on it): ' + keysOrder);
+    }
+    need('grid', /others = cellsOk\.filter\(function\(c\)\{ return c !== 'acute-equi'; \}\)/, 'the three random cards must exclude the equilateral one (no duplicate cell)');
+  }
+
+  /* ---------- 共用：roundSolved()／roundMiss() 從原始碼切出來真的跑 ---------- */
+  {
+    const fsrc = extractFunction(src, 'roundMiss');
+    if (!fsrc) fail('cannot find roundMiss() in index.html');
+    else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(c => {
+      let r = null;
+      try { r = new Function('var gMistake = false, gScore = ' + c[0] + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+      catch (e){ return fail('roundMiss() could not run: ' + e.message); }
+      if (r.s !== c[1] || String(r.shown) !== String(c[1])) fail('roundMiss() at ' + c[0] + ' points leaves ' + r.s + ' (shown ' + r.shown + '), expected ' + c[1]);
+      if ((r.html.indexOf('@MINUS@') >= 0) !== c[2]) fail('roundMiss() at ' + c[0] + ' points ' + (c[2] ? 'does not say' : 'says') + ' −5');
+      if (!r.m) fail('roundMiss() does not record the mistake');
+      if (r.html.indexOf('why') < 0 || r.html.indexOf('class="no"') < 0) fail('roundMiss() does not show the reason as a mistake');
+    });
+    const ssrc = extractFunction(src, 'roundSolved');
+    if (!ssrc) fail('cannot find roundSolved() in index.html');
+    else [[false, 0, 20], [true, 15, 25]].forEach(c => {
+      let r = null;
+      try { r = new Function('var gSolved = false, gMistake = ' + c[0] + ', gScore = ' + c[1] + ', gRound = 1, GAME_ORDER = [1,2,3,4,5], elScore = {}, gMsg = {}, gHintBtn = {}, gNext = { disabled:true },' +
+        ' gameStage = { querySelectorAll: function(){ return []; } }; function L(){ return { gPts:function(p){ return "@" + p; }, gClear:"", gWin:function(){ return ""; } }; }\n' + ssrc +
+        '\nroundSolved("ok"); roundSolved("again"); return { s:gScore, html:gMsg.innerHTML, next:gNext.disabled, solved:gSolved };')(); }
+      catch (e){ return fail('roundSolved() could not run: ' + e.message); }
+      if (r.s !== c[2]) fail('roundSolved() ' + (c[0] ? 'after a mistake' : 'with no mistake') + ' scores ' + r.s + ', expected ' + c[2] + ' (called twice: only once may count)');
+      if (r.html.indexOf('@' + (c[0] ? 10 : 20)) < 0) fail('roundSolved() does not announce +' + (c[0] ? 10 : 20));
+      if (r.next !== false || r.solved !== true) fail('roundSolved() does not open "Next" / mark the round solved');
+    });
+  }
+
+  /* ---------- 共用：拖拉的保險（只跟著第一根手指、capture 遺失、換畫板之後舊的積木不作用） ---------- */
+  {
+    const ap = code(extractFunction(src, 'addPiece') || '');
+    if (!ap) fail('cannot find addPiece()');
+    [[/if \(gen !== gGen\) return;/, 'a piece from a removed board would still act (board-generation guard)'],
+     [/addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\)/, 'losing pointer capture does not send the piece home'],
+     [/if \(!start \|\| e\.pointerId !== pid\) return;/, 'a second finger could move or drop the piece'],
+     [/if \(P\.locked \|\| gSolved \|\| start\) return;/, 'a locked piece, a solved round or a second finger could start a drag'],
+     [/if \(cancelled \|\| gSolved\)\{ P\.home\(\); return; \}/, 'a cancelled drag is not sent home']].forEach(c => { if (!c[0].test(ap)) fail('addPiece: ' + c[1]); });
+    const mb = code(extractFunction(src, 'makeBoard') || '');
+    if (!/if \(PIECE_PTR\[e\.pointerId\]\) return;/.test(mb)) fail('makeBoard: the release of a finger that went down on a piece would count as a tap on the board');
+    if (!/if \(mine && B\.onFreeTap && !gSolved\)/.test(mb)) fail('makeBoard: a free tap must need its own pointerdown on the board (round 1)');
+    if (!/\.gpiece\.locked\{[^}]*pointer-events:none/.test(src)) fail('placed pieces must not take pointer events');
+    if (!/\.gpiece\{[^}]*touch-action:none/.test(src)) fail('pieces must set touch-action:none');
+    GAME_TYPES.forEach(t => { if (t !== 'acute' && !/useTapSelect\(B, function/.test(B[t])) fail(t + ': no tap-then-tap alternative'); });
+    GAME_TYPES.forEach(t => { if (!/roundSolved\(/.test(B[t])) fail(t + ': never calls roundSolved()'); });
+  }
+
+  /* ================= 第 1 關：點出銳角 ================= */
+  {
+    const G = D.ACUTE_G, P = D.ACUTE_POOL;
+    if (!G || !P) fail('ACUTE_G / ACUTE_POOL missing');
+    else {
+      ['acute', 'right', 'obtuse'].forEach(k => {
+        if (!Array.isArray(P[k]) || !P[k].length) return fail('ACUTE_POOL.' + k + ' is empty');
+        P[k].forEach(sq => {
+          if (!triValidRef(sq)) return fail('ACUTE_POOL.' + k + ' ' + sq + ' is not a triangle');
+          if (angleClassByGeometry(sq) !== k) fail('ACUTE_POOL.' + k + ' ' + sq + ' is ' + angleClassByGeometry(sq) + ' by measured angles');
+          if (!clearAngles(anglesDegRef(placeRef(sq)))) fail('ACUTE_POOL ' + sq + ' has an angle between 75° and 105° that is not a right angle — acute / obtuse cannot be seen');
+        });
+      });
+      const z0 = G.box;
+      if (!(z0.x === 0 && z0.y === 0 && z0.w === W && z0.h === G.H)) fail('ACUTE_G.box should be the whole board');
+      if (!Array.isArray(D.ACUTE_ROTS) || D.ACUTE_ROTS.length < 6) fail('ACUTE_ROTS should offer several turns');
+      ['acute', 'right', 'obtuse'].forEach(k => (P[k] || []).forEach(sq => (D.ACUTE_ROTS || []).forEach(rot => {
+        const tag = k + ' ' + sq + ' rot ' + rot;
+        const pts = D.gameFit(sq, rot, G.box), ref = fitRef(sq, rot, G.box);
+        for (let i = 0; i < 3; i++) if (!near(pts[i][0], ref[i][0], 1e-6) || !near(pts[i][1], ref[i][1], 1e-6)) return fail(tag + ': gameFit puts vertex ' + i + ' at ' + pts[i] + ', reference ' + ref[i]);
+        pts.forEach(p => { if (p[0] < G.box.pad - 1e-6 || p[0] > W - G.box.pad + 1e-6 || p[1] < G.box.pad - 1e-6 || p[1] > G.H - G.box.pad + 1e-6) fail(tag + ': vertex ' + p + ' is closer than pad to the edge'); });
+        const degs = anglesDegRef(pts), kinds = D.cornerKinds(sq);
+        for (let i = 0; i < 3; i++) if (kinds[i] !== angClassOfDeg(degs[i])) fail(tag + ': cornerKinds says corner ' + i + ' is ' + kinds[i] + ', measured ' + degs[i].toFixed(2) + '°');
+        const nAcute = degs.filter(a => angClassOfDeg(a) === 'acute').length;
+        if (nAcute !== (k === 'acute' ? 3 : 2)) fail(tag + ': ' + nAcute + ' acute angles');
+        /* the zones, recomputed: vertex + zoneIn along the inner bisector */
+        const zr = pts.map((V, i) => {
+          const a = pts[(i + 1) % 3], b = pts[(i + 2) % 3];
+          const ua = [a[0] - V[0], a[1] - V[1]], ub = [b[0] - V[0], b[1] - V[1]];
+          const la = Math.hypot(...ua), lb = Math.hypot(...ub), bi = [ua[0] / la + ub[0] / lb, ua[1] / la + ub[1] / lb], lbi = Math.hypot(...bi);
+          return [V[0] + bi[0] / lbi * G.zoneIn, V[1] + bi[1] / lbi * G.zoneIn];
+        });
+        for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) if (Math.hypot(zr[i][0] - zr[j][0], zr[i][1] - zr[j][1]) <= 2 * G.zoneR) fail(tag + ': tap zones of corners ' + i + ' and ' + j + ' overlap');
+        /* every corner's vertex and every point of its drawn arc must pick that corner */
+        for (let i = 0; i < 3; i++){
+          if (D.acutePick(pts, pts[i][0], pts[i][1]) !== i) fail(tag + ': tapping vertex ' + i + ' does not pick it');
+          const V = pts[i], a = pts[(i + 1) % 3], b = pts[(i + 2) % 3];
+          const a0 = Math.atan2(a[1] - V[1], a[0] - V[0]); let da = Math.atan2(b[1] - V[1], b[0] - V[0]) - a0;
+          while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+          for (let f = 0; f <= 1.0001; f += 0.05){
+            const x = V[0] + G.arcR * Math.cos(a0 + da * f), y = V[1] + G.arcR * Math.sin(a0 + da * f);
+            if (D.acutePick(pts, x, y) !== i){ fail(tag + ': a point of corner ' + i + '\'s arc (' + Math.round(f * 100) + '%) does not pick it'); break; }
+          }
+        }
+        {
+          for (let x = 0; x <= W; x += 3) for (let y = 0; y <= G.H; y += 3){
+            let best = null, bd = 1e9;
+            zr.forEach((z, i) => { const dd = Math.hypot(x - z[0], y - z[1]); if (dd <= G.zoneR && dd < bd){ bd = dd; best = i; } });
+            if (D.acutePick(pts, x, y) !== best){ fail(tag + ': acutePick(' + x + ',' + y + ') = ' + D.acutePick(pts, x, y) + ', reference ' + best); return; }
+          }
+        }
+      })));
+      need('acute', /if \(kinds\[i\] !== 'acute'\)\{ roundMiss\(d\.gAcuteWhy\[kinds\[i\]\]\); return; \}/, 'tapping a right / obtuse corner must be refused with its reason');
+      need('acute', /if \(n < cur\.need\)\{ roundMiss\(d\.gAcuteMissing\); return; \}/, '"Done" with acute angles left must be refused');
+      need('acute', /on\[i\] = !on\[i\];/, 'tapping an acute corner again must untick it');
+      need('acute', /cur = \{ sq:sq, kinds:kinds, on:on, need:kinds\.filter\(function\(k\)\{ return k === 'acute'; \}\)\.length \};/, 'the number of acute angles must come from cornerKinds');
+      need('acute', /ACUTE_POOL\[order\[step\]\]/, 'each of the three triangles must come from its own angle class');
+      /* 畫出來的點、點的範圍、弧都用同一組 pts（codex 第一輪：換成別的 pts，純函式全綠、孩子點的地方卻不是看到的角） */
+      need('acute', /var pts = gameFit\(sq, rot, G\.box\), kinds = cornerKinds\(sq\)/, 'the drawn triangle must be the one laid out from sq / rot');
+      need('acute', /gameTri\(svg, pts, sq, G\.mark, 12\);/, 'the triangle must be drawn from the same pts');
+      need('acute', /arcs\.push\(gArc\(svg, V, P1, P2, G\.arcR,/, 'the corner arcs must be drawn at arcR from the same pts');
+      need('acute', /var i = acutePick\(pts, p\.x, p\.y\);/, 'taps must be judged against the same pts');
+      if ((B.acute.match(/\bpts\b\s*=/g) || []).length !== 1) fail('acute: pts is assigned more than once in the round');
+      need('acute', /\.map\(function\(i\)\{ return ANGLE_KEYS\[i\]; \}\)/, 'the three triangles must be one of each angle class');
+    }
+  }
+
+  /* ================= 第 2 關：轉一轉 ================= */
+  {
+    const G = D.MEET_G;
+    if (!G || !D.MEET_POOL) fail('MEET_G / MEET_POOL missing');
+    else {
+      if (G.start !== 90) fail('MEET_G.start should be the right angle (both sides upright, parallel)');
+      touch('the turning knob', G.knob);
+      D.MEET_POOL.forEach((e, ei) => {
+        const s = e.fx < e.px ? -1 : 1, L = Math.abs(e.px - e.fx), tag = 'MEET_POOL[' + ei + ']';
+        if (D.meetSide(e) !== s) fail(tag + ': meetSide is wrong');
+        const stops = [];
+        for (let b = G.min; b <= G.max; b += G.stop) stops.push(b);
+        if (stops.length !== 11 || stops.indexOf(90) < 0) fail(tag + ': expected 11 stops including 90');
+        let ok = 0, wide = 0;
+        stops.forEach(b => {
+          const a = b * Math.PI / 180, x = e.px + G.R * s * Math.cos(a), y = G.y - G.R * Math.sin(a), q = D.meetXY(e, b);
+          if (!near(q.x, x) || !near(q.y, y)) fail(tag + ': meetXY(' + b + ') is off');
+          inside(box(x, y, G.knob, G.knob), tag + ' knob at ' + b + '°', G.H);
+          const dd = Math.hypot(x - e.px, y - G.y);
+          if (!(dd >= G.ringIn && dd <= G.ringOut)) fail(tag + ': stop ' + b + ' is outside its own tap ring');
+          const k = b === 90 ? 'start' : (b < 90 ? 'ok' : 'wide');
+          if (D.meetKind(b) !== k) fail('meetKind(' + b + ') = ' + D.meetKind(b) + ', expected ' + k);
+          if (k === 'ok'){
+            ok++;
+            /* the side from P really meets the upright side at F: intersect the two lines, own algebra */
+            const ux = s * Math.cos(a), uy = -Math.sin(a), t = (e.fx - e.px) / ux, ax = e.px + ux * t, ay = G.y + uy * t;
+            const ap = D.meetApex(e, b);
+            if (!near(ap.x, ax, 1e-6) || !near(ap.y, ay, 1e-6)) fail(tag + ': meetApex(' + b + ') = ' + JSON.stringify(ap) + ', the lines meet at ' + ax + ',' + ay);
+            if (!(ay >= 4 && ay < G.y)) fail(tag + ': at ' + b + '° the sides meet at y = ' + ay.toFixed(1) + ', off the board — the picture would not show them meeting');
+            const degs = anglesDegRef([[e.fx, G.y], [e.px, G.y], [ax, ay]]);
+            if (!near(degs[0], 90, 1e-7) || !near(degs[1], b, 1e-7)) fail(tag + ': the closed triangle at ' + b + '° has angles ' + degs.map(v => v.toFixed(2)));
+          }
+          if (k === 'wide') wide++;
+          /* every visible stop is its own cell: ±7° of it picks it */
+          [-7, 0, 7].forEach(off => {
+            const a2 = (b + off) * Math.PI / 180, r = G.R;
+            const px = e.px + r * s * Math.cos(a2), py = G.y - r * Math.sin(a2);
+            if (D.meetStop(e, px, py) !== b) fail(tag + ': a tap ' + off + '° beside the ' + b + '° stop picks ' + D.meetStop(e, px, py));
+          });
+        });
+        if (ok !== 5 || wide !== 5) fail(tag + ': ' + ok + ' meeting stops and ' + wide + ' too-wide stops, expected 5 and 5');
+        /* meetStop over the whole board vs nearest stop by angle (below the base: the nearer end) */
+        for (let x = 0; x <= W; x += 3) for (let y = 0; y <= G.H; y += 3){
+          let b = Math.atan2(G.y - y, s * (x - e.px)) * 180 / Math.PI;
+          if (b < 0) b = s * (x - e.px) >= 0 ? 0 : 180;
+          let best = null, bd = 1e9;
+          stops.forEach(st => { const dd = Math.abs(st - b); if (dd < bd - 1e-9){ bd = dd; best = st; } });
+          if (Math.abs(bd - 7.5) < 1e-9) continue;   /* exactly between two stops */
+          if (D.meetStop(e, x, y) !== best){ fail(tag + ': meetStop(' + x + ',' + y + ') = ' + D.meetStop(e, x, y) + ', nearest stop ' + best); return; }
+        }
+        if (D.meetRing(e, e.px, G.y)) fail(tag + ': a tap on the pivot itself counts as a stop');
+        for (let x = 0; x <= W; x += 2) for (let y = 0; y <= G.H; y += 2){
+          const dd = Math.hypot(x - e.px, y - G.y), want = dd >= G.ringIn && dd <= G.ringOut && y <= G.y + 12;
+          if (D.meetRing(e, x, y) !== want){ fail(tag + ': meetRing(' + x + ',' + y + ') = ' + D.meetRing(e, x, y) + ', the drawn ring band says ' + want); x = 1e9; break; }
+        }
+        if (G.ringIn < G.R - 45 || G.ringOut > G.R + 45) fail(tag + ': the tap ring band reaches more than 45px from the drawn stops');
+        if (!(e.fx >= 20 && e.fx <= W - 20)) fail(tag + ': the upright side is too close to the edge');
+      });
+      need('meet', /if \(k === 'start'\) return false;/, 'releasing on the start (upright) stop must be silent');
+      need('meet', /if \(k !== 'ok'\)\{ roundMiss\(d\.gMeetWhy\[k\]\); return false; \}/, 'a too-wide stop must be refused with its reason');
+      need('meet', /if \(pt\.tap && !meetRing\(e, pt\.x, pt\.y\)\) return false;/, 'a tap far from the ring must not count as a stop');
+      need('meet', /follow:function\(p\)\{ return meetXY\(e, meetStop\(e, p\.x, p\.y\)\); \}/, 'the knob must snap to the stops while dragging');
+      need('meet', /var b = pt\.tap \? meetStop\(e, pt\.x, pt\.y\) : meetStop\(e, Pc\.cx, Pc\.cy\);/, 'release must judge the stop that is shown');
+      need('meet', /var ap = b < 90 \? meetApex\(e, b\) : null/, 'the meeting point must be drawn only when the angle is acute');
+      LANGS.forEach(L => {
+        has('gMeetWhy.wide (' + L + ')', I18N[L].gMeetWhy.wide, L === 'zh' ? ['比直角還大', '碰不到'] : ['bigger than a right angle', 'never meet']);
+        has('gMeetOk (' + L + ')', I18N[L].gMeetOk, L === 'zh' ? ['銳角', '最多只有一個'] : ['acute', 'at most one right or obtuse angle']);
+      });
+    }
+  }
+
+  /* ================= 第 3 關：選小棒 ================= */
+  {
+    const G = D.STICK_G, SETS = D.STICK_SETS;
+    if (!G || !SETS) fail('STICK_G / STICK_SETS missing');
+    else {
+      if ((D.STICK_TARGETS || []).join() !== 'equi,iso,scalene') fail('STICK_TARGETS should be equi, iso, scalene in that order');
+      const kindRef = l => { const s = l.slice().sort((a, b) => a - b); return s[0] === s[2] ? 'equi' : (s[0] === s[1] || s[1] === s[2]) ? 'iso' : 'scalene'; };
+      SETS.forEach((set, si) => {
+        if (set.length !== 6 || !set.every(n => Number.isInteger(n) && n >= 1)) return fail('STICK_SETS[' + si + '] must be six whole lengths');
+        const reach = { equi:0, iso:0, scalene:0 };
+        for (let a = 0; a < 6; a++) for (let b = a + 1; b < 6; b++) for (let c = b + 1; c < 6; c++){
+          const l = [set[a], set[b], set[c]];
+          if (!triValidRef(l.map(n => n * n))) fail('STICK_SETS[' + si + ']: ' + l + ' does not close into a triangle');
+          const k = kindRef(l);
+          reach[k]++;
+          if (D.stickKind(l) !== k) fail('stickKind(' + l + ') = ' + D.stickKind(l) + ', expected ' + k);
+          ['equi', 'iso', 'scalene'].forEach(t => {
+            const want = k === t ? 'ok' : (t === 'iso' && k === 'equi') ? 'alsoIso' : k;
+            if (D.stickJudge(t, l) !== want) fail('stickJudge(' + t + ', ' + l + ') = ' + D.stickJudge(t, l) + ', expected ' + want);
+          });
+        }
+        ['equi', 'iso', 'scalene'].forEach(t => { if (!reach[t]) fail('STICK_SETS[' + si + '] cannot build a ' + t + ' triangle'); });
+        /* tray: two columns, never overlapping, inside the board, every stick fits a slot */
+        const tray = set.map((n, j) => ['stick ' + j + ' (' + n + ')', box(G.trayX[j % 2], G.trayY[Math.floor(j / 2)], D.stickW(n), G.pieceH)]);
+        tray.forEach(t => inside(t[1], 'STICK ' + t[0], G.H));
+        noHits(tray.concat([0, 1, 2].map(i => ['slot ' + i, D.stickSlotBox(i)]), [['preview', G.prev]]), 'sticks set ' + si);
+        set.forEach(n => {
+          if (D.stickW(n) !== n * G.cm + G.padW) fail('stickW(' + n + ') is not proportional');
+          if (D.stickW(n) > G.slotW) fail('a ' + n + ' cm stick is wider than a slot');
+        });
+      });
+      touch('a stick', G.pieceH);
+      const slots = [0, 1, 2].map(i => D.stickSlotBox(i));
+      slots.forEach((b, i) => inside(b, 'slot ' + i, G.H));
+      inside(G.prev, 'the preview', G.H);
+      let overlap = false;
+      for (let x = -30; x <= W + 30; x += 0.5) for (let y = -30; y <= G.H + 30; y += 0.5){
+        const ds = slots.map(b => boxDistRef(x, y, b));
+        let best = null, bd = 1e9;
+        ds.forEach((dd, i) => { if (dd <= G.reach && dd < bd){ bd = dd; best = i; } });
+        if (ds.filter(dd => dd <= G.reach).length > 1) overlap = true;
+        if (D.stickSlot(x, y) !== best){ fail('stickSlot(' + x + ',' + y + ') = ' + D.stickSlot(x, y) + ', nearest slot by distance to box ' + best); x = 1e9; break; }
+      }
+      if (!overlap) fail('the slots\' reach zones never overlap — the nearest-slot rule is untested');
+      need('sticks', /if \(slots\.some\(function\(x\)\{ return !x; \}\)\)\{ gMsg\.textContent = ''; return true; \}/, 'nothing may be judged before all three slots are full');
+      need('sticks', /if \(k === 'alsoIso'\)\{ roundNote\(d\.gStickAlsoIso\); reset\(\); return true; \}/, 'an equilateral when "exactly two" is asked: no penalty, all sticks back');
+      need('sticks', /if \(k !== 'ok'\)\{ roundMiss\(d\.gStickWhy\(target, k\)\); reset\(\); return true; \}/, 'a wrong triangle must be refused and ALL sticks returned (or a scalene ask could get stuck)');
+      need('sticks', /var at = stickPick\(stickSlot\(pt\.x, pt\.y\), pt\.fx !== undefined \? stickSlot\(pt\.fx, pt\.fy\) : null, slots\);\s*if \(at === null\) return false;/, 'the slot must be chosen by stickPick (centre, else finger; filled slots skipped), nothing → silent');
+      /* stickPick: centre first, then finger; a filled slot never takes a second stick */
+      [[0, 1, [null, null, null], 0], [0, 1, [1, null, null], 1], [null, 2, [null, null, null], 2], [0, null, [1, null, null], null],
+       [1, 1, [null, 1, null], null], [null, null, [null, null, null], null], [2, 0, [1, null, 1], null], [2, 1, [1, null, 1], 1]].forEach(c => {
+        if (D.stickPick(c[0], c[1], c[2]) !== c[3]) fail('stickPick(' + c[0] + ', ' + c[1] + ', ' + JSON.stringify(c[2]) + ') = ' + D.stickPick(c[0], c[1], c[2]) + ', expected ' + c[3]);
+      });
+      LANGS.forEach(L => {
+        has('gStickAsk(iso) (' + L + ')', I18N[L].gStickAsk('iso'), L === 'zh' ? ['剛好兩條'] : ['exactly two']);
+        has('gStickAlsoIso (' + L + ')', I18N[L].gStickAlsoIso, L === 'zh' ? ['也是', '剛好兩條'] : ['is', 'exactly two']);
+        ['equi', 'iso', 'scalene'].forEach(t => ['equi', 'iso', 'scalene'].forEach(g => {
+          if (g === t || (t === 'iso' && g === 'equi')) return;
+          const s = I18N[L].gStickWhy(t, g);
+          textOk('gStickWhy(' + t + ',' + g + ') ' + L, s);
+          has('gStickWhy(' + t + ',' + g + ') ' + L, s, L === 'zh' ? [{ equi:'都一樣長', iso:'兩根一樣長', scalene:'都不一樣長' }[g], '放回去'] : [{ equi:'are equal', iso:'Two sticks are equal', scalene:'No two sticks' }[g], 'go back']);
+        }));
+        SETS.forEach(set => ['equi', 'iso', 'scalene'].forEach(t => {
+          const s = I18N[L].gStick2(t, set), c = {}; set.forEach(n => { c[n] = (c[n] || 0) + 1; });
+          const three = Object.keys(c).map(Number).filter(n => c[n] >= 3)[0];
+          textOk('gStick2 ' + L, s);
+          if ((s.match(/\d+/g) || []).map(Number).filter(n => n !== 2).join() !== String(three)) fail('gStick2(' + t + ', ' + set + ') ' + L + ' names the wrong length: ' + s);
+        }));
+      });
+    }
+  }
+
+  /* ================= 第 4 關：九宮格 ================= */
+  {
+    const G = D.GRID_G, POOL = D.GRID_POOL;
+    if (!G || !POOL) fail('GRID_G / GRID_POOL missing');
+    else {
+      const all = [];
+      ['acute', 'right', 'obtuse'].forEach(a => ['scalene', 'iso', 'equi'].forEach(s => all.push(a + '-' + s)));
+      const possible = all.filter(c => cellPossibleRef(c.split('-')[0], c.split('-')[1]));
+      if (Object.keys(POOL).sort().join() !== possible.slice().sort().join()) fail('GRID_POOL must have exactly the seven cells that can be drawn: ' + Object.keys(POOL));
+      Object.keys(POOL).forEach(cell => POOL[cell].forEach(sq => {
+        const p = cell.split('-');
+        if (angleClassByGeometry(sq) !== p[0] || sideClassRef(sq) !== p[1]) fail('GRID_POOL[' + cell + '] ' + sq + ' is ' + angleClassByGeometry(sq) + '-' + sideClassRef(sq));
+        if (!clearAngles(anglesDegRef(placeRef(sq)))) fail('GRID_POOL ' + sq + ' has an angle between 75° and 105° that is not a right angle');
+        (D.GRID_ROTS || []).forEach(rot => {
+          const bx = { x:0, y:0, w:G.card.w, h:G.card.h, pad:G.mini.pad }, pts = D.gameFit(sq, rot, bx), ref = fitRef(sq, rot, bx);
+          for (let i = 0; i < 3; i++) if (!near(pts[i][0], ref[i][0]) || !near(pts[i][1], ref[i][1])) return fail('card ' + sq + ' rot ' + rot + ' drawn off');
+          const ma = minAltitude(pts);
+          if (ma < 12) fail('card ' + sq + ' rot ' + rot + ' is a sliver (' + ma.toFixed(1) + 'px thick) — its marks would not fit');
+          const sides = [0, 1, 2].map(i => Math.hypot(pts[(i + 1) % 3][0] - pts[i][0], pts[(i + 1) % 3][1] - pts[i][1]));
+          if (Math.min(...sides) < 20) fail('card ' + sq + ' rot ' + rot + ': a side is only ' + Math.min(...sides).toFixed(1) + 'px');
+        });
+      }));
+      /* scalene cards must look scalene: neighbouring side lengths differ by ≥ 10% */
+      Object.keys(POOL).forEach(cell => (POOL[cell] || []).forEach(sq => {
+        if (sideClassRef(sq) !== 'scalene') return;
+        const l = sortSqRef(sq).map(Math.sqrt);
+        if (l[1] / l[0] < 1.1 || l[2] / l[1] < 1.1) fail(sq + ' is scalene but two sides differ by under 10% — it would look isosceles');
+      }));
+      ((D.ACUTE_POOL || {}).acute || []).concat((D.ACUTE_POOL || {}).right || [], (D.ACUTE_POOL || {}).obtuse || []).forEach(sq => {
+        if (sideClassRef(sq) !== 'scalene') return;
+        const l = sortSqRef(sq).map(Math.sqrt);
+        if (l[1] / l[0] < 1.1 || l[2] / l[1] < 1.1) fail(sq + ' (round 1) is scalene but looks isosceles');
+      });
+      /* layout: header, cells, tray inside, nothing overlapping */
+      const cells = [];
+      for (let ai = 0; ai < 3; ai++) for (let si = 0; si < 3; si++){
+        const b = D.gridCellBox(ai, si), want = { x:G.x0 + G.hw + si * G.cw, y:G.y0 + G.hh + ai * G.rh, w:G.cw, h:G.rh };
+        if (JSON.stringify(b) !== JSON.stringify(want)) fail('gridCellBox(' + ai + ',' + si + ') is off');
+        inside(b, 'cell ' + ai + si, G.H);
+        cells.push(['cell ' + ai + si, b]);
+      }
+      const tray = G.tray.map((t, j) => ['card ' + j, box(t[0], t[1], G.card.w, G.card.h)]).concat(G.stampAt.map((t, j) => ['stamp ' + j, box(t[0], t[1], G.stamp.w, G.stamp.h)]));
+      if (G.tray.length !== 4 || G.stampAt.length !== 2) fail('the grid round needs 4 card places and 2 stamps');
+      tray.forEach(t => inside(t[1], 'grid ' + t[0], G.H));
+      noHits(cells.concat(tray), 'grid');
+      touch('a grid card', Math.min(G.card.w, G.card.h)); touch('a stamp', Math.min(G.stamp.w, G.stamp.h));
+      if (G.card.w * G.placed > G.cw || G.card.h * G.placed > G.rh) fail('a placed card does not fit in its cell');
+      for (let x = 0; x <= W; x += 0.5) for (let y = 0; y <= G.H; y += 0.5){
+        let want = null;
+        for (let ai = 0; ai < 3 && !want; ai++) for (let si = 0; si < 3; si++){
+          const b = cells[ai * 3 + si][1];
+          if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h){ want = ['acute', 'right', 'obtuse'][ai] + '-' + ['scalene', 'iso', 'equi'][si]; break; }
+        }
+        if (D.gridCell(x, y) !== want){ fail('gridCell(' + x + ',' + y + ') = ' + D.gridCell(x, y) + ', expected ' + want); x = 1e9; break; }
+      }
+      /* gridPick: centre or finger in the right cell → that cell; else the centre's cell, else the finger's */
+      [['a', 'b', 'b', 'b'], ['b', 'a', 'b', 'b'], ['a', 'c', 'b', 'a'], [null, 'c', 'b', 'c'], [null, null, 'b', null]].forEach(c => {
+        if (D.gridPick(c[0], c[1], c[2]) !== c[3]) fail('gridPick(' + c.slice(0, 3) + ') = ' + D.gridPick(c[0], c[1], c[2]) + ', expected ' + c[3]);
+      });
+      /* gridWhy for every card on every wrong cell */
+      Object.keys(POOL).forEach(cell => POOL[cell].forEach(sq => all.forEach(put => {
+        if (put === cell) return;
+        const r = D.gridWhy(sq, put), p = put.split('-'), a = angleClassByGeometry(sq), s = sideClassRef(sq);
+        const want = p[0] !== a ? 'ang' : (s === 'equi' && p[1] === 'iso' ? 'alsoIso' : 'side');
+        if (r.key !== want) return fail('gridWhy(' + sq + ', ' + put + ') = ' + r.key + ', expected ' + want);
+        LANGS.forEach(L => {
+          const t = want === 'ang' ? I18N[L].gGridAng(r.real, r.put) : want === 'side' ? I18N[L].gGridSide(r.real, r.put) : I18N[L].gGridAlsoIso;
+          textOk('grid reason ' + L, t);
+          if (want === 'ang'){ if (r.real !== a || r.put !== p[0]) fail('gridWhy ang names the wrong rows'); has('gGridAng ' + L, t, L === 'zh' ? [ANG_ZH[p[0]], '列'] : [p[0], 'row']); }
+          if (want === 'side'){ if (r.real !== s || r.put !== p[1]) fail('gridWhy side names the wrong columns'); has('gGridSide ' + L, t, L === 'zh' ? [SIDE_ZH[p[1]], '欄'] : [SIDE_EN[p[1]], 'column']); }
+          if (want === 'alsoIso') has('gGridAlsoIso ' + L, t, L === 'zh' ? ['也是', '最精確'] : ['is', 'most specific']);
+        });
+      })));
+      /* the stamp reason for every drawable cell says it CAN be drawn */
+      possible.forEach(c => LANGS.forEach(L => { const p = c.split('-'), t = I18N[L].gGridStamp(p[0], p[1]); textOk('gGridStamp ' + L, t); has('gGridStamp(' + c + ') ' + L, t, L === 'zh' ? ['畫得出來'] : ['can be drawn']); }));
+      /* the stamps go where the lesson's own grid says nothing can be drawn — and that grid agrees with the reference */
+      all.forEach(c => { if ((D.GRID[c] === null) === cellPossibleRef(c.split('-')[0], c.split('-')[1])) fail('GRID[' + c + '] disagrees with the reference about whether it exists'); });
+      need('grid', /if \(GRID\[at\] !== null\)\{ var p = at\.split\('-'\); roundMiss\(d\.gGridStamp\(p\[0\], p\[1\]\)\); return false; \}/, 'a stamp on a drawable cell must be refused with its reason');
+      need('grid', /at = gridPick\(c, f, Pc\.data\.cell\);\s*if \(!at \|\| filled\[at\]\) return false;/, 'a card must be judged by its centre OR the finger; off the grid / a filled cell bounces silently');
+      need('grid', /: \(c \|\| f\)\);\s*if \(!at \|\| filled\[at\]\) return false;/, 'a stamp off the grid / on a filled cell must bounce silently');
+      need('grid', /if \(w\.key === 'alsoIso'\)\{ roundNote\(d\.gGridAlsoIso\); return false; \}/, 'equilateral in the isosceles column: no penalty');
+      need('grid', /roundMiss\(w\.key === 'ang' \? d\.gGridAng\(w\.real, w\.put\) : d\.gGridSide\(w\.real, w\.put\)\);/, 'a wrong cell must be refused with its reason');
+      need('grid', /var total = 6/, 'the round ends after 4 cards and 2 stamps');
+    }
+  }
+
+  /* ================= 第 5 關：釘板 ================= */
+  {
+    const G = D.PIN_G;
+    if (!G || !D.PIN_BASES || !D.PIN_TARGETS) fail('PIN_G / PIN_BASES / PIN_TARGETS missing');
+    else {
+      touch('the pinboard knob', G.knob);
+      const xy = g => ({ x:G.ox + G.pitch * g[0], y:G.oy + G.pitch * g[1] });
+      for (let c = 0; c < G.cols; c++) for (let r = 0; r < G.rows; r++){
+        const q = xy([c, r]), p = D.pinXY([c, r]);
+        if (!near(q.x, p.x) || !near(q.y, p.y)) fail('pinXY is off');
+        inside(box(q.x, q.y, G.knob, G.knob), 'the knob on pin ' + c + r, G.H);
+        /* every visible pin is its own cell: ±35% of the pitch around it */
+        [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35], [0.35, 0.35], [-0.35, -0.35]].forEach(o => {
+          const s = D.pinSnap(q.x + o[0] * G.pitch, q.y + o[1] * G.pitch), d2 = D.pinDot(q.x + o[0] * G.pitch, q.y + o[1] * G.pitch);
+          if (s[0] !== c || s[1] !== r || !d2 || d2[0] !== c || d2[1] !== r) fail('a tap ' + o + ' pitch beside pin ' + c + r + ' picks ' + s);
+        });
+      }
+      /* pinDot over the whole board: null outside the half-pitch rectangle around the pins, otherwise the nearest pin */
+      for (let x = 0; x <= W; x += 1) for (let y = 0; y <= G.H; y += 1){
+        const h = G.pitch / 2, out = x < G.ox - h || x > G.ox + G.pitch * (G.cols - 1) + h || y < G.oy - h || y > G.oy + G.pitch * (G.rows - 1) + h;
+        const got = D.pinDot(x, y);
+        let want = null;
+        if (!out){ let bd = 1e9; for (let c = 0; c < G.cols; c++) for (let r = 0; r < G.rows; r++){ const dd = Math.max(Math.abs(x - xy([c, r]).x), Math.abs(y - xy([c, r]).y)); if (dd < bd - 1e-9){ bd = dd; want = [c, r]; } } if (Math.abs(bd - h) < 1e-9) continue; }
+        if (JSON.stringify(got) !== JSON.stringify(want)){ fail('pinDot accepts / picks wrongly at (' + x + ',' + y + '): ' + JSON.stringify(got) + ', expected ' + JSON.stringify(want)); x = 1e9; break; }
+      }
+      const all = [].concat(...D.PIN_TARGETS);
+      all.forEach(t => { if (t[1] === 'equi') fail('an equilateral triangle cannot be made on a square pinboard'); });
+      if (!D.PIN_TARGETS[0].every(t => t[1] === 'iso') || !D.PIN_TARGETS[1].every(t => t[1] === 'scalene')) fail('PIN_TARGETS: first ask isosceles, second scalene');
+      const d2 = (u, v) => (u[0] - v[0]) ** 2 + (u[1] - v[1]) ** 2;
+      D.PIN_BASES.forEach((e, ei) => {
+        const tag = 'PIN_BASES[' + ei + ']';
+        if (e.a[1] !== e.b[1]) fail(tag + ': the base should be level');
+        const clsOf = g => {
+          if ((e.b[0] - e.a[0]) * (g[1] - e.a[1]) - (e.b[1] - e.a[1]) * (g[0] - e.a[0]) === 0) return null;
+          /* own geometry: lay the three integer points down and measure with atan2 */
+          const degs = anglesDegRef([e.a, e.b, g]), mx = Math.max(...degs);
+          const sq = [d2(e.a, e.b), d2(e.b, g), d2(g, e.a)];
+          return { a:angClassOfDeg(mx), s:sideClassRef(sq), fuzzy:Math.abs(mx - 90) < 15 && Math.abs(mx - 90) > 1e-7, mx:mx, sq:sq };
+        };
+        /* 第二層提示的做法對每一個底邊都成立（codex 第一輪：「偏向一邊就三條都不一樣長」是假的）：
+           A 或 B 正上方 → 直角；AB 正中間的上方 → 等腰；正中間、比底邊一半還高 → 銳角；只高一格、在 A 和 B 中間 → 鈍角 */
+        {
+          const mid = (e.a[0] + e.b[0]) / 2, half = Math.abs(e.b[0] - e.a[0]) / 2;
+          for (let c = 0; c < G.cols; c++) for (let r = 0; r < e.a[1]; r++){
+            const k = clsOf([c, r]); if (!k) continue;
+            const h = e.a[1] - r;
+            if ((c === e.a[0] || c === e.b[0]) && k.a !== 'right') fail(tag + ': hint "straight above A or B" gives ' + k.a + ' at ' + c + r);
+            if (c === mid && k.s !== 'iso') fail(tag + ': hint "above the middle" gives ' + k.s + ' at ' + c + r);
+            if (c === mid && h > half && (k.a !== 'acute' || k.fuzzy)) fail(tag + ': hint "above the middle, higher than half the base" gives ' + k.a + (k.fuzzy ? ' (too close to call)' : '') + ' at ' + c + r);
+            if (h === 1 && c > Math.min(e.a[0], e.b[0]) && c < Math.max(e.a[0], e.b[0]) && k.a !== 'obtuse') fail(tag + ': hint "one row above, between A and B" gives ' + k.a + ' at ' + c + r);
+          }
+          if (!Number.isInteger(mid)) fail(tag + ': the middle of AB is not a pin, so the isosceles hint cannot be followed');
+        }
+        const st = clsOf(e.start);
+        if (!st || st.a !== 'acute' || st.s !== 'scalene' || st.mx > 75) fail(tag + ': the start apex must be a clearly acute scalene triangle (not an answer)');
+        all.forEach(t => {
+          let clear = 0;
+          for (let c = 0; c < G.cols; c++) for (let r = 0; r < G.rows; r++){
+            const g = [c, r], k = clsOf(g);
+            let want;
+            if (c === e.start[0] && r === e.start[1]) want = 'start';
+            else if (!k) want = 'flat';
+            else if (k.a === t[0] && k.s === t[1]) want = 'ok';
+            else if (k.a !== t[0] && k.s === t[1] && k.fuzzy) want = 'fuzzy';
+            else want = 'miss';
+            if (D.pinKind(e, g, t) !== want) fail(tag + ' ' + t + ': pinKind at ' + g + ' = ' + D.pinKind(e, g, t) + ', expected ' + want);
+            if (want === 'ok' && !k.fuzzy) clear++;
+            if (k){
+              const sq = D.pinSq(e, g);
+              if (sq.join() !== k.sq.join()) fail('pinSq is off at ' + g);
+              /* the right-angle vertex, from measured angles */
+              const degs = anglesDegRef([e.a, e.b, g]), ri = degs.findIndex(v => Math.abs(v - 90) < 1e-7);
+              if (D.pinRight(e, g) !== ri) fail(tag + ': pinRight at ' + g + ' = ' + D.pinRight(e, g) + ', measured ' + ri);
+            }
+          }
+          if (clear < 2) fail(tag + ': only ' + clear + ' clear way(s) to make ' + t);
+        });
+      });
+      need('pin', /if \(k === 'start' \|\| k === 'flat'\) return false;/, 'back to the start / onto the base line must be silent');
+      need('pin', /if \(k === 'fuzzy'\)\{ roundNote\(d\.gPinFuzzy\(angleClass\(sq\)\)\); return false; \}/, 'a too-close-to-call angle must not cost points');
+      need('pin', /if \(k === 'miss'\)\{ roundMiss\(d\.gPinWhy\(angleClass\(sq\), sideClass\(sq\), tgt\[0\], tgt\[1\]\)\); return false; \}/, 'a wrong triangle must be refused with its reason');
+      need('pin', /follow:function\(p\)\{ return pinXY\(pinSnap\(p\.x, p\.y\)\); \}/, 'the apex must snap to the pins while dragging');
+      need('pin', /var g = pt\.tap \? pinDot\(pt\.x, pt\.y\) : pinSnap\(Pc\.cx, Pc\.cy\);/, 'release must judge the pin that is shown');
+      need('pin', /var ri = pinRight\(e, g\);/, 'the right-angle square must follow the integer test');
+      LANGS.forEach(L => {
+        ['acute', 'right', 'obtuse'].forEach(a => ['iso', 'scalene'].forEach(s => ['acute', 'right', 'obtuse'].forEach(ta => ['iso', 'scalene'].forEach(ts => {
+          if (a === ta && s === ts) return;
+          const t = I18N[L].gPinWhy(a, s, ta, ts);
+          textOk('gPinWhy ' + L, t);
+          if (a !== ta) has('gPinWhy angle ' + L, t, L === 'zh' ? ['依角是' + { acute:'銳角', right:'直角', obtuse:'鈍角' }[a]] : ['by angles it is']);
+          else hasNot('gPinWhy ' + L, t, L === 'zh' ? ['依角是'] : ['by angles it is']);
+          if (s !== ts) has('gPinWhy side ' + L, t, L === 'zh' ? ['依邊是' + (s === 'iso' ? '等腰' : '不等邊')] : ['by sides it is']);
+          else hasNot('gPinWhy ' + L, t, L === 'zh' ? ['依邊是'] : ['by sides it is']);
+        }))));
+        const p2 = I18N[L].gPin2;
+        has('gPin2 ' + L, p2('right', 'iso'), L === 'zh' ? ['A 或 B 的正上方', 'AB 正中間的上方'] : ['straight above A or B', 'straight above the middle of AB']);
+        has('gPin2 ' + L, p2('acute', 'scalene'), L === 'zh' ? ['比底邊的一半還高', '一條短撇都沒有'] : ['higher than half the base', 'no side has a tick mark']);
+        has('gPin2 ' + L, p2('obtuse', 'iso'), L === 'zh' ? ['只高一格', 'A 和 B 中間'] : ['one row above the base', 'between A and B']);
+        ['acute', 'obtuse'].forEach(a => { const t = I18N[L].gPinFuzzy(a); textOk('gPinFuzzy ' + L, t); has('gPinFuzzy ' + L, t, L === 'zh' ? [ANG_ZH[a], '不扣分'] : [a, 'no points lost']); });
+      });
+    }
+  }
+
+  /* ---------- 文字：每一個函式型字串在每一種輸入都印得出東西 ---------- */
+  LANGS.forEach(L => {
+    const d = I18N[L];
+    [['gAcuteWhy.right', d.gAcuteWhy && d.gAcuteWhy.right, L === 'zh' ? ['小方框', '直角'] : ['small square', 'right angle']],
+     ['gAcuteWhy.obtuse', d.gAcuteWhy && d.gAcuteWhy.obtuse, L === 'zh' ? ['比直角還開', '鈍角'] : ['wider than a right angle', 'obtuse']],
+     ['gAcuteMissing', d.gAcuteMissing, L === 'zh' ? ['至少有兩個銳角'] : ['at least two acute angles']],
+     ['gAcuteAll', d.gAcuteAll, L === 'zh' ? ['三個角都是'] : ['all three']]].forEach(c => { textOk(c[0] + ' ' + L, c[1]); has(c[0] + ' ' + L, c[1], c[2]); });
+    ['acute', 'right', 'obtuse'].forEach(k => { const n = k === 'acute' ? 3 : 2, s = d.gAcuteOk(n, d.angName[k]); textOk('gAcuteOk ' + L, s); has('gAcuteOk ' + L, s, [d.angName[k], String(n === 3 ? (L === 'zh' ? '三個角都是' : 'All three') : n)]); });
+    [2, 3].forEach(n => { if ((d.gAcute2(n).match(/\d+/g) || []).map(Number).filter(v => v !== 2 || n === 2).indexOf(n) < 0) fail('gAcute2(' + n + ') ' + L + ' does not name ' + n); });
+    ['equi', 'iso', 'scalene'].forEach(t => { textOk('gStickAsk ' + L, d.gStickAsk(t)); textOk('gStickOk ' + L, d.gStickOk(t)); });
+    ['acute', 'right', 'obtuse'].forEach(a => ['iso', 'scalene'].forEach(s => {
+      [d.gPinAsk(a, s), d.gPinOk(a, s), d.gPin2(a, s)].forEach(t => textOk('pin text ' + L, t));
+      has('gPinAsk ' + L, d.gPinAsk(a, s), L === 'zh' ? [ANG_ZH[a] + '三角形', s === 'iso' ? '等腰三角形' : '不等邊三角形'] : [a, s === 'iso' ? 'isosceles' : 'scalene']);
+    }));
+    ['acute', 'right', 'obtuse'].forEach(w => ['scalene', 'iso', 'equi'].forEach(s => textOk('gGrid2 ' + L, d.gGrid2(d.angWord[w], s))));
+    [d.gGridDone, d.gGridOk, d.gGridOkStamp, d.gGrid2Stamp, d.gStampLbl, d.gGridCorner, d.gMeet2, d.gPinDone, d.gStickAll, d.gAcuteBtn, d.gMinus, d.gClear].forEach((t, i) => textOk('game text #' + i + ' ' + L, t));
+    /* 九宮格的列名與欄名要說的就是那一列、那一欄（codex 第一輪：兩列對調只驗「非空」會漏） */
+    ['acute', 'right', 'obtuse'].forEach(k => { textOk('gGridRow ' + L, d.gGridRow[k]); if (d.gGridRow[k] !== (L === 'zh' ? ANG_ZH[k] : k)) fail('gGridRow.' + k + ' ' + L + ' reads "' + d.gGridRow[k] + '"'); });
+    ['scalene', 'iso', 'equi'].forEach(k => { textOk('gGridCol ' + L, d.gGridCol[k]); if (d.gGridCol[k] !== (L === 'zh' ? SIDE_ZH[k] : SIDE_EN[k])) fail('gGridCol.' + k + ' ' + L + ' reads "' + d.gGridCol[k] + '"'); });
+    has('gAsks.grid ' + L, d.gAsks.grid, L === 'zh' ? ['畫不出來', '不存在'] : ['can’t draw', 'do not exist']);
+    textOk('gWin ' + L, d.gWin(100)); textOk('gPts ' + L, d.gPts(20));
+    if (L === 'en') [d.gAsks.acute, d.gAsks.meet, d.gAsks.grid].concat(Object.values(d.gHints)).forEach(t => { if (/[㐀-鿿]/.test(t)) fail('English game text contains Chinese: ' + t); });
+  });
+  /* the board is sized so the e2e can rely on one board at a time */
+  if (!/\.ghold\{width:100%\}/.test(src)) fail('the round holder must be full width, or the board would be measured at 0 width');
+  if (!/var avail = document\.getElementById\('gameStage'\)\.clientWidth \|\| W;/.test(src)) fail('makeBoard must measure the whole stage');
+}
+
 module.exports = {
   /* ================= 刻意改壞測試 ================= */
   breaks: [
@@ -409,18 +980,6 @@ module.exports = {
       replace:"    var third = 180 - c.a - c.b;\n    var mx = Math.max(c.a, c.b);",
       why:'a triangle whose biggest angle is the apex would be named after a base angle' },
     /* --- 遊戲關卡 --- */
-    { file:'index', via:'index', expect:'computed answer is',
-      find:"    { kind:'side',   tri:'acuteEqui',     rot:22, opts:['equi', 'iso', 'scalene', 'rightName'],          ans:0 },",
-      replace:"    { kind:'side',   tri:'acuteEqui',     rot:22, opts:['equi', 'iso', 'scalene', 'rightName'],          ans:1 },",
-      why:'a game round would mark the wrong option correct' },
-    { file:'index', via:'index', expect:'reachable by correct reasoning',
-      find:"    { kind:'also',   side:'equi',         opts:['iso', 'scalene', 'rightName', 'none'],                  ans:0 }",
-      replace:"    { kind:'also',   side:'equi',         opts:['iso', 'scalene', 'acute', 'none'],                     ans:0 }",
-      why:'"an acute triangle" is genuinely also true of an equilateral triangle, so it cannot be a distractor' },
-    { file:'index', via:'index', expect:'exactly one impossible combination',
-      find:"    { kind:'cannot', opts:['right-equi', 'right-iso', 'acute-equi', 'obtuse-iso'],                       ans:0 },",
-      replace:"    { kind:'cannot', opts:['right-equi', 'obtuse-equi', 'acute-equi', 'obtuse-iso'],                    ans:0 },",
-      why:'two of the four options would be impossible, so two answers would be correct' },
     /* --- 題庫 --- */
     { file:'index', via:'index', expect:'duplicate options',
       find:"          opts:['直角三角形','銳角三角形','鈍角三角形','正三角形'], ans:1,",
@@ -492,10 +1051,6 @@ module.exports = {
       find:"        var cell = pick(CELLS_OK);\n        var sq = FIG_SQ[cell];\n        if (!sq) return null;\n        var kind = angleClass(sq);\n        var order = shuffle(['acute', 'right', 'obtuse', 'noIdea']);\n        return { cell:cell, sq:sq, rot:pick(ROTS), key:kind, opts:order, ans:order.indexOf(kind) };",
       replace:"        var cell = 'acute-scalene';\n        var sq = FIG_SQ[cell];\n        if (!sq) return null;\n        var kind = angleClass(sq);\n        var order = ['acute', 'right', 'obtuse', 'noIdea'];\n        return { cell:cell, sq:sq, rot:0, key:kind, opts:order, ans:order.indexOf(kind) };",
       why:'figAngle would stop sampling and always draw the same triangle, while every invariant stayed green' },
-    { file:'index', via:'index', expect:'the page roundAnswer() says',
-      find:"    if (r.kind === 'acutes') return String(acuteCount(TRI[r.tri].sq));",
-      replace:"    if (r.kind === 'acutes') return String(acuteCount(TRI[r.tri].sq) + 1);",
-      why:'the page would score the "how many acute angles" round from its own broken recomputation' },
     { file:'index', via:'index', expect:'the oracle expects',
       find:"          opts:['0 個','1 個','2 個','3 個'], ans:2,",
       replace:"          opts:['0 個','1 個','2 個','3 個'], ans:1,",
@@ -515,7 +1070,233 @@ module.exports = {
     { file:'review', via:'review', expect:'not four distinct pairs',
       find:"          if (c === cell) return false;",
       replace:"          if (false) return false;",
-      why:'bothNames could offer the correct pair twice' }
+      why:'bothNames could offer the correct pair twice' },
+    /* --- GAME-BREAKS: 小遊戲五關（§六之五） --- */
+    { file:'index', via:'index', expect:"tap zones of corners",
+      find:"var ACUTE_G = { H:270, box:{ x:0, y:0, w:300, h:270, pad:36 }, zoneR:30,",
+      replace:"var ACUTE_G = { H:270, box:{ x:0, y:0, w:300, h:270, pad:36 }, zoneR:50,",
+      why:"round 1: corner tap zones would overlap" },
+    { file:'index', via:'index', expect:"does not pick it",
+      find:"zoneIn:14, arcR:26",
+      replace:"zoneIn:-24, arcR:26",
+      why:"round 1: the tap zone would sit outside the corner, so its own arc would not pick it" },
+    { file:'index', via:'index', expect:"cornerKinds says",
+      find:"    return [k(q, r, p), k(p, r, q), k(p, q, r)];",
+      replace:"    return [k(p, q, r), k(p, r, q), k(q, r, p)];",
+      why:"round 1: the biggest corner would be judged at the wrong vertex" },
+    { file:'index', via:'index', expect:"between 75° and 105°",
+      find:"    acute:  [[36, 36, 36], [25, 25, 36],",
+      replace:"    acute:  [[36, 36, 36], [16, 25, 36],",
+      why:"round 1: an 83° acute triangle cannot be told from a right one by eye" },
+    { file:'index', via:'index', expect:"by measured angles",
+      find:"    acute:  [[36, 36, 36], [25, 25, 36], [16, 25, 25],",
+      replace:"    acute:  [[36, 36, 36], [25, 25, 36], [9, 16, 25],",
+      why:"round 1: a right triangle filed as acute" },
+    { file:'index', via:'index', expect:"tapping a right / obtuse corner",
+      find:"if (kinds[i] !== 'acute'){ roundMiss(d.gAcuteWhy[kinds[i]]); return; }",
+      replace:"if (false){ roundMiss(d.gAcuteWhy[kinds[i]]); return; }",
+      why:"round 1: a right or obtuse corner could be ticked as acute" },
+    { file:'index', via:'index', expect:"\"Done\" with acute angles left",
+      find:"if (n < cur.need){ roundMiss(d.gAcuteMissing); return; }",
+      replace:"if (n < 2){ roundMiss(d.gAcuteMissing); return; }",
+      why:"round 1: two acute angles would pass for an acute triangle" },
+    { file:'index', via:'index', expect:"meetKind(",
+      find:"(b < 90 ? 'ok' : 'wide')",
+      replace:"(b < 120 ? 'ok' : 'wide')",
+      why:"round 2: an obtuse angle would close the triangle" },
+    { file:'index', via:'index', expect:"meetStop(",
+      find:"    var st = Math.round(b / MEET_G.stop) * MEET_G.stop;",
+      replace:"    var st = Math.floor(b / MEET_G.stop) * MEET_G.stop;",
+      why:"round 2: taps would snap to the stop below, not the nearest" },
+    { file:'index', via:'index', expect:"outside the",
+      find:"var MEET_G = { H:300, y:268, R:104,",
+      replace:"var MEET_G = { H:300, y:268, R:150,",
+      why:"round 2: the knob ring would leave the board" },
+    { file:'index', via:'index', expect:"off the board",
+      find:"var MEET_POOL = [{ fx:100, px:164 },",
+      replace:"var MEET_POOL = [{ fx:100, px:190 },",
+      why:"round 2: with a long base the 75° meeting point is above the board" },
+    { file:'index', via:'index', expect:"releasing on the start",
+      find:"        if (k === 'start') return false;\n        if (k !== 'ok'){ roundMiss(d.gMeetWhy[k]); return false; }",
+      replace:"        if (k !== 'ok'){ roundMiss(d.gMeetWhy[k]); return false; }",
+      why:"round 2: putting the knob back would cost points" },
+    { file:'index', via:'index', expect:"snap to the stops while dragging",
+      find:"        follow:function(p){ return meetXY(e, meetStop(e, p.x, p.y)); },",
+      replace:"",
+      why:"round 2: the knob would float free while dragging" },
+    { file:'index', via:'index', expect:"stickSlot(",
+      find:"      if (dd <= STICK_G.reach && dd < bd){ bd = dd; best = i; }",
+      replace:"      if (dd <= STICK_G.reach && best === null){ bd = dd; best = i; }",
+      why:"round 3: the first slot in reach would win, not the nearest" },
+    { file:'index', via:'index', expect:"never overlap",
+      find:"slotY:[46, 98, 150], reach:18,",
+      replace:"slotY:[46, 98, 150], reach:2,",
+      why:"round 3: no overlap, so nearest-slot would go untested" },
+    { file:'index', via:'index', expect:"stickJudge(",
+      find:"    if (target === 'iso' && k === 'equi') return 'alsoIso';\n",
+      replace:"",
+      why:"round 3: an equilateral answer to 'exactly two' would cost points" },
+    { file:'index', via:'index', expect:"ALL sticks returned",
+      find:"if (k !== 'ok'){ roundMiss(d.gStickWhy(target, k)); reset(); return true; }",
+      replace:"if (k !== 'ok'){ roundMiss(d.gStickWhy(target, k)); return true; }",
+      why:"round 3: a wrong pair left in the slots could make the round unsolvable" },
+    { file:'index', via:'index', expect:"cannot build",
+      find:"var STICK_SETS = [[6, 6, 6, 4, 5, 7],",
+      replace:"var STICK_SETS = [[6, 6, 5, 4, 5, 7],",
+      why:"round 3: a set without three equal sticks" },
+    { file:'index', via:'index', expect:"not proportional",
+      find:"function stickW(n){ return n * STICK_G.cm + STICK_G.padW; }",
+      replace:"function stickW(n){ return 60 + n * 8; }",
+      why:"round 3: bars would not be drawn to length" },
+    { file:'index', via:'index', expect:"a stick is",
+      find:"pieceH:48, padW:16",
+      replace:"pieceH:44, padW:16",
+      why:"round 3: sticks under 44px on a phone" },
+    { file:'index', via:'index', expect:"gridCellBox(",
+      find:"x:GRID_G.x0 + GRID_G.hw + si * GRID_G.cw,",
+      replace:"x:GRID_G.x0 + GRID_G.hw + ai * GRID_G.cw,",
+      why:"round 4: cells drawn in the wrong columns" },
+    { file:'index', via:'index', expect:"gridPick(",
+      find:"function gridPick(c, f, want){ return (c === want || f === want) ? want : (c || f); }",
+      replace:"function gridPick(c, f, want){ return (c === want) ? want : (c || f); }",
+      why:"round 4: a card held by its edge with the finger on the right cell would be refused" },
+    { file:'index', via:'index', expect:"gridWhy(",
+      find:"    if (s === 'equi' && p[1] === 'iso') return { key:'alsoIso' };\n",
+      replace:"",
+      why:"round 4: equilateral in the isosceles column would cost points" },
+    { file:'index', via:'index', expect:"GRID_POOL[right-iso]",
+      find:"'right-iso':[[16, 16, 32]],",
+      replace:"'right-iso':[[16, 16, 30]],",
+      why:"round 4: a card filed under the wrong cell" },
+    { file:'index', via:'index', expect:"a side is only",
+      find:"var GRID_ROTS = [0, 180];",
+      replace:"var GRID_ROTS = [0, 90, 180];",
+      why:"round 4: turned cards shrink to slivers" },
+    { file:'index', via:'index', expect:"a stamp on a drawable cell",
+      find:"if (GRID[at] !== null){ var p = at.split('-'); roundMiss(d.gGridStamp(p[0], p[1])); return false; }",
+      replace:"if (false){ var p = at.split('-'); roundMiss(d.gGridStamp(p[0], p[1])); return false; }",
+      why:"round 4: 'can't draw' could be stamped anywhere" },
+    { file:'index', via:'index', expect:"re-shuffled",
+      find:"var cards = shuffle([0, 1, 2, 3]).map(function(i){ return picks[i]; });",
+      replace:"var cards = picks.slice();",
+      why:"round 4: the tray would come out in grid order" },
+    { file:'index', via:'index', expect:"re-shuffled",
+      find:"      picks.sort(function(a, b){ return cellsOk.indexOf(a) - cellsOk.indexOf(b); });",
+      replace:"",
+      why:"round 4: without sorting first, the shuffle can still land in grid order" },
+    { file:'index', via:'index', expect:"would start in order",
+      find:"    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }\n",
+      replace:"",
+      why:"shuffle() could hand back the sorted order" },
+    { file:'index', via:'index', expect:"pinKind at",
+      find:"    if (a !== tgt[0] && s === tgt[1] && pinFuzzy(sq)) return 'fuzzy';\n",
+      replace:"",
+      why:"round 5: a too-close-to-call angle would cost points" },
+    { file:'index', via:'index', expect:"pinKind at",
+      find:"fuzzy:15, mark:12",
+      replace:"fuzzy:5, mark:12",
+      why:"round 5: an 82° angle would be judged as if anyone could see it" },
+    { file:'index', via:'index', expect:"start apex",
+      find:"{ a:[1, 5], b:[5, 5], start:[2, 2] }",
+      replace:"{ a:[1, 5], b:[5, 5], start:[3, 2] }",
+      why:"round 5: the apex would start on an isosceles answer" },
+    { file:'index', via:'index', expect:"pinRight at",
+      find:"      if (u[0] * v[0] + u[1] * v[1] === 0) return i;",
+      replace:"      if (u[0] * v[0] + u[1] * v[1] === 0) return 2;",
+      why:"round 5: the right-angle square at the wrong corner" },
+    { file:'index', via:'index', expect:"pitch beside pin",
+      find:"    var c = Math.round((x - PIN_G.ox) / PIN_G.pitch), r = Math.round((y - PIN_G.oy) / PIN_G.pitch);",
+      replace:"    var c = Math.floor((x - PIN_G.ox) / PIN_G.pitch), r = Math.round((y - PIN_G.oy) / PIN_G.pitch);",
+      why:"round 5: a pin's own cell would be shifted" },
+    { file:'index', via:'index', expect:"pinDot accepts",
+      find:"    if (x < PIN_G.ox - h || x > PIN_G.ox + PIN_G.pitch * (PIN_G.cols - 1) + h ||\n        y < PIN_G.oy - h || y > PIN_G.oy + PIN_G.pitch * (PIN_G.rows - 1) + h) return null;\n",
+      replace:"",
+      why:"round 5: a tap anywhere would move the apex" },
+    { file:'index', via:'index', expect:"square pinboard",
+      find:"    [['right', 'iso'], ['obtuse', 'iso'], ['acute', 'iso']],",
+      replace:"    [['right', 'iso'], ['obtuse', 'iso'], ['acute', 'iso'], ['acute', 'equi']],",
+      why:"round 5: an impossible ask" },
+    { file:'index', via:'index', expect:"says −5",
+      find:"    var lost = gScore >= 5 ? 5 : 0;",
+      replace:"    var lost = 5;",
+      why:"scoring: −5 shown at 0 points" },
+    { file:'index', via:'index', expect:"only once may count",
+      find:"  function roundSolved(text){\n    if (gSolved) return;",
+      replace:"  function roundSolved(text){",
+      why:"scoring: a round could be scored twice" },
+    { file:'index', via:'index', expect:"board-generation guard",
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */\n",
+      replace:"",
+      why:"a piece held across Restart would act on the new board" },
+    { file:'index', via:'index', expect:"losing pointer capture",
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+      replace:"",
+      why:"a piece could stick when capture is lost" },
+    { file:'index', via:'index', expect:"gMeetOk (zh) should say",
+      find:"gMeetOk:'碰到了！這個角是<strong>銳角</strong> —— 一個三角形裡，<strong>直角和鈍角合起來最多只有一個</strong>，另一個角只能是銳角。'",
+      replace:"gMeetOk:'碰到了！這個角是<strong>銳角</strong>。'",
+      why:"round 2 would stop naming the lesson's reason" },
+    { file:'index', via:'index', expect:"gGridStamp(",
+      find:"an acute equilateral triangle can be drawn, so this square",
+      replace:"an acute equilateral triangle exists, so this square",
+      why:"round 4: the stamp reason would stop saying the cell can be drawn" },
+    { file:'index', via:'index', expect:"gStickAsk(iso)",
+      find:"'用三根小棒圍出一個<strong>等腰三角形</strong>，而且<strong>剛好兩條</strong>邊一樣長。'",
+      replace:"'用三根小棒圍出一個<strong>等腰三角形</strong>。'",
+      why:"round 3: without 'exactly two' an equilateral would be a correct answer" },
+    { file:'index', via:'index', expect:"must not say",
+      find:"        if (a !== ta) out.push({ acute:'三個角都是銳角',",
+      replace:"        if (true) out.push({ acute:'三個角都是銳角',",
+      why:"round 5: the reason would blame the angle name even when it was right" },
+    { file:'index', via:'index', expect:"names the wrong length",
+      find:"? '提示 2：三根都選 ' + three + ' 公分的。'",
+      replace:"? '提示 2：三根都選 ' + (three + 1) + ' 公分的。'",
+      why:"round 3: hint 2 would name a stick that does not exist" },
+    { file:'index', via:'index', expect:"gAcuteWhy.right zh should say",
+      find:"right:'這個角有<strong>小方框</strong>，它剛好是直角，不是銳角。'",
+      replace:"right:'這不是銳角。'",
+      why:"round 1: the right-angle reason would stop pointing at the square" },
+    { file:'index', via:'index', expect:"meetApex(",
+      find:"  function meetApex(e, b){ return { x:e.fx, y:MEET_G.y - Math.abs(e.px - e.fx) * Math.tan(",
+      replace:"  function meetApex(e, b){ return { x:e.fx, y:MEET_G.y - Math.abs(e.px - e.fx) * Math.sin(",
+      why:"round 2: the drawn meeting point would be off the sides" },
+    { file:'index', via:'index', expect:"gameFit puts vertex",
+      find:"    var k = Math.min((bx.w - 2 * bx.pad) / bw, (bx.h - 2 * bx.pad) / bh);",
+      replace:"    var k = Math.min((bx.w - bx.pad) / bw, (bx.h - bx.pad) / bh);",
+      why:"game triangles would be drawn at the wrong scale" },
+    { file:'index', via:'index', expect:"stickPick(",
+      find:"  function stickPick(c, f, filled){\n    if (c !== null && !filled[c]) return c;\n",
+      replace:"  function stickPick(c, f, filled){\n    if (c !== null) return filled[c] ? null : c;\n",
+      why:"round 3: a stick whose centre is over a filled slot would bounce although the finger is on an empty one" },
+    { file:'index', via:'index', expect:"tap ring band",
+      find:"ringIn:64, ringOut:146,",
+      replace:"ringIn:64, ringOut:1000,",
+      why:"round 2: a tap anywhere on the board would pick a stop" },
+    { file:'index', via:'index', expect:"gGridRow.",
+      find:"gGridRow:{ acute:'銳角', right:'直角',",
+      replace:"gGridRow:{ acute:'直角', right:'銳角',",
+      why:"round 4: the row labels would not say what the rows hold" },
+    { file:'index', via:'index', expect:"pinDot accepts",
+      find:"x > PIN_G.ox + PIN_G.pitch * (PIN_G.cols - 1) + h ||",
+      replace:"x > 1000 ||",
+      why:"round 5: a tap right of the pinboard would move the apex" },
+    { file:'index', via:'index', expect:"taps must be judged against the same pts",
+      find:"var i = acutePick(pts, p.x, p.y);",
+      replace:"var i = acutePick(gameFit(sq, rot + 25, G.box), p.x, p.y);",
+      why:"round 1: taps judged against a different layout than the one drawn" },
+    { file:'index', via:'index', expect:"switched-off branch",
+      find:"if (n < cur.need){ roundMiss(d.gAcuteMissing); return; }",
+      replace:"if (false){ roundMiss(d.gAcuteMissing); return; }\n        if (n < 2 && n < cur.need){ roundMiss(d.gAcuteMissing); return; }",
+      why:"round 1: the pinned guard kept as a dead copy while the live one is weakened" },
+    { file:'index', via:'index', expect:"gPin2 zh should say",
+      find:"scalene:'不等邊 —— 讓頂點偏向一邊，再看短撇：要選一條短撇都沒有的位置'",
+      replace:"scalene:'不等邊 —— 讓頂點偏向一邊，三條邊都不一樣長'",
+      why:"round 5: hint 2 would promise that any off-centre corner is scalene" },
+    { file:'index', via:'index', expect:"switched-off branch",
+      find:"if (n < cur.need){ roundMiss(d.gAcuteMissing); return; }",
+      replace:"if(n < cur.need && 0===1){ roundMiss(d.gAcuteMissing); return; }\n        if ( false ){ }",
+      why:"round 1: a switch-off written with different spacing" }
+    /* --- /GAME-BREAKS --- */
   ],
 
   /* ================= review.html 產生器模擬 ================= */
@@ -818,13 +1599,18 @@ module.exports = {
   data: {
     dataStart: '/* ---------- 語言無關的資料 ---------- */',
     dataEnd: '/* ---------- i18n ---------- */',
-    dataReturn: '{TRI, BIG_CASES, RAY_CASES, RAY_BASE, SIDE_CASES, NAME_CASES, GRID, ROUNDS, ' +
+    dataReturn: '{TRI, BIG_CASES, RAY_CASES, RAY_BASE, SIDE_CASES, NAME_CASES, GRID, ' +
                 'ANGLE_KEYS, SIDE_KEYS, sortSq, triValid, sideClass, angleClass, sideAlso, acuteCount, ' +
-                'triLayout, tickPlan, rayApex, rayDirs, rayClass, roundAnswer, ' +
+                'triLayout, tickPlan, rayApex, rayDirs, rayClass, ' +
+                'GAME_ORDER, GAME_W, gameFit, cornerKinds, ACUTE_POOL, ACUTE_ROTS, ACUTE_G, acuteZones, acutePick, ' +
+                'MEET_POOL, MEET_G, meetSide, meetXY, meetStop, meetRing, meetKind, meetApex, ' +
+                'STICK_SETS, STICK_TARGETS, STICK_G, stickW, stickSlotBox, stickSlot, stickPick, stickKind, stickJudge, ' +
+                'GRID_POOL, GRID_G, GRID_ROTS, gridCellBox, gridCell, gridPick, gridWhy, ' +
+                'PIN_G, PIN_BASES, PIN_TARGETS, pinXY, pinSnap, pinDot, pinSq, pinFlat, pinFuzzy, pinKind, pinRight, ' +
                 'FIG_W, FIG_H, FIG_PAD, FIG_ARC_R, FIG_MARK, FIG_TICK, FIG_LABEL_R, T_TICK}',
 
     check: function(data, I18N, fail, src){
-      const { TRI, BIG_CASES, RAY_CASES, RAY_BASE, SIDE_CASES, NAME_CASES, GRID, ROUNDS } = data;
+      const { TRI, BIG_CASES, RAY_CASES, RAY_BASE, SIDE_CASES, NAME_CASES, GRID } = data;
 
       /* ---------- 0. 兩套「依角分類」必須逐一同意 ---------- */
       let sweep = 0, mism = 0;
@@ -1096,11 +1882,12 @@ module.exports = {
       if (!(data.FIG_LABEL_R > data.FIG_ARC_R))
         fail('the angle label sits inside the arc it labels (FIG_LABEL_R ' + data.FIG_LABEL_R + ' <= FIG_ARC_R ' + data.FIG_ARC_R + ')');
       if (!(data.T_TICK > 0 && data.T_TICK < 1)) fail('T_TICK must be a fraction strictly inside the edge');
-      /* ⚠️ 只驗第一張圖等於沒驗其他五張：座標全部照 520x220 算，
-         某一張的 viewBox 改掉就會被拉扁或裁切，而檢查是綠的。 */
+      /* ⚠️ 只驗第一張圖等於沒驗其他四張：座標全部照 520x220 算，
+         某一張的 viewBox 改掉就會被拉扁或裁切，而檢查是綠的。
+         （遊戲 2026-10 改成五關畫板，自己有一套版面檢查，不再用 .shapefig。） */
       const vbs = src.match(/<svg class="shapefig"[^>]*viewBox="0 0 (\d+) (\d+)"/g) || [];
-      if (vbs.length !== 6)
-        fail('expected 6 .shapefig canvases on the lesson page (five examples + the game), found ' + vbs.length);
+      if (vbs.length !== 5)
+        fail('expected 5 .shapefig canvases on the lesson page (the five examples), found ' + vbs.length);
       vbs.forEach(tag => {
         const m = /viewBox="0 0 (\d+) (\d+)"/.exec(tag);
         const id = (/id="([a-zA-Z0-9]+)"/.exec(tag) || [])[1] || '?';
@@ -1233,66 +2020,8 @@ module.exports = {
       if (!NAME_CASES.some(k => angleClassRef(TRI[k].sq) === 'right' && sideClassRef(TRI[k].sq) === 'iso'))
         fail('NAME_CASES never shows an isosceles right triangle, which is the whole point of combining the two names');
 
-      /* ---------- 7. 遊戲關卡 ---------- */
-      /* ⚠️ 正解由**這份設定自己算**。呼叫 data.roundAnswer() 等於拿頁面的函式當自己的神諭：
-         把 ans 和 roundAnswer 一起改掉，兩邊還是會同意（codex 2026-08-29 抓到的）。 */
-      function roundAnswerRef(r){
-        if (r.kind === 'angle')  return angleClassRef(TRI[r.tri].sq);
-        if (r.kind === 'side')   return sideClassRef(TRI[r.tri].sq);
-        if (r.kind === 'acutes') return String(acuteCountRef(TRI[r.tri].sq));
-        if (r.kind === 'cannot') return r.opts.filter(c => !cellPossibleRef(c.split('-')[0], c.split('-')[1]))[0];
-        if (r.kind === 'also')   return sideAlsoRef(r.side).length ? sideAlsoRef(r.side)[0] : 'none';
-        return undefined;
-      }
-      ROUNDS.forEach((r, i) => {
-        const want = roundAnswerRef(r);
-        if (want === undefined) return fail('round ' + (i + 1) + ': this config does not know how to score kind "' + r.kind + '"');
-        if (data.roundAnswer(r) !== want)
-          fail('round ' + (i + 1) + ': the page roundAnswer() says ' + data.roundAnswer(r) +
-               ' but the reference gives ' + want);
-        if (r.opts[r.ans] !== want) fail('round ' + (i + 1) + ': ans points at ' + r.opts[r.ans] + ', computed answer is ' + want);
-        if (new Set(r.opts).size !== r.opts.length) fail('round ' + (i + 1) + ': duplicate option keys');
-        if (r.opts.length < 4) fail('round ' + (i + 1) + ': fewer than four options');
-        if (r.tri && !TRI[r.tri]) fail('round ' + (i + 1) + ' points at the missing shape ' + r.tri);
-        if (r.tri && (!int(r.rot) || r.rot < 0 || r.rot >= 360)) fail('round ' + (i + 1) + ': rot = ' + r.rot + ' is not a usable angle');
-        /* §六之二：沒有一個誘答可以由正確推理到達。 */
-        if (r.kind === 'side' || r.kind === 'also'){
-          const sq = r.tri ? TRI[r.tri].sq : [36, 36, 36];
-          const trueAngle = angleClassRef(sq), trueSide = sideClassRef(sq);
-          /* 問「最精確的名字」時，上層（正三角形的上層是等腰三角形）是合法誘答 ——
-             可是題幹一定要真的問了，兩種語言都要問。沒問的話兩個答案都對。 */
-          const asksSpecific = r.kind === 'side' &&
-            /最精確/.test(String(I18N.zh.gPrompt && I18N.zh.gPrompt.side)) &&
-            /most specific/.test(String(I18N.en.gPrompt && I18N.en.gPrompt.side));
-          if (r.kind === 'side' && !asksSpecific && sideAlsoRef(trueSide).length)
-            fail('round ' + (i + 1) + ': the shape has a looser side name, so the prompt must ask for the most specific one in BOTH languages');
-          for (const k of r.opts){
-            if (k === want) continue;
-            if (k === trueAngle)
-              fail('round ' + (i + 1) + ': "' + k + '" is reachable by correct reasoning — it really is the angle class of this triangle');
-            if (k === trueSide)
-              fail('round ' + (i + 1) + ': "' + k + '" is reachable by correct reasoning — it really is the side class of this triangle');
-            if (!asksSpecific && sideAlsoRef(trueSide).indexOf(k) >= 0)
-              fail('round ' + (i + 1) + ': "' + k + '" is a looser but still correct name, and the prompt never asks for the most specific one');
-          }
-        }
-        if (r.kind === 'cannot'){
-          const imp = r.opts.filter(c => !cellPossibleRef(c.split('-')[0], c.split('-')[1]));
-          if (imp.length !== 1) fail('round ' + (i + 1) + ': exactly one impossible combination is required, found ' + imp.length);
-          for (const c of r.opts){
-            const p = c.split('-');
-            if (data.ANGLE_KEYS.indexOf(p[0]) < 0 || data.SIDE_KEYS.indexOf(p[1]) < 0)
-              fail('round ' + (i + 1) + ': "' + c + '" is not a grid cell');
-          }
-        }
-        if (r.kind === 'acutes'){
-          const nOpts = r.opts.map(Number);
-          if (nOpts.indexOf(2) < 0 || nOpts.indexOf(3) < 0)
-            fail('round ' + (i + 1) + ': both 2 and 3 must be offered, or the "count the acute angles" misconception is untested');
-        }
-      });
-      const kinds = new Set(ROUNDS.map(r => r.kind));
-      for (const k of ['angle', 'side', 'acutes', 'cannot', 'also']) if (!kinds.has(k)) fail('the game never plays the "' + k + '" round');
+      /* ---------- 7. 遊戲「三角形鑑定所」的五關（§六之五：五種玩法；見 gameChecks） ---------- */
+      gameChecks(data, I18N, fail, src);
 
       /* ---------- 8. 靜態題庫 ---------- */
       for (const bank of ['qs', 'qsAdv', 'qsBoost']){
