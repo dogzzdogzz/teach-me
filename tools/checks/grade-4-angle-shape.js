@@ -48,8 +48,8 @@ const EPS = 1e-6;
 const MARGIN_REF = 8;          // 每一張圖四個邊至少要留這麼多
 /* 驗算器在 data.check 跑完之後應該驗過的算式條數，以及那一組算式本身的指紋。
    兩個都要釘 —— 見下面 5) 的說明。裝上去的時候用實測值填。 */
-const VERIFIED_REF = 90;
-const FINGERPRINT_REF = '10514078101f4f444031b954f28d9a116f71739e';
+const VERIFIED_REF = 444;
+const FINGERPRINT_REF = '46e283cd1555a21c67cf516eb03af492835b92da';
 const CANVAS_W_REF = 460, CANVAS_H_REF = 300;
 
 function sortNum(a){ return a.slice().sort(function(x, y){ return x - y; }); }
@@ -269,23 +269,23 @@ const BANK_EXPECTED = {
    ⚠️ min 要寫**當下真實的出現次數**，不是「至少 1」——
    實際有兩份而只要求一份的話，拿掉其中一份還是綠的。 */
 const SIBLING_RULES = [
-  { text:'角的大小和邊畫多長沒有關係', files:{ index:4, reference:2 } },
+  { text:'角的大小和邊畫多長沒有關係', files:{ index:5, reference:2 } },
   { text:'15 的倍數', files:{ index:14, reference:11, review:4 } },
-  { text:'165', files:{ index:16, reference:3, review:3 } },
-  { text:'斜對面', files:{ index:12, reference:3, review:3, parents:6 } },
-  { text:'兩塊加起來還是原來那個角', files:{ index:6, reference:2, review:1, parents:2 } },
-  { text:'共用一條邊', files:{ index:7, reference:8, review:2 } },
+  { text:'165', files:{ index:15, reference:3, review:3 } },
+  { text:'斜對面', files:{ index:16, reference:3, review:3, parents:6 } },
+  { text:'兩塊加起來還是原來那個角', files:{ index:7, reference:2, review:1, parents:2 } },
+  { text:'共用一條邊', files:{ index:8, reference:8, review:2 } },
   { text:'不可以重疊', files:{ index:3, parents:2 } },
-  { text:'露出來', files:{ index:13, reference:6, review:4, parents:2 } },
+  { text:'露出來', files:{ index:14, reference:6, review:4, parents:2 } },
   { text:'反過來', files:{ index:2, reference:2 } },
   { text:'各出一個角', files:{ index:5, reference:2, review:2 } }
 ];
 const SIBLING_RULES_EN = [
-  { text:'has nothing to do with how long its sides are drawn', files:{ index:3, reference:1 } },
+  { text:'has nothing to do with how long its sides are drawn', files:{ index:4, reference:1 } },
   { text:'multiple of 15', files:{ index:4, reference:4, review:2 } },
-  { text:'diagonally across', files:{ index:5, reference:2, review:2, parents:2 } },
-  { text:'add up to the angle you started with', files:{ index:3, reference:1, review:1 } },
-  { text:'left showing', files:{ index:10, reference:3, review:4, parents:1 } },
+  { text:'diagonally across', files:{ index:10, reference:2, review:2, parents:2 } },
+  { text:'add up to the angle you started with', files:{ index:4, reference:1, review:1 } },
+  { text:'left showing', files:{ index:11, reference:3, review:4, parents:1 } },
   { text:'not overlap', files:{ index:4, reference:1 } },
   { text:'one corner from each', files:{ index:3, reference:2, review:2 } },
   { text:'reverse is', files:{ index:1, reference:1 } }
@@ -468,6 +468,536 @@ const TRI_WORDS = {
 const DEG_GENS = ['pieceOther', 'joinTwo', 'layTwo', 'notMakeable', 'rectCorner', 'paraOpp', 'splitRight', 'splitAny'];
 const GEN_IDS = DEG_GENS.concat(['whichCombo', 'nameKind', 'triKind', 'minPieces']);
 
+/* ---------- 小遊戲「拼角工作坊接訂單」（§六之五，2026-10-05 起五關五種玩法） ----------
+   每一關都用**自己的實作**重算，不呼叫課程頁判斷對錯的那一行：
+   - 圖：三角板、四邊形的每一個角用**餘弦定理**從畫布座標量回來；扇形從 SVG 字串讀回起訖角。
+   - 規則：照遊戲的規則把每一題從頭玩一遍（第一個角、第二個角、每一張卡、每一對角、每一刀），
+     證明一定解得完、而且只有對的做法收。
+   - 範圍：判斷「放在哪一格／切在哪裡」的函式（nearestOpen、joinInGap、cutPick）有第二套實作掃整張畫板；
+     看得到的目標（角、數字、刻度）放下去都要被收（自然動作的規則）。
+   - 原始碼：RENDER 裡擋錯誤動作的那幾行用 need() 釘住；shuffle()、nearestOpen()、roundMiss() 切出來真的跑。 */
+const GAME_ORDER_REF = ['piece', 'join', 'sort', 'opp', 'cut'];
+const TOUCH_MIN_REF = 48;        /* 300 寬的畫板在 375px 手機上縮成約 0.96 倍：48 → 46px ≥ 44 */
+const JOIN_TARGETS_REF = [75, 105, 120, 135, 150, 180];
+function extractFn(src, name){
+  const head = new RegExp('function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{');
+  const m = head.exec(src);
+  if (!m) return null;
+  let i = m.index + m[0].length, depth = 1;
+  while (i < src.length && depth > 0){
+    const c = src[i], d = src[i + 1];
+    if (c === '/' && d === '/'){ while (i < src.length && src[i] !== '\n') i++; continue; }
+    if (c === '/' && d === '*'){ i = src.indexOf('*/', i + 2); if (i < 0) return null; i += 2; continue; }
+    if (c === '"' || c === "'"){ const q = c; i++; while (i < src.length && src[i] !== q){ if (src[i] === '\\') i++; i++; } i++; continue; }
+    if (c === '{') depth++; else if (c === '}') depth--;
+    i++;
+  }
+  return depth === 0 ? src.slice(m.index, i) : null;
+}
+function boxOf(cx, cy, w, h, name){ return { l:cx - w / 2, r:cx + w / 2, t:cy - h / 2, b:cy + h / 2, n:name }; }
+function boxesOverlap(a, b){ return Math.min(a.r, b.r) - Math.max(a.l, b.l) > 0.5 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 0.5; }
+function layoutProblems(label, boxes, W, H, allowed){
+  const out = [];
+  boxes.forEach(function(a, i){
+    if (![a.l, a.r, a.t, a.b].every(Number.isFinite)) { out.push(label + ': ' + a.n + ' has no position'); return; }
+    if (a.l < 0 || a.t < 0 || a.r > W || a.b > H) out.push(label + ': ' + a.n + ' sticks out of the ' + W + '×' + H + ' board');
+    for (let j = i + 1; j < boxes.length; j++)
+      if (boxesOverlap(a, boxes[j]) && !(allowed && allowed(a, boxes[j]))) out.push(label + ': ' + a.n + ' overlaps ' + boxes[j].n);
+  });
+  return out;
+}
+/* 'M cx cy L x1 y1 A r r 0 0 0 x2 y2 Z' → 起訖角（數學方向，度） */
+function sectorAnglesRef(d){
+  const m = /^M (-?[\d.]+) (-?[\d.]+) L (-?[\d.]+) (-?[\d.]+) A ([\d.]+) [\d.]+ 0 0 0 (-?[\d.]+) (-?[\d.]+) Z$/.exec(d);
+  if (!m) return null;
+  const cx = +m[1], cy = +m[2];
+  const a1 = Math.atan2(cy - +m[4], +m[3] - cx) * 180 / Math.PI, a2 = Math.atan2(cy - +m[7], +m[6] - cx) * 180 / Math.PI;
+  let span = a2 - a1; while (span < 0) span += 360; while (span >= 360) span -= 360;
+  return { cx:cx, cy:cy, r:+m[5], from:a1, span:span };
+}
+function digitsOf(s){ return (String(s).replace(/<[^>]+>/g, '').match(/\d+/g) || []).map(Number); }
+/* 四年級的 3 種角：直角、這一片最尖的、另一個（45°／45°／90° 那一片兩個尖角一樣） —— 第二套分類 */
+function kindRef(angles, i){
+  const d = angles[i];
+  if (Math.abs(d - RIGHT_REF) < 1e-6) return 'right';
+  const sharp = angles.filter(function(x){ return Math.abs(x - RIGHT_REF) > 1e-6; });
+  if (Math.abs(sharp[0] - sharp[1]) < 1e-6) return 'eq';
+  return d === Math.min.apply(null, sharp) ? 'min' : 'max';
+}
+
+function gameChecks(D, I18N, fail, src, narrated){
+  function need(what, re, msg){ if (!re.test(src)) fail('game ' + what + ': ' + msg); }
+  /* 擋不住的捷徑：handler 開頭到呼叫判斷函式之間，不可以有任何「收下」的動作（codex 第一輪：只釘判斷那一行，
+     前面多插一條提早收下的分支照樣全綠）。nth ＝ 第幾個 useTapSelect（第 1 關是 0）。 */
+  function noEarlyAccept(what, startRe, judgeRe, bad){
+    const m = startRe.exec(src);
+    if (!m){ fail('game ' + what + ': cannot find the handler start'); return; }
+    const rest = src.slice(m.index + m[0].length), j = rest.search(judgeRe);
+    if (j < 0){ fail('game ' + what + ': the handler never calls its judge function'); return; }
+    const seg = rest.slice(0, j);
+    bad.forEach(function(w){ if (seg.indexOf(w) >= 0) fail('game ' + what + ': early accept — "' + w + '" runs before the judge function'); });
+  }
+  if (JSON.stringify(D.GAME_ORDER) !== JSON.stringify(GAME_ORDER_REF)) fail('game: the five rounds are ' + JSON.stringify(D.GAME_ORDER) + ', expected ' + JSON.stringify(GAME_ORDER_REF));
+  ['zh', 'en'].forEach(function(lang){
+    const d = I18N[lang];
+    GAME_ORDER_REF.forEach(function(k){
+      if (typeof d.gAsks[k] !== 'string' || !d.gAsks[k]) fail('gAsks.' + k + ' missing in ' + lang);
+      if (typeof d.gHints[k] !== 'string' || !d.gHints[k]) fail('gHints.' + k + ' missing in ' + lang);
+    });
+    if (digitsOf(d.gPts(20)).join() !== '20' || digitsOf(d.gMinus).join() !== '5') fail('gPts / gMinus (' + lang + ') do not say 20 / 5');
+    if (digitsOf(d.gWin(85)).indexOf(85) < 0) fail('gWin (' + lang + ') does not show the score');
+  });
+
+  /* ---------- 計分、吸附、洗牌：從原始碼切出來真的跑 ---------- */
+  need('scoring', /var pts = gMistake \? 10 : 20;/, 'a round must give +20 with no mistakes and +10 after mistakes');
+  {
+    const fsrc = extractFn(src, 'roundMiss');
+    if (!fsrc) fail('game scoring: cannot find roundMiss()');
+    else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(function(row){
+      let r;
+      try { r = new Function('var gMistake = false, gScore = ' + row[0] + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+      catch (e){ fail('game scoring: roundMiss() could not run: ' + e.message); return; }
+      if (r.s !== row[1] || String(r.shown) !== String(row[1])) fail('game scoring: a mistake at ' + row[0] + ' points leaves ' + r.s + ' (−5, floored at 0)');
+      if ((r.html.indexOf('@MINUS@') >= 0) !== row[2]) fail('game scoring: at ' + row[0] + ' points the "−5" note is ' + (row[2] ? 'missing' : 'shown although nothing was taken'));
+      if (r.html.indexOf('why') < 0 || !r.m) fail('game scoring: roundMiss() does not show the reason or record the mistake');
+    });
+  }
+  let nearestOpen = null;
+  {
+    const fsrc = extractFn(src, 'nearestOpen');
+    if (!fsrc) fail('game: cannot find nearestOpen()');
+    else { try { nearestOpen = new Function(fsrc + '\nreturn nearestOpen;')(); } catch (e){ fail('game: nearestOpen() could not run: ' + e.message); } }
+    if (nearestOpen){
+      const two = [ { id:0, cx:100, cy:100, hw:42, hh:42, done:false }, { id:1, cx:155, cy:100, hw:12, hh:12, done:false } ];
+      const r0 = nearestOpen(two, { x:140, y:100 }, 6);
+      if (!r0 || r0.id !== 0) fail('nearestOpen(): a point inside the big box near the small one goes to the small one (measure to the box, not the centre)');
+      const two2 = [ { id:0, cx:100, cy:100, hw:22, hh:22, done:false }, { id:1, cx:148, cy:100, hw:22, hh:22, done:false } ];
+      const r1 = nearestOpen(two2, { x:125, y:100 }, 6);
+      if (!r1 || r1.id !== 1) fail('nearestOpen(): a drop just inside the second box goes to the first one (array order is not nearness)');
+      const done = [ { id:0, cx:100, cy:100, hw:22, hh:22, done:true }, { id:1, cx:148, cy:100, hw:22, hh:22, done:false } ];
+      if (nearestOpen(done, { x:121, y:100 }, 6) !== null) fail('nearestOpen(): a drop nearest to a finished slot skips it into the next slot');
+      if (nearestOpen(done, { x:300, y:300 }, 6) !== null) fail('nearestOpen(): a drop far from every slot is accepted');
+    }
+  }
+  {
+    /* 托盤不可以一開始就排成答案的順序（同一個答案的兩張卡也算） */
+    let sorted = 0, seen = new Set();
+    for (let i = 0; i < 4000; i++){
+      const a = D.shuffle([3, 1, 2, 0]);
+      if (a.join() === '0,1,2,3') sorted++;
+      seen.add(a.join());
+      const b = D.shuffle(['a', 'b', 'c', 'd'], function(x){ return { a:0, b:0, c:1, d:2 }[x]; });
+      const kb = b.map(function(x){ return { a:0, b:0, c:1, d:2 }[x]; });
+      if (kb[0] <= kb[1] && kb[1] <= kb[2] && kb[2] <= kb[3]) sorted++;
+    }
+    if (sorted) fail('shuffle(): ' + sorted + ' trays out of 8000 came out already in answer order');
+    if (seen.size < 20) fail('shuffle(): only ' + seen.size + ' of the 23 allowed orders of four ever appear');
+  }
+  need('drag', /if \(gen !== gGen\) return;/, 'a piece released after its board was rebuilt must do nothing (generation guard)');
+  need('drag', /el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/, 'a lost pointer capture must put the piece back');
+  need('drag', /if \(!start \|\| e\.pointerId !== pid\) return;/, 'only the first finger may drag');
+  need('drag', /\.gpiece\.locked\{[^}]*pointer-events:none/, 'placed pieces must not block taps (pointer-events:none)');
+  need('drag', /\.gpiece\{[^}]*touch-action:none/, 'draggable pieces need touch-action:none');
+  need('restart', /function startRound\(\)\{[\s\S]*?gGen\+\+;[\s\S]*?gameStage\.textContent = '';/, 'every round must start a new board generation and clear the stage');
+  need('ahead', /if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/, 'ahead mode must show hint level 1 automatically');
+
+  /* ---------- 第 1 關：認角 ---------- */
+  {
+    const G = D.PIECE_G;
+    [G.card.w, G.card.h].forEach(function(s){ if (s < TOUCH_MIN_REF) fail('piece: a degree card side is ' + s + ' (< ' + TOUCH_MIN_REF + ')'); });
+    if (D.GAME_PIECE.length < 6 || !D.GAME_PIECE.some(function(e){ return e.p === 0; }) || !D.GAME_PIECE.some(function(e){ return e.p === 1; }))
+      fail('piece: the pool must use both set squares');
+    D.GAME_PIECE.forEach(function(e, k){
+      const label = 'piece pool ' + k, ref = D.pieceRef(e), big = D.pieceBig(e);
+      const angRef = ref.pts.map(function(p, i){ return cornerDegRef(ref.pts[(i + 2) % 3], p, ref.pts[(i + 1) % 3]); });
+      const angBig = big.pts.map(function(p, i){ return cornerDegRef(big.pts[(i + 2) % 3], p, big.pts[(i + 1) % 3]); });
+      if (!eqArr(sortNum(angRef.map(Math.round)), PIECE_REF[e.p])) fail(label + ': the small piece is drawn with angles ' + angRef.map(Math.round).join('/'));
+      angBig.forEach(function(a, i){
+        if (Math.abs(a - big.corners[i].deg) > 0.01) fail(label + ': corner ' + i + ' of the big piece is drawn ' + a.toFixed(2) + '° but the game judges it as ' + big.corners[i].deg + '°');
+        if (Math.abs(a - angRef[i]) > 0.01) fail(label + ': corner ' + i + ' is ' + a.toFixed(1) + '° on the big piece but ' + angRef[i].toFixed(1) + '° on the small one');
+        if (Math.abs(ref.corners[i].deg - angRef[i]) > 0.01) fail(label + ': the small piece labels corner ' + i + ' ' + ref.corners[i].deg + '° but it is drawn ' + angRef[i].toFixed(1) + '°');
+      });
+      const sideR = distRef(ref.pts[0], ref.pts[1]), sideB = distRef(big.pts[0], big.pts[1]);
+      if (!(sideB / sideR > 1.3)) fail(label + ': the big piece is not clearly bigger (' + (sideB / sideR).toFixed(2) + '×)');
+      const dirR = Math.atan2(ref.pts[1].y - ref.pts[0].y, ref.pts[1].x - ref.pts[0].x), dirB = Math.atan2(big.pts[1].y - big.pts[0].y, big.pts[1].x - big.pts[0].x);
+      const cross = (ref.pts[1].x - ref.pts[0].x) * (ref.pts[2].y - ref.pts[0].y) - (ref.pts[1].y - ref.pts[0].y) * (ref.pts[2].x - ref.pts[0].x);
+      const crossB = (big.pts[1].x - big.pts[0].x) * (big.pts[2].y - big.pts[0].y) - (big.pts[1].y - big.pts[0].y) * (big.pts[2].x - big.pts[0].x);
+      if (Math.abs(dirR - dirB) < 0.01 && Math.sign(cross) === Math.sign(crossB)) fail(label + ': the big piece is not turned or flipped — the round would only test copying by position');
+      /* 托盤：這一片的三個角 ＋ 一張這一片沒有、另一片才有的角 */
+      const decoy = D.pieceDecoy(e.p);
+      if (PIECE_REF[e.p].indexOf(decoy) >= 0 || PIECE_REF[1 - e.p].indexOf(decoy) < 0) fail(label + ': the extra card (' + decoy + '°) must be a corner of the other set square only');
+      /* 照規則玩一遍：每一張卡放到每一個角 —— 只有度數一樣的收；三個角一定放得完 */
+      const cards = PIECE_REF[e.p].slice().concat([decoy]);
+      big.corners.forEach(function(c, i){
+        cards.forEach(function(v){
+          const accept = Math.abs(v - angBig[i]) < 0.01;
+          if (D.pieceJudge(v, c.deg) !== (accept ? 'ok' : 'miss')) fail(label + ': pieceJudge(' + v + ', ' + c.deg + ') is ' + D.pieceJudge(v, c.deg) + ' but the drawn corner is ' + angBig[i].toFixed(1) + '°');
+          if (accept) return;
+          const kind = kindRef(angBig.map(Math.round), i);
+          if (D.cornerKind(big.angles, i) !== kind) fail(label + ': corner ' + i + ' is the "' + kind + '" corner but the game calls it "' + D.cornerKind(big.angles, i) + '"');
+          ['zh', 'en'].forEach(function(lang){
+            const s = I18N[lang].gPieceNo(v, c.deg, kind, PIECE_REF[e.p].indexOf(v) < 0);
+            const want = kind === 'right' ? [v, 90] : [v, c.deg];
+            if (PIECE_REF[e.p].indexOf(v) < 0) want.push(v);
+            if (digitsOf(s).join() !== want.join()) fail(label + ' (' + lang + '): the reason for ' + v + '° on the ' + c.deg + '° corner reads ' + JSON.stringify(digitsOf(s)) + ', expected ' + JSON.stringify(want));
+            narrated.push([lang, 'gPieceNo', s]);
+          });
+        });
+      });
+      /* 自然動作：看得到的角 —— 頂點、以及三角形裡離頂點 26 以內的點 —— 放下去都歸那一個角 */
+      if (nearestOpen){
+        const slots = big.corners.map(function(c, i){ return { id:i, cx:c.zx, cy:c.zy, hw:G.zone / 2, hh:G.zone / 2, done:false }; });
+        big.corners.forEach(function(c, i){
+          const u1 = { x:big.pts[(i + 1) % 3].x - c.x, y:big.pts[(i + 1) % 3].y - c.y }, u2 = { x:big.pts[(i + 2) % 3].x - c.x, y:big.pts[(i + 2) % 3].y - c.y };
+          const n1 = Math.hypot(u1.x, u1.y), n2 = Math.hypot(u2.x, u2.y);
+          let miss = 0;
+          for (let s = 0; s <= 1; s += 0.1) for (let rr = 0; rr <= 26; rr += 2){
+            const dx = (u1.x / n1) * (1 - s) + (u2.x / n2) * s, dy = (u1.y / n1) * (1 - s) + (u2.y / n2) * s, dn = Math.hypot(dx, dy);
+            const pt = { x:c.x + dx / dn * rr, y:c.y + dy / dn * rr };
+            const g = nearestOpen(slots, pt, D.GAME_PAD);
+            if (!g || g.id !== i) miss++;
+          }
+          if (miss) fail(label + ': ' + miss + ' points on the drawn ' + c.deg + '° corner are not taken by that corner');
+        });
+      }
+      const boxes = [];
+      ref.corners.forEach(function(c){ boxes.push(boxOf(c.lx, c.ly, G.lblW, G.lblH, 'small-piece label ' + c.deg)); });
+      big.corners.forEach(function(c){ boxes.push(boxOf(c.lx, c.ly, G.card.w, G.card.h, 'placed card at corner ' + c.i)); });
+      G.trayX.forEach(function(x, j){ boxes.push(boxOf(x, G.trayY, G.card.w, G.card.h, 'tray card ' + j)); });
+      boxes.push({ l:G.tag.x, r:G.tag.x + G.tag.w, t:G.tag.y, b:G.tag.y + G.tag.h, n:'the "small one" tag' });
+      [ref, big].forEach(function(pl, q){
+        const xs = pl.pts.map(function(p){ return p.x; }), ys = pl.pts.map(function(p){ return p.y; });
+        boxes.push({ l:Math.min.apply(null, xs), r:Math.max.apply(null, xs), t:Math.min.apply(null, ys), b:Math.max.apply(null, ys), n:q ? 'big triangle' : 'small triangle' });
+      });
+      layoutProblems(label, boxes, G.W, G.H, function(a, b){
+        return (a.n === 'big triangle' && b.n.indexOf('placed card') === 0) || (b.n === 'big triangle' && a.n.indexOf('placed card') === 0)
+            || (a.n === 'small triangle' && b.n.indexOf('small-piece label') === 0) || (b.n === 'small triangle' && a.n.indexOf('small-piece label') === 0);
+      }).forEach(fail);
+      /* 放好的卡不可以蓋住別的角 */
+      big.corners.forEach(function(c){ big.pts.forEach(function(p, j){ if (j !== c.i && Math.abs(p.x - c.lx) < G.card.w / 2 && Math.abs(p.y - c.ly) < G.card.h / 2) fail(label + ': the card placed on corner ' + c.i + ' covers corner ' + j); }); });
+      ['zh', 'en'].forEach(function(lang){
+        big.corners.forEach(function(c, i){
+          const s = I18N[lang].gPiece2(kindRef(angBig.map(Math.round), i), c.deg);
+          if (digitsOf(s).join() !== String(c.deg)) fail(label + ' (' + lang + '): the level-2 hint for corner ' + i + ' reads ' + JSON.stringify(digitsOf(s)));
+          narrated.push([lang, 'gPiece2', s]);
+        });
+      });
+    });
+    need('piece', /if \(pieceJudge\(v, c\.deg\) !== 'ok'\)\{\s*roundMiss\(d\.gPieceNo\(/, 'a card must be judged against the corner it was dropped on');
+    noEarlyAccept('piece', /piece: function\(d\)\{[\s\S]*?useTapSelect\(B, function\(P, pt\)\{/, /pieceJudge\(/, ['lock(', 'return true', '.done = true']);
+    need('piece', /var s = nearestOpen\(slots, pt, GAME_PAD\);\s*if \(!s\) return false;/, 'a drop away from every corner must bounce silently');
+    need('piece', /shuffle\(big\.angles\.concat\(\[pieceDecoy\(e\.p\)\]\)\)/, 'the tray must be the piece\'s three angles plus the decoy, shuffled');
+  }
+
+  /* ---------- 第 2 關：拼 ---------- */
+  {
+    const G = D.JOIN_G;
+    const all = D.GAME_JOIN.trap.concat(D.GAME_JOIN.plain);
+    if (JSON.stringify(sortNum(all)) !== JSON.stringify(JOIN_TARGETS_REF)) fail('join: the targets are ' + sortNum(all).join('/') + ', expected every one-from-each join ' + JOIN_TARGETS_REF.join('/'));
+    [G.chip.w, G.chip.h].forEach(function(s){ if (s < TOUCH_MIN_REF) fail('join: a corner chip side is ' + s + ' (< ' + TOUCH_MIN_REF + ')'); });
+    all.forEach(function(W){
+      const label = 'join ' + W + '°';
+      /* 一片出一個角：剛好一種 */
+      const ways = [];
+      PIECE_REF[0].forEach(function(a){ PIECE_REF[1].forEach(function(b){ if (a + b === W) ways.push(a + '+' + b); }); });
+      if (new Set(ways).size !== 1) fail(label + ': one-from-each ways are ' + JSON.stringify([...new Set(ways)]) + ' — exactly one is needed');
+      /* 同一片的兩個（不同的）角加起來也剛好 W —— 那就是陷阱 */
+      let trap = false;
+      [0, 1].forEach(function(p){ const c = PIECE_REF[p]; for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) if (c[i] + c[j] === W) trap = true; });
+      if (trap !== (D.GAME_JOIN.trap.indexOf(W) >= 0)) fail(label + ': listed as ' + (trap ? 'plain' : 'trap') + ' but two corners of one piece ' + (trap ? 'do' : 'do not') + ' add up to it');
+      /* 照規則玩：六個角當第一個 —— 比 W 小、而且另一片有 W − v 才收；收了之後只有另一片的那一個值補得滿 */
+      [0, 1].forEach(function(p){
+        PIECE_REF[p].forEach(function(v){
+          const mine = v < W && PIECE_REF[1 - p].indexOf(W - v) >= 0;
+          const page = v < W && D.pieceHas(1 - p, W - v);
+          if (mine !== page) fail(label + ': the first corner ' + v + '° (piece ' + p + ') is ' + (page ? 'accepted' : 'refused') + ' by pieceHas(), expected ' + (mine ? 'accepted' : 'refused'));
+          const j1 = D.joinJudge(W, [], p, v), w1 = v >= W ? 'big' : (mine ? 'first' : 'nomate');
+          if (j1 !== w1) fail(label + ': joinJudge() on a first ' + v + '° (piece ' + p + ') says ' + j1 + ', expected ' + w1);
+          if (mine){
+            [0, 1].forEach(function(p2){ PIECE_REF[p2].forEach(function(v2){
+              const j2 = D.joinJudge(W, [{ p:p, deg:v }], p2, v2), w2 = p2 === p ? 'same' : (v + v2 === W ? 'ok' : 'sum');
+              if (j2 !== w2) fail(label + ': joinJudge() on ' + v + '° (piece ' + p + ') then ' + v2 + '° (piece ' + p2 + ') says ' + j2 + ', expected ' + w2);
+            }); });
+            if (D.joinJudge(W, [{ p:p, deg:v }, { p:1 - p, deg:W - v }], 1 - p, 45) !== 'full') fail(label + ': joinJudge() accepts a third corner');
+          }
+          ['zh', 'en'].forEach(function(lang){
+            const d = I18N[lang];
+            if (v >= W){ const s = d.gJoinBig(v, W); if (digitsOf(s).slice(0, 2).join() !== [v, W].join()) fail(label + ' (' + lang + '): gJoinBig reads ' + digitsOf(s)); narrated.push([lang, 'gJoinBig', s]); }
+            else if (!mine){
+              const same = PIECE_REF[p].indexOf(W - v) >= 0 && (PIECE_REF[p].indexOf(W - v) !== PIECE_REF[p].indexOf(v) || PIECE_REF[p].filter(function(x){ return x === v; }).length > 1);
+              const s = d.gJoinNoMate(v, W, W - v, d.pieceName[D.PIECES[1 - p].id], D.pieceHas(p, W - v));
+              narrated.push([lang, 'gJoinNoMate', s]);
+              if (s.indexOf(String(W - v)) < 0) fail(label + ' (' + lang + '): the "no mate" reason does not say ' + (W - v) + '° is missing');
+              if (same && D.pieceHas(p, W - v) !== true) fail(label + ': the same-piece note is lost for ' + v + '°');
+            } else {
+              /* 收了：第二個角 —— 同一片的一律彈回（就算加起來剛好），另一片只有 W − v 收 */
+              PIECE_REF[p].forEach(function(v2, j){
+                if (j === PIECE_REF[p].indexOf(v) && PIECE_REF[p].filter(function(x){ return x === v; }).length === 1) return;
+                narrated.push([lang, 'gJoinSame', d.gJoinSame(v, d.pieceName[D.PIECES[p].id])]);
+              });
+              PIECE_REF[1 - p].forEach(function(v2){
+                if (v + v2 === W){ narrated.push([lang, 'gJoinOk', d.gJoinOk(v, v2, W)]); return; }
+                const s = d.gJoinNo(v, v2, v + v2, W);
+                if (sortNum(digitsOf(s)).join() !== sortNum([v, v2, v + v2, W, Math.abs(W - v - v2)]).join()) fail(label + ' (' + lang + '): gJoinNo reads ' + digitsOf(s));
+                narrated.push([lang, 'gJoinNo', s]);
+              });
+              narrated.push([lang, 'gJoinFirst', d.gJoinFirst(v, W - v)]);
+              narrated.push([lang, 'gJoin2b', d.gJoin2b(W - v, d.pieceName[D.PIECES[1 - p].id])]);
+            }
+          });
+        });
+      });
+      const one = ways[0].split('+').map(Number);
+      ['zh', 'en'].forEach(function(lang){
+        const d = I18N[lang], s = d.gJoin2(W, one[0], d.pieceName[D.PIECES[0].id], one[1], d.pieceName[D.PIECES[1].id]);
+        narrated.push([lang, 'gJoin2', s]);
+      });
+      /* 放下去的範圍：第二套 —— 畫出來的扇形（半徑 arm）裡、還沒補滿的那一塊，加上頂點 */
+      [0].concat(PIECE_REF[0], PIECE_REF[1]).filter(function(lo){ return lo < W; }).forEach(function(lo){
+        let bad = 0;
+        for (let x = 0; x <= G.W; x += 3) for (let y = 0; y <= G.H; y += 3){
+          const dx = x - G.vx, dy = G.vy - y, r = Math.hypot(dx, dy);
+          let th = Math.atan2(dy, dx) * 180 / Math.PI;
+          const inside = r <= G.arm - 1 && th >= lo + 1 && th <= W - 1 && r > G.inR + 1;
+          const far = r > G.inR + 1 && (r > G.arm + G.pad + 1 || th < lo - G.angPad - 1 || th > W + G.angPad + 1);
+          const got = D.joinInGap(W, lo, x, y);
+          if (inside && !got) bad++;
+          if (far && got) bad++;
+        }
+        if (!D.joinInGap(W, lo, G.vx, G.vy)) bad++;
+        if (bad) fail(label + ': joinInGap() disagrees with the drawn gap (' + lo + '° filled) at ' + bad + ' points');
+      });
+      /* 畫出來的扇形：外框 0 → W；放好的角照度數畫 */
+      const svg = D.joinSVG(W, [{ p:0, deg:one[0] }, { p:1, deg:one[1] }]);
+      const secs = [...svg.matchAll(/<path class="(gj-[a-z]+)" d="([^"]+)"/g)].map(function(m){ return { cls:m[1], a:sectorAnglesRef(m[2]) }; });
+      const out = secs.filter(function(s){ return s.cls === 'gj-out'; })[0], fills = secs.filter(function(s){ return s.cls === 'gj-fill'; });
+      if (!out || !out.a || Math.abs(out.a.from) > 0.05 || Math.abs(out.a.span - W) > 0.05) fail(label + ': the dashed outline is not drawn 0° → ' + W + '°');
+      if (fills.length !== 2 || !fills[0].a || !fills[1].a || Math.abs(fills[0].a.span - one[0]) > 0.05 || Math.abs(fills[1].a.from - one[0]) > 0.05 || Math.abs(fills[1].a.span - one[1]) > 0.05)
+        fail(label + ': the two placed corners are not drawn side by side at their own sizes');
+      /* 版面：W 的牌子、兩排角、兩行片名 */
+      const boxes = [boxOf(D.polarX(G.vx, W / 2, G.wLblR), D.polarY(G.vy, W / 2, G.wLblR), G.wBadge.w, G.wBadge.h, 'the ' + W + '° badge')];
+      [0, 1].forEach(function(p){
+        boxes.push({ l:10, r:G.W - 10, t:G.grpY[p], b:G.grpY[p] + G.grpH, n:'piece name ' + p });
+        G.rowX.forEach(function(x, j){ boxes.push(boxOf(x, G.rowY[p], G.chip.w, G.chip.h, 'chip ' + p + '.' + j)); });
+      });
+      boxes.push({ l:G.vx - G.arm, r:G.vx + G.arm, t:G.vy - G.arm, b:G.vy + 2, n:'the angle' });
+      layoutProblems(label, boxes, G.W, G.H, function(a, b){ return a.n === 'the angle' || b.n === 'the angle'; }).forEach(fail);
+    });
+    need('join', /if \(placed\.length === 2 \|\| !joinInGap\(W, lo, pt\.x, pt\.y\)\) return false;/, 'a drop outside the dashed gap must bounce silently');
+    need('join', /var v = P\.data\.deg, p = P\.data\.p, res = joinJudge\(W, placed, p, v\);/, 'the join handler must ask joinJudge()');
+    need('join', /if \(res !== 'first' && res !== 'ok'\) return false;/, 'only "first" and "ok" may place a corner');
+    /* 掃到最後那一道關卡為止（codex 第二輪：judge 之後、關卡之前插一條「same 也收下」照樣逃得掉） */
+    noEarlyAccept('join', /join: function\(d\)\{[\s\S]*?useTapSelect\(B, function\(P, pt\)\{/, /if \(res !== 'first' && res !== 'ok'\) return false;/, ['lock(', 'return true', 'placed.push']);
+    need('join', /pieceAngles\(PIECES\[p\]\)\.forEach\(function\(v, j\)\{\s*addPiece\(/, 'the tray must offer every corner of both pieces');
+    need('join', /var list = swapMaybe\(\[pick\(GAME_JOIN\.trap\), pick\(GAME_JOIN\.plain\)\]\);/, 'each round needs one order with the same-piece trap and one without');
+  }
+
+  /* ---------- 第 3 關：拼還是疊 ---------- */
+  {
+    const G = D.SORT_G;
+    [G.card.w, G.card.h].forEach(function(s){ if (s < TOUCH_MIN_REF) fail('sort: a card side is ' + s); });
+    D.GAME_SORT.forEach(function(set, k){
+      const label = 'sort set ' + k, cards = D.sortCards(set), bins = D.sortBins(cards);
+      if (cards.length !== 4) fail(label + ': four cards expected');
+      set.forEach(function(pr){
+        if (!crossLegalRef({ op:'join', a:pr[0], b:pr[1] })) fail(label + ': ' + pr.join('/') + ' needs two corners of one set square');
+        if (!(pr[0] > pr[1])) fail(label + ': the pair must be (big, small)');
+      });
+      if (set[0].join() === set[1].join()) fail(label + ': the two pairs are the same');
+      const mine = [];
+      cards.forEach(function(c){
+        const v = c.op === 'join' ? c.big + c.small : c.big - c.small;
+        bins.concat([v + 7]).forEach(function(bv){ const j = D.sortJudge(c, bv), w = bv === v ? 'ok' : c.op; if (j !== w) fail(label + ': sortJudge() puts ' + c.op + ' ' + c.big + '/' + c.small + ' in ' + bv + '° as ' + j + ', expected ' + w); });
+        if (D.sortValue(c) !== v) fail(label + ': ' + c.op + ' ' + c.big + '/' + c.small + ' gives ' + D.sortValue(c) + ', expected ' + v);
+        mine.push(v);
+        /* 顏色：30、60 是橘色那一片，45 是藍色那一片，90 是另一個角不在的那一片 */
+        const pieceOf = function(x, other){ return (x === 30 || x === 60) ? 0 : (x === 45 ? 1 : ((other === 30 || other === 60) ? 1 : 0)); };
+        const want = [pieceOf(c.big, c.small), pieceOf(c.small, c.big)];
+        if (c.pc.join() !== want.join()) fail(label + ': the colours of ' + c.big + '/' + c.small + ' are pieces ' + c.pc + ', expected ' + want);
+        if (c.pc[0] === c.pc[1]) fail(label + ': both angles of a card come from one set square');
+        /* 讀圖：並排 ＝ 第二塊從第一塊的邊開始；疊 ＝ 兩塊都從 0 開始 */
+        const svg = D.sortCardSVG(c, G.sw, G.sh);
+        const secs = [...svg.matchAll(/<path class="gs-[ab]" d="([^"]+)" fill="([^"]+)" stroke="([^"]+)"/g)].map(function(m){ return { a:sectorAnglesRef(m[1]), stroke:m[3] }; });
+        if (secs.length !== 2 || !secs[0].a || !secs[1].a) { fail(label + ': cannot read the two angles on the ' + c.op + ' card'); return; }
+        const ok = c.op === 'join'
+          ? Math.abs(secs[0].a.from) < 0.05 && Math.abs(secs[0].a.span - c.big) < 0.05 && Math.abs(secs[1].a.from - c.big) < 0.05 && Math.abs(secs[1].a.span - c.small) < 0.05
+          : Math.abs(secs[0].a.from) < 0.05 && Math.abs(secs[0].a.span - c.big) < 0.05 && Math.abs(secs[1].a.from) < 0.05 && Math.abs(secs[1].a.span - c.small) < 0.05;
+        if (!ok) fail(label + ': the ' + c.op + ' card of ' + c.big + '/' + c.small + ' is not drawn as a ' + c.op);
+        if (secs[0].stroke !== (want[0] === 0 ? '#E8871E' : '#3B7DD8') || secs[1].stroke !== (want[1] === 0 ? '#E8871E' : '#3B7DD8')) fail(label + ': a wedge on a card is not drawn in its set square\'s colour');
+        ['zh', 'en'].forEach(function(lang){
+          const d = I18N[lang];
+          const s = c.op === 'join' ? d.gSortJoin(c.big, c.small, v) : d.gSortLay(c.big, c.small, v);
+          if (digitsOf(s).join() !== [c.big, c.small, v].join()) fail(label + ' (' + lang + '): the ' + c.op + ' reason reads ' + digitsOf(s));
+          narrated.push([lang, 'gSort', s]);
+          narrated.push([lang, 'gSort2', d.gSort2(d.gSortPos[0], c.op === 'join', c.big, c.small, v)]);
+        });
+      });
+      if (JSON.stringify(bins) !== JSON.stringify([...new Set(mine)].sort(function(a, b){ return a - b; }))) fail(label + ': the boxes are ' + bins + ', expected ' + mine);
+      /* 陷阱一定在：同一組的另一種擺法的度數一定有盒子 */
+      set.forEach(function(pr){ if (bins.indexOf(pr[0] + pr[1]) < 0 || bins.indexOf(pr[0] - pr[1]) < 0) fail(label + ': reading ' + pr.join('/') + ' the wrong way has no box to land in, so the trap is gone'); });
+      const n = bins.length, boxes = [];
+      bins.forEach(function(v, i){ boxes.push({ l:D.sortBinX(i, n), r:D.sortBinX(i, n) + G.binW, t:G.binY, b:G.binY + G.binH, n:'box ' + v }); });
+      for (let j = 0; j < 4; j++) boxes.push(boxOf(G.cardX[j % 2], G.cardY[Math.floor(j / 2)], G.card.w, G.card.h, 'card ' + j));
+      layoutProblems(label, boxes, G.W, G.H).forEach(fail);
+      const most = Math.max.apply(null, bins.map(function(v){ return mine.filter(function(x){ return x === v; }).length; }));
+      if (G.binLbl + 6 + (most - 1) * G.mini.dy + G.mini.h + 18 > G.binH) fail(label + ': ' + most + ' cards do not fit in one box');
+      if (G.binW < G.mini.w) fail('sort: a box is narrower than a card inside it');
+    });
+    need('sort', /var cards = shuffle\(all, function\(c\)\{ return bins\.indexOf\(sortValue\(c\)\); \}\);/, 'the cards must be shuffled against the box order');
+    need('sort', /var b = nearestOpen\(boxes, pt, GAME_PAD\);\s*if \(!b\) return false;/, 'a drop away from every box must bounce silently');
+    need('sort', /res = sortJudge\(c, b\.v\);\s*if \(res !== 'ok'\)\{/, 'a card must only go into the box for the angle it makes');
+    noEarlyAccept('sort', /sort: function\(d\)\{[\s\S]*?useTapSelect\(B, function\(P, pt\)\{/, /sortJudge\(/, ['lock(', 'return true', 'left--']);
+  }
+
+  /* ---------- 第 4 關：對角 ---------- */
+  {
+    const G = D.OPP_G;
+    [G.badge.w, G.badge.h, G.hit].forEach(function(s){ if (s < 40) fail('opp: a tap target side is ' + s); });
+    if (G.badge.h < 40 || G.hit < TOUCH_MIN_REF) fail('opp: the corner tap targets are too small');
+    ['para', 'rhomb'].forEach(function(kind){
+      if (!D.GAME_OPP[kind] || D.GAME_OPP[kind].length < 3) fail('opp: the ' + kind + ' pool is too small');
+      D.GAME_OPP[kind].forEach(function(e, k){
+        const label = 'opp ' + kind + ' ' + k, pl = D.oppPlace(e);
+        if ((kind === 'rhomb') !== (e.w === e.h)) fail(label + ': a ' + kind + ' must have ' + (kind === 'rhomb' ? 'equal' : 'unequal') + ' sides');
+        if (e.a === RIGHT_REF || Math.abs(e.a - (STRAIGHT_REF - e.a)) < 20) fail(label + ': ' + e.a + '° and its neighbour must look clearly different');
+        const ang = pl.pts.map(function(p, i){ return cornerDegRef(pl.pts[(i + 3) % 4], p, pl.pts[(i + 1) % 4]); });
+        ang.forEach(function(a, i){ if (Math.abs(a - pl.corners[i].deg) > 0.01) fail(label + ': corner ' + i + ' is drawn ' + a.toFixed(2) + '° but labelled ' + pl.corners[i].deg + '°'); });
+        if (Math.abs(ang[0] - ang[2]) > 0.01 || Math.abs(ang[1] - ang[3]) > 0.01) fail(label + ': the angles diagonally across are not drawn equal');
+        if (Math.abs(ang[0] - ang[1]) < 15) fail(label + ': neighbouring corners look alike, the picture does not tell the twin apart');
+        const kn = pl.known;
+        if (kn.length !== 2 || (kn[1] - kn[0] + 4) % 4 !== 1) fail(label + ': the two measured corners must be neighbours');
+        /* 照規則：每一個量好的角配每一個「?」—— 只有斜對面那一個收；兩次一定配得完 */
+        const unk = [0, 1, 2, 3].filter(function(i){ return kn.indexOf(i) < 0; });
+        let goods = 0;
+        kn.forEach(function(a){ unk.forEach(function(u){
+          const across = (Math.abs(u - a) === 2);
+          if (D.oppJudge(a, u) !== (across ? 'ok' : 'next')) fail(label + ': oppJudge(' + a + ', ' + u + ') is ' + D.oppJudge(a, u));
+          if (across) goods++;
+          ['zh', 'en'].forEach(function(lang){
+            const d = I18N[lang];
+            if (across){ narrated.push([lang, 'gOppOk', d.gOppOk(pl.corners[a].deg)]); return; }
+            const s = d.gOppNo(pl.corners[a].deg, pl.corners[(u + 2) % 4].deg);
+            if (digitsOf(s).join() !== [ang[a], ang[(u + 2) % 4]].map(Math.round).join()) fail(label + ' (' + lang + '): the reason reads ' + digitsOf(s));
+            narrated.push([lang, 'gOppNo', s]);
+          });
+        }); });
+        if (goods !== 2) fail(label + ': ' + goods + ' correct pairs, expected 2');
+        ['zh', 'en'].forEach(function(lang){
+          const d = I18N[lang];
+          kn.forEach(function(a){ narrated.push([lang, 'gOpp2', d.gOpp2(pl.corners[a].deg, d.cornerName[a], d.cornerName[(a + 2) % 4])]); });
+        });
+        const boxes = [];
+        pl.corners.forEach(function(c){ boxes.push(boxOf(c.lx, c.ly, G.badge.w, G.badge.h, 'badge ' + c.i)); boxes.push(boxOf(c.x, c.y, G.hit, G.hit, 'corner ' + c.i)); });
+        layoutProblems(label, boxes, G.W, G.H, function(a, b){ return a.n.slice(-1) === b.n.slice(-1); }).forEach(fail);
+      });
+    });
+    need('opp', /if \(oppJudge\(kn\.c\.i, un\.c\.i\) !== 'ok'\)\{\s*roundMiss\(d\.gOppNo\(/, 'only the corner diagonally across may take a measured angle');
+    noEarlyAccept('opp', /function tapSpot\(s\)\{/, /oppJudge\(/, ['.done = true', 'matched++', 'links.push']);
+    need('opp', /if \(!sel \|\| sel === s \|\| sel\.known === s\.known\)\{/, 'two measured corners (or two "?") tapped in a row must just change the selection');
+    need('opp', /el\.addEventListener\('click', function\(\)\{ if \(gen === gGen\) tapSpot\(s\); \}\);/, 'the badge and the drawn corner must both be tap targets, guarded by the board generation');
+  }
+
+  /* ---------- 第 5 關：切一刀 ---------- */
+  {
+    const G = D.CUT_G;
+    if (G.knob < TOUCH_MIN_REF) fail('cut: the handle is ' + G.knob + ' (< ' + TOUCH_MIN_REF + ')');
+    const labels = D.cutLabels();
+    if (labels.join() !== '10,20,30,40,50,60,70,80') fail('cut: the printed scale is ' + labels.join(','));
+    /* 第二套 cutPick：數字的牌子上 → 那個數字；其他地方 → 方向四捨五入到 5° */
+    function pickRef(x, y){
+      for (let t = 10; t <= 80; t += 10){
+        const cx = G.vx + G.lblR * Math.cos(t * Math.PI / 180), cy = G.vy + G.lblR * Math.sin(t * Math.PI / 180);
+        if (Math.abs(x - cx) <= G.lblW / 2 && Math.abs(y - cy) <= G.lblH / 2) return t;
+      }
+      /* 只有長方形（四邊各放寬一點）裡面是切線的地方 —— 寫死的第二份邊界：左上 (40, 30)、236 × 216、放寬 8 */
+      if (x < 32 || x > 284 || y < 22 || y > 254) return null;
+      const dx = x - G.vx, dy = y - G.vy;
+      if (Math.hypot(dx, dy) < G.minR) return null;
+      let th = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (th < -90) th = 90;
+      th = Math.min(90, Math.max(0, th));
+      return 5 * Math.round(th / 5);
+    }
+    /* 每一個整數點都比（不只偶數點），長方形四邊各放寬 8 這一條也釘住（codex 第二輪：edge 改成 9 偶數格掃不到） */
+    for (let x = 20; x <= 296; x++) for (let y of [20, 21, 22, 23, 253, 254, 255, 256]) if (D.cutPick(x, y) !== pickRef(x, y)) fail('cut: cutPick(' + x + ', ' + y + ') near the top/bottom edge is ' + D.cutPick(x, y) + ', expected ' + pickRef(x, y));
+    for (let y = 20; y <= 258; y++) for (let x of [30, 31, 32, 33, 283, 284, 285, 286]) if (D.cutPick(x, y) !== pickRef(x, y)) fail('cut: cutPick(' + x + ', ' + y + ') near the left/right edge is ' + D.cutPick(x, y) + ', expected ' + pickRef(x, y));
+    if (G.edge !== 8) fail('cut: the rectangle\'s tap margin is ' + G.edge + ', the second implementation uses 8');
+    if (G.vx !== 40 || G.vy !== 30 || G.rw !== 236 || G.rh !== 216) fail('cut: the rectangle moved — update the second implementation\'s bounds');
+    [[290, 258], [296, 10], [6, 250], [20, 20], [150, 8], [292, 140]].forEach(function(q){ if (D.cutPick(q[0], q[1]) !== null) fail('cut: tapping the empty board margin at (' + q + ') cuts at ' + D.cutPick(q[0], q[1])); });
+    let bad = 0;
+    for (let x = 0; x <= G.W; x += 2) for (let y = 0; y <= G.H; y += 2) if (D.cutPick(x, y) !== pickRef(x, y)) bad++;
+    if (bad) fail('cut: cutPick() disagrees with the second implementation at ' + bad + ' points');
+    /* 自然動作：每一個印出來的數字，中心和 ±35% 都是那個數字；每一根刻度上都是那一格 */
+    labels.forEach(function(t){
+      const c = D.cutLblXY(t);
+      if (Math.abs(Math.atan2(c.y - G.vy, c.x - G.vx) * 180 / Math.PI - t) > 0.01) fail('cut: the number ' + t + ' is not printed at ' + t + '° from the top side');
+      [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35], [0.35, 0.35], [-0.35, -0.35]].forEach(function(f){
+        const got = D.cutPick(c.x + f[0] * G.lblW, c.y + f[1] * G.lblH);
+        if (got !== t) fail('cut: tapping the printed ' + t + ' at ' + f + ' cuts at ' + got);
+      });
+      labels.forEach(function(u){ if (u > t){ const q = D.cutLblXY(u); if (boxesOverlap(boxOf(c.x, c.y, G.lblW, G.lblH, ''), boxOf(q.x, q.y, G.lblW, G.lblH, ''))) fail('cut: the printed ' + t + ' and ' + u + ' overlap'); } });
+      if (!(c.x - G.lblW / 2 > G.vx && c.y - G.lblH / 2 > G.vy && c.x + G.lblW / 2 < G.vx + G.rw && c.y + G.lblH / 2 < G.vy + G.rh)) fail('cut: the printed ' + t + ' is not inside the rectangle');
+    });
+    const svg0 = D.cutSVG(25);
+    const ticks = [...svg0.matchAll(/<line class="gx-tick" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)].map(function(m){ return { x1:+m[1], y1:+m[2], x2:+m[3], y2:+m[4] }; });
+    if (ticks.length !== 17) fail('cut: ' + ticks.length + ' ticks drawn, expected 17 (5° to 85°)');
+    ticks.forEach(function(l){
+      const t = Math.round(Math.atan2(l.y1 - G.vy, l.x1 - G.vx) * 180 / Math.PI);
+      if (t % 5 !== 0) fail('cut: a tick is drawn at ' + t + '°');
+      if (D.cutPick((l.x1 + l.x2) / 2, (l.y1 + l.y2) / 2) !== t) fail('cut: dropping on the ' + t + '° tick cuts elsewhere');
+    });
+    /* 每一刀：切線碰到長方形的邊；兩塊照度數畫 */
+    for (let t = 5; t < 90; t += 5){
+      const svg = D.cutSVG(t);
+      const cl = /<line class="gx-cut" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/.exec(svg);
+      if (!cl) { fail('cut: no cut line at ' + t); continue; }
+      const x2 = +cl[3], y2 = +cl[4];
+      const onRight = Math.abs(x2 - (G.vx + G.rw)) < 0.05 && y2 <= G.vy + G.rh + 0.05, onBottom = Math.abs(y2 - (G.vy + G.rh)) < 0.05 && x2 <= G.vx + G.rw + 0.05;
+      if (!onRight && !onBottom) fail('cut: the cut at ' + t + ' does not end on the rectangle');
+      if (Math.abs(Math.atan2(y2 - G.vy, x2 - G.vx) * 180 / Math.PI - t) > 0.05) fail('cut: the cut line for ' + t + ' points at the wrong angle');
+      const wa = /<path class="gx-a" d="([^"]+)"/.exec(svg), wb = /<path class="gx-b" d="([^"]+)"/.exec(svg);
+      const A = wa && sectorAnglesRef(wa[1]), Bq = wb && sectorAnglesRef(wb[1]);
+      if (!A || !Bq || Math.abs(A.span - t) > 0.05 || Math.abs(Bq.span - (90 - t)) > 0.05) fail('cut: at ' + t + ' the orange / blue pieces are not drawn ' + t + '° / ' + (90 - t) + '°');
+      const k = { x:D.polarX(G.vx, -t, G.knobR), y:D.polarY(G.vy, -t, G.knobR) };
+      if (k.x - G.knob / 2 < 0 || k.y - G.knob / 2 < 0 || k.x + G.knob / 2 > G.W || k.y + G.knob / 2 > G.H) fail('cut: the handle at ' + t + ' sticks out of the board');
+      if (D.cutPick(k.x, k.y) !== t) fail('cut: the handle at ' + t + ' does not read ' + t);
+    }
+    D.GAME_CUT.forEach(function(pr, k){
+      const label = 'cut pool ' + k, tO = pr[0], tB = 90 - pr[1];
+      if (pr[0] === 45 || pr[1] === 45) fail(label + ': 45° reads the same both ways, so it cannot show the subtraction');
+      if (tO === tB) fail(label + ': both cuts are at the same place');
+      if (tO % 10 === 0 && tB % 10 === 0) fail(label + ': both cuts are on printed numbers — one must need the 5° ticks');
+      [tO, tB].forEach(function(t){ if (t < 5 || t > 85 || t % 5) fail(label + ': a cut at ' + t + ' is off the scale'); });
+      ['zh', 'en'].forEach(function(lang){
+        const d = I18N[lang];
+        narrated.push([lang, 'gCutOk', d.gCutOk(tO, 90 - tO)]);
+        narrated.push([lang, 'gCutOk', d.gCutOk(tB, 90 - tB)]);
+        narrated.push([lang, 'gCutSwapO', d.gCutSwapO(90 - pr[0], pr[0])]);
+        narrated.push([lang, 'gCutSwapB', d.gCutSwapB(pr[1], 90 - pr[1])]);
+        narrated.push([lang, 'gCutNoO', d.gCutNoO(tB, pr[0])]);
+        narrated.push([lang, 'gCutNoB', d.gCutNoB(tO, 90 - tO, pr[1])]);
+        narrated.push([lang, 'gCutO2', d.gCutO2(pr[0])]);
+        narrated.push([lang, 'gCutB2', d.gCutB2(pr[1], 90 - pr[1])]);
+        if (digitsOf(d.gCutSwapB(pr[1], 90 - pr[1])).join() !== [pr[1], pr[1], 90, pr[1], 90 - pr[1]].join()) fail(label + ' (' + lang + '): the swapped-reading reason reads ' + digitsOf(d.gCutSwapB(pr[1], 90 - pr[1])));
+        if (digitsOf(d.gCutAskO(pr[0], 1, 2)).pop() !== pr[0] || digitsOf(d.gCutAskB(pr[1], 2, 2)).pop() !== pr[1]) fail(label + ' (' + lang + '): the order line does not end with the wanted degrees');
+      });
+    });
+    D.GAME_CUT.forEach(function(pr){
+      [{ c:'o', v:pr[0] }, { c:'b', v:pr[1] }].forEach(function(o){
+        const want = o.c === 'o' ? o.v : 90 - o.v, swap = o.c === 'o' ? 90 - o.v : o.v;
+        for (let t = 0; t <= 90; t += 5){
+          const w = (t === 0 || t === 90) ? 'zero' : t === want ? 'ok' : t === swap ? 'swap' : 'no';
+          if (D.cutJudge(o, t) !== w) fail('cut: cutJudge(' + o.c + ' ' + o.v + ', ' + t + ') is ' + D.cutJudge(o, t) + ', expected ' + w);
+        }
+      });
+    });
+    need('cut', /var o = orders\[idx\], t = cur, res = cutJudge\(o, t\);\s*if \(res === 'zero'\)\{ roundInfo\(d\.gCutZero\); return; \}\s*if \(res !== 'ok'\)\{/, 'only the wanted cut is accepted; an uncut corner is a reminder, not a mistake');
+    noEarlyAccept('cut', /var go = actionBtn\(row, d\.gCutBtn, function\(\)\{/, /cutJudge\(/, ['idx++', 'roundSolved', 'roundInfo(ok)']);
+    need('cut', /knob\.abort\(\);/, 'pressing Cut while another finger turns must judge the released position');
+    need('cut', /move: function\(p\)\{ var t = cutPick\(p\.x, p\.y\); if \(t !== null\) setCut\(t\); \}/, 'the cut must snap and show the snapped position while dragging');
+  }
+}
+
 module.exports = {
   /* ================= 刻意改壞測試 ================= */
   breaks: [
@@ -596,31 +1126,171 @@ module.exports = {
       replace:"（45° ＋ 90° ＝ 135°；45° 疊上 60° 露出 15°",
       why:"one verified equation is swapped for the same sum written the other way round: it is still correct and the count stays at exactly the same number, and no exact-wording assertion covers that sentence — so only the fingerprint can see it" },
 
-    /* --- 遊戲 --- */
-    { file:"index", via:"index", expect:"ROUNDS[2]",
-      find:"    { kind:'shapeOpp', shape:2, corner:0, opts:['90', '60', '30', '150'], ans:1 },",
-      replace:"    { kind:'shapeOpp', shape:2, corner:0, opts:['90', '60', '30', '150'], ans:0 },",
-      why:"the game would mark the neighbouring angle as the opposite one" },
-    { file:"index", via:"index", expect:"an option uses an angle no set square carries",
-      find:"      combos:[{ op:'join', a:45, b:30 }, { op:'join', a:90, b:30 },",
-      replace:"      combos:[{ op:'join', a:45, b:30 }, { op:'join', a:90, b:15 },",
-      why:"a distractor would offer a 15° angle that no set square carries — and it stays a distractor, so the unique-answer assertion cannot fire first" },
-    { file:"index", via:"index", expect:"exactly one option must build",
-      find:"      combos:[{ op:'join', a:45, b:30 }, { op:'lay', a:45, b:30 },\n              { op:'lay', a:90, b:30 }, { op:'lay', a:90, b:45 }], ans:1 },",
-      replace:"      combos:[{ op:'join', a:45, b:30 }, { op:'lay', a:45, b:30 },\n              { op:'lay', a:60, b:45 }, { op:'lay', a:90, b:45 }], ans:1 },",
-      why:"two options would build 15°, so a child reasoning correctly could be marked wrong" },
-    { file:"index", via:"index", expect:"must use an angle that really needs three pieces",
-      find:"    { kind:'minPieces', target:165, opts:['2', '3', '4', '5'], ans:1 }",
-      replace:"    { kind:'minPieces', target:150, opts:['2', '3', '4', '5'], ans:1 }",
-      why:"150° takes two pieces, so the round would teach the wrong count" },
-    { file:"index", via:"index", expect:"game figure caption",
-      find:"      gCapSplit:'📐 橘色那一塊是量到的，藍色那一塊是剩下的',",
-      replace:"      gCapSplit:'📐 橘色那一塊是量到的 25°，藍色那一塊是剩下的',",
-      why:"the caption under the game figure would print a number from the question" },
-    { file:"index", via:"index", expect:"roundFig() disagrees",
-      find:"    if (r.kind === 'splitRest') return { kind:'split', cut:r.cut };\n    return null;",
-      replace:"    if (r.kind === 'splitRest') return { kind:'split', cut:r.cut };\n    if (r.kind === 'makeCombo') return { kind:'split', cut:30 };\n    return null;",
-      why:"the two 'pick the method' rounds would come with a picture, which is where the answer would be visible" },
+    /* --- 遊戲（2026-10-05 起五關五種玩法；gameChecks()） --- */
+    { file:"index", via:"index", expect:"the extra card",
+      find:"  function pieceDecoy(p){ return p === 0 ? 45 : 60; }",
+      replace:"  function pieceDecoy(p){ return p === 0 ? 30 : 60; }",
+      why:"the extra card in round 1 would be a real corner of the same piece, so two cards fit one corner" },
+    { file:"index", via:"index", expect:"is not turned or flipped",
+      find:"    { p:0, rot:90, flip:false }, { p:0, rot:180, flip:false },",
+      replace:"    { p:0, rot:0, flip:false }, { p:0, rot:180, flip:false },",
+      why:"the big piece would sit exactly like the small one, so the round tests copying by position, not reading the angle" },
+    { file:"index", via:"index", expect:"points on the drawn",
+      find:"zone:64, zoneIn:14,",
+      replace:"zone:64, zoneIn:44,",
+      why:"dropping a card ON the drawn corner (its vertex) would no longer count — the accept box would sit away from what the child sees" },
+    { file:"index", via:"index", expect:"the game calls it",
+      find:"    return d < others[0] ? 'min' : 'max';",
+      replace:"    return d < others[0] ? 'max' : 'min';",
+      why:"the reason for a wrong card would call the 30° corner 'not the sharpest' and the 60° corner 'the sharpest'" },
+    { file:"index", via:"index", expect:"pieceJudge(",
+      find:"  function pieceJudge(v, deg){ return v === deg ? 'ok' : 'miss'; }",
+      replace:"  function pieceJudge(v, deg){ return v === deg || v === 45 ? 'ok' : 'miss'; }",
+      why:"the 45° decoy would fit any corner of the 30/60/90 piece" },
+    { file:"index", via:"index", expect:"early accept",
+      find:"        var v = P.data.deg, c = s.c;\n",
+      replace:"        var v = P.data.deg, c = s.c;\n        if (v === pieceDecoy(e.p)){ s.done = true; P.lock(c.lx, c.ly); return true; }\n",
+      why:"an early branch before the judge would accept the decoy card — the pinned judge line itself stays intact" },
+    { file:"index", via:"index", expect:"listed as",
+      find:"  var GAME_JOIN = { trap:[120, 135, 150], plain:[75, 105, 180] };",
+      replace:"  var GAME_JOIN = { trap:[120, 135, 105], plain:[75, 150, 180] };",
+      why:"a round could get two orders without the same-piece trap" },
+    { file:"index", via:"index", expect:"by pieceHas()",
+      find:"  function pieceHas(p, need){ return pieceAngles(PIECES[p]).indexOf(need) >= 0; }",
+      replace:"  function pieceHas(p, need){ return pieceAngleList().indexOf(need) >= 0; }",
+      why:"the first-corner check would look on BOTH set squares, so a corner whose only partner is on its own piece would be accepted" },
+    { file:"index", via:"index", expect:"joinInGap() disagrees",
+      find:"    if (r <= G.inR) return true;\n",
+      replace:"",
+      why:"a corner put right on the vertex (the natural place to put an angle) would be refused" },
+    { file:"index", via:"index", expect:"joinJudge()",
+      find:"    if (p === placed[0].p) return 'same';\n",
+      replace:"",
+      why:"60° + 90° from the 30/60/90 piece would build 150° — two corners of one physical piece" },
+    { file:"index", via:"index", expect:"early accept",
+      find:"          var v = P.data.deg, p = P.data.p, res = joinJudge(W, placed, p, v);\n",
+      replace:"          var v = P.data.deg, p = P.data.p;\n          if (placed.length === 1 && placed[0].deg + v === W){ placed.push({ p:p, deg:v }); P.lock(P.homeX, P.homeY); return true; }\n          var res = joinJudge(W, placed, p, v);\n",
+      why:"an early branch would accept any second corner with the right sum, same piece or not, before joinJudge() runs" },
+    { file:"index", via:"index", expect:"early accept",
+      find:"          if (res === 'big'){ roundMiss(d.gJoinBig(v, W)); return false; }\n",
+      replace:"          if (res === 'same'){ placed.push({ p:p, deg:v }); P.lock(P.homeX, P.homeY); return true; }\n          if (res === 'big'){ roundMiss(d.gJoinBig(v, W)); return false; }\n",
+      why:"a branch AFTER joinJudge() but before the final gate would accept a same-piece corner (codex round 2)" },
+    { file:"index", via:"index", expect:"cutPick(",
+      find:"knobR:96, knob:48, wedgeR:82, minR:20, step:5, edge:8 };",
+      replace:"knobR:96, knob:48, wedgeR:82, minR:20, step:5, edge:9 };",
+      why:"the rectangle's tap margin would widen by one pixel — only an every-integer scan sees it (codex round 2)" },
+    { file:"index", via:"index", expect:"side by side",
+      find:"      lo += q.deg;\n",
+      replace:"      lo += 0;\n",
+      why:"the second corner would be drawn on top of the first instead of beside it" },
+    { file:"index", via:"index", expect:"gives",
+      find:"  function sortValue(c){ return c.op === 'join' ? joinDeg(c.big, c.small) : layDeg(c.big, c.small); }",
+      replace:"  function sortValue(c){ return c.op === 'join' ? joinDeg(c.big, c.small) : joinDeg(c.big, c.small); }",
+      why:"a laid card would be filed under the sum — exactly the misconception the round exists to catch" },
+    { file:"index", via:"index", expect:"is not drawn as a lay",
+      find:"      s += gSector('gs-b', cx, cy, r * 0.82, 0, c.small, pieceFill(c.pc[1]), pieceStroke(c.pc[1]));",
+      replace:"      s += gSector('gs-b', cx, cy, r * 0.82, c.big, c.big + c.small, pieceFill(c.pc[1]), pieceStroke(c.pc[1]));",
+      why:"a 'lay' card would be drawn side by side, so the picture contradicts the answer" },
+    { file:"index", via:"index", expect:"the colours of",
+      find:"    return [pb, ps];",
+      replace:"    return [ps, pb];",
+      why:"a 45° wedge would be painted in the 30/60/90 piece's colour" },
+    { file:"index", via:"index", expect:"the two pairs are the same",
+      find:"    [[45, 30], [60, 45]], [[90, 45], [90, 30]], [[90, 60], [45, 30]],",
+      replace:"    [[45, 30], [60, 45]], [[90, 45], [90, 45]], [[90, 60], [45, 30]],",
+      why:"a set would show the same two angles twice" },
+    { file:"index", via:"index", expect:"sortJudge()",
+      find:"  function sortJudge(c, binV){ return sortValue(c) === binV ? 'ok' : c.op; }",
+      replace:"  function sortJudge(c, binV){ return sortValue(c) === binV || joinDeg(c.big, c.small) === binV ? 'ok' : c.op; }",
+      why:"a laid card would also be accepted in the box of the sum" },
+    { file:"index", via:"index", expect:"must be neighbours",
+      find:"    return { pts:pts, angles:angles, known:[e.known, (e.known + 1) % 4], corners:pts.map(function(pt, i){",
+      replace:"    return { pts:pts, angles:angles, known:[e.known, (e.known + 2) % 4], corners:pts.map(function(pt, i){",
+      why:"the two measured corners would be a diagonal pair, so the '?' corners have no measured twin" },
+    { file:"index", via:"index", expect:"look clearly different",
+      find:"    para:[ { a:60, w:130, h:96, known:0 },",
+      replace:"    para:[ { a:85, w:130, h:96, known:0 },",
+      why:"85° and 95° look alike, so the picture would not tell the diagonal twin apart" },
+    { file:"index", via:"index", expect:"oppJudge(",
+      find:"  function oppJudge(k, u){ return u === oppositeIndex(k) ? 'ok' : 'next'; }",
+      replace:"  function oppJudge(k, u){ return u !== k ? 'ok' : 'next'; }",
+      why:"the neighbouring corner would take the measured angle" },
+    { file:"index", via:"index", expect:"cutPick() disagrees",
+      find:"    if (hit !== null) return hit;\n",
+      replace:"",
+      why:"tapping the edge of a printed number would round to the neighbouring 5°" },
+    { file:"index", via:"index", expect:"empty board margin",
+      find:"    if (x < G.vx - G.edge || x > G.vx + G.rw + G.edge || y < G.vy - G.edge || y > G.vy + G.rh + G.edge) return null;\n",
+      replace:"",
+      why:"tapping the blank margin outside the rectangle would be turned into a cut (codex round 1)" },
+    { file:"index", via:"index", expect:"is not printed at",
+      find:"  function cutLblXY(t){ return { x:CUT_G.vx + CUT_G.lblR * Math.cos(toRad(t)), y:CUT_G.vy + CUT_G.lblR * Math.sin(toRad(t)) }; }",
+      replace:"  function cutLblXY(t){ return { x:CUT_G.vx + CUT_G.lblR * Math.cos(toRad(t + 3)), y:CUT_G.vy + CUT_G.lblR * Math.sin(toRad(t + 3)) }; }",
+      why:"the numbers would drift 3° off their ticks" },
+    { file:"index", via:"index", expect:"cutJudge(",
+      find:"  function cutWant(o){ return o.c === 'o' ? o.v : layDeg(RIGHT_DEG, o.v); }",
+      replace:"  function cutWant(o){ return o.v; }",
+      why:"the blue order would accept the cut at Y — reading the scale from the wrong side" },
+    { file:"index", via:"index", expect:"45° reads the same",
+      find:"  var GAME_CUT = [[25, 30],",
+      replace:"  var GAME_CUT = [[25, 45],",
+      why:"45° reads the same from either side, so it cannot show the subtraction" },
+    { file:"index", via:"index", expect:"both cuts are on printed numbers",
+      find:"[35, 20], [20, 65]",
+      replace:"[30, 20], [20, 65]",
+      why:"neither cut would need the 5° ticks" },
+    { file:"index", via:"index", expect:"does not end on the rectangle",
+      find:"    return Math.min(G.rw / Math.cos(toRad(t)), G.rh / Math.sin(toRad(t)));",
+      replace:"    return Math.min(G.rw / Math.cos(toRad(t)), G.rh / Math.sin(toRad(t))) * 0.9;",
+      why:"the cut line would stop short of the far side" },
+    { file:"index", via:"index", expect:"already in answer order",
+      find:"    if (up && !same) a.push(a.shift());\n",
+      replace:"    a.sort(function(x, y){ return kf(x) - kf(y); });\n",
+      why:"the sort tray would start in box order" },
+    { file:"index", via:"index", expect:"array order is not nearness",
+      find:"if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }",
+      replace:"if (!best){ bd = dd; bc = dc; best = b; }",
+      why:"a drop in the overlap of two boxes would go to the first box in the array" },
+    { file:"index", via:"index", expect:"the \"−5\" note is",
+      find:"    var lost = gScore >= 5 ? 5 : 0;",
+      replace:"    var lost = 5;",
+      why:"at 0 points the game would still say −5" },
+    { file:"index", via:"index", expect:"generation guard",
+      find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */\n",
+      replace:"",
+      why:"a card still held across Restart would act on the new board" },
+    { file:"index", via:"index", expect:"lost pointer capture",
+      find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+      replace:"",
+      why:"a lost capture would leave a card stuck mid-drag" },
+    { file:"index", via:"index", expect:"gJoinNo reads",
+      find:"(s > w ? '多' : '少') + ' ' + Math.abs(w - s) + '°。'",
+      replace:"(s > w ? '多' : '少') + ' ' + Math.abs(w - s + 5) + '°。'",
+      why:"the 'how far off' number in the join reason would be wrong" },
+    { file:"index", via:"index", expect:"the reason reads",
+      find:"      gOppNo:function(kd, od){ return '那個角在 ' + kd + '° 的旁邊",
+      replace:"      gOppNo:function(kd, od){ return '那個角在 ' + od + '° 的旁邊",
+      why:"the opposite-angle reason would name the wrong measured corner" },
+    { file:"index", via:"index", expect:"arithmetic is wrong",
+      find:"藍色那一塊是 90° － ' + v + '° ＝ ' + t + '°。'; },",
+      replace:"藍色那一塊是 90° － ' + v + '° ＝ ' + (t + 10) + '°。'; },",
+      why:"a cut reason would carry a wrong subtraction" },
+    { file:"index", via:"index", expect:"a degree card side is",
+      find:"card:{ w:58, h:48 }, trayY:424,",
+      replace:"card:{ w:40, h:48 }, trayY:424,",
+      why:"the degree cards would be under the 44px phone touch size" },
+    { file:"index", via:"index", expect:"overlaps",
+      find:"card:{ w:58, h:48 }, trayY:424,",
+      replace:"card:{ w:58, h:48 }, trayY:330,",
+      why:"the tray would sit on top of the big set square" },
+    { file:"index", via:"index", expect:"ahead mode must show",
+      find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */",
+      replace:"    if (mode === 'ahead'){ hintLevel = 1; }",
+      why:"ahead mode would stop showing the first hint" },
+    { file:"index", via:"index", expect:"every corner of both pieces",
+      find:"          pieceAngles(PIECES[p]).forEach(function(v, j){\n            addPiece(",
+      replace:"          pieceAngleSet(PIECES[p]).forEach(function(v, j){\n            addPiece(",
+      why:"the tray would show only distinct angles, dropping a physical 45° corner" },
 
     /* --- 旁白 --- */
     { file:"index", via:"index", expect:"missing space between Chinese and a digit",
@@ -1056,7 +1726,9 @@ module.exports = {
                 'toRad, polarX, polarY, arcPath, wedgePath, arcSpan, dirDeg, distOf, centreFit, ' +
                 'piecePlan, joinPlan, layPlan, shapePlan, splitPlan, ' +
                 'S1_CASES, S2_CASES, S3_CASES, S4_ORDER, S5_CUTS, plEn, isAreEn, ' +
-                'ROUNDS, minPieces, roundAnswer, roundFig}',
+                'minPieces, GAME_ORDER, GAME_PAD, shuffle, cornerKind, pieceJudge, joinJudge, sortJudge, oppJudge, cutJudge, PIECE_G, GAME_PIECE, pieceDecoy, pieceRef, pieceBig, ' +
+                'JOIN_G, GAME_JOIN, joinInGap, pieceHas, joinSVG, SORT_G, GAME_SORT, sortCards, sortBins, sortValue, sortBinX, sortCardSVG, pairPieces, ' +
+                'OPP_G, GAME_OPP, oppPlace, CUT_G, GAME_CUT, cutLabels, cutLblXY, cutPick, cutSVG}',
     optionValueMax: DEG_MAX_REF,
 
     check: function(data, I18N, fail, rawSrc){
@@ -1168,8 +1840,9 @@ module.exports = {
         fail('the margin (' + MARGIN_REF + 'px) must cover the fattest thing drawn (dot r=' +
              data.DOT_R + ' + half of stroke ' + widest + ')');
       const vbCount = countOf(src, 'viewBox="0 0 ' + CANVAS_W_REF + ' ' + CANVAS_H_REF + '"');
-      if (vbCount !== 6)
-        fail('expected 6 figure canvases on the lesson page (five examples + the game), found ' + vbCount);
+      /* 小遊戲改成畫板（2026-10-05）：460 × 300 的圖只剩五個範例。 */
+      if (vbCount !== 5)
+        fail('expected 5 figure canvases on the lesson page (the five examples), found ' + vbCount);
       if (src.indexOf('max-width:' + CANVAS_W_REF + 'px;height:' + CANVAS_H_REF + 'px') < 0)
         fail('the .anglefig CSS size must match the viewBox (' + CANVAS_W_REF + '×' + CANVAS_H_REF + ')');
 
@@ -1494,72 +2167,9 @@ module.exports = {
         });
       });
 
-      /* ---------- 4) 遊戲 ---------- */
-      if (data.ROUNDS.length !== 5) fail('the game has five orders');
-      const kinds = {};
-      data.ROUNDS.forEach(function(r, i){
-        kinds[r.kind] = (kinds[r.kind] || 0) + 1;
-        const label = 'ROUNDS[' + i + ']';
-        const ans = data.roundAnswer(r);
-        if (ans === null || ans === undefined) fail(label + ': roundAnswer() gave nothing');
-        if (r.kind === 'makeCombo'){
-          const vals = r.combos.map(function(c){ return c.op === 'join' ? c.a + c.b : c.a - c.b; });
-          const hits = vals.filter(function(v){ return v === r.target; }).length;
-          if (hits !== 1) fail(label + ': exactly one option must build ' + r.target + '°, found ' + hits);
-          if (vals[r.ans] !== r.target) fail(label + ': the marked option does not build the target');
-          if (new Set(vals).size !== vals.length) fail(label + ': two options build the same angle');
-          r.combos.forEach(function(c){
-            if (ANGLE_SET_REF.indexOf(c.a) < 0 || ANGLE_SET_REF.indexOf(c.b) < 0)
-              fail(label + ': an option uses an angle no set square carries (' + c.a + '/' + c.b + ')');
-            if (!crossLegalRef(c))
-              fail(label + ': an option needs two corners of the same set square (' + c.a + '/' + c.b + ')');
-            if (c.op === 'lay' && !(c.a > c.b)) fail(label + ': a lay must put the smaller angle on top');
-          });
-          if (String(data.comboValue(r.combos[r.ans])) !== ans)
-            fail(label + ': roundAnswer() disagrees with the marked option');
-        } else {
-          if (r.opts[r.ans] !== ans) fail(label + ': opts[ans]=' + r.opts[r.ans] + ' but roundAnswer()=' + ans);
-          if (new Set(r.opts).size !== r.opts.length) fail(label + ': duplicate options');
-        }
-        if (r.kind === 'shapeOpp'){
-          const pl = data.shapePlan(r.shape);
-          if (pl.allRight) fail(label + ': asking for the opposite angle of a right-angled shape is trivial');
-          if (String(pl.angles[data.oppositeIndex(r.corner)]) !== ans)
-            fail(label + ': the answer is not the opposite angle');
-          if (pl.angles[(r.corner + 1) % 4] === pl.angles[r.corner])
-            fail(label + ': neighbour and opposite are equal, so the question has two answers');
-          /* ⚠️ 「旁邊那一個角」不可以當誘答：那個數字只有這一課不教的規則算得出來。 */
-          if (r.opts.indexOf(String(pl.angles[(r.corner + 1) % 4])) >= 0)
-            fail(label + ': the neighbouring angle (' + pl.angles[(r.corner + 1) % 4] +
-                 '°) must not be offered — it needs a rule this lesson does not teach');
-        }
-        if (r.kind === 'splitRest'){
-          if (String(RIGHT_REF - r.cut) !== ans) fail(label + ': the other piece is not 90 minus the cut');
-          if (r.cut === RIGHT_REF - r.cut) fail(label + ': the answer repeats the number in the question');
-        }
-        if (r.kind === 'minPieces'){
-          if (minPiecesRef(r.target) !== 3)
-            fail(label + ': this round must use an angle that really needs three pieces');
-          if (String(minPiecesRef(r.target)) !== ans) fail(label + ': the piece count is wrong');
-        }
-        const fig = data.roundFig(r);
-        const wantFig = (r.kind === 'shapeOpp' || r.kind === 'splitRest');
-        if (!!fig !== wantFig) fail(label + ': roundFig() disagrees with which rounds get a picture');
-        if (fig && ['shape', 'split'].indexOf(fig.kind) < 0) fail(label + ': unknown figure kind');
-      });
-      if (!kinds.makeCombo || !kinds.shapeOpp || !kinds.splitRest || !kinds.minPieces)
-        fail('the game must cover all four kinds of order');
-      ['zh', 'en'].forEach(function(lang){
-        const d = I18N[lang];
-        [d.gCapShape, d.gCapSplit].forEach(function(cap, i){
-          if (/\d/.test(String(cap)))
-            fail('game figure caption ' + i + ' (' + lang + ') contains a digit: ' + cap);
-        });
-        ['makeCombo', 'shapeOpp', 'splitRest', 'minPieces'].forEach(function(k){
-          if (typeof d.gHint1[k] !== 'string') fail('gHint1.' + k + ' missing in ' + lang);
-          if (typeof d.gHint2[k] !== 'function') fail('gHint2.' + k + ' missing in ' + lang);
-        });
-      });
+      /* ---------- 4) 遊戲：gameChecks()（見檔案上方） ---------- */
+      const gameNarr = [];
+      gameChecks(data, I18N, fail, src, gameNarr);
 
       /* ---------- 5) 旁白：真的渲染出來再掃 ---------- */
       const narrated = [];
@@ -1604,28 +2214,9 @@ module.exports = {
           narrated.push([lang, 's5calc', d.s5calc(cut, plan.other)]);
           narrated.push([lang, 's5result', d.s5result(plan.other)]);
         });
-        data.ROUNDS.forEach(function(r){
-          if (r.kind === 'makeCombo'){
-            narrated.push([lang, 'gPrompt', d.gPrompt.makeCombo(r.target)]);
-            narrated.push([lang, 'gHint2', d.gHint2.makeCombo(r.target)]);
-            r.combos.forEach(function(c){ narrated.push([lang, 'comboText', d.comboText(c)]); });
-          } else if (r.kind === 'shapeOpp'){
-            const pl = data.shapePlan(r.shape);
-            narrated.push([lang, 'gPrompt',
-              d.gPrompt.shapeOpp(d.shapeName[pl.id], d.cornerName[r.corner], pl.angles[r.corner])]);
-            narrated.push([lang, 'gHint2', d.gHint2.shapeOpp(pl.angles[r.corner])]);
-          } else if (r.kind === 'splitRest'){
-            narrated.push([lang, 'gPrompt', d.gPrompt.splitRest(r.cut)]);
-            narrated.push([lang, 'gHint2', d.gHint2.splitRest(r.cut)]);
-          } else {
-            narrated.push([lang, 'gPrompt', d.gPrompt.minPieces(r.target)]);
-            narrated.push([lang, 'gHint2', d.gHint2.minPieces(r.target)]);
-          }
-        });
-        narrated.push([lang, 'gWrong0', d.gWrong(0)]);
-        narrated.push([lang, 'gWrong5', d.gWrong(5)]);
         narrated.push([lang, 'gWin', d.gWin(100)]);
       });
+      gameNarr.forEach(function(row){ narrated.push(row); });
       narrated.forEach(function(row){
         textProblems(row[2], row[0], row[1] + ' (' + row[0] + ')').forEach(fail);
         arithProblems(row[2]).problems.forEach(function(p){ fail(row[1] + ' (' + row[0] + '): ' + p); });
