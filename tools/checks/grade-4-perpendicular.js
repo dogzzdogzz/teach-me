@@ -66,14 +66,6 @@ const S5_CASES_REF = [
 ];
 const QUIZ_DIST_REF = { axis:'h', at:3, pt:[10, 6], offs:[-4, 0, 4] };
 const QUIZ_CROSS_REF = { aAt:[3, 2], aDir:[2, 1], bAt:[11, 6], bDir:[-1, 2] };
-const G_DIST_REF = { axis:'h', at:2, pt:[10, 8], offs:[-8, 0, 8] };
-const ROUND_KINDS_REF = ['firstStep', 'distFig', 'widthFig', 'relFig', 'orderPara'];
-const STEP_KEYS_REF = ['hypOnLine', 'measureFirst', 'legOnLine', 'guessLine'];
-const WIDTH_KEYS_REF = ['slantOne', 'longestOne', 'perpOne', 'anyOne'];
-const REL_KEYS_REF = ['perpToEachOther', 'meetSomewhere', 'cannotTell', 'parallel'];
-const ORDER_KEYS_REF = ['noRuler', 'moveRuler', 'drawFirst', 'right'];
-/* 遊戲那五關的正解位置（刻意不全押第一個）。 */
-const ROUND_ANS_REF = { firstStep:2, distFig:1, widthFig:2, relFig:3, orderPara:3 };
 /* 驗算器在 data.check 跑完之後應該驗過的算式條數與指紋（裝上去時用實測值填）。 */
 const VERIFIED_REF = 4;
 const FINGERPRINT_REF = '4f2dee99750019c71a81660280629f8624f3926b';
@@ -270,18 +262,18 @@ const BANK_NUMS = {
    ⚠️ 次數要寫**當下真實的出現次數**，不是「至少 1」（裝上去時用實測值填）。 */
 const SIBLING_RULES = [
   { text:'一條直角邊貼住', files:{ index:1, review:1, parents:2 } },
-  { text:'垂直的那一條最短', files:{ index:11, reference:4 } },
+  { text:'垂直的那一條最短', files:{ index:12, reference:4 } },
   { text:'點到直線的距離', files:{ index:7, reference:7, parents:2 } },
-  { text:'處處一樣寬', files:{ index:7, reference:2, review:1, parents:4 } },
-  { text:'和兩條線都垂直', files:{ index:10, reference:4, review:2, parents:4 } },
+  { text:'處處一樣寬', files:{ index:8, reference:2, review:1, parents:4 } },
+  { text:'和兩條線都垂直', files:{ index:11, reference:4, review:2, parents:4 } },
   { text:'兩條不一樣的直線都和同一條直線垂直', files:{ index:4, reference:4, review:1, parents:2 } },
   { text:'不是斜邊', files:{ index:3, reference:2, parents:2 } }
 ];
 const SIBLING_RULES_EN = [
-  { text:'side of the right angle', files:{ index:10, reference:6, review:4, parents:4 } },
-  { text:'perpendicular one is the shortest', files:{ index:4, reference:1 } },
+  { text:'side of the right angle', files:{ index:15, reference:6, review:4, parents:4 } },
+  { text:'perpendicular one is the shortest', files:{ index:5, reference:1 } },
   { text:'same width apart everywhere', files:{ index:2, reference:1, review:1, parents:1 } },
-  { text:'perpendicular to both', files:{ index:10, reference:3, review:2, parents:2 } },
+  { text:'perpendicular to both', files:{ index:11, reference:3, review:2, parents:2 } },
   { text:'perpendicular to the same line are parallel', files:{ index:3, reference:2, parents:1 } }
 ];
 /* 一個字都不可以出現的句子（都是假話，連當誘答都不可以）。 */
@@ -649,6 +641,729 @@ function figProblems(fig, genId, d){
   return out;
 }
 
+/* ================= 小遊戲「製圖廠接訂單」（§六之五：五關五種玩法） =================
+   每一關照遊戲自己的規則（頁面資料區的純函式）把題庫的每一題玩一遍，正解一律用這份設定**自己的幾何**重算：
+   整數方向的內積／外積、畫板座標的距離。畫板座標、收的範圍、觸控大小都從資料區讀，用這裡自己的距離公式掃過整個畫板驗。
+   計分、洗牌從原始碼切出來真的跑；拖拉引擎與每一關 handler 的收／不收順序用字面釘住（行為由 e2e 與改壞頁證明）。 */
+const { extractFunction } = require('./lib/gameshuffle.js');
+/* 375px 手機上畫板的縮放：卡片內距後舞台約 286px 寬（e2e 在 375px 實際量到 48 × k ≈ 45.8）。取下界。 */
+const PHONE_K = Math.min(1.5, 286 / 300);
+const GAME_TYPES = ['slide', 'string', 'steps', 'width', 'rel'];
+const STEP_KEYS_GAME = ['stick', 'rail', 'slide', 'draw'];
+const DECOY_KEYS_GAME = ['moveRuler', 'turn'];
+
+function gameChecks(D, I18N, fail, src){
+  const LANGS = ['zh', 'en'], W = D.GAME_W;
+  if (W !== 300) fail('GAME_W is ' + W + ', the boards are designed for 300');
+  if (!Array.isArray(D.GAME_ORDER) || D.GAME_ORDER.join() !== GAME_TYPES.join())
+    fail('GAME_ORDER should be ' + GAME_TYPES.join() + ' (the order of the five examples), got ' + D.GAME_ORDER);
+  const body = name => (src.match(new RegExp('\\n {4}' + name + ': function\\(d\\)\\{([\\s\\S]*?)\\n {4}\\}(,|\\n)')) || [])[1] || '';
+  const B = {};
+  GAME_TYPES.forEach(t => {
+    B[t] = body(t);
+    if (!B[t]) fail('cannot cut RENDER.' + t + ' out of index.html');
+    LANGS.forEach(L => {
+      if (!(I18N[L].gAsks && typeof I18N[L].gAsks[t] === 'string' && I18N[L].gAsks[t].trim())) fail('gAsks.' + t + ' missing in ' + L);
+      if (!(I18N[L].gHints && typeof I18N[L].gHints[t] === 'string' && /^💡 (提示 1|Hint 1)/.test(I18N[L].gHints[t]))) fail('gHints.' + t + ' missing in ' + L + ' (it must start with 💡 提示 1 / 💡 Hint 1)');
+    });
+  });
+  const need = (k, re, what) => { if (!re.test(B[k] || '')) fail(k + ': ' + what); };
+  const touch = (what, sz) => { if (!(sz * PHONE_K >= 44)) fail(what + ' is ' + (sz * PHONE_K).toFixed(1) + 'px on a 375px phone — under 44'); };
+  const inside = (o, what, H) => { if (!(o.x >= 0 && o.y >= 0 && o.x + o.w <= W && o.y + o.h <= H)) fail(what + ' is outside the ' + W + '×' + H + ' board: ' + JSON.stringify(o)); };
+  const hit = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0;
+  const noHits = (list, what) => { for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (hit(list[i][1], list[j][1])) return fail(what + ': ' + list[i][0] + ' and ' + list[j][0] + ' overlap'); };
+  const box = (cx, cy, w, h) => ({ x:cx - w / 2, y:cy - h / 2, w:w, h:h });
+  const boxDistRef = (x, y, b) => Math.hypot(Math.max(0, b.x - x, x - (b.x + b.w)), Math.max(0, b.y - y, y - (b.y + b.h)));
+  const segDistRef = (p, a, b) => {
+    const ux = b.x - a.x, uy = b.y - a.y, L2 = ux * ux + uy * uy;
+    let t = ((p.x - a.x) * ux + (p.y - a.y) * uy) / L2; t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - a.x - ux * t, p.y - a.y - uy * t);
+  };
+  const px = (G, g) => ({ x:G.ox + g[0] * G.u, y:G.oy - g[1] * G.u });
+  const dotI = (u, v) => u[0] * v[0] + u[1] * v[1], crossI = (u, v) => u[0] * v[1] - u[1] * v[0];
+  const textOk = (where, s) => { if (typeof s !== 'string' || !s.trim() || /undefined|NaN|null|\[object/.test(s)) fail(where + ': bad text: ' + s); };
+  const has = (where, s, words) => words.forEach(w => { if (String(s).indexOf(w) < 0) fail(where + ' should say "' + w + '": ' + s); });
+  const lacks = (where, s, words) => words.forEach(w => { if (String(s).indexOf(w) >= 0) fail(where + ' must not say "' + w + '": ' + s); });
+  const numsIn = s => (String(s).replace(/<[^>]*>/g, ' ').match(/\d+/g) || []).map(Number);
+  /* 自己的「直線被方格紙切出來的那一段」 */
+  const clipRef = (cols, rows, A, Dv) => {
+    let lo = -Infinity, hi = Infinity;
+    for (let i = 0; i < 2; i++){
+      const a = A[i], d = Dv[i], m = i ? rows : cols;
+      if (d === 0){ if (a < 0 || a > m) return null; continue; }
+      let t0 = -a / d, t1 = (m - a) / d; if (t0 > t1) [t0, t1] = [t1, t0];
+      lo = Math.max(lo, t0); hi = Math.min(hi, t1);
+    }
+    return lo < hi ? [[A[0] + Dv[0] * lo, A[1] + Dv[1] * lo], [A[0] + Dv[0] * hi, A[1] + Dv[1] * hi]] : null;
+  };
+
+  /* ---------- 共用：shuffle() 真的跑：是排列、不改輸入、永遠不會由小到大，每一張到過每一個位置 ---------- */
+  {
+    const fsrc = extractFunction(src, 'shuffle');
+    let shuffle = null;
+    if (!fsrc) fail('cannot find shuffle() in index.html');
+    else { try { shuffle = new Function(fsrc + '\nreturn shuffle;')(); } catch (e){ fail('shuffle() could not be evaluated on its own: ' + e.message); } }
+    /* 決定性的一層（codex 第一輪：4000 次亂數只是「幾乎一定」）：把 Math.random 換成一串指定的值，
+       走遍 Fisher–Yates 每一種抽法 —— 每一種排列都要出得來，唯獨「由小到大」一定被換掉。 */
+    if (fsrc) [4, 5].forEach(n => {
+      const input = [...Array(n).keys()], outs = new Set();
+      const total = [1, 1, 2, 6, 24, 120][n];
+      for (let code = 0; code < total; code++){
+        /* code 拆成每一步的選擇 k_j（j = n−1 … 1，k_j ∈ 0…j） */
+        let rest = code; const ks = [];
+        for (let j = n - 1; j > 0; j--){ ks.push(rest % (j + 1)); rest = Math.floor(rest / (j + 1)); }
+        const queue = ks.map((k, i) => (k + 0.5) / (n - i));
+        let sh;
+        try { sh = new Function('Math', fsrc + '\nreturn shuffle;')({ floor:Math.floor, random:() => queue.shift() }); }
+        catch (e){ return fail('shuffle() could not be evaluated with a scripted Math.random: ' + e.message); }
+        const out = sh(input).join();
+        if (out === input.join()) return fail('shuffle() of ' + n + ' with scripted draws ' + ks + ' returns the increasing order — the tray would start in the answer order');
+        outs.add(out);
+      }
+      if (outs.size !== total - 1) fail('shuffle() of ' + n + ' items reaches ' + outs.size + ' orders over every scripted draw, expected ' + (total - 1));
+    });
+    if (shuffle){
+      [[0, 1, 2, 3], [0, 1, 2, 3, 4]].forEach(input => {
+        const seen = {}, before = input.join(), perms = new Set();
+        for (let i = 0; i < 4000; i++){
+          const out = shuffle(input);
+          if (input.join() !== before) return fail('shuffle() mutates its input');
+          if (out.slice().sort((a, b) => a - b).join() !== before) return fail('shuffle() changed the set: ' + out);
+          if (out.join() === before) return fail('shuffle() returned ' + out.join(',') + ' — the tray would start in the answer order');
+          out.forEach((v, p) => { seen[v + '@' + p] = true; });
+          perms.add(out.join());
+        }
+
+      });
+    }
+    /* 排步驟：四張步驟卡洗牌，兩張陷阱再插進去 —— 四步的相對順序就是 shuffle 的結果，不會是答案的順序 */
+    need('steps', /var cards = GAME_STEPS\.concat\(GAME_STEPS_DECOY\), order = shuffle\(\[0, 1, 2, 3\]\);/, 'the four step cards are not shuffled onto the tray');
+    need('steps', /order\.forEach\(function\(ci, p\)\{/, 'the tray is not drawn in the shuffled order');
+    need('width', /shuffle\(segs\.map\(function\(s, i\)\{ return i; \}\)\)\.forEach\(/, 'the length cards are not shuffled onto the tray');
+  }
+  /* ---------- 共用：計分（中年級 §三：沒犯錯 +20、犯過錯 +10；放錯一次 −5，最低 0）---------- */
+  {
+    const fsrc = extractFunction(src, 'roundSolved');
+    if (!fsrc) fail('scoring: cannot find roundSolved() in index.html');
+    else [[false, 0, 20], [true, 15, 25], [false, 40, 60]].forEach(([mis, s0, want]) => {
+      let r;
+      try { r = new Function('var gSolved = false, gMistake = ' + mis + ', gScore = ' + s0 + ', gRound = 1, GAME_ORDER = [1,2,3,4,5], elScore = {}, gMsg = {}, gHintBtn = {}, gNext = { disabled:true },' +
+        ' gameStage = { querySelectorAll:function(){ return []; } }; function L(){ return { gPts:function(p){ return "@" + p + "@"; }, gClear:"", gWin:function(){ return ""; } }; }\n' + fsrc +
+        '\nroundSolved("done"); roundSolved("again"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, solved:gSolved, next:gNext.disabled };')(); }
+      catch (e){ return fail('scoring: roundSolved() could not run: ' + e.message); }
+      const pts = mis ? 10 : 20;
+      if (r.s !== want || String(r.shown) !== String(want)) fail('scoring: a round ' + (mis ? 'with' : 'without') + ' mistakes from ' + s0 + ' ends at ' + r.s + ', expected +' + pts + ' = ' + want + ' (and only once)');
+      if (r.html.indexOf('@' + pts + '@') < 0 || r.html.indexOf('done') < 0 || !r.solved || r.next) fail('scoring: roundSolved() does not show "+' + pts + '", mark the round solved or enable Next');
+    });
+  }
+  {
+    const fsrc = extractFunction(src, 'roundMiss');
+    if (!fsrc) fail('scoring: cannot find roundMiss() in index.html');
+    else [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(([s0, want, shows]) => {
+      let r;
+      try { r = new Function('var gMistake = false, gScore = ' + s0 + ', elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc + '\nroundMiss("why"); return { s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake };')(); }
+      catch (e){ return fail('scoring: roundMiss() could not run: ' + e.message); }
+      if (r.s !== want || String(r.shown) !== String(want)) fail('scoring: a mistake at ' + s0 + ' leaves ' + r.s + ' — a mistake does not cost 5 (floored at 0)');
+      if ((r.html.indexOf('@MINUS@') >= 0) !== shows) fail('scoring: at ' + s0 + ' points the "−5" note is ' + (shows ? 'missing' : 'shown although nothing was taken'));
+      if (r.html.indexOf('why') < 0 || !r.m) fail('scoring: roundMiss() does not show the reason or record the mistake');
+    });
+  }
+  /* ---------- 共用：整段遊戲程式的指紋（codex 第一輪：handler 裡多一行覆寫、畫圖和判斷用的座標分家、訊息被改寫、
+     扣分呼叫兩次……這些都在純函式之外，資料檢查看不到）。這一層只負責「改了就響」：改了以後要重跑 e2e
+     （harness: teaching-workspace/game-harness/g4-perpendicular/run.sh）與改壞頁，確認行為，再更新指紋。 ---------- */
+  {
+    const a = src.indexOf('  /* ===================== 小遊戲：製圖廠接訂單'), b = src.indexOf('  /* ---------- 語言切換');
+    if (a < 0 || b < a) fail('cannot find the game code block in index.html');
+    else {
+      const code = src.slice(a, b);   /* 原樣，不正規化空白：JavaScript 的換行有意義（return 後面換行會插分號）—— codex 第二輪 */
+      const fp = require('crypto').createHash('sha1').update(code).digest('hex');
+      if (fp !== GAME_CODE_FP) fail('the game code changed (fingerprint ' + fp + ') — re-run the e2e harness and the broken pages, then update GAME_CODE_FP');
+    }
+  }
+  /* ---------- 共用：拖拉引擎（字面釘樁；真正的行為由 e2e 和改壞頁證明） ---------- */
+  if (!/if \(gen !== gGen\) return;/.test(src) || !/var start = null, orig = null, moved = false, pid = null, gen = gGen;/.test(src))
+    fail('the drag engine has no board-generation guard: a piece held across Restart could act on the new board');
+  if (!/gSolved = false; gMistake = false; gCtx = \{\}; gGen\+\+;/.test(src)) fail('startRound() does not bump gGen');
+  if ((src.match(/if \(!start \|\| e\.pointerId !== pid\) return;/g) || []).length !== 2) fail('the drag engine does not follow only the first finger (move and end must both check pointerId)');
+  if (!/document\.addEventListener\('pointerup', onDocEnd\);\n\s*document\.addEventListener\('pointercancel', onDocEnd\);/.test(src)) fail('the drag engine has no document-level release while dragging');
+  if (!/el\.addEventListener\('lostpointercapture', function\(e\)\{ end\(e, true\); \}\);/.test(src)) fail('the drag engine does not put a piece back on lostpointercapture');
+  if (!/el\.addEventListener\('pointercancel', function\(e\)\{ end\(e, true\); \}\);/.test(src)) fail('the drag engine does not put a piece back on pointercancel');
+  if (!/\.gpiece\.locked\{cursor:default;pointer-events:none\}/.test(src)) fail('placed pieces still take pointer events');
+  if (!/\.gpiece\{[^}]*touch-action:none/.test(src)) fail('pieces do not set touch-action:none');
+  if (!/if \(P\.busy\(\)\) return;/.test(src)) fail('a tap-then-tap destination is taken while another finger still drags that piece');
+  if (!/if \(o\.follow\)\{ var f = o\.follow\(\{ x:orig\.x \+ dx, y:orig\.y \+ dy \}\); P\.place\(f\.x, f\.y\); \}/.test(src)) fail('the drag engine does not snap while dragging (o.follow)');
+  if (!/if \(PIECE_PTR\[e\.pointerId\]\) return;/.test(src)) fail('a finger that went down on a piece can still "tap a destination" when it is released on the board');
+  ['slide', 'string', 'steps', 'width'].forEach(t => { if ((B[t].match(/useTapSelect\(B, function\(P, pt\)\{/g) || []).length !== 1) fail(t + ': the round does not install its drop / tap-then-tap handler (useTapSelect)'); });
+  need('rel', /B\.onBoardTap = function\(pt\)\{/, 'the tap round does not install its board tap handler');
+  if (!/if \(mode === 'ahead'\)\{ hintLevel = 1; showHint\(\); \}/.test(src)) fail('ahead mode does not show hint level 1 automatically');
+  if (!/gameStage\.textContent = '';/.test(src)) fail('startRound() does not clear the stage before rendering');
+  LANGS.forEach(L => {
+    if (!/20/.test(I18N[L].gPts(20))) fail('gPts ' + L + ' does not show the points');
+    if (!/5/.test(I18N[L].gMinus)) fail('gMinus ' + L + ' does not say 5');
+    if (String(I18N[L].gWin(85)).indexOf('85') < 0) fail('gWin ' + L + ' does not show the score');
+  });
+
+  /* ---------- 每一關的收／不收／靜靜回去，照順序寫在 handler 裡 ---------- */
+  const order = (k, lines, what) => {
+    let at = -1;
+    for (const l of lines){ const i = (B[k] || '').indexOf(l, at + 1); if (i < 0){ fail(k + ': ' + what + ' — missing or out of order: ' + l); return; } at = i; }
+  };
+  order('slide', ["if (pt.tap && !slideOnLine(e, pt.x, pt.y)) return false;", "var i = pt.tap ? slideIdx(e, pt.x, pt.y) : slideIdxFromGrip(e, P.cx, P.cy);", "if (k === 'start') return false;",
+    "if (k === 'below'){ roundMiss(d.gSlideWhy.below); return false; }", "if (k !== 'ok'){ roundMiss(d.gSlideWhy.other(slideDir(e, i))); return false; }", "P.lock(q.x, q.y);", "roundSolved(d.gSlideOk);"],
+    'only the foot stop is accepted; straight-below and other stops are refused with a reason; the start is silent');
+  order('string', ["if (pt.tap && !strOnLine(e, pt.x, pt.y)) return false;", "var s = pt.tap ? strIdx(e, pt.x, pt.y) : strIdx(e, P.cx, P.cy);", "if (k === 'start') return false;",
+    "if (k !== 'ok'){ roundMiss(d.gStrWhy); return false; }", "P.lock(q.x, q.y);", "roundSolved(d.gStrOk(dist));"], 'only the foot is accepted; slanted pegs are refused; the start is silent');
+  order('steps', ["var j = stepsNearest(pt.x, pt.y);", "if (j < 0 && pt.fx !== undefined) j = stepsNearest(pt.fx, pt.fy);", "if (j < 0 || filled[j]) return false;",
+    "if (k === 'decoy'){ roundMiss(d.gStepsWhy[c]); return false; }", "if (k !== 'ok'){ roundMiss(d.gStepsWhy[c][k]); return false; }", "P.lock(", "filled[j] = true;", "if (n === total) roundSolved(d.gStepsDone);"],
+    'a card goes only into its own slot (nearest slot, centre then finger); a filled slot or empty space is silent');
+  order('width', ["var r = widthBin(lay, pt.x, pt.y, pt.fx, pt.fy);", "if (!r) return false;", "if (r !== want){ roundMiss(", "P.lock(q.x, q.y);", "if (left === 0) roundSolved(d.gWidthDone(e.g));"],
+    'a card goes only into its own box; outside both boxes is silent');
+  order('rel', ["if (gSolved) return;", "var id = relHit(e, pt.x, pt.y);", "if (!id || found[id]) return;", "if (k === 'given') return;", "if (k !== 'ok'){ roundMiss(d.gRelWhy[k]); return; }", "found[id] = true; nFound++;", "if (nFound === total) roundSolved(d.gRelDone);"],
+    'only lines parallel to A count; A itself, found lines and empty paper are silent');
+  /* 理由句子（兩種語言）用指紋釘住：改了任何一句，這裡就會響 —— 重新逐句確認那句話對每一種會叫到它的情況都是真的，再更新指紋。 */
+  {
+    const pickWhy = d => JSON.stringify([d.gSlideWhy.below, String(d.gSlideWhy.other), d.gStrWhy, d.gStepsWhy, String(d.gWidthWhy.perpNo), String(d.gWidthWhy.slantYes), d.gRelWhy]);
+    const fp = require('crypto').createHash('sha1').update(pickWhy(I18N.zh) + pickWhy(I18N.en)).digest('hex');
+    if (fp !== GAME_WHY_FP) fail('the game\'s mistake reasons changed (fingerprint ' + fp + ') — re-check every reason sentence against every case that calls it, then update GAME_WHY_FP');
+  }
+  /* 每一句理由的關鍵字（可讀的一層；指紋才是擋改寫的那一層） */
+  const SAYS = {
+    zh:{ below:['正下方', '沒有通過紅點', '直角'], other:['沒有通過紅點'], str:['斜的', '比垂直的那一條長'], moveRuler:['滑軌', '不動'], turn:['垂直', '不是平行'],
+         perpNo:['都垂直', '就是距離'], slantYes:['斜著量', '不是距離'], skew:['沒有直角', '不平行'], cross:['甲', '垂直', '不是平行'], bing:['垂直', '不是平行'] },
+    en:{ below:['straight below', 'misses the red dot', 'right angle'], other:['does not go through the red dot'], str:['slanted', 'longer than the perpendicular'], moveRuler:['rail', 'held still'], turn:['perpendicular', 'not parallel'],
+         perpNo:['perpendicular to both lines', 'is the distance'], slantYes:['slanted', 'not the distance'], skew:['no right angle', 'not parallel'], cross:['A', 'perpendicular', 'not parallel'], bing:['perpendicular', 'not parallel'] }
+  };
+  LANGS.forEach(L => {
+    const d = I18N[L], S = SAYS[L];
+    has('gSlideWhy.below ' + L, d.gSlideWhy.below, S.below);
+    ['right', 'left'].forEach(dir => { has('gSlideWhy.other ' + L, d.gSlideWhy.other(dir), S.other); has('gSlideWhy.other(' + dir + ') ' + L, d.gSlideWhy.other(dir), [L === 'zh' ? (dir === 'right' ? '右' : '左') : dir]); });
+    lacks('gSlideWhy.other(right) ' + L, d.gSlideWhy.other('right'), [L === 'zh' ? '往<strong>左' : 'to the <strong>left']);
+    has('gStrWhy ' + L, d.gStrWhy, S.str);
+    has('gStepsWhy.moveRuler ' + L, d.gStepsWhy.moveRuler, S.moveRuler); has('gStepsWhy.turn ' + L, d.gStepsWhy.turn, S.turn);
+    has('gWidthWhy.perpNo ' + L, d.gWidthWhy.perpNo(2, 4), S.perpNo.concat(['2', '4']));
+    has('gWidthWhy.slantYes ' + L, d.gWidthWhy.slantYes(3, 5, 4), S.slantYes.concat(['3', '5', '4']));
+    ['skew', 'cross', 'bing'].forEach(k => has('gRelWhy.' + k + ' ' + L, d.gRelWhy[k], S[k]));
+    /* 排步驟：每一張卡、每一種放錯都有一句；只會太晚的（第一步）、只會太早的（最後一步）各一句 */
+    STEP_KEYS_GAME.forEach((c, i) => {
+      if (i > 0) textOk('gStepsWhy.' + c + '.early ' + L, d.gStepsWhy[c] && d.gStepsWhy[c].early);
+      if (i < 3) textOk('gStepsWhy.' + c + '.late ' + L, d.gStepsWhy[c] && d.gStepsWhy[c].late);
+      textOk('gStepsCard.' + c + ' ' + L, d.gStepsCard[c]);
+    });
+    DECOY_KEYS_GAME.forEach(c => { textOk('gStepsWhy.' + c + ' ' + L, d.gStepsWhy[c]); textOk('gStepsCard.' + c + ' ' + L, d.gStepsCard[c]); });
+    if (new Set(STEP_KEYS_GAME.concat(DECOY_KEYS_GAME).map(c => d.gStepsCard[c])).size !== 6) fail('gStepsCard ' + L + ': two cards say the same thing');
+    ['gSlideOk', 'gStepsOk', 'gStepsDone', 'gWidthOk', 'gRelOk', 'gRelDone', 'gSlide2now', 'gStr2now', 'gStrMeter'].forEach(k => textOk(k + ' ' + L, d[k]));
+    textOk('gSlideNow ' + L, d.gSlideNow(true)); textOk('gSlideNow ' + L, d.gSlideNow(false));
+    if (numsIn(d.gStrNow(7)).indexOf(7) < 0) fail('gStrNow ' + L + ' does not show the distance');
+    if (numsIn(d.gStrOk(7)).filter(n => n === 7).length !== 2) fail('gStrOk ' + L + ' should say the distance twice (cm and squares): ' + d.gStrOk(7));
+    if (numsIn(d.gWidthDone(3)).filter(n => n === 3).length !== 2) fail('gWidthDone ' + L + ' should say the gap twice: ' + d.gWidthDone(3));
+    if (numsIn(d.gWidth2(4)).filter(n => n === 4).length !== 2) fail('gWidth2 ' + L + ' should say the gap twice: ' + d.gWidth2(4));
+    if (numsIn(d.gWidthCard(2, 5)).join() !== '2,5') fail('gWidthCard ' + L + ' should show the number then the length: ' + d.gWidthCard(2, 5));
+    if (numsIn(d.gSlide2('right', 3)).join() !== '3' || numsIn(d.gStr2('up', 2)).join() !== '2') fail('second-level hints ' + L + ' do not show the count');
+    if (numsIn(d.gRel2(2)).join() !== '2') fail('gRel2 ' + L + ' does not show how many are left');
+    if (numsIn(d.gSteps2(3, 'x')).join() !== '3') fail('gSteps2 ' + L + ' does not name the step number');
+    has('gRelName ' + L, d.gRelName.jia + d.gRelName.bing, L === 'zh' ? ['甲', '丙'] : ['A', 'C']);
+  });
+
+  /* ================= 第 1 關：滑三角板 ================= */
+  {
+    const G = D.SLIDE_G;
+    touch('the set square grip', G.knob);
+    if (!(Array.isArray(D.GAME_SLIDE) && D.GAME_SLIDE.length >= 3)) fail('GAME_SLIDE should hold at least 3 cases');
+    D.GAME_SLIDE.forEach((e, ci) => {
+      const tag = 'slide case ' + ci;
+      const stops = []; for (let i = 0; i < e.n; i++) stops.push([e.v0[0] + i * e.d[0], e.v0[1] + i * e.d[1]]);
+      if (!(e.d[0] !== 0 && e.d[1] !== 0)) fail(tag + ': the blue line is not slanted');
+      if (!(e.d[0] > 0)) fail(tag + ': d must point right (the "slide left / right" words depend on it)');
+      /* 自己的垂足：紅點和停車點的連線和藍線垂直（整數內積 0） */
+      const dot = D.slideDot(e);
+      const own = stops.map(s => dotI([dot[0] - s[0], dot[1] - s[1]], e.d) === 0 ? 'ok' : (s[0] === dot[0] ? 'below' : 'other'));
+      if (own.filter(k => k === 'ok').length !== 1 || own.indexOf('ok') !== e.foot) fail(tag + ': the foot of the perpendicular is not stop ' + e.foot + ' by own geometry (' + own + ')');
+      if (own.filter(k => k === 'below').length !== 1) fail(tag + ': no stop straight below the red dot — the "perpendicular = straight down" misconception is never tested');
+      if (dot[1] <= stops[own.indexOf('below') >= 0 ? own.indexOf('below') : 0][1]) fail(tag + ': the red dot is not above the "below" stop');
+      if (own[e.start] !== 'other') fail(tag + ': the set square must start on a stop that is neither the answer nor straight below');
+      if (dotI([dot[0] - stops[e.foot][0], dot[1] - stops[e.foot][1]], [-e.d[1], e.d[0]]) <= 0) fail(tag + ': the dot is not on the side the other edge points to');
+      stops.forEach((s, i) => {
+        const want = own[i] === 'ok' ? 'ok' : i === e.start ? 'start' : own[i];
+        if (D.slideKind(e, i) !== want) fail(tag + ' stop ' + i + ': slideKind says ' + D.slideKind(e, i) + ', own geometry says ' + want);
+        const dirWant = s[0] < stops[e.foot][0] ? 'right' : 'left';
+        if (i !== e.foot && D.slideDir(e, i) !== dirWant) fail(tag + ' stop ' + i + ': slideDir says ' + D.slideDir(e, i) + ', the foot is to the ' + dirWant);
+        /* 三角板：直角頂點在停車點、一條邊在藍線上、另一條和它垂直、長到穿過紅點、整塊在畫板裡、手柄在三角板裡 */
+        const t = D.slideTri(e, i), V = t[0];
+        if (V[0] !== s[0] || V[1] !== s[1]) fail(tag + ' stop ' + i + ': the set square corner is not on the stop');
+        const e1 = [t[1][0] - V[0], t[1][1] - V[1]], e2 = [t[2][0] - V[0], t[2][1] - V[1]];
+        if (Math.abs(crossI(e1, e.d)) > 1e-9) fail(tag + ' stop ' + i + ': one edge is not on the blue line');
+        if (Math.abs(dotI(e1, e2)) > 1e-9 || Math.abs(Math.hypot(...e1) - Math.hypot(...e2)) > 1e-9) fail(tag + ' stop ' + i + ': the set square is not a 45-45-90 right triangle');
+        if (Math.hypot(...e2) <= Math.hypot(dot[0] - stops[e.foot][0], dot[1] - stops[e.foot][1])) fail(tag + ': the other edge is too short to reach the red dot');
+        t.forEach(g => { const p = px(G, g); if (p.x < 2 || p.x > W - 2 || p.y < 2 || p.y > G.H - 2) fail(tag + ' stop ' + i + ': the set square leaves the board'); });
+        const gp = D.slideGrip(e, i), P = t.map(g => px(G, g));
+        const sgn = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+        const s1 = sgn(P[0], P[1], gp), s2 = sgn(P[1], P[2], gp), s3 = sgn(P[2], P[0], gp);
+        if (!((s1 > 0 && s2 > 0 && s3 > 0) || (s1 < 0 && s2 < 0 && s3 < 0))) fail(tag + ' stop ' + i + ': the grip is not inside the set square');
+        inside(box(gp.x, gp.y, G.knob, G.knob), tag + ' stop ' + i + ' grip', G.H);
+        if (D.slideIdxFromGrip(e, gp.x, gp.y) !== i) fail(tag + ' stop ' + i + ': the grip position does not map back to its own stop');
+      });
+      { const p = px(G, dot); if (p.x < 8 || p.x > W - 8 || p.y < 8 || p.y > G.H - 8) fail(tag + ': the red dot is off the board'); }
+      const c = clipRef(G.cols, G.rows, e.v0, e.d);
+      if (!c) fail(tag + ': the blue line is not on the paper');
+      /* 每一個停車點自己一段：沿著藍線每 0.5px、離線 ±band 掃，和自己「最近的停車點」比 */
+      const a = px(G, stops[0]), z = px(G, stops[e.n - 1]), Lp = Math.hypot(z.x - a.x, z.y - a.y), ux = (z.x - a.x) / Lp, uy = (z.y - a.y) / Lp, sp = Lp / (e.n - 1);
+      for (let t = -0.45 * sp; t <= Lp + 0.45 * sp; t += 0.5) for (const off of [-G.band + 0.5, 0, G.band - 0.5]){
+        const q = { x:a.x + ux * t - uy * off, y:a.y + uy * t + ux * off };
+        let best = 0, bd = Infinity; stops.forEach((s, i) => { const p = px(G, s), dd = Math.abs((q.x - p.x) * ux + (q.y - p.y) * uy); if (dd < bd - 1e-9){ bd = dd; best = i; } });
+        if (Math.abs(bd - sp / 2) < 0.6) continue;   /* 正好在兩個停車點中間：哪一邊都可以 */
+        if (D.slideIdx(e, q.x, q.y) !== best) return fail(tag + ': a point ' + t.toFixed(1) + 'px along the line maps to stop ' + D.slideIdx(e, q.x, q.y) + ', nearest is ' + best);
+        if (!D.slideOnLine(e, q.x, q.y)) return fail(tag + ': a point on the line (' + t.toFixed(1) + 'px, ' + off + 'px off) is not accepted as a tap on the line');
+      }
+      { const p = px(G, dot); if (D.slideOnLine(e, p.x, p.y)) fail(tag + ': tapping the red dot counts as tapping the line'); }
+      if (D.slideOnLine(e, a.x - uy * (G.band + 3), a.y + ux * (G.band + 3))) fail(tag + ': a tap ' + (G.band + 3) + 'px off the line still counts');
+    });
+  }
+
+  /* ================= 第 2 關：拉繩子 ================= */
+  {
+    const G = D.STR_G;
+    touch('the string knob', G.knob);
+    if (!(Array.isArray(D.GAME_STRING) && D.GAME_STRING.length >= 3)) fail('GAME_STRING should hold at least 3 cases');
+    if (!D.GAME_STRING.some(e => e.axis === 'v') || !D.GAME_STRING.some(e => e.axis === 'h')) fail('GAME_STRING should have both across and upright lines (the perpendicular is not always "straight down")');
+    D.GAME_STRING.forEach((e, ci) => {
+      const tag = 'string case ' + ci, Dl = e.axis === 'h' ? [1, 0] : [0, 1];
+      const pg = s => e.axis === 'h' ? [s, e.at] : [e.at, s];
+      const lens = []; let foot = null;
+      for (let s = e.lo; s <= e.hi; s++){
+        const q = pg(s), v = [e.p[0] - q[0], e.p[1] - q[1]];
+        if (dotI(v, Dl) === 0){ if (foot !== null) fail(tag + ': two feet'); foot = s; }
+        lens.push([s, Math.hypot(v[0], v[1])]);
+        if (Math.abs(D.strLen(e, s) - Math.hypot(v[0], v[1])) > 1e-9) fail(tag + ' peg ' + s + ': strLen disagrees with own length');
+        const want = foot === s ? 'ok' : s === e.start ? 'start' : 'slant';
+        if (D.strKind(e, s) !== want) fail(tag + ' peg ' + s + ': strKind says ' + D.strKind(e, s) + ', expected ' + want);
+      }
+      if (foot === null) return fail(tag + ': the foot of the perpendicular is not on a peg');
+      if (foot !== D.strFoot(e)) fail(tag + ': strFoot is not the own foot ' + foot);
+      if (e.start === foot) fail(tag + ': the string starts on the answer');
+      const dist = Math.hypot(e.p[0] - pg(foot)[0], e.p[1] - pg(foot)[1]);
+      if (dist !== Math.round(dist) || D.strDist(e) !== dist) fail(tag + ': the distance ' + dist + ' is not a whole number of cm or disagrees with strDist');
+      if (!lens.every(([s, l]) => s === foot || l > dist + 1e-9)) fail(tag + ': the perpendicular one is not the unique shortest');
+      if (Math.abs(foot - e.start) < 3) fail(tag + ': the start is too close to the foot to tell by eye');
+      for (let s = e.lo; s <= e.hi; s++) if (s !== foot && D.strDir(e, s) !== (e.axis === 'h' ? (foot > s ? 'right' : 'left') : (foot > s ? 'up' : 'down'))) fail(tag + ' peg ' + s + ': strDir is wrong');
+      [pg(e.lo), pg(e.hi), e.p].forEach(g => { if (g[0] < 0 || g[0] > G.cols || g[1] < 0 || g[1] > G.rows) fail(tag + ': ' + g + ' is off the paper'); });
+      for (let s = e.lo; s <= e.hi; s++) inside(box(px(G, pg(s)).x, px(G, pg(s)).y, G.knob, G.knob), tag + ' knob at peg ' + s, G.H);
+      /* 每一個格點自己一格：沿著 L 每 0.5px 掃 */
+      const a = px(G, pg(e.lo)), z = px(G, pg(e.hi));
+      for (let t = -0.45 * G.u; t <= Math.hypot(z.x - a.x, z.y - a.y) + 0.45 * G.u; t += 0.5) for (const off of [-G.band + 0.5, 0, G.band - 0.5]){
+        const q = e.axis === 'h' ? { x:a.x + t, y:a.y + off } : { x:a.x + off, y:a.y - t };
+        let best = null, bd = Infinity;
+        for (let s = e.lo; s <= e.hi; s++){ const p = px(G, pg(s)), dd = e.axis === 'h' ? Math.abs(q.x - p.x) : Math.abs(q.y - p.y); if (dd < bd - 1e-9){ bd = dd; best = s; } }
+        if (Math.abs(bd - G.u / 2) < 0.6) continue;
+        if (D.strIdx(e, q.x, q.y) !== best) return fail(tag + ': a point ' + t + 'px along L maps to peg ' + D.strIdx(e, q.x, q.y) + ', nearest is ' + best);
+        if (!D.strOnLine(e, q.x, q.y)) return fail(tag + ': a point on L (' + t + 'px, ' + off + 'px off) is not accepted as a tap on L');
+      }
+      { const p = px(G, e.p); if (D.strOnLine(e, p.x, p.y)) fail(tag + ': tapping P counts as tapping L'); }
+      /* 名字牌 L 整塊都算點到 L（natural-action rule）；名字牌在畫板裡、不壓到 P */
+      {
+        const lb = D.strLabel(e), p = px(G, e.p);
+        inside(lb, tag + ' the name L', G.H);
+        for (let x = lb.x; x <= lb.x + lb.w; x += 1) for (let y = lb.y; y <= lb.y + lb.h; y += 1) if (!D.strOnLine(e, x, y)){ fail(tag + ': tapping the name L at (' + x + ', ' + y + ') does not count as tapping L'); x = Infinity; break; }
+        if (boxDistRef(p.x, p.y, lb) < 20) fail(tag + ': the name L sits on P');
+        for (let s = e.lo; s <= e.hi; s++){ const q = px(G, pg(s)); if (hit(box(q.x, q.y, G.knob, G.knob), lb)) fail(tag + ': the string knob at peg ' + s + ' covers the name L (a tap on the name would hit the knob)'); }
+      }
+    });
+  }
+
+  /* ================= 第 3 關：排步驟 ================= */
+  {
+    const G = D.STEPS_G;
+    if (D.GAME_STEPS.join() !== STEP_KEYS_GAME.join()) fail('GAME_STEPS should be ' + STEP_KEYS_GAME + ' (example 3, in order)');
+    if (D.GAME_STEPS_DECOY.join() !== DECOY_KEYS_GAME.join()) fail('GAME_STEPS_DECOY should be ' + DECOY_KEYS_GAME);
+    STEP_KEYS_GAME.concat(DECOY_KEYS_GAME).forEach(c => [0, 1, 2, 3].forEach(j => {
+      const k = STEP_KEYS_GAME.indexOf(c), want = k < 0 ? 'decoy' : k === j ? 'ok' : k > j ? 'early' : 'late';
+      if (D.stepsKind(c, j) !== want) fail('stepsKind(' + c + ', ' + j + ') is ' + D.stepsKind(c, j) + ', expected ' + want);
+    }));
+    touch('a step card', Math.min(G.card.w, G.card.h));
+    const slots = [0, 1, 2, 3].map(j => D.stepsSlot(j));
+    slots.forEach((b, j) => inside(b, 'step slot ' + (j + 1), G.H));
+    noHits(slots.map((b, j) => ['slot ' + (j + 1), b]), 'step slots');
+    const cards = G.tray.map((t, i) => ['tray card ' + i, box(t[0], t[1], G.card.w, G.card.h)]);
+    if (cards.length !== 6) fail('the steps tray should have 6 places');
+    cards.forEach(c => inside(c[1], c[0], G.H));
+    noHits(cards, 'step tray');
+    const pad = G.slot.pad, zone = b => ({ x:b.x - pad, y:b.y - pad, w:b.w + 2 * pad, h:b.h + 2 * pad });
+    cards.forEach(c => slots.forEach((b, j) => { if (hit(c[1], zone(b))) fail(c[0] + ' sits inside the snap zone of slot ' + (j + 1)); }));
+    inside({ x:0, y:0, w:G.fig.w, h:G.fig.h }, 'the steps figure', G.H);
+    if (G.fig.h > slots[0].y - pad) fail('the steps figure runs into slot 1');
+    /* 最近的那一格：整個畫板每 1px 掃，和自己的「在吸附範圍裡、到方框最近」比；吸附範圍要真的重疊（不然 nearest 沒被考到） */
+    let overlap = 0;
+    for (let x = 0; x <= W; x += 1) for (let y = 0; y <= G.H; y += 1){
+      let best = -1, bd = Infinity, inZ = 0;
+      slots.forEach((b, j) => { if (x >= b.x - pad && x <= b.x + b.w + pad && y >= b.y - pad && y <= b.y + b.h + pad){ inZ++; const dd = boxDistRef(x, y, b); if (dd < bd){ bd = dd; best = j; } } });
+      if (inZ > 1) overlap++;
+      if (D.stepsNearest(x, y) !== best){ fail('stepsNearest(' + x + ', ' + y + ') is ' + D.stepsNearest(x, y) + ', the nearest slot is ' + best); x = W + 1; break; }
+    }
+    if (!overlap) fail('the slots\' snap zones never overlap, so "nearest slot" is never exercised');
+    /* 上面那張圖：0 步只有直線和點；1～4 步是範例 3 的第 0～3 步（三角板、加直尺、滑過去、畫好） */
+    const pl = [0, 1, 2, 3, 4].map(m => D.stepsPlan(m));
+    if (pl[0].polys.length !== 0 || pl[0].lines.length !== 1 || pl[0].dots.length !== 1) fail('steps figure 0 should show only the line and the dot');
+    if (pl[1].polys.length !== 1 || pl[2].polys.length !== 2 || pl[3].polys.length !== 2 || pl[4].polys.length !== 2) fail('steps figures 1–4 should add the set square, then the ruler');
+    if (pl[4].lines.length !== 2 || pl[3].lines.length !== 1) fail('the parallel line should appear only in steps figure 4');
+    else {
+      const L0 = pl[4].lines[0], L1 = pl[4].lines[1], u = [L0.b.x - L0.a.x, L0.b.y - L0.a.y], v = [L1.b.x - L1.a.x, L1.b.y - L1.a.y];
+      if (Math.abs(crossI(u, v)) / (Math.hypot(...u) * Math.hypot(...v)) > 1e-9) fail('steps figure 4: the drawn line is not parallel to the blue line');
+      const pt = pl[4].dots[0].p, w = [pt.x - L1.a.x, pt.y - L1.a.y];
+      if (Math.abs(crossI(v, w)) / Math.hypot(...v) > 1e-6) fail('steps figure 4: the drawn line does not go through the red dot');
+    }
+    /* 滑過去：第 3 張圖的三角板和第 2 張的一樣大、一樣方向（只是平移），直尺沒動 */
+    {
+      const t2 = pl[2].polys.filter(p => p.kind === 'tool')[0], t3 = pl[3].polys.filter(p => p.kind === 'tool')[0];
+      const r2 = pl[2].polys.filter(p => p.kind === 'ruler')[0], r3 = pl[3].polys.filter(p => p.kind === 'ruler')[0];
+      if (!t2 || !t3 || !r2 || !r3) fail('steps figures 2 and 3 should both show the set square and the ruler');
+      else {
+        const dx = t3.pts[0].x - t2.pts[0].x, dy = t3.pts[0].y - t2.pts[0].y;
+        if (!t2.pts.every((p, i) => Math.abs(t3.pts[i].x - p.x - dx) < 1e-9 && Math.abs(t3.pts[i].y - p.y - dy) < 1e-9)) fail('steps: the set square turns between figure 2 and 3 — it must only slide');
+        if (!r2.pts.every((p, i) => Math.abs(r3.pts[i].x - p.x) < 1e-9 && Math.abs(r3.pts[i].y - p.y) < 1e-9)) fail('steps: the ruler moves between figure 2 and 3 — the rail must stay still');
+        const rl = [r2.pts[1].x - r2.pts[0].x, r2.pts[1].y - r2.pts[0].y];
+        if (Math.abs(crossI(rl, [dx, dy])) / (Math.hypot(...rl) * Math.hypot(dx, dy)) > 1e-9) fail('steps: the set square does not slide along the ruler');
+      }
+    }
+  }
+
+  /* ================= 第 4 關：分一分 ================= */
+  {
+    const G = D.WIDTH_G;
+    touch('a length card', Math.min(G.card.w, G.card.h));
+    if (!(Array.isArray(D.GAME_WIDTH) && D.GAME_WIDTH.length >= 3)) fail('GAME_WIDTH should hold at least 3 cases');
+    D.GAME_WIDTH.forEach((e, ci) => {
+      const tag = 'width case ' + ci, lay = D.widthLayout(e), segs = D.widthSegs(e);
+      if (segs.length !== 5) return fail(tag + ': five measurements expected');
+      const own = segs.map(s => {
+        const v = [s.b[0] - s.a[0], s.b[1] - s.a[1]];
+        return { perp:dotI(v, [1, 0]) === 0, len:Math.hypot(v[0], v[1]), low:s.a[0] };
+      });
+      if (own.filter(o => o.perp).length !== 3) fail(tag + ': three perpendicular measurements expected');
+      own.forEach((o, i) => {
+        const s = segs[i];
+        if (s.a[1] !== 1 || s.b[1] !== 1 + e.g) fail(tag + ' segment ' + s.no + ': does not run from one line to the other');
+        if (o.len !== Math.round(o.len) || s.len !== o.len) fail(tag + ' segment ' + s.no + ': length ' + o.len + ' is not a whole cm or disagrees with the page (' + s.len + ')');
+        if (o.perp !== s.isPerp) fail(tag + ' segment ' + s.no + ': isPerp disagrees with own geometry');
+        if (o.perp ? o.len !== e.g : !(o.len > e.g)) fail(tag + ' segment ' + s.no + ': ' + (o.perp ? 'a perpendicular one does not measure the gap' : 'a slanted one is not longer than the gap'));
+        if (D.widthWant(s) !== (o.perp ? 'yes' : 'no')) fail(tag + ' segment ' + s.no + ': widthWant is wrong');
+        if (s.no !== i + 1 || (i && !(own[i - 1].low < o.low))) fail(tag + ': segments are not numbered left to right by their lower end');
+        [s.a, s.b].forEach(g => { if (g[0] < 0 || g[0] > lay.cols || g[1] < 0 || g[1] > lay.rows) fail(tag + ' segment ' + s.no + ' leaves the paper'); });
+      });
+      const perpXs = own.filter(o => o.perp).map(o => o.low);
+      if (Math.max(...perpXs) - Math.min(...perpXs) < 8) fail(tag + ': the perpendicular measurements are not spread out (they should be "in different places")');
+      if (segs.filter(s => !s.isPerp).map(s => Math.sign(s.b[0] - s.a[0])).reduce((a, b) => a + b, 0) !== 0) fail(tag + ': the two slanted ones should lean opposite ways');
+      /* 線段兩兩不相交（連端點都不碰） */
+      for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++){
+        const p = segs[i], q = segs[j], r = [p.b[0] - p.a[0], p.b[1] - p.a[1]], s = [q.b[0] - q.a[0], q.b[1] - q.a[1]], den = crossI(r, s);
+        const w = [q.a[0] - p.a[0], q.a[1] - p.a[1]];
+        if (den === 0){ if (crossI(w, r) === 0) fail(tag + ': segments ' + p.no + ' and ' + q.no + ' lie on one line'); continue; }
+        const t = crossI(w, s) / den, u = crossI(w, r) / den;
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1) fail(tag + ': segments ' + p.no + ' and ' + q.no + ' cross or touch');
+      }
+      /* 版面：編號牌、托盤、兩個箱子都在畫板裡、互不重疊；箱子裡的位置放得下 */
+      const tags = segs.map(s => { const p = px(lay, s.a); return ['tag ' + s.no, { x:p.x - G.tag / 2, y:p.y + 6, w:G.tag, h:G.tag }]; });
+      const tray = G.trayX.map((x, i) => ['tray card ' + i, box(x, lay.trayY, G.card.w, G.card.h)]);
+      const all = tags.concat(tray, [['yes box', lay.yes], ['no box', lay.no]]);
+      all.forEach(o => inside(o[1], tag + ' ' + o[0], lay.H));
+      noHits(all, tag + ' layout');
+      ['yes', 'no'].forEach(bin => {
+        const n = bin === 'yes' ? 3 : 2, spots = [];
+        for (let k = 0; k < n; k++){
+          const q = D.widthSpot(lay, bin, k), c = box(q.x, q.y, G.card.w * G.placed, G.card.h * G.placed);
+          if (!(c.x >= lay[bin].x && c.y >= lay[bin].y + 18 && c.x + c.w <= lay[bin].x + lay[bin].w && c.y + c.h <= lay[bin].y + lay[bin].h)) fail(tag + ': placed card ' + k + ' sticks out of the ' + bin + ' box');
+          spots.push([bin + ' ' + k, c]);
+        }
+        noHits(spots, tag + ' ' + bin + ' box');
+      });
+      /* 哪一箱：中心優先，再看手指；兩箱外面是 null */
+      for (let x = 0; x <= W; x += 2) for (let y = 0; y <= lay.H; y += 2){
+        const inY = x >= lay.yes.x && x <= lay.yes.x + lay.yes.w && y >= lay.yes.y && y <= lay.yes.y + lay.yes.h;
+        const inN = x >= lay.no.x && x <= lay.no.x + lay.no.w && y >= lay.no.y && y <= lay.no.y + lay.no.h;
+        const want = inY ? 'yes' : inN ? 'no' : null;
+        if (D.widthBin(lay, x, y) !== want){ fail(tag + ': widthBin(' + x + ', ' + y + ') is ' + D.widthBin(lay, x, y) + ', expected ' + want); x = W + 1; break; }
+        if (!want && D.widthBin(lay, x, y, lay.yes.x + 5, lay.yes.y + 5) !== 'yes'){ fail(tag + ': a finger inside the yes box does not count when the card centre is outside'); x = W + 1; break; }
+      }
+    });
+  }
+
+  /* ================= 第 5 關：點出全部 ================= */
+  {
+    const G = D.REL_G;
+    if (!(Array.isArray(D.GAME_REL) && D.GAME_REL.length >= 3)) fail('GAME_REL should hold at least 3 cases');
+    D.GAME_REL.forEach((e, ci) => {
+      const tag = 'rel case ' + ci, lines = D.relLines(e), n = [-e.d[1], e.d[0]];
+      const byId = {}; lines.forEach(l => { byId[l.id] = l; });
+      if (!(e.d[0] !== 0 && e.d[1] !== 0)) fail(tag + ': C is not slanted');
+      const C = byId.bing, A = byId.jia;
+      if (!C || !A || C.at.join() !== e.a.join() || dotI(A.dir, C.dir) !== 0) return fail(tag + ': A is not perpendicular to C');
+      const same = (p, q) => crossI(p.dir, q.dir) === 0 && crossI([q.at[0] - p.at[0], q.at[1] - p.at[1]], p.dir) === 0;
+      for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++) if (same(lines[i], lines[j])) fail(tag + ': ' + lines[i].id + ' and ' + lines[j].id + ' are the same line');
+      lines.forEach(l => {
+        const want = l.id === 'jia' ? 'given' : l.id === 'bing' ? 'bing' : crossI(l.dir, A.dir) === 0 ? 'ok' : crossI(l.dir, C.dir) === 0 ? 'cross' : 'skew';
+        if (D.relKind(l.id) !== want) fail(tag + ': relKind(' + l.id + ') is ' + D.relKind(l.id) + ', own geometry says ' + want);
+        if (want === 'skew' && dotI(l.dir, C.dir) === 0) fail(tag + ': a decoy is perpendicular to C');
+        const c = clipRef(G.cols, G.rows, l.at, l.dir);
+        if (!c || Math.hypot(c[1][0] - c[0][0], c[1][1] - c[0][1]) < 3) fail(tag + ': line ' + l.id + ' shows less than 3 squares on the paper');
+        /* 和丙的交點要在紙上（看得到那裡有沒有小方框）；cross 和甲的交點也要在紙上 */
+        const other = want === 'cross' ? A : want === 'bing' ? null : C;
+        if (other){
+          const den = crossI(l.dir, other.dir), k = crossI([other.at[0] - l.at[0], other.at[1] - l.at[1]], other.dir) / den, X = [l.at[0] + k * l.dir[0], l.at[1] + k * l.dir[1]];
+          if (X[0] < 0 || X[0] > G.cols || X[1] < 0 || X[1] > G.rows) fail(tag + ': where ' + l.id + ' crosses ' + (other === A ? 'A' : 'C') + ' is off the paper');
+        }
+      });
+      const kinds = lines.map(l => D.relKind(l.id));
+      if (kinds.filter(k => k === 'ok').length < 2 || kinds.filter(k => k === 'skew').length < 1 || kinds.filter(k => k === 'cross').length !== 1) fail(tag + ': needs ≥ 2 lines to find, ≥ 1 slanted decoy and the "box on A" decoy');
+      /* 小方框：自己算所有在紙上的直角，和 relBoxes 一一對上 */
+      const ownBoxes = [];
+      for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++){
+        const p = lines[i], q = lines[j];
+        if (dotI(p.dir, q.dir) !== 0) continue;
+        const den = crossI(p.dir, q.dir), k = crossI([q.at[0] - p.at[0], q.at[1] - p.at[1]], q.dir) / den, X = [p.at[0] + k * p.dir[0], p.at[1] + k * p.dir[1]];
+        if (X[0] >= 0 && X[0] <= G.cols && X[1] >= 0 && X[1] <= G.rows) ownBoxes.push(X.map(v => v.toFixed(6)).join());
+      }
+      const pageBoxes = D.relBoxes(e).map(b => b.at.map(v => v.toFixed(6)).join());
+      if (ownBoxes.slice().sort().join('|') !== pageBoxes.slice().sort().join('|')) fail(tag + ': the right-angle boxes (' + pageBoxes.length + ') are not exactly the right angles on the paper (' + ownBoxes.length + ')');
+      /* 名字牌：在畫板裡、貼著自己的線 */
+      const segPx = l => { const c = clipRef(G.cols, G.rows, l.at, l.dir); return [px(G, c[0]), px(G, c[1])]; };
+      ['jia', 'bing'].forEach(id => {
+        const q = D.relLabel(e, id), h = G.label / 2;
+        inside({ x:q.x - h, y:q.y - h, w:G.label, h:G.label }, tag + ' name ' + id, G.H);
+        const s = segPx(byId[id]);
+        if (segDistRef(q, s[0], s[1]) > 20) fail(tag + ': the name of ' + id + ' is not next to its line');
+      });
+      /* 點哪裡算哪一條：整個畫板每 1px，和自己的「名字牌，否則 band 以內最近的線」比 */
+      const segs = lines.map(l => [l.id, segPx(l)]);
+      for (let x = 0; x <= W; x += 1) for (let y = 0; y <= G.H; y += 1){
+        let want = null;
+        for (const id of ['bing', 'jia']){ const q = D.relLabel(e, id); if (Math.abs(x - q.x) <= G.label / 2 && Math.abs(y - q.y) <= G.label / 2){ want = id; break; } }
+        if (!want){
+          let bd = Infinity;
+          segs.forEach(([id, s]) => { const dd = segDistRef({ x:x, y:y }, s[0], s[1]); if (dd <= G.band && dd < bd - 1e-9){ bd = dd; want = id; } });
+        }
+        const got = D.relHit(e, x, y);
+        if (got !== want){
+          /* 正好一樣近（兩條線的交點附近）：誰都可以 */
+          const dd = id => { const s = segs.filter(z => z[0] === id)[0]; return s ? segDistRef({ x:x, y:y }, s[1][0], s[1][1]) : Infinity; };
+          if (got && want && Math.abs(dd(got) - dd(want)) < 1e-6) continue;
+          fail(tag + ': relHit(' + x + ', ' + y + ') is ' + got + ', expected ' + want); x = W + 1; break;
+        }
+      }
+      /* 交點上（一樣近）：算畫在最上面（最後畫）的那一條 —— 孩子點的是看得到的那一條（codex 第一輪） */
+      for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++){
+        const p = lines[i], q = lines[j], den = crossI(p.dir, q.dir);
+        if (den === 0) continue;
+        const k = crossI([q.at[0] - p.at[0], q.at[1] - p.at[1]], q.dir) / den, X = [p.at[0] + k * p.dir[0], p.at[1] + k * p.dir[1]];
+        if (X[0] < 0 || X[0] > G.cols || X[1] < 0 || X[1] > G.rows) continue;
+        const Xp = px(G, X);
+        if (['bing', 'jia'].some(id => { const q2 = D.relLabel(e, id); return Math.abs(Xp.x - q2.x) <= G.label / 2 && Math.abs(Xp.y - q2.y) <= G.label / 2; })) continue;
+        let top = null;
+        segs.forEach(([id, s]) => { if (segDistRef(Xp, s[0], s[1]) < 1e-6) top = id; });
+        if (D.relHit(e, Xp.x, Xp.y) !== top) fail(tag + ': at the crossing of ' + p.id + ' and ' + q.id + ' relHit picks ' + D.relHit(e, Xp.x, Xp.y) + ', the line drawn on top is ' + top);
+      }
+      /* 每一條要找的線，至少有一大段（≥ 2 格）點下去一定是它（不被別條線或名字牌搶走） */
+      lines.filter(l => D.relKind(l.id) === 'ok').forEach(l => {
+        const s = segPx(l); let run = 0, bestRun = 0;
+        for (let f = 0; f <= 1; f += 0.01){
+          const q = { x:s[0].x + (s[1].x - s[0].x) * f, y:s[0].y + (s[1].y - s[0].y) * f };
+          if (D.relHit(e, q.x, q.y) === l.id){ run++; bestRun = Math.max(bestRun, run); } else run = 0;
+        }
+        if (bestRun * 0.01 * Math.hypot(s[1].x - s[0].x, s[1].y - s[0].y) < 2 * G.u) fail(tag + ': line ' + l.id + ' has no clear stretch of 2 squares to tap');
+      });
+    });
+  }
+}
+
+/* 理由句子的指紋（兩種語言）：改了任何一句就要重新逐句確認，再更新這裡 */
+const GAME_WHY_FP = '5052f62ed5167b9963ed341fe099a3b518f33f5e';
+/* 整段遊戲程式的指紋：改了就要重跑 e2e 與改壞頁 */
+const GAME_CODE_FP = 'e634bf9a0e5f353a95c8df0000d7224ec7d12a6c';
+
+const GAME_BREAKS = [
+  { file:'index', via:'index', expect:"the game code changed",
+    find:"        roundSolved(d.gSlideOk);\n        return true;",
+    replace:"        roundSolved(d.gSlideOk);\n        return\n        true;",
+    why:"codex r2: a whitespace-only edit that changes meaning (automatic semicolon insertion) must still be caught" },
+  { file:'index', via:'index', expect:"the game code changed",
+    find:"        var k = slideKind(e, i);\n",
+    replace:"        var k = slideKind(e, i); if (k === 'below') k = 'ok';\n",
+    why:"codex r1: the handler overrides the pure rule — straight-below accepted" },
+  { file:'index', via:'index', expect:"the game code changed",
+    find:"        var k = strKind(e, s);\n",
+    replace:"        var k = strKind(e, s); if (k === 'slant') k = 'ok';\n",
+    why:"codex r1: every slanted peg accepted inside the handler" },
+  { file:'index', via:'index', expect:"the game code changed",
+    find:"data:{ card:c } });",
+    replace:"data:{ card:GAME_STEPS[0] } });",
+    why:"codex r1: the visible card and the judged card differ" },
+  { file:'index', via:'index', expect:"the game code changed",
+    find:"addZone(B, lay.no.x, lay.no.y, lay.no.w, lay.no.h, 'gbin no',",
+    replace:"addZone(B, lay.yes.x, lay.yes.y, lay.no.w, lay.no.h, 'gbin no',",
+    why:"codex r1: the drawn boxes overlap while widthLayout() is untouched" },
+  { file:'index', via:'index', expect:"the game code changed",
+    find:"drawn[l.id] = gFullLine(svg, G, l.at, l.dir, color,",
+    replace:"drawn[l.id] = gFullLine(svg, G, l.at, e.d, color,",
+    why:"codex r1: the picture is drawn with different directions than the hit test" },
+  { file:'index', via:'index', expect:"the game code changed",
+    find:"  function roundMiss(text){\n",
+    replace:"  function roundMiss(text){ text = String(text).replace('沒有通過紅點', '通過紅點');\n",
+    why:"codex r1: the displayed reason is rewritten after the I18N fingerprint" },
+  { file:'index', via:'index', expect:"the game code changed",
+    find:"    function onDocEnd(e){ end(e, true); }",
+    replace:"    function onDocEnd(e){ end({ pointerId:-1 }, true); }",
+    why:"codex r1: the document-level release never reaches end()" },
+  { file:'index', via:'index', expect:"the game code changed",
+    find:"    var avail = gameStage.clientWidth || W;",
+    replace:"    var avail = (gameStage.clientWidth || W) - 80;",
+    why:"codex r1: the board shrinks, touch targets fall under 44px" },
+  { file:'index', via:'index', expect:"the line drawn on top",
+    find:"    for (var i = lines.length - 1; i >= 0; i--){\n      var l = lines[i], c = gClip(REL_G, l.at, l.dir);",
+    replace:"    for (var i = 0; i < lines.length; i++){\n      var l = lines[i], c = gClip(REL_G, l.at, l.dir);",
+    why:"codex r1: at a crossing the line under the visible one would win" },
+  { file:'index', via:'index', expect:"does not count as tapping L",
+    find:"    if (inBox(strLabel(e), x, y)) return true;\n",
+    replace:"",
+    why:"codex r1: tapping the name L would be silently ignored" },
+  { file:'index', via:'index', expect:"slideKind says",
+    find:"    if (slideStop(e, i)[0] === slideDot(e)[0]) return 'below';   /* 直角頂點在紅點正下方 */",
+    replace:"    if (slideStop(e, i)[0] === slideDot(e)[0]) return 'ok';   /* 直角頂點在紅點正下方 */",
+    why:"the stop straight below the dot would be accepted (perpendicular = straight down)" },
+  { file:'index', via:'index', expect:"the foot of the perpendicular is not stop",
+    find:"  function slideDot(e){ var f = slideStop(e, e.foot); return [f[0] - 2 * e.d[1], f[1] + 2 * e.d[0]]; }",
+    replace:"  function slideDot(e){ var f = slideStop(e, e.foot); return [f[0] - 2 * e.d[1], f[1] + 3 * e.d[0]]; }",
+    why:"the red dot would not be on the perpendicular through the keyed stop — no stop would draw a perpendicular through it" },
+  { file:'index', via:'index', expect:"not slanted",
+    find:"    { v0:[5, 3], d:[2, 1],  n:5, foot:3, side:-1, start:0 },",
+    replace:"    { v0:[5, 3], d:[2, 0],  n:5, foot:3, side:-1, start:0 },",
+    why:"an across blue line makes the perpendicular straight up — the misconception round would teach it" },
+  { file:'index', via:'index', expect:"maps to stop",
+    find:"    return Math.max(0, Math.min(e.n - 1, Math.round(t)));\n  }\n  /* 手柄的位置",
+    replace:"    return Math.max(0, Math.min(e.n - 1, Math.floor(t)));\n  }\n  /* 手柄的位置",
+    why:"a stop would not own the half-spacing on each side of it" },
+  { file:'index', via:'index', expect:"tapping the red dot counts",
+    find:"    return off <= SLIDE_G.band && t >= -0.5 && t <= e.n - 0.5;",
+    replace:"    return t >= -0.5 && t <= e.n - 0.5;",
+    why:"a tap anywhere (even on the red dot) would move the set square — tapping the dot would solve the round" },
+  { file:'index', via:'index', expect:"missing or out of order",
+    find:"        if (k === 'below'){ roundMiss(d.gSlideWhy.below); return false; }",
+    replace:"        if (k === 'below') return false;",
+    why:"straight-below would bounce silently instead of explaining the misconception" },
+  { file:'index', via:'index', expect:"slideDir says",
+    find:"  function slideDir(e, i){ return (e.foot - i) * e.d[0] > 0 ? 'right' : 'left'; }",
+    replace:"  function slideDir(e, i){ return (e.foot - i) * e.d[0] > 0 ? 'left' : 'right'; }",
+    why:"the reason would send the child the wrong way" },
+  { file:'index', via:'index', expect:"under 44",
+    find:"  var SLIDE_G = { H:250, u:20, ox:10, oy:240, cols:14, rows:11, leg:5, knob:48,",
+    replace:"  var SLIDE_G = { H:250, u:20, ox:10, oy:240, cols:14, rows:11, leg:5, knob:40,",
+    why:"the grip would be under 44px on a phone" },
+  { file:'index', via:'index', expect:"maps to peg",
+    find:"    return Math.max(e.lo, Math.min(e.hi, Math.round(s)));",
+    replace:"    return Math.max(e.lo, Math.min(e.hi, Math.floor(s)));",
+    why:"a peg would not own its own cell" },
+  { file:'index', via:'index', expect:"tapping P counts",
+    find:"    return segDist(x, y, a, b) <= STR_G.band + 0.5 * STR_G.u &&",
+    replace:"    return true || segDist(x, y, a, b) <= STR_G.band + 0.5 * STR_G.u &&",
+    why:"a tap anywhere would move the string end" },
+  { file:'index', via:'index', expect:"starts on the answer",
+    find:"    { axis:'h', at:1,  p:[6, 7],  lo:1, hi:13, start:12 },",
+    replace:"    { axis:'h', at:1,  p:[6, 7],  lo:1, hi:13, start:6 },",
+    why:"the string would start already solved" },
+  { file:'index', via:'index', expect:"is not on a peg",
+    find:"    { axis:'h', at:2,  p:[9, 10], lo:1, hi:13, start:2 },",
+    replace:"    { axis:'h', at:2,  p:[19, 10], lo:1, hi:13, start:2 },",
+    why:"the foot would be off the pegs, so no peg is the shortest" },
+  { file:'index', via:'index', expect:"stepsNearest(",
+    find:"      if (dd < bd){ bd = dd; best = j; }\n    }\n    return best;",
+    replace:"      if (best < 0){ bd = dd; best = j; }\n    }\n    return best;",
+    why:"the first slot in array order would win in an overlap" },
+  { file:'index', via:'index', expect:"never overlap",
+    find:"slot:{ x:6, w:288, h:46, y0:204, gap:54, pad:8 },",
+    replace:"slot:{ x:6, w:288, h:46, y0:204, gap:54, pad:2 },",
+    why:"with no overlap nearest-slot is never exercised" },
+  { file:'index', via:'index', expect:"stepsKind(",
+    find:"    if (GAME_STEPS_DECOY.indexOf(card) >= 0) return 'decoy';",
+    replace:"    if (GAME_STEPS_DECOY.indexOf(card) >= 0) return 'ok';",
+    why:"a decoy card (move the ruler / turn 90°) would be accepted" },
+  { file:'index', via:'index', expect:"not shuffled",
+    find:"order = shuffle([0, 1, 2, 3]);",
+    replace:"order = [0, 1, 2, 3];",
+    why:"the step cards would start in the answer order" },
+  { file:'index', via:'index', expect:"missing or out of order",
+    find:"        if (j < 0 || filled[j]) return false;",
+    replace:"        if (j < 0) return false;",
+    why:"a card dropped on a filled slot would be judged" },
+  { file:'index', via:'index', expect:"steps figure",
+    find:"    return paraPlan(m - 1);",
+    replace:"    return paraPlan(m);",
+    why:"the picture would run one step ahead of the cards" },
+  { file:'index', via:'index', expect:"widthWant is wrong",
+    find:"  function widthWant(seg){ return seg.isPerp ? 'yes' : 'no'; }",
+    replace:"  function widthWant(seg){ return 'yes'; }",
+    why:"slanted measurements would count as the distance" },
+  { file:'index', via:'index', expect:"is not a whole cm",
+    find:"    { g:4, perp:[1, 7, 13], slant:[[3, 3], [11, -3]] },",
+    replace:"    { g:4, perp:[1, 7, 13], slant:[[3, 2], [11, -3]] },",
+    why:"a slanted card would show a rounded length" },
+  { file:'index', via:'index', expect:"a finger inside the yes box",
+    find:"    if (fx !== undefined && inBox(lay.yes, fx, fy)) return 'yes';\n",
+    replace:"",
+    why:"a card picked up by its edge with the finger in the box would bounce" },
+  { file:'index', via:'index', expect:"overlap",
+    find:"bin:{ w:144, h:156, gap:4,",
+    replace:"bin:{ w:144, h:156, gap:-20,",
+    why:"the two boxes would overlap" },
+  { file:'index', via:'index', expect:"right-angle boxes",
+    find:"      if (p.dir[0] * q.dir[0] + p.dir[1] * q.dir[1] !== 0) continue;",
+    replace:"      if (p.dir[0] * q.dir[0] + p.dir[1] * q.dir[1] !== 0 || (p.id !== 'bing' && q.id !== 'bing')) continue;",
+    why:"right angles off C would have no box, so 'no box = no right angle' would be false" },
+  { file:'index', via:'index', expect:"relKind(cross)",
+    find:"    if (id === 'cross') return 'cross';",
+    replace:"    if (id === 'cross') return 'ok';",
+    why:"the line perpendicular to A would count as parallel to A" },
+  { file:'index', via:'index', expect:"relHit(",
+    find:"      if (dd <= REL_G.band && dd < bd - 1e-6){ bd = dd; best = l.id; }   /* 小於一百萬分之一像素的差距算一樣近 */",
+    replace:"      if (dd <= REL_G.band && best === null){ bd = dd; best = l.id; }   /* 小於一百萬分之一像素的差距算一樣近 */",
+    why:"near a crossing the first line in the list would win instead of the nearest" },
+  { file:'index', via:'index', expect:"relHit(",
+    find:"      if (Math.abs(x - q.x) <= h && Math.abs(y - q.y) <= h) return id;",
+    replace:"      if (false) return id;",
+    why:"tapping the name of a line would not count as that line" },
+  { file:'index', via:'index', expect:"relKind(skew0)",
+    find:"    { a:[0, 2], d:[2, 1],  jia:2, para:[4, 6],    skew:[[3, [-2, 3]], [1, [-1, 3]]], cross:2 },",
+    replace:"    { a:[0, 2], d:[2, 1],  jia:2, para:[4, 6],    skew:[[3, [-1, 2]], [1, [-1, 3]]], cross:2 },",
+    why:"a 'decoy' would really be parallel to A, so tapping it would be marked wrong" },
+  { file:'index', via:'index', expect:"a mistake at 0",
+    find:"    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;",
+    replace:"    gScore = gScore - 5; elScore.textContent = gScore;",
+    why:"the score would go negative" },
+  { file:'index', via:'index', expect:"scoring: a round with",
+    find:"    var pts = gMistake ? 10 : 20;",
+    replace:"    var pts = 20;",
+    why:"a round with mistakes would still give +20" },
+  { file:'index', via:'index', expect:"board-generation guard",
+    find:"      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板 */\n",
+    replace:"",
+    why:"a piece held across Restart would act on the new board" },
+  { file:'index', via:'index', expect:"lostpointercapture",
+    find:"    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n",
+    replace:"",
+    why:"a piece could get stuck when capture is lost" },
+  { file:'index', via:'index', expect:"tray would start",
+    find:"    if (up){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }",
+    replace:"    if (false){ var t0 = a[0]; a[0] = a[1]; a[1] = t0; }",
+    why:"a shuffle could leave the tray in the answer order" },
+  { file:'index', via:'index', expect:"ahead mode",
+    find:"    if (mode === 'ahead'){ hintLevel = 1; showHint(); }",
+    replace:"    if (false){ hintLevel = 1; showHint(); }",
+    why:"ahead mode would not give the first hint" },
+  { file:'index', via:'index', expect:"mistake reasons changed",
+    find:"不是「直直往下」。',\n        other:function(dir){ return '另一條直角邊",
+    replace:"就是「直直往下」。',\n        other:function(dir){ return '另一條直角邊",
+    why:"a reason sentence silently changed (here: into a false one)" },
+  { file:'index', via:'index', expect:"should say the distance twice",
+    find:"（數一數，' + dist + ' 格）。'",
+    replace:"（數一數格子）。'",
+    why:"the success message would stop tying the distance to the counted squares" },
+];
+
 module.exports = {
   /* ================= 刻意改壞測試 ================= */
   breaks: [
@@ -742,23 +1457,8 @@ module.exports = {
       replace:"    { id:'offLine', pt:[8, 5],  foot:[8, 5] }",
       why:"the 'point off the line' case would secretly be the on-the-line case again" },
 
-    /* --- 上課頁：遊戲 --- */
-    { file:"index", via:"index", expect:"the answer sits at index",
-      find:"  var G_DIST_ANS_AT = 1;   // 數字選項那一關，正解要排在第幾個",
-      replace:"  var G_DIST_ANS_AT = 0;   // 數字選項那一關，正解要排在第幾個",
-      why:"the numeric round would put its answer back in the first slot" },
-    { file:"index", via:"index", expect:"round 3 option order changed",
-      find:"  var WIDTH_KEYS = ['slantOne', 'longestOne', 'perpOne', 'anyOne'];",
-      replace:"  var WIDTH_KEYS = ['perpOne', 'slantOne', 'longestOne', 'anyOne'];",
-      why:"the answer would drift back to the first option" },
-    { file:"index", via:"index", expect:"game round 4: the two lines are not both perpendicular",
-      find:"  var G_REL = S5_CASES[0];",
-      replace:"  var G_REL = S5_CASES[1];",
-      why:"the round would ask 'how are A and B related' about a pair that is not parallel, while keying 'parallel'" },
-    { file:"index", via:"index", expect:"game round 2: the key is not the distance",
-      find:"    return opts.indexOf(gameDistData().dist);",
-      replace:"    return opts.indexOf(gameDistData().segs[0].len);",
-      why:"the round would key the slanted length instead of the distance" },
+    /* --- 上課頁：遊戲（第 5 段 gameChecks 的改壞測試在 GAME_BREAKS） --- */
+    ...GAME_BREAKS,
 
     /* --- 上課頁：題庫 --- */
     { file:"index", via:"index", expect:"the key is \"4 公分\", expected \"3 公分\"",
@@ -1270,8 +1970,12 @@ module.exports = {
                 'S1_A, S1_D, S1_VSTART, S1_CASES, S1_STEPS, perpPlan, S2_CASES, distData, distPlan, ' +
                 'S3_A, S3_D, S3_VSTART, S3_PT, S3_STEPS, paraPlan, S4_CASES, widthData, widthPlan, ' +
                 'S5_A, S5_D, S5_CASES, relData, relPlan, QUIZ_DIST, QUIZ_CROSS, crossPlan, QUIZ_FIGS, ' +
-                'G_DIST, G_WIDTH, G_REL, ROUNDS, STEP_KEYS, WIDTH_KEYS, REL_KEYS, ORDER_KEYS, G_DIST_ANS_AT, ' +
-                'rotateTo, numOpts, gameDistData, roundOptions, roundAnswer, roundPlan, roundOptText}',
+                'GAME_ORDER, GAME_W, pick, inBox, boxDist, gXY, segDist, gClip, ' +
+                'SLIDE_G, GAME_SLIDE, slideStop, slideDot, slideTri, slideGrip, slideIdx, slideIdxFromGrip, slideOnLine, slideKind, slideDir, ' +
+                'STR_G, GAME_STRING, strPeg, strFoot, strDist, strLen, strIdx, strLabel, strOnLine, strKind, strDir, ' +
+                'GAME_STEPS, GAME_STEPS_DECOY, STEPS_G, stepsSlot, stepsNearest, stepsKind, stepsPlan, ' +
+                'WIDTH_G, GAME_WIDTH, widthLayout, widthSegs, widthWant, widthBin, widthSpot, ' +
+                'REL_G, GAME_REL, relStop, relPerp, relLines, relBoxes, relLabel, relHit, relKind}',
     optionValueMax: LEN_MAX_REF,
 
     check: function(data, I18N, fail, rawSrc){
@@ -1674,60 +2378,8 @@ module.exports = {
         }
       }
 
-      /* --- 遊戲的五關。 --- */
-      if (!eqJ(data.ROUNDS.map(r => r.kind), ROUND_KINDS_REF)) fail('the game must have the five rounds ' + ROUND_KINDS_REF.join(', '));
-      if (!eqJ(data.STEP_KEYS, STEP_KEYS_REF)) fail('round 1 option order changed');
-      if (!eqJ(data.WIDTH_KEYS, WIDTH_KEYS_REF)) fail('round 3 option order changed');
-      if (!eqJ(data.REL_KEYS, REL_KEYS_REF)) fail('round 4 option order changed');
-      if (!eqJ(data.ORDER_KEYS, ORDER_KEYS_REF)) fail('round 5 option order changed');
-      {
-        const seen = {};
-        data.ROUNDS.forEach(r => {
-          const ans = data.roundAnswer(r);
-          const opts = data.roundOptions(r);
-          if (ans < 0 || ans >= opts.length) fail('game round ' + r.kind + ': no unique answer');
-          if (opts.length !== 4) fail('game round ' + r.kind + ': not four options');
-          if (new Set(opts.map(String)).size !== 4) fail('game round ' + r.kind + ': duplicate options');
-          if (ROUND_ANS_REF[r.kind] !== ans) fail('game round ' + r.kind + ': the answer sits at index ' + ans + ', expected ' + ROUND_ANS_REF[r.kind]);
-          seen[ans] = true;
-          const plan = data.roundPlan(r);
-          if (plan){
-            let gWant = [];
-            if (r.kind === 'distFig') gWant = [refP(footRef(G_DIST_REF)), refP(footRef(G_DIST_REF))];
-            else if (r.kind === 'relFig') gWant = [refP(S5_CASES_REF[0].aAt), refP(S5_CASES_REF[0].bAt)];
-            else if (r.kind === 'widthFig'){
-              const w0 = S4_CASES_REF[0];
-              w0.perpAt.forEach(t => gWant.push(refP([t, w0.a]), refP([t, w0.b])));
-            }
-            checkPlan(plan, 'game round ' + r.kind, gWant);
-          }
-          if ((r.kind === 'distFig' || r.kind === 'widthFig' || r.kind === 'relFig') !== !!plan) fail('game round ' + r.kind + ': figure presence is wrong');
-        });
-        /* ⚠️ 正解不可以每一關都押同一個位置。 */
-        if (Object.keys(seen).length < 3) fail('the game answers sit in fewer than three different positions');
-      }
-      /* 第 2 關的數字要從資料重算，而且距離必須是唯一的最短。 */
-      {
-        const dd = data.gameDistData();
-        const dist = distRef(G_DIST_REF);
-        if (Math.abs(dd.dist - dist) > 1e-9) fail('game round 2: the page distance disagrees with the reference');
-        if (!isWholeCm(dist)) fail('game round 2: the distance is not a whole number of centimetres');
-        const sf = shortestFootRef(G_DIST_REF);
-        if (sf.ties !== 1 || Math.abs(sf.min - dist) > 1e-9) fail('game round 2: the perpendicular one is not the unique shortest');
-        dd.segs.forEach((s, i) => {
-          if (!isWholeCm(s.len)) fail('game round 2 segment ' + i + ': not a whole number of centimetres');
-          if (!s.isPerp && !(s.len > dist + 1e-9)) fail('game round 2 segment ' + i + ': a slanted segment is not longer');
-        });
-        const opts = data.roundOptions({ kind:'distFig' });
-        if (!fourDistinctNums(opts)) fail('game round 2: options are not four distinct whole numbers');
-        if (opts.indexOf(dd.segs.filter(s => !s.isPerp)[0].len) < 0) fail('game round 2: the slanted length must be offered as a distractor');
-        if (opts[data.roundAnswer({ kind:'distFig' })] !== dist) fail('game round 2: the key is not the distance');
-      }
-      /* 第 4 關的兩條線一定要真的都和丙垂直，不然選項「互相平行」不成立。 */
-      {
-        const rd = data.relData(data.G_REL);
-        if (!rd.bothPerp || !rd.parallel) fail('game round 4: the two lines are not both perpendicular to C, so "parallel" is not the answer');
-      }
+      /* ---------- 2b) 小遊戲「製圖廠接訂單」（§六之五）：見 gameChecks ---------- */
+      gameChecks(data, I18N, fail, rawSrc);
 
       /* ---------- 3) 圖上不可以有文字，也不可以繞過 svgEl ---------- */
       ['index', 'review'].forEach(name => {
@@ -1777,7 +2429,7 @@ module.exports = {
         data.S4_CASES.forEach(c => every.push(['s4 ' + c.id, data.widthPlan(c)]));
         data.S5_CASES.forEach(c => every.push(['s5 ' + c.id, data.relPlan(c)]));
         every.push(['quiz qDist', data.QUIZ_FIGS.qDist()], ['quiz qCross', data.QUIZ_FIGS.qCross()]);
-        data.ROUNDS.forEach(r => { const p = data.roundPlan(r); if (p) every.push(['game ' + r.kind, p]); });
+        for (let m = 0; m <= 4; m++) every.push(['game steps figure ' + m, data.stepsPlan(m)]);
         every.forEach(pair => {
           /* ⚠️ 這個迴圈自己重新取一次每一張圖，所以它也要先驗形狀 —— 不然一個 null 端點
              會在 svgOf() 裡丟例外，整份報告變成 stack trace。響亮地失敗，不要安靜地爆炸。 */
