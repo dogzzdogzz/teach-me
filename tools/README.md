@@ -337,14 +337,14 @@ node tools/breaktest.js grade-2/math/time
 不是整份輸出裡隨便一個子字串。原檔與改壞版**跑同一個亂數種子**（`SIMGEN_SEED`），
 不然兩次抽到不同參數，「只有改壞版失敗」可能只是運氣。
 （`SIMGEN_SEED=42 node tools/simgen.js <review.html> 1000` 也可以自己用來重現某一批。）
-目前：add-sub 10、numbers 27、multiply 22、time 30、length 39、divide 65、two-step 109、
-capacity-weight 105、shapes 114、solid 97、table 130 —— **二年級十一課共 748 筆**，
-再加上 **grade-4 numbers 80**、**rounding 133**、**angle 110**、**area 135**、
-**time 146**、**fraction 132**、**quadrilateral 24**、**triangle 53**、**decimal 82**、
-**multiply-divide 66**、**pattern 98**、**chart 135**、**figurate 73**、**angle-shape 59**、**congruent 71**、**cubes 73**、
-**perpendicular 73**、**chain-divide 134**、**numberline 77**，一年級九課 117，
-再加上 **grade-6 prime 40**、**gcf-lcm 48**、**ratio 57**、**divide-fraction 76**、**circle 53**、**decimal-divide 73**、**sector 64**、**speed 83**、**prism-volume 152** ——
-**48 份設定檔全站共 3265 筆**（2026-09-24 用 `node -e` 逐檔讀 `breaks.length` 重新數過，
+目前（2026-10-08，四年級小遊戲全數改完之後重數）：
+- 一年級 9 份共 **329** 筆：add-sub 36、clock 78、length 41、money 55、number-bonds 20、numbers 21、pattern 25、shapes 19、two-digit 34
+- 二年級 11 份共 **1368** 筆：add-sub 49、capacity-weight 153、divide 110、length 103、multiply 88、numbers 95、shapes 190、solid 154、table 174、time 89、two-step 163
+- 三年級 17 份共 **1604** 筆：add-sub 85、angle 108、capacity 95、circle 95、decimal 102、divide 92、equation 72、fraction 84、length 95、multiply 69、numbers 95、perimeter 80、rectangle 117、table 108、time 98、two-step 104、weight 105
+- 四年級 19 份共 **2709** 筆：angle-shape 94、angle 189、area 172、chain-divide 195、chart 205、congruent 111、cubes 119、decimal 137、figurate 126、fraction 170、multiply-divide 107、numberline 108、numbers 141、pattern 132、perpendicular 115、quadrilateral 85、rounding 182、time 216、triangle 105
+- 六年級 9 份共 **646** 筆：circle 53、decimal-divide 73、divide-fraction 76、gcf-lcm 48、prime 40、prism-volume 152、ratio 57、sector 64、speed 83
+
+**65 份設定檔全站共 6656 筆**（2026-10-08 用 `node -e` 逐檔讀 `breaks.length` 重新數過，
 不是把上一次的數字加上去）。
 ⚠️ 這一行的數字**每一次都要重新數，不要用加的**：先前寫 1535、又寫 1616，
 兩次都是加總漏掉（decimal 實際是 82，不是 78）。
