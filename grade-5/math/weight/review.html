@@ -198,10 +198,12 @@
     decStr = decStr.replace(/0+$/, '');
     return (neg ? '-' : '') + whole + '.' + decStr;
   }
-  /* 保證 3 個相異、且不等於正解的錯誤選項（數值型；先用候選值去重，不夠再往外補） */
-  function makeWrongs(correct, candidates){
+  /* 保證 3 個相異、且不等於正解的錯誤選項（數值型；先用候選值去重，不夠再往外補）。
+     avoid：題幹上印出來的數，先當成用過了 —— 誘答不可以把題幹的數字抄回來（§六之三第 4 點） */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(a){ seen[String(a)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
       if (!seen[key]){ seen[key] = true; out.push(c); }
@@ -216,8 +218,8 @@
     return out.slice(0, 3);
   }
   /* 把選項值（數字）＋正解洗牌，回傳 {opts, ans}；opts 內容仍是數字，交給各題型的 fmt 自行轉成字串 */
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -226,7 +228,7 @@
   function encodeTKg(t, kgRem){ return t * 10000 + kgRem; }
   function decodeTKg(enc){ return { t: Math.floor(enc / 10000), kgRem: enc - Math.floor(enc / 10000) * 10000 }; }
   function fmtCompound(t, kgRem, lang){
-    return lang === 'zh' ? (t + '公噸' + kgRem + '公斤') : (t + ' t ' + kgRem + ' kg');
+    return lang === 'zh' ? (t + ' 公噸 ' + kgRem + ' 公斤') : (t + ' t ' + kgRem + ' kg');
   }
 
   /* 產生 n 個正整數，平均剛好是 avg，數字全部大於 0（純整數運算，抄自平均課的作法） */
@@ -271,7 +273,7 @@
       fmt: function(d, lang){
         return {
           stem: lang === 'zh' ? d.kg + ' 公斤 = 多少公噸？' : d.kg + ' kg = how many tonnes?',
-          opts: d.optsStr.map(function(v){ return lang === 'zh' ? v + '公噸' : v + ' t'; }),
+          opts: d.optsStr.map(function(v){ return lang === 'zh' ? v + ' 公噸' : v + ' t'; }),
           ans: d.ans,
           why: lang === 'zh'
             ? d.kg + ' ÷ 1000 = ' + d.tonStr + '，所以是 ' + d.tonStr + ' 公噸。'
@@ -321,9 +323,9 @@
         var kgRem = total - t * 1000;
         var correctEnc = encodeTKg(t, kgRem);
         var wrongEncs = [];
-        // 迷思：只取後兩位當公斤餘數（把 ÷1000 誤當成 ÷100）
-        wrongEncs.push(encodeTKg(t, total % 100));
-        if (t > 0) wrongEncs.push(encodeTKg(t - 1, kgRem));
+        // 迷思：只取後兩位當公斤餘數（把 ÷1000 誤當成 ÷100）；後兩位是 0 時沒有這一種（「1 公噸 0 公斤」不是寫法）
+        if (total % 100 > 0) wrongEncs.push(encodeTKg(t, total % 100));
+        if (t > 1) wrongEncs.push(encodeTKg(t - 1, kgRem));   /* 不出「0 公噸 …」 */
         wrongEncs.push(encodeTKg(t + 1, kgRem));
         var seen = {}; seen[correctEnc] = true;
         var wrongs = [];
@@ -373,7 +375,7 @@
           stem: lang === 'zh'
             ? '卡車上有 ' + d.kg1 + ' 公斤和 ' + d.kg2 + ' 公斤兩批貨物，總重是多少公噸？'
             : 'A truck carries two loads of ' + d.kg1 + ' kg and ' + d.kg2 + ' kg. What is the total weight in tonnes?',
-          opts: d.optsStr.map(function(v){ return lang === 'zh' ? v + '公噸' : v + ' t'; }),
+          opts: d.optsStr.map(function(v){ return lang === 'zh' ? v + ' 公噸' : v + ' t'; }),
           ans: d.ans,
           why: lang === 'zh'
             ? d.kg1 + ' + ' + d.kg2 + ' = ' + d.total + ' 公斤 = ' + d.tonStr + ' 公噸。'
@@ -387,11 +389,12 @@
         var total = perBox * n;
         var t = Math.floor(total / 1000);
         var kgRem = total - t * 1000;
-        var m = mixOpts(perBox, [total, perBox + 50, perBox - 50]);
+        var m = mixOpts(perBox, [perBox + 50, perBox - 50, perBox + 100], [n, total, t, kgRem]);
         return { n:n, perBox:perBox, total:total, t:t, kgRem:kgRem, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
-        var compoundStr = d.t > 0 ? fmtCompound(d.t, d.kgRem, lang) : (lang === 'zh' ? d.kgRem + '公斤' : d.kgRem + ' kg');
+        var compoundStr = d.t === 0 ? d.kgRem + (lang === 'zh' ? ' 公斤' : ' kg')
+          : d.kgRem === 0 ? d.t + (lang === 'zh' ? ' 公噸' : ' t') : fmtCompound(d.t, d.kgRem, lang);
         return {
           stem: lang === 'zh'
             ? '一批貨物總重 ' + compoundStr + '（' + d.total + ' 公斤），平均裝進 ' + d.n + ' 箱，每箱裝多少公斤？'
@@ -410,7 +413,9 @@
         var dividendTenths = qt * k;
         var dividend = divExact(dividendTenths, 10);
         var q = divExact(qt, 10);
-        var m = mixOpts(qt, [qt - 1, qt + 1, qt * 2].map(function(v){ return v; }));
+        /* 題幹上看得到的每一串數字（被除數的整數、小數部分與除數）都不可以變成誘答：選項是 v ÷ 10，所以避開那些數 × 10 */
+        var stemTok = (dividend + ' ' + k).match(/\d+/g).map(function(x){ return Number(x) * 10; });
+        var m = mixOpts(qt, [qt - 1, qt + 1, qt * 10], [dividendTenths].concat(stemTok));   /* qt × 10：小數點忘了點（2.3 寫成 23） */
         // m 是以「十分位整數」比較，opts 顯示時要轉成小數字串
         return { k:k, dividend:dividend, dividendTenths:dividendTenths, q:q, qt:qt, optsQt:m.opts, ans:m.ans };
       },
@@ -430,7 +435,7 @@
         var w = pick([2,3,4,5]);
         var h = pick([2,3,4,5]);
         var v = l * w * h;
-        var m = mixOpts(v, [l * w, w * h, l + w + h, l * w * (h + 1)]);
+        var m = mixOpts(v, [l * w, w * h, l + w + h, l * w * (h + 1)], [l, w, h]);
         return { l:l, w:w, h:h, v:v, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -439,7 +444,7 @@
           stem: lang === 'zh'
             ? '長方體長 ' + d.l + ' 公分、寬 ' + d.w + ' 公分、高 ' + d.h + ' 公分，體積是多少立方公分？'
             : 'A cuboid is ' + d.l + ' cm long, ' + d.w + ' cm wide and ' + d.h + ' cm tall. What is its volume?',
-          opts: d.opts.map(function(v){ return v + (lang === 'zh' ? '' : ' ') + unit; }),
+          opts: d.opts.map(function(v){ return v + ' ' + unit; }),
           ans: d.ans,
           why: lang === 'zh'
             ? d.l + ' × ' + d.w + ' × ' + d.h + ' = ' + d.v + ' 立方公分。'
@@ -452,7 +457,7 @@
         var avg = pickUnused([6,7,8,9,10,12,14,15,16,18,20], used);
         var nums = makeNumsForAvg(avg, n);
         var s = sum(nums);
-        var m = mixOpts(avg, [avg - 1, avg + 1, s]);
+        var m = mixOpts(avg, [avg - 1, avg + 1, s], nums);
         return { n:n, nums:nums, avg:avg, sum:s, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
