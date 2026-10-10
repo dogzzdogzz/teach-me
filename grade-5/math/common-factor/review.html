@@ -199,14 +199,17 @@
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
-  /* 公因數／最大公因數用的干擾選項：其他公因數、a 或 b 各自才有的因數 —— 全部即時算出，不寫死 */
+  /* 公因數／最大公因數用的干擾選項：其他公因數、a 或 b 各自才有的因數 —— 全部即時算出，不寫死。
+     ⚠️ 兩個數裡**較大的那一個**不可以當誘答：它連較小的數都不能整除，等於把題幹的數字抄回來（§六之三 第 4 點）。
+     **較小的那一個**可以 —— 「最大公因數就是較小的那個數」是這一課刻意要抓的迷思（qsBoost[1]）；
+     tools/checks/grade-5-common-factor.js 的 stemEchoOk 只放行那一個值。 */
   function buildGcfWrongs(a, b, common, correct){
-    var wrongs = [];
+    var wrongs = [], big = Math.max(a, b);
     var oc = common.filter(function(x){ return x !== correct; });
     if (oc.length) wrongs.push(pick(oc));
-    var ncA = factorsOf(a).filter(function(x){ return common.indexOf(x) < 0; });
+    var ncA = factorsOf(a).filter(function(x){ return common.indexOf(x) < 0 && x !== big; });
     if (ncA.length) wrongs.push(pick(ncA));
-    var ncB = factorsOf(b).filter(function(x){ return common.indexOf(x) < 0; });
+    var ncB = factorsOf(b).filter(function(x){ return common.indexOf(x) < 0 && x !== big; });
     if (ncB.length) wrongs.push(pick(ncB));
     var seen = {}; seen[correct] = true;
     var out = [];
@@ -370,7 +373,7 @@
           ans: d.ans,
           why: lang === 'zh'
             ? '兩件事下次同時發生的時間，就是兩個週期的公倍數，「下一次」代表要用最小公倍數。' + d.a + ' 的倍數：' + d.a + '、' + 2 * d.a + '⋯⋯；' + d.b + ' 的倍數：' + d.b + '、' + 2 * d.b + '⋯⋯ 最早重複的是 ' + d.correct + ' ' + unit + '。'
-            : 'The next time both happen together is a common multiple of the two cycles — “next time” means the LCM. Multiples of ' + d.a + ': ' + d.a + ', ' + 2 * d.a + '…; of ' + d.b + ': ' + d.b + ', ' + 2 * d.b + '… — the first shared one is ' + d.correct + ' ' + unit + '.'
+            : 'A time when both happen together is a common multiple of the two cycles — and “together again” asks for the soonest one, the LCM. Multiples of ' + d.a + ': ' + d.a + ', ' + 2 * d.a + '…; of ' + d.b + ': ' + d.b + ', ' + 2 * d.b + '… — the first shared one is ' + d.correct + ' ' + unit + '.'
         };
       } },
     { id:'factorCount', cat:'factor',
@@ -419,7 +422,8 @@
         var k = pickUnused([3,4,6,7,8,9], used);
         var range = pick([30, 50]);
         var c = Math.floor(range / k);
-        var m = mixOpts(c, [c - 1, c + 1, c + 2]);
+        /* 誘答不可以剛好是題幹上的 k 或範圍（§六之三 第 4 點：1～50 裡 8 的倍數有 6 個，c + 2 就是 8） */
+        var m = mixOpts(c, [c - 1, c + 1, c + 2, c - 2, c + 3].filter(function(x){ return x > 0 && x !== k && x !== range; }).slice(0, 3));
         return { k:k, range:range, c:c, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){

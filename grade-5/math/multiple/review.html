@@ -193,6 +193,11 @@
   function gcd(a, b){ return b ? gcd(b, a % b) : a; }
   function lcm(a, b){ return a * b / gcd(a, b); }
   function joinNums(arr, lang){ return arr.join(lang === 'zh' ? '、' : ', '); }
+  function ordEn(n){
+    var t = n % 100, o = n % 10;
+    if (t >= 11 && t <= 13) return n + 'th';
+    return n + (o === 1 ? 'st' : o === 2 ? 'nd' : o === 3 ? 'rd' : 'th');
+  }
   /* 把選項值＋正解洗牌，回傳 {opts, ans} */
   function mixOpts(correct, wrongs){
     var opts = shuffle([correct].concat(wrongs));
@@ -246,7 +251,9 @@
         var k = pickUnused([3,4,6,7,8,9], used);
         var range = pick([30, 50]);
         var c = Math.floor(range / k);
-        var m = mixOpts(c, [c - 1, c + 1, c + 2]);
+        /* 誘答是「差一個」的數；不可以剛好抄到題幹的 k 或範圍（§六之三第 4 點）：抄到就往外再找一個 */
+        var wrongs = [c - 1, c + 1, c + 2, c - 2, c + 3].filter(function(v){ return v > 0 && v !== k && v !== range && v !== c; }).slice(0, 3);
+        var m = mixOpts(c, wrongs);
         return { k:k, range:range, c:c, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -266,19 +273,20 @@
         var k = pickUnused([3,4,5,6,7,8,9], used);
         var n = 3 + rand(6);
         var c = k * n;
-        var offs = shuffle([-2, -1, 1, 2]).slice(0, 3);
+        /* n = 3 時 c − 2k 剛好就是 k（題幹的數，也是「第 1 個」）：那時不出 −2 */
+        var offs = shuffle(n > 3 ? [-2, -1, 1, 2] : [-1, 1, 2]).slice(0, 3);
         var wrongs = offs.map(function(o){ return c + o * k; });
         var m = mixOpts(c, wrongs);
         return { k:k, n:n, c:c, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
         return {
-          stem: lang === 'zh' ? d.k + ' 的第 ' + d.n + ' 個倍數是多少？' : 'What is the ' + d.n + 'th multiple of ' + d.k + '?',
+          stem: lang === 'zh' ? d.k + ' 的第 ' + d.n + ' 個倍數是多少？' : 'What is the ' + ordEn(d.n) + ' multiple of ' + d.k + '?',
           opts: d.opts.map(String),
           ans: d.ans,
           why: lang === 'zh'
             ? d.k + ' 的倍數依序是 ' + d.k + '×1、' + d.k + '×2⋯⋯所以第 ' + d.n + ' 個就是 ' + d.k + ' × ' + d.n + ' = ' + d.c + '。'
-            : 'Multiples of ' + d.k + ' go ' + d.k + '×1, ' + d.k + '×2… so the ' + d.n + 'th one is ' + d.k + ' × ' + d.n + ' = ' + d.c + '.'
+            : 'Multiples of ' + d.k + ' go ' + d.k + '×1, ' + d.k + '×2… so the ' + ordEn(d.n) + ' one is ' + d.k + ' × ' + d.n + ' = ' + d.c + '.'
         };
       } },
     { id:'nextMultipleAfter', cat:'multiple',
@@ -288,7 +296,8 @@
         var r = 1 + rand(k - 1);
         var x = k * mm + r;
         var ans = k * (mm + 1);
-        var wrongs = [k * mm, k * (mm + 2), x];
+        /* 誘答：比 x 小的那一個倍數、跳過一個、把 x 再加 k（x ＋ k 不是倍數）。不放 x 自己 —— 那是抄題幹（§六之三第 4 點） */
+        var wrongs = [k * mm, k * (mm + 2), x + k];
         var m = mixOpts(ans, wrongs);
         return { k:k, x:x, mm:mm, ans2:ans, opts:m.opts, ans:m.ans };
       },
@@ -403,8 +412,8 @@
               : ['0 is the smallest multiple', '1 is a multiple of every number', 'Every number’s smallest multiple is itself', 'A number has exactly 10 multiples'],
             ans: 2,
             why: lang === 'zh'
-              ? '0 不算倍數，1 是因數不是倍數；每個數最小的倍數就是它自己（× 1）。'
-              : '0 doesn’t count, and 1 is a factor, not a multiple; the smallest multiple of any number is itself (×1).'
+              ? '0 不算倍數；1 只是 1 的倍數，不是每個數的倍數；每個數最小的倍數就是它自己（× 1）。'
+              : '0 doesn’t count, and 1 is a multiple only of 1, not of every number; the smallest multiple of any number is itself (×1).'
           };
         }
         if (d.v === 'wrongSent'){

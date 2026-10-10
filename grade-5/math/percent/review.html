@@ -248,7 +248,8 @@
         var mult = 100 / gcd(p, 100);
         var n = mult * (2 + rand(10));
         var c = n * p / 100;
-        var m = mixOpts(c, nearWrongs(c, 3));
+        /* 鄰近數不可以剛好是題幹的 p 或 n（§六之三第 4 點：誘答不抄題幹）—— 9 的鄰居 8 會撞上 8% */
+        var m = mixOpts(c, nearWrongs(c, 5).filter(function(v){ return v !== p && v !== n; }).slice(0, 3));
         return { n:n, p:p, c:c, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -271,7 +272,8 @@
         var mult = 100 / gcd(rate, 100);
         var n = mult * (2 + rand(10));
         var c = n * rate / 100;
-        var m = mixOpts(c, nearWrongs(c, 3));
+        /* 鄰近數不可以剛好是題幹的原價 n（五折、n ＝ 4 時 2 的鄰居 4 就是原價 —— codex 第一輪） */
+        var m = mixOpts(c, nearWrongs(c, 6).filter(function(v){ return v !== n; }).slice(0, 3));
         return { n:n, rate:rate, lbl:LABELS[rate], elbl:ELABELS[rate], c:c, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -294,7 +296,9 @@
         var n = mult * (2 + rand(10));
         var paid = n * rate / 100;
         var saved = n - paid;
-        var m = mixOpts(saved, nearWrongs(saved, 3).concat([paid]).slice(0, 3));
+        /* 「把要付的錢當成省下的」是這一題的迷思誘答，放在最前面（以前排在三個鄰近數後面，被 slice(0, 3) 切掉，從來沒出現過） */
+        /* 五折時「要付的」就等於「省下的」，那個誘答用不上；鄰近數也不可以剛好是原價 n（codex 第一輪） */
+        var m = mixOpts(saved, (paid !== saved ? [paid] : []).concat(nearWrongs(saved, 6).filter(function(v){ return v !== paid && v !== n; })).slice(0, 3));
         return { n:n, rate:rate, lbl:LABELS[rate], elbl:ELABELS[rate], paid:paid, saved:saved, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -427,7 +431,10 @@
         var sn = num / g, sd = den / g;
         var correct = sn + '/' + sd;
         var wrongs = [(num - 1) + '/' + den, sn + '/' + (sd + 1), (sn + 1) + '/' + sd, num + '/' + sd, sn + '/' + den];
-        var m = mixOpts(correct, wrongs);
+        /* 五個候選裡挑前三個「值」不同、也不等於正解的（mixOpts 只去重不截斷：以前一題會出現 5～6 個選項） */
+        var seenV = [sn / sd], three = [];
+        wrongs.forEach(function(w){ var q = w.split('/'), v = q[0] / q[1]; if (three.length < 3 && seenV.indexOf(v) < 0){ seenV.push(v); three.push(w); } });
+        var m = mixOpts(correct, three);
         return { num:num, den:den, g:g, sn:sn, sd:sd, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){

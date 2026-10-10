@@ -203,12 +203,24 @@
     var n = Number(t);
     return (t === '' || isNaN(n)) ? 'S' + t : 'N' + n;
   }
-  /* 從候選字串中挑出跟正解不同、彼此「值」也不重複的 n 個錯誤選項 */
-  function uniqueWrongs(correct, cands, n){
+  /* 從候選字串中挑出跟正解不同、彼此「值」也不重複的 n 個錯誤選項。
+     avoid：題幹上印出來的數字，先當成已經用過（§六之三第 4 點：誘答不可以把題幹的數字抄回來）；
+     刻意的那一個用 avoidExcept() 留下來。
+     分數候選的分子是 0（0/2）、或分子等於分母（6/6 就是 1）都不像答案，一律跳過 ——
+     2026-10-10 simgen 抓到這兩種都真的會出現（|a − c| 剛好是 0、最簡分數的分子 ＋ 1 剛好等於分母）。 */
+  function usableOpt(c){
+    var m = /^(\d+)\/(\d+)$/.exec(String(c).trim());
+    return !m || (Number(m[1]) > 0 && Number(m[1]) !== Number(m[2]));
+  }
+  function avoidExcept(stemNums, keep){
+    return stemNums.filter(function(v){ return keep.indexOf(v) < 0; });
+  }
+  function uniqueWrongs(correct, cands, n, avoid){
     var out = [], seen = {};
     seen[optKey(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[optKey(String(v))] = true; });
     cands.forEach(function(c){
-      if (!c) return;
+      if (!c || !usableOpt(c)) return;
       var k = optKey(c);
       if (!seen[k]){ seen[k] = true; out.push(c); }
     });
@@ -218,7 +230,7 @@
       var cand = fm ? (fm[1] + '/' + (Number(fm[2]) + i)) : String(Number(correct) + i);
       if (fm && i % 2 === 0) cand = (Number(fm[1]) + i) + '/' + fm[2];
       var kk = optKey(cand);
-      if (seen[kk]) continue;
+      if (seen[kk] || !usableOpt(cand)) continue;
       seen[kk] = true; out.push(cand);
     }
     return out.slice(0, n);
@@ -377,9 +389,11 @@
         var p = COMMONDEN_POOL[keys.indexOf(key)];
         var b = p[0], d = p[1], l = lcm(b, d);
         var a = 1 + rand(b - 1), c = 1 + rand(d - 1);
-        var cand = [b*d, b+d, gcd(b,d), Math.max(b,d), Math.min(b,d), l+1, l-1]
+        /* 刻意的迷思誘答：直接拿比較大的那個分母（max）；最大公因數是「公因數／公倍數搞混」，只在它大於 1 時才放。
+           其他題幹上的數字（分子、比較小的分母）一律不准當選項（avoidExcept）。 */
+        var cand = [b*d, b+d, gcd(b,d) > 1 ? gcd(b,d) : 0, Math.max(b,d), l+1, l-1]
           .filter(function(v){ return v > 0; }).map(String);
-        var wrongs = uniqueWrongs(String(l), cand, 3);
+        var wrongs = uniqueWrongs(String(l), cand, 3, avoidExcept([a, b, c, d], [Math.max(b, d)]));
         var mo = mixOpts(String(l), wrongs);
         return { a:a,b:b,c:c,d:d,l:l,opts:mo.opts,ans:mo.ans };
       },
@@ -400,9 +414,10 @@
         var key = pickUnused(keys, used);
         var p = LCM_POOL[keys.indexOf(key)];
         var a = p[0], b = p[1], l = lcm(a, b);
-        var cand = [a*b, a+b, gcd(a,b), Math.max(a,b), Math.min(a,b), l+1, l-1]
+        /* 刻意的迷思誘答：比較大的那個數（max）；比較小的那個數不像答案（最小公倍數不會比任何一個數小），不放。 */
+        var cand = [a*b, a+b, gcd(a,b) > 1 ? gcd(a,b) : 0, Math.max(a,b), l+1, l-1]
           .filter(function(v){ return v > 0; }).map(String);
-        var wrongs = uniqueWrongs(String(l), cand, 3);
+        var wrongs = uniqueWrongs(String(l), cand, 3, avoidExcept([a, b], [Math.max(a, b)]));
         var mo = mixOpts(String(l), wrongs);
         return { a:a,b:b,l:l,opts:mo.opts,ans:mo.ans };
       },
