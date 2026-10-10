@@ -197,10 +197,11 @@
     decStr = decStr.replace(/0+$/, '');
     return (neg ? '-' : '') + whole + '.' + decStr;
   }
-  /* 保證 3 個相異、且不等於正解的錯誤選項 */
-  function makeWrongs(correct, candidates){
+  /* 保證 3 個相異、且不等於正解的錯誤選項。avoid：題幹裡印出來的數，不可以被當成誘答抄回去（§六之三第 4 點） */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(a){ seen[String(a)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
       if (!seen[key]){ seen[key] = true; out.push(c); }
@@ -214,8 +215,8 @@
     }
     return out.slice(0, 3);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -225,7 +226,8 @@
     en:{ m2:'m²', a:'a', ha:'ha', km2:'km²', cm2:'cm²', m3:'m³', cm3:'cm³', t:'t', kg:'kg' }
   };
   function u(unit, lang){ return UNIT[lang][unit]; }
-  function withUnit(v, unit, lang){ return lang === 'zh' ? (v + u(unit, lang)) : (v + ' ' + u(unit, lang)); }
+  /* 數字和單位中間一律空一格（中英文都是） */
+  function withUnit(v, unit, lang){ return v + ' ' + u(unit, lang); }
 
   /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
   var AREA_LEVELS = ['km2', 'ha', 'a', 'm2']; // 相鄰兩階都是 × 100
@@ -240,23 +242,24 @@
         var hiVal = pickUnused([1,2,3,4,5,6,7,8,9,10,12,15,18,20], used);
         var loVal = hiVal * 100;
         var down = pick([true, false]);
+        /* 誘答：乘（除）錯倍數 —— × 10、× 1000、× 10000（不把題幹的數原封不動抄回來） */
         if (down){
-          var m1 = mixOpts(loVal, [loVal / 100, loVal * 100, hiVal]);
+          var m1 = mixOpts(loVal, [hiVal * 10, hiVal * 1000, hiVal * 10000], [hiVal]);
           return { down:true, hiVal:hiVal, hiUnit:hiUnit, loVal:loVal, loUnit:loUnit, opts:m1.opts, ans:m1.ans };
         } else {
-          var m2 = mixOpts(hiVal, [hiVal * 100, hiVal / 100, loVal]);
+          var m2 = mixOpts(hiVal, [hiVal * 10, hiVal / 10, hiVal / 100], [loVal]);
           return { down:false, hiVal:hiVal, hiUnit:hiUnit, loVal:loVal, loUnit:loUnit, opts:m2.opts, ans:m2.ans };
         }
       },
       fmt: function(d, lang){
         var stem, why;
         if (d.down){
-          stem = withUnit(d.hiVal, d.hiUnit, lang) + (lang === 'zh' ? ' 等於多少 ' + u(d.loUnit, lang) + '？' : ' equals how many ' + u(d.loUnit, lang) + '?');
+          stem = withUnit(d.hiVal, d.hiUnit, lang) + (lang === 'zh' ? ' 等於多少' + u(d.loUnit, lang) + '？' : ' equals how many ' + u(d.loUnit, lang) + '?');
           why = lang === 'zh'
             ? '面積每往下一階 × 100：' + d.hiVal + ' × 100 = ' + d.loVal + '（' + u(d.loUnit, lang) + '）。'
             : 'Each step down in area is ×100: ' + d.hiVal + ' × 100 = ' + d.loVal + ' (' + u(d.loUnit, lang) + ').';
         } else {
-          stem = withUnit(d.loVal, d.loUnit, lang) + (lang === 'zh' ? ' 等於多少 ' + u(d.hiUnit, lang) + '？' : ' equals how many ' + u(d.hiUnit, lang) + '?');
+          stem = withUnit(d.loVal, d.loUnit, lang) + (lang === 'zh' ? ' 等於多少' + u(d.hiUnit, lang) + '？' : ' equals how many ' + u(d.hiUnit, lang) + '?');
           why = lang === 'zh'
             ? '面積每往上一階 ÷ 100：' + d.loVal + ' ÷ 100 = ' + d.hiVal + '（' + u(d.hiUnit, lang) + '）。'
             : 'Each step up in area is ÷100: ' + d.loVal + ' ÷ 100 = ' + d.hiVal + ' (' + u(d.hiUnit, lang) + ').';
@@ -271,10 +274,10 @@
         var m2Val = pickUnused([1,2,3,4,5,6,7,8,9], used);
         var cm2Val = m2Val * 10000;
         if (down){
-          var mm = mixOpts(cm2Val, [m2Val * 100, m2Val * 1000, cm2Val / 10]);
+          var mm = mixOpts(cm2Val, [m2Val * 100, m2Val * 1000, m2Val * 100000], [m2Val]);
           return { down:true, m2Val:m2Val, cm2Val:cm2Val, opts:mm.opts, ans:mm.ans };
         } else {
-          var mm2 = mixOpts(m2Val, [m2Val * 100, cm2Val, m2Val / 10]);
+          var mm2 = mixOpts(m2Val, [m2Val * 100, m2Val * 10, m2Val / 10], [cm2Val]);
           return { down:false, m2Val:m2Val, cm2Val:cm2Val, opts:mm2.opts, ans:mm2.ans };
         }
       },
@@ -301,10 +304,10 @@
         var m3Val = pickUnused([1,2,3,4,5,6,7,8,9], used);
         var cm3Val = m3Val * 1000000;
         if (down){
-          var mm = mixOpts(cm3Val, [m3Val * 10000, m3Val * 100000, cm3Val / 10]);
+          var mm = mixOpts(cm3Val, [m3Val * 10000, m3Val * 1000, m3Val * 100000], [m3Val]);
           return { down:true, m3Val:m3Val, cm3Val:cm3Val, opts:mm.opts, ans:mm.ans };
         } else {
-          var mm2 = mixOpts(m3Val, [m3Val * 100, cm3Val, m3Val * 10]);
+          var mm2 = mixOpts(m3Val, [m3Val * 100, m3Val * 1000, m3Val * 10], [cm3Val]);
           return { down:false, m3Val:m3Val, cm3Val:cm3Val, opts:mm2.opts, ans:mm2.ans };
         }
       },
@@ -346,8 +349,8 @@
         var optA = lang === 'zh' ? '甲地' : 'Plot A';
         var optB = lang === 'zh' ? '乙地' : 'Plot B';
         var why = lang === 'zh'
-          ? '先統一單位換成平方公尺：甲 = ' + d.m2A + ' 平方公尺，乙 = ' + d.m2B + ' 平方公尺，' + (d.aWins ? '甲' : '乙') + '比較大。'
-          : 'Unify to square meters first: A = ' + d.m2A + ' m², B = ' + d.m2B + ' m², ' + (d.aWins ? 'A' : 'B') + ' is bigger.';
+          ? '先統一單位換成平方公尺：甲地 ' + withUnit(d.vA, d.uA, lang) + ' ＝ ' + d.m2A + ' 平方公尺，乙地 ' + withUnit(d.vB, d.uB, lang) + ' ＝ ' + d.m2B + ' 平方公尺，' + (d.aWins ? '甲地' : '乙地') + '比較大。'
+          : 'Unify to square meters first: Plot A ' + withUnit(d.vA, d.uA, lang) + ' = ' + d.m2A + ' m², Plot B ' + withUnit(d.vB, d.uB, lang) + ' = ' + d.m2B + ' m², so ' + (d.aWins ? 'Plot A' : 'Plot B') + ' is bigger.';
         return { stem: stem, opts: [optA, optB], ans: d.aWins ? 0 : 1, why: why };
       } },
 
@@ -358,7 +361,8 @@
         var w = pick([5,10,15,20,25,30]);
         var areaM2 = l * w;
         var aVal = areaM2 / 100;
-        var m = mixOpts(aVal, [areaM2, aVal * 10, aVal + 1]);
+        /* 誘答：忘了 ÷ 100（還是平方公尺）、只 ÷ 10、多 ÷ 100（當成公頃）、算成周長 */
+        var m = mixOpts(aVal, [areaM2, aVal * 10, areaM2 / 10000, 2 * (l + w)], [l, w]);
         return { l:l, w:w, areaM2:areaM2, aVal:aVal, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -402,11 +406,12 @@
         var factor = Math.pow(100, skip);
         var toUnit = skip === 2 ? 'a' : 'm2';
         var toVal = kmVal * factor;
-        var m = mixOpts(toVal, [kmVal * 100, kmVal * Math.pow(100, skip - 1), toVal / 10]);
+        /* 誘答：只乘了一階、少一個 0、多一個 0 */
+        var m = mixOpts(toVal, skip === 2 ? [kmVal * 100, kmVal * 1000, kmVal * 100000] : [kmVal * 10000, kmVal * 100000, kmVal * 10000000], [kmVal]);
         return { kmVal:kmVal, toUnit:toUnit, toVal:toVal, factor:factor, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
-        var stem = withUnit(d.kmVal, 'km2', lang) + (lang === 'zh' ? ' 等於多少 ' + u(d.toUnit, lang) + '？' : ' equals how many ' + u(d.toUnit, lang) + '?');
+        var stem = withUnit(d.kmVal, 'km2', lang) + (lang === 'zh' ? ' 等於多少' + u(d.toUnit, lang) + '？' : ' equals how many ' + u(d.toUnit, lang) + '?');
         var why = lang === 'zh'
           ? '中間跨了幾階，就連乘幾次 100：' + d.kmVal + ' × ' + d.factor + ' = ' + d.toVal + '（' + u(d.toUnit, lang) + '）。'
           : 'Multiply by 100 once per rung skipped: ' + d.kmVal + ' × ' + d.factor + ' = ' + d.toVal + ' (' + u(d.toUnit, lang) + ').';
@@ -418,10 +423,15 @@
       make: function(used){
         var shape = pick(['rect', 'tri']);
         var base = pickUnused([3,4,5,6,7,8,9,10,12], used);
-        var height = pick([2,3,4,5,6,7,8]);
+        var height;
+        /* (底 − 2) × (高 − 2) ＝ 4 的三組（4 × 4、3 × 6、6 × 3）會讓「底 ＋ 高」「2 ×（底 ＋ 高）」和面積撞在一起，湊不滿三個誘答：不出 */
+        do {
+          height = pick([2,3,4,5,6,7,8]);
+          if (shape === 'tri' && (base * height) % 2 !== 0) height += 1;
+        } while ((base - 2) * (height - 2) === 4);
         var area = shape === 'rect' ? base * height : (base * height) / 2;
-        if (shape === 'tri' && (base * height) % 2 !== 0){ height += 1; area = (base * height) / 2; }
-        var m = mixOpts(area, [base + height, base * height, area * 2]);
+        /* 誘答：底 ＋ 高、2 ×（底 ＋ 高）（算成周長）；長方形 ÷ 2（套了三角形的公式）、× 2；三角形忘了 ÷ 2、× 2 */
+        var m = mixOpts(area, shape === 'rect' ? [base + height, 2 * (base + height), area / 2, area * 2] : [base * height, base + height, 2 * (base + height), area * 4], [base, height]);
         return { shape:shape, base:base, height:height, area:area, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -431,11 +441,11 @@
           : 'A ' + shapeName + ' has a base of ' + d.base + ' cm and a height of ' + d.height + ' cm. What is its area?';
         var why = lang === 'zh'
           ? (d.shape === 'rect'
-              ? '長方形面積 = 底 × 高 = ' + d.base + ' × ' + d.height + ' = ' + d.area + '（平方公分）。'
-              : '三角形面積 = 底 × 高 ÷ 2 = ' + d.base + ' × ' + d.height + ' ÷ 2 = ' + d.area + '（平方公分）。')
+              ? '長方形面積 ＝ 底 × 高：' + d.base + ' × ' + d.height + ' ＝ ' + d.area + '（平方公分）。'
+              : '三角形面積 ＝ 底 × 高 ÷ 2：' + d.base + ' × ' + d.height + ' ÷ 2 ＝ ' + d.area + '（平方公分）。')
           : (d.shape === 'rect'
-              ? 'Rectangle area = base × height = ' + d.base + ' × ' + d.height + ' = ' + d.area + ' cm².'
-              : 'Triangle area = base × height ÷ 2 = ' + d.base + ' × ' + d.height + ' ÷ 2 = ' + d.area + ' cm².');
+              ? 'Rectangle area = base × height: ' + d.base + ' × ' + d.height + ' = ' + d.area + ' cm².'
+              : 'Triangle area = base × height ÷ 2: ' + d.base + ' × ' + d.height + ' ÷ 2 = ' + d.area + ' cm².');
         return { stem: stem, opts: d.opts.map(function(v){ return v + (lang === 'zh' ? ' 平方公分' : ' cm²'); }), ans: d.ans, why: why };
       } },
 
@@ -446,7 +456,8 @@
         var w = pick([2,3,4,5,6]);
         var h = pick([2,3,4,5,6]);
         var vol = l * w * h;
-        var m = mixOpts(vol, [l + w + h, l * w, vol + l]);
+        /* 誘答：長 ＋ 寬 ＋ 高、只算一個面（長 × 寬）、表面積、三個面、所有稜的總長 */
+        var m = mixOpts(vol, [l + w + h, l * w, 2 * (l * w + w * h + l * h), l * w + w * h + l * h, 4 * (l + w + h)], [l, w, h]);
         return { l:l, w:w, h:h, vol:vol, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -466,10 +477,10 @@
         var tVal = pickUnused([1,2,3,4,5,6,7,8,9], used);
         var kgVal = tVal * 1000;
         if (down){
-          var m = mixOpts(kgVal, [tVal * 100, tVal * 10000, kgVal / 10]);
+          var m = mixOpts(kgVal, [tVal * 100, tVal * 10000, tVal * 10], [tVal]);
           return { down:true, tVal:tVal, kgVal:kgVal, opts:m.opts, ans:m.ans };
         } else {
-          var m2 = mixOpts(tVal, [tVal * 10, kgVal, tVal * 100]);
+          var m2 = mixOpts(tVal, [tVal * 10, tVal * 100, tVal / 10], [kgVal]);
           return { down:false, tVal:tVal, kgVal:kgVal, opts:m2.opts, ans:m2.ans };
         }
       },
