@@ -190,12 +190,18 @@
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
-  /* 在正確答案附近找 count 個不重複、不等於正解的正整數當錯誤選項 */
-  function nearbyWrongs(correct, count){
+  /* 在正確答案附近找 count 個不重複、不等於正解的正整數當錯誤選項。
+     avoid：題幹裡已經給的數（§六之三第 4 點：誘答不可以把題幹的數字抄回來 ——
+     「面積 24、底 6，高是多少？」的選項裡出現 6，等於送一個題幹裡的數給孩子挑） */
+  /* ⚠️ 每一步上下兩邊都試（先 +delta、再 −delta）。以前是照「已經有幾個」輪流選邊：
+     下面那一邊用完（≤ 0）之後就永遠輪不到上面那一邊 —— 加了 avoid 之後，h = 3、b = 4 這一題會卡成無窮迴圈。 */
+  function nearbyWrongs(correct, count, avoid){
     var wrongs = [], delta = 1;
+    avoid = avoid || [];
     while (wrongs.length < count){
-      var cand = (wrongs.length % 2 === 0) ? correct + delta : correct - delta;
-      if (cand > 0 && cand !== correct && wrongs.indexOf(cand) < 0) wrongs.push(cand);
+      [correct + delta, correct - delta].forEach(function(cand){
+        if (wrongs.length < count && cand > 0 && wrongs.indexOf(cand) < 0 && avoid.indexOf(cand) < 0) wrongs.push(cand);
+      });
       delta++;
     }
     return wrongs;
@@ -275,11 +281,12 @@
       make: function(used){
         var bs = [3,4,5,6,7,8,9], hs = [3,4,5,6,7,8,9];
         var b, h, key, tries = 0;
-        do { b = pick(bs); h = pick(hs); key = b + 'x' + h; tries++; }
+        /* 高不等於底：「面積 36、底 6，高是多少？」的答案 6 就是題幹裡的底，不用算也猜得到 */
+        do { b = pick(bs); h = pick(hs.filter(function(v){ return v !== b; })); key = b + 'x' + h; tries++; }
         while (used.indexOf(key) >= 0 && tries < 30);
         used.push(key);
         var area = b * h;
-        var m = mixOpts(h, nearbyWrongs(h, 3));
+        var m = mixOpts(h, nearbyWrongs(h, 3, [b, area]));
         return { b:b, h:h, area:area, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -295,13 +302,15 @@
       } },
     { id:'inverseBase', cat:'area',
       make: function(used){
-        var hs = [2,4,6,8], bs = [4,5,6,7,8,9,10];
+        /* 高不用 2：高 2 時三角形的面積 ＝ 底 × 2 ÷ 2 ＝ 底，答案就是題幹裡的面積那個數 */
+        var hs = [4,6,8], bs = [4,5,6,7,8,9,10];
         var b, h, key, tries = 0;
-        do { b = pick(bs); h = pick(hs); key = b + 'x' + h; tries++; }
+        /* 底也不等於高：「面積 32、高 8，底是多少？」的答案 8 就是題幹裡的高 */
+        do { b = pick(bs); h = pick(hs.filter(function(v){ return v !== b; })); key = b + 'x' + h; tries++; }
         while (used.indexOf(key) >= 0 && tries < 30);
         used.push(key);
         var area = b * h / 2;
-        var m = mixOpts(b, nearbyWrongs(b, 3));
+        var m = mixOpts(b, nearbyWrongs(b, 3, [h, area]));
         return { b:b, h:h, area:area, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -369,17 +378,19 @@
       make: function(used){
         var pool = [30,40,50,60,70,80,90,100];
         var a, b, key, tries = 0;
+        /* 不收的組合：兩個角加起來 ≥ 170（第三個角太小或不合理），或第三個角剛好等於題目給的角
+           （60°、60° → 60°：答案就是題幹裡的數，不用算也猜得到 —— 驗證者 2026-10-10，約 13% 的題目） */
+        function bad(a, b){ return a + b >= 170 || 180 - a - b === a || 180 - a - b === b; }
         do { a = pick(pool); b = pick(pool); key = a + '-' + b; tries++; }
-        while ((used.indexOf(key) >= 0 || a + b >= 170) && tries < 30);
-        /* 30 次抽不到就會沿用最後一次的抽樣 —— a+b 可能 ≥ 180，第三個角變成 0 或負數。
-           所以保底一定要換成一組合法的角。 */
-        if (a + b >= 170){
-          var SAFE = [[30,40],[40,50],[50,60],[60,70],[30,90],[40,100],[50,80],[60,80]];
+        while ((used.indexOf(key) >= 0 || bad(a, b)) && tries < 30);
+        /* 30 次抽不到就會沿用最後一次的抽樣 —— 可能是不收的組合。所以保底一定要換成一組合法的角（每一組都不是不收的組合）。 */
+        if (bad(a, b)){
+          var SAFE = [[30,40],[40,50],[50,60],[60,70],[30,90],[40,110],[50,70],[60,80]];
           for (var si = 0; si < SAFE.length; si++){
             var safeKey = SAFE[si][0] + '-' + SAFE[si][1];
             if (used.indexOf(safeKey) < 0){ a = SAFE[si][0]; b = SAFE[si][1]; key = safeKey; break; }
           }
-          if (a + b >= 170){ a = 60; b = 70; key = '60-70'; }
+          if (bad(a, b)){ a = 60; b = 70; key = '60-70'; }
         }
         used.push(key);
         var missing = 180 - a - b;

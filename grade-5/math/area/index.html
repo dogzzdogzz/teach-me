@@ -89,9 +89,53 @@
   }
   .game .stats{display:flex;gap:20px;flex-wrap:wrap;font-size:16px;margin-top:14px}
   .hint{color:var(--muted);font-size:15px;margin-top:8px;text-align:center}
-  .gprompt{font-size:19px;margin-top:14px;text-align:center;font-weight:700}
   .gamemsg{margin-top:14px;font-size:17px;min-height:28px;text-align:center}
   .btnrow{display:flex;gap:12px;margin-top:16px;justify-content:center}
+  /* ---- 小遊戲「面積工地」：剪一刀、轉半圈、梯形公式、分一分、拉高（§六之五） ---- */
+  .game .stats{justify-content:center}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div, .gboard > button{position:absolute}
+  .gsvg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gpiece svg{pointer-events:none;overflow:visible}
+  /* 第 1 關：剪下來的那一塊滑到另一邊 */
+  .gslide{transition:transform .6s ease}
+  /* 第 2 關：那一塊三角形（整個正方形都拿得起來） */
+  .gtri.sel{outline-offset:-2px}
+  /* 卡片 */
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-weight:800;color:var(--ink);text-align:center;white-space:nowrap}
+  .gnumcard{font-size:22px}
+  .gshape{border-color:var(--blue);padding:0}
+  /* 第 3 關：公式的格子與括號 */
+  .gslot{display:flex;align-items:center;justify-content:center;border:3px dashed var(--blue);border-radius:10px;background:var(--blue-soft);
+    font-size:22px;font-weight:800;color:var(--blue);pointer-events:none;white-space:nowrap}
+  .gslot.filled{border-style:solid;border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gsym{display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1.2;font-weight:800;color:var(--ink);pointer-events:none;white-space:nowrap}
+  .gcap{display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--muted);pointer-events:none;white-space:nowrap;line-height:1.2}
+  /* 第 4 關：兩個箱子 */
+  .gbin{border:3px dashed #C9BFA9;border-radius:14px;background:var(--card);pointer-events:none}
+  .gbinlbl{display:flex;align-items:center;justify-content:center;text-align:center;font-size:15px;line-height:1.2;font-weight:800;color:var(--ink);pointer-events:none}
+  .gplaced{display:flex;align-items:center;justify-content:center;border:2px solid var(--green);border-radius:8px;background:var(--green-soft);pointer-events:none;
+    color:var(--green);font-size:15px;line-height:1.2;font-weight:800;white-space:nowrap}
+  /* 第 5 關：拉頂點的把手 */
+  /* 把手是一個空心的圈：頂點和虛線的高從圈裡看得到（以前是實心的白底，高 1～2 格時蓋住頂點與虛線） */
+  .ggrip{background:transparent;border:3px solid var(--orange);border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+  .ggrip.sel{border-radius:50%}
+  /* 提示／下一關／重新開始 在 375px 手機上一排放得下，不要把「下一關」折成兩行 */
+  .game .btnrow .btn{white-space:nowrap;padding:10px 16px}
+  .gaction{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
+  .gaction .btn{min-height:48px;min-width:48px}
+  .gnote{color:var(--muted)}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
   footer{
     margin-top:64px;text-align:center;background:var(--orange-soft);
     border-radius:20px;padding:24px;font-size:18px;
@@ -149,19 +193,20 @@
     <p class="lead" data-i18n="s1lead">把左邊的三角形剪下來，移到右邊，就變成長方形了！</p>
 
     <div class="card">
+      <!-- ⚠️ 照比例畫：底 6 是 180px、高 4 是 120px（一單位 30px）；以前高畫成 110px，圖和標的數字對不起來 -->
       <svg class="scene" viewBox="0 0 380 220" role="img" data-i18n-aria="s1aria" aria-label="平行四邊形透過剪下三角形移到另一邊變成長方形的圖">
         <g class="pstep" data-step="0">
-          <polygon points="60,170 240,170 300,60 120,60" fill="none" stroke="#2B2A33" stroke-width="3"/>
-          <line x1="120" y1="60" x2="120" y2="170" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="6 5"/>
+          <polygon points="60,170 240,170 300,50 120,50" fill="none" stroke="#2B2A33" stroke-width="3"/>
+          <line x1="120" y1="50" x2="120" y2="170" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="6 5"/>
           <text x="150" y="192" font-size="16" fill="#2B2A33" text-anchor="middle">6</text>
           <text x="95" y="118" font-size="16" fill="#3B7DD8" text-anchor="middle">4</text>
           <text x="150" y="210" font-size="13" fill="#6B6875" text-anchor="middle" data-i18n="svgLabelBase">底</text>
           <text x="70" y="140" font-size="13" fill="#3B7DD8" text-anchor="middle" data-i18n="svgLabelHeight">高</text>
         </g>
         <g class="pstep" data-step="1" style="display:none">
-          <polygon points="60,170 240,170 300,60 120,60" fill="none" stroke="#2B2A33" stroke-width="3"/>
-          <polygon points="60,170 120,60 120,170" fill="#FDF0E0" stroke="#E8871E" stroke-width="3" opacity="0.9"/>
-          <line x1="120" y1="60" x2="120" y2="170" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="6 5"/>
+          <polygon points="60,170 240,170 300,50 120,50" fill="none" stroke="#2B2A33" stroke-width="3"/>
+          <polygon points="60,170 120,50 120,170" fill="#FDF0E0" stroke="#E8871E" stroke-width="3" opacity="0.9"/>
+          <line x1="120" y1="50" x2="120" y2="170" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="6 5"/>
           <text x="150" y="192" font-size="16" fill="#2B2A33" text-anchor="middle">6</text>
           <text x="95" y="118" font-size="16" fill="#3B7DD8" text-anchor="middle">4</text>
           <text x="150" y="210" font-size="13" fill="#6B6875" text-anchor="middle" data-i18n="svgLabelBase">底</text>
@@ -170,8 +215,8 @@
           <defs><marker id="pArrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#E8871E"/></marker></defs>
         </g>
         <g class="pstep" data-step="2" style="display:none">
-          <polygon points="120,60 300,60 300,170 120,170" fill="#E3F4EB" stroke="#2F9E69" stroke-width="3"/>
-          <polygon points="60,170 120,60 120,170" transform="translate(180,0)" fill="#FDF0E0" stroke="#E8871E" stroke-width="2" opacity="0.85"/>
+          <polygon points="120,50 300,50 300,170 120,170" fill="#E3F4EB" stroke="#2F9E69" stroke-width="3"/>
+          <polygon points="60,170 120,50 120,170" transform="translate(180,0)" fill="#FDF0E0" stroke="#E8871E" stroke-width="2" opacity="0.85"/>
           <text x="210" y="192" font-size="16" fill="#2B2A33" text-anchor="middle">6</text>
           <text x="105" y="118" font-size="16" fill="#3B7DD8" text-anchor="middle">4</text>
           <text x="210" y="210" font-size="13" fill="#6B6875" text-anchor="middle" data-i18n="svgLabelBase">底</text>
@@ -285,21 +330,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">面積工地</h2>
-    <p class="lead" data-i18n="s6lead">工地需要量出每個圖形的面積才能施工。點選正確答案，答錯會扣分，但工地不會關門，可以一直試！</p>
+    <p class="lead" data-i18n="s6lead">剪一刀、轉半圈、拼梯形公式、分一分、拉高 —— 五關五種玩法，每一關都在練同一件事：<strong>找出底和高，算出面積</strong>。放錯會扣分，但工地不會關門 —— 慢慢想比手快重要。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <div id="gIcon"></div>
-      <p class="gprompt" id="gPromptText"></p>
-      <div class="btnrow">
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
-      </div>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div id="gOpts" class="opts"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -327,6 +368,365 @@
 <script>
 (function(){
   "use strict";
+
+  /* ============ 小遊戲「面積工地」的題庫與版面（語言無關；tools/checks/grade-5-area.js 直接讀這一段） ============
+     五關五種玩法（§六之五），每一關對應一個範例，每一關都在練「找出底和高，算出面積」：
+       cut  剪一刀（範例 1）：點一條直的格線剪一刀。從上面的邊一路剪到下面的邊（剪在一條高上）才收，
+            剪下來的那一塊滑到另一邊，拼成底 × 高的長方形。
+       turn 轉半圈（範例 2）：一樣的三角形按 ↻ 轉，拖到原來那一個的左邊或右邊；轉了 180° 才拼得成平行四邊形。
+       trap 梯形公式（範例 3、4）：圖上的四個數（上底、下底、高、斜邊）放進「(□ ＋ □) × □ ÷ 2」。
+       sort 分一分（範例 4）：四張圖（三角形、平行四邊形、梯形）各自算出面積，分進兩個面積箱子。
+       pull 拉高（範例 2 倒過來）：上下拖三角形的頂點，拉到面積剛好是目標，再按「就是這個」。
+     每一關「收不收、為什麼不收」都是這裡的純函式，畫面只負責呼叫 —— 設定檔可以直接跑。
+     座標：圖形用「格子座標」（一格一單位，y 往上）；畫板用「畫板座標」（px，y 往下），寬一律 GW。 */
+  var GAME_ORDER = ['cut', 'turn', 'trap', 'sort', 'pull'];
+  var GW = 300;
+  var GPICK = 48;   /* 拿得起來的東西最小 48 ×（畫板縮放 ≥ 0.92 時，手機上仍 ≥ 44px） */
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  /* 托盤洗牌之後，不可以剛好已經是答案的排法（inOrder 說是）：那樣就整個倒過來 */
+  function unsorted(list, inOrder){
+    var t = shuffle(list);
+    if (inOrder(t)) t.reverse();
+    return t;
+  }
+
+  /* ---- 多邊形工具（點、頂點都是 {x, y} 或 [x, y]，同一個座標系裡算） ---- */
+  function P2(p){ return Array.isArray(p) ? { x:p[0], y:p[1] } : p; }
+  function polyArea(pts){
+    var s = 0;
+    for (var i = 0; i < pts.length; i++){ var a = P2(pts[i]), b = P2(pts[(i + 1) % pts.length]); s += a.x * b.y - b.x * a.y; }
+    return Math.abs(s) / 2;
+  }
+  function segDist(p, a, b){
+    var dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+    var t = L2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2)) : 0;
+    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  }
+  function inPoly(p, pts){
+    var inside = false;
+    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++){
+      var a = P2(pts[i]), b = P2(pts[j]);
+      if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+    }
+    return inside;
+  }
+  /* 點到多邊形的距離：在裡面是 0，在外面是到最近那一條邊的距離 */
+  function polyDist(p, pts){
+    if (inPoly(p, pts)) return 0;
+    var d = Infinity;
+    for (var i = 0; i < pts.length; i++) d = Math.min(d, segDist(p, P2(pts[i]), P2(pts[(i + 1) % pts.length])));
+    return d;
+  }
+  function centroid(pts){
+    var x = 0, y = 0;
+    pts.forEach(function(q){ q = P2(q); x += q.x; y += q.y; });
+    return { x:x / pts.length, y:y / pts.length };
+  }
+
+  /* ---- 第 1 關：剪一刀 —— 平行四邊形畫在方格上：底 b 格、高 h 格，上面的邊往右錯開 s 格（s ≥ 2，s < b）。
+         點一條直的格線（第 c 條，1 ≤ c ≤ b + s − 1）就是沿著它剪一刀。
+         s ≤ c ≤ b 時，這條線從上面的邊一路通到下面的邊（是一條高）：左邊那一塊往右移 b 格，拼成 b × h 的長方形。
+         c < s 只剪下左下角、c > b 只剪下右上角的一小塊三角形 —— 移過去補不成長方形，不收。
+         格子中間（離兩條線都超過 tol）點下去什麼都不做。整張圖（含移過去之後）寬 2b 格，放得進畫板。
+         ⚠️ 刻意的 44px 例外：一條線只收左右 tol px（手機上約 17px 寬）。線和線只隔 26px，再放寬就會蓋掉格子中間的空白 ——
+         點偏一點就會變成「剪錯線、扣分」。拿得起來的東西都仍然 ≥ 44px（tools/checks/grade-5-area.js 的開頭有同樣的說明）。 ---- */
+  var CUT = { U:26, oy:128, tol:9 }, CUT_H = 164;
+  var GAME_CUT = [[4, 3, 2], [4, 4, 2], [4, 3, 3], [4, 4, 3], [5, 3, 2], [5, 4, 2], [5, 3, 3], [5, 4, 3], [5, 3, 4], [5, 4, 4]];   /* [b, h, s] */
+  function cutOx(b){ return (GW - 2 * b * CUT.U) / 2; }
+  function cutPt(b, x, y){ return { x:cutOx(b) + x * CUT.U, y:CUT.oy - y * CUT.U }; }
+  /* 點在 pt：選到第幾條直的格線（最近的那一條，而且在 tol 以內），沒有就是 null */
+  function cutPick(b, h, s, pt){
+    if (pt.y < CUT.oy - h * CUT.U - CUT.tol || pt.y > CUT.oy + CUT.tol) return null;
+    var best = null, bd = Infinity;
+    for (var c = 1; c < b + s; c++){
+      var d = Math.abs(pt.x - cutPt(b, c, 0).x);
+      if (d <= CUT.tol && d < bd){ bd = d; best = c; }
+    }
+    return best;
+  }
+  /* null：剪在高上（收）；'left'：只剪下左下角；'right'：只剪下右上角 */
+  function cutRefuse(b, s, c){ return c < s ? 'left' : (c > b ? 'right' : null); }
+  /* 剪在高上：左邊那一塊（moved，往右移 b 格）與留下來的那一塊（stay）；拼好的長方形是 x = c … c + b */
+  function cutPieces(b, h, s, c){
+    return { moved:[[0, 0], [c, 0], [c, h], [s, h]], stay:[[c, 0], [b, 0], [b + s, h], [c, h]], rect:[[c, 0], [c + b, 0], [c + b, h], [c, h]] };
+  }
+  /* 剪錯的那一刀只剪下的小角（畫成紅色給他看） */
+  function cutCorner(b, h, s, c){
+    return c < s ? [[0, 0], [c, 0], [c, c * h / s]] : [[c, (c - b) * h / s], [c, h], [b + s, h]];
+  }
+
+  /* ---- 第 2 關：轉半圈 —— 三角形底 b 格、高 h 格，頂點在底的左端往右 a 格（0 < a < b，b × h 是偶數）。
+         托盤上有一個一樣的三角形（方向也一樣）；按 ↻ 一次轉 90°（順時針）。拖到原來那一個的左邊或右邊：
+         轉了 180°（倒過來）才拼得成平行四邊形（收），0° 或 90°、270° 邊對不上（不收、說為什麼）。
+         「放在哪一邊」量的是放下去的點到那一邊「該放的三角形」的距離（在裡面是 0），pad 以內才算，兩邊挑近的。 ---- */
+  var TURN = { U:26, oy:128, ax:150, homeY:240, pad:14 }, TURN_H = 312;
+  var GAME_TURN = [[5, 2, 4], [4, 1, 3], [4, 3, 4], [5, 1, 4], [4, 3, 3], [5, 3, 4], [4, 2, 3]];   /* [b, a, h] */
+  function turnOx(a){ return TURN.ax - a * TURN.U; }
+  function turnPt(a, x, y){ return { x:turnOx(a) + x * TURN.U, y:TURN.oy - y * TURN.U }; }
+  function turnTri(b, a, h){ return [[0, 0], [b, 0], [a, h]]; }
+  /* 原來的三角形繞著那一邊的中點轉半圈 —— 就是拼成平行四邊形時另一個三角形的位置 */
+  function turnCopy(b, a, h, side){ return side === 'R' ? [[a, h], [b, 0], [a + b, h]] : [[0, 0], [a, h], [a - b, h]]; }
+  function turnSq(b, h){ return Math.max(b, h) * TURN.U; }   /* 那一塊是一個正方形（整塊都拿得起來），三角形畫在正中間 */
+  function turnCenter(b, a, h, side){ var x = side === 'R' ? a + b / 2 : a - b / 2; return turnPt(a, x, h / 2); }
+  function turnPoly(b, a, h, side){ return turnCopy(b, a, h, side).map(function(q){ return turnPt(a, q[0], q[1]); }); }
+  function turnPick(b, a, h, pt){
+    var best = null, bd = Infinity, bc = Infinity;
+    ['L', 'R'].forEach(function(side){
+      var poly = turnPoly(b, a, h, side), d = polyDist(pt, poly), m = centroid(poly), dc = Math.hypot(pt.x - m.x, pt.y - m.y);
+      if (d > TURN.pad) return;
+      if (d < bd || (d === bd && dc < bc)){ bd = d; bc = dc; best = side; }
+    });
+    return best;
+  }
+  /* r：轉了幾個 90°。null：轉了半圈（收）；'same'：方向沒變；'quarter'：90° 或 270° */
+  function turnRefuse(r){ r = ((r % 4) + 4) % 4; return r === 2 ? null : (r === 0 ? 'same' : 'quarter'); }
+
+  /* ---- 第 3 關：梯形公式 —— 梯形畫在方格上：下底 d 格、上底 t 格、高 h 格，上底的左端往右 p 格；
+         左邊的斜邊長 L ＝ √(p² ＋ h²)（3-4-5，畫出來就是 L 格長）。四張卡 t、d、h、L 各一張，放進
+         「(□ ＋ □) × □ ÷ 2」：括號裡兩格收上底、下底（順序不拘），× 後面那一格只收高。 ---- */
+  var TRAP = { U:24, oy:130, slotY:166, slotW:52, slotH:50, slotX:[48, 124, 218], capY:220, capH:24, cardY:274, cardW:56, cardH:50, cardX:[45, 115, 185, 255], pad:10 }, TRAP_H = 306;
+  var TRAP_SYMS = [['(', 12, 16], ['+', 86, 22], [')', 159, 16], ['×', 179, 22], ['÷ 2', 270, 44]];   /* 公式裡的符號：字、中心 x、寬（夾在格子之間，不可以和格子重疊） */
+  var GAME_TRAP = [[3, 8, 3, 4], [2, 6, 3, 4], [3, 7, 3, 4], [6, 10, 3, 4], [2, 8, 4, 3], [4, 10, 4, 3], [2, 10, 4, 3]];   /* [t, d, p, h] */
+  var TRAP_KEYS = ['t', 'd', 'h', 'L'];
+  function trapOx(dd){ return (GW - dd * TRAP.U) / 2; }
+  function trapPt(dd, x, y){ return { x:trapOx(dd) + x * TRAP.U, y:TRAP.oy - y * TRAP.U }; }
+  function trapLeg(p, h){ return Math.round(Math.sqrt(p * p + h * h)); }
+  function trapShape(e){ return [[0, 0], [e[1], 0], [e[2] + e[0], e[3]], [e[2], e[3]]]; }
+  function trapCards(e){ return [{ k:'t', v:e[0] }, { k:'d', v:e[1] }, { k:'h', v:e[3] }, { k:'L', v:trapLeg(e[2], e[3]) }]; }
+  /* 托盤的順序不可以剛好是答案：前兩張是上底、下底（任一順序）而且第三張是高 */
+  function trapInOrder(list){ return (list[0].k === 't' || list[0].k === 'd') && (list[1].k === 't' || list[1].k === 'd') && list[2].k === 'h'; }
+  function trapTray(e){ return unsorted(trapCards(e), trapInOrder); }
+  /* 放進第 i 格（0、1 是括號裡的兩格，2 是高）：收 → null；不收 → 卡片的種類（說明用） */
+  function trapRefuse(i, k){ return (i < 2 ? (k === 't' || k === 'd') : k === 'h') ? null : k; }
+
+  /* ---- 第 4 關：分一分 —— 每一組四張圖、兩個箱子（面積 A 與 2A）。圖：
+           ['tri', 底, 高, 頂點往右幾格]、['para', 底, 高, 上面的邊錯開幾格（斜邊 3-4-5，標出斜邊長）]、['trap', 上底, 下底, 高, 上底左端往右幾格]。
+         每一組：同底同高的三角形與平行四邊形各一（A、2A）、一個梯形（A）、一個大三角形（2A）——
+         忘了除以 2 的三角形、梯形，與多除了 2 的平行四邊形，都會掉進另一個箱子（說明會說「別忘了除以 2」「不用除以 2」）。 ---- */
+  var SORT = { cardW:136, cardH:100, trayX:[76, 224], trayY:[56, 162], binX:[6, 154], binY:220, binW:140, binH:110, lblH:34, chipW:128, chipH:30, chipY:[275, 309], pad:8 }, SORT_H = 336;
+  var GAME_SORT = [
+    [12, [['tri', 6, 4, 2], ['para', 6, 4, 3], ['trap', 2, 4, 4, 1], ['tri', 8, 6, 3]]],
+    [16, [['tri', 8, 4, 3], ['para', 8, 4, 3], ['trap', 3, 5, 4, 1], ['tri', 8, 8, 6]]],
+    [18, [['tri', 9, 4, 3], ['para', 9, 4, 3], ['trap', 3, 6, 4, 1], ['tri', 12, 6, 4]]],
+    [14, [['tri', 7, 4, 3], ['para', 7, 4, 3], ['trap', 2, 5, 4, 1], ['tri', 8, 7, 2]]],
+    [20, [['tri', 10, 4, 2], ['para', 10, 4, 3], ['trap', 4, 6, 4, 1], ['tri', 10, 8, 3]]]
+  ];
+  function sortArea(c){ return c[0] === 'tri' ? c[1] * c[2] / 2 : (c[0] === 'para' ? c[1] * c[2] : (c[1] + c[2]) * c[3] / 2); }
+  /* 畫在卡片上的形狀（格子座標） */
+  function sortShape(c){
+    if (c[0] === 'tri') return [[0, 0], [c[1], 0], [c[3], c[2]]];
+    if (c[0] === 'para') return [[0, 0], [c[1], 0], [c[1] + c[3], c[2]], [c[3], c[2]]];
+    return [[0, 0], [c[2], 0], [c[4] + c[1], c[3]], [c[4], c[3]]];
+  }
+  /* 卡片放進箱子之後寫出的算式（兩種語言一樣） */
+  function sortFormula(c){ return c[0] === 'tri' ? c[1] + ' × ' + c[2] + ' ÷ 2' : (c[0] === 'para' ? c[1] + ' × ' + c[2] : '(' + c[1] + ' + ' + c[2] + ') × ' + c[3] + ' ÷ 2'); }
+  function sortSlant(c){ return c[0] === 'para' ? trapLeg(c[3], c[2]) : null; }
+  /* 托盤的順序不可以剛好是答案（左箱的兩張在前、右箱的兩張在後） */
+  function sortInOrder(A){ return function(list){ return sortArea(list[0]) === A && sortArea(list[1]) === A; }; }
+  function sortTray(e){ return unsorted(e[1], sortInOrder(e[0])); }
+  /* 放進面積 bin 的箱子：收 → null；不收 → 'half'（忘了除以 2 會剛好是 bin）、'whole'（平行四邊形多除了 2）、'other' */
+  function sortRefuse(c, bin){
+    var a = sortArea(c);
+    if (a === bin) return null;
+    if (c[0] !== 'para' && a * 2 === bin) return 'half';
+    if (c[0] === 'para' && a / 2 === bin) return 'whole';
+    return 'other';
+  }
+
+  /* ---- 第 5 關：拉高 —— 三角形底 b 格（b 是偶數）、頂點在底的左端往右 a 格；上下拖頂點（吸到最近的格線，拖的時候就吸），
+         高只能 1～8 格。畫面只寫「底 b、高 h」，不寫面積；按「就是這個」才判斷：b × h ÷ 2 剛好是 A 才收。
+         題庫的每一題「忘了除以 2」的高（A ÷ b）也是整數 —— 停在那裡會被說「那是平行四邊形的面積，三角形還要除以 2」。 ---- */
+  var PULL = { U:22, oy:212, hMin:1, hMax:8, h0:1 }, PULL_H = 250;
+  var GAME_PULL = [[6, 4, 12], [8, 2, 24], [4, 3, 12], [10, 7, 20], [6, 1, 18], [8, 6, 16], [4, 1, 16], [10, 3, 30]];   /* [b, a, A] */
+  function pullOx(b){ return (GW - b * PULL.U) / 2; }
+  function pullY(h){ return PULL.oy - h * PULL.U; }
+  /* 拖到（或點在）y：高是最近的那一條橫格線（每一條線自己一格） */
+  function pullH(y){ return Math.max(PULL.hMin, Math.min(PULL.hMax, Math.round((PULL.oy - y) / PULL.U))); }
+  /* 按「就是這個」：收 → null；不收 → 算出來的面積、比目標少還是多、是不是「忘了除以 2」的那一個高 */
+  function pullRefuse(b, h, A){ var x = b * h / 2; return x === A ? null : { x:x, less:x < A, forgot:b * h === A }; }
+
+  /* ---- 圖上的數字標籤放哪裡（2026-10-10 驗證者兩輪）。三條規則，每一個標籤都要守：
+         ① 不碰線：字框離圖上每一條線（線寬的一半 ＋ LBL_CLEAR）都有空隙；不出界；不壓到已經放好的標籤。
+         ② 不被蓋住：畫在標籤「上面」的填色形狀（第 2 關放好的那一塊三角形是另一層、在 SVG 上面）—— 字框不可以碰到它的裡面（covers）。
+         ③ 看得出是誰的標籤：標籤要貼著它標的那一段（own）—— 離它 ≤ LBL_NEAR、比離任何「別的邊或虛線」至少近 LBL_MARGIN、
+            字框中心落在那一段的範圍裡（底、上底在它的左右之間；高、斜邊在它的上下之間）、在對的那一邊（底在下面、上底在上面、斜邊在左邊）。
+            顏色不算數 —— 只靠位置。
+         直接放不下（太扁的圖、高只有 1～2 格）就用**引線**：標籤放到附近空得下的地方，一條細線（標籤的顏色）從那一段的中點拉到字框邊上；
+         引線可以跨過形狀的邊（高在形狀裡面時一定要跨），但不可以碰到別的虛線、直角記號、別的標籤，也不可以被蓋住，長度 ≤ LBL_LEAD。
+         字框：中心 (x, y)、寬 ＝ 字數 × 0.6 × 字級 ＋ 2、高 ＝ 0.8 × 字級 ＋ 2（數字的墨跡加四邊各 1px）。
+         線：{ a, b, w, role }，role：'edge' 形狀的邊、'dash' 虛線、'mark' 直角記號、'grip' 把手（長度 0 的線 ＝ 一個圓，w ＝ 直徑）、'label' 已放好的標籤／引線。
+         每一關的「線」「蓋在上面的形狀」與「標籤」都是這裡的純函式算出來的（xxxScene），畫面照著畫 —— 設定檔把題庫每一題（拉高的每一個高）都跑過、自己量。 ---- */
+  var LBL_CLEAR = 1.5, LBL_FS = 17, CARD_FS = 15, LBL_NEAR = 12, LBL_MARGIN = 2, LBL_LEAD = 60;
+  /* 字框量的是**字的墨跡**（數字的寬約 0.56 字級、高約 0.73 字級，從基線往上），四邊各多留 1px —— 和驗證者用 canvas actualBoundingBox 量的一樣 */
+  function lblBox(text, fs, cx, cy){ var w = String(text).length * 0.6 * fs + 2, h = 0.8 * fs + 2; return { x:cx - w / 2, y:cy - h / 2, w:w, h:h }; }
+  function lblBaseline(fs, cy){ return cy + 0.37 * fs; }   /* 字框中心在 cy 時，text 的 y（基線）放這裡：墨跡在基線上面 0.74 字級高 */
+  function segsCross(p, q, r, s){
+    var d = (q.x - p.x) * (s.y - r.y) - (q.y - p.y) * (s.x - r.x);
+    if (d === 0) return false;
+    var t = ((r.x - p.x) * (s.y - r.y) - (r.y - p.y) * (s.x - r.x)) / d, u = ((r.x - p.x) * (q.y - p.y) - (r.y - p.y) * (q.x - p.x)) / d;
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+  }
+  function ptRectDist(p, r){ var dx = Math.max(r.x - p.x, 0, p.x - (r.x + r.w)), dy = Math.max(r.y - p.y, 0, p.y - (r.y + r.h)); return Math.hypot(dx, dy); }
+  function rectCorners(r){ return [{ x:r.x, y:r.y }, { x:r.x + r.w, y:r.y }, { x:r.x + r.w, y:r.y + r.h }, { x:r.x, y:r.y + r.h }]; }
+  /* 字框到一條線段的距離（碰到或穿過就是 0） */
+  function rectSegDist(r, a, b){
+    var C = rectCorners(r);
+    if (ptRectDist(a, r) === 0 || ptRectDist(b, r) === 0) return 0;
+    for (var i = 0; i < 4; i++) if (segsCross(a, b, C[i], C[(i + 1) % 4])) return 0;
+    var d = Math.min(ptRectDist(a, r), ptRectDist(b, r));
+    for (var j = 0; j < 4; j++) d = Math.min(d, segDist(C[j], a, b));
+    return d;
+  }
+  function segSegDist(p, q, r, s){ return segsCross(p, q, r, s) ? 0 : Math.min(segDist(p, r, s), segDist(q, r, s), segDist(r, p, q), segDist(s, p, q)); }
+  function lblClear(r, strokes){ return strokes.every(function(s){ return rectSegDist(r, s.a, s.b) >= s.w / 2 + LBL_CLEAR; }); }
+  /* 字框碰到某個「蓋在上面」的形狀的裡面嗎（中心、四個角、四邊的中點在裡面，或邊和邊交叉） */
+  function lblCovered(r, covers){
+    var P = rectCorners(r).concat([{ x:r.x + r.w / 2, y:r.y + r.h / 2 }, { x:r.x + r.w / 2, y:r.y }, { x:r.x + r.w / 2, y:r.y + r.h }, { x:r.x, y:r.y + r.h / 2 }, { x:r.x + r.w, y:r.y + r.h / 2 }]);
+    return covers.some(function(poly){
+      if (P.some(function(p){ return inPoly(p, poly); })) return true;
+      var C = rectCorners(r);
+      for (var i = 0; i < poly.length; i++) for (var j = 0; j < 4; j++) if (segsCross(P2(poly[i]), P2(poly[(i + 1) % poly.length]), C[j], C[(j + 1) % 4])) return true;
+      return false;
+    });
+  }
+  function inBounds(r, B){ return r.x >= B.x0 && r.y >= B.y0 && r.x + r.w <= B.x1 && r.y + r.h <= B.y1; }
+  /* 規則 ③：r 是不是貼著 own（L.own、L.side），而且 own 是離它最近的邊 */
+  function lblAdjacent(r, L, strokes){
+    var a = L.own.a, b = L.own.b, dOwn = rectSegDist(r, a, b);
+    if (dOwn > LBL_NEAR) return false;
+    var cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    if (L.side === 'below' || L.side === 'above'){
+      if (cx < Math.min(a.x, b.x) || cx > Math.max(a.x, b.x)) return false;
+      if (L.side === 'below' ? cy <= Math.max(a.y, b.y) : cy >= Math.min(a.y, b.y)) return false;
+    } else {
+      if (cy < Math.min(a.y, b.y) || cy > Math.max(a.y, b.y)) return false;
+      if (L.side === 'left' && cx >= (a.x + b.x) / 2) return false;
+    }
+    return strokes.every(function(s){
+      if ((s.role !== 'edge' && s.role !== 'dash') || onOwn(s, L.own)) return true;
+      return rectSegDist(r, s.a, s.b) >= dOwn + LBL_MARGIN;
+    });
+  }
+  /* 這一條線是不是 own 的一部分（兩端都在 own 上：同一條邊被兩塊形狀各畫一次、或只畫了一段，都算 own） */
+  function onOwn(s, o){ return segDist(s.a, o.a, o.b) < 0.5 && segDist(s.b, o.a, o.b) < 0.5; }
+  /* 一個標籤：先找「直接貼著」的位置（離那一段的中點最近的那一個）；找不到才用引線（引線最短的那一個） */
+  function lblPlace(L, strokes, covers, B){
+    var a = L.own.a, b = L.own.b, m = { x:(a.x + b.x) / 2, y:(a.y + b.y) / 2 };
+    var free = function(r){ return inBounds(r, B) && lblClear(r, strokes) && !lblCovered(r, covers); };
+    /* 第一步：直接貼著 —— 只要找那一段附近（LBL_NEAR ＋ 字框大小）就夠了；挑離那一段的中點最近的 */
+    var box0 = lblBox(L.v, L.fs, 0, 0), R1 = LBL_NEAR + Math.max(box0.w, box0.h) + 2, best = null, bd = Infinity, diag = Math.hypot(box0.w, box0.h) / 2;
+    for (var y = Math.min(a.y, b.y) - R1; y <= Math.max(a.y, b.y) + R1; y += 1) for (var x = Math.min(a.x, b.x) - R1; x <= Math.max(a.x, b.x) + R1; x += 1){
+      if (segDist({ x:x, y:y }, a, b) > LBL_NEAR + diag) continue;   /* 中心離那一段太遠，字框不可能貼著它：不用算 */
+      var r = lblBox(L.v, L.fs, x, y);
+      if (!lblAdjacent(r, L, strokes) || !free(r)) continue;   /* 先算便宜的「貼不貼著」，再算每一條線的空隙 */
+      var d = Math.hypot(x - m.x, y - m.y);
+      if (d < bd){ bd = d; best = { x:x, y:y }; }
+    }
+    if (best) return { at:best, leader:null };
+    /* 第二步：放不下才用引線 —— 從那一段的中點拉到字框上最近的一點，挑引線最短的 */
+    var lead = null, ld = Infinity, R2 = LBL_LEAD + Math.max(box0.w, box0.h);
+    for (var y2 = m.y - R2; y2 <= m.y + R2; y2 += 1) for (var x2 = m.x - R2; x2 <= m.x + R2; x2 += 1){
+      if (Math.hypot(x2 - m.x, y2 - m.y) > LBL_LEAD + diag || Math.hypot(x2 - m.x, y2 - m.y) - diag >= ld) continue;   /* 引線一定比現在找到的長：不用算 */
+      var r2 = lblBox(L.v, L.fs, x2, y2);
+      /* 引線停在墨跡邊上（字框四邊各縮回 1.5px：字框比墨跡大一點） */
+      var e = { x:Math.max(r2.x + 1.5, Math.min(m.x, r2.x + r2.w - 1.5)), y:Math.max(r2.y + 1.5, Math.min(m.y, r2.y + r2.h - 1.5)) }, len = Math.hypot(e.x - m.x, e.y - m.y);
+      if (len > LBL_LEAD || len >= ld || len < 4 || !free(r2)) continue;
+      /* 高的數字（引線）不可以跑到底的下面：那裡是「底」的標籤的地盤，看起來會像在標底 */
+      if (L.side === 'any' && r2.y + r2.h > Math.max(a.y, b.y) - 2) continue;
+      var okLead = strokes.every(function(s){
+        /* 把手是空心的圈，引線可以從圈裡出來；高在形狀裡面時引線一定要跨過形狀的一條邊才出得來 —— 可以跨邊，
+           但不可以碰到別的虛線、直角記號、別的標籤或引線 */
+        if (s.role === 'grip' || s.role === 'edge' || onOwn(s, L.own)) return true;
+        return segSegDist(m, e, s.a, s.b) >= s.w / 2 + 1.5;
+      }) && !covers.some(function(poly){ return inPoly(m, poly) || inPoly(e, poly) || poly.some(function(p, i){ return segsCross(m, e, P2(p), P2(poly[(i + 1) % poly.length])); }); });
+      if (okLead){ ld = len; lead = { x:x2, y:y2, from:m, to:e }; }
+    }
+    if (lead) return { at:{ x:lead.x, y:lead.y }, leader:{ a:lead.from, b:lead.to } };
+    return { at:null, leader:null };
+  }
+  function polyStrokes(pts, w, role){ return pts.map(function(p, i){ return { a:P2(p), b:P2(pts[(i + 1) % pts.length]), w:w, role:role || 'edge' }; }); }
+  /* 高：虛線 top → foot，再加垂足的直角記號（mark 長） */
+  function heightStrokes(top, foot, mark){
+    return [{ a:top, b:foot, w:2.5, role:'dash' }, { a:{ x:foot.x + mark, y:foot.y }, b:{ x:foot.x + mark, y:foot.y - mark }, w:1.5, role:'mark' }, { a:{ x:foot.x + mark, y:foot.y - mark }, b:{ x:foot.x, y:foot.y - mark }, w:1.5, role:'mark' }];
+  }
+  /* 一張圖的所有標籤：依序放，放好的字框（與引線）也算進後面的「線」（標籤彼此不重疊、引線不穿過標籤） */
+  function placeLabels(list, strokes, covers, bounds){
+    var taken = strokes.slice();
+    return list.map(function(L){
+      var p = lblPlace(L, taken, covers, bounds);
+      if (p.at){
+        var r = lblBox(L.v, L.fs, p.at.x, p.at.y);
+        polyStrokes([[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]], 0, 'label').forEach(function(s){ taken.push(s); });
+        if (p.leader) taken.push({ a:p.leader.a, b:p.leader.b, w:1.5, role:'label' });
+      }
+      return { k:L.k, v:L.v, fs:L.fs, own:L.own, side:L.side, at:p.at, leader:p.leader };
+    });
+  }
+  var BOARD_IN = function(H){ return { x0:2, y0:2, x1:GW - 2, y1:H - 2 }; };
+  function seg(p, q){ return { a:p, b:q }; }
+  /* 第 1 關剪好之後：留下來的那一塊、移過去的那一塊、長方形的框；標底（長方形的底邊）與高（長方形的左邊） */
+  function cutScene(b, h, s, c){
+    var px = function(q){ return cutPt(b, q[0], q[1]); }, pc = cutPieces(b, h, s, c);
+    var strokes = polyStrokes(pc.stay.map(px), 3).concat(polyStrokes(pc.moved.map(function(q){ return px([q[0] + b, q[1]]); }), 3), polyStrokes(pc.rect.map(px), 2));
+    return { strokes:strokes, covers:[], labels:placeLabels([
+      { k:'b', v:b, fs:LBL_FS, own:seg(px([c, 0]), px([c + b, 0])), side:'below' },
+      { k:'h', v:h, fs:LBL_FS, own:seg(px([c, 0]), px([c, h])), side:'left' }], strokes, [], BOARD_IN(CUT_H)) };
+  }
+  /* 第 2 關拼好之後：原來的三角形、半圈的那一塊（side；它是另一層、畫在上面 —— 標籤不可以被它蓋住）、從頂點畫下來的高；標底與高 */
+  function turnScene(b, a, h, side){
+    var px = function(q){ return turnPt(a, q[0], q[1]); }, top = px([a, h]), foot = px([a, 0]), copy = turnCopy(b, a, h, side).map(px);
+    var strokes = polyStrokes(turnTri(b, a, h).map(px), 3).concat(polyStrokes(copy, 3), heightStrokes(top, foot, 8));
+    return { top:top, foot:foot, strokes:strokes, covers:[copy], labels:placeLabels([
+      { k:'b', v:b, fs:LBL_FS, own:seg(px([0, 0]), px([b, 0])), side:'below' },
+      { k:'h', v:h, fs:LBL_FS, own:seg(top, foot), side:'any' }], strokes, [copy], BOARD_IN(TURN_H)) };
+  }
+  /* 第 3 關：梯形、高；標上底、下底、高、斜邊（左邊那一條） */
+  function trapScene(e){
+    var t = e[0], dd = e[1], p = e[2], h = e[3], px = function(q){ return trapPt(dd, q[0], q[1]); };
+    var top = px([p, h]), foot = px([p, 0]);
+    var strokes = polyStrokes(trapShape(e).map(px), 3).concat(heightStrokes(top, foot, 8));
+    return { top:top, foot:foot, strokes:strokes, covers:[], labels:placeLabels([
+      { k:'t', v:t, fs:LBL_FS, own:seg(px([p, h]), px([p + t, h])), side:'above' },
+      { k:'d', v:dd, fs:LBL_FS, own:seg(px([0, 0]), px([dd, 0])), side:'below' },
+      { k:'L', v:trapLeg(p, h), fs:LBL_FS, own:seg(px([0, 0]), px([p, h])), side:'left' },
+      { k:'h', v:h, fs:LBL_FS, own:seg(top, foot), side:'any' }], strokes, [], { x0:2, y0:2, x1:GW - 2, y1:TRAP.slotY - 2 }) };
+  }
+  /* 第 4 關的圖卡（卡片自己的座標，一張卡自己一個比例）：形狀、高；標底、高、平行四邊形的斜邊、梯形的上底 */
+  function sortScene(c){
+    var W = SORT.cardW - 6, H = SORT.cardH - 6, box = { x:22, y:22, w:92, h:50 };   /* 上下各留一個標籤的高度（墨跡 0.8 × 15 ＋ 2 ＋ 線寬 ＋ 空隙） */
+    var shape = sortShape(c), wU = 0;
+    shape.forEach(function(q){ wU = Math.max(wU, q[0]); });
+    var hU = c[0] === 'trap' ? c[3] : c[2];
+    var u = Math.min(box.w / wU, box.h / hU), x0 = box.x + (box.w - wU * u) / 2, y0 = box.y + (box.h + hU * u) / 2;
+    var px = function(q){ return { x:x0 + q[0] * u, y:y0 - q[1] * u }; };
+    var fx = c[0] === 'tri' ? c[3] : (c[0] === 'para' ? c[3] : c[4]);   /* 高畫在哪裡：三角形從頂點、另外兩個從上面的邊的左端 */
+    var top = px([fx, hU]), foot = px([fx, 0]), base = c[0] === 'trap' ? c[2] : c[1];
+    var pts = shape.map(px), strokes = polyStrokes(pts, 2.5).concat(heightStrokes(top, foot, 6));
+    var L = [{ k:'b', v:base, fs:CARD_FS, own:seg(px([0, 0]), px([base, 0])), side:'below' }];
+    if (c[0] === 'para') L.push({ k:'L', v:sortSlant(c), fs:CARD_FS, own:seg(px([0, 0]), px([c[3], hU])), side:'left' });
+    if (c[0] === 'trap') L.push({ k:'t', v:c[1], fs:CARD_FS, own:seg(px([c[4], hU]), px([c[4] + c[1], hU])), side:'above' });
+    L.push({ k:'h', v:hU, fs:CARD_FS, own:seg(top, foot), side:'any' });
+    return { W:W, H:H, pts:pts, top:top, foot:foot, strokes:strokes, covers:[], labels:placeLabels(L, strokes, [], { x0:4, y0:4, x1:W - 4, y1:H - 4 }) };
+  }
+  /* 第 5 關，高 h 的時候：三角形、高、把手（圓心在頂點、直徑 GPICK ＋ 4 的圓）；標底與高（高只有 1～2 格時用引線） */
+  function pullScene(b, a, h){
+    var ox = pullOx(b), px = function(q){ return { x:ox + q[0] * PULL.U, y:pullY(q[1]) }; }, top = px([a, h]), foot = px([a, 0]);
+    var strokes = polyStrokes([px([0, 0]), px([b, 0]), top], 3).concat([{ a:top, b:foot, w:2.5, role:'dash' }, { a:top, b:top, w:GPICK + 4, role:'grip' }]);   /* 把手：直徑 GPICK 的圈，外面還有 2px 的白邊 */
+    return { top:top, foot:foot, strokes:strokes, covers:[], labels:placeLabels([
+      { k:'b', v:b, fs:LBL_FS, own:seg(px([0, 0]), px([b, 0])), side:'below' },
+      { k:'h', v:h, fs:LBL_FS, own:seg(top, foot), side:'any' }], strokes, [], BOARD_IN(PULL_H)) };
+  }
+  /* 畫一個 placeLabels 算好的標籤（設定檔保證每一題都放得下，at 不會是 null） */
+  function lblAttrs(L){ return { x:L.at.x, y:lblBaseline(L.fs, L.at.y), 'font-size':L.fs }; }
 
   /* ---------- i18n ---------- */
   var I18N = {
@@ -391,7 +791,6 @@
       next2: '🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
       next3: '❓ 有看不懂的地方，找爸媽或 AI 老師問到懂 —— 會問問題的人學最快。',
       gHintBtn: '💡 提示',
-      hint2Prefix: '提示 2：',
       qsAdv: [
         { stem:'組合圖形：一個長方形長 6 公分、寬 4 公分，上面加了一個底 6 公分、高 2 公分的三角形，總面積是多少？',
           opts:['24 平方公分','27 平方公分','30 平方公分','36 平方公分'], ans:2,
@@ -435,18 +834,57 @@
           why:'高必須是垂直距離：梯形的高是上底和下底之間垂直量出來的長度；不是任何斜邊，也不一定是最長邊；梯形面積公式是 (上底＋下底) × 高 ÷ 2，不是三個數相乘。' }
       ],
       s6h2: '面積工地',
-      s6lead: '工地需要量出每個圖形的面積才能施工。點選正確答案，答錯會扣分，但工地不會關門，可以一直試！',
+      s6lead: '剪一刀、轉半圈、拼梯形公式、分一分、拉高 —— 五關五種玩法，每一關都在練同一件事：<strong>找出底和高，算出面積</strong>。放錯會扣分，但工地不會關門 —— 慢慢想比手快重要。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
-      gPrompt: function(name){ return '這是一個' + name + '，面積是多少？'; },
-      shapeNamePara: '平行四邊形', shapeNameTri: '三角形', shapeNameTrap: '梯形',
-      wordBase: '底', wordHeight: '高', wordTop: '上底', wordBottom: '下底', unitCm2: '平方公分',
-      hintPara: '提示：平行四邊形面積 = 底 × 高',
-      hintTri: '提示：三角形面積 = 底 × 高 ÷ 2（別忘了除以 2）',
-      hintTrap: '提示：梯形面積 = (上底＋下底) × 高 ÷ 2',
-      gCorrectFirst: function(area){ return '太厲害了，一次就答對！面積 = ' + area + ' 平方公分。基本 +10 分，一次答對再加碼 +20 分！'; },
-      gCorrect: function(area){ return '答對了！面積 = ' + area + ' 平方公分，+10 分。'; },
-      gWrong: function(v){ return v + ' 不對，再想想公式，－5 分，繼續試試看！'; },
-      gClear: '這一關完成了！按「下一關」繼續。',
+      gAsks: {
+        cut: '沿著一條直的格線剪一刀，剪下來的那一塊移到另一邊，要拼成長方形。',
+        turn: '再拿一個一樣的三角形：按 ↻ 轉一轉，拖到原來那一個的旁邊，拼成平行四邊形。',
+        trap: '兩個一樣的梯形可以拼成平行四邊形。把圖上的數字放進梯形的面積公式。',
+        sort: '每一張圖先算出面積，再放進對的箱子。',
+        pull: function(A){ return '上下拖橘色的頂點，把三角形拉成面積剛好 ' + A + ' 平方公分，再按「就是這個」。'; }
+      },
+      gHints: {
+        cut: '高是從上面的邊直直量到下面的邊的距離。沿著一條高剪下去，剪下來的那一塊移過去才補得剛好。',
+        turn: '兩個一樣的三角形，要把其中一個轉半圈（倒過來），才拼得成平行四邊形。',
+        trap: '上底和下底是上下兩條平行的邊；高是和底垂直的那條虛線，不是旁邊斜斜的邊。',
+        sort: '三角形和梯形最後要除以 2，平行四邊形不用；高是虛線那一條，不是斜邊。',
+        pull: '三角形面積 ＝ 底 × 高 ÷ 2。先想一想：底 × 高要是多少？'
+      },
+      gCut2: '提示 2：從左上角那一點直直往下剪，就是一條高（發亮的那幾條都可以）。',
+      gTurn2: function(deg){ return deg === 180 ? '提示 2：已經倒過來了（180°），放到三角形的左邊或右邊。' : '提示 2：現在轉了 ' + deg + '°，要轉到 180°（倒過來），再放到三角形的左邊或右邊。'; },
+      gTrap2Base: function(t, d){ return '提示 2：上下兩條平行的邊是 ' + t + ' 和 ' + d + '，放進括號裡。'; },
+      gTrap2H: function(h){ return '提示 2：和下底垂直的虛線是 ' + h + '，放進 × 後面那一格。'; },
+      gSort2: function(f, x){ return '提示 2：還沒分的第一張：' + f + ' ＝ ' + x + '。'; },
+      gPull2: function(b, A){ return '提示 2：' + b + ' × 高 ÷ 2 要等於 ' + A + '，所以 ' + b + ' × 高要等於 ' + A + ' × 2 ＝ ' + (A * 2) + '。'; },
+      gCutNow0: '✂️ 還沒剪',
+      gCutNow: function(b, h){ return '長方形 ' + b + ' × ' + h + ' ＝ ' + (b * h); },
+      gCutBad: function(side){ return '這一刀只剪下' + (side === 'left' ? '左下角' : '右上角') + '的一小塊 —— 它沒有從上面的邊剪到下面的邊，移過去補不成長方形。要剪在一條高上：從上面的邊直直剪到下面的邊。'; },
+      gCutDone: function(b, h){ return '剪下來的那一塊移到另一邊，變成長方形：底 ' + b + '、高 ' + h + '，' + b + ' × ' + h + ' ＝ ' + (b * h) + ' 平方公分 —— 平行四邊形的面積就是底 × 高。'; },
+      gTurnNow: function(deg){ return '↻ 轉了 ' + deg + '°'; },
+      gTurnBtn: '↻ 轉 90°',
+      gTurnSame: '方向沒有變：兩個方向一樣的三角形併在一起，不是平行四邊形。先按 ↻ 轉半圈（倒過來）。',
+      gTurnQuarter: function(deg){ return '轉了 ' + deg + '°，邊對不上 —— 要剛好轉半圈（180°，倒過來）。'; },
+      gTurnDone: function(b, h){ return '兩個一樣的三角形拼成平行四邊形：' + b + ' × ' + h + ' ＝ ' + (b * h) + '。一個三角形是它的一半：' + (b * h) + ' ÷ 2 ＝ ' + (b * h / 2) + ' 平方公分。'; },
+      gTrapNow: function(k){ return '放好了 ' + k + '／3 格'; },
+      gTrapDoneNow: function(A){ return '梯形面積是 ' + A + ' 平方公分'; },
+      gTrapCapBase: '上底 ＋ 下底', gTrapCapH: '高',
+      gTrapNotBase: function(v, k){ return v + (k === 'h' ? ' 是高' : ' 是旁邊斜斜的邊') + '，不是上底或下底 —— 上底和下底是上下兩條平行的邊。'; },
+      gTrapNotH: function(v, k){ return k === 'L' ? v + ' 是斜邊，不是高 —— 高要和底垂直（虛線那一條）。' : v + ' 是' + (k === 't' ? '上底' : '下底') + '，不是高 —— 高是上下兩條底之間垂直的距離（虛線那一條）。'; },
+      gTrapOk: function(v, k){ return v + (k === 't' ? ' 是上底 ✓' : (k === 'd' ? ' 是下底 ✓' : ' 是高 ✓')); },
+      gTrapDone: function(t, d, h){ return '兩個梯形拼成底 ' + t + ' ＋ ' + d + ' ＝ ' + (t + d) + '、高 ' + h + ' 的平行四邊形：(' + t + ' ＋ ' + d + ') × ' + h + ' ＝ ' + ((t + d) * h) + '，一個梯形是一半：' + ((t + d) * h) + ' ÷ 2 ＝ ' + ((t + d) * h / 2) + ' 平方公分。'; },
+      gBin: function(v){ return '面積 ' + v + ' 平方公分'; },
+      gSortNow: function(n, total){ return '分好了 ' + n + '／' + total + ' 張'; },
+      gShapes: { tri:'三角形', para:'平行四邊形', trap:'梯形' },
+      gSortBad: function(name, f, a, bin, why){ return name + '：' + f + ' ＝ ' + a + '，不是 ' + bin + (why === 'half' ? ' —— 別忘了除以 2。' : (why === 'whole' ? ' —— 平行四邊形不用除以 2。' : '。')); },
+      gSortOk: function(name, f, a){ return name + '：' + f + ' ＝ ' + a + ' ✓'; },
+      gSortDone: '四張都分對了！三角形和梯形最後要除以 2，平行四邊形不用。',
+      gPullNow: function(b, h){ return '底 ' + b + '　高 ' + h; },
+      gPullBtn: '就是這個', gPullUp: '高加 1', gPullDown: '高減 1',
+      gPullBad: function(b, h, x, A, less, forgot){ return b + ' × ' + h + ' ÷ 2 ＝ ' + x + '，比 ' + A + (less ? ' 少' : ' 多') + '。' + (forgot ? b + ' × ' + h + ' ＝ ' + A + ' 是平行四邊形的面積 —— 三角形還要除以 2。' : ''); },
+      gPullDone: function(b, h, A){ return b + ' × ' + h + ' ÷ 2 ＝ ' + A + '，高 ' + h + ' 剛好！也可以倒過來算：' + A + ' × 2 ÷ ' + b + ' ＝ ' + h + '。'; },
+      gPts: function(p){ return '＋' + p + ' 分'; },
+      gMinus: '扣 5 分',
+      gClear: '按「下一關」繼續。',
       gWin: function(score){ return '五關全部完工！總分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
       gNextBtn: '下一關', gRestartBtn: '重新開始',
       footer: '三個公式都是同一招 —— 想辦法變回長方形。'
@@ -512,7 +950,6 @@
       next2: '🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
       next3: '❓ Anything unclear — ask your parents or your AI teacher until it clicks. Good learners ask.',
       gHintBtn: '💡 Hint',
-      hint2Prefix: 'Hint 2: ',
       qsAdv: [
         { stem:'Composite shape: a 6×4 cm rectangle with a triangle on top — base 6 cm, height 2 cm. What is the total area?',
           opts:['24 cm²','27 cm²','30 cm²','36 cm²'], ans:2,
@@ -556,19 +993,58 @@
           why:'Height must be a perpendicular distance: a trapezoid’s height is measured perpendicular between its top and bottom bases — not any slanted side, and not necessarily the longest side. The trapezoid area formula is (top + bottom) × height ÷ 2, not a product of three numbers.' }
       ],
       s6h2: 'Area Construction Site',
-      s6lead: 'The construction site needs the area of each shape before it can build. Tap the correct answer — wrong taps cost points, but the site never closes, so keep trying!',
+      s6lead: 'Cut, turn, build the trapezoid formula, sort, and pull — five rounds, five ways to play, and every round practises the same thing: <strong>find the base and the height, then the area</strong>. A wrong move costs points, but the site never closes — thinking slowly beats moving fast.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
-      gPrompt: function(name){ return 'Here is a ' + name + '. What is its area?'; },
-      shapeNamePara: 'parallelogram', shapeNameTri: 'triangle', shapeNameTrap: 'trapezoid',
-      wordBase: 'base', wordHeight: 'height', wordTop: 'top', wordBottom: 'bottom', unitCm2: 'cm²',
-      hintPara: 'Hint: parallelogram area = base × height',
-      hintTri: 'Hint: triangle area = base × height ÷ 2 (don’t forget to divide by 2)',
-      hintTrap: 'Hint: trapezoid area = (top + bottom) × height ÷ 2',
-      gCorrectFirst: function(area){ return 'Amazing, correct on the first try! Area = ' + area + ' cm². +10 points, plus a +20 first-try bonus!'; },
-      gCorrect: function(area){ return 'Correct! Area = ' + area + ' cm², +10 points.'; },
-      gWrong: function(v){ return v + ' is not right — think about the formula again. −5 points. Keep trying!'; },
-      gClear: 'Round complete! Press “Next round” to continue.',
-      gWin: function(score){ return 'All 5 rounds complete! Final score: ' + score + ' points 🏆 Press “Restart” to play again.'; },
+      gAsks: {
+        cut: 'Cut along one vertical grid line, then move the cut-off piece to the other side to make a rectangle.',
+        turn: 'Here is an identical triangle: turn it with ↻ and drag it next to the first one to make a parallelogram.',
+        trap: 'Two identical trapezoids make a parallelogram. Put the numbers from the picture into the trapezoid area formula.',
+        sort: 'Work out the area of each picture, then put it in the right box.',
+        pull: function(A){ return 'Drag the orange corner up or down until the triangle’s area is exactly ' + A + ' cm², then press “That’s it”.'; }
+      },
+      gHints: {
+        cut: 'The height runs straight from the top side down to the bottom side. Cut along a height, and the piece you move fits exactly.',
+        turn: 'To make a parallelogram from two identical triangles, one of them has to be turned half a turn (upside down).',
+        trap: 'The top and bottom bases are the two parallel sides; the height is the dashed line at a right angle to them — not the slanted side.',
+        sort: 'Triangles and trapezoids end with ÷ 2; parallelograms don’t. The height is the dashed line, not a slanted side.',
+        pull: 'Triangle area = base × height ÷ 2. First think: what must base × height be?'
+      },
+      gCut2: 'Hint 2: cut straight down from the top-left corner — that line is a height (any of the glowing lines works).',
+      gTurn2: function(deg){ return deg === 180 ? 'Hint 2: it is already upside down (180°) — put it on the left or right of the triangle.' : 'Hint 2: it is turned ' + deg + '° now; turn it to 180° (upside down), then put it on the left or right of the triangle.'; },
+      gTrap2Base: function(t, d){ return 'Hint 2: the two parallel sides are ' + t + ' and ' + d + ' — they go inside the brackets.'; },
+      gTrap2H: function(h){ return 'Hint 2: the dashed line at a right angle to the bottom base is ' + h + ' — it goes after the ×.'; },
+      gSort2: function(f, x){ return 'Hint 2: the first card not sorted yet: ' + f + ' = ' + x + '.'; },
+      gPull2: function(b, A){ return 'Hint 2: ' + b + ' × height ÷ 2 must be ' + A + ', so ' + b + ' × height must be ' + A + ' × 2 = ' + (A * 2) + '.'; },
+      gCutNow0: '✂️ Not cut yet',
+      gCutNow: function(b, h){ return 'Rectangle ' + b + ' × ' + h + ' = ' + (b * h); },
+      gCutBad: function(side){ return 'That cut only takes off a small piece of the ' + (side === 'left' ? 'bottom-left' : 'top-right') + ' corner — it doesn’t run from the top side to the bottom side, so moving it can’t make a rectangle. Cut along a height: straight from the top side down to the bottom side.'; },
+      gCutDone: function(b, h){ return 'The cut-off piece moves to the other side and makes a rectangle: base ' + b + ', height ' + h + ', ' + b + ' × ' + h + ' = ' + (b * h) + ' cm² — a parallelogram’s area is base × height.'; },
+      gTurnNow: function(deg){ return '↻ turned ' + deg + '°'; },
+      gTurnBtn: '↻ Turn 90°',
+      gTurnSame: 'It hasn’t turned: two triangles facing the same way side by side don’t make a parallelogram. Press ↻ to turn it half a turn (upside down) first.',
+      gTurnQuarter: function(deg){ return 'Turned ' + deg + '°, so the sides don’t line up — it needs exactly half a turn (180°, upside down).'; },
+      gTurnDone: function(b, h){ return 'Two identical triangles make a parallelogram: ' + b + ' × ' + h + ' = ' + (b * h) + '. One triangle is half of it: ' + (b * h) + ' ÷ 2 = ' + (b * h / 2) + ' cm².'; },
+      gTrapNow: function(k){ return k + ' / 3 boxes filled'; },
+      gTrapDoneNow: function(A){ return 'Trapezoid area: ' + A + ' cm²'; },
+      gTrapCapBase: 'top + bottom', gTrapCapH: 'height',
+      gTrapNotBase: function(v, k){ return v + (k === 'h' ? ' is the height' : ' is the slanted side') + ', not the top or bottom base — the bases are the two parallel sides.'; },
+      gTrapNotH: function(v, k){ return k === 'L' ? v + ' is the slanted side, not the height — the height is at a right angle to the bases (the dashed line).' : v + ' is the ' + (k === 't' ? 'top' : 'bottom') + ' base, not the height — the height is the straight-across distance between the two bases (the dashed line).'; },
+      gTrapOk: function(v, k){ return v + ' is the ' + (k === 't' ? 'top base' : (k === 'd' ? 'bottom base' : 'height')) + ' ✓'; },
+      gTrapDone: function(t, d, h){ return 'Two trapezoids make a parallelogram with base ' + t + ' + ' + d + ' = ' + (t + d) + ' and height ' + h + ': (' + t + ' + ' + d + ') × ' + h + ' = ' + ((t + d) * h) + '; one trapezoid is half of it: ' + ((t + d) * h) + ' ÷ 2 = ' + ((t + d) * h / 2) + ' cm².'; },
+      gBin: function(v){ return 'Area ' + v + ' cm²'; },
+      gSortNow: function(n, total){ return n + ' / ' + total + ' cards sorted'; },
+      gShapes: { tri:'Triangle', para:'Parallelogram', trap:'Trapezoid' },
+      gSortBad: function(name, f, a, bin, why){ return name + ': ' + f + ' = ' + a + ', not ' + bin + (why === 'half' ? ' — don’t forget to divide by 2.' : (why === 'whole' ? ' — a parallelogram doesn’t need ÷ 2.' : '.')); },
+      gSortOk: function(name, f, a){ return name + ': ' + f + ' = ' + a + ' ✓'; },
+      gSortDone: 'All four sorted correctly! Triangles and trapezoids end with ÷ 2; parallelograms don’t.',
+      gPullNow: function(b, h){ return 'base ' + b + ' · height ' + h; },
+      gPullBtn: 'That’s it', gPullUp: 'Height up 1', gPullDown: 'Height down 1',
+      gPullBad: function(b, h, x, A, less, forgot){ return b + ' × ' + h + ' ÷ 2 = ' + x + ', ' + (less ? 'less' : 'more') + ' than ' + A + '.' + (forgot ? ' ' + b + ' × ' + h + ' = ' + A + ' is a parallelogram’s area — a triangle still needs ÷ 2.' : ''); },
+      gPullDone: function(b, h, A){ return b + ' × ' + h + ' ÷ 2 = ' + A + ' — height ' + h + ' is exactly right! You can also work backwards: ' + A + ' × 2 ÷ ' + b + ' = ' + h + '.'; },
+      gPts: function(p){ return '+' + p + ' points'; },
+      gMinus: '5 points off',
+      gClear: 'Press “Next round” to continue.',
+      gWin: function(score){ return 'All 5 rounds built! Final score: ' + score + ' points 🏆 Press “Restart” to play again.'; },
       gNextBtn: 'Next round', gRestartBtn: 'Restart',
       footer: 'All three formulas use the same trick — find a way to turn the shape back into a rectangle.'
     }
@@ -762,151 +1238,580 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：面積工地 ---------- */
-  var ROUNDS = [
-    { type:'para', b:6, h:4,           area:24, opts:['12','24','30','10','20','28'], ans:1 },
-    { type:'tri',  b:8, h:5,           area:20, opts:['40','15','20','13','24','18'], ans:2 },
-    { type:'trap', top:3, bottom:5, h:4, area:16, opts:['32','16','12','20','14','18'], ans:1 },
-    { type:'para', b:9, h:6,           area:54, opts:['45','60','54','27','48','15'], ans:2 },
-    { type:'tri',  b:10, h:7,          area:35, opts:['70','35','17','40','42','30'], ans:1 }
-  ];
-
-  var gRoundIdx = 0, gScore = 0, gFirstTry = true, gLocked = false, hintLevel = 0;
+  /* ===================== 小遊戲：面積工地（§六之五：五關五種玩法） ===================== */
+  var gRound = 0, gScore = 0, gSolved = false, gMistake = false, hintLevel = 0, gCtx = {};
+  /* 畫板世代：重新開始、切換語言、下一關都換一個新的畫板。還拿在手上的舊積木放開時，不可以替新的畫板做任何事 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var elIcon = document.getElementById('gIcon');
-  var elPrompt = document.getElementById('gPromptText');
-  var elHint = document.getElementById('gHint');
-  var gHintBtn = document.getElementById('gHintBtn');
-  var gOpts = document.getElementById('gOpts');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
+  var gHintBtn = document.getElementById('gHintBtn');
+  var elHint = document.getElementById('gHint');
+  var NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs, text){
+    var el = document.createElementNS(NS, tag);
+    for (var a in attrs) el.setAttribute(a, attrs[a]);
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function ptsAttr(list){ return list.map(function(p){ return p.x + ',' + p.y; }).join(' '); }
 
-  function shapeName(type){
-    var d = L();
-    if (type === 'para') return d.shapeNamePara;
-    if (type === 'tri') return d.shapeNameTri;
-    return d.shapeNameTrap;
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null, onBoardTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    /* 點畫板（不是點在積木上）：只認第一根手指，按下和放開在同一個地方才算「點一下」 */
+    board.addEventListener('pointerdown', function(e){
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (!e.isPrimary) return;   /* 第二根手指：不理 —— 第一根手指按在畫板外、按鈕或積木上時也一樣 */
+      BOARD_TAP = { id:e.pointerId, x:e.clientX, y:e.clientY, far:false };
+    });
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      var t = BOARD_TAP, pt = B.toBoard(e);
+      if (t && t.id === e.pointerId) BOARD_TAP = null;
+      /* 「點目的地」也一樣只認第一根手指的「點一下」：別的手指放開、或滑動之後放開，都不算（不然想捲動也會被扣分） */
+      if (!t || t.id !== e.pointerId) return;
+      if (t.far || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10) return;   /* 中途離開按下去的地方超過 10px 就不是「點一下」 */
+      if (B.selected && B.onPointTap){ B.onPointTap(B.selected, pt); return; }
+      if (B.onBoardTap && !gSolved) B.onBoardTap(pt);
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」；BOARD_TAP 記「按在畫板上的第一根手指」。
+     任何地方的 pointerup／pointercancel 傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {}, BOARD_TAP = null;
+  function clearPtr(e){ delete PIECE_PTR[e.pointerId]; if (BOARD_TAP && BOARD_TAP.id === e.pointerId) BOARD_TAP = null; }
+  window.addEventListener('pointerup', clearPtr);
+  window.addEventListener('pointercancel', clearPtr);
+  window.addEventListener('pointerdown', function(e){ delete PIECE_PTR[e.pointerId]; }, true);
+  window.addEventListener('pointermove', function(e){
+    if (BOARD_TAP && BOARD_TAP.id === e.pointerId && Math.hypot(e.clientX - BOARD_TAP.x, e.clientY - BOARD_TAP.y) > 10) BOARD_TAP.far = true;
+  });
+  /* 指標離開視窗時收不到 pointermove：一離開就當成走遠了（滑鼠拖出視窗再回來放開，不算點一下） */
+  window.addEventListener('pointerout', function(e){ if (BOARD_TAP && BOARD_TAP.id === e.pointerId && !e.relatedTarget) BOARD_TAP.far = true; });
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 畫板上的一張 SVG（整塊畫板大小，不接指標）。⚠️ 不給 viewBox：頁尾「讓 SVG 的畫布容得下自己的標籤」那段只撐開
+     有 viewBox 的圖，遊戲的畫布不可以被它撐開（一撐開，畫出來的位置就和吸附、點選量的位置對不上）。 */
+  function gSvg(B){
+    var s = svgEl('svg', { 'class':'gsvg', width:B.W, height:B.H, 'aria-hidden':'true' });
+    B.el.appendChild(s);
+    return s;
+  }
+  /* 畫 xxxScene() 算好的標籤；fills：每一種標籤的顏色（高的數字和它的虛線同一個顏色） */
+  function drawLabels(svg, labels, fills, extra){
+    labels.forEach(function(L){
+      var a = lblAttrs(L);
+      a.fill = fills[L.k] || '#2B2A33'; a['data-k'] = L.k;
+      /* 引線：從它標的那一段的中點拉到字框邊上（標籤的顏色、細線） */
+      if (L.leader) svg.appendChild(svgEl('line', { x1:L.leader.a.x, y1:L.leader.a.y, x2:L.leader.b.x, y2:L.leader.b.y, stroke:a.fill, 'stroke-width':1.5, 'class':'gleader', 'data-k':L.k }));
+      for (var k in extra) a[k] = extra[k];
+      gText(svg, a.x, a.y, L.v, a);
+    });
+  }
+  function gText(svg, x, y, text, attrs){
+    var a = { x:x, y:y, 'font-size':17, 'font-weight':800, fill:'#2B2A33', 'text-anchor':'middle' };
+    for (var k in attrs) a[k] = attrs[k];
+    var t = svgEl('text', a, String(text));
+    svg.appendChild(t);
+    return t;
+  }
+  /* 方格（格子座標 x0…x1 × 0…y1，toPx 把格子座標換成畫板座標） */
+  function gGrid(svg, toPx, x0, x1, y1){
+    for (var x = x0; x <= x1; x++){ var p = toPx(x, 0), q = toPx(x, y1); svg.appendChild(svgEl('line', { x1:p.x, y1:p.y, x2:q.x, y2:q.y, stroke:'#E8E2D6', 'stroke-width':1 })); }
+    for (var y = 0; y <= y1; y++){ var r = toPx(x0, y), s = toPx(x1, y); svg.appendChild(svgEl('line', { x1:r.x, y1:r.y, x2:s.x, y2:s.y, stroke:'#E8E2D6', 'stroke-width':1 })); }
+  }
+  /* 高：一條虛線（top → foot）＋垂足的直角記號 */
+  function gHeight(svg, top, foot, color, mark){
+    svg.appendChild(svgEl('line', { x1:top.x, y1:top.y, x2:foot.x, y2:foot.y, stroke:color, 'stroke-width':2.5, 'stroke-dasharray':'6 5' }));
+    var m = mark || 8;
+    svg.appendChild(svgEl('path', { d:'M' + (foot.x + m) + ',' + foot.y + ' L' + (foot.x + m) + ',' + (foot.y - m) + ' L' + foot.x + ',' + (foot.y - m), fill:'none', stroke:color, 'stroke-width':1.5 }));
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫板下面的一排按鈕（第 2 關的 ↻、第 5 關的 ▼ ▲ 與「就是這個」） */
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, cls, aria){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = text;
+    if (aria) b.setAttribute('aria-label', aria);
+    row.appendChild(b);
+    return b;
   }
 
-  function shapeHint(type){
-    var d = L();
-    if (type === 'para') return d.hintPara;
-    if (type === 'tri') return d.hintTri;
-    return d.hintTrap;
-  }
-
-  function shapeHint2(round){
-    var d = L();
-    if (round.type === 'para') return d.hint2Prefix + round.b + ' × ' + round.h + ' = ?';
-    if (round.type === 'tri') return d.hint2Prefix + round.b + ' × ' + round.h + ' ÷ 2 = ?';
-    return d.hint2Prefix + '(' + round.top + ' + ' + round.bottom + ') × ' + round.h + ' ÷ 2 = ?';
-  }
-
-  function shapeIconSVG(round){
-    var d = L();
-    if (round.type === 'para'){
-      return '<svg class="scene shapeIcon" viewBox="0 0 240 160" role="img">' +
-        '<polygon points="40,130 160,130 200,40 80,40" fill="#E3F4EB" stroke="#2F9E69" stroke-width="3"/>' +
-        '<line x1="80" y1="40" x2="80" y2="130" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="5 4"/>' +
-        '<text x="120" y="150" font-size="14" text-anchor="middle" fill="#2B2A33">' + d.wordBase + ' = ' + round.b + '</text>' +
-        '<text x="55" y="88" font-size="14" text-anchor="middle" fill="#3B7DD8">' + d.wordHeight + ' = ' + round.h + '</text>' +
-        '</svg>';
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。
+         o.axis === 'y'：只能上下拖（第 5 關的頂點），o.snapY 把中心點吸到最近的那一條格線 —— 拖的時候就畫在吸到的位置；
+         o.node：放在裡面的東西（SVG）；P.rot：轉了幾個 90°（第 2 關），畫的時候一起轉；o.onPlace：每次位置改變（含彈回）都通知 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.node) el.appendChild(o.node);
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, rot:0, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)' + (P.rot ? ' rotate(' + (P.rot * 90) + 'deg)' : '');
+      if (o.onPlace) o.onPlace(P);
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    /* 換一個家（第 5 關的頂點停在哪一條格線，那裡就是它的家） */
+    P.rehome = function(cx, cy){
+      stopGesture();
+      P.homeX = cx; P.homeY = cy;
+      P.home();
+    };
+    P.turn = function(){ P.rot = (P.rot + 1) % 4; P.place(P.cx, P.cy); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
     }
-    if (round.type === 'tri'){
-      return '<svg class="scene shapeIcon" viewBox="0 0 240 160" role="img">' +
-        '<polygon points="40,130 200,130 120,40" fill="#FDF0E0" stroke="#E8871E" stroke-width="3"/>' +
-        '<line x1="120" y1="40" x2="120" y2="130" stroke="#3B7DD8" stroke-width="2" stroke-dasharray="5 4"/>' +
-        '<text x="120" y="150" font-size="14" text-anchor="middle" fill="#2B2A33">' + d.wordBase + ' = ' + round.b + '</text>' +
-        '<text x="95" y="88" font-size="14" text-anchor="middle" fill="#3B7DD8">' + d.wordHeight + ' = ' + round.h + '</text>' +
-        '</svg>';
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣） */
+      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      if (o.axis === 'y') P.place(orig.x, o.snapY(orig.y + dy));
+      else P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */
+      /* 先點選、後來又直接拖走的那一塊：拖完就不再是「選起來」的，不然下一次點目的地會多放一次 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
     }
-    return '<svg class="scene shapeIcon" viewBox="0 0 240 160" role="img">' +
-      '<polygon points="80,40 160,40 200,130 40,130" fill="#E8F0FB" stroke="#3B7DD8" stroke-width="3"/>' +
-      '<line x1="160" y1="40" x2="160" y2="130" stroke="#E8871E" stroke-width="2" stroke-dasharray="5 4"/>' +
-      '<text x="120" y="28" font-size="13" text-anchor="middle" fill="#2B2A33">' + d.wordTop + ' = ' + round.top + '</text>' +
-      '<text x="120" y="150" font-size="13" text-anchor="middle" fill="#2B2A33">' + d.wordBottom + ' = ' + round.bottom + '</text>' +
-      '<text x="185" y="88" font-size="13" text-anchor="middle" fill="#E8871E">' + d.wordHeight + ' = ' + round.h + '</text>' +
-      '</svg>';
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（三年級 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字（四年級 chart 的驗證者抓到的） */
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 已經說明過、也扣過分的同一個錯：把說明再說一次，不再算錯、不扣分 */
+  function roundAgain(text){ gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+
+  var RENDER = {
+    /* 第 1 關：剪一刀（範例 1）—— 平行四邊形畫在方格上，直的格線是虛線。點一條虛線就是沿著它剪：
+       從上面的邊一路剪到下面的邊（剪在高上）→ 左邊那一塊滑到另一邊，拼成長方形，寫出底 × 高；
+       只剪下一個角 → 那個角塗紅、說為什麼。同一條錯的線再點一次不再扣分。格子中間點下去什麼都不做。
+       沒有東西可以拿，「點一條線」本身就是剪（§六之五 第 4 點的例外）。 */
+    cut: function(d){
+      var e = pick(GAME_CUT), b = e[0], h = e[1], s = e[2], lastBad = null, badSeen = {};
+      var line = trailLine(d.gCutNow0);
+      var B = makeBoard(GW, CUT_H);
+      var svg = gSvg(B);
+      var px = function(x, y){ return cutPt(b, x, y); };
+      var poly = function(list){ return ptsAttr(list.map(function(q){ return px(q[0], q[1]); })); };
+      gGrid(svg, px, 0, 2 * b, h);
+      var shape = svgEl('polygon', { points:poly([[0, 0], [b, 0], [b + s, h], [s, h]]), fill:'#E3F4EB', stroke:'#2F9E69', 'stroke-width':3, 'stroke-linejoin':'round' });
+      svg.appendChild(shape);
+      var corner = svgEl('polygon', { points:'', fill:'#FBE9E9', stroke:'#D64545', 'stroke-width':2.5, 'stroke-linejoin':'round' });
+      svg.appendChild(corner);
+      var cuts = [];
+      for (var c = 1; c < b + s; c++){
+        var p0 = px(c, 0), p1 = px(c, h);
+        var ln = svgEl('line', { x1:p0.x, y1:p0.y, x2:p1.x, y2:p1.y, stroke:'#8A8496', 'stroke-width':2, 'stroke-dasharray':'4 4', 'class':'gcutline' });
+        ln.setAttribute('data-c', c);
+        svg.appendChild(ln);
+        cuts.push(ln);
+      }
+      gCtx.hint2 = function(){
+        cuts.forEach(function(ln){ var c = +ln.getAttribute('data-c'); if (!cutRefuse(b, s, c)){ ln.setAttribute('stroke', '#E8871E'); ln.setAttribute('stroke-width', 3.5); } });
+        return d.gCut2;
+      };
+      B.onBoardTap = function(pt){
+        var c = cutPick(b, h, s, pt);
+        if (c === null) return;
+        var bad = cutRefuse(b, s, c);
+        if (bad){
+          corner.setAttribute('points', poly(cutCorner(b, h, s, c)));
+          /* 已經說明過的錯線再點一次（不管中間點過別的）：不再扣分；不是剛剛那一條就把它的說明再說一次 */
+          if (badSeen[c]){ if (lastBad !== c){ lastBad = c; roundAgain(d.gCutBad(bad)); } return; }
+          badSeen[c] = true; lastBad = c;
+          roundMiss(d.gCutBad(bad));
+          return;
+        }
+        /* 剪對了：原來的圖換成兩塊，左邊那一塊滑過去 */
+        var pc = cutPieces(b, h, s, c);
+        svg.removeChild(shape); svg.removeChild(corner);
+        cuts.forEach(function(ln){ svg.removeChild(ln); });
+        svg.appendChild(svgEl('polygon', { points:poly(pc.stay), fill:'#E3F4EB', stroke:'#2F9E69', 'stroke-width':3, 'stroke-linejoin':'round' }));
+        var g = svgEl('g', { 'class':'gslide gmoved' });
+        g.appendChild(svgEl('polygon', { points:poly(pc.moved), fill:'#FDF0E0', stroke:'#E8871E', 'stroke-width':3, 'stroke-linejoin':'round' }));
+        svg.appendChild(g);
+        g.getBoundingClientRect();   /* 先排一次版，下一行的位移才會有動畫 */
+        g.style.transform = 'translate(' + (b * CUT.U) + 'px,0px)';
+        svg.appendChild(svgEl('polygon', { points:poly(pc.rect), fill:'none', stroke:'#2B2A33', 'stroke-width':2 }));
+        /* 標籤等那一塊滑完（0.6s）才出現：滑的時候那一塊的斜邊會掃過「高」的標籤（codex 第五輪）。位置是算好的終點位置 */
+        var lg = svgEl('g', { 'class':'gcutlbl', style:'visibility:hidden' }), gen0 = gGen;
+        svg.appendChild(lg);
+        drawLabels(lg, cutScene(b, h, s, c).labels, { h:'#3B7DD8' });
+        setTimeout(function(){ if (gen0 === gGen) lg.style.visibility = ''; }, 650);
+        line.textContent = d.gCutNow(b, h);
+        roundSolved(d.gCutDone(b, h));
+      };
+    },
+
+    /* 第 2 關：轉半圈（範例 2）—— 三角形畫在方格上；托盤上有一個一樣的三角形（一開始方向一樣）。
+       按 ↻ 一次轉 90°；拖到（或先點它、再點）原來那一個的左邊或右邊：轉了 180° 才收、兩塊拼成平行四邊形；
+       0° 或 90°、270° 彈回並說為什麼。放在別的地方靜靜彈回。 */
+    turn: function(d){
+      var e = pick(GAME_TURN), b = e[0], a = e[1], h = e[2], U = TURN.U;
+      var line = trailLine(d.gTurnNow(0));
+      var B = makeBoard(GW, TURN_H);
+      var svg = gSvg(B);
+      var px = function(x, y){ return turnPt(a, x, y); };
+      gGrid(svg, px, a - b, a + b, h);
+      svg.appendChild(svgEl('polygon', { points:ptsAttr(turnTri(b, a, h).map(function(q){ return px(q[0], q[1]); })), fill:'#E3F4EB', stroke:'#2F9E69', 'stroke-width':3, 'stroke-linejoin':'round' }));
+      var S = turnSq(b, h);
+      var pieceSvg = svgEl('svg', { width:S, height:S, 'aria-hidden':'true' });
+      pieceSvg.appendChild(svgEl('polygon', { points:ptsAttr(turnTri(b, a, h).map(function(q){ return { x:S / 2 + (q[0] - b / 2) * U, y:S / 2 - (q[1] - h / 2) * U }; })),
+        fill:'#FDF0E0', stroke:'#E8871E', 'stroke-width':3, 'stroke-linejoin':'round' }));
+      var P = addPiece(B, { w:S, h:S, cx:TURN.ax, cy:TURN.homeY, cls:'gtri', node:pieceSvg });
+      var row = actionRow();
+      var rotBtn = actionBtn(row, d.gTurnBtn, 'ghost');
+      rotBtn.addEventListener('click', function(){
+        if (gSolved || P.locked) return;
+        P.turn();
+        line.textContent = d.gTurnNow(P.rot * 90);
+        refreshHint();
+      });
+      gCtx.hint2 = function(){ return d.gTurn2(P.rot * 90); };
+      useTapSelect(B, function(Q, pt){
+        var side = turnPick(b, a, h, pt);
+        if (!side) return false;
+        var bad = turnRefuse(Q.rot);
+        if (bad){ roundMiss(bad === 'same' ? d.gTurnSame : d.gTurnQuarter(Q.rot * 90)); return false; }
+        var c = turnCenter(b, a, h, side);
+        Q.lock(c.x, c.y);
+        rotBtn.disabled = true;
+        /* 拼好的平行四邊形：底 b、高 h（從頂點垂直畫到底） */
+        var sc = turnScene(b, a, h, side);
+        gHeight(svg, sc.top, sc.foot, '#3B7DD8');
+        drawLabels(svg, sc.labels, { h:'#3B7DD8' });
+        roundSolved(d.gTurnDone(b, h));
+        return true;
+      });
+    },
+
+    /* 第 3 關：梯形公式（範例 3、4）—— 梯形畫在方格上，標出四個數（上底、下底、高、左邊的斜邊），只寫數字不寫名稱。
+       四張數字卡放進「(□ ＋ □) × □ ÷ 2」：括號裡收上底、下底（順序不拘），× 後面收高；
+       放錯彈回並說那個數是什麼（「5 是斜邊，不是高」）。三格放好就寫出兩個梯形拼成的平行四邊形與面積。 */
+    trap: function(d){
+      var e = pick(GAME_TRAP), t = e[0], dd = e[1], p = e[2], h = e[3], L = trapLeg(p, h), done = 0;
+      var area = (t + dd) * h / 2;
+      var line = trailLine(d.gTrapNow(0));
+      var B = makeBoard(GW, TRAP_H);
+      var svg = gSvg(B);
+      var px = function(x, y){ return trapPt(dd, x, y); };
+      gGrid(svg, px, 0, dd, h);
+      svg.appendChild(svgEl('polygon', { points:ptsAttr(trapShape(e).map(function(q){ return px(q[0], q[1]); })), fill:'#E8F0FB', stroke:'#3B7DD8', 'stroke-width':3, 'stroke-linejoin':'round' }));
+      var sc = trapScene(e);
+      gHeight(svg, sc.top, sc.foot, '#E8871E');
+      drawLabels(svg, sc.labels, { h:'#E8871E' }, { 'class':'glbl' });
+      TRAP_SYMS.forEach(function(sy){
+        addZone(B, sy[1] - sy[2] / 2, TRAP.slotY, sy[2], TRAP.slotH, 'gsym', sy[0]);
+      });
+      var slots = TRAP.slotX.map(function(x, i){
+        var z = addZone(B, x - TRAP.slotW / 2, TRAP.slotY, TRAP.slotW, TRAP.slotH, 'gslot');
+        return { i:i, z:z, cx:x, cy:TRAP.slotY + TRAP.slotH / 2, hw:TRAP.slotW / 2, hh:TRAP.slotH / 2, done:false };
+      });
+      var capL = TRAP.slotX[0] - TRAP.slotW / 2, capR = TRAP.slotX[1] + TRAP.slotW / 2;
+      addZone(B, capL, TRAP.capY, capR - capL, TRAP.capH, 'gcap', d.gTrapCapBase);
+      addZone(B, TRAP.slotX[2] - TRAP.slotW / 2 - 10, TRAP.capY, TRAP.slotW + 20, TRAP.capH, 'gcap', d.gTrapCapH);
+      trapTray(e).forEach(function(cd, j){
+        addPiece(B, { w:TRAP.cardW, h:TRAP.cardH, cx:TRAP.cardX[j], cy:TRAP.cardY, text:String(cd.v), cls:'gcard gnumcard', data:{ k:cd.k, v:cd.v } });
+      });
+      gCtx.hint2 = function(){ return (!slots[0].done || !slots[1].done) ? d.gTrap2Base(t, dd) : d.gTrap2H(h); };
+      useTapSelect(B, function(P, pt){
+        var sl = nearestOpen(slots, pt, TRAP.pad);
+        if (!sl) return false;
+        var bad = trapRefuse(sl.i, P.data.k);
+        if (bad){ roundMiss(sl.i < 2 ? d.gTrapNotBase(P.data.v, bad) : d.gTrapNotH(P.data.v, bad)); return false; }
+        sl.done = true;
+        sl.z.textContent = P.data.v;
+        sl.z.classList.add('filled');
+        P.lock(P.homeX, P.homeY);
+        P.el.style.visibility = 'hidden';
+        done++;
+        if (done === slots.length){ line.textContent = d.gTrapDoneNow(area); roundSolved(d.gTrapDone(t, dd, h)); }
+        else { line.textContent = d.gTrapNow(done); roundInfo(d.gTrapOk(P.data.v, P.data.k)); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 4 關：分一分（範例 4）—— 四張圖卡（三角形、平行四邊形、梯形，都標了底、高（虛線），平行四邊形另外標了斜邊），
+       分進「面積 A」「面積 2A」兩個箱子（左右相鄰，放寬之後會重疊：挑最近的箱子）。放錯彈回並把算式算給他看：
+       忘了除以 2 → 「別忘了除以 2」；平行四邊形除了 2 → 「平行四邊形不用除以 2」。放對 → 箱子裡寫出算式。
+       托盤洗牌後不可以已經是答案的排法。 */
+    sort: function(d){
+      var e = pick(GAME_SORT), A = e[0], done = 0;
+      var line = trailLine(d.gSortNow(0, e[1].length));
+      var B = makeBoard(GW, SORT_H);
+      var bins = [A, 2 * A].map(function(v, i){
+        addZone(B, SORT.binX[i], SORT.binY, SORT.binW, SORT.binH, 'gbin');
+        addZone(B, SORT.binX[i] + 4, SORT.binY + 4, SORT.binW - 8, SORT.lblH, 'gbinlbl', d.gBin(v));
+        return { v:v, i:i, n:0, cx:SORT.binX[i] + SORT.binW / 2, cy:SORT.binY + SORT.binH / 2, hw:SORT.binW / 2, hh:SORT.binH / 2, done:false };
+      });
+      var cards = sortTray(e).map(function(c, j){
+        return addPiece(B, { w:SORT.cardW, h:SORT.cardH, cx:SORT.trayX[j % 2], cy:SORT.trayY[Math.floor(j / 2)], cls:'gcard gshape', node:sortCardSvg(c),
+          label:d.gShapes[c[0]], data:{ c:c } });
+      });
+      gCtx.hint2 = function(){
+        for (var j = 0; j < cards.length; j++) if (!cards[j].locked){ var c = cards[j].data.c; return d.gSort2(sortFormula(c), sortArea(c)); }
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var bin = nearestOpen(bins, pt, SORT.pad);
+        if (!bin) return false;
+        var c = P.data.c, why = sortRefuse(c, bin.v), name = d.gShapes[c[0]];
+        if (why){ roundMiss(d.gSortBad(name, sortFormula(c), sortArea(c), bin.v, why)); return false; }
+        P.lock(P.homeX, P.homeY);
+        P.el.style.visibility = 'hidden';
+        addZone(B, bin.cx - SORT.chipW / 2, SORT.chipY[bin.n] - SORT.chipH / 2, SORT.chipW, SORT.chipH, 'gplaced', sortFormula(c));
+        bin.n++; done++;
+        line.textContent = d.gSortNow(done, cards.length);
+        if (done === cards.length) roundSolved(d.gSortDone);
+        else { roundInfo(d.gSortOk(name, sortFormula(c), sortArea(c))); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 5 關：拉高（範例 2 倒過來）—— 底 b 的三角形，上下拖橘色的頂點（拖的時候就吸到最近的橫格線、三角形跟著變）；
+       也可以點方格上的一條橫線、或按 ▼ ▲。畫面只寫「底、高」，不寫面積。移動永遠不算錯；按「就是這個」才判斷：
+       b × h ÷ 2 不是目標 → 算給他看、說比目標少還是多（停在「忘了除以 2」的那一個高，另外說那是平行四邊形的面積）。
+       同一個高再按一次不再扣分；頂點正被拖著時按「就是這個」不判斷。 */
+    pull: function(d){
+      var e = pick(GAME_PULL), b = e[0], a = e[1], A = e[2], U = PULL.U, hh = PULL.h0, lastBad = null, badSeen = {};
+      gCtx.ask.textContent = d.gAsks.pull(A);
+      var line = trailLine(d.gPullNow(b, hh));
+      var B = makeBoard(GW, PULL_H);
+      var svg = gSvg(B), ox = pullOx(b);
+      var px = function(x, y){ return { x:ox + x * U, y:pullY(y) }; };
+      gGrid(svg, px, 0, b, PULL.hMax);
+      var tri = svgEl('polygon', { fill:'#FDF0E0', stroke:'#E8871E', 'stroke-width':3, 'stroke-linejoin':'round' });
+      svg.appendChild(tri);
+      var dash = svgEl('line', { stroke:'#3B7DD8', 'stroke-width':2.5, 'stroke-dasharray':'6 5' });
+      svg.appendChild(dash);
+      var b0 = px(0, 0), b1 = px(b, 0);
+      var bLbl = gText(svg, 0, 0, b, { 'data-k':'b' }), hLbl = gText(svg, 0, 0, hh, { fill:'#3B7DD8', 'data-k':'h' });
+      var hLead = svgEl('line', { stroke:'#3B7DD8', 'stroke-width':1.5, 'class':'gleader', 'data-k':'h' }), scenes = {};   /* 高只有 1～2 格時的引線 */
+      function draw(){
+        var sc = scenes[hh] || (scenes[hh] = pullScene(b, a, hh)), top = sc.top, foot = sc.foot;   /* 每一個高只算一次（拖的時候不重算） */
+        tri.setAttribute('points', ptsAttr([b0, b1, top]));
+        dash.setAttribute('x1', top.x); dash.setAttribute('y1', top.y); dash.setAttribute('x2', foot.x); dash.setAttribute('y2', foot.y);
+        /* 標籤的位置每一個高都重算（pullScene）：斜邊、虛線、把手都碰不到 */
+        [bLbl, hLbl].forEach(function(el, i){ var at = lblAttrs(sc.labels[i]); el.setAttribute('x', at.x); el.setAttribute('y', at.y); });
+        var ld = sc.labels[1].leader;
+        if (ld){ hLead.setAttribute('x1', ld.a.x); hLead.setAttribute('y1', ld.a.y); hLead.setAttribute('x2', ld.b.x); hLead.setAttribute('y2', ld.b.y); if (!hLead.parentNode) svg.insertBefore(hLead, hLbl); }
+        else if (hLead.parentNode) svg.removeChild(hLead);
+        hLbl.textContent = hh;
+        line.textContent = d.gPullNow(b, hh);
+      }
+      var grip = addPiece(B, { w:GPICK, h:GPICK, cx:px(a, hh).x, cy:pullY(hh), cls:'ggrip', label:d.gPullUp + ' / ' + d.gPullDown,
+        axis:'y', snapY:function(y){ return pullY(pullH(y)); },
+        onPlace:function(P){ var nh = pullH(P.cy); if (nh !== hh){ hh = nh; draw(); } } });
+      function setH(v){
+        v = Math.max(PULL.hMin, Math.min(PULL.hMax, v));
+        if (gSolved) return;
+        grip.rehome(px(a, v).x, pullY(v));
+      }
+      B.onDrop = function(P){ P.rehome(P.cx, P.cy); return true; };   /* 放開：停在吸到的那一條線（不判斷） */
+      B.onBoardTap = function(pt){
+        if (pt.x < ox - U || pt.x > ox + b * U + U || pt.y < pullY(PULL.hMax) - U / 2 || pt.y > PULL.oy + U / 2) return;
+        setH(pullH(pt.y));
+      };
+      var row = actionRow();
+      var down = actionBtn(row, '▼', 'ghost', d.gPullDown), up = actionBtn(row, '▲', 'ghost', d.gPullUp), ok = actionBtn(row, d.gPullBtn, '');
+      down.addEventListener('click', function(){ setH(hh - 1); });
+      up.addEventListener('click', function(){ setH(hh + 1); });
+      ok.addEventListener('click', function(){
+        if (gSolved || grip.busy()) return;   /* 頂點正被拖著：等它放開再判斷 */
+        var bad = pullRefuse(b, hh, A);
+        if (bad){
+          /* 已經判過的高再按一次（不管中間試過別的）：不再扣分；不是剛剛那一個就把它的說明再說一次 */
+          if (badSeen[hh]){ if (lastBad !== hh){ lastBad = hh; roundAgain(d.gPullBad(b, hh, bad.x, A, bad.less, bad.forgot)); } return; }
+          badSeen[hh] = true; lastBad = hh;
+          roundMiss(d.gPullBad(b, hh, bad.x, A, bad.less, bad.forgot));
+          return;
+        }
+        grip.lock(grip.cx, grip.cy);
+        down.disabled = up.disabled = ok.disabled = true;
+        roundSolved(d.gPullDone(b, hh, A));
+      });
+      gCtx.hint2 = function(){ return d.gPull2(b, A); };
+      draw();
+    }
+  };
+
+  /* 第 4 關的圖卡：形狀照比例縮到卡片裡（一張卡自己一個比例），標出底、高（虛線＋直角記號）、平行四邊形的斜邊、梯形的上底 */
+  function sortCardSvg(c){
+    var sc = sortScene(c);
+    var col = { tri:['#FDF0E0', '#E8871E'], para:['#E3F4EB', '#2F9E69'], trap:['#E8F0FB', '#3B7DD8'] }[c[0]];
+    var s = svgEl('svg', { width:sc.W, height:sc.H, 'aria-hidden':'true' });
+    s.appendChild(svgEl('polygon', { points:ptsAttr(sc.pts), fill:col[0], stroke:col[1], 'stroke-width':2.5, 'stroke-linejoin':'round' }));
+    gHeight(s, sc.top, sc.foot, '#D64545', 6);
+    drawLabels(s, sc.labels, { h:'#D64545' }, { 'class':'gclbl' });
+    return s;
   }
 
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRoundIdx];
-    gFirstTry = true; gLocked = false;
-    elRound.textContent = gRoundIdx + 1;
-    elIcon.innerHTML = shapeIconSVG(round);
-    elPrompt.textContent = d.gPrompt(shapeName(round.type));
-    gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = shapeHint(round.type);
-    } else {
-      hintLevel = 0;
-      elHint.textContent = '';
-    }
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {}; gGen++; BOARD_TAP = null; PIECE_PTR = {};   /* 上一關沒收尾的手指不帶到下一關 */
+    elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-    gOpts.textContent = '';
-    round.opts.forEach(function(val, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = val;
-      b.addEventListener('click', function(){
-        if (gLocked) return;
-        var good = (oi === round.ans);
-        if (good){
-          gLocked = true;
-          var all = gOpts.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gFirstTry){
-            gScore += 30;
-            gMsg.innerHTML = '<span class="yes">' + L().gCorrectFirst(round.area) + '</span>';
-          } else {
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + L().gCorrect(round.area) + '</span>';
-          }
-          elScore.textContent = gScore;
-          if (gRoundIdx === ROUNDS.length - 1){
-            gMsg.innerHTML += '<br><span class="yes">' + L().gWin(gScore) + '</span>';
-            gNext.disabled = true;
-          } else {
-            gMsg.innerHTML += '<br>' + L().gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gFirstTry = false;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gScore = Math.max(0, gScore - 5);
-          elScore.textContent = gScore;
-          gMsg.innerHTML = '<span class="no">' + L().gWrong(val) + '</span>';
-        }
-      });
-      gOpts.appendChild(b);
-    });
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = typeof d.gAsks[type] === 'string' ? d.gAsks[type] : '';
+    gameStage.appendChild(ask);
+    gCtx.ask = ask;
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRoundIdx = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕），第二層跟著畫面走 */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
-    if (gRoundIdx < ROUNDS.length - 1){ gRoundIdx++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
-
   gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2) return;
     hintLevel++;
-    var round = ROUNDS[gRoundIdx];
-    if (hintLevel === 1){
-      elHint.textContent = shapeHint(round.type);
-    } else {
-      elHint.textContent = shapeHint2(round);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
