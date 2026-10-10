@@ -230,24 +230,39 @@
     var n = Number(v);
     return (v === '' || isNaN(n)) ? 'S' + String(v) : 'N' + n;
   }
-  function makeWrongs(correct, candidates){
+  /* 正解的鄰居：用整數（以正解的最後一位為單位）加減，不用浮點數、也不用字串相加 ——
+     舊版寫 correct - step／correct + step：'12' + 1 會變成 '121'，0.3 − 1 會變成負數，0.13 − 0.01 會變成 0.1200000000000001。
+     負數不出（回傳 null）。 */
+  function decStep(v, k){
+    var s = String(v), at = s.indexOf('.'), dp = at < 0 ? 0 : s.length - at - 1;
+    var t = Number(s.replace('.', '')) + k;
+    if (t < 0) return null;
+    var r = String(t);
+    if (dp === 0) return r;
+    while (r.length <= dp) r = '0' + r;
+    return r.slice(0, r.length - dp) + '.' + r.slice(r.length - dp);
+  }
+  /* §六之三第 4 點：avoid 是題幹裡印出來的數，先當成「用過」—— 誘答不可以把它們抄回去（刻意的迷思誘答直接放在 candidates）。 */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[dedupKey(correct)] = true;
+    (avoid || []).forEach(function(a){ seen[dedupKey(a)] = true; });
     (candidates || []).forEach(function(c){
       var key = dedupKey(c);
       if (!seen[key]){ seen[key] = true; out.push(c); }
     });
     var step = 1;
     while (out.length < 3 && step < 50){
-      var lo = correct - step, hi = correct + step;
-      if (!seen[dedupKey(lo)]){ seen[dedupKey(lo)] = true; out.push(lo); }
-      if (out.length < 3 && !seen[dedupKey(hi)]){ seen[dedupKey(hi)] = true; out.push(hi); }
+      [-step, step].forEach(function(k){
+        var c = decStep(correct, k);
+        if (out.length < 3 && c !== null && !seen[dedupKey(c)]){ seen[dedupKey(c)] = true; out.push(c); }
+      });
       step++;
     }
     return out.slice(0, 3);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -329,8 +344,8 @@
           stem: lang === 'zh' ? '把 ' + d.numStr + ' 四捨五入到小數第一位，答案是多少？（注意會不會進位到整數）' : 'Round ' + d.numStr + ' to the first decimal place. (Watch out for a carry into the whole number!)',
           opts: d.opts, ans: d.ans,
           why: lang === 'zh'
-            ? '小數點後第二位滿 5，9 要進位，進位後往前推到整數位，答案是 ' + d.correct + '，要記得留一位小數。'
-            : 'The 2nd decimal digit is 5 or more, so the 9 carries into the whole-number place — the answer is ' + d.correct + ', keeping one decimal place.'
+            ? '小數點後第二位是 ' + d.numStr.slice(-1) + '，滿 5 要進位：9 進位後往前推到整數位，答案是 ' + d.correct + '，要記得留一位小數。'
+            : 'The 2nd decimal digit is ' + d.numStr.slice(-1) + ', which is 5 or more, so the 9 carries into the whole-number place — the answer is ' + d.correct + ', keeping one decimal place.'
         };
       } },
     /* E. 無條件進位文字題 */
@@ -340,7 +355,7 @@
         var boxSize = pick([12, 15, 18, 20, 25]);
         var boxes = Math.floor(total / boxSize) + (total % boxSize === 0 ? 0 : 1);
         var wrongFloor = Math.floor(total / boxSize);
-        var m = mixOpts(boxes, [wrongFloor, boxes + 1, total]);
+        var m = mixOpts(boxes, [wrongFloor, boxes + 1], [total, boxSize]);
         return { total:total, boxSize:boxSize, boxes:boxes, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -359,7 +374,8 @@
       make: function(used){
         var intPart = pickUnused([4,5,6,7,8,9,10,11,12], used);
         var frac = randDigit() + '' + randDigit();
-        while (frac === '00') frac = randDigit() + '' + randDigit();
+        /* 剩下的那兩位不可以是 00（就沒有剩），也不可以剛好印成和誘答（段數附近 ±3）一樣的數 —— 10.11 的「11」會被當成抄題幹 */
+        while (frac === '00' || Math.abs(Number(frac) - intPart) <= 3) frac = randDigit() + '' + randDigit();
         var lenStr = intPart + '.' + frac;
         var pieces = intPart;
         var m = mixOpts(pieces, [pieces + 1, Number(roundDecimalStr(lenStr, 0)), pieces - 1 < 0 ? pieces : pieces - 1]);
@@ -385,7 +401,9 @@
         var aStr = a + '.' + aFrac;
         var aRounded = Number(roundDecimalStr(aStr, 0));
         var correct = aRounded * b;
-        var m = mixOpts(correct, [a * b, correct + b, correct - b]);
+        /* 題幹印出來的數（a、小數部分、b）不可以當誘答：3.9 × 3 的「只乘整數部分」剛好是 9 —— 換一組 */
+        if ([a * b, correct + b, correct - b].some(function(v){ return v === aFrac || v === b || v === a; })) return this.make(used);
+        var m = mixOpts(correct, [a * b, correct + b, correct - b], [a, aFrac, b]);
         return { aStr:aStr, b:b, aRounded:aRounded, correct:correct, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -402,11 +420,16 @@
       make: function(used){
         var place = pick([0, 1, 2]);
         var intPart = pickUnused([3,5,8,12,17,24,9,6], used);
-        var d1 = randDigit(), d2 = randDigit(), d3 = randDigit();
-        var numStr = intPart + '.' + d1 + d2 + d3;
-        var lookDigit = place === 0 ? d1 : (place === 1 ? d2 : d3);
-        var pool = [d1, d2, d3].filter(function(x){ return x !== lookDigit; });
-        var m = mixOpts(lookDigit, pool.length ? pool : [((lookDigit + 3) % 10), ((lookDigit + 7) % 10)]);
+        /* 決定的那一位在整個數裡只出現一次：不然選「同一個數字、別的位」的孩子也會被判對 */
+        var d1, d2, d3, numStr, lookDigit;
+        do {
+          d1 = randDigit(); d2 = randDigit(); d3 = randDigit();
+          numStr = intPart + '.' + d1 + d2 + d3;
+          lookDigit = place === 0 ? d1 : (place === 1 ? d2 : d3);
+        } while (numStr.replace('.', '').split(String(lookDigit)).length !== 2);
+        /* 誘答先用這個數裡別的數字（看錯位的迷思），不夠再補 0～9 裡的數字 —— 不會補出 −1 或 10 */
+        var pool = numStr.replace('.', '').split('').map(Number).filter(function(x){ return x !== lookDigit; });
+        var m = mixOpts(lookDigit, pool.concat([(lookDigit + 3) % 10, (lookDigit + 7) % 10, (lookDigit + 5) % 10]));
         return { numStr:numStr, place:place, lookDigit:lookDigit, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -428,9 +451,10 @@
         var nums = [];
         var total = 0;
         for (var i = 0; i < n - 1; i++){ var dv = rand(7) - 3; nums.push(avg + dv); total += dv; }
-        nums.push(avg - total);
+        nums.push(avg - total);   /* avg ≥ 6、total 最多 ±9：最後一個數可能 ≤ 0 —— 換一組 */
+        if (nums[nums.length - 1] < 1) return this.make(used);
         var s = nums.reduce(function(a,b){ return a+b; }, 0);
-        var m = mixOpts(avg, [avg - 1, avg + 1, s]);
+        var m = mixOpts(avg, [avg - 1, avg + 1, s], nums);
         return { nums:nums, n:n, sum:s, avg:avg, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -468,7 +492,7 @@
         var base = pickUnused([20, 40, 60, 80, 120, 160, 200], used);
         var pct = pick([5, 10, 20, 25, 50]);
         var val = base * pct / 100;
-        var m = mixOpts(val, [val * 2, val / 2 === Math.floor(val / 2) ? val / 2 : val - 1, base]);
+        var m = mixOpts(val, [val * 2, val / 2 === Math.floor(val / 2) ? val / 2 : val - 1], [base, pct]);
         return { base:base, pct:pct, val:val, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
