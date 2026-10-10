@@ -204,6 +204,20 @@
     var fracStr = (frac < 10 ? '0' : '') + frac;
     return sign + whole + '.' + fracStr;
   }
+  /* 誘答：依序從候選裡挑 3 個 —— 不等於正解、彼此不同值、而且不是題幹上的數（§六之三第 4 點的 avoid）。
+     avoid 是題幹裡看得到的每一串數字（小數點兩邊分開算：2.5 → 2、5），抄回來的數字孩子一眼就會挑。 */
+  function pickWrongs(correct, cands, avoid){
+    var out = [];
+    cands.forEach(function(c){
+      if (out.length >= 3) return;
+      var v = Number(c);
+      if (v === Number(correct) || avoid.indexOf(String(c)) >= 0) return;
+      if (out.some(function(o){ return Number(o) === v; })) return;
+      out.push(String(c));
+    });
+    return out;
+  }
+  function stemDigits(){ var a = []; for (var i = 0; i < arguments.length; i++) a = a.concat(String(arguments[i]).match(/\d+/g) || []); return a; }
   /* 純小數（<1）補成兩位小數顯示用，例如 6 -> '0.60' */
   function pad2(h){ return '0.' + (h < 10 ? '0' + h : String(h)); }
   /* 選一張夠大的鈔票；順便避開「找的錢剛好等於商品總價」的巧合（避免選項重複） */
@@ -224,7 +238,7 @@
         var n = 2 + rand(5);
         var prod = t * n;
         var correct = fmtTenths(prod);
-        var wrongs = [ String(prod), fmtHundredths(prod), fmtTenths(prod + n) ];
+        var wrongs = pickWrongs(correct, [ String(prod), fmtHundredths(prod), fmtTenths(prod + n), fmtTenths(prod - n), fmtTenths(prod + 10), fmtTenths(prod + 2 * n) ], stemDigits(fmtTenths(t), n));
         var m = mixOpts(correct, wrongs);
         return { t:t, n:n, prod:prod, opts:m.opts, ans:m.ans };
       },
@@ -244,7 +258,7 @@
         var q = 11 + rand(8);
         var t = q * n;
         var correct = fmtTenths(q);
-        var wrongs = [ String(q), fmtHundredths(q), fmtTenths(q + n) ];
+        var wrongs = pickWrongs(correct, [ String(q), fmtHundredths(q), fmtTenths(q + n), fmtTenths(q + 10), fmtTenths(q - 1), fmtTenths(q + 1) ], stemDigits(fmtTenths(t), n));
         var m = mixOpts(correct, wrongs);
         return { t:t, n:n, q:q, opts:m.opts, ans:m.ans };
       },
@@ -264,7 +278,7 @@
         var n = 2 + rand(5);
         var prod = t * n;
         var correct = fmtTenths(prod);
-        var wrongs = [ String(prod), fmtHundredths(prod), fmtTenths(prod - n) ];
+        var wrongs = pickWrongs(correct, [ String(prod), fmtHundredths(prod), fmtTenths(prod - n), fmtTenths(prod + n), fmtTenths(prod + 10), fmtTenths(prod - 10) ], stemDigits(fmtTenths(t), n));
         var m = mixOpts(correct, wrongs);
         return { t:t, n:n, prod:prod, opts:m.opts, ans:m.ans };
       },
@@ -285,9 +299,11 @@
         var n = 2 + rand(3);
         var total = t * n;
         var P = pickBank(total);
+        /* 找的錢剛好等於一枝筆的價錢（12.5 × 3，付 50 → 找 12.5）：正解就是題幹上的數，換一張鈔票（codex 第一輪） */
+        if (P * 10 - total === t) P = P * 2;
         var change = P * 10 - total;
         var correct = fmtTenths(change);
-        var wrongs = [ fmtTenths(total), String(change), fmtTenths(change + n) ];
+        var wrongs = pickWrongs(correct, [ fmtTenths(total), String(change), fmtTenths(change + n), fmtTenths(change - n), fmtTenths(change + 10), fmtTenths(change - 10) ], stemDigits(fmtTenths(t), n, P));
         var m = mixOpts(correct, wrongs);
         return { t:t, n:n, total:total, P:P, change:change, opts:m.opts, ans:m.ans };
       },
