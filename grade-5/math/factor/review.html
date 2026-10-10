@@ -357,7 +357,12 @@
         var k = pickUnused([3,4,6,7,8,9], used);
         var range = pick([30, 50]);
         var c = Math.floor(range / k);
-        var m = mixOpts(c, [c - 1, c + 1, c + 2]);
+        /* 誘答不可以把題幹的數字抄回來（§六之三第 4 點）：k = 6、1～30 時 c + 1 就是 6，k = 8、1～50 時 c + 2 就是 8 */
+        var wrongs = [];
+        [c - 1, c + 1, c + 2, c + 3, c - 2].forEach(function(v){
+          if (wrongs.length < 3 && v > 0 && v !== c && v !== k && v !== range && v !== 1 && wrongs.indexOf(v) < 0) wrongs.push(v);
+        });
+        var m = mixOpts(c, wrongs);
         return { k:k, range:range, c:c, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -395,11 +400,18 @@
     { id:'concept', cat:'factor',
       make: function(used){
         var v = pickUnused(['prime', 'one', 'square', 'wrongSent'], used);
-        var d = { v:v };
+        /* 選項的順序每一批洗一次（兩種語言同一個順序）：以前正解永遠在第二個（錯的那一句永遠在第三個） */
+        var d = { v:v, order:shuffle([0, 1, 2, 3]) };
         if (v === 'square') d.n = pick([25, 36, 49]);
         return d;
       },
       fmt: function(d, lang){
+        var q = conceptBase(d, lang);
+        return { stem:q.stem, opts:d.order.map(function(i){ return q.opts[i]; }), ans:d.order.indexOf(q.ans), why:q.why };
+      } }
+  ];
+  /* concept 題的四個選項（還沒洗牌；ans 是正解在這裡的位置） */
+  function conceptBase(d, lang){
         if (d.v === 'prime'){
           var u = lang === 'zh' ? ' 個' : '';
           return {
@@ -429,15 +441,14 @@
         return {
           stem: lang === 'zh' ? '下面哪一句是錯的？' : 'Which sentence is WRONG?',
           opts: lang === 'zh'
-            ? ['8 是 24 的因數','24 是 8 的倍數','8 的因數包含 24','24 的因數包含 8']
+            ? ['8 是 24 的因數','24 是 8 的倍數','8 的因數包含 24','8 是自己的因數']
             : ['8 is a factor of 24','24 is a multiple of 8','24 is a factor of 8','8 is a factor of itself'],
           ans: 2,
           why: lang === 'zh'
             ? '因數不會比自己大 —— 8 的因數最大就是 8，不可能包含 24。'
             : 'A factor is never bigger than the number — 24 cannot be a factor of 8.'
         };
-      } }
-  ];
+  }
 
   /* ---------- 出一批 12 題：10 種題型各一題＋隨機 2 題（數字不重複） ---------- */
   function makePlan(){
