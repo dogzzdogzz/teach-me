@@ -185,11 +185,12 @@
     }
     return a;
   }
-  /* 把選項值＋正解洗牌，回傳 {opts, ans} */
-  function mixOpts(correct, wrongs){
+  /* 把選項值＋正解洗牌，回傳 {opts, ans}。wrongs 依序挑前三個「不等於正解、彼此不同、不在 avoid 裡」的值 ——
+     avoid 放題幹裡的數字（§六之三第 4 點：誘答不可以把題幹的數字抄回來），所以 wrongs 要多給幾個備用的 */
+  function mixOpts(correct, wrongs, avoid){
     var uniqWrongs = [];
     wrongs.forEach(function(w){
-      if (w !== correct && uniqWrongs.indexOf(w) < 0) uniqWrongs.push(w);
+      if (w >= 1 && w !== correct && uniqWrongs.indexOf(w) < 0 && (avoid || []).indexOf(w) < 0) uniqWrongs.push(w);
     });
     var opts = shuffle([correct].concat(uniqWrongs.slice(0, 3)));
     return { opts: opts, ans: opts.indexOf(correct) };
@@ -226,7 +227,8 @@
       make: function(used){
         var e = pickUnused([2,3,4,5,6,7,8], used);
         var v = e * e * e;
-        var m = mixOpts(v, [e * 3, e * e, e * 4, e * e * (e - 1)]);
+        /* e ＝ 2 時 e × 4 ＝ 8 就是正解、e × e 與 e × e × (e − 1) 都是 4 —— 多給一個備用的 e × e × (e ＋ 1) */
+        var m = mixOpts(v, [e * 3, e * e, e * 4, e * e * (e - 1), e * e * (e + 1)], [e]);
         return { e:e, v:v, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -236,8 +238,8 @@
           opts: d.opts.map(function(v){ return v + ' ' + unit; }),
           ans: d.ans,
           why: lang === 'zh'
-            ? '邊 × 邊 × 邊 = ' + d.e + ' × ' + d.e + ' × ' + d.e + ' = ' + d.v + '（立方公分），要連乘三次，不是邊長 × 3。'
-            : 'Edge × Edge × Edge = ' + d.e + ' × ' + d.e + ' × ' + d.e + ' = ' + d.v + ' (cubic cm) — multiply by itself three times, not edge × 3.'
+            ? '邊 × 邊 × 邊 = ' + d.e + ' × ' + d.e + ' × ' + d.e + ' = ' + d.v + '（立方公分），要把三個邊長連乘，不是邊長 × 3。'
+            : 'Edge × Edge × Edge = ' + d.e + ' × ' + d.e + ' × ' + d.e + ' = ' + d.v + ' (cubic cm) — multiply three edges together, not edge × 3.'
         };
       } },
     /* 3. 已知體積和兩邊，逆求第三邊 */
@@ -248,7 +250,8 @@
         var key = pickUnused(keys, used);
         var p = POOL[keys.indexOf(key)];
         var l = p[0], w = p[1], h = p[2], v = l * w * h;
-        var m = mixOpts(h, [h + 1, Math.max(1, h - 1), l * w]);
+        /* l × w 是刻意的迷思（把「一層幾塊」當成高）；h ± 1 會撞到題幹的長或寬時改用 h ＋ 2、h ＋ 3 */
+        var m = mixOpts(h, [h + 1, h - 1, l * w, h + 2, h + 3], [l, w]);
         return { l:l, w:w, h:h, v:v, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -279,7 +282,8 @@
         var key = pickUnused(keys, used);
         var p = POOL[keys.indexOf(key)];
         var cm3 = p.l * p.w * p.h;
-        var m = mixOpts(p.liters, [p.liters * 10, Math.max(1, Math.floor(p.liters / 10)), p.liters + 2]);
+        /* 1 公升時 floor(1 ÷ 10) 的保底 1 就是正解；乘 10、加幾也會撞到題幹的長寬高 —— 多給幾個備用的，題幹的數字不收 */
+        var m = mixOpts(p.liters, [p.liters * 10, Math.floor(p.liters / 10), p.liters + 2, p.liters + 1, p.liters + 3, p.liters + 4], [p.l, p.w, p.h]);
         return { l:p.l, w:p.w, h:p.h, cm3:cm3, liters:p.liters, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -344,7 +348,8 @@
         var key = pickUnused(keys, used);
         var p = POOL[keys.indexOf(key)];
         var l = p[0], w = p[1], a = l * w;
-        var m = mixOpts(a, [l + w, a + l, (l + 1) * w]);
+        /* 正方形（4 × 4）時 a ＋ l 和 (l ＋ 1) × w 一樣 —— 多給一個「算成周長」的 2 × (l ＋ w) */
+        var m = mixOpts(a, [l + w, a + l, (l + 1) * w, 2 * (l + w), a + 1], [l, w]);
         return { l:l, w:w, a:a, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
