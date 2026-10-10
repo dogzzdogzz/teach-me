@@ -133,6 +133,47 @@
   .stepdots{display:flex;gap:6px;margin-left:4px}
   .stepdot{width:8px;height:8px;border-radius:50%;background:var(--line)}
   .stepdot.on{background:var(--green)}
+
+  /* --- 小遊戲「準時出發」：點與段、滿 60 進位、一天一天疊起來、把時間平分、排一排（§六之五） --- */
+  .game .stats{justify-content:center}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div, .gboard > button{position:absolute}
+  .gsvg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gpiece svg{pointer-events:none;overflow:visible}
+  /* 卡片 */
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-size:20px;line-height:1.2;font-weight:800;color:var(--ink);text-align:center;white-space:nowrap}
+  .gclock{border-color:var(--blue)}
+  /* 放卡片的格子：空的時候寫著它要放什麼（淡色），放好了換成那張卡的字 */
+  .gslot{display:flex;align-items:center;justify-content:center;border:3px dashed var(--blue);border-radius:10px;background:var(--blue-soft);
+    font-size:20px;line-height:1.2;font-weight:800;color:var(--blue);pointer-events:none;white-space:nowrap}
+  .gslot.gph{font-size:15px;font-weight:700;color:var(--muted)}
+  .gslot.filled{border-style:solid;border-color:var(--green);background:var(--green-soft);color:var(--green);font-size:20px;font-weight:800}
+  .gsym{display:flex;align-items:center;padding:0 3px;font-size:19px;line-height:1.2;font-weight:800;color:var(--ink);pointer-events:none;white-space:nowrap}
+  .gcap{display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--muted);pointer-events:none;white-space:nowrap;line-height:1.2}
+  /* 第 4 關：拖每一份長度的圓點 */
+  .ggrip{background:var(--card);border:3px solid var(--orange);border-radius:50%;font-size:18px;font-weight:800;color:var(--orange)}
+  .ggrip.sel{border-radius:50%}
+  /* 提示／下一關／重新開始 在 375px 手機上一排放得下，不要把「下一關」折成兩行 */
+  .game .btnrow{gap:8px}
+  .game .btnrow .btn{white-space:nowrap;padding:10px 12px;font-size:16px}
+  .gaction{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
+  .gaction .btn{min-height:48px;min-width:48px}
+  /* 第 2 關：兩格輸入框 */
+  .gnum{width:68px;height:48px;font-size:22px;font-weight:800;text-align:center;border:3px solid var(--blue);border-radius:10px;color:var(--ink);background:var(--card)}
+  .gnum:disabled{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gunit{font-size:20px;font-weight:800}
+  .gnote{color:var(--muted)}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
 </style>
 </head>
 <body>
@@ -248,19 +289,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">準時出發</h2>
-    <p class="lead" data-i18n="s6lead">看清楚時間，選出正確答案。答對愈快，分數愈高！</p>
+    <p class="lead" data-i18n="s6lead">點與段、滿 60 進位、一天一天疊起來、把時間平分、由短排到長 —— 五關五種玩法，練的都是上面的範例：<strong>時刻和時間量、60 進位、時間量的乘和除</strong>。放錯會扣分，但不會出局 —— 想清楚比手快重要。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <p class="target" id="gAskLine">
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px;margin-left:0" data-i18n="gHintBtn">💡 提示</button>
-      </p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="opts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -305,13 +344,146 @@
   var MUL_EXAMPLES = [ {h:1,m:25,days:5}, {h:2,m:15,days:3} ];
   var DIV_EXAMPLE = { h:3, m:20, parts:4 };
 
-  var ROUNDS = [
-    { correct:{h:1,m:15}, choices:[{h:1,m:15},{h:0,m:75,f:true},{h:1,m:5},{h:1,m:25},{h:5,m:15}] },
-    { correct:{h:0,m:40}, choices:[{h:0,m:40},{h:0,m:160},{h:4,m:0,f:true},{h:1,m:40},{h:0,m:4}] },
-    { correct:{h:0,m:56}, choices:[{h:0,m:56},{h:0,m:48},{h:0,m:65},{h:0,m:15},{h:1,m:4}] },
-    { correct:{h:2,m:35}, choices:[{h:2,m:35},{h:2,m:5},{h:1,m:35},{h:5,m:10},{h:3,m:5}] },
-    { correct:{h:4,m:30}, choices:[{h:4,m:30},{h:0,m:240},{h:4,m:50},{h:3,m:30},{h:2,m:70,f:true}] }
+  /* ============ 小遊戲「準時出發」的題庫與版面（語言無關；tools/checks/grade-5-time.js 直接讀這一段） ============
+     五關五種玩法，每一關的操作本身就是那個概念：
+       span  點與段（範例 1）：線上畫一段活動。開始、結束兩個「時刻」放到線上的兩個點，「經過多久」放到那一段 ——
+             時刻是一個點，時間量是一段長度。多一張只數整點的錯卡（3:40 到 5:20 數成 2 時）。
+       carry 滿 60 進 1 時（範例 2）：a 分 ＋ b 分 畫成尺上接在一起的兩段，在兩格輸入框打出幾時幾分；分不可以 ≥ 60。
+       times 一天一天疊起來（範例 3）：分和時分開乘；數字卡放進「A 分 ＝ □ 時 □ 分」與「時的總數」。
+             錯卡是三種迷思：把 100 分當 1 時（A ＝ 100 ＋ …）、忘了加進位（只算 h × n）。
+       share 把時間平分（範例 4）：左右拖橘色圓點拉出「一份」的長度（拖的時候就吸到每 5 分、讀數跟著變），
+             按「就是這個」才判斷 —— n 份要剛好排滿整段時間。忘了借位、把 3 時 20 分 當成 320 分，各多一句。
+       rank  先統一成分再比（範例 2～4、頁尾那一句）：四段時間（有的寫「幾分」、有的寫「幾時幾分」）由短排到長。
+     每一關「收不收、為什麼不收」都是這裡的純函式，畫面只負責呼叫 —— 設定檔可以直接跑。
+     座標一律是畫板座標（px，y 往下），畫板寬一律 GW；時間一律用「分鐘數」。 */
+  var GAME_ORDER = ['span', 'carry', 'times', 'share', 'rank'];
+  var GW = 300;
+  var GPICK = 48;   /* 拿得起來的東西最小 48 ×（畫板縮放 ≥ 0.92 時，手機上仍 ≥ 44px） */
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  /* 托盤洗牌之後，不可以剛好已經是答案的排法（inOrder 說是）：那樣就把前兩張對調 */
+  function unsorted(list, inOrder){
+    var t = shuffle(list);
+    if (inOrder(t)){ var x = t[0]; t[0] = t[1]; t[1] = x; }
+    return t;
+  }
+
+  /* ---- 第 1 關 span：點與段 ----
+     [H0, s, e]：尺從 H0:00 畫到 (H0 ＋ 3):00，每 10 分一個刻度、整點寫時刻；活動從 H0:00 之後 s 分開始、e 分結束。
+     開始和結束都不在整點上、分都是 20／30／40（離整點的標籤 ≥ 30px，虛線不會穿過標籤），
+     結束的分比開始的分小（跨過整點要「借」），所以只數整點的錯卡（spanDecoy）一定不是答案；經過至少 50 分（兩個點的格子不重疊）。 */
+  var GAME_SPAN = [[3, 40, 140], [8, 40, 90], [1, 30, 140], [6, 30, 80], [9, 40, 140], [2, 40, 150]];
+  var SPAN = { x0:24, ppm:1.4, len:180, ry:150, boxW:64, boxH:46, boxY:22, durW:124, durY:186, cardW:124, cardH:48, cardX:[77, 223], cardY:[262, 316], pad:12 };
+  var SPAN_H = 344;
+  function spanX(t){ return SPAN.x0 + t * SPAN.ppm; }
+  /* 只數經過了幾個整點的標籤（3:40 → 5:20 經過 4:00、5:00，數成 2 時）—— 一個常見的錯 */
+  function spanDecoy(s, e){ return (Math.floor(e / 60) - Math.floor(s / 60)) * 60; }
+  /* 三個放卡片的地方。box 是畫出來的格子；判斷放進哪一格用的是孩子「看得到的那個目標」（zones，每一塊 cx, cy, hw, hh）：
+       點 ＝ 上面的格子，連同往下指到線上那一點的虛線與那一點（左右各 pin 寬）；
+       段 ＝ 線上的那一段長條（扣掉兩端的點），連同下面的括號與格子。
+     兩種範圍互不重疊；放寬（pad）之後重疊的地方，由 nearestOpen() 挑比較近的那一塊。 */
+  var SPAN_PIN = 8;
+  function spanSlots(s, e){
+    var top = SPAN.ry - 9, bot = SPAN.ry + 9, low = SPAN.ry + 14, end = SPAN.durY + SPAN.boxH, mid = (spanX(s) + spanX(e)) / 2;
+    var rect = function(l, t, r, b){ return { cx:(l + r) / 2, cy:(t + b) / 2, hw:(r - l) / 2, hh:(b - t) / 2 }; };
+    var out = [s, e].map(function(t, i){
+      var x = spanX(t);
+      return { k:i ? 'end' : 'start', t:t, bx:x - SPAN.boxW / 2, by:SPAN.boxY, bw:SPAN.boxW, bh:SPAN.boxH,
+               zones:[rect(x - SPAN.boxW / 2, SPAN.boxY, x + SPAN.boxW / 2, SPAN.boxY + SPAN.boxH), rect(x - SPAN_PIN, SPAN.boxY + SPAN.boxH, x + SPAN_PIN, low)] };
+    });
+    var l = spanX(s) + SPAN_PIN, r = spanX(e) - SPAN_PIN;
+    out.push({ k:'span', t:e - s, bx:mid - SPAN.durW / 2, by:SPAN.durY, bw:SPAN.durW, bh:SPAN.boxH,
+               zones:[rect(l, top, r, bot), rect(Math.min(l, mid - SPAN.durW / 2), low, Math.max(r, mid + SPAN.durW / 2), end)] });
+    return out;
+  }
+  /* 從開始數到結束：先數到下一個整點、再數整整幾時、最後數剩下的分（開始和結束都不在整點上） */
+  function spanParts(s, e){
+    var a = Math.ceil(s / 60) * 60, b = Math.floor(e / 60) * 60, out = [[s, a]];
+    if (b > a) out.push([a, b]);
+    out.push([b, e]);
+    return out;
+  }
+  function spanCards(s, e){ return [{ k:'clock', t:s }, { k:'clock', t:e }, { k:'dur', t:e - s }, { k:'dur', t:spanDecoy(s, e) }]; }
+  /* 托盤的「答案排法」：前三張剛好是開始、結束、經過多久 */
+  function spanInOrder(list){ return list[0].k === 'clock' && list[1].k === 'clock' && list[0].t < list[1].t && list[2].k === 'dur' && list[2].t === list[1].t - list[0].t; }
+  /* 收不收：時刻只進點、而且是那一點；時間量只進那一段、而且是那一段的長度 */
+  function spanRefuse(s, e, slotK, card){
+    if (slotK === 'span') return card.k === 'clock' ? 'clockOnSpan' : (card.t !== e - s ? 'badDur' : null);
+    if (card.k === 'dur') return 'durOnPoint';
+    return card.t !== (slotK === 'start' ? s : e) ? 'otherPoint' : null;
+  }
+
+  /* ---- 第 2 關 carry：a 分 ＋ b 分，加起來在 60～120 之間（一定滿 60、只進 1 時，分不是 0） ---- */
+  var GAME_CARRY = [[45, 30], [20, 50], [55, 25], [50, 45], [55, 30], [40, 50]];
+  var CARRY = { x0:20, ppm:260 / 120, len:120, barY:40, barH:22, ry:84 };
+  var CARRY_H = 116;
+  function carryX(t){ return CARRY.x0 + t * CARRY.ppm; }
+  /* 輸入框只收寫法正常的整數（可以前後有空白）；其他一律回傳 null —— 只提醒、不算錯 */
+  function readInt(s){ var t = String(s).trim(); return /^(0|[1-9]\d{0,2})$/.test(t) ? +t : null; }
+  function carryRefuse(A, h, m){ return m >= 60 ? 'over' : (h * 60 + m !== A ? 'value' : null); }
+
+  /* ---- 第 3 關 times：[h, m, n] 每天 h 時 m 分、連續 n 天。分的積 A 在 120～179（進 2 時），
+     六張卡（進位的時 c、剩下的分 r、時的總數 H、十進位的拆法 c10／r10、忘了加進位的 H0）兩兩不同 ---- */
+  var GAME_TIMES = [[2, 25, 5], [1, 35, 4], [1, 45, 3], [2, 40, 4], [1, 50, 3], [1, 55, 3]];
+  var TIMES = { slotW:52, slotH:46, row1:26, row2:78, row3:132, row4:176, slots:{ c:140, r:220, H:156 }, cardW:84, cardH:48, cardX:[52, 150, 248], cardY:[252, 306], pad:20 };
+  var TIMES_H = 340;
+  /* 畫板上的字（不接指標）：x、寬、y 中心；align 是字靠哪一邊 */
+  var TIMES_SYMS = [{ id:'A', x:2, w:110, y:78, align:'flex-end' }, { id:'h1', x:168, w:24, y:78, align:'center' }, { id:'m1', x:248, w:50, y:78, align:'flex-start' },
+                    { id:'eq', x:96, w:30, y:176, align:'center' }, { id:'h2', x:184, w:50, y:176, align:'flex-start' }];
+  function timesParts(h, m, n){
+    var A = m * n;
+    return { A:A, c:Math.floor(A / 60), r:A % 60, H0:h * n, H:h * n + Math.floor(A / 60), c10:Math.floor(A / 100), r10:A % 100 };
+  }
+  function timesCards(h, m, n){
+    var p = timesParts(h, m, n);
+    return [{ k:'c', v:p.c }, { k:'r', v:p.r }, { k:'H', v:p.H }, { k:'c10', v:p.c10 }, { k:'r10', v:p.r10 }, { k:'H0', v:p.H0 }];
+  }
+  function timesInOrder(list){ return list[0].k === 'c' && list[1].k === 'r' && list[2].k === 'H'; }
+  /* 每一格只收自己的那一張：c 格收進位的時、r 格收剩下的分、H 格收時的總數 */
+  function timesRefuse(slotK, card){ return card.k === slotK ? null : card.k; }
+
+  /* ---- 第 4 關 share：[h, m, n] 把 h 時 m 分平分成 n 份。每一份是 5 的倍數（拖的時候每 5 分吸一格）；
+     h 不是 n 的倍數（要借位）、m 是 n 的倍數；兩種迷思的那一份 ——「忘了借位」floor(h ÷ n) × 60 ＋ m ÷ n、「當成 100h ＋ m 分」(100h ＋ m) ÷ n ——
+     都是 5 的倍數、不超過整段（拖得到，那兩句說明才看得到）。n ＝ 3、5 做不到這兩件事（算過），所以只用 n ＝ 2、4。整段時間不是整點（尺的最右邊沒有標籤）。 ---- */
+  var GAME_SHARE = [[3, 20, 4], [2, 40, 4], [3, 30, 2], [1, 40, 2], [3, 20, 2], [1, 50, 2]];
+  /* 由上往下：整段時間（灰）、一份（橘，n 份按「就是這個」之後接著畫）、拖的圓點（掛在橘色那一段的右端下面，不蓋住它）、尺 */
+  var SHARE = { x0:30, w:240, totY:30, totH:22, rowY:62, rowH:22, gripY:110, ry:146, step:5, band:[24, 184] };
+  var SHARE_H = 186;
+  function shareX(T, v){ return SHARE.x0 + v * SHARE.w / T; }
+  /* 畫板上的 x → 一份幾分：吸到最近的 5 分，夾在 0～T */
+  function shareSnap(T, x){ var v = Math.round((x - SHARE.x0) * T / SHARE.w / SHARE.step) * SHARE.step; return Math.max(0, Math.min(T, v)); }
+  /* 收不收：n 份剛好等於整段才收；不收的時候說少還是多、差多少，以及是不是那兩種迷思 */
+  function shareRefuse(h, m, n, v){
+    var T = h * 60 + m, x = v * n;
+    if (x === T) return null;
+    return { x:x, less:x < T, diff:Math.abs(T - x),
+             borrow:h % n !== 0 && m % n === 0 && v === Math.floor(h / n) * 60 + m / n,
+             ten:(h * 100 + m) % n === 0 && v === (h * 100 + m) / n };
+  }
+
+  /* ---- 第 5 關 rank：四段時間，[分鐘數, 寫法]（1 ＝ 寫成「幾時幾分」、0 ＝ 寫成「幾分」）。
+     每一組都有兩張「把 1 時 40 分 讀成 140」會排反的卡（十進位的迷思真的會排錯） ---- */
+  var GAME_RANK = [
+    [[90, 1], [95, 0], [100, 1], [110, 0]],
+    [[65, 0], [70, 1], [75, 0], [80, 1]],
+    [[100, 0], [105, 1], [115, 0], [125, 1]],
+    [[95, 1], [130, 0], [140, 1], [150, 0]],
+    [[85, 1], [90, 0], [115, 1], [120, 0]],
+    [[135, 1], [145, 0], [150, 1], [155, 0]]
   ];
+  var RANK = { slotX:225, cardX:80, w:130, h:48, rowY:[52, 108, 164, 220], capTop:[2, 26], capBot:[246, 270], pad:12 };
+  var RANK_H = 274;
+  /* 第幾短（0 起算）：比它短的有幾段 */
+  function rankOf(set, t){ return set.filter(function(c){ return c[0] < t; }).length; }
+  function rankInOrder(list){ for (var i = 1; i < list.length; i++) if (list[i - 1][0] > list[i][0]) return false; return true; }
 
   /* ---------- i18n ---------- */
   var I18N = {
@@ -347,7 +519,7 @@
       s5h2: '檢查一下',
       s5lead: '直接點答案，馬上告訴你為什麼。',
       s6h2: '準時出發',
-      s6lead: '看清楚時間，選出正確答案。答對愈快，分數愈高！',
+      s6lead: '點與段、滿 60 進位、一天一天疊起來、把時間平分、由短排到長 —— 五關五種玩法，練的都是上面的範例：<strong>時刻和時間量、60 進位、時間量的乘和除</strong>。放錯會扣分，但不會出局 —— 想清楚比手快重要。',
       footer: '把整頁縮成一句：<strong>先統一成分再計算，滿 60 分就進 1 時。</strong>',
       stepPrevBtn: '上一步', stepNextBtn: '下一步',
 
@@ -372,17 +544,17 @@
 
       nlChipLabel: function(a, b){ return a + ' + ' + b; },
       nlLine: function(a, b, sum, h, m){
-        return a + ' 分 + ' + b + ' 分 = ' + sum + ' 分 = <b>' + (h > 0 ? (h + '時' + m + '分') : (m + '分')) + '</b>';
+        return a + ' 分 + ' + b + ' 分 = ' + sum + ' 分 = <b>' + (h > 0 ? (h + ' 時 ' + m + ' 分') : (m + ' 分')) + '</b>';
       },
-      nlHourMark: '60分=1時',
+      nlHourMark: '60 分 = 1 時',
       nlStartBtn: '開始進位', nlResetBtn: '重新開始',
 
-      mulChipLabel: function(h, m, days){ return h + '時' + m + '分 × ' + days + '天'; },
+      mulChipLabel: function(h, m, days){ return h + ' 時 ' + m + ' 分 × ' + days + ' 天'; },
       mulSteps: function(h, m, days){
         var mTotal = m * days, carry = Math.floor(mTotal / 60), remM = mTotal % 60;
         var hMul = h * days, hFinal = hMul + carry;
         return [
-          '題目：' + h + '時' + m + '分 × ' + days + '天 = ？先把「分」和「時」分開乘。',
+          '題目：' + h + ' 時 ' + m + ' 分 × ' + days + ' 天 = ？先把「分」和「時」分開乘。',
           '分：' + m + ' × ' + days + ' = <span class="hl">' + mTotal + '</span> 分。',
           mTotal >= 60
             ? mTotal + ' 分 ≥ 60，要進位：' + mTotal + ' = ' + (carry * 60) + ' + ' + remM + ' = <span class="hl2">' + carry + ' 時 ' + remM + ' 分</span>。'
@@ -399,10 +571,10 @@
       divTabConvert: '換算成分', divTabBorrow: '借位法',
       divStepsConvert: function(h, m, parts){
         var totalM = h * 60 + m, perM = totalM / parts, hOut = Math.floor(perM / 60), mOut = perM % 60;
-        var final = hOut > 0 ? (hOut + '時' + mOut + '分') : (mOut + '分');
+        var final = hOut > 0 ? (hOut + ' 時 ' + mOut + ' 分') : (mOut + ' 分');
         return [
-          '題目：' + h + '時' + m + '分 ÷ ' + parts + ' = ？先把時和分都換算成分。',
-          h + '時' + m + '分 ＝ ' + h + '×60 + ' + m + ' = <span class="hl">' + totalM + '</span> 分。',
+          '題目：' + h + ' 時 ' + m + ' 分 ÷ ' + parts + ' = ？先把時和分都換算成分。',
+          h + ' 時 ' + m + ' 分 ＝ ' + h + '×60 + ' + m + ' = <span class="hl">' + totalM + '</span> 分。',
           totalM + ' ÷ ' + parts + ' = <span class="hl">' + perM + '</span> 分。',
           '答案：<span class="hl2">' + final + '</span>。'
         ];
@@ -411,9 +583,9 @@
         var hDiv = Math.floor(h / parts), hRem = h % parts, borrowedM = hRem * 60;
         var totalForDiv = borrowedM + m, perM = totalForDiv / parts;
         var finalH = hDiv + Math.floor(perM / 60), finalM = perM % 60;
-        var final = finalH > 0 ? (finalH + '時' + finalM + '分') : (finalM + '分');
+        var final = finalH > 0 ? (finalH + ' 時 ' + finalM + ' 分') : (finalM + ' 分');
         var steps = [];
-        steps.push('題目：' + h + '時' + m + '分 ÷ ' + parts + ' = ？這次用「借位法」試試看。');
+        steps.push('題目：' + h + ' 時 ' + m + ' 分 ÷ ' + parts + ' = ？這次用「借位法」試試看。');
         steps.push(hRem === 0
           ? (h + ' ÷ ' + parts + ' 剛好整除，時的部分是 <span class="hl">' + hDiv + '</span> 時。')
           : (h + ' 時不夠平分成 ' + parts + ' 份（' + h + ' ÷ ' + parts + ' = ' + hDiv + ' 餘 ' + hRem + '），剩下的 <span class="hl">' + hRem + ' 時</span> 要借位換成分。'));
@@ -430,41 +602,41 @@
       cTry: '沒關係，回到上面範例教學再玩一次。',
       qs: [
         { stem:'75 分換算成「時」和「分」，等於多少？',
-          opts:['1時75分','1時15分','7時5分','75時'], ans:1,
+          opts:['1 時 75 分','1 時 15 分','7 時 5 分','75 時'], ans:1,
           why:'75 分 = 60 分 + 15 分 = 1 時 15 分（分不能超過 59，滿 60 就要進位）。' },
         { stem:'小傑每天寫作業花 20 分，連續寫 4 天，一共花多少時間？',
-          opts:['1時20分','0時80分','2時0分','1時'], ans:0,
+          opts:['1 時 20 分','0 時 80 分','2 時 0 分','1 時'], ans:0,
           why:'20 × 4 = 80 分，80 = 60 + 20，等於 1 時 20 分。' },
         { stem:'2 時 30 分平分給 2 個人，每人分到多少時間？',
-          opts:['2時15分','1時5分','0時75分','1時15分'], ans:3,
+          opts:['2 時 15 分','1 時 5 分','0 時 75 分','1 時 15 分'], ans:3,
           why:'2 時 30 分 = 150 分，150 ÷ 2 = 75 分 = 1 時 15 分。' },
         { stem:'下面哪一個是「時刻」（某一個時間點）？',
-          opts:['3:40','25分鐘','2時','1時30分'], ans:0,
+          opts:['3:40','25 分鐘','2 時','1 時 30 分'], ans:0,
           why:'3:40 代表現在幾點，是時刻；其他三個都是經過多久，是時間量。' },
         { stem:'現在是 3:20，過了 25 分鐘，現在是幾點？',
           opts:['3:05','3:25','4:05','3:45'], ans:3,
           why:'20 + 25 = 45 分，時不變，所以是 3:45。' },
         { stem:'40 分 + 35 分 = ？',
-          opts:['1時25分','0時75分','1時15分','1時5分'], ans:2,
+          opts:['1 時 25 分','0 時 75 分','1 時 15 分','1 時 5 分'], ans:2,
           why:'40 + 35 = 75，75 分 = 60 + 15 = 1 時 15 分（不可以寫成 0 時 75 分，分要小於 60）。' }
       ],
       qsAdv: [
         { stem:'文字題：小明每天練習跳繩 1 時 15 分，連續練習 4 天，一共練習多久？',
-          opts:['4時','5時15分','4時60分','5時0分'], ans:3,
+          opts:['4 時','5 時 15 分','4 時 60 分','5 時 0 分'], ans:3,
           why:'分：15 × 4 = 60 = 1 時 0 分（進位 1 時）；時：1 × 4 = 4，4 + 1 = 5 時；答案是 5 時 0 分。' },
         { stem:'文字題：校外教學搭車共花了 3 時 40 分，平均分成 2 段路程，每段路程多久？',
-          opts:['1時40分','1時50分','2時10分','0時50分'], ans:1,
+          opts:['1 時 40 分','1 時 50 分','2 時 10 分','0 時 50 分'], ans:1,
           why:'3 時 40 分 = 220 分，220 ÷ 2 = 110 分 = 1 時 50 分。' },
         { stem:'文字題：游泳課 3:10 開始，上了 1 時 20 分，下課是幾點？',
           opts:['3:30','4:10','4:30','5:10'], ans:2,
           why:'10 + 20 = 30 分，3 + 1 = 4 時，所以是 4:30。' },
         { stem:'文字題：馬拉松接力賽全程 4 時 15 分，分成 3 棒平均跑，每棒跑多久？',
-          opts:['1時15分','1時25分','1時35分','1時5分'], ans:1,
+          opts:['1 時 15 分','1 時 25 分','1 時 35 分','1 時 5 分'], ans:1,
           why:'4 時 15 分 = 255 分，255 ÷ 3 = 85 分 = 1 時 25 分。' }
       ],
       qsBoost: [
         { stem:'迷思檢查：1.5 小時是多少時間？',
-          opts:['1時5分','1時50分','1時30分','15分'], ans:2,
+          opts:['1 時 5 分','1 時 50 分','1 時 30 分','15 分'], ans:2,
           why:'1 小時 = 60 分，0.5 小時 = 30 分（不是 50 分），所以 1.5 小時 = 1 時 30 分。' },
         { stem:'迷思檢查：露營活動在 4:20 結束，整個活動進行了 1 時 40 分，請問活動是幾點開始的？',
           opts:['2:40','3:20','2:20','3:00'], ans:0,
@@ -472,24 +644,84 @@
       ],
 
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
-      gScenario: [
-        '小華每天騎腳踏車上學花 15 分，連續騎 5 天，一共花多少時間？',
-        '一鍋湯要燉 2 時 40 分，平均分成 4 次小火慢燉，每次燉多久？',
-        '媽媽每天沖泡咖啡花 8 分，一星期（7 天）一共花多少時間？',
-        '羽毛球賽全場用了 5 時 10 分，分成 2 局，平均每局打多久？',
-        '一次晨跑要 45 分，連續跑 6 天，一共跑了多久？'
-      ],
       gHintBtn: '💡 提示',
-      gHint1: '先把單位統一成分',
-      gHint2: function(mins){ return '提示 2：答案換算成分大約是 ' + mins + ' 分，你可以自己轉換成時分。'; },
       gNextBtn: '下一關', gRestartBtn: '重新開始',
-      gCorrectFirst: function(str){ return '答對了！答案是 ' + str + '，+20 分！'; },
-      gCorrectRetry: function(str){ return '答對了！答案是 ' + str + '，+10 分。'; },
-      gWrong: function(str){ return str + ' 不對，再試一次，−5 分。'; },
-      gClear: '按「下一關」繼續下一組時間。',
-      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gOk: '就是這個',
+      gPts: function(p){ return '分數 ＋' + p; },
+      gMinus: '分數 −5',
+      gClear: '按「下一關」繼續。',
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 🏆 按「重新開始」再挑戰一次。'; },
+      gDur: function(t){ var h = Math.floor(t / 60), m = t % 60; return h > 0 ? (m > 0 ? h + ' 時 ' + m + ' 分' : h + ' 時') : m + ' 分'; },
+      gMin: function(t){ return t + ' 分'; },
+      gClk: function(t){ var h = Math.floor(t / 60), m = t % 60; return h + ':' + (m < 10 ? '0' + m : String(m)); },
+      gHints: {
+        span: '時刻是線上的一個點（幾點）；時間量是一段長度（經過多久）。',
+        carry: '先把兩段的分加起來，再看有沒有滿 60 分 —— 滿 60 分就是 1 時。',
+        times: '分和時分開乘；分滿 60 就換成 1 時，剩下的才是分。',
+        share: '先把整段時間換成分（1 時 ＝ 60 分），再除以份數。',
+        rank: '先把每一段都換成分再比：1 時 ＝ 60 分，不是 100 分。'
+      },
+      gSpanAsk: '線上畫了一段活動，從開始到結束。把時刻（幾點）放到線上的點，把經過多久（時間量）放到下面那一段。',
+      gSpanNow: function(n){ return '放好了 ' + n + ' / 3'; },
+      gSpanStart: '開始', gSpanEnd: '結束', gSpanHow: '經過多久',
+      gSpanOkClock: function(c){ return '對：' + c + ' 是一個時刻，是線上的一個點。'; },
+      gSpanOkDur: function(t){ return '對：經過 ' + t + '，是時間量，是一段長度。'; },
+      gSpanDurOnPoint: function(t){ return '「' + t + '」是經過多久（時間量），是一段長度 —— 要放到下面那一段；線上的點放的是時刻（幾點）。'; },
+      gSpanClockOnSpan: function(c){ return '「' + c + '」是一個時刻（幾點），是線上的一個點 —— 要放到上面的點；下面那一段放的是經過多久。'; },
+      gSpanOtherPoint: function(c, hh, mm){ return '這個點在 ' + hh + ':00 再過 ' + mm + ' 分的地方，不是 ' + c + '。'; },
+      gSpanBadDur: function(bad, real, s, e, parts){ return '從 ' + s + ' 到 ' + e + ' 是 ' + real + '，不是 ' + bad + ' —— ' + parts.map(function(p){ return p[0] + ' 到 ' + p[1] + ' 是 ' + p[2]; }).join('，') + '。'; },
+      gSpanDone: function(s, e, t){ return '開始 ' + s + '、結束 ' + e + ' 是兩個時刻（線上的兩個點）；中間經過 ' + t + '，是時間量（一段長度）。'; },
+      gSpan2: function(which, hh, mm){ return '提示 2：' + which + '的點在 ' + hh + ':00 再過 ' + mm + ' 分。'; },
+      gSpan2Span: function(whole){ return '提示 2：從開始數到結束 —— 先數到整點，' + (whole ? '再數整整幾時，最後數剩下的分。' : '再數剩下的分。'); },
+      gCarryAsk: '兩段時間接起來，一共是幾時幾分？打在下面的兩格裡，再按「就是這個」。',
+      gCarryNow: function(a, b){ return a + ' 分 ＋ ' + b + ' 分 ＝ ？'; },
+      gCarry60: '60 分 ＝ 1 時',
+      gCarryH: '時', gCarryM: '分', gCarryAriaH: '幾時', gCarryAriaM: '幾分',
+      gCarryBlank: '兩格都要打一個整數（不要有空格、小數點或開頭的 0）。',
+      gCarryOver: function(m){ return m + ' 分已經滿 60 了 —— 分一定小於 60，滿 60 分要換成 1 時。'; },
+      gCarryValue: function(h, m, x, A){ return h + ' 時 ' + m + ' 分 ＝ ' + x + ' 分，不是 ' + A + ' 分。'; },
+      gCarryDone: function(a, b, A, h, m){ return a + ' 分 ＋ ' + b + ' 分 ＝ ' + A + ' 分 ＝ ' + h + ' 時 ' + m + ' 分 —— 滿 60 分換成 1 時。'; },
+      gCarry2: function(a, b, A){ return '提示 2：' + a + ' ＋ ' + b + ' ＝ ' + A + '，' + A + ' 分裡面有一個 60 分。'; },
+      gTimesAsk: function(h, m, n){ return '每天 ' + h + ' 時 ' + m + ' 分，連續 ' + n + ' 天，一共多久？把數字卡放進格子裡。'; },
+      gTimesNow: function(k){ return '放好了 ' + k + ' / 3'; },
+      gTimesRow1: function(m, n, A){ return '分：' + m + ' × ' + n + ' ＝ ' + A + ' 分'; },
+      gTimesSyms: function(A){ return { A:A + ' 分 ＝', h1:'時', m1:'分', eq:'＝', h2:'時' }; },
+      gTimesRow3: function(h, n){ return '時：' + h + ' × ' + n + ' ＋ 進位的時'; },
+      gTimesTen: function(A, v){ return A + ' ＝ ' + (v * 100) + ' ＋ ' + (A - v * 100) + ' 是十進位的拆法；時間是 60 進位，1 時只有 60 分。'; },
+      gTimesC: function(v, A){ return v * 60 > A ? v + ' 時 ＝ ' + (v * 60) + ' 分，比 ' + A + ' 分還多。' : v + ' 時 ＝ ' + (v * 60) + ' 分，' + A + ' − ' + (v * 60) + ' ＝ ' + (A - v * 60) + ' 分，還滿 60，可以再進位。'; },
+      gTimesR: function(v, A, ten){ return v >= 60 ? v + ' 分已經滿 60 了 —— 剩下的分一定小於 60，滿 60 要再進 1 時。' : (ten ? A + ' ＝ 100 ＋ ' + v + ' 是十進位的拆法；1 時只有 60 分。' : '') + A + ' − ' + v + ' ＝ ' + (A - v) + ' 分，不是 60 的倍數，換不成整整幾時。'; },
+      gTimesH0: function(h, n, H0){ return h + ' × ' + n + ' ＝ ' + H0 + ' 只算了每天的時 —— 還要加上分滿 60 進位上來的時。'; },
+      gTimesHless: function(v, h, n, H0){ return v + ' 比 ' + h + ' × ' + n + ' ＝ ' + H0 + ' 還少 —— 時的總數至少有 ' + H0 + '。'; },
+      gTimesHmore: function(v, H0, A){ return H0 + ' 加上進位的時，不會是 ' + v + ' —— 進位的時要看 ' + A + ' 分裡有幾個 60。'; },
+      gTimesOkC: function(A, c){ return '對：' + A + ' 分裡有 ' + c + ' 個 60 分。'; },
+      gTimesOkR: function(A, c, r){ return '對：' + A + ' − ' + (c * 60) + ' ＝ ' + r + ' 分。'; },
+      gTimesOkH: function(H0, c, H){ return '對：' + H0 + ' ＋ ' + c + ' ＝ ' + H + ' 時。'; },
+      gTimesDone: function(h, m, n, H, r){ return h + ' 時 ' + m + ' 分 × ' + n + ' ＝ ' + H + ' 時 ' + r + ' 分 —— 分和時分開乘，分滿 60 要進位。'; },
+      gTimes2c: function(A){ return '提示 2：60 × 2 ＝ 120，60 × 3 ＝ 180 —— ' + A + ' 在這兩個中間。'; },
+      gTimes2r: function(A, c){ return '提示 2：' + A + ' − ' + (c * 60) + ' ＝ ？'; },
+      gTimes2H: function(h, n, H0){ return '提示 2：' + h + ' × ' + n + ' ＝ ' + H0 + '，再加上進位的時。'; },
+      gShareAsk: function(h, m, n){ return h + ' 時 ' + m + ' 分平分成 ' + n + ' 份，每一份多長？左右拖橘色的圓點（也可以點線上的位置、按 ◀ ▶），再按「就是這個」。'; },
+      gShareNow: function(txt){ return '每一份：' + txt; },
+      gShareH: function(k){ return k + ' 時'; },
+      gShareLess: '少 5 分', gShareMore: '多 5 分',
+      gShareZero: '先把橘色的圓點往右拖，拉出一份的長度。',
+      gShareBad: function(n, v, x, T, less, diff){ return n + ' 份 × ' + v + ' ＝ ' + x + '，這比 ' + T + (less ? ' 少 ' : ' 多 ') + diff + '。'; },
+      gShareBorrow: function(h, n, q, rem, m){ return (q > 0 ? ' 這是 ' + h + ' ÷ ' + n + ' 只拿了商 ' + q + ' 時、把餘下的 ' + rem + ' 時丟掉了' : ' 這是把 ' + h + ' 時整個丟掉了（' + h + ' 時不夠分給 ' + n + ' 份、每份 1 時）') + ' —— ' + (q > 0 ? '剩下的 ' : '這 ') + rem + ' 時要換成 ' + (rem * 60) + ' 分，和 ' + m + ' 分一起分。'; },
+      gShareTen: function(h, m, X, T){ return ' 這是把 ' + h + ' 時 ' + m + ' 分當成 ' + X + ' 分了 —— 1 時是 60 分，' + h + ' 時 ' + m + ' 分 ＝ ' + T + ' 分。'; },
+      gShareDone: function(h, m, n, T, v, vtxt){ return h + ' 時 ' + m + ' 分 ＝ ' + T + ' 分，' + T + ' ÷ ' + n + ' ＝ ' + v + ' 分' + (v >= 60 ? ' ＝ ' + vtxt : '') + ' —— ' + n + ' 份剛好排滿。'; },
+      gShare2: function(h, m, n, T){ return '提示 2：' + h + ' 時 ' + m + ' 分 ＝ ' + h + ' × 60 ＋ ' + m + ' ＝ ' + T + ' 分，再除以 ' + n + '。'; },
+      gRankAsk: '四段時間，由短排到長（最上面最短）。有的寫「幾分」、有的寫「幾時幾分」。',
+      gRankNow: function(k){ return '排好了 ' + k + ' / 4'; },
+      gRankTop: '↑ 最短', gRankBot: '↓ 最長',
+      gRankOrd: function(k){ return '第 ' + k + ' 短'; },
+      gRankBad: function(txt, t, hm, k, i){ return (hm ? txt + ' ＝ ' + t + ' 分' : txt) + ' —— 四段都換成分來比，它是第 ' + k + ' 短，不是第 ' + i + ' 短。'; },
+      gRankOk: function(txt, t, hm, k){ return '對：' + (hm ? txt + ' ＝ ' + t + ' 分' : txt) + ' 是第 ' + k + ' 短。'; },
+      gRankItem: function(txt, t, hm){ return hm ? txt + '（' + t + ' 分）' : txt; },
+      gRankDone: function(list){ return '由短到長：' + list.join(' ＜ ') + ' —— 先統一成分再比。'; },
+      gRank2: function(txt, h, m, t){ return '提示 2：' + txt + ' ＝ 60 × ' + h + ' ＋ ' + m + ' ＝ ' + t + ' 分。'; },
+      gRank2None: '提示 2：剩下的都已經寫成分了，直接比大小。',
 
-      dur: function(h, m, forceH){ return (h > 0 || forceH) ? (h + '時' + m + '分') : (m + '分'); },
+      dur: function(h, m, forceH){ return (h > 0 || forceH) ? (h + ' 時 ' + m + ' 分') : (m + ' 分'); },
       clk: function(h, m){ return h + ':' + (m < 10 ? ('0' + m) : String(m)); }
     },
     en: {
@@ -524,7 +756,7 @@
       s5h2: 'Quick Check',
       s5lead: 'Tap an answer and we’ll tell you why right away.',
       s6h2: 'Right On Time',
-      s6lead: 'Read the time carefully and pick the correct answer. The faster you answer, the more points you score!',
+      s6lead: 'Points and stretches, carrying at 60, stacking day by day, sharing time equally, shortest to longest — five rounds, five ways to play, all practising the examples above: <strong>points in time and lengths of time, base 60, multiplying and dividing lengths of time</strong>. A wrong move costs points, but you are never out — thinking it through beats being fast.',
       footer: 'The whole page in one line: <strong>convert everything into minutes first, and every 60 minutes becomes 1 hour.</strong>',
       stepPrevBtn: 'Back', stepNextBtn: 'Next',
 
@@ -649,22 +881,82 @@
       ],
 
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
-      gScenario: [
-        'It takes Hua 15 minutes to bike to school each day. How much time in total over 5 days?',
-        'A pot of soup needs 2 h 40 min of simmering, split evenly into 4 sessions. How long is each session?',
-        'It takes Mom 8 minutes to brew coffee each day. How much time over a week (7 days)?',
-        'A badminton match lasted 5 h 10 min in total, split into 2 games. How long was each game?',
-        'A morning run takes 45 minutes. How much total time over 6 days of running?'
-      ],
       gHintBtn: '💡 Hint',
-      gHint1: 'First convert every unit into minutes',
-      gHint2: function(mins){ return 'Hint 2: the answer is about ' + mins + ' minutes in total — try converting that into hours and minutes yourself.'; },
       gNextBtn: 'Next round', gRestartBtn: 'Restart',
-      gCorrectFirst: function(str){ return 'Correct on the first try! The answer is ' + str + ' — +20 points!'; },
-      gCorrectRetry: function(str){ return 'Correct! The answer is ' + str + ' — +10 points.'; },
-      gWrong: function(str){ return str + ' isn’t right — try again. −5 points.'; },
-      gClear: 'Press “Next round” to try the next scenario.',
+      gOk: 'That’s it',
+      gPts: function(p){ return '+' + p + ' points'; },
+      gMinus: '−5 points',
+      gClear: 'Press “Next round” to go on.',
       gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gDur: function(t){ var h = Math.floor(t / 60), m = t % 60; return h > 0 ? (m > 0 ? h + ' h ' + m + ' min' : h + ' h') : m + ' min'; },
+      gMin: function(t){ return t + ' min'; },
+      gClk: function(t){ var h = Math.floor(t / 60), m = t % 60; return h + ':' + (m < 10 ? '0' + m : String(m)); },
+      gHints: {
+        span: 'A point in time is one point on the line (what time it is); a length of time is a stretch (how long it took).',
+        carry: 'First add the minutes of the two stretches, then see whether they reach 60 — every 60 minutes make 1 hour.',
+        times: 'Multiply the minutes and the hours separately; every 60 minutes become 1 hour, and what is left stays as minutes.',
+        share: 'First turn the whole length of time into minutes (1 hour = 60 minutes), then divide by the number of parts.',
+        rank: 'Turn every length into minutes before comparing: 1 hour = 60 minutes, not 100.'
+      },
+      gSpanAsk: 'The line shows an activity from start to end. Put each point in time (what time) on a point of the line, and how long it took (a length of time) on the stretch below.',
+      gSpanNow: function(n){ return n + ' / 3 placed'; },
+      gSpanStart: 'start', gSpanEnd: 'end', gSpanHow: 'how long',
+      gSpanOkClock: function(c){ return 'Yes: ' + c + ' is a point in time — one point on the line.'; },
+      gSpanOkDur: function(t){ return 'Yes: ' + t + ' is a length of time — a stretch of the line.'; },
+      gSpanDurOnPoint: function(t){ return '“' + t + '” is how long something took (a length of time) — a stretch, so it goes on the stretch below; the points of the line take points in time.'; },
+      gSpanClockOnSpan: function(c){ return '“' + c + '” is a point in time (what time it is) — one point, so it goes on a point above; the stretch below takes how long it took.'; },
+      gSpanOtherPoint: function(c, hh, mm){ return 'This point is ' + mm + ' min after ' + hh + ':00, not ' + c + '.'; },
+      gSpanBadDur: function(bad, real, s, e, parts){ return 'From ' + s + ' to ' + e + ' is ' + real + ', not ' + bad + ' — ' + parts.map(function(p){ return p[0] + ' to ' + p[1] + ' is ' + p[2]; }).join(', ') + '.'; },
+      gSpanDone: function(s, e, t){ return 'Start ' + s + ' and end ' + e + ' are two points in time (two points on the line); the ' + t + ' in between is a length of time (a stretch).'; },
+      gSpan2: function(which, hh, mm){ return 'Hint 2: the ' + which + ' point is ' + mm + ' min after ' + hh + ':00.'; },
+      gSpan2Span: function(whole){ return 'Hint 2: count from start to end — first up to the next o’clock, ' + (whole ? 'then the whole hours, then the minutes left.' : 'then the minutes left.'); },
+      gCarryAsk: 'Joined end to end, how long are the two stretches together? Type the hours and minutes below, then press “That’s it”.',
+      gCarryNow: function(a, b){ return a + ' min + ' + b + ' min = ?'; },
+      gCarry60: '60 min = 1 h',
+      gCarryH: 'h', gCarryM: 'min', gCarryAriaH: 'hours', gCarryAriaM: 'minutes',
+      gCarryBlank: 'Type one whole number in each box (no spaces, decimal points or leading zeros).',
+      gCarryOver: function(m){ return m + ' min is already 60 or more — minutes must stay under 60; every 60 minutes become 1 hour.'; },
+      gCarryValue: function(h, m, x, A){ return h + ' h ' + m + ' min = ' + x + ' min, not ' + A + ' min.'; },
+      gCarryDone: function(a, b, A, h, m){ return a + ' min + ' + b + ' min = ' + A + ' min = ' + h + ' h ' + m + ' min — 60 minutes become 1 hour.'; },
+      gCarry2: function(a, b, A){ return 'Hint 2: ' + a + ' + ' + b + ' = ' + A + ', and ' + A + ' minutes contain one group of 60 minutes.'; },
+      gTimesAsk: function(h, m, n){ return h + ' h ' + m + ' min a day for ' + n + ' days — how long in all? Put number cards in the boxes.'; },
+      gTimesNow: function(k){ return k + ' / 3 placed'; },
+      gTimesRow1: function(m, n, A){ return 'Minutes: ' + m + ' × ' + n + ' = ' + A + ' min'; },
+      gTimesSyms: function(A){ return { A:A + ' min =', h1:'h', m1:'min', eq:'=', h2:'h' }; },
+      gTimesRow3: function(h, n){ return 'Hours: ' + h + ' × ' + n + ' + the carry'; },
+      gTimesTen: function(A, v){ return A + ' = ' + (v * 100) + ' + ' + (A - v * 100) + ' splits it in hundreds; time goes in sixties — 1 hour is only 60 minutes.'; },
+      gTimesC: function(v, A){ return v * 60 > A ? v + ' h = ' + (v * 60) + ' min, more than ' + A + ' min.' : v + ' h = ' + (v * 60) + ' min, ' + A + ' − ' + (v * 60) + ' = ' + (A - v * 60) + ' min, still 60 or more — carry again.'; },
+      gTimesR: function(v, A, ten){ return v >= 60 ? v + ' min is already 60 or more — the minutes left must be under 60; every 60 carry another hour.' : (ten ? A + ' = 100 + ' + v + ' splits it in hundreds; 1 hour is only 60 minutes. ' : '') + A + ' − ' + v + ' = ' + (A - v) + ' min, not a multiple of 60 — not a whole number of hours.'; },
+      gTimesH0: function(h, n, H0){ return h + ' × ' + n + ' = ' + H0 + ' only counts the daily hours — add the hours carried from the minutes too.'; },
+      gTimesHless: function(v, h, n, H0){ return v + ' is less than ' + h + ' × ' + n + ' = ' + H0 + ' — the hours add up to at least ' + H0 + '.'; },
+      gTimesHmore: function(v, H0, A){ return H0 + ' plus the carried hours can’t make ' + v + ' — the carry is how many 60s fit in ' + A + ' minutes.'; },
+      gTimesOkC: function(A, c){ return 'Yes: ' + A + ' min holds ' + c + ' lots of 60 min.'; },
+      gTimesOkR: function(A, c, r){ return 'Yes: ' + A + ' − ' + (c * 60) + ' = ' + r + ' min.'; },
+      gTimesOkH: function(H0, c, H){ return 'Yes: ' + H0 + ' + ' + c + ' = ' + H + ' h.'; },
+      gTimesDone: function(h, m, n, H, r){ return h + ' h ' + m + ' min × ' + n + ' = ' + H + ' h ' + r + ' min — multiply minutes and hours separately, and carry when the minutes reach 60.'; },
+      gTimes2c: function(A){ return 'Hint 2: 60 × 2 = 120 and 60 × 3 = 180 — ' + A + ' is between them.'; },
+      gTimes2r: function(A, c){ return 'Hint 2: ' + A + ' − ' + (c * 60) + ' = ?'; },
+      gTimes2H: function(h, n, H0){ return 'Hint 2: ' + h + ' × ' + n + ' = ' + H0 + ', then add the carried hours.'; },
+      gShareAsk: function(h, m, n){ return 'Share ' + h + ' h ' + m + ' min equally into ' + n + ' parts. How long is each part? Drag the orange dot left or right (or tap the line, or use ◀ ▶), then press “That’s it”.'; },
+      gShareNow: function(txt){ return 'Each part: ' + txt; },
+      gShareH: function(k){ return k + ' h'; },
+      gShareLess: '5 min less', gShareMore: '5 min more',
+      gShareZero: 'First drag the orange dot to the right to stretch out one part.',
+      gShareBad: function(n, v, x, T, less, diff){ return n + ' parts × ' + v + ' = ' + x + ', which is ' + diff + (less ? ' less than ' : ' more than ') + T + '.'; },
+      gShareBorrow: function(h, n, q, rem, m){ return (q > 0 ? ' That is ' + h + ' ÷ ' + n + ' keeping only the ' + q + ' h and dropping the ' + rem + ' h left over' : ' That drops the whole ' + h + ' h (' + h + ' h is not enough to give each of the ' + n + ' parts 1 h)') + ' — those ' + rem + ' h must become ' + (rem * 60) + ' min and be shared together with the ' + m + ' min.'; },
+      gShareTen: function(h, m, X, T){ return ' That treats ' + h + ' h ' + m + ' min as ' + X + ' min — 1 hour is 60 minutes, so ' + h + ' h ' + m + ' min = ' + T + ' min.'; },
+      gShareDone: function(h, m, n, T, v, vtxt){ return h + ' h ' + m + ' min = ' + T + ' min, ' + T + ' ÷ ' + n + ' = ' + v + ' min' + (v >= 60 ? ' = ' + vtxt : '') + ' — ' + n + ' parts fill it exactly.'; },
+      gShare2: function(h, m, n, T){ return 'Hint 2: ' + h + ' h ' + m + ' min = ' + h + ' × 60 + ' + m + ' = ' + T + ' min, then divide by ' + n + '.'; },
+      gRankAsk: 'Put the four lengths of time in order, shortest to longest (shortest at the top). Some are written in minutes, some in hours and minutes.',
+      gRankNow: function(k){ return k + ' / 4 placed'; },
+      gRankTop: '↑ shortest', gRankBot: '↓ longest',
+      gRankOrd: function(k){ return k === 1 ? 'the shortest' : 'the ' + k + ['', 'st', 'nd', 'rd', 'th'][k] + ' shortest'; },
+      gRankBad: function(txt, t, hm, k, i){ return (hm ? txt + ' = ' + t + ' min' : txt) + ' — in minutes it is ' + this.gRankOrd(k) + ', not ' + this.gRankOrd(i) + '.'; },
+      gRankOk: function(txt, t, hm, k){ return 'Yes: ' + (hm ? txt + ' = ' + t + ' min' : txt) + ' is ' + this.gRankOrd(k) + '.'; },
+      gRankItem: function(txt, t, hm){ return hm ? txt + ' (' + t + ' min)' : txt; },
+      gRankDone: function(list){ return 'Shortest to longest: ' + list.join(' < ') + ' — turn everything into minutes first, then compare.'; },
+      gRank2: function(txt, h, m, t){ return 'Hint 2: ' + txt + ' = 60 × ' + h + ' + ' + m + ' = ' + t + ' min.'; },
+      gRank2None: 'Hint 2: the ones left are already in minutes — just compare them.',
 
       dur: function(h, m, forceH){ return (h > 0 || forceH) ? (h + ' h ' + m + ' min') : (m + ' min'); },
       clk: function(h, m){ return h + ':' + (m < 10 ? ('0' + m) : String(m)); }
@@ -1054,112 +1346,572 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：準時出發 ---------- */
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 6. 小遊戲：準時出發（§六之五：五關五種玩法） ===================== */
+  var gRound = 0, gScore = 0, gSolved = false, gMistake = false, hintLevel = 0, gCtx = { bad:{} };
+  /* 畫板世代：重新開始、切換語言、下一關都換一個新的畫板。還拿在手上的舊卡片放開時，不可以替新的畫板做任何事 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskLine = document.getElementById('gAskLine');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
-  var hintLevel = 0;
-
-  function durStr(choice){ return L().dur(choice.h, choice.m, !!choice.f); }
-
-  /* 遊戲選項每回合重新洗牌，正確答案不固定在第一個 */
-  function shuffle(arr){
-    var a = arr.slice();
-    for (var j = a.length - 1; j > 0; j--){
-      var k = Math.floor(Math.random() * (j + 1));
-      var t = a[j]; a[j] = a[k]; a[k] = t;
-    }
-    return a;
+  var NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs, text){
+    var el = document.createElementNS(NS, tag);
+    for (var a in attrs) el.setAttribute(a, attrs[a]);
+    if (text !== undefined) el.textContent = text;
+    return el;
   }
 
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null, onBoardTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    /* 點畫板（不是點在卡片上）：只認第一根手指，按下和放開在同一個地方才算「點一下」 */
+    board.addEventListener('pointerdown', function(e){
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (!e.isPrimary) return;   /* 第二根手指：不理 —— 第一根手指按在畫板外、按鈕或卡片上時也一樣 */
+      BOARD_TAP = { id:e.pointerId, x:e.clientX, y:e.clientY, far:false };
+    });
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從卡片上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      var t = BOARD_TAP, pt = B.toBoard(e);
+      if (t && t.id === e.pointerId) BOARD_TAP = null;
+      /* 「點目的地」也一樣只認第一根手指的「點一下」：別的手指放開、或滑動之後放開，都不算（不然想捲動也會被扣分） */
+      if (!t || t.id !== e.pointerId) return;
+      if (t.far || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10) return;   /* 中途離開按下去的地方超過 10px 就不是「點一下」 */
+      if (B.selected && B.onPointTap){ B.onPointTap(B.selected, pt); return; }
+      if (B.onBoardTap && !gSolved) B.onBoardTap(pt);
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從卡片上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一張卡放過去。PIECE_PTR 記「按在卡片上的 pointerId」；BOARD_TAP 記「按在畫板上的第一根手指」。
+     任何地方的 pointerup／pointercancel 傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {}, BOARD_TAP = null;
+  function clearPtr(e){ delete PIECE_PTR[e.pointerId]; if (BOARD_TAP && BOARD_TAP.id === e.pointerId) BOARD_TAP = null; }
+  window.addEventListener('pointerup', clearPtr);
+  window.addEventListener('pointercancel', clearPtr);
+  window.addEventListener('pointerdown', function(e){ delete PIECE_PTR[e.pointerId]; }, true);
+  window.addEventListener('pointermove', function(e){
+    if (BOARD_TAP && BOARD_TAP.id === e.pointerId && Math.hypot(e.clientX - BOARD_TAP.x, e.clientY - BOARD_TAP.y) > 10) BOARD_TAP.far = true;
+  });
+  /* 指標離開視窗時收不到 pointermove：一離開就當成走遠了（滑鼠拖出視窗再回來放開，不算點一下） */
+  window.addEventListener('pointerout', function(e){ if (BOARD_TAP && BOARD_TAP.id === e.pointerId && !e.relatedTarget) BOARD_TAP.far = true; });
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 畫板上的一張 SVG（整塊畫板大小，不接指標） */
+  function gSvg(B){
+    var s = svgEl('svg', { 'class':'gsvg', width:B.W, height:B.H, 'aria-hidden':'true' });
+    B.el.appendChild(s);
+    return s;
+  }
+  function gText(svg, x, y, text, attrs){
+    var a = { x:x, y:y, 'font-size':17, 'font-weight':800, fill:'#2B2A33', 'text-anchor':'middle' };
+    for (var k in attrs) a[k] = attrs[k];
+    var t = svgEl('text', a, String(text));
+    svg.appendChild(t);
+    return t;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫板下面的一排按鈕或輸入框 */
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, cls, aria){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = text;
+    if (aria) b.setAttribute('aria-label', aria);
+    row.appendChild(b);
+    return b;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。
+         o.axis === 'x'：只能左右拖（第 4 關的圓點），o.snapX 把中心點吸到最近的 5 分 —— 拖的時候就畫在吸到的位置；
+         o.onPlace：每次位置改變（含彈回）都通知 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+      if (o.onPlace) o.onPlace(P);
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    /* 換一個家（第 4 關的圓點停在哪裡，那裡就是它的家） */
+    P.rehome = function(cx, cy){
+      stopGesture();
+      P.homeX = cx; P.homeY = cy;
+      P.home();
+    };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這張卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      /* 只跟著第一根手指：第二根手指不能拿起任何一張（第一根手指按在別處時也一樣） */
+      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      if (o.axis === 'x') P.place(o.snapX(orig.x + dx), orig.y);
+      else P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一張屬於已經拿掉的畫板：放開什麼都不做 */
+      /* 先點選、後來又直接拖走的那一張：拖完就不再是「選起來」的，不然下一次點目的地會多放一次 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一張一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一張正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開的點落在格子的範圍裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**範圍的方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（三年級 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字（四年級 chart 的驗證者抓到的） */
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  function roundNote(text){ gMsg.innerHTML = '<span class="gnote">' + text + '</span>'; }
+  /* 已經說明過、也扣過分的同一個錯：把說明再說一次，不再算錯、不扣分 */
+  function roundAgain(text){ gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  /* 同一個畫板上，同一個錯（key 一樣）只扣一次分 —— 不管中間做過什麼；再犯一次只把說明再說一次 */
+  function missOnce(key, text){
+    if (gCtx.bad[key]){ roundAgain(text); return; }
+    gCtx.bad[key] = true;
+    roundMiss(text);
+  }
+  /* 卡片放好：卡片本身收起來，格子裡換成卡片上的字 */
+  function fillSlot(P, slot, text){
+    if (slot.bx !== undefined) P.lock(slot.bx + slot.bw / 2, slot.by + slot.bh / 2);   /* 畫出來的格子正中間 */
+    else P.lock(slot.cx, slot.cy);
+    P.el.style.visibility = 'hidden';
+    slot.done = true;
+    slot.el.textContent = text;
+    slot.el.classList.remove('gph');
+    slot.el.classList.add('filled');
+  }
+
+  var RENDER = {
+    /* 第 1 關：點與段（範例 1）—— 時刻放到線上的點，經過多久放到那一段 */
+    span: function(d){
+      var e0 = pick(GAME_SPAN), H0 = e0[0], s = e0[1], e = e0[2], base = H0 * 60;
+      var clk = function(t){ return d.gClk(base + t); };
+      gCtx.ask.textContent = d.gSpanAsk;
+      var line = trailLine(d.gSpanNow(0));
+      var B = makeBoard(GW, SPAN_H), svg = gSvg(B);
+      svg.appendChild(svgEl('line', { x1:spanX(0), y1:SPAN.ry, x2:spanX(SPAN.len), y2:SPAN.ry, stroke:'#6B6875', 'stroke-width':2 }));
+      for (var t = 0; t <= SPAN.len; t += 10){
+        var hr = t % 60 === 0, x = spanX(t);
+        svg.appendChild(svgEl('line', { 'class':hr ? 'ghour' : 'gtick', x1:x, y1:SPAN.ry - (hr ? 10 : 5), x2:x, y2:SPAN.ry + (hr ? 10 : 5), stroke:hr ? '#2B2A33' : '#6B6875', 'stroke-width':hr ? 2.5 : 1.2 }));
+        if (hr) gText(svg, x, SPAN.ry - 18, clk(t), { 'font-size':13, 'class':'ghourlbl' });
+      }
+      svg.appendChild(svgEl('rect', { 'class':'gspanbar', x:spanX(s), y:SPAN.ry - 9, width:spanX(e) - spanX(s), height:18, rx:4, fill:'#2F9E69', 'fill-opacity':0.3, stroke:'#2F9E69', 'stroke-width':2 }));
+      [s, e].forEach(function(tt){
+        svg.appendChild(svgEl('line', { 'class':'gpin', x1:spanX(tt), y1:SPAN.boxY + SPAN.boxH, x2:spanX(tt), y2:SPAN.ry - 9, stroke:'#3B7DD8', 'stroke-width':2, 'stroke-dasharray':'4 4' }));
+        svg.appendChild(svgEl('circle', { 'class':'gdot', cx:spanX(tt), cy:SPAN.ry, r:5, fill:'#3B7DD8' }));
+      });
+      var mid = (spanX(s) + spanX(e)) / 2, by = SPAN.ry + 16;
+      svg.appendChild(svgEl('path', { 'class':'gbrace', d:'M' + spanX(s) + ',' + (SPAN.ry + 10) + ' L' + spanX(s) + ',' + by + ' L' + spanX(e) + ',' + by + ' L' + spanX(e) + ',' + (SPAN.ry + 10) + ' M' + mid + ',' + by + ' L' + mid + ',' + SPAN.durY, fill:'none', stroke:'#2F9E69', 'stroke-width':2 }));
+      var slots = spanSlots(s, e), zones = [], placed = 0;
+      slots.forEach(function(sl){
+        sl.el = addZone(B, sl.bx, sl.by, sl.bw, sl.bh, 'gslot gph', sl.k === 'start' ? d.gSpanStart : (sl.k === 'end' ? d.gSpanEnd : d.gSpanHow));
+        sl.el.setAttribute('data-k', sl.k);
+        sl.zones.forEach(function(z){ z.slot = sl; zones.push(z); });
+      });
+      var text = function(c){ return c.k === 'clock' ? clk(c.t) : d.gDur(c.t); };
+      unsorted(spanCards(s, e), spanInOrder).forEach(function(c, j){
+        addPiece(B, { w:SPAN.cardW, h:SPAN.cardH, cx:SPAN.cardX[j % 2], cy:SPAN.cardY[j >> 1], text:text(c), cls:'gcard' + (c.k === 'clock' ? ' gclock' : ''), data:{ k:c.k, t:c.t, j:j } });
+      });
+      useTapSelect(B, function(P, pt){
+        var z = nearestOpen(zones, pt, SPAN.pad);
+        if (!z) return false;
+        var sl = z.slot, c = P.data, why = spanRefuse(s, e, sl.k, c);
+        /* 時間量的卡放在那一點或它的虛線上（不是上面的格子）：多半是想放到旁邊那一段、手偏了一點 ——
+           時間量從來不會是對的點，所以只提醒（說明照樣說），不算放錯、不扣分 */
+        if (why === 'durOnPoint' && z !== sl.zones[0]){ roundNote(d.gSpanDurOnPoint(text(c))); return false; }
+        if (why){
+          var msg = why === 'durOnPoint' ? d.gSpanDurOnPoint(text(c)) : why === 'clockOnSpan' ? d.gSpanClockOnSpan(text(c))
+            : why === 'otherPoint' ? d.gSpanOtherPoint(text(c), H0 + Math.floor(sl.t / 60), sl.t % 60)
+            : d.gSpanBadDur(text(c), d.gDur(e - s), clk(s), clk(e), spanParts(s, e).map(function(p){ return [clk(p[0]), clk(p[1]), d.gDur(p[1] - p[0])]; }));
+          missOnce(sl.k + ':' + c.j, msg);
+          return false;
+        }
+        fillSlot(P, sl, text(c));
+        sl.zones.forEach(function(q){ q.done = true; });
+        placed++;
+        line.textContent = d.gSpanNow(placed);
+        if (placed === 3) roundSolved(d.gSpanDone(clk(s), clk(e), d.gDur(e - s)));
+        else { roundInfo(c.k === 'clock' ? d.gSpanOkClock(text(c)) : d.gSpanOkDur(text(c))); refreshHint(); }
+        return true;
+      });
+      gCtx.hint2 = function(){
+        for (var i = 0; i < 2; i++) if (!slots[i].done) return d.gSpan2(slots[i].k === 'start' ? d.gSpanStart : d.gSpanEnd, H0 + Math.floor(slots[i].t / 60), slots[i].t % 60);
+        return d.gSpan2Span(spanParts(s, e).length === 3);
+      };
+    },
+
+    /* 第 2 關：滿 60 進 1 時（範例 2）—— 兩段接起來，在輸入框打出幾時幾分 */
+    carry: function(d){
+      var p = pick(GAME_CARRY), a = p[0], b = p[1], A = a + b;
+      gCtx.ask.textContent = d.gCarryAsk;
+      trailLine(d.gCarryNow(a, b));
+      var B = makeBoard(GW, CARRY_H), svg = gSvg(B);
+      [[0, a, '#3B7DD8', 'gbarA'], [a, A, '#2F9E69', 'gbarB']].forEach(function(q){
+        svg.appendChild(svgEl('rect', { 'class':q[3], x:carryX(q[0]), y:CARRY.barY, width:carryX(q[1]) - carryX(q[0]), height:CARRY.barH, rx:3, fill:q[2], 'fill-opacity':0.3, stroke:q[2], 'stroke-width':2 }));
+        gText(svg, (carryX(q[0]) + carryX(q[1])) / 2, CARRY.barY - 8, d.gMin(q[1] - q[0]), { 'font-size':15, fill:q[2], 'class':'gbarlbl' });
+      });
+      svg.appendChild(svgEl('line', { x1:carryX(0), y1:CARRY.ry, x2:carryX(CARRY.len), y2:CARRY.ry, stroke:'#6B6875', 'stroke-width':2 }));
+      for (var t = 0; t <= CARRY.len; t += 10){
+        var big = t % 30 === 0, h60 = t === 60, x = carryX(t);
+        svg.appendChild(svgEl('line', { 'class':h60 ? 'g60' : 'gtick', x1:x, y1:h60 ? CARRY.barY : CARRY.ry - (big ? 8 : 5), x2:x, y2:CARRY.ry + (big ? 8 : 5), stroke:h60 ? '#E8871E' : '#6B6875', 'stroke-width':h60 ? 3 : 1.2, 'stroke-dasharray':h60 ? '5 4' : 'none' }));
+        if (big) gText(svg, x, CARRY.ry + 24, h60 ? d.gCarry60 : String(t), { 'font-size':13, fill:h60 ? '#E8871E' : '#6B6875', 'class':'grulerlbl' });
+      }
+      var row = actionRow(), inH = document.createElement('input'), inM = document.createElement('input');
+      [[inH, d.gCarryAriaH, d.gCarryH], [inM, d.gCarryAriaM, d.gCarryM]].forEach(function(q){
+        q[0].type = 'text'; q[0].className = 'gnum'; q[0].setAttribute('inputmode', 'numeric'); q[0].setAttribute('autocomplete', 'off');
+        q[0].maxLength = 4; q[0].setAttribute('aria-label', q[1]);
+        var u = document.createElement('span'); u.className = 'gunit'; u.textContent = q[2];
+        row.appendChild(q[0]); row.appendChild(u);
+        q[0].addEventListener('keydown', function(ev){ if (ev.key === 'Enter') submit(); });
+      });
+      var ok = actionBtn(actionRow(), d.gOk, 'gok');
+      function submit(){
+        if (gSolved) return;
+        var h = readInt(inH.value), m = readInt(inM.value);
+        if (h === null || m === null){ roundNote(d.gCarryBlank); return; }
+        var why = carryRefuse(A, h, m);
+        if (why === 'over'){ missOnce(h + ':' + m, d.gCarryOver(m)); return; }
+        if (why){ missOnce(h + ':' + m, d.gCarryValue(h, m, h * 60 + m, A)); return; }
+        inH.disabled = true; inM.disabled = true; ok.disabled = true;
+        roundSolved(d.gCarryDone(a, b, A, h, m));
+      }
+      ok.addEventListener('click', submit);
+      gCtx.hint2 = function(){ return d.gCarry2(a, b, A); };
+    },
+
+    /* 第 3 關：一天一天疊起來（範例 3）—— 分和時分開乘，分滿 60 進位 */
+    times: function(d){
+      var p = pick(GAME_TIMES), h = p[0], m = p[1], n = p[2], X = timesParts(h, m, n);
+      gCtx.ask.textContent = d.gTimesAsk(h, m, n);
+      var line = trailLine(d.gTimesNow(0));
+      var B = makeBoard(GW, TIMES_H), svg = gSvg(B);
+      gText(svg, GW / 2, TIMES.row1 + 6, d.gTimesRow1(m, n, X.A), { 'font-size':18, 'class':'grow1' });
+      gText(svg, GW / 2, TIMES.row3 + 6, d.gTimesRow3(h, n), { 'font-size':18, 'class':'grow3' });
+      var sy = d.gTimesSyms(X.A);
+      TIMES_SYMS.forEach(function(q){
+        var z = addZone(B, q.x, q.y - TIMES.slotH / 2, q.w, TIMES.slotH, 'gsym', sy[q.id]);
+        z.style.justifyContent = q.align;
+      });
+      var slots = ['c', 'r', 'H'].map(function(k){
+        var cy = k === 'H' ? TIMES.row4 : TIMES.row2, cx = TIMES.slots[k];
+        var sl = { k:k, cx:cx, cy:cy, hw:TIMES.slotW / 2, hh:TIMES.slotH / 2 };
+        sl.el = addZone(B, cx - TIMES.slotW / 2, cy - TIMES.slotH / 2, TIMES.slotW, TIMES.slotH, 'gslot');
+        sl.el.setAttribute('data-k', k);
+        return sl;
+      });
+      var placed = 0;
+      unsorted(timesCards(h, m, n), timesInOrder).forEach(function(c, j){
+        addPiece(B, { w:TIMES.cardW, h:TIMES.cardH, cx:TIMES.cardX[j % 3], cy:TIMES.cardY[Math.floor(j / 3)], text:String(c.v), cls:'gcard', data:{ k:c.k, v:c.v } });
+      });
+      useTapSelect(B, function(P, pt){
+        var sl = nearestOpen(slots, pt, TIMES.pad);
+        if (!sl) return false;
+        var c = P.data;
+        if (timesRefuse(sl.k, c)){
+          var msg = sl.k === 'c' ? (c.k === 'c10' ? d.gTimesTen(X.A, c.v) : d.gTimesC(c.v, X.A))
+            : sl.k === 'r' ? d.gTimesR(c.v, X.A, c.k === 'r10')
+            : (c.k === 'H0' ? d.gTimesH0(h, n, X.H0) : c.v < X.H0 ? d.gTimesHless(c.v, h, n, X.H0) : d.gTimesHmore(c.v, X.H0, X.A));
+          missOnce(sl.k + ':' + c.k, msg);
+          return false;
+        }
+        fillSlot(P, sl, String(c.v));
+        placed++;
+        line.textContent = d.gTimesNow(placed);
+        if (placed === 3) roundSolved(d.gTimesDone(h, m, n, X.H, X.r));
+        else { roundInfo(sl.k === 'c' ? d.gTimesOkC(X.A, X.c) : sl.k === 'r' ? d.gTimesOkR(X.A, X.c, X.r) : d.gTimesOkH(X.H0, X.c, X.H)); refreshHint(); }
+        return true;
+      });
+      gCtx.hint2 = function(){
+        if (!slots[0].done) return d.gTimes2c(X.A);
+        if (!slots[1].done) return d.gTimes2r(X.A, X.c);
+        return d.gTimes2H(h, n, X.H0);
+      };
+    },
+
+    /* 第 4 關：把時間平分（範例 4）—— 拉出「一份」的長度，n 份要剛好排滿 */
+    share: function(d){
+      var p = pick(GAME_SHARE), h = p[0], m = p[1], n = p[2], T = h * 60 + m;
+      gCtx.ask.textContent = d.gShareAsk(h, m, n);
+      var line = trailLine(d.gShareNow(d.gDur(0)));
+      var B = makeBoard(GW, SHARE_H), svg = gSvg(B);
+      gText(svg, SHARE.x0 + SHARE.w / 2, SHARE.totY - 8, d.gDur(T), { 'font-size':15, 'class':'gtotlbl' });
+      svg.appendChild(svgEl('rect', { 'class':'gtotal', x:SHARE.x0, y:SHARE.totY, width:SHARE.w, height:SHARE.totH, rx:3, fill:'#E8E2D6', stroke:'#6B6875', 'stroke-width':2 }));
+      svg.appendChild(svgEl('line', { x1:SHARE.x0, y1:SHARE.ry, x2:SHARE.x0 + SHARE.w, y2:SHARE.ry, stroke:'#6B6875', 'stroke-width':2 }));
+      for (var t = 0; t <= T; t += 10){
+        var hr = t % 60 === 0, x = shareX(T, t);
+        svg.appendChild(svgEl('line', { 'class':hr ? 'ghour' : 'gtick', x1:x, y1:SHARE.ry - (hr ? 9 : 4), x2:x, y2:SHARE.ry + (hr ? 9 : 4), stroke:hr ? '#2B2A33' : '#6B6875', 'stroke-width':hr ? 2.5 : 1 }));
+        if (hr) gText(svg, x, SHARE.ry + 26, t ? d.gShareH(t / 60) : '0', { 'font-size':13, 'class':'ghourlbl' });
+      }
+      svg.appendChild(svgEl('line', { 'class':'gend', x1:shareX(T, T), y1:SHARE.totY, x2:shareX(T, T), y2:SHARE.ry + 9, stroke:'#2B2A33', 'stroke-width':2.5 }));
+      var ghosts = svgEl('g', { 'class':'gghosts' });
+      svg.appendChild(ghosts);
+      var bar = svgEl('rect', { 'class':'gsharebar', x:SHARE.x0, y:SHARE.rowY, width:0, height:SHARE.rowH, rx:3, fill:'#E8871E', 'fill-opacity':0.85 });
+      svg.appendChild(bar);
+      var stem = svgEl('line', { 'class':'gstem', x1:SHARE.x0, y1:SHARE.rowY, x2:SHARE.x0, y2:SHARE.gripY - GPICK / 2, stroke:'#E8871E', 'stroke-width':2.5 });
+      svg.appendChild(stem);
+      gCtx.v = 0;
+      function set(v){
+        gCtx.v = v;
+        bar.setAttribute('width', shareX(T, v) - SHARE.x0);
+        stem.setAttribute('x1', shareX(T, v)); stem.setAttribute('x2', shareX(T, v));
+        line.textContent = d.gShareNow(d.gDur(v));
+        ghosts.textContent = '';
+      }
+      /* n 份一份接一份畫出來：超過整段的部分畫紅色，畫到畫板邊為止 */
+      function copies(v){
+        ghosts.textContent = '';
+        for (var i = 1; i < n; i++){
+          var x0 = shareX(T, i * v), x1 = Math.min(shareX(T, (i + 1) * v), GW - 4);
+          if (x0 >= GW - 4) break;
+          var over = (i + 1) * v > T, xs = over ? Math.min(Math.max(shareX(T, T), x0), x1) : x1;
+          if (xs > x0) ghosts.appendChild(svgEl('rect', { 'class':'gcopy', x:x0, y:SHARE.rowY, width:xs - x0, height:SHARE.rowH, fill:i % 2 ? '#F5B266' : '#E8871E', 'fill-opacity':0.85, stroke:'#FFFFFF', 'stroke-width':1.5 }));
+          if (over && x1 > xs) ghosts.appendChild(svgEl('rect', { 'class':'gover', x:xs, y:SHARE.rowY, width:x1 - xs, height:SHARE.rowH, fill:'#D64545', 'fill-opacity':0.85 }));
+        }
+      }
+      var grip = addPiece(B, { w:GPICK, h:GPICK, cx:shareX(T, 0), cy:SHARE.gripY, cls:'ggrip', text:'↔', label:d.gShareNow(''), axis:'x',
+        snapX:function(x){ return shareX(T, shareSnap(T, x)); }, onPlace:function(P){ set(shareSnap(T, P.cx)); } });
+      function moveTo(v){
+        if (gSolved || grip.busy()) return;   /* 圓點正被拖著：點線、按 ◀ ▶ 都不算數，等它放開 */
+        grip.rehome(shareX(T, v), SHARE.gripY);
+      }
+      B.onDrop = function(P, pt){ P.rehome(shareX(T, shareSnap(T, pt.x)), SHARE.gripY); return true; };
+      B.onTap = function(P){
+        if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+        B.selected = P; P.el.classList.add('sel');
+      };
+      var inBand = function(pt){ return pt.y >= SHARE.band[0] && pt.y <= SHARE.band[1] && pt.x >= SHARE.x0 - 20 && pt.x <= SHARE.x0 + SHARE.w + 20; };
+      B.onPointTap = function(P, pt){ P.el.classList.remove('sel'); B.selected = null; if (inBand(pt)) moveTo(shareSnap(T, pt.x)); };
+      B.onBoardTap = function(pt){ if (inBand(pt)) moveTo(shareSnap(T, pt.x)); };
+      var row = actionRow();
+      var less = actionBtn(row, '◀', 'ghost', d.gShareLess), more = actionBtn(row, '▶', 'ghost', d.gShareMore);
+      var ok = actionBtn(row, d.gOk, 'gok');
+      less.addEventListener('click', function(){ moveTo(Math.max(0, gCtx.v - SHARE.step)); });
+      more.addEventListener('click', function(){ moveTo(Math.min(T, gCtx.v + SHARE.step)); });
+      ok.addEventListener('click', function(){
+        if (gSolved || grip.busy()) return;   /* 圓點正被拖著：先放開才判斷 */
+        var v = gCtx.v;
+        if (v === 0){ roundNote(d.gShareZero); return; }
+        copies(v);
+        var r = shareRefuse(h, m, n, v);
+        if (r){
+          missOnce('v' + v, d.gShareBad(n, d.gDur(v), d.gDur(r.x), d.gDur(T), r.less, d.gDur(r.diff))
+            + (r.borrow ? d.gShareBorrow(h, n, Math.floor(h / n), h % n, m) : '') + (r.ten ? d.gShareTen(h, m, h * 100 + m, T) : ''));
+          return;
+        }
+        grip.lock(grip.cx, grip.cy);
+        copies(v);   /* lock() 會重畫一次這一份（清掉複本）：放好之後再畫一次 n 份剛好排滿 */
+        less.disabled = true; more.disabled = true; ok.disabled = true;
+        roundSolved(d.gShareDone(h, m, n, T, v, d.gDur(v)));
+      });
+      gCtx.hint2 = function(){ return d.gShare2(h, m, n, T); };
+    },
+
+    /* 第 5 關：先統一成分再比 —— 四段時間由短排到長 */
+    rank: function(d){
+      var set = pick(GAME_RANK);
+      gCtx.ask.textContent = d.gRankAsk;
+      var line = trailLine(d.gRankNow(0));
+      var B = makeBoard(GW, RANK_H);
+      var text = function(c){ return c[1] ? d.gDur(c[0]) : d.gMin(c[0]); };
+      addZone(B, RANK.slotX - RANK.w / 2, RANK.capTop[0], RANK.w, RANK.capTop[1] - RANK.capTop[0], 'gcap', d.gRankTop);
+      addZone(B, RANK.slotX - RANK.w / 2, RANK.capBot[0], RANK.w, RANK.capBot[1] - RANK.capBot[0], 'gcap', d.gRankBot);
+      var slots = RANK.rowY.map(function(cy, i){
+        var sl = { i:i, cx:RANK.slotX, cy:cy, hw:RANK.w / 2, hh:RANK.h / 2 };
+        sl.el = addZone(B, RANK.slotX - RANK.w / 2, cy - RANK.h / 2, RANK.w, RANK.h, 'gslot gph', String(i + 1));
+        return sl;
+      });
+      var placed = 0;
+      var pieces = unsorted(set, rankInOrder).map(function(c, j){
+        return addPiece(B, { w:RANK.w, h:RANK.h, cx:RANK.cardX, cy:RANK.rowY[j], text:text(c), cls:'gcard', data:{ t:c[0], hm:c[1], j:j } });
+      });
+      useTapSelect(B, function(P, pt){
+        var sl = nearestOpen(slots, pt, RANK.pad);
+        if (!sl) return false;
+        var c = P.data, k = rankOf(set, c.t), txt = text([c.t, c.hm]);
+        if (k !== sl.i){ missOnce(c.j + ':' + sl.i, d.gRankBad(txt, c.t, c.hm, k + 1, sl.i + 1)); return false; }
+        fillSlot(P, sl, txt);
+        placed++;
+        line.textContent = d.gRankNow(placed);
+        if (placed === 4){
+          var sorted = set.slice().sort(function(x, y){ return x[0] - y[0]; });
+          roundSolved(d.gRankDone(sorted.map(function(q){ return d.gRankItem(text(q), q[0], q[1]); })));
+        } else { roundInfo(d.gRankOk(txt, c.t, c.hm, k + 1)); refreshHint(); }
+        return true;
+      });
+      gCtx.hint2 = function(){
+        for (var i = 0; i < pieces.length; i++){
+          var q = pieces[i].data;
+          if (!pieces[i].locked && q.hm) return d.gRank2(text([q.t, 1]), Math.floor(q.t / 60), q.t % 60, q.t);
+        }
+        return d.gRank2None;
+      };
+    }
+  };
+
   function startRound(){
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var d = L();
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = { bad:{} }; gGen++; BOARD_TAP = null; PIECE_PTR = {};   /* 上一關沒收尾的手指不帶到下一關 */
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = L().gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = L().gHint1;
-    } else {
-      elHint.textContent = '';
-    }
-
-    gAskLine.textContent = '';
-    var askText = document.createElement('span');
-    askText.textContent = L().gScenario[gRound];
-    gAskLine.appendChild(askText);
-    gAskLine.appendChild(document.createTextNode(' '));
-    gAskLine.appendChild(gHintBtn);
-
-    var correctStr = durStr(round.correct);
-    gAnswers.textContent = '';
-    shuffle(round.choices).forEach(function(choice){
-      var label = durStr(choice);
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = label;
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        var isRight = (choice.h === round.correct.h && choice.m === round.correct.m && !choice.f);
-        if (isRight){
-          var all = gAnswers.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + L().gCorrectRetry(correctStr) + '</span>';
-          } else {
-            gScore += 20;
-            gMsg.innerHTML = '<span class="yes">' + L().gCorrectFirst(correctStr) + '</span>';
-          }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + L().gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gScore = Math.max(0, gScore - 5);
-          gMsg.innerHTML = '<span class="no">' + L().gWrong(label) + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    gameStage.appendChild(ask);
+    gCtx.ask = ask;
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕），第二層跟著畫面走 */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
-
   gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2) return;
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = L().gHint1;
-    } else {
-      var totalMin = ROUNDS[gRound].correct.h * 60 + ROUNDS[gRound].correct.m;
-      elHint.textContent = L().gHint2(totalMin);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言／模式切換：靜態文字＋所有動態區重新渲染 ---------- */

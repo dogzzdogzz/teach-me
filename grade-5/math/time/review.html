@@ -187,10 +187,12 @@
   }
   function sum(arr){ return arr.reduce(function(a, b){ return a + b; }, 0); }
   function round1(x){ return Math.round(x * 10) / 10; }
-  /* 保證 3 個相異、且不等於正解的錯誤選項（先用候選值去重，不夠再往外補） */
-  function makeWrongs(correct, candidates){
+  /* 保證 3 個相異、且不等於正解的錯誤選項（先用候選值去重，不夠再往外補）。
+     avoid：題幹裡的數字先當成已用過（§六之三第 4 點：誘答不可以把題幹的數字抄回來） */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(a){ seen[String(a)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
       if (!seen[key]){ seen[key] = true; out.push(c); }
@@ -205,8 +207,8 @@
     return out.slice(0, 3);
   }
   /* 把選項值＋正解洗牌，回傳 {opts, ans} */
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -214,7 +216,7 @@
   function toHM(mins){ return { h: Math.floor(mins / 60), m: mins % 60 }; }
   function fmtHM(mins, lang){
     var t = toHM(mins);
-    if (lang === 'zh') return t.h > 0 ? (t.h + '時' + t.m + '分') : (t.m + '分');
+    if (lang === 'zh') return t.h > 0 ? (t.h + ' 時 ' + t.m + ' 分') : (t.m + ' 分');
     return t.h > 0 ? (t.h + ' h ' + t.m + ' min') : (t.m + ' min');
   }
   function fmtClockEnc(enc){
@@ -250,13 +252,13 @@
         var carry = Math.floor(mTotal / 60), remM = mTotal % 60;
         var hTotal = perH * days + carry;
         var answerMin = hTotal * 60 + remM;
-        var cands = [mTotal, answerMin - 60, answerMin + 60].filter(function(v){ return v >= 0 && v !== answerMin; });
+        var cands = [mTotal, answerMin - 60, answerMin + 60].filter(function(v){ return v > 0 && v !== answerMin; });
         var mo = mixOpts(answerMin, cands);
         return { perH:perH, perM:perM, days:days, answerMin:answerMin, opts:mo.opts, ans:mo.ans };
       },
       fmt: function(d, lang){
         var perStr = lang === 'zh'
-          ? (d.perH > 0 ? (d.perH + '時' + d.perM + '分') : (d.perM + '分'))
+          ? (d.perH > 0 ? (d.perH + ' 時 ' + d.perM + ' 分') : (d.perM + ' 分'))
           : (d.perH > 0 ? (d.perH + ' h ' + d.perM + ' min') : (d.perM + ' min'));
         return {
           stem: lang === 'zh' ? perStr + ' × ' + d.days + ' 天 = ？' : perStr + ' × ' + d.days + ' days = ?',
@@ -275,7 +277,7 @@
         var perM = pick([10,15,20,25,30,35,40,45,50]);
         var answerMin = perH * 60 + perM;
         var totalMin = answerMin * parts;
-        var cands = [totalMin, answerMin - parts, answerMin + parts].filter(function(v){ return v >= 0 && v !== answerMin; });
+        var cands = [totalMin, answerMin - parts, answerMin + parts].filter(function(v){ return v > 0 && v !== answerMin; });
         var mo = mixOpts(answerMin, cands);
         return { totalMin:totalMin, parts:parts, answerMin:answerMin, opts:mo.opts, ans:mo.ans };
       },
@@ -295,7 +297,7 @@
         var a = pickUnused([25,30,35,40,45,50,55], used);
         var b = pick([15,20,25,30,35,40]);
         var sumM = a + b;
-        var cands = [sumM - 60, sumM + 60, a].filter(function(v){ return v >= 0 && v !== sumM; });
+        var cands = [sumM - 60, sumM + 60, a].filter(function(v){ return v > 0 && v !== sumM; });
         var mo = mixOpts(sumM, cands);
         return { a:a, b:b, sumM:sumM, opts:mo.opts, ans:mo.ans };
       },
@@ -329,7 +331,7 @@
       fmt: function(d, lang){
         var startClk = d.h0 + ':' + (d.m0 < 10 ? ('0' + d.m0) : d.m0);
         var durStr = lang === 'zh'
-          ? (d.dh > 0 ? (d.dh + '時' + d.dm + '分') : (d.dm + '分'))
+          ? (d.dh > 0 ? (d.dh + ' 時 ' + d.dm + ' 分') : (d.dm + ' 分'))
           : (d.dh > 0 ? (d.dh + ' h ' + d.dm + ' min') : (d.dm + ' min'));
         var carried = d.rawM >= 60;
         return {
@@ -357,13 +359,13 @@
         var c = choices[idx];
         var answerMin = c.mins;
         var trapCands = [];
-        if (c.dec === 1.5) trapCands.push(110);   // 1時50分 陷阱
-        if (c.dec === 2.5) trapCands.push(170);   // 2時50分 陷阱
+        if (c.dec === 1.5) trapCands.push(110);   // 1 時 50 分 陷阱
+        if (c.dec === 2.5) trapCands.push(170);   // 2 時 50 分 陷阱
         if (c.dec === 0.5) trapCands.push(50);    // 0.5小時看成50分
         if (c.dec === 0.25) trapCands.push(25);   // 0.25小時看成25分
         if (c.dec === 0.75) trapCands.push(75);   // 0.75小時看成75分
         trapCands.push(answerMin + 10, Math.max(0, answerMin - 10));
-        trapCands = trapCands.filter(function(v){ return v >= 0 && v !== answerMin; });
+        trapCands = trapCands.filter(function(v){ return v > 0 && v !== answerMin; });
         var mo = mixOpts(answerMin, trapCands);
         return { dec:c.dec, answerMin:answerMin, opts:mo.opts, ans:mo.ans };
       },
@@ -385,7 +387,8 @@
         var dividendTenths = qt * k;
         var dividend = round1(dividendTenths / 10);
         var q = round1(qt / 10);
-        var m = mixOpts(q, [round1(q - 0.1), round1(q + 0.1), round1(q * 2)]);
+        /* 題幹「7.5 ÷ 3」裡看得到的數字（7、5、3、7.5）都不當誘答 */
+        var m = mixOpts(q, [round1(q - 0.1), round1(q + 0.1), round1(q * 2)], [k, dividend].concat(String(dividend).split('.').map(Number)));
         return { k:k, dividend:dividend, dividendTenths:dividendTenths, q:q, qt:qt, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -405,7 +408,7 @@
         var avg = pickUnused([6,7,8,9,10,11,12,14,15,16,18,20,22,24,25], used);
         var nums = makeNumsForAvg(avg, n);
         var s = sum(nums);
-        var m = mixOpts(avg, [avg - 1, avg + 1, s]);
+        var m = mixOpts(avg, [avg - 1, avg + 1, s], nums);
         return { n:n, nums:nums, avg:avg, sum:s, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -426,7 +429,7 @@
         var c = pick([1,2,3,4,5,6]);
         var correct = a + b * c;
         var cands = [(a + b) * c, a * b + c].filter(function(v){ return v >= 0 && v !== correct; });
-        var mo = mixOpts(correct, cands);
+        var mo = mixOpts(correct, cands, [a, b, c]);
         return { a:a, b:b, c:c, correct:correct, opts:mo.opts, ans:mo.ans };
       },
       fmt: function(d, lang){
