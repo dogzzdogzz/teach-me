@@ -122,6 +122,51 @@
   .secline{font-size:18px;margin-top:14px;text-align:center}
   .fracbig{font-size:32px;color:var(--orange);font-weight:700}
   .secangle{font-size:22px;font-weight:700;color:var(--ink)}
+  /* ---- 小遊戲「轉盤大師」：分一分、切三角形、每一個角、轉轉盤、拼分數（§六之五） ---- */
+  .game .stats{justify-content:center}
+  .game .hint{text-align:center;margin-top:8px}
+  .game .gamemsg{text-align:center}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div{position:absolute}
+  .gsvg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gpiece svg{pointer-events:none;overflow:visible}
+  /* 第二層提示：發亮的卡片、頂點 */
+  .gpiece.glow{box-shadow:0 0 0 4px var(--orange)}
+  .gvtx.glow{fill:var(--orange)}
+  /* 卡片 */
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-weight:800;color:var(--ink);text-align:center;white-space:nowrap}
+  .gnumcard{font-size:24px}
+  .gshape{border-color:var(--blue);padding:0}
+  /* 第 1 關：兩個箱子與放進去的小圖 */
+  .gbin{border:3px dashed #C9BFA9;border-radius:14px;background:var(--card);pointer-events:none}
+  .gbinlbl{display:flex;align-items:center;justify-content:center;text-align:center;font-size:15px;line-height:1.2;font-weight:800;color:var(--ink);pointer-events:none}
+  .gplaced{display:flex;align-items:center;justify-content:center;border:2px solid var(--green);border-radius:8px;background:var(--green-soft);pointer-events:none}
+  /* 第 2 關：紅色頂點上的筆、第 4 關：旋鈕 —— 都是空心的圈，下面的頂點與半徑看得到 */
+  .gpen, .gknob{background:transparent;border:3px solid var(--red);border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+  .gknob{border-color:var(--blue)}
+  .gpen.sel, .gknob.sel{border-radius:50%}
+  /* 第 5 關：分子、分母的格子 */
+  .gslot{border:3px dashed var(--blue);border-radius:10px;background:var(--blue-soft);pointer-events:none}
+  .gslot.filled{border-style:solid;border-color:var(--green);background:var(--green-soft)}
+  /* 提示／下一關／重新開始 在 375px 手機上一排放得下，不要把「下一關」折成兩行 */
+  .game .btnrow{gap:8px}
+  .game .btnrow .btn{white-space:nowrap;padding:10px 12px}
+  .gaction{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
+  .gaction .btn{min-height:48px;min-width:48px}
+  .ginput{width:96px;height:48px;font-size:24px;font-weight:800;text-align:center;border:3px solid var(--blue);border-radius:12px;color:var(--ink);background:var(--card)}
+  .gdeg{font-size:24px;font-weight:800}
+  .gnote{color:var(--muted)}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
 </style>
 </head>
 <body>
@@ -234,18 +279,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">轉盤大師</h2>
-    <p class="lead" data-i18n="s6lead">看清楚出現的是多邊形還是扇形，選出正確答案。答對愈快，分數愈高！</p>
+    <p class="lead" data-i18n="s6lead">分一分、切三角形、算每個角、轉轉盤、拼分數 —— 五關五種玩法：先認出正多邊形，再算它的角，最後把扇形和整個圓連起來。放錯會扣分，但轉盤不會停 —— 慢慢想比手快重要。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <div id="gScene"></div>
-      <p class="hint"><button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button></p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div id="gCards" class="opts"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -322,6 +366,234 @@
     return s;
   }
 
+  /* ============ 小遊戲「轉盤大師」的題庫與版面（語言無關；tools/checks/grade-5-polygon.js 直接讀這一段） ============
+     五關五種玩法（§六之五），每一關對應一個範例：
+       sort 分一分（範例 1）：六張圖拖進「正多邊形／不是正多邊形」兩個箱子。邊一樣長「而且」角一樣大才是正多邊形；
+            不是的那三張，一張只差「角」（菱形、等邊的屋頂五邊形）、一張只差「邊」（長方形、邊有長有短的六邊形）。
+       cut  切三角形（範例 2）：從紅色的頂點拉線（或直接點頂點）畫對角線；連到旁邊的頂點只是沿著邊畫，不收。
+            畫完 n − 3 條，就切成 n − 2 個三角形，內角和 ＝ (n − 2) × 180°。
+       each 每一個角（範例 3）：正 n 邊形的每一個內角，打一個整數。打成內角和、打成 180°、太大太小，各有一句為什麼。
+       dial 轉轉盤（範例 4）：拖旋鈕（或點圓周、按 ◀ ▶）轉出整個圓的 p/q，再按「就是這個」。拖的時候就吸到 15° 一格，看到的就是判的。
+       frac 拼分數（範例 4 倒過來）：圓心角 A° 的扇形，用數字卡 1～9 拼出它占整個圓的最簡分數。
+     每一關「收不收、為什麼不收」都是這裡的純函式，畫面只負責呼叫 —— 設定檔可以直接跑。
+     座標一律是「畫板座標」（px，y 往下），寬 GW；角度從正上方開始、順時針。 */
+  var GAME_ORDER = ['sort', 'cut', 'each', 'dial', 'frac'];
+  var GW = 300;
+  var GPICK = 48;   /* 拿得起來的東西最小 48 ×（畫板縮放 ≥ 0.92 時，手機上仍 ≥ 44px） */
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function gGcd(a, b){ return b ? gGcd(b, a % b) : a; }
+  /* 正 n 邊形的頂點：第 0 個在正上方，順時針排 */
+  function regPts(n, cx, cy, r){
+    var pts = [];
+    for (var k = 0; k < n; k++){
+      var t = -Math.PI / 2 + k * 2 * Math.PI / n;
+      pts.push({ x:cx + r * Math.cos(t), y:cy + r * Math.sin(t) });
+    }
+    return pts;
+  }
+  /* 圓周上的點：deg 從正上方開始、順時針 */
+  function rimPt(cx, cy, r, deg){
+    var t = (deg - 90) * Math.PI / 180;
+    return { x:cx + r * Math.cos(t), y:cy + r * Math.sin(t) };
+  }
+
+  /* ---- 第 1 關：分一分 —— 六張圖：三個正多邊形（SORT_REG 裡挑三個不同的邊數），三個不是的：
+         一個只差「角」（SORT_ODD.angles）、一個只差「邊」（SORT_ODD.sides），第三個從剩下的不是裡挑。
+         圖照比例畫，一樣長的邊畫一樣的小記號（一條長度一種記號），長方形畫直角記號 —— 圖本身就決定得了答案。
+         托盤洗牌之後，不可以剛好上一排全是同一種（那等於已經分好了）：那樣就重新洗。 ---- */
+  var SORT = { cardW:88, cardH:84, trayX:[52, 150, 248], trayY:[164, 256], binX:[4, 154], binY:4, binW:142, binH:106, lblH:50, miniS:40, miniGap:4, pad:8, area:1400, sMin:0.85 };
+  var SORT_H = 302;
+  var SORT_REG = [3, 4, 5, 6, 8];
+  var SORT_ODD = { angles:['rhombus', 'house'], sides:['rect', 'hexalt'], both:['iso'] };
+  /* 每一種不是正多邊形的圖，差的是哪一個條件 */
+  function sortWhy(c){
+    if (c.kind === 'reg') return 'reg';
+    if (SORT_ODD.angles.indexOf(c.kind) >= 0) return 'angles';
+    if (SORT_ODD.sides.indexOf(c.kind) >= 0) return 'sides';
+    return 'both';
+  }
+  /* 放進箱子 isReg（true ＝「正多邊形」那一箱）：對了回 null，錯了回差的是什麼 */
+  function sortRefuse(c, isReg){ return (c.kind === 'reg') === isReg ? null : sortWhy(c); }
+  function sortBoard(){
+    var regs = shuffle(SORT_REG).slice(0, 3).map(function(n){ return { kind:'reg', n:n }; });
+    var size = function(c){ c.s = SORT.sMin + (1 - SORT.sMin) * Math.random(); return c; };   /* 每一張自己的大小，跟答案無關 */
+    var a = pick(SORT_ODD.angles), s = pick(SORT_ODD.sides);
+    var rest = SORT_ODD.angles.concat(SORT_ODD.sides, SORT_ODD.both).filter(function(k){ return k !== a && k !== s; });
+    var odd = [a, s, pick(rest)].map(function(k){ return { kind:k, n:sortShape({ kind:k }).pts.length }; });
+    return regs.concat(odd).map(size);
+  }
+  function sortGrouped(t){
+    var top = t.slice(0, 3).map(function(c){ return c.kind === 'reg'; });
+    return top[0] === top[1] && top[1] === top[2];
+  }
+  function sortTray(cards){
+    /* 分好的排法就重新洗（不是固定對調兩張 —— 那樣「RRDRDD」這種排法會出現兩倍多，只看位置也猜得到；codex 第四輪） */
+    var t = shuffle(cards);
+    for (var i = 0; i < 100 && sortGrouped(t); i++) t = shuffle(cards);
+    if (sortGrouped(t)){ var x = t[2]; t[2] = t[3]; t[3] = x; }   /* 連洗 100 次都分好（機率 10⁻¹⁰⁰）才對調 */
+    return t;
+  }
+  /* 卡片上的圖（以卡片中心為原點的 px）：pts 頂點；ticks[i] ＝ 第 i 條邊（pts[i] → pts[i+1]）畫幾條小記號；right ＝ 畫直角記號的頂點 */
+  /* 卡片上的圖一律換成同一個面積 SORT.area，再乘上這一張自己的 c.s（0.85～1，跟答案無關的亂數）：
+     大小不可以透露答案（驗證者 2026-10-11：舊版正多邊形都比較大，「最大的三張放進正多邊形」一半的板子會全對）。
+     頂點以外框的中心為原點。 */
+  function sortShape(c){
+    var raw = sortShapeRaw(c), V = raw.pts, A = 0, x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (var i = 0; i < V.length; i++){ var p = V[i], q = V[(i + 1) % V.length]; A += p.x * q.y - q.x * p.y; }
+    var k = Math.sqrt(SORT.area / (Math.abs(A) / 2)) * (c.s || 1);
+    V.forEach(function(p){ x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); });
+    var mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    return { pts:V.map(function(p){ return { x:(p.x - mx) * k, y:(p.y - my) * k }; }), ticks:raw.ticks, right:raw.right };
+  }
+  function sortShapeRaw(c){
+    var P = function(list){ return list.map(function(p){ return { x:p[0], y:p[1] }; }); };
+    var all = function(pts, m){ return pts.map(function(){ return m; }); };
+    if (c.kind === 'reg'){
+      var r = c.n === 3 ? 36 : 33, pts = regPts(c.n, 0, c.n === 3 ? 7 : 0, r);
+      /* 正方形擺正（不要站成一個角朝上的菱形 —— 那樣看起來像旁邊那張菱形） */
+      if (c.n === 4) pts = pts.map(function(p){ return { x:(p.x - p.y) / Math.SQRT2, y:(p.x + p.y) / Math.SQRT2 }; });
+      return { pts:pts, ticks:all(pts, 1), right:c.n === 4 ? [0, 1, 2, 3] : [] };
+    }
+    if (c.kind === 'rhombus'){   /* 四邊 38，兩個 60°（左右）、兩個 120°（上下） */
+      var w = 38 * Math.cos(Math.PI / 6), h = 38 * Math.sin(Math.PI / 6);
+      var rp = P([[0, -h], [w, 0], [0, h], [-w, 0]]);
+      return { pts:rp, ticks:all(rp, 1), right:[] };
+    }
+    if (c.kind === 'house'){     /* 正方形 30 ＋ 正三角形的屋頂：五條邊都是 30，角是 90、90、150、60、150 */
+      var a = 30, rh = a * Math.sqrt(3) / 2, y0 = (a + rh) / 2 - rh;
+      var hp = P([[-a / 2, y0 + a], [-a / 2, y0], [0, y0 - rh], [a / 2, y0], [a / 2, y0 + a]]);
+      return { pts:hp, ticks:all(hp, 1), right:[0, 4] };
+    }
+    if (c.kind === 'rect'){      /* 64 × 32：四個直角，長邊一條記號、短邊兩條 */
+      var rr = P([[-32, -16], [32, -16], [32, 16], [-32, 16]]);
+      return { pts:rr, ticks:[1, 2, 1, 2], right:[0, 1, 2, 3] };
+    }
+    if (c.kind === 'hexalt'){    /* 六個角都是 120°，邊長 30、12 輪流：一圈走回原點 */
+      var len = [30, 12, 30, 12, 30, 12], x = 0, y = 0, q = [];
+      for (var i = 0; i < 6; i++){ q.push([x, y]); var t = i * Math.PI / 3; x += len[i] * Math.cos(t); y += len[i] * Math.sin(t); }
+      var mx = 0, my = 0; q.forEach(function(p){ mx += p[0] / 6; my += p[1] / 6; });
+      var xp = P(q.map(function(p){ return [p[0] - mx, p[1] - my]; }));
+      return { pts:xp, ticks:[1, 2, 1, 2, 1, 2], right:[] };
+    }
+    /* iso：底 36、高 62 的等腰三角形 —— 兩腰一樣長（一條記號），底不一樣 */
+    var ip = P([[0, -34], [18, 28], [-18, 28]]);
+    return { pts:ip, ticks:[1, 0, 1], right:[] };
+  }
+
+  /* ---- 第 2 關：切三角形 —— 正 n 邊形，紅色的頂點是第 0 個（正上方）。
+         拖紅點上的筆到第 k 個頂點（或直接點第 k 個頂點）：k 是 1 或 n − 1（相鄰）→ 那是邊，不收；k ＝ 0 什麼都不做；
+         已經畫過的什麼都不做；其他的畫一條對角線。點／放開的位置離頂點超過 pad 就什麼都不做（不算錯）。 ---- */
+  var CUT = { cx:150, cy:150, r:110, pad:24 };
+  var CUT_H = 290;
+  var GAME_CUT = [5, 6, 7, 8];
+  function cutPts(n){ return regPts(n, CUT.cx, CUT.cy, CUT.r); }
+  /* 放開／點下去的位置 → 最近的頂點（在 pad 以內），沒有就是 null */
+  function cutPick(n, pt){
+    var best = null, bd = Infinity;
+    cutPts(n).forEach(function(p, k){
+      var d = Math.hypot(pt.x - p.x, pt.y - p.y);
+      if (d <= CUT.pad && d < bd){ bd = d; best = k; }
+    });
+    return best;
+  }
+  function cutRefuse(n, k){ return k === 0 ? 'self' : (k === 1 || k === n - 1 ? 'side' : null); }
+  /* 已經畫的對角線（連到的頂點 drawn）把多邊形切成幾塊：每一塊是「紅點 ＋ 相鄰兩條線之間的頂點」，只有三個頂點的就是三角形 */
+  function cutRegions(n, drawn){
+    var L = [1].concat(drawn.slice().sort(function(a, b){ return a - b; }), [n - 1]), out = [];
+    for (var m = 0; m + 1 < L.length; m++){
+      var v = [0];
+      for (var k = L[m]; k <= L[m + 1]; k++) v.push(k);
+      out.push(v);
+    }
+    return out;
+  }
+
+  /* ---- 第 3 關：每一個角 —— 正 n 邊形（每個角都是整數度的那幾個；3、4 太熟了不出）。
+         打的字只收寫法正常的整數（可以帶一個 °），其他（空的、小數、空格、開頭的 0）只提醒、不算錯。 ---- */
+  var EACH = { cx:150, cy:136, r:106, arc:16 };
+  var EACH_H = 254;
+  var GAME_EACH = [5, 6, 8, 9, 10, 12];
+  function eachPts(n){ return regPts(n, EACH.cx, EACH.cy, EACH.r); }
+  function eachRead(raw){
+    var t = String(raw).replace(/^\s+|\s+$/g, '').replace(/°$/, '');
+    return /^(0|[1-9]\d{0,5})$/.test(t) ? +t : null;
+  }
+  function eachJudge(n, x){
+    var S = (n - 2) * 180, E = S / n;
+    if (x === E) return null;
+    if (x === S) return { k:'sum', S:S };
+    if (x === 180) return { k:'tri', S:S };
+    return { k:'wrong', S:S, Y:n * x, big:n * x > S };
+  }
+
+  /* ---- 第 4 關：轉轉盤 —— 圓心在 (cx, cy)，半徑 r；固定的那一條半徑在正上方，旋鈕在另一條半徑的端點。
+         圓心角只會是 15° 的倍數（15～345）：拖的時候吸到最近的一格、畫在吸到的位置；按「就是這個」判的就是看到的那一格。
+         點圓周附近（離圓周 band 以內）也可以：每一格各管自己的 ±7.5°（四捨五入到最近的 15°）；正上方（固定的半徑）左右半格點了沒反應。
+         拖的時候拖過正上方，旋鈕停在 15° 或 345°（不會跳到 0°）。 ---- */
+  var DIAL = { cx:150, cy:138, r:100, band:24, step:15, start:90 };
+  var DIAL_H = 266;
+  var GAME_DIAL = [[1, 8], [3, 8], [5, 8], [7, 8], [1, 6], [5, 6], [1, 12], [5, 12], [7, 12], [11, 12], [1, 3], [2, 3], [3, 4]];   /* [p, q] */
+  function dialDeg(pt){
+    var deg = Math.atan2(pt.x - DIAL.cx, DIAL.cy - pt.y) * 180 / Math.PI;
+    return deg < 0 ? deg + 360 : deg;
+  }
+  function dialSnap(pt){
+    var deg = dialDeg(pt);
+    var k = Math.round(deg / DIAL.step), last = 360 / DIAL.step - 1;
+    if (k >= last + 1) k = last;   /* 正上方偏左一點 → 345° */
+    if (k < 1) k = 1;              /* 正上方偏右一點 → 15° */
+    return k * DIAL.step;
+  }
+  function dialTap(pt){
+    var d = Math.hypot(pt.x - DIAL.cx, pt.y - DIAL.cy);
+    if (Math.abs(d - DIAL.r) > DIAL.band) return null;
+    /* 正上方是固定的那條半徑，不是刻度：左右各半格（±7.5°）點下去什麼都不做（codex 第一輪：以前歸給 15°／345°，那兩格就各管了 22.5°） */
+    var deg = dialDeg(pt);
+    return deg < DIAL.step / 2 || deg > 360 - DIAL.step / 2 ? null : dialSnap(pt);
+  }
+  function dialRefuse(p, q, x){
+    if (x * q === 360 * p) return null;
+    var g = gGcd(x, 360);
+    return { a:x / g, b:360 / g, less:x * q < 360 * p, one:p > 1 && x * q === 360 };
+  }
+
+  /* ---- 第 5 關：拼分數 —— 圓心角 A° 的扇形；數字卡 1～9 各一張，拖進分子、分母兩格。兩格都放好才判：
+         a/b ＝ A/360 才收（題庫的每一個 A 約分之後分母 ≥ 5，用 1～9 拼得出來的只有最簡分數那一種）。
+         不收的話兩張卡都回托盤，說為什麼。放好的卡點一下就拿回托盤（還沒判之前可以改）。 ---- */
+  var FRAC = { cx:82, cy:104, r:66, slotX:222, numY:62, denY:146, slotS:56, pad:10, cardS:52, trayX:[[34, 92, 150, 208, 266], [63, 121, 179, 237]], trayY:[226, 284] };
+  var FRAC_H = 316;
+  var GAME_FRAC = [40, 45, 60, 72, 80, 135, 144, 160, 200, 216, 225, 280, 288, 315];
+  function fracSlots(){ return [{ i:0, cx:FRAC.slotX, cy:FRAC.numY, hw:FRAC.slotS / 2, hh:FRAC.slotS / 2 }, { i:1, cx:FRAC.slotX, cy:FRAC.denY, hw:FRAC.slotS / 2, hh:FRAC.slotS / 2 }]; }
+  function fracCardXY(v){ var r = v <= 5 ? 0 : 1; return { x:FRAC.trayX[r][r ? v - 6 : v - 1], y:FRAC.trayY[r] }; }
+  function fracJudge(A, a, b){
+    if (a * 360 === A * b) return null;
+    if (a >= b) return { k:'big' };
+    return (360 * a) % b === 0 ? { k:'int', y:360 * a / b } : { k:'frac' };
+  }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（三年級 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+
   /* ---------- i18n ---------- */
   var I18N = {
     zh: {
@@ -347,7 +619,7 @@
       s1def: '正多邊形一定要符合兩個條件：<strong>所有邊長都相等</strong>，而且<strong>所有角度也都相等</strong>。',
       polyChip: function(n){ return I18N.zh.polyName(n); },
       polyName: function(n){
-        var names = {3:'正三角形',4:'正方形',5:'正五邊形',6:'正六邊形',7:'正七邊形',8:'正八邊形'};
+        var names = {3:'正三角形',4:'正方形',5:'正五邊形',6:'正六邊形',7:'正七邊形',8:'正八邊形',9:'正九邊形',10:'正十邊形',12:'正十二邊形'};
         return names[n] || (n + '邊形');
       },
       plainName: function(n){
@@ -359,10 +631,10 @@
       trapTitle: '陷阱檢查：邊長相等就一定是正多邊形嗎？',
       trapSquareLbl: '正方形', trapRhombusLbl: '菱形',
       trapSquareAria: '正方形，四邊等長、四個角都是直角',
-      trapRhombusAria: '菱形，四邊等長，但角度不相等',
+      trapRhombusAria: '菱形，四邊等長，但角度不全相等',
       trapBtn: '這是正多邊形嗎？',
       trapSquareAns: '<span class="reveal yes">✔ 是正多邊形！四個邊相等，四個角也都相等（都是 90°）。</span>',
-      trapRhombusAns: '<span class="reveal no">✘ 不是正多邊形。菱形四個邊雖然相等，但角度不相等（兩個角比較尖、兩個角比較鈍），所以不是正多邊形。</span>',
+      trapRhombusAns: '<span class="reveal no">✘ 不是正多邊形。菱形四個邊雖然相等，但角度不全相等（兩個角比較尖、兩個角比較鈍），所以不是正多邊形。</span>',
       s2h2: '內角和大切割',
       s2lead: '從一個頂點畫對角線，把多邊形切成一個一個三角形，看看內角和怎麼算出來。',
       triChip: function(n){ return I18N.zh.plainName(n); },
@@ -403,16 +675,16 @@
       qs: [
         { stem:'圖形要符合什麼條件，才能叫做「正多邊形」？',
           opts:['所有邊長相等，而且所有角度也都相等','所有角度都相等就可以','所有邊長都相等就可以','邊數是偶數就可以'], ans:0,
-          why:'菱形四個邊都相等，但角度不相等，所以不是正多邊形；正多邊形一定要「邊長全部相等」而且「角度也全部相等」，兩個條件缺一不可。' },
+          why:'菱形四個邊都相等，但角度不全相等，所以不是正多邊形；正多邊形一定要「邊長全部相等」而且「角度也全部相等」，兩個條件缺一不可。' },
         { stem:'六邊形的內角和是多少度？',
           opts:['900°','1080°','720°','360°'], ans:2,
           why:'六邊形可以從一個頂點切成 (6−2)=4 個三角形，4×180°=720°。' },
         { stem:'n 邊形的內角和公式是哪一個？',
           opts:['n × 180°','n × 360°','(n − 1) × 180°','(n − 2) × 180°'], ans:3,
-          why:'從一個頂點畫對角線，可以把 n 邊形切成 (n−2) 個三角形，每個三角形都是 180°，所以內角和 ＝ (n−2) × 180°。' },
+          why:'從一個頂點畫對角線，可以把 n 邊形切成 (n−2) 個三角形，每個三角形都是 180°，所以內角和是 (n−2) × 180°。' },
         { stem:'正六邊形，每一個內角是多少度？',
           opts:['135°','120°','108°','90°'], ans:1,
-          why:'內角和 ＝(6−2)×180°=720°，720°÷6=120°。' },
+          why:'內角和是 (6−2)×180°=720°，720°÷6=120°。' },
         { stem:'扇形的圓心角是 90°，這個扇形是整個圓的幾分之幾？',
           opts:['1/8','1/2','1/3','1/4'], ans:3,
           why:'整個圓是 360°，90 ÷ 360 ＝ 1/4。' },
@@ -426,13 +698,13 @@
           why:'(8−2)×180°=6×180°=1080°。' },
         { stem:'一個正十邊形，每一個內角是多少度？',
           opts:['160°','180°','144°','108°'], ans:2,
-          why:'內角和＝(10−2)×180°=1440°，1440°÷10=144°。' },
+          why:'內角和是 (10−2)×180°=1440°，1440°÷10=144°。' },
         { stem:'把時鐘鐘面平分成 6 等份，像切蛋糕一樣，每一份扇形的圓心角是多少度？這一份是整個圓的幾分之幾？',
           opts:['72°，1/5','60°，1/3','30°，1/12','60°，1/6'], ans:3,
           why:'360°÷6=60°，60÷360＝1/6。' },
         { stem:'從六邊形的一個頂點畫對角線，可以把它切成幾個三角形？它的內角和是多少度？',
           opts:['6 個三角形，1080°','4 個三角形，720°','3 個三角形，540°','5 個三角形，900°'], ans:1,
-          why:'n−2＝6−2＝4 個三角形，4×180°=720°。' }
+          why:'6−2＝4 個三角形，4×180°=720°。' }
       ],
       qsBoost: [
         { stem:'計算六邊形的內角和，下面哪一個算式是對的？',
@@ -443,18 +715,79 @@
           why:'60° 是整個圓的 60/360=1/6，120° 是 120/360=1/3=2/6，比例確實變成兩倍；但半徑是圓本身的大小，不會因為圓心角改變而跟著變。' }
       ],
       s6h2: '轉盤大師',
-      s6lead: '看清楚出現的是多邊形還是扇形，選出正確答案。答對愈快，分數愈高！',
+      s6lead: '分一分、切三角形、算每個角、轉轉盤、拼分數 —— 五關五種玩法：先認出正多邊形，再算它的角，最後把扇形和整個圓連起來。放錯會扣分，但轉盤不會停 —— 慢慢想比手快重要。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
       gHintBtn: '💡 提示',
       gNextBtn: '下一關', gRestartBtn: '重新開始',
-      gAskSum: function(name){ return name + '的內角和是多少度？'; },
-      gAskEach: function(name){ return name + '，每一個內角是多少度？'; },
-      gAskFrac: function(deg){ return '圓心角 ' + deg + '°，這個扇形是整個圓的幾分之幾？'; },
-      gCorrectFirst: function(ans){ return '答對了！正確答案是 ' + ans + '，+20 分！'; },
-      gCorrectRetry: function(ans){ return '答對了！正確答案是 ' + ans + '，+10 分。'; },
-      gWrong: function(v){ return v + ' 不對，再試一次，−5 分。'; },
-      gClear: '按「下一關」繼續下一題。',
-      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gAsks: {
+        sort: '把每一張圖放進對的箱子：它是正多邊形，還是不是？',
+        cut: function(n){ return '從紅色的頂點畫對角線，把這個' + I18N.zh.plainName(n) + '切成三角形（拖紅點上的圈，或直接點頂點）。'; },
+        each: function(n){ return I18N.zh.polyName(n) + '的每一個內角是幾度？打出來，再按「確定」。'; },
+        dial: function(p, q){ return '轉動旋鈕，轉出整個圓的 ' + p + '/' + q + '，再按「就是這個」。'; },
+        frac: function(A){ return '這個扇形的圓心角是 ' + A + '°。它是整個圓的幾分之幾？用數字卡拼出最簡分數。'; }
+      },
+      gHints: {
+        sort: '正多邊形要兩件事都成立：所有的邊一樣長（看邊上的小記號），所有的角也一樣大。少一件就不是正多邊形。',
+        cut: '從紅色的頂點出發，連到別的頂點。紅色頂點旁邊的兩個頂點本來就用邊連著，要連的是不相鄰的頂點。',
+        each: '先算內角和：(邊數 − 2) × 180°；正多邊形的每個角一樣大，再把內角和平分給每一個角。',
+        dial: '整個圓是 360°。幾分之幾個圓：把 360° 平分成分母那麼多份，再拿分子那麼多份。',
+        frac: '扇形占整個圓的幾分之幾 ＝ 圓心角 ÷ 360°，再把分子和分母同時除以同一個數，約到最簡。'
+      },
+      gPts: function(p){ return '＋' + p + ' 分'; },
+      gMinus: '−5 分',
+      gClear: '按「下一關」繼續。',
+      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; },
+      gBin: { reg:'✅ 正多邊形', not:'❌ 不是正多邊形' },
+      gSortNow: function(k, t){ return '分好了 ' + k + ' ／ ' + t + ' 張'; },
+      gSortBad: function(why, kind, n){
+        if (why === 'reg') return '這是' + I18N.zh.polyName(n) + '：' + n + ' 條邊都一樣長，' + n + ' 個角也都一樣大 —— 兩個條件都成立，它是正多邊形。';
+        return {
+          rhombus: '這是菱形：4 條邊一樣長，可是角不是全部一樣大（兩個尖、兩個鈍）—— 角不全相等，不是正多邊形。',
+          house: '這個五邊形的 5 條邊一樣長，可是角不是全部一樣大（有直角、有尖角、有鈍角）—— 角不全相等，不是正多邊形。',
+          rect: '這是長方形：4 個角都是直角，可是邊不是全部一樣長（長邊比短邊長）—— 邊不全相等，不是正多邊形。',
+          hexalt: '這個六邊形的 6 個角一樣大，可是邊有長有短 —— 邊不全相等，不是正多邊形。',
+          iso: '這個三角形只有兩條邊一樣長，三個角也不是全部一樣大 —— 不是正多邊形。'
+        }[kind];
+      },
+      gSortHint2: function(kind){
+        return '發亮的那一張：' + {
+          reg: '邊都一樣長，角也都一樣大。',
+          rhombus: '邊都一樣長，可是角有尖有鈍。',
+          house: '邊都一樣長，可是角有直角、尖角和鈍角。',
+          rect: '角都是直角，可是邊有長有短。',
+          hexalt: '角都一樣大，可是邊有長有短。',
+          iso: '只有兩條邊一樣長，角也不是全部一樣大。'
+        }[kind];
+      },
+      gSortDone: '分好了！正多邊形要「邊都一樣長」而且「角都一樣大」，少一個都不行。',
+      gPenAria: '紅色頂點上的筆：拖到另一個頂點就畫一條對角線',
+      gCutNow: function(dg, pieces){ return dg === 0 ? '還沒有畫對角線' : '畫了 ' + dg + ' 條對角線，切成 ' + pieces + ' 塊'; },
+      gCutTotal: function(n){ return n + ' − 2 ＝ ' + (n - 2) + ' 個三角形：' + (n - 2) + ' × 180° ＝ ' + ((n - 2) * 180) + '°'; },
+      gCutSide: '這個頂點和紅色的頂點中間本來就有一條邊 —— 連過去只是沿著邊畫，切不出新的三角形。要連到不相鄰的頂點（畫對角線）。',
+      gCutDone: function(n){ return '從一個頂點畫 ' + (n - 3) + ' 條對角線，' + I18N.zh.plainName(n) + '切成了 ' + (n - 2) + ' 個三角形。每個三角形的內角和是 180°，所以內角和是 ' + (n - 2) + ' × 180° ＝ ' + ((n - 2) * 180) + '°。'; },
+      gCut2: function(m){ return '還要再畫 ' + m + ' 條：發亮的頂點都還沒連。'; },
+      gEachAria: '每一個內角的度數',
+      gEachOk: '確定',
+      gEachNow: function(E){ return E === null ? '每一個角是 ？°' : '每一個角是 ' + E + '°'; },
+      gEachBlank: '先打一個整數（例如 100），不要有空格、小數點或開頭的 0，再按「確定」。',
+      gEachSum: function(n, S){ return S + '° 是 ' + n + ' 個角全部加起來的（內角和）。正多邊形的每個角一樣大，還要再平分給 ' + n + ' 個角。'; },
+      gEachTri: function(n){ return '180° 是一個三角形的內角和。這個圖形切得出不只一個三角形，而且內角和還要平分給 ' + n + ' 個角。'; },
+      gEachWrong: function(n, x, Y, S, big){ return '如果每個角都是 ' + x + '°，' + n + ' 個角加起來是 ' + n + ' × ' + x + '° ＝ ' + Y + '°；可是內角和是 (' + n + ' − 2) × 180° ＝ ' + S + '°，所以 ' + x + '° 太' + (big ? '大' : '小') + '了。'; },
+      gEachDone: function(n, S, E){ return '內角和是 (' + n + ' − 2) × 180° ＝ ' + S + '°，平分給 ' + n + ' 個角：' + S + '° ÷ ' + n + ' ＝ ' + E + '°。'; },
+      gEach2: function(n, S){ return '內角和是 (' + n + ' − 2) × 180° ＝ ' + S + '°，再除以 ' + n + '。'; },
+      gKnobAria: '旋鈕：沿著圓周拖',
+      gLessAria: '少轉 15°', gMoreAria: '多轉 15°',
+      gDialOk: '就是這個',
+      gDialNow: function(x){ return '圓心角 ' + x + '°'; },
+      gDialBad: function(x, a, b, p, q, less, one){ return '你轉的是 ' + x + '°，是整個圓的 ' + a + '/' + b + '（' + x + ' ÷ 360，約分）—— 比 ' + p + '/' + q + ' ' + (less ? '小' : '大') + '。' + (one ? '那只是 1 份；' + p + '/' + q + ' 要 ' + p + ' 份。' : ''); },
+      gDialDone: function(p, q){ return '360° ÷ ' + q + ' ＝ ' + (360 / q) + '°，' + p + ' 份是 ' + (360 / q) + '° × ' + p + ' ＝ ' + (360 / q * p) + '° —— 圓心角 ' + (360 / q * p) + '° 的扇形就是整個圓的 ' + p + '/' + q + '。'; },
+      gDial2: function(p, q){ return '360° ÷ ' + q + ' ＝ ' + (360 / q) + '°，一份是 ' + (360 / q) + '°；要轉 ' + p + ' 份。'; },
+      gFracNow: function(a, b){ return '你拼的分數：' + (a === null ? '□' : a) + '/' + (b === null ? '□' : b); },
+      gFracBig: function(a, b){ return a + '/' + b + ' 的分子不比分母小，那是一整個圓或更多；這個扇形比整個圓小。'; },
+      gFracInt: function(a, b, y, A){ return a + '/' + b + ' 個圓的圓心角是 360° ÷ ' + b + ' × ' + a + ' ＝ ' + y + '°，不是 ' + A + '°。'; },
+      gFracNoInt: function(a, b, A){ return '360 ÷ ' + b + ' 除不盡：' + a + '/' + b + ' 個圓的圓心角不是整數度，不會剛好是 ' + A + '°。'; },
+      gFracDone: function(A, p, q, g){ return A + '° ÷ 360°：分子 ' + A + ' 和分母 360 同時除以 ' + g + '，約分成 ' + p + '/' + q + '。'; },
+      gFrac2: function(A, g){ return A + ' 和 360 都可以被 ' + g + ' 整除。'; },
       ebNext: '學完之後', nextH2: '把它記牢的三個動作',
       next1: '🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2: '🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
@@ -484,7 +817,7 @@
       s1def: 'A regular polygon must meet two conditions: <strong>all sides are equal length</strong>, AND <strong>all angles are equal</strong>.',
       polyChip: function(n){ return I18N.en.polyName(n); },
       polyName: function(n){
-        var names = {3:'Equilateral triangle',4:'Square',5:'Regular pentagon',6:'Regular hexagon',7:'Regular heptagon',8:'Regular octagon'};
+        var names = {3:'Equilateral triangle',4:'Square',5:'Regular pentagon',6:'Regular hexagon',7:'Regular heptagon',8:'Regular octagon',9:'Regular nonagon',10:'Regular decagon',12:'Regular dodecagon'};
         return names[n] || ('Regular ' + n + '-gon');
       },
       plainName: function(n){
@@ -496,10 +829,10 @@
       trapTitle: 'Trap check: does “equal sides” always mean “regular polygon”?',
       trapSquareLbl: 'Square', trapRhombusLbl: 'Rhombus',
       trapSquareAria: 'A square, four equal sides and four right angles',
-      trapRhombusAria: 'A rhombus, four equal sides but unequal angles',
+      trapRhombusAria: 'A rhombus, four equal sides but angles that are not all equal',
       trapBtn: 'Is this a regular polygon?',
       trapSquareAns: '<span class="reveal yes">✔ Yes, it\'s regular! Four equal sides, and four equal angles too (all 90°).</span>',
-      trapRhombusAns: '<span class="reveal no">✘ Not regular. A rhombus has four equal sides, but its angles aren\'t equal (two are sharper, two are wider) — so it fails the angle condition.</span>',
+      trapRhombusAns: '<span class="reveal no">✘ Not regular. A rhombus has four equal sides, but its angles aren\'t all equal (two are sharper, two are wider) — so it fails the angle condition.</span>',
       s2h2: 'The Big Triangle Cut',
       s2lead: 'Draw diagonals from one vertex to split a polygon into triangles, and watch the interior-angle sum add up.',
       triChip: function(n){ return I18N.en.plainName(n); },
@@ -540,16 +873,16 @@
       qs: [
         { stem:'What condition must a shape meet to be called a "regular polygon"?',
           opts:['All sides must be equal, AND all angles must be equal','Just having all angles equal is enough','Just having all sides equal is enough','It just needs an even number of sides'], ans:0,
-          why:'A rhombus has four equal sides but unequal angles, so it isn’t a regular polygon. A regular polygon needs BOTH equal side lengths AND equal angles — neither condition alone is enough.' },
+          why:'A rhombus has four equal sides but its angles are not all equal, so it isn’t a regular polygon. A regular polygon needs BOTH equal side lengths AND equal angles — neither condition alone is enough.' },
         { stem:'What is the sum of the interior angles of a hexagon?',
           opts:['900°','1080°','720°','360°'], ans:2,
           why:'A hexagon can be split into (6−2)=4 triangles from one vertex, and 4×180°=720°.' },
         { stem:'Which formula gives the sum of the interior angles of an n-sided polygon?',
           opts:['n × 180°','n × 360°','(n − 1) × 180°','(n − 2) × 180°'], ans:3,
-          why:'Drawing diagonals from one vertex splits an n-gon into (n−2) triangles, and each triangle is 180°, so the sum = (n−2) × 180°.' },
+          why:'Drawing diagonals from one vertex splits an n-gon into (n−2) triangles, and each triangle is 180°, so the sum is (n−2) × 180°.' },
         { stem:'In a regular hexagon, how big is each interior angle?',
           opts:['135°','120°','108°','90°'], ans:1,
-          why:'The angle sum = (6−2)×180°=720°, and 720°÷6=120°.' },
+          why:'The angle sum is (6−2)×180°=720°, and 720°÷6=120°.' },
         { stem:'A sector has a central angle of 90°. What fraction of the whole circle is it?',
           opts:['1/8','1/2','1/3','1/4'], ans:3,
           why:'A full circle is 360°, and 90 ÷ 360 = 1/4.' },
@@ -563,13 +896,13 @@
           why:'(8−2)×180°=6×180°=1080°.' },
         { stem:'In a regular decagon, how big is each interior angle?',
           opts:['160°','180°','144°','108°'], ans:2,
-          why:'The angle sum = (10−2)×180°=1440°, and 1440°÷10=144°.' },
+          why:'The angle sum is (10−2)×180°=1440°, and 1440°÷10=144°.' },
         { stem:'A clock face is cut into 6 equal slices, like a cake. What is the central angle of each slice, and what fraction of the circle is it?',
           opts:['72°, 1/5','60°, 1/3','30°, 1/12','60°, 1/6'], ans:3,
           why:'360°÷6=60°, and 60÷360 = 1/6.' },
         { stem:'Drawing diagonals from one vertex of a hexagon, how many triangles does it split into? What is its angle sum?',
           opts:['6 triangles, 1080°','4 triangles, 720°','3 triangles, 540°','5 triangles, 900°'], ans:1,
-          why:'n−2 = 6−2 = 4 triangles, and 4×180°=720°.' }
+          why:'6−2 = 4 triangles, and 4×180°=720°.' }
       ],
       qsBoost: [
         { stem:'Which calculation correctly finds the interior-angle sum of a hexagon?',
@@ -580,18 +913,79 @@
           why:'60° is 60/360=1/6 of the circle, and 120° is 120/360=1/3=2/6 — exactly double. But the radius is a property of the circle itself; changing the central angle doesn’t change it.' }
       ],
       s6h2: 'Dial Master',
-      s6lead: 'Watch for whether a polygon or a sector shows up, then pick the correct answer. The faster you answer, the more points you score!',
+      s6lead: 'Sort, cut, work out each angle, turn the dial, build a fraction — five rounds, five ways to play: spot the regular polygons, work out their angles, then link a sector to the whole circle. A wrong move costs points, but the dial never stops — thinking slowly beats moving fast.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
       gHintBtn: '💡 Hint',
       gNextBtn: 'Next round', gRestartBtn: 'Restart',
-      gAskSum: function(name){ return 'What is the interior-angle sum of a ' + name + '?'; },
-      gAskEach: function(name){ return 'In a ' + name + ', how big is each interior angle?'; },
-      gAskFrac: function(deg){ return 'A sector has a central angle of ' + deg + '°. What fraction of the whole circle is it?'; },
-      gCorrectFirst: function(ans){ return 'Correct on the first try! The answer is ' + ans + ' — +20 points!'; },
-      gCorrectRetry: function(ans){ return 'Correct! The answer is ' + ans + ' — +10 points.'; },
-      gWrong: function(v){ return v + ' isn’t right — try again. −5 points.'; },
-      gClear: 'Press "Next round" to try the next question.',
-      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press "Restart" to play again.'; },
+      gAsks: {
+        sort: 'Put each shape in the right box: is it a regular polygon, or not?',
+        cut: function(n){ return 'Draw diagonals from the red vertex to cut this ' + I18N.en.plainName(n) + ' into triangles (drag the red ring, or tap a vertex).'; },
+        each: function(n){ return 'How big is each interior angle of this ' + I18N.en.polyName(n).toLowerCase() + '? Type it, then press “Check”.'; },
+        dial: function(p, q){ return 'Turn the knob to make ' + p + '/' + q + ' of the whole circle, then press “That’s it”.'; },
+        frac: function(A){ return 'This sector has a central angle of ' + A + '°. What fraction of the whole circle is it? Build it in simplest form with the number cards.'; }
+      },
+      gHints: {
+        sort: 'A regular polygon needs both: all sides the same length (look at the little marks on the sides) and all angles the same size. Missing either one means it is not regular.',
+        cut: 'Start at the red vertex and join it to other vertices. The two vertices next to it are already joined by sides — join it to the vertices that are not next to it.',
+        each: 'First find the angle sum: (number of sides − 2) × 180°. Every angle of a regular polygon is the same, so share the sum out equally among the angles.',
+        dial: 'A whole circle is 360°. For a fraction of a circle, split 360° into as many equal shares as the bottom number, then take as many shares as the top number.',
+        frac: 'The fraction of the circle = central angle ÷ 360°. Then divide the top and the bottom by the same number until it is in simplest form.'
+      },
+      gPts: function(p){ return '+' + p + ' points'; },
+      gMinus: '−5 points',
+      gClear: 'Press “Next round” to go on.',
+      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gBin: { reg:'✅ Regular polygon', not:'❌ Not regular' },
+      gSortNow: function(k, t){ return 'Sorted ' + k + ' / ' + t; },
+      gSortBad: function(why, kind, n){
+        if (why === 'reg'){ var nm = I18N.en.polyName(n).toLowerCase(); return 'This is ' + (/^[aeiou]/.test(nm) ? 'an ' : 'a ') + nm + ': all ' + n + ' sides are the same length and all ' + n + ' angles are the same size — both conditions hold, so it IS a regular polygon.'; }
+        return {
+          rhombus: 'This is a rhombus: all 4 sides are the same length, but the angles are not all the same size (two sharp, two wide) — the angles are not all equal, so it is not regular.',
+          house: 'All 5 sides of this pentagon are the same length, but the angles are not all the same size (right angles, a sharp one and wide ones) — the angles are not all equal, so it is not regular.',
+          rect: 'This is a rectangle: all 4 angles are right angles, but the sides are not all the same length (the long sides are longer) — the sides are not all equal, so it is not regular.',
+          hexalt: 'All 6 angles of this hexagon are the same size, but its sides are long and short — the sides are not all equal, so it is not regular.',
+          iso: 'Only two sides of this triangle are the same length, and its three angles are not all the same size either — so it is not regular.'
+        }[kind];
+      },
+      gSortHint2: function(kind){
+        return 'The glowing card: ' + {
+          reg: 'all sides are the same length and all angles are the same size.',
+          rhombus: 'all sides are the same length, but some angles are sharp and some are wide.',
+          house: 'all sides are the same length, but it has right angles, a sharp angle and wide angles.',
+          rect: 'all angles are right angles, but the sides are long and short.',
+          hexalt: 'all angles are the same size, but the sides are long and short.',
+          iso: 'only two sides are the same length, and the angles are not all the same size.'
+        }[kind];
+      },
+      gSortDone: 'All sorted! A regular polygon needs equal sides AND equal angles — one without the other is not enough.',
+      gPenAria: 'Pen on the red vertex: drag it to another vertex to draw a diagonal',
+      gCutNow: function(dg, pieces){ return dg === 0 ? 'No diagonals yet' : dg + ' diagonal' + (dg === 1 ? '' : 's') + ' drawn — ' + pieces + ' pieces'; },
+      gCutTotal: function(n){ return n + ' − 2 = ' + (n - 2) + ' triangles: ' + (n - 2) + ' × 180° = ' + ((n - 2) * 180) + '°'; },
+      gCutSide: 'That vertex is already joined to the red vertex by a side — drawing along a side cuts off nothing new. Join the red vertex to a vertex that is not next to it (draw a diagonal).',
+      gCutDone: function(n){ return (n - 3) + ' diagonals from one vertex cut the ' + I18N.en.plainName(n) + ' into ' + (n - 2) + ' triangles. Each triangle’s angles add up to 180°, so the angle sum is ' + (n - 2) + ' × 180° = ' + ((n - 2) * 180) + '°.'; },
+      gCut2: function(m){ return m + ' more to draw: the glowing vertices are not joined yet.'; },
+      gEachAria: 'Size of each interior angle in degrees',
+      gEachOk: 'Check',
+      gEachNow: function(E){ return E === null ? 'Each angle: ?°' : 'Each angle: ' + E + '°'; },
+      gEachBlank: 'Type a whole number first (for example 100) — no spaces, decimal points or leading 0 — then press “Check”.',
+      gEachSum: function(n, S){ return S + '° is all ' + n + ' angles added together (the angle sum). Every angle of a regular polygon is the same, so it still has to be shared out among the ' + n + ' angles.'; },
+      gEachTri: function(n){ return '180° is the angle sum of ONE triangle. This shape cuts into more than one triangle, and the angle sum still has to be shared out among its ' + n + ' angles.'; },
+      gEachWrong: function(n, x, Y, S, big){ return 'If every angle were ' + x + '°, the ' + n + ' angles would add up to ' + n + ' × ' + x + '° = ' + Y + '°. But the angle sum is (' + n + ' − 2) × 180° = ' + S + '°, so ' + x + '° is too ' + (big ? 'big' : 'small') + '.'; },
+      gEachDone: function(n, S, E){ return 'The angle sum is (' + n + ' − 2) × 180° = ' + S + '°; shared among ' + n + ' angles, ' + S + '° ÷ ' + n + ' = ' + E + '°.'; },
+      gEach2: function(n, S){ return 'The angle sum is (' + n + ' − 2) × 180° = ' + S + '°; now divide by ' + n + '.'; },
+      gKnobAria: 'Knob: drag it around the circle',
+      gLessAria: 'Turn back 15°', gMoreAria: 'Turn on 15°',
+      gDialOk: 'That’s it',
+      gDialNow: function(x){ return 'Central angle ' + x + '°'; },
+      gDialBad: function(x, a, b, p, q, less, one){ return 'You turned ' + x + '°, which is ' + a + '/' + b + ' of the whole circle (' + x + ' ÷ 360, reduced) — ' + (less ? 'less' : 'more') + ' than ' + p + '/' + q + '.' + (one ? ' That is only 1 share; ' + p + '/' + q + ' needs ' + p + ' shares.' : ''); },
+      gDialDone: function(p, q){ return '360° ÷ ' + q + ' = ' + (360 / q) + '°, and ' + p + ' share' + (p === 1 ? ' is ' : 's are ') + (360 / q) + '° × ' + p + ' = ' + (360 / q * p) + '° — a sector with a ' + (360 / q * p) + '° central angle is ' + p + '/' + q + ' of the whole circle.'; },
+      gDial2: function(p, q){ return '360° ÷ ' + q + ' = ' + (360 / q) + '°, so one share is ' + (360 / q) + '°; turn ' + p + ' share' + (p === 1 ? '' : 's') + '.'; },
+      gFracNow: function(a, b){ return 'Your fraction: ' + (a === null ? '□' : a) + '/' + (b === null ? '□' : b); },
+      gFracBig: function(a, b){ return 'In ' + a + '/' + b + ' the top number is not smaller than the bottom one — that is a whole circle or more, but this sector is smaller than the whole circle.'; },
+      gFracInt: function(a, b, y, A){ return a + '/' + b + ' of a circle has a central angle of 360° ÷ ' + b + ' × ' + a + ' = ' + y + '°, not ' + A + '°.'; },
+      gFracNoInt: function(a, b, A){ return '360 ÷ ' + b + ' does not divide evenly, so ' + a + '/' + b + ' of a circle is not a whole number of degrees — it cannot be exactly ' + A + '°.'; },
+      gFracDone: function(A, p, q, g){ return A + '° ÷ 360°: divide the top, ' + A + ', and the bottom, 360, by ' + g + ' — it reduces to ' + p + '/' + q + '.'; },
+      gFrac2: function(A, g){ return 'Both ' + A + ' and 360 can be divided by ' + g + '.'; },
       ebNext: 'After the lesson', nextH2: 'Three moves that make it stick',
       next1: '🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2: '🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
@@ -934,146 +1328,543 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：轉盤大師 ---------- */
-  var ROUNDS = [
-    { type:'polygon', n:5, ask:'sum', ans:540, choices:[540,900,360,720],
-      hint1z:'先想：從一個頂點畫對角線，五邊形可以切成幾個三角形？', hint2z:function(){ return '提示：五邊形可以切成 3 個三角形，3 × 180° = 540°。'; },
-      hint1e:'Think: drawing diagonals from one vertex, how many triangles does a pentagon split into?', hint2e:function(){ return 'Hint: a pentagon splits into 3 triangles, and 3 × 180° = 540°.'; } },
-    { type:'sector', angle:90, ans:'1/4', choices:['1/4','1/2','1/3','1/8'],
-      hint1z:'先想：整個圓是 360°，90° 占了 360° 的幾分之幾？', hint2z:function(){ return '提示：90 ÷ 360，兩個數字可以同時除以 90，變成 1/4。'; },
-      hint1e:'Think: a full circle is 360°. What fraction of 360° is 90°?', hint2e:function(){ return 'Hint: 90 ÷ 360 — divide both by 90 to get 1/4.'; } },
-    { type:'polygon', n:6, ask:'each', ans:120, choices:[120,720,108,135],
-      hint1z:'先想：先算出六邊形的內角和，再平分給 6 個角。', hint2z:function(){ return '提示：內角和是 720°，720 ÷ 6 = 120°。'; },
-      hint1e:'Think: first find the hexagon’s angle sum, then share it evenly among 6 angles.', hint2e:function(){ return 'Hint: the angle sum is 720°, and 720 ÷ 6 = 120°.'; } },
-    { type:'sector', angle:120, ans:'1/3', choices:['1/3','1/4','2/3','1/6'],
-      hint1z:'先想：120° 是 360° 的幾分之幾？試著約分看看。', hint2z:function(){ return '提示：120 ÷ 360 可以同時除以 120，變成 1/3。'; },
-      hint1e:'Think: what fraction of 360° is 120°? Try reducing it.', hint2e:function(){ return 'Hint: 120 ÷ 360 — divide both by 120 to get 1/3.'; } },
-    { type:'polygon', n:8, ask:'sum', ans:1080, choices:[1080,1440,900,1260],
-      hint1z:'先想：正八邊形從一個頂點可以切出幾個三角形？', hint2z:function(){ return '提示：八邊形可以切成 6 個三角形，6 × 180° = 1080°。'; },
-      hint1e:'Think: how many triangles can a regular octagon be cut into from one vertex?', hint2e:function(){ return 'Hint: an octagon splits into 6 triangles, and 6 × 180° = 1080°.'; } }
-  ];
-
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 小遊戲：轉盤大師（§六之五：五關五種玩法） ===================== */
+  var gRound = 0, gScore = 0, gSolved = false, gMistake = false, hintLevel = 0, gCtx = {};
+  /* 畫板世代：重新開始、切換語言、下一關都換一個新的畫板。還拿在手上的舊積木放開時，不可以替新的畫板做任何事 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gScene = document.getElementById('gScene');
-  var gCards = document.getElementById('gCards');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
-  var hintLevel = 0;
-
-  function roundQuestionText(round){
-    var d = L();
-    if (round.type === 'polygon'){
-      var name = d.polyName(round.n);
-      return round.ask === 'sum' ? d.gAskSum(name) : d.gAskEach(name);
-    }
-    return d.gAskFrac(round.angle);
+  var NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs, text){
+    var el = document.createElementNS(NS, tag);
+    for (var a in attrs) el.setAttribute(a, attrs[a]);
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function ptsAttr(list){ return list.map(function(p){ return p.x.toFixed(2) + ',' + p.y.toFixed(2); }).join(' '); }
+  /* 扇形：從正上方順時針轉 deg 度（deg < 360） */
+  function sectorD(cx, cy, r, deg){
+    var p1 = rimPt(cx, cy, r, 0), p2 = rimPt(cx, cy, r, deg);
+    return 'M' + cx + ',' + cy + ' L' + p1.x.toFixed(2) + ',' + p1.y.toFixed(2) + ' A' + r + ',' + r + ' 0 ' + (deg > 180 ? 1 : 0) + ' 1 ' + p2.x.toFixed(2) + ',' + p2.y.toFixed(2) + ' Z';
   }
 
-  function roundHint1(round){ return lang === 'zh' ? round.hint1z : round.hint1e; }
-  function roundHint2(round){ return (lang === 'zh' ? round.hint2z : round.hint2e)(); }
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null, onBoardTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    /* 點畫板（不是點在積木上）：只認第一根手指，按下和放開在同一個地方才算「點一下」 */
+    board.addEventListener('pointerdown', function(e){
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (!e.isPrimary) return;   /* 第二根手指：不理 —— 第一根手指按在畫板外、按鈕或積木上時也一樣 */
+      BOARD_TAP = { id:e.pointerId, x:e.clientX, y:e.clientY, far:false };
+    });
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      var t = BOARD_TAP, pt = B.toBoard(e);
+      if (t && t.id === e.pointerId) BOARD_TAP = null;
+      /* 「點目的地」也一樣只認第一根手指的「點一下」：別的手指放開、或滑動之後放開，都不算（不然想捲動也會被扣分） */
+      if (!t || t.id !== e.pointerId) return;
+      if (t.far || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10) return;   /* 中途離開按下去的地方超過 10px 就不是「點一下」 */
+      if (B.selected && B.onPointTap){ B.onPointTap(B.selected, pt); return; }
+      if (B.onBoardTap && !gSolved) B.onBoardTap(pt);
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」；BOARD_TAP 記「按在畫板上的第一根手指」。
+     任何地方的 pointerup／pointercancel 傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {}, BOARD_TAP = null;
+  function clearPtr(e){ delete PIECE_PTR[e.pointerId]; if (BOARD_TAP && BOARD_TAP.id === e.pointerId) BOARD_TAP = null; }
+  window.addEventListener('pointerup', clearPtr);
+  window.addEventListener('pointercancel', clearPtr);
+  window.addEventListener('pointerdown', function(e){ delete PIECE_PTR[e.pointerId]; }, true);
+  window.addEventListener('pointermove', function(e){
+    if (BOARD_TAP && BOARD_TAP.id === e.pointerId && Math.hypot(e.clientX - BOARD_TAP.x, e.clientY - BOARD_TAP.y) > 10) BOARD_TAP.far = true;
+  });
+  /* 指標離開視窗時收不到 pointermove：一離開就當成走遠了（滑鼠拖出視窗再回來放開，不算點一下） */
+  window.addEventListener('pointerout', function(e){ if (BOARD_TAP && BOARD_TAP.id === e.pointerId && !e.relatedTarget) BOARD_TAP.far = true; });
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 畫板上的一張 SVG（整塊畫板大小，不接指標；不給 viewBox：畫出來的位置就是吸附、點選量的位置） */
+  function gSvg(B){
+    var s = svgEl('svg', { 'class':'gsvg', width:B.W, height:B.H, 'aria-hidden':'true' });
+    B.el.appendChild(s);
+    return s;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫板下面的一排按鈕（第 3 關的輸入框與「確定」、第 4 關的 ◀ ▶ 與「就是這個」） */
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, cls, aria){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = text;
+    if (aria) b.setAttribute('aria-label', aria);
+    row.appendChild(b);
+    return b;
+  }
 
-  /* 遊戲選項每回合重新洗牌，正確答案不固定在第一個 */
-  function shuffle(arr){
-    var a = arr.slice();
-    for (var j = a.length - 1; j > 0; j--){
-      var k = Math.floor(Math.random() * (j + 1));
-      var t = a[j]; a[j] = a[k]; a[k] = t;
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。
+         o.snap(pt)：拖的時候把中心點吸到哪裡（第 4 關的旋鈕吸到 15° 一格）—— 拖的時候就畫在吸到的位置；
+         o.node：放在裡面的東西（SVG）；o.onPlace：每次位置改變（含彈回）都通知 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.node) el.appendChild(o.node);
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+      if (o.onPlace) o.onPlace(P);
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    /* 換一個家（第 4 關的旋鈕停在哪一格，那裡就是它的家） */
+    P.rehome = function(cx, cy){
+      stopGesture();
+      P.homeX = cx; P.homeY = cy;
+      P.home();
+    };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 第 5 關：判錯之後放回托盤，可以再拿 */
+    P.unlock = function(){
+      P.locked = false;
+      el.classList.remove('locked');
+      P.home();
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
     }
-    return a;
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣） */
+      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      if (o.snap){ var sp = o.snap({ x:orig.x + dx, y:orig.y + dy }); P.place(sp.x, sp.y); }
+      else P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */
+      /* 先點選、後來又直接拖走的那一塊：拖完就不再是「選起來」的，不然下一次點目的地會多放一次 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel, .glow'), function(x){ x.classList.remove('sel'); x.classList.remove('glow'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字 */
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  /* 提醒（打的不是整數）：不算錯、不扣分 */
+  function roundNote(text){ gMsg.innerHTML = '<span class="gnote">' + text + '</span>'; }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 已經說明過、也扣過分的同一個錯：把說明再說一次，不再算錯、不扣分 */
+  function roundAgain(text){ gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  /* 同一個錯只扣一次：第一次扣分；之後再犯只把說明再說一次（不算錯、不扣分）；
+     連著同一個、說明還在畫面上的話什麼都不做（說明被收掉了就再說一次 —— 不然彈回去卻什麼都沒說） */
+  function missOnce(seen, key, text){
+    if (seen.map[key]){ if (seen.last !== key || !gMsg.querySelector('.no')){ seen.last = key; roundAgain(text); } return; }
+    seen.map[key] = true; seen.last = key;
+    roundMiss(text);
+  }
+
+  var RENDER = {
+    /* 第 1 關：分一分（範例 1）—— 六張圖拖進兩個箱子（或先點圖、再點箱子）。放對 → 圖縮小放進箱子；
+       放錯 → 彈回並說差的是哪一個條件；放到箱子外 → 靜靜彈回，不算錯。同一張放進同一個錯的箱子不再扣分。 */
+    sort: function(d){
+      var B = makeBoard(GW, SORT_H), cards = sortBoard(), done = 0, seen = { map:{}, last:null };
+      var bins = [true, false].map(function(isReg, i){
+        var x = SORT.binX[i];
+        var z = addZone(B, x, SORT.binY, SORT.binW, SORT.binH, 'gbin');
+        addZone(B, x + 4, SORT.binY + 4, SORT.binW - 8, SORT.lblH, 'gbinlbl', isReg ? d.gBin.reg : d.gBin.not);
+        return { isReg:isReg, i:i, z:z, n:0, cx:x + SORT.binW / 2, cy:SORT.binY + SORT.binH / 2, hw:SORT.binW / 2, hh:SORT.binH / 2 };
+      });
+      var line = trailLine(d.gSortNow(0, cards.length));
+      var pieces = sortTray(cards).map(function(c, j){
+        return addPiece(B, { w:SORT.cardW, h:SORT.cardH, cx:SORT.trayX[j % 3], cy:SORT.trayY[Math.floor(j / 3)], cls:'gcard gshape', node:shapeSvg(c, SORT.cardW, SORT.cardH, 1), data:{ c:c } });
+      });
+      useTapSelect(B, function(P, pt){
+        var bin = nearestOpen(bins, pt, SORT.pad);
+        if (!bin) return false;
+        var c = P.data.c, why = sortRefuse(c, bin.isReg);
+        if (why){ missOnce(seen, pieces.indexOf(P) + ':' + bin.i, d.gSortBad(why, c.kind, c.n)); return false; }
+        P.lock(bin.cx, bin.cy);
+        P.el.style.visibility = 'hidden';
+        P.el.classList.remove('glow');
+        var mx = SORT.binX[bin.i] + 8 + bin.n * (SORT.miniS + SORT.miniGap), my = SORT.binY + SORT.lblH + 8;
+        var mini = addZone(B, mx, my, SORT.miniS, SORT.miniS, 'gplaced');
+        mini.appendChild(shapeSvg(c, SORT.miniS - 4, SORT.miniS - 4, 0.42));   /* 框線 2px：小圖畫在框裡面那 36 × 36 */
+        bin.n++; done++;
+        gMsg.textContent = '';   /* 放對了：上一個錯的說明收掉，不然看起來像這一張也錯了 */
+        line.textContent = d.gSortNow(done, cards.length);
+        refreshHint();
+        if (done === cards.length) roundSolved(d.gSortDone);
+        return true;
+      });
+      /* 第二層提示：托盤裡第一張還沒分的圖發亮，說它的邊和角 */
+      gCtx.hint2 = function(){
+        pieces.forEach(function(p){ p.el.classList.remove('glow'); });
+        var p = pieces.filter(function(q){ return !q.locked; })[0];
+        if (!p) return '';
+        p.el.classList.add('glow');
+        return d.gSortHint2(p.data.c.kind);
+      };
+    },
+
+    /* 第 2 關：切三角形（範例 2）—— 把紅點上的筆拖到另一個頂點（或先點筆、再點頂點，或直接點頂點）就畫一條對角線。
+       連到旁邊的頂點 → 說「那是邊」；同一個旁邊的頂點再連一次不再扣分。畫完 n − 3 條就過關。 */
+    cut: function(d){
+      var n = pick(GAME_CUT), V = cutPts(n), drawn = [], seen = { map:{}, last:null };
+      var B = makeBoard(GW, CUT_H), svg = gSvg(B);
+      gCtx.ask.textContent = d.gAsks.cut(n);
+      var fills = svgEl('g', { 'class':'gfills' }); svg.appendChild(fills);
+      svg.appendChild(svgEl('polygon', { points:ptsAttr(V), fill:'none', stroke:'#2B2A33', 'stroke-width':3, 'class':'gpoly' }));
+      var diags = svgEl('g', { 'class':'gdiags' }); svg.appendChild(diags);
+      var rubber = svgEl('line', { x1:V[0].x, y1:V[0].y, x2:V[0].x, y2:V[0].y, stroke:'#D64545', 'stroke-width':2.5, 'stroke-dasharray':'6 5', visibility:'hidden', 'class':'grubber' });
+      svg.appendChild(rubber);
+      var dots = V.map(function(p, k){ return svg.appendChild(svgEl('circle', { cx:p.x, cy:p.y, r:k === 0 ? 8 : 6, fill:k === 0 ? '#D64545' : '#2B2A33', 'class':'gvtx', 'data-k':k })); });
+      var line = trailLine(d.gCutNow(0, 1));
+      function draw(){
+        fills.textContent = '';
+        cutRegions(n, drawn).forEach(function(v, m){
+          if (v.length === 3) fills.appendChild(svgEl('polygon', { points:ptsAttr(v.map(function(k){ return V[k]; })), fill:CUT_FILLS[m % CUT_FILLS.length], stroke:'none', 'class':'gtri' }));
+        });
+      }
+      function judge(k){
+        if (k === null || gSolved) return;
+        var bad = cutRefuse(n, k);
+        if (bad === 'self' || drawn.indexOf(k) >= 0) return;   /* 紅點自己、已經畫過的：什麼都不做 */
+        if (bad){ missOnce(seen, k, d.gCutSide); return; }
+        drawn.push(k);
+        gMsg.textContent = '';   /* 畫對了：上一個錯的說明收掉 */
+        diags.appendChild(svgEl('line', { x1:V[0].x, y1:V[0].y, x2:V[k].x, y2:V[k].y, stroke:'#D64545', 'stroke-width':2.5, 'class':'gdiag', 'data-k':k }));
+        dots[k].classList.remove('glow');
+        draw();
+        line.textContent = drawn.length === n - 3 ? d.gCutTotal(n) : d.gCutNow(drawn.length, drawn.length + 1);
+        refreshHint();
+        if (drawn.length === n - 3){ pen.lock(V[0].x, V[0].y); roundSolved(d.gCutDone(n)); }
+      }
+      var pen = addPiece(B, { w:GPICK, h:GPICK, cx:V[0].x, cy:V[0].y, cls:'gpen', label:d.gPenAria,
+        onPlace:function(P){
+          var away = Math.hypot(P.cx - V[0].x, P.cy - V[0].y) > 1;
+          rubber.setAttribute('x2', P.cx); rubber.setAttribute('y2', P.cy);
+          rubber.setAttribute('visibility', away ? 'visible' : 'hidden');
+        } });
+      useTapSelect(B, function(P, pt){ judge(cutPick(n, pt)); return false; });
+      B.onBoardTap = function(pt){ judge(cutPick(n, pt)); };
+      gCtx.hint2 = function(){
+        dots.forEach(function(c, k){ c.classList.toggle('glow', k > 1 && k < n - 1 && drawn.indexOf(k) < 0); });
+        return d.gCut2(n - 3 - drawn.length);
+      };
+    },
+
+    /* 第 3 關：每一個角（範例 3）—— 正 n 邊形（每個角畫一樣的弧），打每一個內角的度數，按「確定」。
+       打錯有三種說明（內角和、180°、太大／太小），同一個數再按不再扣分；打的不是整數只提醒。 */
+    each: function(d){
+      var n = pick(GAME_EACH), V = eachPts(n), S = (n - 2) * 180, E = S / n, seen = { map:{}, last:null };
+      gCtx.ask.textContent = d.gAsks.each(n);
+      var B = makeBoard(GW, EACH_H), svg = gSvg(B);
+      svg.appendChild(svgEl('polygon', { points:ptsAttr(V), fill:'#E3F4EB', stroke:'#2B2A33', 'stroke-width':3, 'class':'gpoly' }));
+      V.forEach(function(p, k){
+        var a = V[(k + n - 1) % n], b = V[(k + 1) % n], u = unit(p, a), w = unit(p, b), R = EACH.arc;
+        var cross = u.x * w.y - u.y * w.x;
+        svg.appendChild(svgEl('path', { d:'M' + (p.x + R * u.x).toFixed(2) + ',' + (p.y + R * u.y).toFixed(2) + ' A' + R + ',' + R + ' 0 0 ' + (cross > 0 ? 1 : 0) + ' ' + (p.x + R * w.x).toFixed(2) + ',' + (p.y + R * w.y).toFixed(2), fill:'none', stroke:'#E8871E', 'stroke-width':2.5, 'class':'garc' }));
+        svg.appendChild(svgEl('circle', { cx:p.x, cy:p.y, r:4, fill:'#2B2A33' }));
+      });
+      var line = trailLine(d.gEachNow(null));
+      var row = actionRow();
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.className = 'ginput'; inp.setAttribute('inputmode', 'numeric'); inp.setAttribute('autocomplete', 'off');
+      inp.setAttribute('aria-label', d.gEachAria);
+      row.appendChild(inp);
+      var deg = document.createElement('span'); deg.className = 'gdeg'; deg.textContent = '°'; row.appendChild(deg);
+      var ok = actionBtn(row, d.gEachOk);
+      function check(){
+        if (gSolved) return;
+        var x = eachRead(inp.value);
+        if (x === null){ roundNote(d.gEachBlank); return; }
+        var bad = eachJudge(n, x);
+        if (bad){
+          var text = bad.k === 'sum' ? d.gEachSum(n, S) : (bad.k === 'tri' ? d.gEachTri(n) : d.gEachWrong(n, x, bad.Y, S, bad.big));
+          missOnce(seen, x, text);
+          return;
+        }
+        inp.disabled = true; ok.disabled = true;
+        line.textContent = d.gEachNow(E);
+        roundSolved(d.gEachDone(n, S, E));
+      }
+      ok.addEventListener('click', check);
+      inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') check(); });
+      gCtx.hint2 = function(){ return d.gEach2(n, S); };
+    },
+
+    /* 第 4 關：轉轉盤（範例 4）—— 拖旋鈕（吸到 15° 一格）、點圓周、或按 ◀ ▶，轉出整個圓的 p/q，再按「就是這個」。
+       判的就是畫出來、讀數寫的那一格；同一個角度再按不再扣分；旋鈕正被拖著時按「就是這個」不算數。 */
+    dial: function(d){
+      var e = pick(GAME_DIAL), p = e[0], q = e[1], x = DIAL.start, seen = { map:{}, last:null };
+      gCtx.ask.textContent = d.gAsks.dial(p, q);
+      var B = makeBoard(GW, DIAL_H), svg = gSvg(B);
+      svg.appendChild(svgEl('circle', { cx:DIAL.cx, cy:DIAL.cy, r:DIAL.r, fill:'#FFFFFF', stroke:'#C9BFA9', 'stroke-width':2 }));
+      var sec = svgEl('path', { d:sectorD(DIAL.cx, DIAL.cy, DIAL.r, x), fill:'#FDF0E0', stroke:'#E8871E', 'stroke-width':3, 'class':'gsector' });
+      svg.appendChild(sec);
+      for (var t = DIAL.step; t < 360; t += DIAL.step){
+        var a = rimPt(DIAL.cx, DIAL.cy, DIAL.r - 7, t), b = rimPt(DIAL.cx, DIAL.cy, DIAL.r + 7, t);
+        svg.appendChild(svgEl('line', { x1:a.x, y1:a.y, x2:b.x, y2:b.y, stroke:'#6B6875', 'stroke-width':t % 90 === 0 ? 2.5 : 1.2, 'class':'gtick', 'data-deg':t }));
+      }
+      var top = rimPt(DIAL.cx, DIAL.cy, DIAL.r, 0);
+      svg.appendChild(svgEl('line', { x1:DIAL.cx, y1:DIAL.cy, x2:top.x, y2:top.y, stroke:'#3B7DD8', 'stroke-width':3, 'class':'gfixed' }));
+      var a0 = rimPt(DIAL.cx, DIAL.cy, DIAL.r, x);
+      var arm = svgEl('line', { x1:DIAL.cx, y1:DIAL.cy, x2:a0.x, y2:a0.y, stroke:'#3B7DD8', 'stroke-width':3, 'class':'garm' });
+      svg.appendChild(arm);
+      svg.appendChild(svgEl('circle', { cx:DIAL.cx, cy:DIAL.cy, r:4, fill:'#2B2A33' }));
+      var line = trailLine(d.gDialNow(x));
+      function show(v){
+        x = v;
+        var r = rimPt(DIAL.cx, DIAL.cy, DIAL.r, v);
+        sec.setAttribute('d', sectorD(DIAL.cx, DIAL.cy, DIAL.r, v));
+        arm.setAttribute('x2', r.x); arm.setAttribute('y2', r.y);
+        line.textContent = d.gDialNow(v);
+        refreshHint();
+      }
+      function setX(v){ var r = rimPt(DIAL.cx, DIAL.cy, DIAL.r, v); knob.rehome(r.x, r.y); }
+      var k0 = rimPt(DIAL.cx, DIAL.cy, DIAL.r, x);
+      var knob = addPiece(B, { w:GPICK, h:GPICK, cx:k0.x, cy:k0.y, cls:'gknob', label:d.gKnobAria,
+        snap:function(pt){ return rimPt(DIAL.cx, DIAL.cy, DIAL.r, dialSnap(pt)); },
+        onPlace:function(P){ var v = dialSnap({ x:P.cx, y:P.cy }); if (v !== x) show(v); } });
+      useTapSelect(B, function(P, pt){
+        var v = pt.tap ? dialTap(pt) : dialSnap(pt);
+        if (v === null) return false;
+        setX(v);
+        return true;
+      });
+      B.onBoardTap = function(pt){ var v = dialTap(pt); if (v !== null) setX(v); };
+      var row = actionRow();
+      var less = actionBtn(row, '◀', 'ghost', d.gLessAria), more = actionBtn(row, '▶', 'ghost', d.gMoreAria), ok = actionBtn(row, d.gDialOk);
+      less.addEventListener('click', function(){ if (!gSolved && !knob.busy() && x > DIAL.step) setX(x - DIAL.step); });
+      more.addEventListener('click', function(){ if (!gSolved && !knob.busy() && x < 360 - DIAL.step) setX(x + DIAL.step); });
+      ok.addEventListener('click', function(){
+        if (gSolved || knob.busy()) return;   /* 旋鈕正被拖著：等放開再判 */
+        var bad = dialRefuse(p, q, x);
+        if (bad){ missOnce(seen, x, d.gDialBad(x, bad.a, bad.b, p, q, bad.less, bad.one)); return; }
+        knob.lock(knob.cx, knob.cy);
+        less.disabled = more.disabled = ok.disabled = true;
+        roundSolved(d.gDialDone(p, q));
+      });
+      gCtx.hint2 = function(){ return d.gDial2(p, q); };
+    },
+
+    /* 第 5 關：拼分數（範例 4 倒過來）—— 數字卡拖進分子、分母（或先點卡、再點格子）；兩格都放好才判。
+       不對 → 兩張卡都回托盤並說為什麼（同一個分數再拼一次不再扣分）。放好的卡點一下拿回托盤。 */
+    frac: function(d){
+      var A = pick(GAME_FRAC), g = gGcd(A, 360), seen = { map:{}, last:null };
+      gCtx.ask.textContent = d.gAsks.frac(A);
+      var B = makeBoard(GW, FRAC_H), svg = gSvg(B);
+      svg.appendChild(svgEl('circle', { cx:FRAC.cx, cy:FRAC.cy, r:FRAC.r, fill:'#FFFFFF', stroke:'#C9BFA9', 'stroke-width':2 }));
+      svg.appendChild(svgEl('path', { d:sectorD(FRAC.cx, FRAC.cy, FRAC.r, A), fill:'#FDF0E0', stroke:'#E8871E', 'stroke-width':3, 'class':'gsector' }));
+      svg.appendChild(svgEl('circle', { cx:FRAC.cx, cy:FRAC.cy, r:3.5, fill:'#2B2A33' }));
+      svg.appendChild(svgEl('line', { x1:FRAC.slotX - 34, y1:(FRAC.numY + FRAC.denY) / 2, x2:FRAC.slotX + 34, y2:(FRAC.numY + FRAC.denY) / 2, stroke:'#2B2A33', 'stroke-width':3, 'class':'gbar' }));
+      var slots = fracSlots();
+      slots.forEach(function(s){ s.z = addZone(B, s.cx - s.hw, s.cy - s.hh, 2 * s.hw, 2 * s.hh, 'gslot'); s.done = false; s.P = null; });
+      var line = trailLine(d.gFracNow(null, null));
+      var cards = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(function(v){
+        var at = fracCardXY(v);
+        return addPiece(B, { w:FRAC.cardS, h:FRAC.cardS, cx:at.x, cy:at.y, text:String(v), cls:'gcard gnumcard', data:{ v:v } });
+      });
+      function now(){ return d.gFracNow(slots[0].P ? slots[0].P.data.v : null, slots[1].P ? slots[1].P.data.v : null); }
+      function take(s){ var P = s.P; s.P = null; s.done = false; s.z.classList.remove('filled'); P.unlock(); }
+      useTapSelect(B, function(P, pt){
+        var sl = nearestOpen(slots, pt, FRAC.pad);
+        if (!sl) return false;
+        sl.done = true; sl.P = P; sl.z.classList.add('filled');
+        gMsg.textContent = '';   /* 放進格子：上一個錯的說明收掉（兩格都放好才判） */
+        P.lock(sl.cx, sl.cy);
+        line.textContent = now();
+        if (slots[0].P && slots[1].P){
+          var a = slots[0].P.data.v, b = slots[1].P.data.v, bad = fracJudge(A, a, b);
+          if (!bad){ roundSolved(d.gFracDone(A, a, b, g)); return true; }
+          take(slots[0]); take(slots[1]);
+          line.textContent = now();
+          missOnce(seen, a + '/' + b, bad.k === 'big' ? d.gFracBig(a, b) : (bad.k === 'int' ? d.gFracInt(a, b, bad.y, A) : d.gFracNoInt(a, b, A)));
+        }
+        return true;
+      });
+      /* 放好的卡（不接指標）點一下：它的格子在畫板上收到「點一下」→ 拿回托盤 */
+      B.onBoardTap = function(pt){
+        slots.forEach(function(s){ if (s.P && Math.abs(pt.x - s.cx) <= s.hw && Math.abs(pt.y - s.cy) <= s.hh){ take(s); line.textContent = now(); } });
+      };
+      gCtx.hint2 = function(){ return d.gFrac2(A, g); };
+    }
+  };
+  var SHAPE_FILL = '#E8F0FB';   /* 分一分：所有卡片與小圖一律這個顏色 */
+  var CUT_FILLS = ['#E3F4EB', '#FDF0E0', '#E8F0FB', '#FBE9E9', '#F3E9FB', '#EAF6E9'];
+  function unit(p, q){ var dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy) || 1; return { x:dx / L, y:dy / L }; }
+  /* 卡片上的圖：sortShape 的頂點放大 s 倍、放在 w × h 的中間；小記號、直角記號照 sortShape 畫（s < 1 的小圖不畫記號） */
+  function shapeSvg(c, w, h, s){
+    var sh = sortShape(c), cx = w / 2, cy = h / 2;
+    var V = sh.pts.map(function(p){ return { x:cx + p.x * s, y:cy + p.y * s }; });
+    var g = svgEl('svg', { width:w, height:h, 'aria-hidden':'true' });
+    /* 每一張卡同一種顏色：顏色、框線不可以透露答案（驗證者只看顏色就分對 49/49 —— 正的都是綠、不是的都是橘） */
+    g.appendChild(svgEl('polygon', { points:ptsAttr(V), fill:SHAPE_FILL, stroke:'#2B2A33', 'stroke-width':s < 1 ? 1.5 : 2.5, 'class':'gshp' }));
+    if (s < 1) return g;
+    V.forEach(function(a, i){
+      var b = V[(i + 1) % V.length], m = sh.ticks[i], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, u = unit(a, b);
+      for (var j = 0; j < m; j++){
+        var off = (j - (m - 1) / 2) * 4;
+        var px = mx + u.x * off, py = my + u.y * off;
+        g.appendChild(svgEl('line', { x1:px - u.y * 4, y1:py + u.x * 4, x2:px + u.y * 4, y2:py - u.x * 4, stroke:'#2F9E69', 'stroke-width':2, 'class':'gtk', 'data-side':i }));
+      }
+    });
+    sh.right.forEach(function(i){
+      var p = V[i], a = V[(i + V.length - 1) % V.length], b = V[(i + 1) % V.length], u = unit(p, a), w2 = unit(p, b), R = 7;
+      g.appendChild(svgEl('path', { d:'M' + (p.x + R * u.x) + ',' + (p.y + R * u.y) + ' L' + (p.x + R * u.x + R * w2.x) + ',' + (p.y + R * u.y + R * w2.y) + ' L' + (p.x + R * w2.x) + ',' + (p.y + R * w2.y), fill:'none', stroke:'#3B7DD8', 'stroke-width':1.5, 'class':'gra' }));
+    });
+    return g;
   }
 
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {}; gGen++; BOARD_TAP = null; PIECE_PTR = {};   /* 上一關沒收尾的手指不帶到下一關 */
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = roundHint1(round);
-    } else {
-      elHint.textContent = '';
-    }
-
-    gScene.textContent = '';
-    if (round.type === 'polygon'){
-      gScene.innerHTML = regularPolygonSVG(round.n, d.polyName(round.n));
-    } else {
-      gScene.innerHTML = sectorSVG(round.angle, d.secAria(round.angle));
-    }
-
-    var askEl = document.createElement('p');
-    askEl.className = 'secline';
-    askEl.style.fontWeight = '700';
-    askEl.textContent = roundQuestionText(round);
-    gScene.appendChild(askEl);
-
-    gCards.textContent = '';
-    var choiceStrs = round.choices.map(function(c){ return round.type === 'polygon' ? (c + '°') : c; });
-    var correctStr = round.type === 'polygon' ? (round.ans + '°') : round.ans;
-    shuffle(choiceStrs).forEach(function(v){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = v;
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        if (v === correctStr){
-          var all = gCards.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){
-            gScore += 10;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry(correctStr) + '</span>';
-          } else {
-            gScore += 20;
-            gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst(correctStr) + '</span>';
-          }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + d.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gScore = Math.max(0, gScore - 5);
-          gMsg.innerHTML = '<span class="no">' + d.gWrong(v) + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gCards.appendChild(b);
-    });
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = typeof d.gAsks[type] === 'string' ? d.gAsks[type] : '';
+    gameStage.appendChild(ask);
+    gCtx.ask = ask;
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕），第二層跟著畫面走 */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
-
   gHintBtn.addEventListener('click', function(){
-    var round = ROUNDS[gRound];
+    if (hintLevel >= 2) return;
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = roundHint1(round);
-    } else {
-      elHint.textContent = roundHint2(round);
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
