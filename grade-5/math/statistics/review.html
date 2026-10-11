@@ -156,7 +156,7 @@
       MONTHS:['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'],
       FRUITS:['蘋果','香蕉','橘子','葡萄','西瓜','鳳梨'],
       SPORTS:['籃球','足球','羽球','桌球'],
-      WEEKS:['第1週','第2週','第3週','第4週','第5週','第6週'],
+      WEEKS:['第 1 週','第 2 週','第 3 週','第 4 週','第 5 週','第 6 週'],
       CLASSES:['五年一班','五年二班','五年三班','五年四班']
     },
     en: {
@@ -234,8 +234,9 @@
   function range(n){ var a = []; for (var i = 0; i < n; i++) a.push(i); return a; }
   function sum(arr){ return arr.reduce(function(a, b){ return a + b; }, 0); }
   function round1(x){ return Math.round(x * 10) / 10; }
-  function makeWrongs(correct, candidates){
+  function makeWrongs(correct, candidates, avoid){
     var out = []; var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(a){ seen[String(a)] = true; });   /* 題幹裡印出來的數不可以當誘答（§六之三 第 4 點） */
     (candidates || []).forEach(function(c){
       var key = String(c);
       if (!seen[key]){ seen[key] = true; out.push(c); }
@@ -249,8 +250,8 @@
     }
     return out.slice(0, 3);
   }
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -424,8 +425,9 @@
         var squares = idxs.map(function(){ return randInt(2, 9); });
         var values = squares.map(function(s){ return s * unit; });
         var qIdx = randInt(0, n - 1);
+        if (squares[qIdx] < 3){ squares[qIdx] = randInt(3, 9); values[qIdx] = squares[qIdx] * unit; }   /* 少一格（correct − unit）不可以剛好是題幹的「一格 = unit」 */
         var correct = values[qIdx];
-        var m = mixOpts(correct, [squares[qIdx], correct + unit, correct - unit]);
+        var m = mixOpts(correct, [squares[qIdx], correct + unit, correct - unit], [1]);   /* 英文題幹的「1 square = …」 */
         return { poolName:poolName, idxs:idxs, unit:unit, squares:squares, values:values, qIdx:qIdx, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -470,19 +472,18 @@
         var n = pick(poolName === 'WEEKDAYS' ? [4, 5] : [4, 5, 6]);
         var start = randInt(0, poolLen - n);
         var idxs = range(n).map(function(i){ return start + i; });
-        var values = [randInt(10, 40)];
+        /* 折線圖的點沒有寫數字：每一個點都要剛好在一條格線上，圖才讀得出答案 */
+        var step = pick([2, 5]), top = 10 * step;
+        var values = [step * randInt(2, 8)];
         for (var i = 1; i < n; i++){
-          var prev = values[i - 1];
-          var delta;
-          do { delta = randInt(-10, 10); } while (delta === 0);
-          var nv = prev + delta;
-          if (nv < 5) nv = prev + Math.abs(delta);
+          var prev = values[i - 1], nv;
+          do { nv = prev + step * (pick([-1, 1]) * randInt(1, 3)); } while (nv < step || nv > top);
           values.push(nv);
         }
         var segIdx = randInt(0, n - 2);
         var delta2 = values[segIdx + 1] - values[segIdx];
         var absD = Math.abs(delta2);
-        var m = { poolName:poolName, idxs:idxs, values:values, segIdx:segIdx, delta:delta2, absD:absD };
+        var m = { poolName:poolName, idxs:idxs, values:values, step:step, segIdx:segIdx, delta:delta2, absD:absD };
         return m;
       },
       fmt: function(d, lang){
@@ -494,7 +495,7 @@
         var fmt1 = lang === 'zh' ? function(w, v){ return w + ' ' + v; } : function(w, v){ return w + ' ' + v; };
         var correctText = fmt1(dirWord, d.absD);
         var opts = shuffle([correctText, fmt1(oppWord, d.absD), fmt1(dirWord, d.absD + 2), fmt1(oppWord, d.absD + 2)]);
-        var step = niceStep(Math.max.apply(null, d.values));
+        var step = d.step;
         return {
           stem: lang === 'zh'
             ? '從「' + cats[d.segIdx] + '」到「' + cats[d.segIdx + 1] + '」，數值是上升還是下降？變化了多少？'
@@ -514,27 +515,26 @@
         var idxs = range(n).map(function(i){ return start + i; });
         var classIdxs = shuffle(range(4)).slice(0, 2);
         var a, b, qIdx;
-        for (var tries = 0; tries < 30; tries++){
-          a = idxs.map(function(){ return randInt(8, 25); });
-          b = idxs.map(function(){ return randInt(8, 25); });
-          qIdx = randInt(0, n - 1);
-          if (a[qIdx] !== b[qIdx]) break;
-        }
+        /* 複合長條圖沒有寫數字：每一根都是雙數，剛好在「一格 2」的格線上；問的那一週兩班一定不一樣多 */
+        a = idxs.map(function(){ return 2 * randInt(4, 10); });
+        b = idxs.map(function(){ return 2 * randInt(4, 10); });
+        qIdx = randInt(0, n - 1);
+        if (a[qIdx] === b[qIdx]) b[qIdx] = a[qIdx] === 20 ? 18 : a[qIdx] + 2;
         var diff = Math.abs(a[qIdx] - b[qIdx]);
-        var m = mixOpts(diff, [a[qIdx] + b[qIdx], diff + 2, Math.max.apply(null, a.concat(b))]);
+        var m = mixOpts(diff, [a[qIdx] + b[qIdx], diff + 2, Math.max.apply(null, a.concat(b))], [idxs[qIdx] + 1]);   /* 題幹的「第 n 週」 */
         return { idxs:idxs, classIdxs:classIdxs, a:a, b:b, qIdx:qIdx, diff:diff, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
         var cats = d.idxs.map(function(i){ return POOLS[lang].WEEKS[i]; });
         var nameA = POOLS[lang].CLASSES[d.classIdxs[0]], nameB = POOLS[lang].CLASSES[d.classIdxs[1]];
         var maxV = Math.max.apply(null, d.a.concat(d.b));
-        var step = niceStep(maxV);
+        var step = 2;
         return {
           stem: lang === 'zh' ? cats[d.qIdx] + '，兩班資源回收公斤數相差多少？' : 'In ' + cats[d.qIdx] + ', how many kg do the two classes’ recycling amounts differ by?',
           opts: d.opts.map(String), ans: d.ans,
           why: lang === 'zh'
-            ? cats[d.qIdx] + '：' + nameA + ' ' + d.a[d.qIdx] + '，' + nameB + ' ' + d.b[d.qIdx] + '，相差 ' + d.diff + '。'
-            : 'In ' + cats[d.qIdx] + ': ' + nameA + ' has ' + d.a[d.qIdx] + ', ' + nameB + ' has ' + d.b[d.qIdx] + ' — a difference of ' + d.diff + '.',
+            ? cats[d.qIdx] + '：' + nameA + ' ' + d.a[d.qIdx] + '，' + nameB + ' ' + d.b[d.qIdx] + '，' + Math.max(d.a[d.qIdx], d.b[d.qIdx]) + ' − ' + Math.min(d.a[d.qIdx], d.b[d.qIdx]) + ' = ' + d.diff + '，相差 ' + d.diff + '。'
+            : 'In ' + cats[d.qIdx] + ': ' + nameA + ' has ' + d.a[d.qIdx] + ', ' + nameB + ' has ' + d.b[d.qIdx] + '. ' + Math.max(d.a[d.qIdx], d.b[d.qIdx]) + ' − ' + Math.min(d.a[d.qIdx], d.b[d.qIdx]) + ' = ' + d.diff + ' — a difference of ' + d.diff + '.',
           chart: { kind:'grouped', categories:cats, valuesA:d.a, valuesB:d.b, nameA:nameA, nameB:nameB, axisMin:0, axisMax: niceAxisMax(maxV, step), gridStep:step, yUnit: lang === 'zh' ? '公斤' : 'kg' }
         };
       } },
@@ -583,7 +583,7 @@
         var avg = pickUnused([6,7,8,9,10,11,12,14,15,16,18,20,22,24,25], used);
         var nums = makeNumsForAvg(avg, n);
         var s = sum(nums);
-        var m = mixOpts(avg, [avg - 1, avg + 1, s]);
+        var m = mixOpts(avg, [avg - 1, avg + 1, s], nums);   /* 平均 ± 1 常常剛好是題目裡的某一個數 */
         return { n:n, nums:nums, avg:avg, sum:s, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -602,7 +602,7 @@
         var dividendTenths = qt * k;
         var dividend = round1(dividendTenths / 10);
         var q = round1(qt / 10);
-        var m = mixOpts(q, [round1(q - 0.1), round1(q + 0.1), round1(q * 2)]);
+        var m = mixOpts(q, [round1(q - 0.1), round1(q + 0.1), round1(q * 2)], [k, dividend]);   /* 2.1 − 0.1 ＝ 2 會剛好是除數 */
         return { k:k, dividend:dividend, dividendTenths:dividendTenths, q:q, qt:qt, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -621,7 +621,7 @@
         var k = randInt(4, 20);
         var whole = unitPart * k;
         var result = k;
-        var m = mixOpts(result, [whole - result, result * 2, pct]);
+        var m = mixOpts(result, [whole - result, result * 2, pct], [whole]);   /* 50% 的時候 result × 2 就是題幹的整體 */
         return { pct:pct, whole:whole, result:result, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -635,6 +635,7 @@
       } }
   ];
 
+  /* ---------- 出一批（GENS 之後：tools/simgen.js 從「靜態文字」切到這裡為止） ---------- */
   var EXTRA_IDS = ['statBarRead', 'statBarTotal', 'statLineTrend', 'statGroupedDiff', 'statMisleading'];
   var EXTRA_POOL = GENS.filter(function(g){ return EXTRA_IDS.indexOf(g.id) >= 0; });
 

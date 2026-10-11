@@ -132,6 +132,58 @@
     margin-top:14px;background:var(--red-soft);border:2px solid var(--red);border-radius:14px;
     padding:14px 18px;font-size:15px;display:none;
   }
+  /* ---- 小遊戲「偵察隊出任務」：畫長條、描點連線、讀複合長條圖、選對圖表、抓出騙人的圖（§六之五） ---- */
+  .game .stats{justify-content:center}
+  .game .hint{text-align:center;margin-top:8px}
+  .game .gamemsg{text-align:center}
+  .game .btnrow{justify-content:center}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:18px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:48px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div, .gboard > button{position:absolute}
+  .gsvg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  /* 表格（第 1、2 關）：第一列項目、第二列數量 */
+  .gtblh,.gtblv{display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;line-height:1.2;font-weight:700;white-space:nowrap;
+    border:1px solid var(--line);background:var(--card);pointer-events:none}
+  .gtblv{font-size:14px;font-weight:800;color:var(--blue)}
+  .gtblc{color:var(--muted);font-size:11px;background:var(--bg)}
+  /* 第 1 關：長條的把手 —— 空心的圈，長條的頂端從圈裡看得到；拖的時候吸到格線（transition 會讓它慢半拍，拿掉） */
+  .ghandle{background:transparent;border:3px solid var(--orange);border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.75);transition:none}
+  .ghandle.sel{border-radius:50%}
+  /* 卡片 */
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-weight:800;color:var(--ink);text-align:center}
+  .gchip{font-size:13px;line-height:1.1;border-color:var(--blue);white-space:nowrap}
+  .gscard{font-size:14px;line-height:1.25;padding:2px 6px}
+  /* 第 3 關：圖例、輸入框 */
+  .gleg{display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;line-height:1.2;font-weight:700;pointer-events:none;white-space:nowrap}
+  .gsw{display:inline-block;width:18px;height:18px;border-radius:4px;flex:none}
+  .gswA{background:#2F9E69}
+  .gswB{background:repeating-linear-gradient(45deg,#E8871E 0 3px,#fff 3px 5px)}
+  .gnum{width:96px;height:48px;font-size:22px;font-weight:800;text-align:center;border:3px solid var(--blue);border-radius:12px;color:var(--ink);background:var(--card)}
+  .gnum:disabled{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+  .gnumlbl{font-size:17px;font-weight:700}
+  /* 第 4 關：三個箱子 */
+  .gbin{border:3px dashed #C9BFA9;border-radius:14px;background:var(--card);pointer-events:none}
+  .gbinlbl{display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;line-height:1.2;font-weight:800;color:var(--ink);pointer-events:none;white-space:nowrap}
+  .gplaced{display:flex;align-items:center;justify-content:center;text-align:center;border:2px solid var(--green);border-radius:8px;background:var(--green-soft);pointer-events:none;
+    color:var(--green);font-size:12px;line-height:1.2;font-weight:800;padding:0 3px}
+  /* 第 5 關：四張小圖 */
+  .gtcard{background:var(--card);border:3px solid var(--line);border-radius:14px;cursor:pointer}
+  .gtcard.found{border-color:var(--red);background:var(--red-soft)}
+  .gtcard.honest{border-color:var(--green);border-style:dashed}
+  .gaction{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
+  .gaction .btn{min-height:48px;min-width:48px}
+  .game .btnrow .btn{white-space:nowrap;padding:10px 16px}
+  .gnote{color:var(--muted)}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
 </style>
 </head>
 <body>
@@ -261,20 +313,18 @@
   <!-- 小遊戲 -->
   <section>
     <span class="eyebrow" data-i18n="ebGame">小遊戲</span>
-    <h2 data-i18n="s7h2">圖表快問快答</h2>
-    <p class="lead" data-i18n="s7lead">每一關都是新的圖表，看清楚刻度再回答！</p>
+    <h2 data-i18n="s7h2">偵察隊出任務</h2>
+    <p class="lead" data-i18n="s7lead">畫長條、描點連線、讀複合長條圖、選對圖表、抓出騙人的圖 —— 五關五種玩法，每一關都要<strong>先看刻度再動手</strong>。放錯會扣分，但任務不會失敗 —— 慢慢看比手快重要。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <p class="readline" id="gAskLine" style="text-align:left"></p>
-      <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="chartbox" id="gChart"></div>
-      <div class="opts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -507,6 +557,181 @@
     return 'url(#' + id + ')';
   }
 
+  /* ---------- 小遊戲「偵察隊出任務」的資料（語言無關）：題庫、版面常數、「收不收、為什麼」的純函式 ----------
+     五關對應範例 1～5：畫長條（一格代表多少）、描點連線＋找變化最大的一段（折線圖）、讀複合長條圖（相差／一共）、
+     選對圖表（分一分）、抓出騙人的圖（縱軸沒有從 0 開始）。RENDER 只負責畫與呼叫這裡的函式 —— 檢查設定可以直接跑。 */
+  var GAME_ORDER = ['bar', 'plot', 'group', 'sort', 'trunc'];
+  var GPICK = 48;   /* 拿得起來的東西至少 48 × 48（畫板在 375px 手機上約縮成 0.97 倍，仍 ≥ 44px） */
+  /* 統計圖的座標：n 個項目、rows 格，畫在 x0～x1、y0（最上面那一條線）～y1（0 那一條線） */
+  function gChart(n, rows, x0, x1, y0, y1){
+    var slot = (x1 - x0) / n, cx = [];
+    for (var i = 0; i < n; i++) cx.push(x0 + slot * i + slot / 2);
+    return { n:n, rows:rows, x0:x0, x1:x1, y0:y0, y1:y1, cellH:(y1 - y0) / rows, slot:slot, cx:cx };
+  }
+  function gLineY(ch, k){ return ch.y1 - k * ch.cellH; }
+  /* 最近的那一條格線（0～rows） */
+  function gSnapK(ch, y){ return Math.max(0, Math.min(ch.rows, Math.round((ch.y1 - y) / ch.cellH))); }
+  /* 點在第幾個項目的那一直行（每一行一樣寬、不重疊；行外回 -1） */
+  function gColOf(ch, x){ if (x < ch.x0 || x >= ch.x1) return -1; return Math.floor((x - ch.x0) / ch.slot); }
+  /* 托盤洗牌之後不可以剛好是答案的順序：rank 由小到大就整個倒過來（rank 至少兩種，倒過來一定不是由小到大） */
+  function unsorted(list, rank){
+    var a = shuffle(list);
+    var sorted = a.every(function(x, i){ return i === 0 || rank(a[i - 1]) <= rank(x); });
+    return sorted ? a.reverse() : a;
+  }
+
+  /* 第 1 關：畫長條（範例 1）—— 表上是數量，圖的「一格 ＝ u」；把每一根長條拉到 數量 ÷ u 格。
+     縱軸只在雙數格寫數字（0、2u、4u…）：單數格的線要自己數出來 —— 這就是「一格代表多少」。
+     每一題至少有一個數量 ≤ 10（「把數量當成格數」那個迷思在 10 格的圖上畫得出來，說明才會出現）。 */
+  var BAR = { W:300, H:360, x0:40, x1:292, tblY:2, tblRowH:28, capY:76, y0:108, y1:308, rows:10, catY:352, handle:GPICK };
+  var GAME_BAR = [
+    { cat:'WEEKDAYS', unit:'book', u:5, vals:[35, 10, 45, 20] },
+    { cat:'FRUITS', unit:'person', u:2, vals:[14, 6, 18, 10] },
+    { cat:'CLASSES', unit:'kg', u:10, vals:[60, 10, 80, 40] },
+    { cat:'MONTHS', unit:'cup', u:5, vals:[25, 40, 15, 5] }
+  ];
+  function barChart(){ return gChart(4, BAR.rows, BAR.x0, BAR.x1, BAR.y0, BAR.y1); }
+  /* 畫了 h 格的那一根：對 → null；還沒拉 → 'empty'；把數量當成格數 → 'count'；太高／太低 → 'high'／'low' */
+  function barWhy(e, i, h){
+    var v = e.vals[i];
+    if (h * e.u === v) return null;
+    if (h === 0) return 'empty';
+    if (h === v) return 'count';
+    return h * e.u > v ? 'high' : 'low';
+  }
+  /* 縱軸寫數字的線：雙數格 */
+  function barLabelled(k){ return k % 2 === 0; }
+
+  /* 第 2 關：描點連線＋找出變化最大的一段（範例 2）—— 表上是五個月的數；月份的點從托盤拖到那一直行、那一條線上
+     （拖的時候就吸到最近的交叉點，畫面上標出那一直行、那一條線與它的數）。五個點都畫好了，連成折線，再點「變化最大」的那一段。
+     每一題變化最大的那一段只有一段；前兩題它是「減少」，而且減少得比最大的增加還多（只看「增加」的孩子會點錯）。 */
+  var PLOT = { W:300, H:384, x0:40, x1:292, tblY:2, tblRowH:28, y0:92, y1:292, catY:310, trayY:354, chipW:54, segHit:16, vtxSkip:10 };
+  var GAME_PLOT = [
+    { from:0, unit:'person', s:5, rows:8, vals:[15, 25, 20, 35, 10] },
+    { from:2, unit:'mm', s:10, rows:8, vals:[30, 50, 70, 20, 40] },
+    { from:5, unit:'cup', s:2, rows:10, vals:[6, 10, 18, 14, 16] },
+    { from:7, unit:'person', s:10, rows:8, vals:[20, 60, 50, 40, 30] }
+  ];
+  function plotChart(e){ return gChart(5, e.rows, PLOT.x0, PLOT.x1, PLOT.y0, PLOT.y1); }
+  /* 托盤上第 j 個點的中心（五個一排，間隔 6） */
+  function plotTrayX(j){ return 3 + PLOT.chipW / 2 + j * (PLOT.chipW + 6); }
+  /* 拖到哪一個交叉點：在畫圖的範圍裡（上下各放寬半格）才算，回 { i:第幾個月, k:第幾條線 }；範圍外回 null */
+  function plotCell(ch, p){
+    if (p.x < ch.x0 || p.x >= ch.x1 || p.y < ch.y0 - ch.cellH / 2 || p.y > ch.y1 + ch.cellH / 2) return null;
+    return { i:gColOf(ch, p.x), k:gSnapK(ch, p.y) };
+  }
+  /* 第 m 個月的點放在 (i, k)：對 → null；放錯月份 → 'col'；放太高／太低 → 'high'／'low' */
+  function plotWhy(e, m, i, k){
+    if (i !== m) return 'col';
+    if (k * e.s === e.vals[m]) return null;
+    return k * e.s > e.vals[m] ? 'high' : 'low';
+  }
+  function segDelta(vals, j){ return vals[j + 1] - vals[j]; }
+  /* 變化最大的那一段（增加、減少都算；題庫保證只有一段） */
+  function segBest(vals){
+    var best = 0;
+    for (var j = 1; j < vals.length - 1; j++) if (Math.abs(segDelta(vals, j)) > Math.abs(segDelta(vals, best))) best = j;
+    return best;
+  }
+  /* 點到哪一段：離線段 ≤ segHit 的最近那一段；點在兩段相接的點附近（< vtxSkip）分不出是哪一段 → -1（不算錯、什麼都不做） */
+  function segDist(p, a, b){
+    var dx = b.x - a.x, dy = b.y - a.y, t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy);
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  }
+  function segPts(ch, e){ return e.vals.map(function(v, i){ return { x:ch.cx[i], y:gLineY(ch, v / e.s) }; }); }
+  function segPick(ch, e, p){
+    var pts = segPts(ch, e), best = -1, bd = Infinity;
+    for (var v = 1; v < pts.length - 1; v++) if (Math.hypot(p.x - pts[v].x, p.y - pts[v].y) < PLOT.vtxSkip) return -1;
+    for (var j = 0; j < pts.length - 1; j++){
+      var dd = segDist(p, pts[j], pts[j + 1]);
+      if (dd <= PLOT.segHit && dd < bd){ bd = dd; best = j; }
+    }
+    return best;
+  }
+
+  /* 第 3 關：讀複合長條圖（範例 3）—— 兩班四週的資源回收公斤數；題目指定一週，問兩班「相差」或「一共」多少，答案打在輸入框裡。
+     縱軸一格 2 公斤、每一條線都寫數字，每一根長條的頂端都剛好在一條線上（圖決定得了答案）。 */
+  var GROUP = { W:300, H:296, x0:40, x1:292, y0:16, y1:216, rows:10, step:2, catY:236, legY:254, legH:36 };
+  var GAME_GROUP = [
+    { a:[12, 16, 10, 18], b:[8, 14, 16, 12], k:2, kind:'diff' },
+    { a:[14, 6, 18, 12], b:[10, 16, 12, 20], k:1, kind:'total' },
+    { a:[6, 12, 16, 20], b:[10, 18, 12, 14], k:3, kind:'diff' },
+    { a:[16, 10, 14, 8], b:[12, 14, 6, 18], k:0, kind:'total' }
+  ];
+  function groupChart(){ return gChart(4, GROUP.rows, GROUP.x0, GROUP.x1, GROUP.y0, GROUP.y1); }
+  function groupAnswer(e){ var a = e.a[e.k], b = e.b[e.k]; return e.kind === 'diff' ? Math.abs(a - b) : a + b; }
+  /* 只收寫法正常的整數（沒有空格、小數點、開頭的 0）；其他回 null（只提醒、不算錯） */
+  function parseCount(s){ var t = String(s).trim(); return /^(0|[1-9]\d{0,3})$/.test(t) ? Number(t) : null; }
+  /* 打了 n：對 → null；相差／一共搞反 → 'swap'；只讀了一班 → 'one'；其他 → 'high'／'low' */
+  function groupWhy(e, n){
+    var a = e.a[e.k], b = e.b[e.k], ans = groupAnswer(e);
+    if (n === ans) return null;
+    if (n === (e.kind === 'diff' ? a + b : Math.abs(a - b))) return 'swap';
+    if (n === a || n === b) return 'one';
+    return n > ans ? 'high' : 'low';
+  }
+  /* 一組兩根長條：左邊是一班（綠）、右邊是二班（斜線） */
+  function groupBarX(ch, i, side){ var pairW = ch.slot * 0.62, w = pairW / 2 - 2; return { x:ch.cx[i] - pairW / 2 + (side ? pairW / 2 + 2 : 0), w:w }; }
+
+  /* 第 4 關：選對圖表（範例 4）—— 四張情境卡分進「長條圖／折線圖／複合長條圖」三個箱子；三種都至少一張。
+     卡片的文字在字典（gSortCards，和 SORT_TYPES 一一對應）。 */
+  var SORT_TYPES = ['bar', 'bar', 'bar', 'line', 'line', 'line', 'grouped', 'grouped', 'grouped'];
+  var SORT_BINS = ['bar', 'line', 'grouped'];
+  var SORT = { W:300, H:316, binW:96, binGap:6, binY:0, lblY:30, lblH:58, slotH:52, slotGap:4, cardW:144, cardH:56, trayY:[220, 282], trayX:[74, 226], pad:10 };
+  function sortBinX(b){ return b * (SORT.binW + SORT.binGap); }
+  function sortBinH(){ return SORT.lblH + 2 * (SORT.slotH + SORT.slotGap) + 4; }
+  /* 四張：每一種先抽一張，再多抽一張（任一種）；放在托盤的順序不可以剛好照箱子排 */
+  function sortPick(){
+    var by = {};
+    SORT_TYPES.forEach(function(t, i){ (by[t] = by[t] || []).push(i); });
+    var cards = SORT_BINS.map(function(t){ return pick(by[t]); });
+    var rest = SORT_TYPES.map(function(t, i){ return i; }).filter(function(i){ return cards.indexOf(i) < 0; });
+    cards.push(pick(rest));
+    return unsorted(cards, function(c){ return SORT_BINS.indexOf(SORT_TYPES[c]); });
+  }
+  /* 卡片 c 放進箱子 b：對 → null；錯 → 卡片自己的種類（說明講「它是哪一種、該放哪裡」） */
+  function sortWhy(c, b){ var t = SORT_TYPES[c]; return SORT_BINS[b] === t ? null : t; }
+
+  /* 第 5 關：抓出騙人的圖（範例 5）—— 四張小長條圖，每張兩根（A、B）、長條上寫著數；點出所有「縱軸沒有從 0 開始」的圖。
+     縱軸最下面那一條線一定寫著它的數（沒有從 0 開始就照實寫出來），長條照比例畫。每一組有兩張騙人的、兩張從 0 開始的。
+     ⚠️ 不可以有「不看 0 也猜得到」的線索：每一張都是 3 格高，而且同一組裡騙人的兩張與誠實的兩張用的是同一對刻度（例如 5 和 10）——
+     看「一格多少」猜不出來，只能看最下面那一條線是不是 0（驗證者抓到的：舊版誠實的一律一格 20、騙人的一律一格 5 或 10）。
+     數的大小與長條的高矮也不洩題：照 A／B 的數、A／B 的高度、兩根看起來差幾倍、兩根頂端看起來差多高排，騙人的兩張不會在同一頭，而且沒有一個「排第幾名」的規則在三組裡都成立 ——
+     最大的那一張、最小的那一張，在不同的組裡有時騙人、有時誠實（codex 第七、八輪）。四張圖的位置每一次都重新洗牌。 */
+  var TRUNC = { W:300, H:308, cw:146, ch:150, gap:8, px0:40, px1:136, py0:24, py1:112, catY:130 };
+  var GAME_TRUNC = [
+    [ { a:39, b:45, min:30, max:45, step:5 }, { a:42, b:46, min:40, max:100, step:20 }, { a:5, b:10, min:0, max:15, step:5 }, { a:49, b:54, min:0, max:60, step:20 } ],
+    [ { a:7, b:8, min:5, max:20, step:5 }, { a:59, b:70, min:40, max:70, step:10 }, { a:9, b:14, min:0, max:15, step:5 }, { a:13, b:27, min:0, max:30, step:10 } ],
+    [ { a:42, b:49, min:30, max:60, step:10 }, { a:195, b:215, min:160, max:220, step:20 }, { a:7, b:15, min:0, max:30, step:10 }, { a:52, b:56, min:0, max:60, step:20 } ]
+  ];
+  function truncLie(c){ return c.min > 0; }
+  /* 畫出來 B 看起來是 A 的幾倍高（長條的高度從最下面那一條線量起），取到小數一位 —— 騙人的圖說的就是這件事 */
+  function truncLooks(c){ return Math.round((c.b - c.min) / (c.a - c.min) * 10) / 10; }
+  /* 第 i 張圖的左上角（2 × 2） */
+  function truncXY(i){ return { x:(i % 2) * (TRUNC.cw + TRUNC.gap), y:Math.floor(i / 2) * (TRUNC.ch + TRUNC.gap) }; }
+  function truncY(c, v){ return TRUNC.py1 - (v - c.min) / (c.max - c.min) * (TRUNC.py1 - TRUNC.py0); }
+  /* 長條上的數放在哪裡（基線 y）：在長條頂端上面，字框（13px：基線上 1.1 em、下 0.35 em）離每一條格線、長條頂端都 ≥ 2px、不出卡片；
+     頂端緊貼一條格線時就往上找下一個空隙（驗證者抓到的：舊版固定在頂端上 5px，「48」被 50 那一條線穿過） */
+  var TLBL = 13;
+  function truncLabelY(c, v){
+    var top = truncY(c, v), lines = [];
+    for (var t = c.min; t <= c.max; t += c.step) lines.push(truncY(c, t));
+    for (var y = top - 2 - 0.35 * TLBL; y - 1.1 * TLBL >= 2; y -= 0.5){
+      var bt = y - 1.1 * TLBL, bb = y + 0.35 * TLBL;
+      if (lines.every(function(l){ return l < bt - 2 || l > bb + 2; })) return y;
+    }
+    return null;
+  }
+  /* 點在哪一張圖上（圖和圖之間的縫 → -1，不算錯） */
+  function truncPick(p){
+    for (var i = 0; i < 4; i++){
+      var o = truncXY(i);
+      if (p.x >= o.x && p.x <= o.x + TRUNC.cw && p.y >= o.y && p.y <= o.y + TRUNC.ch) return i;
+    }
+    return -1;
+  }
+
   /* ---------- i18n ---------- */
   var I18N = {
     zh: {
@@ -583,32 +808,89 @@
       FRUITS:['蘋果','香蕉','橘子','葡萄','西瓜','鳳梨'],
       SPORTS:['籃球','足球','羽球','桌球'],
       CLASSES:['五年一班','五年二班','五年三班','五年四班'],
-      WEEKS:['第1週','第2週','第3週','第4週','第5週','第6週'],
+      WEEKS:['第 1 週','第 2 週','第 3 週','第 4 週','第 5 週','第 6 週'],
       ebQuiz:'試題', s6h2:'檢查一下讀圖功力', s6lead:'每題都要看清楚刻度再作答，答案馬上告訴你為什麼。',
       qDoneLabel:'已作答', qRightLabel:'答對', qRightUnit:'題',
       qn:function(i){ return '第 ' + i + ' 題'; },
       fbRight:'<b>答對了。</b> ', fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
       cAll:'全對！你已經是讀圖高手 🏆', cGood:'很棒！錯的那幾題再看一次說明。', cTry:'沒關係，回到上面的範例再看一次刻度怎麼讀。',
-      ebGame:'小遊戲', s7h2:'圖表快問快答', s7lead:'每一關都是新的圖表，看清楚刻度再回答！',
+      ebGame:'小遊戲', s7h2:'偵察隊出任務',
+      s7lead:'畫長條、描點連線、讀複合長條圖、選對圖表、抓出騙人的圖 —— 五關五種玩法，每一關都要<strong>先看刻度再動手</strong>。放錯會扣分，但任務不會失敗 —— 慢慢看比手快重要。',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
       gHintBtn:'💡 提示',
-      gHint1:'提示 1：先看清楚縱軸「一格代表多少」，再讀長條或折線的位置。',
-      gHint2Read:function(sq, unit){ return '提示 2：這根長條是 ' + sq + ' 格，一格代表 ' + unit + '。'; },
-      gHint2Total:function(vals){ return '提示 2：把每一個數字加起來：' + vals.join(' + ') + '。'; },
-      gHint2Diff:function(a, b){ return '提示 2：用比較大的數減掉比較小的數：' + Math.max(a,b) + ' − ' + Math.min(a,b) + '。'; },
-      gHint2Max:function(vals){ return '提示 2：先找出最高的那個數字是 ' + Math.max.apply(null, vals) + '。'; },
-      gHint2Type:'提示 2：先問自己——這是在比較「不同類別」，還是在看「隨時間的變化」？',
-      gAskRead:function(cat){ return '這張長條圖裡，「' + cat + '」代表多少？'; },
-      gAskTotal:'把所有長條加起來，總共是多少？',
-      gAskDiff:function(a, b){ return '「' + a + '」比「' + b + '」多多少？'; },
-      gAskMax:'哪一個類別的數值最大？',
-      gAskType:function(text){ return text + '——最適合用哪一種圖表？'; },
       gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gCorrectFirst:function(){ return '答對了！+20 分！'; },
-      gCorrectRetry:function(){ return '答對了！+10 分。'; },
-      gWrong:function(v){ return v + ' 不對，再試一次，−5 分。'; },
-      gClear:'按「下一關」繼續下一組資料。',
-      gWin:function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gTblItem:'項目', gTblNum:'數量',
+      gUnits:{ book:'本', person:'人', kg:'公斤', cup:'杯', mm:'毫米' },
+      gAsks:{
+        bar:'照表上的數量，把每一根長條拉到對的高度（拖把手，或點那一直行裡的格線），畫好了按「畫好了」。',
+        plot:'把每個月的點拖到折線圖上對的位置（也可以先點一個點、再點位置）。',
+        group:'',
+        sort:'每一件事要用哪一種圖？把卡片拖進對的箱子（也可以先點卡片、再點箱子）。',
+        trunc:'有的圖縱軸沒有從 0 開始，長條的高矮會騙人。點出所有會騙人的圖。'
+      },
+      gHints:{
+        bar:'提示 1：一格代表的不是 1 —— 表上的數 ÷ 一格代表的數，就是要畫幾格。',
+        plot:'提示 1：先在橫軸找到那個月的那一直行，再沿著縱軸找到那個數的那一條線，兩條交叉的地方就是點。',
+        seg:'提示 1：變化 ＝ 兩個點的數相減；增加和減少都算，比的是差多少。線越陡，變化越大。',
+        group:'提示 1：先看圖例分清楚哪一根是哪一班，再找到題目說的那一週，用縱軸讀出兩根長條各是多少（一格 2 公斤）。',
+        sort:'提示 1：先問自己 —— 是在比「不同的種類」，還是在看「隨著時間的變化」？有沒有兩組要並排比？',
+        trunc:'提示 1：先看每一張圖，縱軸最下面那一條線寫的數字是不是 0。'
+      },
+      gPts:function(p){ return '+' + p + ' 分'; },
+      gMinus:'−5 分',
+      gClear:'按「下一關」繼續。',
+      gWin:function(score){ return '五個任務全部完成！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      /* 第 1 關：畫長條 */
+      gBarCap:function(u, unit){ return '一格 ＝ ' + u + ' ' + unit; },
+      gBarStart:'拉好一根長條，這裡會寫出它是幾格。',
+      gBarNow:function(cat, h){ return cat + '：' + h + ' 格'; },
+      gBarDone:'畫好了',
+      gBarAria:function(cat){ return cat + '的長條把手'; },
+      gBarCount:function(cat, v, u, unit){ return '「' + cat + '」你畫了 ' + v + ' 格。可是一格代表 ' + u + ' ' + unit + '，' + v + ' 格是 ' + v + ' × ' + u + ' ＝ ' + (v * u) + ' ' + unit + '，不是 ' + v + ' ' + unit + ' —— 要畫的格數是 ' + v + ' ÷ ' + u + '。'; },
+      gBarOff:function(cat, h, u, v, unit){ return '「' + cat + '」畫了 ' + h + ' 格：' + h + ' × ' + u + ' ＝ ' + (h * u) + ' ' + unit + '，比表上的 ' + v + ' ' + unit + (h * u > v ? '多' : '少') + '了。'; },
+      gBarEmpty:function(cat){ return '「' + cat + '」還沒畫 —— 把它的長條拉起來。'; },
+      gBarWin:function(u){ return '四根長條都畫對了：每一根的格數 × ' + u + '，就是表上的數。'; },
+      gBarH2:function(cat, v, u, unit){ return '「' + cat + '」是 ' + v + ' ' + unit + '：' + v + ' ÷ ' + u + ' ＝ ' + (v / u) + '，畫 ' + (v / u) + ' 格。'; },
+      /* 第 2 關：描點連線、變化最大的一段 */
+      gPlotNow:function(k, n){ return '畫好 ' + k + ' / ' + n + ' 個點'; },
+      gPlotAt:function(m, v){ return '放在：' + m + '・' + v; },
+      gPlotAria:function(m){ return m + '的點'; },
+      gPlotCol:function(m){ return '這是「' + m + '」的點 —— 要放在橫軸「' + m + '」那一直行上。'; },
+      gPlotOff:function(m, v, at){ return '「' + m + '」是 ' + v + '，你放在 ' + at + ' 那一條線 —— ' + (at > v ? '太高' : '太低') + '了。'; },
+      gPlotH2:function(m, v){ return '「' + m + '」是 ' + v + '：' + m + ' 那一直行、' + v + ' 那一條線。'; },
+      gAskSeg:'五個點都畫好了，連成一條折線。現在點出「變化最大」的那一段線。',
+      gSegNow:'點一段線',
+      gSegText:function(a, b, va, vb){ return a + ' → ' + b + '：' + va + ' → ' + vb + '，' + (vb > va ? '增加' : '減少') + '了 ' + Math.abs(vb - va); },
+      gSegBad:function(txt, decr){ return txt + '。' + (decr ? '減少也算變化 —— 有一段減少得比這一段增加的還多。' : '還有一段變得更多。'); },
+      gSegWin:function(txt){ return txt + ' —— 變化最大，那一段線也最陡。'; },
+      gSegH2:function(list){ return '每一段的變化：' + list.join('、') + '。'; },
+      /* 第 3 關：讀複合長條圖 */
+      gAskGroup:function(week, kind){ return week + '，兩班' + (kind === 'diff' ? '相差' : '一共') + '多少公斤？'; },
+      gGroupLbl:'公斤', gGroupOk:'確定', gGroupAria:'打出答案（公斤）',
+      gGroupEmpty:'先在格子裡打一個數。',
+      gTypeInt:'請打一個整數，不要有空格、小數點或開頭的 0。',
+      gGroupSwap:function(n, kind){ return n + ' 是兩班' + (kind === 'diff' ? '加起來的 —— 題目問的是相差：大的減小的。' : '相差的 —— 題目問的是一共：兩個加起來。'); },
+      gGroupOne:function(n, who, kind){ return n + ' 只是' + who + '那一根長條。' + (kind === 'diff' ? '相差要用兩班的數，大的減小的。' : '一共要把兩班加起來。'); },
+      gGroupOff:function(n, hi){ return n + (hi ? ' 太大了' : ' 太小了') + ' —— 看清楚刻度：一格是 2 公斤，再讀一次兩根長條。'; },
+      gGroupWin:function(A, a, B, b, kind){ return A + ' ' + a + ' 公斤、' + B + ' ' + b + ' 公斤：' + (kind === 'diff' ? Math.max(a, b) + ' − ' + Math.min(a, b) + ' ＝ ' + Math.abs(a - b) : a + ' ＋ ' + b + ' ＝ ' + (a + b)) + ' 公斤。'; },
+      gGroupH2:function(A, a, B, b, kind){ return A + ' 是 ' + a + '、' + B + ' 是 ' + b + '，' + (kind === 'diff' ? '相差就是大的減小的。' : '一共就是兩個加起來。'); },
+      /* 第 4 關：選對圖表 */
+      gSortBins:['長條圖', '折線圖', '複合長條圖'],
+      gSortCards:['四種水果各有幾人喜歡', '五個年級各有幾人參賽', '四種飲料各賣出幾杯',
+                  '豆芽 10 天裡長高的變化', '一年 12 個月雨量的升降', '這學期每週跳繩次數的變化',
+                  '男生女生最喜歡的水果', '兩班參加四種球隊的人數', '兩家店四種飲料的銷量'],
+      gSortWhyKind:{ bar:'是在比較不同的種類，而且只有一組資料', line:'是同一件事隨著時間在變化', grouped:'有兩組資料要並排比較' },
+      gSortWhy:function(text, kind, bin){ return '「' + text + '」' + kind + '，要放「' + bin + '」。'; },
+      gSortNow:function(k, n){ return '分好 ' + k + ' / ' + n + ' 張'; },
+      gSortWin:'分好了：比種類用長條圖、看隨時間的變化用折線圖、兩組並排比用複合長條圖。',
+      gSortH2:function(text, kind, bin){ return '「' + text + '」' + kind + ' → ' + bin + '。'; },
+      /* 第 5 關：抓出騙人的圖 */
+      gTruncNo:['①', '②', '③', '④'],
+      gTruncNow:function(k, n){ return '找到 ' + k + ' / ' + n + ' 張會騙人的圖'; },
+      gTruncFound:function(no, min, a, b, k){ return no + ' 的縱軸從 ' + min + ' 開始：B 看起來大約是 A 的 ' + k + ' 倍高，可是 A 是 ' + a + '、B 是 ' + b + '，其實只差 ' + (b - a) + '。'; },
+      gTruncBad:function(no, a, b){ return no + ' 的縱軸從 0 開始：A ' + a + '、B ' + b + '，長條看起來差多少，就真的差多少 —— 它沒有騙人。'; },
+      gTruncWin:'全部找到了：縱軸沒有從 0 開始，長條的高矮就和數字對不起來 —— 看起來的倍數比數字真正的倍數大。',
+      gTruncH2:function(n, mins){ return '還沒找到的 ' + n + ' 張，縱軸最下面那一條線寫的是 ' + mins.join('、') + '。'; },
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
@@ -696,26 +978,83 @@
       qn:function(i){ return 'Question ' + i; },
       fbRight:'<b>Correct!</b> ', fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
       cAll:'Perfect score! You’re a chart-reading master 🏆', cGood:'Great job! Re-read the explanations for the ones you missed.', cTry:'That’s okay — scroll up and check how to read the scale again.',
-      ebGame:'Game', s7h2:'Chart Quick-Answer', s7lead:'Every round is a brand-new chart — check the scale first!',
+      ebGame:'Game', s7h2:'Detective Missions',
+      s7lead:'Draw bars, plot a line graph, read a grouped bar chart, pick the right chart, and catch the charts that lie — five rounds, five different moves, and every one starts with <strong>checking the scale</strong>. Mistakes cost points, but no mission ever fails — looking carefully beats being fast.',
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
       gHintBtn:'💡 Hint',
-      gHint1:'Hint 1: check what each square on the axis stands for before reading a bar or point.',
-      gHint2Read:function(sq, unit){ return 'Hint 2: this bar is ' + sq + ' squares tall, and each square represents ' + unit + '.'; },
-      gHint2Total:function(vals){ return 'Hint 2: add every value together: ' + vals.join(' + ') + '.'; },
-      gHint2Diff:function(a, b){ return 'Hint 2: subtract the smaller from the bigger: ' + Math.max(a,b) + ' − ' + Math.min(a,b) + '.'; },
-      gHint2Max:function(vals){ return 'Hint 2: the highest value is ' + Math.max.apply(null, vals) + '.'; },
-      gHint2Type:'Hint 2: ask yourself — is this comparing different categories, or showing change over time?',
-      gAskRead:function(cat){ return 'In this bar chart, what is the value for “' + cat + '”?'; },
-      gAskTotal:'Add up every bar — what is the total?',
-      gAskDiff:function(a, b){ return 'How much more is “' + a + '” than “' + b + '”?'; },
-      gAskMax:'Which category has the largest value?',
-      gAskType:function(text){ return text + ' — which chart fits best?'; },
       gNextBtn:'Next round', gRestartBtn:'Restart',
-      gCorrectFirst:function(){ return 'Correct on the first try! +20 points!'; },
-      gCorrectRetry:function(){ return 'Correct! +10 points.'; },
-      gWrong:function(v){ return v + ' isn’t right — try again. −5 points.'; },
-      gClear:'Press “Next round” to try a new dataset.',
-      gWin:function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gTblItem:'Item', gTblNum:'Value',
+      gUnits:{ book:'books', person:'people', kg:'kg', cup:'cups', mm:'mm' },
+      gAsks:{
+        bar:'Pull each bar to the height the table says (drag its handle, or tap a grid line in its column), then press “Done”.',
+        plot:'Drag each month’s point to the right spot on the line graph (or tap a point, then tap the spot).',
+        group:'',
+        sort:'Which chart fits each job? Drag every card into the right box (or tap a card, then tap a box).',
+        trunc:'Some charts’ axes don’t start at 0, so the bars’ heights lie. Tap every chart that lies.'
+      },
+      gHints:{
+        bar:'Hint 1: one square is not worth 1 here — the table’s number ÷ what one square is worth = how many squares to draw.',
+        plot:'Hint 1: find the month’s column on the bottom axis, then the line for the number on the side axis — the point goes where they cross.',
+        seg:'Hint 1: the change is one point’s number minus the other’s. Going up and going down both count — compare how much. The steeper the line, the bigger the change.',
+        group:'Hint 1: check the key to tell the two classes’ bars apart, find the week in the question, then read both bars off the side axis (1 square = 2 kg).',
+        sort:'Hint 1: ask yourself — are we comparing different kinds of things, or watching one thing change over time? Are there two groups to compare side by side?',
+        trunc:'Hint 1: on every chart, look at the number on the bottom line of the side axis — is it 0?'
+      },
+      gPts:function(p){ return '+' + p + ' points'; },
+      gMinus:'−5 points',
+      gClear:'Press “Next round” to go on.',
+      gWin:function(score){ return 'All five missions complete! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      /* Round 1: draw bars */
+      gBarCap:function(u, unit){ return '1 square = ' + u + ' ' + unit; },
+      gBarStart:'Pull a bar up and its number of squares shows here.',
+      gBarNow:function(cat, h){ return cat + ': ' + h + (h === 1 ? ' square' : ' squares'); },
+      gBarDone:'Done',
+      gBarAria:function(cat){ return 'handle of the ' + cat + ' bar'; },
+      gBarCount:function(cat, v, u, unit){ return cat + ': you drew ' + v + ' squares. But 1 square is ' + u + ' ' + unit + ', so ' + v + ' squares is ' + v + ' × ' + u + ' = ' + (v * u) + ' ' + unit + ', not ' + v + ' ' + unit + ' — the number of squares is ' + v + ' ÷ ' + u + '.'; },
+      gBarOff:function(cat, h, u, v, unit){ return cat + ': ' + h + (h === 1 ? ' square' : ' squares') + ' is ' + h + ' × ' + u + ' = ' + (h * u) + ' ' + unit + ' — ' + (h * u > v ? 'more' : 'less') + ' than the ' + v + ' ' + unit + ' in the table.'; },
+      gBarEmpty:function(cat){ return cat + ' isn’t drawn yet — pull its bar up.'; },
+      gBarWin:function(u){ return 'All four bars are right: each bar’s squares × ' + u + ' is the number in the table.'; },
+      gBarH2:function(cat, v, u, unit){ return cat + ' is ' + v + ' ' + unit + ': ' + v + ' ÷ ' + u + ' = ' + (v / u) + ', so draw ' + (v / u) + (v / u === 1 ? ' square.' : ' squares.'); },
+      /* Round 2: plot the points, then the biggest change */
+      gPlotNow:function(k, n){ return k + ' / ' + n + ' points plotted'; },
+      gPlotAt:function(m, v){ return 'Drop on: ' + m + ' · ' + v; },
+      gPlotAria:function(m){ return m + ' point'; },
+      gPlotCol:function(m){ return 'This is the ' + m + ' point — it goes in the ' + m + ' column on the bottom axis.'; },
+      gPlotOff:function(m, v, at){ return m + ' is ' + v + ', but you put it on the ' + at + ' line — ' + (at > v ? 'too high.' : 'too low.'); },
+      gPlotH2:function(m, v){ return m + ' is ' + v + ': the ' + m + ' column, the ' + v + ' line.'; },
+      gAskSeg:'All five points are in and joined into a line. Now tap the piece of line with the biggest change.',
+      gSegNow:'Tap a piece of the line',
+      gSegText:function(a, b, va, vb){ return a + ' → ' + b + ': ' + va + ' → ' + vb + ', ' + (vb > va ? 'up' : 'down') + ' ' + Math.abs(vb - va); },
+      gSegBad:function(txt, decr){ return txt + '. ' + (decr ? 'Going down is a change too — one piece goes down by more than this one goes up.' : 'Another piece changes by more.'); },
+      gSegWin:function(txt){ return txt + ' — the biggest change, and the steepest piece of line.'; },
+      gSegH2:function(list){ return 'The changes: ' + list.join(', ') + '.'; },
+      /* Round 3: read a grouped bar chart */
+      gAskGroup:function(week, kind){ return kind === 'diff' ? 'In ' + week + ', how many kg apart are the two classes?' : 'In ' + week + ', how many kg did the two classes collect altogether?'; },
+      gGroupLbl:'kg', gGroupOk:'Check', gGroupAria:'type the answer (kg)',
+      gGroupEmpty:'Type a number in the box first.',
+      gTypeInt:'Type one whole number — no spaces, decimal points or leading zeros.',
+      gGroupSwap:function(n, kind){ return n + (kind === 'diff' ? ' is the two classes added together — the question asks how far apart: bigger minus smaller.' : ' is how far apart the two classes are — the question asks altogether: add the two.'); },
+      gGroupOne:function(n, who, kind){ return n + ' is just ' + who + '’s bar. ' + (kind === 'diff' ? 'How far apart needs both classes: bigger minus smaller.' : 'Altogether means adding both classes.'); },
+      gGroupOff:function(n, hi){ return n + (hi ? ' is too big' : ' is too small') + ' — check the scale: 1 square is 2 kg. Read both bars again.'; },
+      gGroupWin:function(A, a, B, b, kind){ return A + ' ' + a + ' kg, ' + B + ' ' + b + ' kg: ' + (kind === 'diff' ? Math.max(a, b) + ' − ' + Math.min(a, b) + ' = ' + Math.abs(a - b) : a + ' + ' + b + ' = ' + (a + b)) + ' kg.'; },
+      gGroupH2:function(A, a, B, b, kind){ return A + ' is ' + a + ' and ' + B + ' is ' + b + ' — ' + (kind === 'diff' ? 'how far apart is bigger minus smaller.' : 'altogether is the two added.'); },
+      /* Round 4: pick the right chart */
+      gSortBins:['Bar chart', 'Line graph', 'Grouped bar'],
+      gSortCards:['Votes for 4 fruits', 'Players from 5 grades', 'Cups of 4 drinks sold',
+                  'Change in bean height', 'Monthly rain trend', 'Change in rope skips',
+                  'Boys vs girls: fruits', '2 classes in 4 teams', '2 shops, 4 drinks sold'],
+      gSortWhyKind:{ bar:' compares different kinds of things, with just one set of data', line:' is one thing changing over time', grouped:' has two sets of data to compare side by side' },
+      gSortWhy:function(text, kind, bin){ return '“' + text + '”' + kind + ' — it goes in “' + bin + '”.'; },
+      gSortNow:function(k, n){ return k + ' / ' + n + ' cards sorted'; },
+      gSortWin:'All sorted: compare kinds with a bar chart, watch change over time with a line graph, compare two groups side by side with a grouped bar chart.',
+      gSortH2:function(text, kind, bin){ return '“' + text + '”' + kind + ' → ' + bin + '.'; },
+      /* Round 5: catch the charts that lie */
+      gTruncNo:['①', '②', '③', '④'],
+      gTruncNow:function(k, n){ return k + ' / ' + n + ' lying charts found'; },
+      gTruncFound:function(no, min, a, b, k){ return no + '’s axis starts at ' + min + ': B looks about ' + k + ' times as tall as A, but A is ' + a + ' and B is ' + b + ' — only ' + (b - a) + ' apart.'; },
+      gTruncBad:function(no, a, b){ return no + '’s axis starts at 0: A ' + a + ', B ' + b + ' — the gap you see is the real gap. It doesn’t lie.'; },
+      gTruncWin:'Found them all: when the axis doesn’t start at 0, the bar heights no longer match the numbers — B looks bigger compared with A than the numbers really show.',
+      gTruncH2:function(n, mins){ return (n === 1 ? 'The one still to find has ' : 'The ' + n + ' still to find have ') + mins.join(' and ') + ' on the bottom line of the side axis.'; },
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
@@ -748,9 +1087,9 @@
       why:'12 + 18 + 9 + 15 = 54，總共賣出 54 把。' },
     { kind:'grouped',
       stem:'第 2 週，五年一班比五年二班多賣出多少公斤的資源回收？',
-      cats:['第1週','第2週','第3週'], a:[10,14,12], b:[13,11,15], nameA:'五年一班', nameB:'五年二班', yUnit:'公斤',
-      opts:['3','25','1','4'], ans:0,
-      why:'第 2 週，五年一班是 14，五年二班是 11，14 − 11 = 3。' },
+      cats:['第 1 週','第 2 週','第 3 週'], a:[10,14,12], b:[12,10,14], nameA:'五年一班', nameB:'五年二班', yUnit:'公斤',
+      opts:['4','24','2','14'], ans:0,
+      why:'第 2 週，五年一班是 14，五年二班是 10，14 − 10 = 4。' },
     { kind:'misleading',
       stem:'下面這張長條圖的縱軸沒有從 0 開始，兩根長條看起來差很多，但實際上兩者只差多少？',
       cats:['A','B'], values:[70,74], axisMin:65, axisMax:80, gridStep:5, yUnit:'個',
@@ -779,9 +1118,9 @@
       why:'12 + 18 + 9 + 15 = 54 in total.' },
     { kind:'grouped',
       stem:'In Week 2, how many more kg did Class 1 collect than Class 2?',
-      cats:['Week 1','Week 2','Week 3'], a:[10,14,12], b:[13,11,15], nameA:'Class 1', nameB:'Class 2', yUnit:'kg',
-      opts:['3','25','1','4'], ans:0,
-      why:'In Week 2, Class 1 has 14 and Class 2 has 11. 14 − 11 = 3.' },
+      cats:['Week 1','Week 2','Week 3'], a:[10,14,12], b:[12,10,14], nameA:'Class 1', nameB:'Class 2', yUnit:'kg',
+      opts:['4','24','2','14'], ans:0,
+      why:'In Week 2, Class 1 has 14 and Class 2 has 10. 14 − 10 = 4.' },
     { kind:'misleading',
       stem:'This bar chart’s axis doesn’t start at 0, so the two bars look very different — but what is the real difference?',
       cats:['A','B'], values:[70,74], axisMin:65, axisMax:80, gridStep:5, yUnit:'',
@@ -797,14 +1136,14 @@
       why:'總和 = 2+4+1+3+2 = 12，12 ÷ 5 = 2.4，平均每天剩下 2.4 公斤。' },
     { kind:'line-two-step',
       stem:'下面是某地四個月的降雨量，哪兩個月之間增加最多？增加了多少？',
-      cats:['一月','二月','三月','四月'], values:[30,45,58,50], yUnit:'毫米',
-      opts:['3月到4月，+8','2月到3月，+13','1月到2月，+15','1月到2月，−15'], ans:2,
-      why:'1月到2月：45−30=15；2月到3月：58−45=13；3月到4月：50−58=−8。最大的增加是 1月到2月，增加 15。' },
+      cats:['一月','二月','三月','四月'], values:[10,40,60,50], yUnit:'毫米',
+      opts:['3 月到 4 月，+10','2 月到 3 月，+20','1 月到 2 月，+30','1 月到 2 月，−30'], ans:2,
+      why:'1 月到 2 月：40 − 10 ＝ 30，增加 30；2 月到 3 月：60 − 40 ＝ 20，增加 20；3 月到 4 月：60 − 50 ＝ 10，是減少 10。最大的增加是 1 月到 2 月，增加 30。' },
     { kind:'grouped-two-step',
       stem:'把四週的資源回收公斤數都加起來，哪一班的總重量比較多？多多少？',
-      cats:['第1週','第2週','第3週','第4週'], a:[12,18,15,20], b:[16,14,19,17], nameA:'五年一班', nameB:'五年二班', yUnit:'公斤',
-      opts:['五年一班多1公斤','五年二班多1公斤','五年二班多3公斤','兩班一樣多'], ans:1,
-      why:'五年一班總和 = 12+18+15+20 = 65；五年二班總和 = 16+14+19+17 = 66。66 − 65 = 1，五年二班多 1 公斤。' },
+      cats:['第 1 週','第 2 週','第 3 週','第 4 週'], a:[12,18,14,20], b:[16,14,20,16], nameA:'五年一班', nameB:'五年二班', yUnit:'公斤',
+      opts:['五年一班多 2 公斤','五年二班多 2 公斤','五年二班多 4 公斤','兩班一樣多'], ans:1,
+      why:'五年一班總和 = 12+18+14+20 = 64；五年二班總和 = 16+14+20+16 = 66。66 − 64 = 2，五年二班多 2 公斤。' },
     { kind:'none',
       stem:'老師想一次比較五個年級各自的平均身高（不是隨時間變化，是五個年級互相比較），應該用哪種圖表？',
       opts:['長條圖','折線圖','複合長條圖','圓餅圖'], ans:0,
@@ -818,14 +1157,14 @@
       why:'Total = 2+4+1+3+2 = 12. 12 ÷ 5 = 2.4 kg per day on average.' },
     { kind:'line-two-step',
       stem:'This shows 4 months of rainfall. Between which two months did it increase the most, and by how much?',
-      cats:['Jan','Feb','Mar','Apr'], values:[30,45,58,50], yUnit:'mm',
-      opts:['Mar→Apr, +8','Feb→Mar, +13','Jan→Feb, +15','Jan→Feb, −15'], ans:2,
-      why:'Jan→Feb: 45−30=15; Feb→Mar: 58−45=13; Mar→Apr: 50−58=−8. The biggest increase is Jan→Feb, +15.' },
+      cats:['Jan','Feb','Mar','Apr'], values:[10,40,60,50], yUnit:'mm',
+      opts:['Mar→Apr, +10','Feb→Mar, +20','Jan→Feb, +30','Jan→Feb, −30'], ans:2,
+      why:'Jan→Feb: 40 − 10 = 30, up 30; Feb→Mar: 60 − 40 = 20, up 20; Mar→Apr: 60 − 50 = 10, down 10. The biggest increase is Jan→Feb, +30.' },
     { kind:'grouped-two-step',
       stem:'Add up all 4 weeks of recycling weight — which class collected more in total, and by how much?',
-      cats:['Week 1','Week 2','Week 3','Week 4'], a:[12,18,15,20], b:[16,14,19,17], nameA:'Class 1', nameB:'Class 2', yUnit:'kg',
-      opts:['Class 1 by 1 kg','Class 2 by 1 kg','Class 2 by 3 kg','They are equal'], ans:1,
-      why:'Class 1 total = 12+18+15+20 = 65. Class 2 total = 16+14+19+17 = 66. 66−65=1, so Class 2 has 1 kg more.' },
+      cats:['Week 1','Week 2','Week 3','Week 4'], a:[12,18,14,20], b:[16,14,20,16], nameA:'Class 1', nameB:'Class 2', yUnit:'kg',
+      opts:['Class 1 by 2 kg','Class 2 by 2 kg','Class 2 by 4 kg','They are equal'], ans:1,
+      why:'Class 1 total = 12+18+14+20 = 64. Class 2 total = 16+14+20+16 = 66. 66−64=2, so Class 2 has 2 kg more.' },
     { kind:'none',
       stem:'A teacher wants to compare the average height of five different grade levels (not over time — just the five grades side by side). Which chart fits?',
       opts:['Bar chart','Line graph','Grouped bar chart','Pie chart'], ans:0,
@@ -837,7 +1176,7 @@
       stem:'迷思檢查：這根長條是 7 格，這張圖「一格代表 2」，這根長條實際代表多少？',
       cats:['籃球','足球','羽球','桌球'], squares:[7,3,5,4], unit:2, qIdx:0,
       opts:['12','7','9','14'], ans:3,
-      why:'7 格 × 一格 2 = 14，不能只讀「7 格」就當作答案，一定要乘上一格代表的數字。' },
+      why:'一格代表 2，7 格就是 7 × 2 = 14，不能只讀「7 格」就當作答案，一定要乘上一格代表的數字。' },
     { kind:'misleading',
       stem:'迷思檢查：長條 B 看起來比長條 A 高很多，這是不是代表 B 的數值也大很多？',
       cats:['A','B'], values:[30,33], axisMin:25, axisMax:35, gridStep:5, yUnit:'個',
@@ -1231,173 +1570,624 @@
     });
   }
 
-  /* ---------- 小遊戲：圖表快問快答 ---------- */
-  var ROUND_TYPES = ['readValue', 'findMax', 'computeDiff', 'computeTotal', 'chooseType'];
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 小遊戲：偵察隊出任務（五關五種玩法，§六之五） =====================
+     畫長條（範例 1）、描點連線＋變化最大的一段（範例 2）、讀複合長條圖（範例 3）、選對圖表（範例 4）、抓出騙人的圖（範例 5）。
+     計分（高年級）：一關沒犯錯 +20、犯過錯 +10；每一次「放錯並說明為什麼」−5，最低 0 分；
+     同一個錯（同一個東西放到同一個地方、同一個答案）再犯一次只再說一次，不重複扣分。
+     放到空白處、移動把手、點在兩段線相接的地方、點在圖和圖之間都不算錯。提醒（還沒畫完、還沒打數字）不扣分。
+     題庫、版面常數與「收不收、為什麼」的純函式都在 i18n 前面的資料區。 */
+  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊東西放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加分；二年級 length 的 codex 抓到的）。 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskLine = document.getElementById('gAskLine');
-  var gChart = document.getElementById('gChart');
-  var gAnswers = document.getElementById('gAnswers');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
-  var hintLevel = 0;
-  var currentRound = null;
-
-  function pickPool(){
-    var d = L();
-    return pick([d.WEEKDAYS.slice(), d.MONTHS.slice(0, 6), d.FRUITS.slice(), d.SPORTS.slice()]);
+  /* 遊戲用的 SVG 元素（可以順便給文字）；頁面上方的 svgEl 是範例圖表用的 */
+  function gEl(tag, attrs, text){
+    var el = document.createElementNS(SVGNS, tag);
+    for (var a in attrs) el.setAttribute(a, attrs[a]);
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function gText(svg, x, y, text, attrs){
+    var a = { x:x, y:y, 'font-size':13, 'font-weight':700, fill:'#2B2A33', 'text-anchor':'middle' };
+    for (var k in attrs) a[k] = attrs[k];
+    var t = gEl('text', a, String(text));
+    svg.appendChild(t);
+    return t;
   }
 
-  function genRound(type){
-    var d = L();
-    var pool = shuffle(pickPool());
-    var n = Math.min(pool.length, randInt(4, 5));
-    var cats = pool.slice(0, n);
-    if (type === 'readValue'){
-      var unit = pick([1, 2, 5, 10]);
-      var squares = cats.map(function(){ return randInt(2, 9); });
-      var values = squares.map(function(s){ return s * unit; });
-      var idx = randInt(0, n - 1);
-      var m = mixOpts(values[idx], [squares[idx], values[idx] + unit, values[idx] - unit]);
-      return { type: type, cats: cats, values: values, squares: squares, unit: unit, idx: idx, opts: m.opts.map(String), ans: m.ans,
-        chart: { axisMin: 0, axisMax: 9 * unit, gridStep: unit } };
-    }
-    if (type === 'findMax'){
-      var vals;
-      do { vals = cats.map(function(){ return randInt(2, 20); }); }
-      while (vals.filter(function(v){ return v === Math.max.apply(null, vals); }).length > 1);
-      var maxIdx = vals.indexOf(Math.max.apply(null, vals));
-      var wrongLabels = shuffle(cats.filter(function(_, i){ return i !== maxIdx; })).slice(0, 3);
-      var opts = shuffle([cats[maxIdx]].concat(wrongLabels));
-      var step = niceStep(Math.max.apply(null, vals));
-      return { type: type, cats: cats, values: vals, opts: opts, ans: opts.indexOf(cats[maxIdx]),
-        chart: { axisMin: 0, axisMax: niceAxisMax(Math.max.apply(null, vals), step), gridStep: step } };
-    }
-    if (type === 'computeDiff'){
-      var vs; var i1, i2;
-      do {
-        vs = cats.map(function(){ return randInt(3, 25); });
-        i1 = randInt(0, n - 1); i2 = randInt(0, n - 1);
-      } while (i1 === i2 || vs[i1] === vs[i2]);
-      /* 題目問「i1 比 i2 多多少」，所以 i1 一定要是比較大的那個，否則問法和正解不符 */
-      if (vs[i1] < vs[i2]){ var swapTmp = i1; i1 = i2; i2 = swapTmp; }
-      var big = Math.max(vs[i1], vs[i2]), small = Math.min(vs[i1], vs[i2]);
-      var diff = big - small;
-      var m2 = mixOpts(diff, [vs[i1] + vs[i2], diff + 1, Math.max.apply(null, vs)]);
-      var stepD = niceStep(Math.max.apply(null, vs));
-      return { type: type, cats: cats, values: vs, i1: i1, i2: i2, opts: m2.opts.map(String), ans: m2.ans,
-        chart: { axisMin: 0, axisMax: niceAxisMax(Math.max.apply(null, vs), stepD), gridStep: stepD } };
-    }
-    if (type === 'computeTotal'){
-      var vt = cats.map(function(){ return randInt(3, 20); });
-      var total = sum(vt);
-      var m3 = mixOpts(total, [total - vt[0], total + vt[0], Math.max.apply(null, vt)]);
-      var stepT = niceStep(Math.max.apply(null, vt));
-      return { type: type, cats: cats, values: vt, opts: m3.opts.map(String), ans: m3.ans,
-        chart: { axisMin: 0, axisMax: niceAxisMax(Math.max.apply(null, vt), stepT), gridStep: stepT } };
-    }
-    /* chooseType */
-    var sc = pick(d.scenarios);
-    var types = shuffle(['bar', 'line', 'grouped', 'pie']);
-    var optsLabels = types.map(function(t){ return d.typeLabels[t]; });
-    return { type: type, scenario: sc, opts: optsLabels, ans: types.indexOf(sc.correct) };
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null, onBoardTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    /* 點畫板（不是點在積木上）：只認第一根手指，按下和放開在同一個地方才算「點一下」 */
+    board.addEventListener('pointerdown', function(e){
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (!e.isPrimary) return;   /* 第二根手指：不理 —— 第一根手指按在畫板外、按鈕或積木上時也一樣 */
+      BOARD_TAP = { id:e.pointerId, x:e.clientX, y:e.clientY, far:false };
+    });
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      var t = BOARD_TAP, pt = B.toBoard(e);
+      if (t && t.id === e.pointerId) BOARD_TAP = null;
+      /* 「點目的地」也一樣只認第一根手指的「點一下」：別的手指放開、或滑動之後放開，都不算（不然想捲動也會被扣分） */
+      if (!t || t.id !== e.pointerId) return;
+      if (t.far || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10) return;   /* 中途離開按下去的地方超過 10px 就不是「點一下」 */
+      if (B.selected && B.onPointTap){ B.onPointTap(B.selected, pt); return; }
+      if (B.onBoardTap && !gSolved) B.onBoardTap(pt);
+    });
+    gameStage.appendChild(wrap);
+    return B;
   }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」；BOARD_TAP 記「按在畫板上的第一根手指」。
+     任何地方的 pointerup／pointercancel 傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {}, BOARD_TAP = null;
+  function clearPtr(e){ delete PIECE_PTR[e.pointerId]; if (BOARD_TAP && BOARD_TAP.id === e.pointerId) BOARD_TAP = null; }
+  window.addEventListener('pointerup', clearPtr);
+  window.addEventListener('pointercancel', clearPtr);
+  window.addEventListener('pointerdown', function(e){ delete PIECE_PTR[e.pointerId]; }, true);
+  window.addEventListener('pointermove', function(e){
+    if (BOARD_TAP && BOARD_TAP.id === e.pointerId && Math.hypot(e.clientX - BOARD_TAP.x, e.clientY - BOARD_TAP.y) > 10) BOARD_TAP.far = true;
+  });
+  /* 指標離開視窗時收不到 pointermove：一離開就當成走遠了（滑鼠拖出視窗再回來放開，不算點一下） */
+  window.addEventListener('pointerout', function(e){ if (BOARD_TAP && BOARD_TAP.id === e.pointerId && !e.relatedTarget) BOARD_TAP.far = true; });
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 畫板上的一張 SVG（不接指標）。⚠️ 不給 viewBox：頁尾「讓 SVG 的畫布容得下自己的標籤」那段只撐開有 viewBox 的圖，
+     遊戲的畫布不可以被它撐開（一撐開，畫出來的位置就和吸附、點選量的位置對不上）。 */
+  function gSvg(host, W, H){
+    var s = gEl('svg', { 'class':'gsvg', width:W, height:H, 'aria-hidden':'true' });
+    host.appendChild(s);
+    return s;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫板下面的一排按鈕（第 1 關的「畫好了」、第 3 關的輸入框與「確定」） */
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, cls, aria){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = text;
+    if (aria) b.setAttribute('aria-label', aria);
+    row.appendChild(b);
+    return b;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。
+         o.axis === 'y'：只能上下拖（第 1 關的長條把手），o.snapY 把中心點吸到最近的那一條格線 —— 拖的時候就畫在吸到的位置；
+         o.onPlace：每次位置改變（含彈回）都通知 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+      if (o.onPlace) o.onPlace(P);
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    /* 換一個家（第 1 關的把手停在哪一條格線，那裡就是它的家） */
+    P.rehome = function(cx, cy){
+      stopGesture();
+      P.homeX = cx; P.homeY = cy;
+      P.home();
+    };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (o.onPlace) o.onPlace(P);
+    }
+    P.busy = function(){ return !!start; };
+    P.dragging = function(){ return !!start && moved; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣） */
+      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      if (o.axis === 'y') P.place(orig.x, o.snapY(orig.y + dy));
+      else P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */
+      /* 先點選、後來又直接拖走的那一塊：拖完就不再是「選起來」的，不然下一次點目的地會多放一次 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P, B.toBoard(e)); else P.home(); return; }   /* 點一下：把點在畫板上的哪裡也交出去（第 1 關的把手） */
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（三年級 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字（四年級 chart 的驗證者抓到的） */
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 1 && !gSolved) showHint(); }
+  /* 放錯：說為什麼、扣 5 分（最低 0 分）。key 是「哪一樣放到哪裡／打了哪個數」：同一個錯再犯一次只再說一次，不重複扣分 */
+  function roundMiss(text, key){
+    gMistake = true;
+    var again = !!(gCtx.missed && gCtx.missed[key]);
+    (gCtx.missed = gCtx.missed || {})[key] = true;
+    var lost = !again && gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
+    gScore -= lost; elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 只是提醒（還沒畫完、還沒打數字）：不算錯、不扣分 */
+  function roundNote(text){ gMsg.innerHTML = '<span class="gnote">' + text + '</span>'; }
+
+  /* 統計圖的格線與縱軸數字；labelled(k) 決定哪幾條線寫數字（第 1 關只寫雙數格） */
+  function gGrid(svg, ch, lblOf, labelled){
+    for (var k = 0; k <= ch.rows; k++){
+      var y = gLineY(ch, k);
+      svg.appendChild(gEl('line', { x1:ch.x0, y1:y, x2:ch.x1, y2:y, stroke:k === 0 ? '#2B2A33' : '#D9D2C3', 'stroke-width':k === 0 ? 2 : 1, 'class':'ggrid', 'data-k':k }));
+      if (!labelled || labelled(k)) gText(svg, ch.x0 - 6, y + 4, lblOf(k), { 'font-size':12, 'font-weight':600, fill:'#6B6875', 'text-anchor':'end', 'class':'gtick', 'data-k':k });
+    }
+    svg.appendChild(gEl('line', { x1:ch.x0, y1:ch.y0, x2:ch.x0, y2:ch.y1, stroke:'#2B2A33', 'stroke-width':2 }));
+  }
+  /* 表格：第一列項目、第二列數量，每一欄對齊圖上那一直行 */
+  function gTable(B, ch, y, rowH, names, vals, d){
+    addZone(B, 0, y, ch.x0 - 2, rowH, 'gtblh gtblc', d.gTblItem);
+    addZone(B, 0, y + rowH, ch.x0 - 2, rowH, 'gtblh gtblc', d.gTblNum);
+    names.forEach(function(nm, i){
+      addZone(B, ch.cx[i] - ch.slot / 2 + 1, y, ch.slot - 2, rowH, 'gtblh', nm);
+      addZone(B, ch.cx[i] - ch.slot / 2 + 1, y + rowH, ch.slot - 2, rowH, 'gtblv', String(vals[i]));
+    });
+  }
+
+  var RENDER = {
+    /* 第 1 關：畫長條（範例 1）—— 表上是數量，圖的「一格 ＝ u」，縱軸只在雙數格寫數字。
+       每一根長條的頂端有一個把手：上下拖（拖的時候就吸到最近的格線、讀數跟著變），或點那一直行裡的格線。
+       移動永遠不算錯；按「畫好了」才判斷：對的那幾根鎖住變綠；錯的說第一根為什麼（把數量當成格數有它自己的一句）。 */
+    bar: function(d){
+      var e = pick(GAME_BAR), ch = barChart(), unit = d.gUnits[e.unit], cats = d[e.cat].slice(0, 4);
+      var hs = [0, 0, 0, 0], ok = [false, false, false, false], last = -1;
+      var line = trailLine(d.gBarStart);
+      var B = makeBoard(BAR.W, BAR.H);
+      gTable(B, ch, BAR.tblY, BAR.tblRowH, cats, e.vals, d);
+      var s = gSvg(B.el, BAR.W, BAR.H);
+      gText(s, 4, BAR.capY, d.gBarCap(e.u, unit), { 'font-size':14, 'font-weight':800, fill:'#E8871E', 'text-anchor':'start', 'class':'gcapt' });
+      gGrid(s, ch, function(k){ return k * e.u; }, barLabelled);
+      var bars = cats.map(function(c, i){
+        gText(s, ch.cx[i], BAR.catY, c, { 'class':'gcat' });
+        var r = gEl('rect', { x:ch.cx[i] - 15, y:ch.y1, width:30, height:0, rx:3, fill:'#3B7DD8', 'class':'gbar', 'data-i':i });
+        s.appendChild(r);
+        return r;
+      });
+      function drawBar(i){
+        var y = gLineY(ch, hs[i]);
+        bars[i].setAttribute('y', y); bars[i].setAttribute('height', ch.y1 - y);
+        bars[i].setAttribute('fill', ok[i] ? '#2F9E69' : '#3B7DD8');
+      }
+      function show(i){ last = i; line.textContent = d.gBarNow(cats[i], hs[i]); }
+      var handles = cats.map(function(c, i){
+        return addPiece(B, { w:BAR.handle, h:BAR.handle, cx:ch.cx[i], cy:ch.y1, cls:'ghandle', axis:'y', label:d.gBarAria(c), data:{ i:i },
+          snapY:function(y){ return gLineY(ch, gSnapK(ch, y)); },
+          onPlace:function(P){ var k = gSnapK(ch, P.cy); if (k !== hs[i]){ hs[i] = k; drawBar(i); show(i); } } });
+      });
+      /* 放開：吸到的那一條線就是新的家（拖的時候已經畫在那裡了） */
+      B.onDrop = function(P){ var i = P.data.i; P.rehome(ch.cx[i], gLineY(ch, gSnapK(ch, P.cy))); show(i); refreshHint(); return true; };
+      /* 點那一直行裡的格線（上下各放寬半格）：那一根長條直接拉到那一條線。點在把手上也一樣（把手蓋住的那一段線也點得到） */
+      function setH(i, pt){
+        if (i < 0 || ok[i] || handles[i].busy() || pt.y < ch.y0 - ch.cellH / 2 || pt.y > ch.y1 + ch.cellH / 2) return;
+        handles[i].rehome(ch.cx[i], gLineY(ch, gSnapK(ch, pt.y)));
+        show(i); refreshHint();
+      }
+      B.onBoardTap = function(pt){ setH(gColOf(ch, pt.x), pt); };
+      B.onTap = function(P, pt){ setH(P.data.i, pt); };
+      var row = actionRow();
+      var done = actionBtn(row, d.gBarDone, 'gdone');
+      done.addEventListener('click', function(){
+        if (gSolved) return;
+        handles.forEach(function(P, i){ if (P.busy()) P.rehome(ch.cx[i], gLineY(ch, hs[i])); });   /* 拿著的把手先放下：判斷的是畫面上的高度 */
+        var first = -1, empty = -1;
+        hs.forEach(function(h, i){
+          if (ok[i]) return;
+          var why = barWhy(e, i, h);
+          if (!why){ ok[i] = true; handles[i].lock(ch.cx[i], gLineY(ch, h)); handles[i].el.style.visibility = 'hidden'; drawBar(i); }
+          else if (why === 'empty'){ if (empty < 0) empty = i; }
+          else if (first < 0) first = i;
+        });
+        if (first >= 0){
+          var h = hs[first], why = barWhy(e, first, h);
+          roundMiss(why === 'count' ? d.gBarCount(cats[first], h, e.u, unit) : d.gBarOff(cats[first], h, e.u, e.vals[first], unit), first + ':' + h);
+        } else if (empty >= 0) roundNote(d.gBarEmpty(cats[empty]));
+        else { done.disabled = true; roundSolved(d.gBarWin(e.u)); }
+        refreshHint();
+      });
+      gCtx.hint2 = function(){
+        for (var i = 0; i < 4; i++) if (!ok[i]) return d.gBarH2(cats[i], e.vals[i], e.u, unit);
+        return '';
+      };
+    },
+
+    /* 第 2 關：描點連線（範例 2）—— 表上是五個月的數；月份的點從托盤拖到那一直行、那一條線上（拖的時候吸到最近的交叉點，
+       那一直行與那一條線發亮、讀數寫出「放在：幾月・多少」）。放對 → 點留下、和旁邊的點連起來；放錯月份或高度 → 彈回＋為什麼。
+       五個點都畫好了 → 點出「變化最大」的那一段線（點在線上 16px 內；點在兩段相接的點附近不算）。 */
+    plot: function(d){
+      var e = pick(GAME_PLOT), ch = plotChart(e), unit = d.gUnits[e.unit];
+      var months = d.MONTHS.slice(e.from, e.from + 5), placed = [false, false, false, false, false], nPlaced = 0, phase = 1;
+      var line = trailLine(d.gPlotNow(0, 5));
+      var B = makeBoard(PLOT.W, PLOT.H);
+      gTable(B, ch, PLOT.tblY, PLOT.tblRowH, months, e.vals, d);
+      var s = gSvg(B.el, PLOT.W, PLOT.H);
+      gText(s, 4, PLOT.y0 - 16, unit, { 'font-size':12, 'font-weight':700, fill:'#6B6875', 'text-anchor':'start', 'class':'gunit' });
+      var band = gEl('rect', { x:0, y:ch.y0, width:ch.slot, height:ch.y1 - ch.y0, fill:'#FDF0E0', visibility:'hidden', 'class':'gband' });
+      s.appendChild(band);
+      gGrid(s, ch, function(k){ return k * e.s; });
+      var hl = gEl('line', { x1:ch.x0, x2:ch.x1, y1:0, y2:0, stroke:'#E8871E', 'stroke-width':3, visibility:'hidden', 'class':'ghl' });
+      s.appendChild(hl);
+      months.forEach(function(m, i){ gText(s, ch.cx[i], PLOT.catY, m, { 'class':'gcat' }); });
+      var segG = gEl('g', {}), dotG = gEl('g', {});
+      s.appendChild(segG); s.appendChild(dotG);
+      var pts = segPts(ch, e);
+      function preview(cell){
+        if (!cell){ band.setAttribute('visibility', 'hidden'); hl.setAttribute('visibility', 'hidden'); return; }
+        band.setAttribute('x', ch.x0 + cell.i * ch.slot); band.setAttribute('visibility', 'visible');
+        var y = gLineY(ch, cell.k);
+        hl.setAttribute('y1', y); hl.setAttribute('y2', y); hl.setAttribute('visibility', 'visible');
+      }
+      function drawLines(){
+        segG.textContent = '';
+        for (var j = 0; j < 4; j++) if (placed[j] && placed[j + 1])
+          segG.appendChild(gEl('line', { x1:pts[j].x, y1:pts[j].y, x2:pts[j + 1].x, y2:pts[j + 1].y, stroke:'#3B7DD8', 'stroke-width':3, 'class':'gseg', 'data-j':j }));
+      }
+      var chips = shuffle([0, 1, 2, 3, 4]).map(function(m, j){
+        return addPiece(B, { w:PLOT.chipW, h:GPICK, cx:plotTrayX(j), cy:PLOT.trayY, cls:'gcard gchip', text:months[m], label:d.gPlotAria(months[m]), data:{ m:m },
+          onPlace:function(P){
+            if (!P.dragging || !P.dragging()){ preview(null); if (!gSolved && phase === 1) line.textContent = d.gPlotNow(nPlaced, 5); return; }
+            var cell = plotCell(ch, { x:P.cx, y:P.cy });
+            preview(cell);
+            line.textContent = cell ? d.gPlotAt(months[cell.i], cell.k * e.s) : d.gPlotNow(nPlaced, 5);
+          } });
+      });
+      useTapSelect(B, function(P, pt){
+        var cell = plotCell(ch, pt);
+        preview(null);
+        if (!cell) return false;
+        var m = P.data.m, why = plotWhy(e, m, cell.i, cell.k);
+        if (why === 'col'){ roundMiss(d.gPlotCol(months[m]), m + '>c' + cell.i); return false; }
+        if (why){ roundMiss(d.gPlotOff(months[m], e.vals[m], cell.k * e.s), m + '>' + cell.i + ':' + cell.k); return false; }
+        P.lock(pts[m].x, pts[m].y);
+        P.el.style.visibility = 'hidden';
+        placed[m] = true; nPlaced++;
+        dotG.appendChild(gEl('circle', { cx:pts[m].x, cy:pts[m].y, r:6, fill:'#3B7DD8', 'class':'gpt', 'data-m':m }));
+        drawLines();
+        gMsg.textContent = '';
+        line.textContent = d.gPlotNow(nPlaced, 5);
+        if (nPlaced === 5){
+          phase = 2;
+          gCtx.ask.textContent = d.gAskSeg;
+          line.textContent = d.gSegNow;
+          B.onTap = null; B.selected = null;
+        }
+        refreshHint();
+        return true;
+      });
+      /* 第二步：點一段線 */
+      var best = segBest(e.vals), seen = null;
+      B.onBoardTap = function(pt){
+        if (phase !== 2) return;
+        var j = segPick(ch, e, pt);
+        if (j < 0) return;
+        var txt = d.gSegText(months[j], months[j + 1], e.vals[j], e.vals[j + 1]);
+        if (seen) seen.remove();
+        seen = gEl('line', { x1:pts[j].x, y1:pts[j].y, x2:pts[j + 1].x, y2:pts[j + 1].y, stroke:j === best ? '#D64545' : '#E8871E', 'stroke-width':6, 'stroke-linecap':'round', opacity:0.8, 'class':'gpick', 'data-j':j });
+        segG.appendChild(seen);
+        line.textContent = txt;
+        if (j === best){ roundSolved(d.gSegWin(txt)); return; }
+        roundMiss(d.gSegBad(txt, segDelta(e.vals, best) < 0 && segDelta(e.vals, j) > 0), 's' + j);
+      };
+      gCtx.hint1 = function(){ return phase === 1 ? d.gHints.plot : d.gHints.seg; };
+      gCtx.hint2 = function(){
+        if (phase === 1){ for (var m = 0; m < 5; m++) if (!placed[m]) return d.gPlotH2(months[m], e.vals[m]); return ''; }
+        var list = [];
+        for (var j = 0; j < 4; j++){ var dd = segDelta(e.vals, j); list.push(months[j] + '→' + months[j + 1] + ' ' + (dd > 0 ? '+' : '−') + Math.abs(dd)); }
+        return d.gSegH2(list);
+      };
+    },
+
+    /* 第 3 關：讀複合長條圖（範例 3）—— 兩班四週的資源回收公斤數（一格 2 公斤、每一條線都寫數字、長條頂端都在線上）；
+       題目指定一週，問兩班相差或一共多少，答案打在輸入框裡。相差／一共搞反、只讀了一班、太大太小，各有一句；
+       寫法不正常的數字（空格、小數點、開頭的 0）只提醒、不算錯。 */
+    group: function(d){
+      var e = pick(GAME_GROUP), ch = groupChart(), weeks = d.WEEKS.slice(0, 4), A = d.CLASSES[0], Bn = d.CLASSES[1];
+      gCtx.ask.textContent = d.gAskGroup(weeks[e.k], e.kind);
+      var B = makeBoard(GROUP.W, GROUP.H);
+      var s = gSvg(B.el, GROUP.W, GROUP.H);
+      s.appendChild(gEl('rect', { x:ch.cx[e.k] - ch.slot / 2 + 2, y:ch.y0 - 6, width:ch.slot - 4, height:GROUP.catY + 8 - ch.y0, rx:8, fill:'#FDF0E0', 'class':'gweekband' }));
+      gGrid(s, ch, function(k){ return k * GROUP.step; });
+      var hatch = makeHatchPattern(s, COLOR_ORANGE);
+      weeks.forEach(function(w, i){
+        [e.a[i], e.b[i]].forEach(function(v, side){
+          var g = groupBarX(ch, i, side), y = gLineY(ch, v / GROUP.step);
+          s.appendChild(gEl('rect', { x:g.x, y:y, width:g.w, height:ch.y1 - y, rx:3, fill:side ? hatch : COLOR_GREEN, 'class':side ? 'gbarB' : 'gbarA', 'data-i':i }));
+        });
+        gText(s, ch.cx[i], GROUP.catY, w, i === e.k ? { 'class':'gcat gask2', fill:'#E8871E', 'font-weight':800 } : { 'class':'gcat' });
+      });
+      var legA = addZone(B, 8, GROUP.legY, 138, GROUP.legH, 'gleg', '');
+      var legB = addZone(B, 154, GROUP.legY, 138, GROUP.legH, 'gleg', '');
+      [[legA, 'gswA', A], [legB, 'gswB', Bn]].forEach(function(x){
+        var sw = document.createElement('span'); sw.className = 'gsw ' + x[1];
+        var nm = document.createElement('span'); nm.className = 'glegname'; nm.textContent = x[2];
+        x[0].appendChild(sw); x[0].appendChild(nm);
+      });
+      var row = actionRow();
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.className = 'gnum'; inp.setAttribute('inputmode', 'numeric'); inp.setAttribute('autocomplete', 'off');
+      inp.setAttribute('aria-label', d.gGroupAria);
+      row.appendChild(inp);
+      var lbl = document.createElement('span'); lbl.className = 'gnumlbl'; lbl.textContent = d.gGroupLbl;
+      row.appendChild(lbl);
+      var okBtn = actionBtn(row, d.gGroupOk, 'gok');
+      function submit(){
+        if (gSolved) return;
+        if (!inp.value.trim()){ roundNote(d.gGroupEmpty); return; }
+        var n = parseCount(inp.value);
+        if (n === null){ roundNote(d.gTypeInt); return; }
+        var why = groupWhy(e, n), a = e.a[e.k], b = e.b[e.k];
+        if (!why){ inp.disabled = true; okBtn.disabled = true; roundSolved(d.gGroupWin(A, a, Bn, b, e.kind)); return; }
+        if (why === 'swap') roundMiss(d.gGroupSwap(n, e.kind), 'n' + n);
+        else if (why === 'one') roundMiss(d.gGroupOne(n, n === a ? A : Bn, e.kind), 'n' + n);
+        else roundMiss(d.gGroupOff(n, why === 'high'), 'n' + n);
+      }
+      okBtn.addEventListener('click', submit);
+      inp.addEventListener('keydown', function(ev){ if (ev.key === 'Enter'){ ev.preventDefault(); submit(); } });
+      gCtx.hint1 = function(){ return d.gHints.group; };
+      gCtx.hint2 = function(){ return d.gGroupH2(A, e.a[e.k], Bn, e.b[e.k], e.kind); };
+    },
+
+    /* 第 4 關：選對圖表（範例 4）—— 四張情境卡分進三個左右相鄰的箱子（放寬之後會重疊：挑最近的箱子）。
+       放錯 → 彈回＋「它是哪一種、該放哪裡」；放對 → 卡片收進箱子裡。托盤的順序不會剛好照箱子排。 */
+    sort: function(d){
+      var cards = sortPick(), done = 0, inBin = {};
+      var line = trailLine(d.gSortNow(0, cards.length));
+      var B = makeBoard(SORT.W, SORT.H);
+      var bins = SORT_BINS.map(function(t, b){
+        var x = sortBinX(b), h = sortBinH();
+        addZone(B, x, SORT.binY, SORT.binW, h, 'gbin');
+        addZone(B, x + 2, SORT.binY + SORT.lblY, SORT.binW - 4, SORT.lblH - SORT.lblY - 2, 'gbinlbl', d.gSortBins[b]);
+        return { b:b, x:x, n:0, cx:x + SORT.binW / 2, cy:SORT.binY + h / 2, hw:SORT.binW / 2, hh:h / 2, done:false };
+      });
+      var s = gSvg(B.el, SORT.W, SORT.H);
+      /* 箱子上的小圖：長條、折線、兩兩並排的長條 */
+      bins.forEach(function(bn){
+        var x = bn.x + SORT.binW / 2 - 22, y = SORT.binY + 6, g = gEl('g', { 'class':'gicon' });
+        g.appendChild(gEl('line', { x1:x, y1:y + 22, x2:x + 44, y2:y + 22, stroke:'#2B2A33', 'stroke-width':1.5 }));
+        if (bn.b === 0) [[4, 10], [16, 18], [28, 6]].forEach(function(c){ g.appendChild(gEl('rect', { x:x + c[0], y:y + 22 - c[1], width:9, height:c[1], fill:'#2F9E69' })); });
+        if (bn.b === 1) g.appendChild(gEl('polyline', { points:[x + 4, y + 16, x + 16, y + 6, x + 28, y + 12, x + 40, y + 2].join(' '), fill:'none', stroke:'#3B7DD8', 'stroke-width':2.5 }));
+        if (bn.b === 2) [[3, 12, 8], [24, 16, 10]].forEach(function(c){
+          g.appendChild(gEl('rect', { x:x + c[0], y:y + 22 - c[1], width:8, height:c[1], fill:'#2F9E69' }));
+          g.appendChild(gEl('rect', { x:x + c[0] + 9, y:y + 22 - c[2], width:8, height:c[2], fill:'#E8871E' }));
+        });
+        s.appendChild(g);
+      });
+      cards.forEach(function(c, j){
+        addPiece(B, { w:SORT.cardW, h:SORT.cardH, cx:SORT.trayX[j % 2], cy:SORT.trayY[Math.floor(j / 2)], cls:'gcard gscard', text:d.gSortCards[c], data:{ c:c } });
+      });
+      useTapSelect(B, function(P, pt){
+        var bin = nearestOpen(bins, pt, SORT.pad);
+        if (!bin) return false;
+        var c = P.data.c, why = sortWhy(c, bin.b);
+        if (why){ roundMiss(d.gSortWhy(d.gSortCards[c], d.gSortWhyKind[why], d.gSortBins[SORT_BINS.indexOf(why)]), c + '>' + bin.b); return false; }
+        var y = SORT.binY + SORT.lblH + bin.n * (SORT.slotH + SORT.slotGap);
+        addZone(B, bin.x + 3, y, SORT.binW - 6, SORT.slotH, 'gplaced', d.gSortCards[c]);
+        bin.n++;
+        P.lock(bin.cx, y + SORT.slotH / 2);
+        P.el.style.visibility = 'hidden';
+        inBin[c] = true;
+        done++;
+        gMsg.textContent = '';
+        line.textContent = d.gSortNow(done, cards.length);
+        if (done === cards.length) roundSolved(d.gSortWin);
+        refreshHint();
+        return true;
+      });
+      gCtx.hint2 = function(){
+        for (var j = 0; j < cards.length; j++){
+          var c = cards[j], t = SORT_TYPES[c];
+          if (!inBin[c]) return d.gSortH2(d.gSortCards[c], d.gSortWhyKind[t], d.gSortBins[SORT_BINS.indexOf(t)]);
+        }
+        return '';
+      };
+    },
+
+    /* 第 5 關：抓出騙人的圖（範例 5）—— 四張小長條圖（兩根、長條上寫著數、縱軸最下面那一條線寫著它的數）；
+       點出所有縱軸沒有從 0 開始的圖。點到從 0 開始的圖 → 為什麼它沒有騙人；點過的再點不算；圖和圖之間的縫不算。
+       「點一下」本身就是這一關的動作（§六之五 第 4 點的例外：沒有東西要拿）。 */
+    trunc: function(d){
+      var set = shuffle(pick(GAME_TRUNC)), need = set.filter(truncLie).length, found = [false, false, false, false], nFound = 0;
+      var line = trailLine(d.gTruncNow(0, need));
+      var B = makeBoard(TRUNC.W, TRUNC.H);
+      var cardsEl = set.map(function(c, i){
+        var o = truncXY(i), z = addZone(B, o.x, o.y, TRUNC.cw, TRUNC.ch, 'gtcard');
+        z.setAttribute('data-i', i);
+        var s = gSvg(z, TRUNC.cw, TRUNC.ch);
+        gText(s, 14, TRUNC.catY + 8, d.gTruncNo[i], { 'font-size':15, 'font-weight':800, fill:'#3B7DD8', 'class':'gno' });
+        for (var v = c.min; v <= c.max; v += c.step){
+          var y = truncY(c, v);
+          s.appendChild(gEl('line', { x1:TRUNC.px0, y1:y, x2:TRUNC.px1, y2:y, stroke:v === c.min ? '#2B2A33' : '#D9D2C3', 'stroke-width':v === c.min ? 2 : 1 }));
+          gText(s, TRUNC.px0 - 5, y + 4, v, { 'font-size':12, 'font-weight':600, fill:'#6B6875', 'text-anchor':'end', 'class':'gtick', 'data-v':v });
+        }
+        s.appendChild(gEl('line', { x1:TRUNC.px0, y1:TRUNC.py0, x2:TRUNC.px0, y2:TRUNC.py1, stroke:'#2B2A33', 'stroke-width':2 }));
+        [c.a, c.b].forEach(function(v, side){
+          var cx = TRUNC.px0 + (TRUNC.px1 - TRUNC.px0) * (side ? 0.72 : 0.28), y = truncY(c, v);
+          s.appendChild(gEl('rect', { x:cx - 14, y:y, width:28, height:TRUNC.py1 - y, rx:3, fill:side ? COLOR_ORANGE : COLOR_GREEN, 'class':'gtbar', 'data-v':v }));
+          gText(s, cx, truncLabelY(c, v), v, { 'font-size':TLBL, 'font-weight':800, 'class':'gval' });
+          gText(s, cx, TRUNC.catY, side ? 'B' : 'A', { 'class':'gcat' });
+        });
+        return z;
+      });
+      B.onBoardTap = function(pt){
+        var i = truncPick(pt);
+        if (i < 0 || found[i]) return;
+        var c = set[i];
+        if (!truncLie(c)){ cardsEl[i].classList.add('honest'); roundMiss(d.gTruncBad(d.gTruncNo[i], c.a, c.b), 'c' + i); return; }
+        found[i] = true; nFound++;
+        cardsEl[i].classList.add('found');
+        gMsg.innerHTML = '<span class="yes">' + d.gTruncFound(d.gTruncNo[i], c.min, c.a, c.b, truncLooks(c)) + '</span>';
+        line.textContent = d.gTruncNow(nFound, need);
+        if (nFound === need) roundSolved(d.gTruncFound(d.gTruncNo[i], c.min, c.a, c.b, truncLooks(c)) + ' ' + d.gTruncWin);
+        refreshHint();
+      };
+      gCtx.hint2 = function(){
+        var mins = [];
+        set.forEach(function(c, i){ if (truncLie(c) && !found[i]) mins.push(c.min); });
+        return mins.length ? d.gTruncH2(mins.length, mins) : '';
+      };
+    }
+  };
 
   function startRound(){
     var d = L();
-    var type = ROUND_TYPES[gRound];
-    currentRound = genRound(type);
-    gMistake = false;
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {}; gGen++; BOARD_TAP = null; PIECE_PTR = {};   /* 上一關沒收尾的手指不帶到下一關 */
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
-    elHint.textContent = mode === 'ahead' ? (hintLevel = 1, d.gHint1) : '';
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    gCtx.ask = ask;
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
+  }
 
-    gChart.textContent = '';
-    if (type === 'readValue'){
-      gAskLine.innerHTML = d.gAskRead(currentRound.cats[currentRound.idx]);
-      var geom = makeChartFrame(gChart, { width: 420, height: 220, categories: currentRound.cats,
-        axisMin: currentRound.chart.axisMin, axisMax: currentRound.chart.axisMax, gridStep: currentRound.chart.gridStep });
-      addBars(geom, currentRound.values, COLOR_GREEN, { highlightIdx: currentRound.idx });
-    } else if (type === 'findMax'){
-      gAskLine.textContent = d.gAskMax;
-      var geom2 = makeChartFrame(gChart, { width: 420, height: 220, categories: currentRound.cats,
-        axisMin: currentRound.chart.axisMin, axisMax: currentRound.chart.axisMax, gridStep: currentRound.chart.gridStep });
-      addBars(geom2, currentRound.values, COLOR_GREEN, {});
-    } else if (type === 'computeDiff'){
-      gAskLine.innerHTML = d.gAskDiff(currentRound.cats[currentRound.i1], currentRound.cats[currentRound.i2]);
-      var geom3 = makeChartFrame(gChart, { width: 420, height: 220, categories: currentRound.cats,
-        axisMin: currentRound.chart.axisMin, axisMax: currentRound.chart.axisMax, gridStep: currentRound.chart.gridStep });
-      addBars(geom3, currentRound.values, COLOR_GREEN, { highlightIdx: -1, showValue: true });
-    } else if (type === 'computeTotal'){
-      gAskLine.textContent = d.gAskTotal;
-      var geom4 = makeChartFrame(gChart, { width: 420, height: 220, categories: currentRound.cats,
-        axisMin: currentRound.chart.axisMin, axisMax: currentRound.chart.axisMax, gridStep: currentRound.chart.gridStep });
-      addBars(geom4, currentRound.values, COLOR_GREEN, { showValue: true });
-    } else {
-      gAskLine.innerHTML = d.gAskType(currentRound.scenario.text);
-    }
-
-    gAnswers.textContent = '';
-    currentRound.opts.forEach(function(v){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = v;
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        var idx = currentRound.opts.indexOf(v);
-        var good = idx === currentRound.ans;
-        if (good){
-          var all = gAnswers.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){ gScore += 10; gMsg.innerHTML = '<span class="yes">' + d.gCorrectRetry() + '</span>'; }
-          else { gScore += 20; gMsg.innerHTML = '<span class="yes">' + d.gCorrectFirst() + '</span>'; }
-          if (gRound === ROUND_TYPES.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + d.gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + d.gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gScore = Math.max(0, gScore - 5);
-          gMsg.innerHTML = '<span class="no">' + d.gWrong(v) + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕），第二層跟著畫面走 */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    var h1 = gCtx.hint1 ? gCtx.hint1() : d.gHints[type];
+    elHint.textContent = h1 + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
   function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
-
   gNext.addEventListener('click', function(){
-    if (gRound < ROUND_TYPES.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
-
   gHintBtn.addEventListener('click', function(){
-    var d = L();
+    if (hintLevel >= 2) return;
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = d.gHint1;
-    } else {
-      if (currentRound.type === 'readValue') elHint.textContent = d.gHint2Read(currentRound.squares[currentRound.idx], currentRound.unit);
-      else if (currentRound.type === 'findMax') elHint.textContent = d.gHint2Max(currentRound.values);
-      else if (currentRound.type === 'computeDiff') elHint.textContent = d.gHint2Diff(currentRound.values[currentRound.i1], currentRound.values[currentRound.i2]);
-      else if (currentRound.type === 'computeTotal') elHint.textContent = d.gHint2Total(currentRound.values);
-      else elHint.textContent = d.gHint2Type;
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
