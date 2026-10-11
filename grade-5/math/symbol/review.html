@@ -185,13 +185,16 @@
     }
     return a;
   }
-  /* 保證 3 個相異、且不等於正解的錯誤選項 */
-  function makeWrongs(correct, candidates){
+  /* 保證 3 個相異、且不等於正解的錯誤選項。
+     avoid：題幹上印出來的數字 —— 先當成已用過，候選和保底都不會把它們抄回來（framework §六之三第 4 點）；
+     候選只收正整數（不是整數的「迷思值」，例如除不盡的商，不端出來）。 */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(a){ seen[String(a)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
-      if (!seen[key] && c > 0){ seen[key] = true; out.push(c); }
+      if (!seen[key] && c > 0 && Math.floor(c) === c){ seen[key] = true; out.push(c); }
     });
     var step = 1;
     while (out.length < 3){
@@ -203,8 +206,8 @@
     return out.slice(0, 3);
   }
   /* 把選項值＋正解洗牌，回傳 {opts, ans} */
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
@@ -229,7 +232,8 @@
         var ans = pickUnused([4,5,6,7,8,9,10,12,13,14,15,16,18,20], used);
         var k = pick([3,4,5,6,7,8,9,10,11,12]);
         var n = ans + k;
-        var m = mixOpts(ans, [n, n + k, k]);
+        /* 迷思：把加的數再加一次（n ＋ k） */
+        var m = mixOpts(ans, [n + k], [n, k]);
         return { ans:ans, k:k, n:n, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
@@ -244,7 +248,8 @@
         var ans = pickUnused([10,12,14,15,16,18,20,22,24,25], used);
         var k = pick([3,4,5,6,7,8,9]);
         var n = ans - k;
-        var m = mixOpts(ans, [n, n - k, k]);
+        /* 迷思：把減的數再減一次（n − k） */
+        var m = mixOpts(ans, [n - k], [n, k]);
         return { ans:ans, k:k, n:n, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
@@ -259,7 +264,8 @@
         var k = pickUnused([2,3,4,5,6,7,8,9], used);
         var ans = pick([4,5,6,7,8,9,10,11,12]);
         var n = k * ans;
-        var m = mixOpts(ans, [n, n * k, k]);
+        /* 迷思：再乘一次（n × k）、改用減的（n − k） */
+        var m = mixOpts(ans, [n * k, n - k], [n, k]);
         return { ans:ans, k:k, n:n, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
@@ -274,7 +280,8 @@
         var k = pickUnused([2,3,4,5,6,7,8], used);
         var q = pick([3,4,5,6,7,8,9]);
         var ans = q * k;
-        var m = mixOpts(ans, [q, k, q + k]);
+        /* 迷思：改用加的（q ＋ k）；少乘、多乘一份（ans ∓ k） */
+        var m = mixOpts(ans, [q + k, ans - k, ans + k], [q, k]);
         return { ans:ans, k:k, q:q, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
@@ -289,7 +296,8 @@
         var diff = pickUnused([4,5,6,7,8,9,10,12], used);
         var b = pick([5,6,7,8,9,10,12,14,15,18,20]);
         var a = b + diff;
-        var m = mixOpts(a, [b, diff, a + diff]);
+        /* 迷思：反過來減（b − diff）、把「多 diff」當成 diff 倍（b × diff） */
+        var m = mixOpts(a, [b - diff, b * diff], [b, diff]);
         return { diff:diff, b:b, a:a, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
@@ -319,7 +327,7 @@
         return {
           stem: lang === 'zh' ? '「' + expr + '」是什麼意思？' : 'What does "' + expr + '" mean?',
           opts: lang === 'zh' ? d.optsZh : d.optsEn, ans: d.ansIdx,
-          why: lang === 'zh' ? expr + ' 讀作：「' + d.optsZh[d.ansIdx] + '」。' : expr + ' reads as: "' + d.optsEn[d.ansIdx] + '."'
+          why: lang === 'zh' ? expr + ' 讀作：' + d.optsZh[d.ansIdx] + '。' : expr + ' reads as: ' + d.optsEn[d.ansIdx] + '.'
         };
       } },
     { id:'misconception', cat:'symbol',
@@ -327,7 +335,8 @@
         var base = pickUnused([8,10,12,14,15,16,18,20], used);
         var diff = pick([2,3,4,5,6,7]);
         var total = base + diff;
-        var m = mixOpts(total, [base * diff, base - diff, diff]);
+        /* 迷思：「多」當成乘（base × diff）、看反了用減（base − diff） */
+        var m = mixOpts(total, [base * diff, base - diff], [base, diff]);
         return { base:base, diff:diff, total:total, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
@@ -342,7 +351,8 @@
         var n = pick([3, 4, 5]);
         var avg = pickUnused([6,8,9,10,12,14,15,16,18,20], used);
         var s = avg * n;
-        var m = mixOpts(s, [s - n, s + n, avg]);
+        /* 迷思：平均加上個數（avg ＋ n）、多算或少算一個數（s ± avg） */
+        var m = mixOpts(s, [avg + n, s - avg, s + avg], [n, avg]);
         return { n:n, avg:avg, sum:s, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
@@ -357,7 +367,8 @@
         var whole = pickUnused([20,30,40,50,60,70,80,90,100,120,150,200], used);
         var pct = pick([10,20,50]);
         var part = whole * pct / 100;
-        var m = mixOpts(part, [whole - part, whole + part, pct]);
+        /* 迷思：算成剩下的部分（whole − part）、把百分率直接減掉（whole − pct）、直接除以百分率（whole ÷ pct） */
+        var m = mixOpts(part, [whole - part, whole - pct, whole / pct], [whole, pct]);
         return { whole:whole, pct:pct, part:part, opts:m.opts, ansIdx:m.ans };
       },
       fmt: function(d, lang){
