@@ -187,13 +187,16 @@
   }
   function sum(arr){ return arr.reduce(function(a, b){ return a + b; }, 0); }
   function round1(x){ return Math.round(x * 10) / 10; }
-  /* 保證 3 個相異、且不等於正解的錯誤選項（先用候選值去重，不夠再往外補） */
-  function makeWrongs(correct, candidates){
+  /* 保證 3 個相異、且不等於正解的錯誤選項（先用候選值去重，不夠再往外補）。
+     avoid：題幹印出來的數先當成「已經用過」—— 誘答不可以把題幹的數抄回來（§六之三第 4 點）；
+     刻意的迷思誘答由呼叫端用 avoidExcept() 留下來。候選值不是正數的不收（這一課的答案都是正數）。 */
+  function makeWrongs(correct, candidates, avoid){
     var out = [];
     var seen = {}; seen[String(correct)] = true;
+    (avoid || []).forEach(function(a){ seen[String(a)] = true; });
     (candidates || []).forEach(function(c){
       var key = String(c);
-      if (!seen[key]){ seen[key] = true; out.push(c); }
+      if (!seen[key] && c > 0){ seen[key] = true; out.push(c); }
     });
     var step = 1;
     while (out.length < 3){
@@ -205,11 +208,13 @@
     return out.slice(0, 3);
   }
   /* 把選項值＋正解洗牌，回傳 {opts, ans} */
-  function mixOpts(correct, candidates){
-    var wrongs = makeWrongs(correct, candidates);
+  function mixOpts(correct, candidates, avoid){
+    var wrongs = makeWrongs(correct, candidates, avoid);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
+  /* 題幹的數字裡，只放行刻意的那一個迷思誘答 */
+  function avoidExcept(list, keep){ return list.filter(function(v){ return keep.indexOf(v) < 0; }); }
   /* 產生 n 個數字，平均剛好是 avg（整數），數字全部大於 0 */
   function makeNumsForAvg(avg, n){
     var nums;
@@ -235,7 +240,7 @@
         var avg = pickUnused([6,7,8,9,10,11,12,14,15,16,18,20,22,24,25], used);
         var nums = makeNumsForAvg(avg, n);
         var s = sum(nums);
-        var m = mixOpts(avg, [avg - 1, avg + 1, s]);
+        var m = mixOpts(avg, [avg - 1, avg + 1, s], nums.concat([n]));
         return { n:n, nums:nums, avg:avg, sum:s, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -253,7 +258,7 @@
         var n = pick([3, 4, 5]);
         var avg = pickUnused([6,8,9,10,12,14,15,16,18,20], used);
         var s = avg * n;
-        var m = mixOpts(s, [s - n, s + n, avg]);
+        var m = mixOpts(s, [s - n, s + n, avg], [n]);   /* 平均當總和：刻意的迷思 */
         return { n:n, avg:avg, sum:s, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -278,7 +283,7 @@
           missing = s - sum(known);
           if (missing > 0 && known.every(function(v){ return v > 0; })) break;
         }
-        var m = mixOpts(missing, [missing - 2, missing + 2, avg]);
+        var m = mixOpts(missing, [missing - 2, missing + 2, avg], avoidExcept(known.concat([n, n - 1, avg]), [avg]));   /* 以為最後一個就是平均：刻意的迷思 */
         return { n:n, avg:avg, sum:s, known:known, missing:missing, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -298,7 +303,7 @@
         var days = pickUnused([5, 6, 7, 10], used);
         var perDay = pick([8, 10, 12, 15, 18, 20, 25]);
         var total = perDay * days;
-        var m = mixOpts(total, [total - days, total + days, perDay]);
+        var m = mixOpts(total, [total - days, total + days, perDay], avoidExcept([days], [perDay]));   /* 只抄每天存多少（沒有乘）：刻意的迷思 */
         return { days:days, perDay:perDay, total:total, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -347,7 +352,7 @@
         var delta = pick([1, 2, 3]);
         var newAvg = avg + delta;
         var newVal = newAvg * (n + 1) - s;
-        var m = mixOpts(newAvg, [avg, newAvg - 1, newAvg + 1]);
+        var m = mixOpts(newAvg, [avg, newAvg - 1, newAvg + 1], avoidExcept(nums.concat([n, newVal, avg]), [avg]));   /* 以為平均不會變：刻意的迷思 */
         return { n:n, nums:nums, avg:avg, sum:s, newVal:newVal, newAvg:newAvg, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -369,7 +374,7 @@
         var dividendTenths = qt * k;
         var dividend = round1(dividendTenths / 10);
         var q = round1(qt / 10);
-        var m = mixOpts(q, [round1(q - 0.1), round1(q + 0.1), round1(q * 2)]);
+        var m = mixOpts(q, [round1(q - 0.1), round1(q + 0.1), qt], [dividend, k]);   /* qt ＝ 小數點忘了點（2.3 寫成 23）；舊的「商 × 2」在 k ＝ 2 時就是題幹的被除數 */
         return { k:k, dividend:dividend, dividendTenths:dividendTenths, q:q, qt:qt, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -387,7 +392,7 @@
         var k = pickUnused([3, 4, 6, 7, 8, 9], used);
         var range = pick([30, 40, 50, 60]);
         var c = Math.floor(range / k);
-        var m = mixOpts(c, [c - 1, c + 1, c + 2]);
+        var m = mixOpts(c, [c - 1, c + 1, c + 2], [k, range]);
         return { k:k, range:range, c:c, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
@@ -399,7 +404,7 @@
           ans: d.ans,
           why: lang === 'zh'
             ? d.range + ' ÷ ' + d.k + ' = ' + d.c + (rem ? ' 餘 ' + rem : '') + '，共 ' + d.c + ' 個。'
-            : d.range + ' ÷ ' + d.k + ' = ' + d.c + (rem ? ' r ' + rem : '') + ' — ' + d.c + ' of them.'
+            : d.range + ' ÷ ' + d.k + ' = ' + d.c + (rem ? ' r ' + rem : '') + ', so there are ' + d.c + ' of them.'
         };
       } }
   ];
