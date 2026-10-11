@@ -196,37 +196,23 @@
     return { n: n / g, d: d / g };
   }
   function fracStr(n, d){ return n + '/' + d; }
-  function fracWrongCandidates(n, d){
-    return [
-      [d, n],
-      [n + 1, d],
-      [n > 1 ? n - 1 : n + 1, d],
-      [n, d + 1],
-      [n, d > 1 ? d - 1 : d + 1],
-      [n + 1, d + 1],
-      [n + 2, d]
-    ];
-  }
-  /* 依正解 n/d 產生 4 個選項（含正解），保證選項字串互不相同 */
-  function mixFracOpts(n, d){
-    var correct = fracStr(n, d);
-    var seen = {}; seen[correct] = true;
-    var wrongs = [];
-    fracWrongCandidates(n, d).forEach(function(c){
-      if (c[1] <= 0 || c[0] <= 0) return;
-      var s = fracStr(c[0], c[1]);
-      if (!seen[s]){ seen[s] = true; wrongs.push(s); }
+  /* 誘答：照順序從「說得出名字的迷思」裡挑 3 個（§三 高年級：誘答針對常見迷思設計）。
+     每一個候選是 [分子, 分母]，照迷思算出來的樣子寫（不替它約分；分母是 1 就寫成整數）。
+     值和正解一樣、和已經挑的一樣、和 avoid（題幹上印的數）一樣的跳過 —— §六之二／§六之三：比的是「值」。
+     候選不夠 3 個就少給一個（讓檢查響），不拿垃圾字串充數。 */
+  function fracOpts(n, d, cands, avoid){
+    var correct = fracStr(n, d), seen = [[n, d]].concat(avoid || []), wrongs = [];
+    cands.forEach(function(c){
+      if (wrongs.length >= 3 || !(c[0] > 0 && c[1] > 0)) return;
+      for (var i = 0; i < seen.length; i++) if (c[0] * seen[i][1] === seen[i][0] * c[1]) return;
+      seen.push(c);
+      wrongs.push(c[1] === 1 ? String(c[0]) : fracStr(c[0], c[1]));
     });
-    var bump = 3;
-    while (wrongs.length < 3){
-      var s2 = fracStr(n + bump, d);
-      if (!seen[s2]){ seen[s2] = true; wrongs.push(s2); }
-      bump++;
-    }
-    wrongs = wrongs.slice(0, 3);
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
+  /* 題幹上印的整數，當成已經用過的值 */
+  function ints(){ return Array.prototype.map.call(arguments, function(x){ return [x, 1]; }); }
 
   /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
   var GENS = [
@@ -234,12 +220,13 @@
       make: function(used){
         var m = pickUnused([3,4,5,6,7,8], used);
         var cands = [];
-        for (var i = 1; i < m; i++){ if (gcdFn(i, m) === 1) cands.push(i); }
+        for (var i = 2; i < m; i++){ if (gcdFn(i, m) === 1) cands.push(i); }
         var n = pick(cands);
         return { n:n, m:m };
       },
       fmt: function(d, lang){
-        var mix = mixFracOpts(d.n, d.m);
+        /* 倒過來除（m ÷ n）、只拿一小塊、所有小塊裡的一塊、把蘋果和人數加在一起當分母 */
+        var mix = fracOpts(d.n, d.m, [[d.m, d.n], [1, d.m], [1, d.n * d.m], [d.n, d.n + d.m]], ints(d.n, d.m));
         return {
           stem: lang === 'zh' ? d.n + ' 個蘋果平分給 ' + d.m + ' 個人，每人分到多少個？' : 'Share ' + d.n + ' apples equally among ' + d.m + ' people. How much does each person get?',
           opts: mix.opts, ans: mix.ans,
@@ -251,18 +238,17 @@
     { id:'divideGeneral', cat:'fdiv',
       make: function(used){
         var den = pickUnused([3,4,5,6,7], used);
-        var num, k;
-        for (var tries = 0; tries < 30; tries++){
-          num = 1 + rand(den - 1);
-          k = pick([2,3,4]);
-          if (num % k !== 0) break;
-        }
+        /* 分子不能被 k 整除（那是捷徑那一題）、題幹的分數是最簡分數 */
+        var pairs = [];
+        for (var a = 1; a < den; a++) [2,3,4].forEach(function(kk){ if (a % kk !== 0 && gcdFn(a, den) === 1 && kk % den !== 0) pairs.push([a, kk]); });
+        var pr = pick(pairs), num = pr[0], k = pr[1];
         var pd = den * k;
         var simp = simplifyFrac(num, pd);
         return { num:num, den:den, k:k, pd:pd, sn:simp.n, sd:simp.d };
       },
       fmt: function(d, lang){
-        var mix = mixFracOpts(d.sn, d.sd);
+        /* 分子乘了 k、分母加了 k、只有一小格、沒有分 */
+        var mix = fracOpts(d.sn, d.sd, [[d.num * d.k, d.den], [d.num, d.den + d.k], [1, d.pd], [d.num, d.den]], ints(d.num, d.den, d.k));
         var reduced = (d.sn === d.num && d.sd === d.pd);
         return {
           stem: d.num + '/' + d.den + ' ÷ ' + d.k + ' = ?',
@@ -274,18 +260,16 @@
       } },
     { id:'divideShortcut', cat:'fdiv',
       make: function(used){
-        var den = pickUnused([5,6,7,8,9,10], used);
-        var k, q, num;
-        for (var tries = 0; tries < 40; tries++){
-          k = pick([2,3,4]);
-          q = 1 + rand(den - 1);
-          num = q * k;
-          if (num < den && gcdFn(q, den) === 1) break;
-        }
+        var den = pickUnused([5,7,8,9,10], used);
+        /* 分子 = q × k 比分母小、題幹的分數是最簡分數 */
+        var pairs = [];
+        [2,3,4].forEach(function(kk){ for (var qq = 1; qq * kk < den; qq++) if (gcdFn(qq * kk, den) === 1) pairs.push([kk, qq]); });
+        var pr = pick(pairs), k = pr[0], q = pr[1], num = q * k;
         return { num:num, den:den, k:k, q:q };
       },
       fmt: function(d, lang){
-        var mix = mixFracOpts(d.q, d.den);
+        /* 分子乘了 k、分子除了又把分母乘 k（兩個方法一起用）、分母加了 k、沒有分 */
+        var mix = fracOpts(d.q, d.den, [[d.num * d.k, d.den], [d.q, d.den * d.k], [d.num, d.den + d.k], [d.num, d.den]], ints(d.num, d.den, d.k));
         return {
           stem: d.num + '/' + d.den + ' ÷ ' + d.k + ' = ?',
           opts: mix.opts, ans: mix.ans,
@@ -303,7 +287,8 @@
         return { total:total, people:people, sn:simp.n, sd:simp.d };
       },
       fmt: function(d, lang){
-        var mix = mixFracOpts(d.sn, d.sd);
+        /* 倒過來除、只拿一小塊、所有小塊裡的一塊、把餅乾和人數加在一起當分母 */
+        var mix = fracOpts(d.sn, d.sd, [[d.people, d.total], [1, d.people], [1, d.total * d.people], [d.total, d.total + d.people]], ints(d.total, d.people));
         var reduced = (d.sn === d.total && d.sd === d.people);
         return {
           stem: lang === 'zh' ? d.total + ' 塊餅乾平分給 ' + d.people + ' 個人，每人分到多少塊？' : d.total + ' cookies are shared equally among ' + d.people + ' people. How many cookies does each person get?',
@@ -316,15 +301,18 @@
     { id:'twoStepDivide', cat:'fdiv',
       make: function(used){
         var b = pickUnused([2,3,4,5], used);
-        var a = 1 + rand(b - 1);
-        var k1 = pick([2,3]);
-        var k2 = pick([2,3]);
+        var as = [];
+        for (var x = 1; x < b; x++) if (gcdFn(x, b) === 1) as.push(x);
+        var a = pick(as);
+        var k1 = pick([2,3,4]);
+        var k2 = pick([2,3,4].filter(function(x){ return x !== k1; }));
         var pd = b * k1 * k2;
         var simp = simplifyFrac(a, pd);
         return { a:a, b:b, k1:k1, k2:k2, pd:pd, sn:simp.n, sd:simp.d, mid: a + '/' + (b*k1) };
       },
       fmt: function(d, lang){
-        var mix = mixFracOpts(d.sn, d.sd);
+        /* 只做了第一步、把兩個除數加起來、分子乘了兩次、只做了第二步、兩個除數都加到分母上、只有一小格 */
+        var mix = fracOpts(d.sn, d.sd, [[d.a, d.b * d.k1], [d.a, d.b * (d.k1 + d.k2)], [d.a * d.k1 * d.k2, d.b], [d.a, d.b * d.k2], [d.a, d.b + d.k1 + d.k2], [1, d.pd]], ints(d.k1, d.k2).concat([[d.a, d.b]]));
         var reduced = (d.sn === d.a && d.sd === d.pd);
         return {
           stem: lang === 'zh'
@@ -339,8 +327,11 @@
     { id:'equivalentExpr', cat:'fdiv',
       make: function(used){
         var den = pickUnused([3,4,5,6,7], used);
-        var num = 1 + rand(den - 1);
-        var k = pick([2,3,4,5]);
+        var ns = [];
+        for (var x = 1; x < den; x++) if (gcdFn(x, den) === 1) ns.push(x);
+        var num = pick(ns);
+        /* num/den × k 和 num/den + 1/k 在 den = num × k × (k − 1) 時一樣大（1/6 ÷ 3）：那個 k 不出 */
+        var k = pick([2,3,4,5].filter(function(x){ return den !== num * x * (x - 1); }));
         return { num:num, den:den, k:k };
       },
       fmt: function(d, lang){
@@ -363,36 +354,48 @@
     { id:'fractionMultiply', cat:'fmul',
       make: function(used){
         var b = pickUnused([2,3,4,5,6], used);
-        var a = 1 + rand(b - 1);
-        var dd = pick([2,3,4,5,6]);
-        var c = 1 + rand(dd - 1);
+        /* 兩個分母不一樣（同分母時「分子相加、分母相加」之類的迷思常常剛好就是題幹上的分數） */
+        var dd = pick([2,3,4,5,6].filter(function(x){ return x !== b; }));
+        var as = [], cs = [], x;
+        for (x = 1; x < b; x++) if (gcdFn(x, b) === 1) as.push(x);
+        for (x = 1; x < dd; x++) if (gcdFn(x, dd) === 1) cs.push(x);
+        var a = pick(as), c = pick(cs);
         var pn = a * c, pd = b * dd;
         var simp = simplifyFrac(pn, pd);
         return { a:a, b:b, c:c, dd:dd, pn:pn, pd:pd, sn:simp.n, sd:simp.d };
       },
       fmt: function(d, lang){
-        var mix = mixFracOpts(d.sn, d.sd);
+        /* 分子加分子、分母加分母；分子相乘但分母相加；交叉相乘；變成加法；分子相加但分母相乘；分子相乘、分母只留一個 */
+        var mix = fracOpts(d.sn, d.sd, [[d.a + d.c, d.b + d.dd], [d.a * d.c, d.b + d.dd], [d.a * d.dd, d.b * d.c], [d.a * d.dd + d.c * d.b, d.b * d.dd], [d.a + d.c, d.b * d.dd], [d.a * d.c, d.b], [d.a * d.c, d.dd]], [[d.a, d.b], [d.c, d.dd]]);
         var reduced = (d.sn === d.pn && d.sd === d.pd);
         return {
           stem: d.a + '/' + d.b + ' × ' + d.c + '/' + d.dd + ' = ?',
           opts: mix.opts, ans: mix.ans,
           why: lang === 'zh'
-            ? '分子乘分子（' + d.a + '×' + d.c + '=' + d.pn + '）、分母乘分母（' + d.b + '×' + d.dd + '=' + d.pd + '）' + (reduced ? '。' : '，約分後是 ' + d.sn + '/' + d.sd + '。')
-            : 'Multiply the numerators (' + d.a + '×' + d.c + '=' + d.pn + ') and the denominators (' + d.b + '×' + d.dd + '=' + d.pd + ')' + (reduced ? '.' : ', which simplifies to ' + d.sn + '/' + d.sd + '.')
+            ? '分子乘分子（' + d.a + '×' + d.c + '=' + d.pn + '）、分母乘分母（' + d.b + '×' + d.dd + '=' + d.pd + '）：' + d.a + '/' + d.b + ' × ' + d.c + '/' + d.dd + ' = ' + d.pn + '/' + d.pd + (reduced ? '。' : '，約分後是 ' + d.sn + '/' + d.sd + '。')
+            : 'Multiply the numerators (' + d.a + '×' + d.c + '=' + d.pn + ') and the denominators (' + d.b + '×' + d.dd + '=' + d.pd + '): ' + d.a + '/' + d.b + ' × ' + d.c + '/' + d.dd + ' = ' + d.pn + '/' + d.pd + (reduced ? '.' : ', which simplifies to ' + d.sn + '/' + d.sd + '.')
         };
       } },
     { id:'fractionAdd', cat:'fadd',
       make: function(used){
-        var den = pickUnused([4,5,6,7,8,9,10], used);
-        var a = 1 + rand(den - 2);
-        var maxC = den - a - 1;
-        var c = 1 + rand(maxC);
+        var den = pickUnused([5,7,8,9,10], used);   /* 4 和 6 找不到兩個不一樣、都是最簡、加起來比 1 小的分子 */
+        /* 兩個加數都是最簡分數、不一樣、加起來比 1 小（每一個 a 都至少找得到一個 c） */
+        var as = [];
+        for (var y = 1; y < den - 1; y++){
+          if (gcdFn(y, den) !== 1) continue;
+          for (var z = 1; y + z < den; z++) if (z !== y && gcdFn(z, den) === 1){ as.push(y); break; }
+        }
+        var a = pick(as);
+        var maxC = den - a - 1, cs = [];
+        for (var x = 1; x <= maxC; x++) if (x !== a && gcdFn(x, den) === 1) cs.push(x);
+        var c = pick(cs);
         var pn = a + c;
         var simp = simplifyFrac(pn, den);
         return { a:a, c:c, den:den, pn:pn, sn:simp.n, sd:simp.d };
       },
       fmt: function(d, lang){
-        var mix = mixFracOpts(d.sn, d.sd);
+        /* 分母也相加、分子相加但分母相乘、分子相乘、分子分母都相乘、相減 */
+        var mix = fracOpts(d.sn, d.sd, [[d.a + d.c, 2 * d.den], [d.a + d.c, d.den * d.den], [d.a * d.c, d.den], [d.a * d.c, d.den * d.den], [Math.abs(d.a - d.c), d.den]], [[d.a, d.den], [d.c, d.den]]);
         var reduced = (d.sn === d.pn && d.sd === d.den);
         return {
           stem: d.a + '/' + d.den + ' + ' + d.c + '/' + d.den + ' = ?',
@@ -412,16 +415,13 @@
         var correct = String(q);
         var seen = {}; seen[correct] = true;
         var wrongs = [];
-        [round1(q - 0.1), round1(q + 0.1), round1(q * 2)].forEach(function(v){
-          var s = String(v);
-          if (!seen[s]){ seen[s] = true; wrongs.push(s); }
+        /* 忘了小數點（qt 個 0.1 寫成 qt）、小數點點太左邊（qt 個 0.01）、算差一個 0.1（多或少）。
+           題幹上的數（被除數、除數、被除數小數點兩邊的數字）先當成用過的：6.0 會寫成 6，剛好是除數（35.4 ÷ 6 → 5.9 + 0.1） */
+        seen[String(k)] = true; seen[String(dividend)] = true;
+        String(dividend).split('.').forEach(function(part){ seen[part] = true; });   /* 20.7 ÷ 3：誘答 7 也是抄題幹 */
+        [String(qt), String(qt / 100), String(round1(q + 0.1)), String(round1(q - 0.1))].forEach(function(s){
+          if (wrongs.length < 3 && !seen[s]){ seen[s] = true; wrongs.push(s); }
         });
-        var bump = 1;
-        while (wrongs.length < 3){
-          var s2 = String(round1(q + 0.2 * bump));
-          if (!seen[s2]){ seen[s2] = true; wrongs.push(s2); }
-          bump++;
-        }
         var opts = shuffle([correct].concat(wrongs.slice(0,3)));
         var ans = opts.indexOf(correct);
         return { k:k, dividend:dividend, dividendTenths:dividendTenths, q:q, qt:qt, opts:opts, ans:ans };
