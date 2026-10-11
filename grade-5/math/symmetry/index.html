@@ -122,16 +122,40 @@
   .axiscount{margin-top:10px;font-size:20px;font-weight:700;color:var(--green)}
   .axiscount.zero{color:var(--red)}
   .axisnote{margin-top:8px;font-size:15px;color:var(--muted)}
-  .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:10px;margin-top:16px}
-  .gicon{
-    border:2px solid var(--line);border-radius:12px;background:var(--card);padding:8px 0;
-    cursor:pointer;display:flex;align-items:center;justify-content:center;height:64px;
-  }
-  .gicon svg{width:32px;height:32px}
-  .gicon.found{background:var(--green-soft);border-color:var(--green)}
-  .gicon.found svg *{stroke:#2F9E69 !important;fill:#2F9E69 !important}
-  .gicon.miss{background:var(--red-soft);border-color:var(--red)}
-  .gicon:disabled{cursor:default}
+  /* --- 小遊戲「對摺魔鏡闖關」（§六之五） --- */
+  .game .stats{justify-content:center}
+  .game .hint{text-align:center}
+  .gamemsg{text-align:center}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px;line-height:1.2}
+  .gboard > div{position:absolute}
+  .gsvg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-size:22px;font-weight:800;color:var(--ink);white-space:nowrap}
+  .gshapecard{border-color:var(--blue)}
+  .gshapecard svg{width:100%;height:100%;display:block}
+  .gshapecard.placed{border-width:2px;border-radius:8px;border-color:var(--green);background:var(--green-soft)}
+  .gbin{border:3px dashed var(--line);border-radius:14px;background:var(--card);pointer-events:none}
+  .gbin.gbin-yes{border-color:var(--green)}
+  .gbin.gbin-no{border-color:var(--red)}
+  .gbinlbl{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.15;padding:0 6px;font-size:15px;font-weight:800;color:var(--ink);pointer-events:none;z-index:1}
+  .gpin{border-radius:50%;background:var(--card);border:3px solid var(--green);color:var(--green);font-size:18px;font-weight:800;white-space:nowrap}
+  .gpin.placed{background:var(--green-soft)}
+  .gslot{display:flex;align-items:center;justify-content:center;border:3px dashed var(--orange);border-radius:10px;background:var(--orange-soft);
+    font-size:20px;font-weight:800;color:var(--ink);pointer-events:none}
+  .gslot.ghint{outline:3px solid var(--blue);outline-offset:2px}
+  .gslot.filled{border-style:solid;border-color:var(--green);background:var(--green-soft);color:var(--green)}
+  .gaction{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .gnote{color:var(--muted)}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
 </style>
 </head>
 <body>
@@ -250,21 +274,18 @@
   <!-- 5. 小遊戲 -->
   <section>
     <span class="eyebrow" data-i18n="eb5">小遊戲</span>
-    <h2 data-i18n="s5h2">魔鏡挑選</h2>
-    <p class="lead" data-i18n="s5lead">點出這一關<strong>所有</strong>線對稱的圖形或文字，點錯會扣分，但不會結束。</p>
+    <h2 data-i18n="s5h2">對摺魔鏡闖關</h2>
+    <p class="lead" data-i18n="s5lead">分一分、摺一摺、找對稱點、量對稱邊、剪紙展開 —— 五關五種玩法，每一關都在練同一件事：<strong>對摺之後，兩邊會不會完全重合</strong>。放錯會扣分，但不會結束。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
-        <span><span data-i18n="gFoundLabel">已找到</span> <b id="gFound">0</b> / <b id="gTotal">0</b></span>
       </div>
-      <p class="target"><span data-i18n="gFindAll">找出這一關所有線對稱的圖形或文字</span>
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px;margin-left:10px" data-i18n="gHintBtn">💡 提示</button>
-      </p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div id="gGrid" class="ggrid"></div>
       <p id="gMsg" class="gamemsg"></p>
-      <div class="btnrow">
+      <div class="btnrow" style="justify-content:center">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -293,33 +314,406 @@
 (function(){
   "use strict";
 
-  /* ---------- shape / letter icon builder (language-independent) ---------- */
-  var CHAR_MAP = {
-    letterF:'F', letterA:'A', letterN:'N', letterR:'R', letterL:'L', letterO:'O',
-    letterK:'K', letterW:'W', letterH:'H', letterM:'M', letterT:'T',
-    charWang:'王', charTian:'田', charZhong:'中'
-  };
+  /* ============ 小遊戲「對摺魔鏡闖關」的題庫與版面（語言無關；tools/checks/grade-5-symmetry.js 直接讀這一段） ============
+     五關五種玩法（§六之五），每一關對應一個範例，每一關都在練同一件事：對摺之後，兩邊會不會完全重合。
+       sort   分一分（範例 1）：六張圖卡拖進「線對稱」「不是線對稱」兩個箱子。
+       fold   摺一摺（範例 2）：圖形上畫了幾條通過中心的虛線；點一條就沿著它摺過去（橘色虛線是摺過去的樣子）。
+              找出所有的對稱軸，再按「找完了」—— 一般平行四邊形一條都沒有，要直接按。
+       mirror 找對稱點（範例 3）：點陣上有 A、B、C 和一條摺線；把 A′、B′、C′ 拖到（或先點、再點）它們的對稱點上。
+       sides  對稱邊（範例 3）：線對稱圖形畫了對稱軸，有幾條邊標了長度；數字卡（拿不完）放進空格：那一邊和它的對稱邊一樣長。
+       paint  剪紙展開（進階題 3）：紙沿著虛線對摺，一半剪掉了幾格；點出另一半也被剪掉的格子，再按「打開來看」。
+     每一關「收不收、為什麼不收」都是這裡的純函式，畫面只負責呼叫 —— 設定檔可以直接跑。
+     座標：圖形用「單位座標」（y 往上）；畫板用「畫板座標」（px，y 往下），寬一律 GW。 */
+  var GAME_ORDER = ['sort', 'fold', 'mirror', 'sides', 'paint'];
+  var GW = 300;
+  var GPICK = 48;   /* 拿得起來的東西最小 48 ×（畫板縮放 ≥ 0.92 時，手機上仍 ≥ 44px） */
 
-  function iconBody(type){
-    switch(type){
-      case 'square':    return '<rect x="20" y="20" width="60" height="60" fill="none" stroke="#2B2A33" stroke-width="6"/>';
-      case 'circle':    return '<circle cx="50" cy="50" r="34" fill="none" stroke="#2B2A33" stroke-width="6"/>';
-      case 'rect':      return '<rect x="8" y="30" width="84" height="40" fill="none" stroke="#2B2A33" stroke-width="6"/>';
-      case 'rhombus':   return '<polygon points="50,8 92,50 50,92 8,50" fill="none" stroke="#2B2A33" stroke-width="6"/>';
-      case 'isoTri':    return '<polygon points="50,10 70,90 30,90" fill="none" stroke="#2B2A33" stroke-width="6"/>';
-      case 'equiTri':   return '<polygon points="50,12 88,80 12,80" fill="none" stroke="#2B2A33" stroke-width="6"/>';
-      case 'star5':     return '<polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35" fill="none" stroke="#2B2A33" stroke-width="5"/>';
-      case 'heart':     return '<path d="M50,85 C20,60 8,35 28,20 C40,11 50,21 50,30 C50,21 60,11 72,20 C92,35 80,60 50,85 Z" fill="none" stroke="#2B2A33" stroke-width="6"/>';
-      case 'lightning': return '<polygon points="56,4 30,50 48,50 34,96 76,44 55,44" fill="none" stroke="#2B2A33" stroke-width="6"/>';
-      case 'parallelo': return '<polygon points="32,20 92,20 68,80 8,80" fill="none" stroke="#2B2A33" stroke-width="6"/>';
-      default:
-        return '<text x="50" y="72" text-anchor="middle" font-size="62" font-family="\'PingFang TC\',\'Microsoft JhengHei\',sans-serif" font-weight="700" fill="#2B2A33">' + (CHAR_MAP[type] || '?') + '</text>';
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
     }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  /* ---- 幾何（點是 {x, y} 或 [x, y]） ---- */
+  function P2(p){ return Array.isArray(p) ? { x:p[0], y:p[1] } : p; }
+  /* 點 p 對「通過 a、b 的直線」的鏡射（對摺過去落在哪裡） */
+  function reflectPt(p, a, b){
+    p = P2(p); a = P2(a); b = P2(b);
+    var dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+    var t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2;
+    return { x:2 * (a.x + t * dx) - p.x, y:2 * (a.y + t * dy) - p.y };
+  }
+  function vcenter(pts){
+    var x = 0, y = 0;
+    pts.forEach(function(q){ q = P2(q); x += q.x; y += q.y; });
+    return { x:x / pts.length, y:y / pts.length };
+  }
+  /* 兩串頂點是不是同一個多邊形（起點可以不一樣，方向可以反過來 —— 對摺會把繞的方向反過來） */
+  function sameCycle(P, Q){
+    var n = P.length;
+    if (Q.length !== n) return false;
+    for (var s = 0; s < n; s++) for (var dir = -1; dir <= 1; dir += 2){
+      var ok = true;
+      for (var i = 0; i < n && ok; i++){
+        var a = P2(P[i]), b = P2(Q[((s + dir * i) % n + n) % n]);
+        if (Math.abs(a.x - b.x) > 1e-6 || Math.abs(a.y - b.y) > 1e-6) ok = false;
+      }
+      if (ok) return true;
+    }
+    return false;
+  }
+  /* 沿著通過 a、b 的直線摺過去，每一個頂點都落在另一個頂點上 ＝ 這條線是對稱軸 */
+  function isAxis(pts, a, b){ return sameCycle(pts, pts.map(function(p){ return reflectPt(p, a, b); })); }
+  /* 所有對稱軸的方向（0 ≤ 度 < 180）。對稱軸一定通過頂點的中心，而且碰到邊界的地方不是頂點、就是一條邊的中點 ——
+     所以只要試「中心 → 每一個頂點」「中心 → 每一條邊的中點」這幾條線。 */
+  function symAxes(pts){
+    var c = vcenter(pts), out = [];
+    pts.forEach(function(p, i){
+      p = P2(p);
+      var q = P2(pts[(i + 1) % pts.length]);
+      [p, { x:(p.x + q.x) / 2, y:(p.y + q.y) / 2 }].forEach(function(m){
+        if (Math.hypot(m.x - c.x, m.y - c.y) < 1e-9) return;
+        var deg = Math.round(((Math.atan2(m.y - c.y, m.x - c.x) * 180 / Math.PI) % 180 + 180) % 180 * 1e6) / 1e6;
+        if (deg >= 180) deg -= 180;
+        if (out.some(function(o){ var d = Math.abs(o - deg); return d < 1e-4 || Math.abs(d - 180) < 1e-4; })) return;
+        if (isAxis(pts, c, m)) out.push(deg);
+      });
+    });
+    return out.sort(function(a, b){ return a - b; });
+  }
+  /* 轉半圈（繞中心轉 180°）和原來一樣嗎 —— 平行四邊形、Z 字形是，可是那不是對摺 */
+  function halfTurn(pts){
+    var c = vcenter(pts);
+    return sameCycle(pts, pts.map(function(p){ p = P2(p); return { x:2 * c.x - p.x, y:2 * c.y - p.y }; }));
+  }
+  /* 對稱軸的方向說成「直的／橫的／斜的」（v／h／d） */
+  function axisKind(deg){ return Math.abs(deg - 90) < 1e-6 ? 'v' : (deg < 1e-6 ? 'h' : 'd'); }
+  function segDist(p, a, b){
+    var dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+    var t = L2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2)) : 0;
+    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  }
+  function ptRectDist(p, r){ var dx = Math.max(r.x - p.x, 0, p.x - (r.x + r.w)), dy = Math.max(r.y - p.y, 0, p.y - (r.y + r.h)); return Math.hypot(dx, dy); }
+  function segsCross(p, q, r, s){
+    var d = function(a, b, c){ return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x); };
+    var d1 = d(r, s, p), d2 = d(r, s, q), d3 = d(p, q, r), d4 = d(p, q, s);
+    return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+  }
+  /* 線段到方框的距離（線段穿過方框是 0） */
+  function rectSegDist(r, a, b){
+    if (ptRectDist(a, r) === 0 || ptRectDist(b, r) === 0) return 0;
+    var c = [{ x:r.x, y:r.y }, { x:r.x + r.w, y:r.y }, { x:r.x + r.w, y:r.y + r.h }, { x:r.x, y:r.y + r.h }];
+    for (var i = 0; i < 4; i++) if (segsCross(a, b, c[i], c[(i + 1) % 4])) return 0;
+    var m = Infinity;
+    for (var j = 0; j < 4; j++) m = Math.min(m, segDist(c[j], a, b));
+    return Math.min(m, ptRectDist(a, r), ptRectDist(b, r));
+  }
+  /* 標籤的字框（估計：數字一個字 0.62 字高寬，加 2px）；中心在 (cx, cy) */
+  function lblBox(text, fs, cx, cy){ var w = String(text).length * 0.62 * fs + 2, h = 1.45 * fs; return { x:cx - w / 2, y:cy - h / 2, w:w, h:h }; }
+  function lblBaseline(fs, cy){ return cy + 0.36 * fs; }
+  var LBL_FS = 18, LBL_CLEAR = 3;   /* 標籤的字框離任何一條線都至少 3px */
+
+  /* ---- 第 1 關：分一分 —— 十三個圖形（單位座標，一格一單位）。線對稱的八個裡，箭頭形的對稱軸是橫的、斜放的風箏形是斜的；
+         不是的五個裡，平行四邊形和 Z 字形「轉半圈會一樣」（最常被當成線對稱）。一局發 3 張線對稱 ＋ 3 張不是，
+         兩邊各保證一張上面說的那種。托盤洗牌後，上面一排三張不可以剛好全是同一種（看起來像已經分好了）。 ---- */
+  var SORT_SHAPES = {
+    house:[[0, 0], [4, 0], [4, 3], [2, 5], [0, 3]],
+    isoTrap:[[0, 0], [6, 0], [4, 3], [2, 3]],
+    tee:[[2, 0], [4, 0], [4, 3], [6, 3], [6, 5], [0, 5], [0, 3], [2, 3]],
+    arrow:[[0, 1], [3, 1], [3, 0], [5, 2], [3, 4], [3, 3], [0, 3]],
+    rhombus:[[3, 0], [6, 2], [3, 4], [0, 2]],
+    cross:[[2, 0], [4, 0], [4, 2], [6, 2], [6, 4], [4, 4], [4, 6], [2, 6], [2, 4], [0, 4], [0, 2], [2, 2]],
+    kite:[[2, 0], [4, 4], [2, 5], [0, 4]],
+    kiteD:[[0, 0], [3, 1], [5, 5], [1, 3]],
+    parallelo:[[0, 0], [4, 0], [6, 3], [2, 3]],
+    zee:[[0, 4], [4, 4], [4, 2], [6, 2], [6, 0], [2, 0], [2, 2], [0, 2]],
+    ell:[[0, 0], [4, 0], [4, 2], [2, 2], [2, 6], [0, 6]],
+    scalene:[[0, 0], [5, 0], [1, 4]],
+    rightTrap:[[0, 0], [5, 0], [3, 3], [0, 3]]
+  };
+  var SORT_SYM = ['house', 'isoTrap', 'tee', 'arrow', 'rhombus', 'cross', 'kite', 'kiteD'], SORT_TILT = ['arrow', 'kiteD'];
+  var SORT_NOT = ['parallelo', 'zee', 'ell', 'scalene', 'rightTrap'], SORT_TRAP = ['parallelo', 'zee'];
+  var SORT = { U:10, cardW:84, cardH:84, trayX:[52, 150, 248], trayY:[50, 144], binX:[6, 152], binY:200, binW:142, binH:110, lblH:42,
+               miniW:38, miniY:268, pad:10 }, SORT_H = 318;
+  var SORT_BINS = ['yes', 'no'];
+  /* 箱子 i 裡第 n 張小圖的中心 x */
+  function sortMiniX(i, n){ return SORT.binX[i] + (SORT.binW - 3 * SORT.miniW - 12) / 2 + n * (SORT.miniW + 6) + SORT.miniW / 2; }
+  function sortSym(k){ return symAxes(SORT_SHAPES[k]).length > 0; }
+  function sortDeal(){
+    var s = [pick(SORT_TILT)], n = [pick(SORT_TRAP)];
+    shuffle(SORT_SYM).forEach(function(k){ if (s.length < 3 && s.indexOf(k) < 0) s.push(k); });
+    shuffle(SORT_NOT).forEach(function(k){ if (n.length < 3 && n.indexOf(k) < 0) n.push(k); });
+    return s.concat(n);
+  }
+  /* 上面一排（前三張）全是同一種 ＝ 看起來已經分好了 */
+  function sortInOrder(t){ var a = sortSym(t[0]); return sortSym(t[1]) === a && sortSym(t[2]) === a; }
+  function sortTray(keys){
+    var t = shuffle(keys);
+    if (sortInOrder(t)){ var x = t[2]; t[2] = t[3]; t[3] = x; }   /* 上下兩排各換一張：兩排都變成混著的 */
+    return t;
+  }
+  /* 放進箱子 bin（'yes'／'no'）：對了回 null；不對回 'isSym'（其實是線對稱）或 'notSym'（其實不是） */
+  function sortRefuse(k, bin){ var s = sortSym(k); return s === (bin === 'yes') ? null : (s ? 'isSym' : 'notSym'); }
+  /* 說明用的那一條對稱軸：有直的先說直的，再來是橫的，最後才是斜的 */
+  function sortAxis(k){
+    var ax = symAxes(SORT_SHAPES[k]);
+    if (!ax.length) return null;
+    var best = ax.filter(function(d){ return axisKind(d) === 'v'; })[0];
+    if (best === undefined) best = ax.filter(function(d){ return axisKind(d) === 'h'; })[0];
+    if (best === undefined) best = ax[0];
+    return best;
+  }
+  /* 卡片上的圖：一格 SORT.U px，整個圖形放在卡片正中間（所有卡片同一個比例） */
+  function sortCardPts(k, W, H, U){
+    var pts = SORT_SHAPES[k].map(P2), xs = pts.map(function(p){ return p.x; }), ys = pts.map(function(p){ return p.y; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    var ox = W / 2 - (x0 + x1) / 2 * U, oy = H / 2 + (y0 + y1) / 2 * U;
+    return pts.map(function(p){ return { x:ox + p.x * U, y:oy - p.y * U }; });
+  }
+  /* 卡片上的對稱軸（放錯之後畫出來給他看）：通過中心、方向 deg，畫到卡片邊 */
+  function sortAxisSeg(k, W, H, U){
+    var deg = sortAxis(k);
+    if (deg === null) return null;
+    var pts = sortCardPts(k, W, H, U), c = vcenter(pts), r = deg * Math.PI / 180;
+    var ux = Math.cos(r), uy = -Math.sin(r), m = 4;
+    /* 兩頭都畫到離卡片邊 m px 為止（中心不一定在卡片正中間：風箏形的頂點中心偏下） */
+    var lim = function(c0, u, size){ return Math.abs(u) < 1e-9 ? Infinity : Math.min((u > 0 ? size - m - c0 : c0 - m) / Math.abs(u), (u > 0 ? c0 - m : size - m - c0) / Math.abs(u)); };
+    var L = Math.min(lim(c.x, ux, W), lim(c.y, uy, H));
+    return { a:{ x:c.x - ux * L, y:c.y - uy * L }, b:{ x:c.x + ux * L, y:c.y + uy * L } };
   }
 
-  function iconSVG(type){
-    return '<svg viewBox="0 0 100 100" aria-hidden="true">' + iconBody(type) + '</svg>';
+  /* ---- 第 2 關：摺一摺 —— 圖形以頂點的中心為原點（單位座標），dirs 是幾條通過中心的虛線的方向（從中心指出去的一個點）。
+         點一條就沿著它摺過去：每一個頂點都落在另一個頂點上才是對稱軸。對稱軸的條數由 symAxes() 算，不寫死。
+         正方形、正六邊形的每一條虛線都是對稱軸；一般平行四邊形一條都不是。 ---- */
+  var R3 = Math.sqrt(3);
+  var FOLD = { U:30, cx:150, cy:150, ext:16, tol:18, rc:22 }, FOLD_H = 300;
+  var GAME_FOLD = [
+    { k:'rect', pts:[[-3, -1.5], [3, -1.5], [3, 1.5], [-3, 1.5]], dirs:[[1, 0], [0, 1], [3, 1.5], [3, -1.5]] },
+    { k:'square', pts:[[-2, -2], [2, -2], [2, 2], [-2, 2]], dirs:[[1, 0], [0, 1], [1, 1], [1, -1]] },
+    { k:'equi', pts:[[0, 2 * R3], [3, -R3], [-3, -R3]], dirs:[[0, 1], [3, -R3], [-3, -R3], [1, 0]] },
+    { k:'iso', pts:[[-2, -5 / 3], [2, -5 / 3], [0, 10 / 3]], dirs:[[0, 1], [2, -5 / 3], [-2, -5 / 3], [1, 0]] },
+    { k:'rhombus', pts:[[3, 0], [0, 2], [-3, 0], [0, -2]], dirs:[[1, 0], [0, 1], [1.5, 1], [1.5, -1]] },
+    { k:'parallelo', pts:[[-4, -1.5], [2, -1.5], [4, 1.5], [-2, 1.5]], dirs:[[1, 0], [0, 1], [4, 1.5], [2, -1.5]] },
+    { k:'hexagon', pts:[[3, 0], [1.5, 1.5 * R3], [-1.5, 1.5 * R3], [-3, 0], [-1.5, -1.5 * R3], [1.5, -1.5 * R3]],
+      dirs:[[1, 0], [R3, 1], [1, R3], [0, 1], [-1, R3], [-R3, 1]] },
+    { k:'isoTrap', pts:[[-3, -1.5], [3, -1.5], [1.5, 1.5], [-1.5, 1.5]], dirs:[[0, 1], [1, 0], [1, 1], [1, -1]] }
+  ];
+  function foldPt(x, y){ return { x:FOLD.cx + x * FOLD.U, y:FOLD.cy - y * FOLD.U }; }
+  /* 第 i 條虛線（畫板座標）：從中心往兩邊各畫到「最遠的頂點再多 ext」 */
+  function foldSeg(e, i){
+    var R = 0;
+    e.pts.forEach(function(p){ R = Math.max(R, Math.hypot(p[0], p[1])); });
+    R = R * FOLD.U + FOLD.ext;
+    var v = e.dirs[i], n = Math.hypot(v[0], v[1]), ux = v[0] / n, uy = -v[1] / n;
+    return { a:{ x:FOLD.cx - ux * R, y:FOLD.cy - uy * R }, b:{ x:FOLD.cx + ux * R, y:FOLD.cy + uy * R }, R:R };
   }
+  function foldIsAxis(e, i){ return isAxis(e.pts, [0, 0], e.dirs[i]); }
+  function foldAxes(e){ return symAxes(e.pts).length; }
+  /* 摺過去的樣子（畫板座標）：每一個頂點對第 i 條線鏡射 */
+  function foldGhost(e, i){ return e.pts.map(function(p){ var q = reflectPt(p, [0, 0], e.dirs[i]); return foldPt(q.x, q.y); }); }
+  /* 點在哪一條虛線上：離中心太近（rc 以內，每一條線都經過那裡）不算；其他地方挑垂直距離最近的那一條（每一條線自己一塊），
+     而且要在 tol 以內、在那一條線畫出來的長度裡。 */
+  function foldPick(e, pt){
+    var dx = pt.x - FOLD.cx, dy = pt.y - FOLD.cy;
+    if (Math.hypot(dx, dy) < FOLD.rc) return null;
+    var best = null, bd = Infinity;
+    e.dirs.forEach(function(v, i){
+      var s = foldSeg(e, i), n = Math.hypot(v[0], v[1]), ux = v[0] / n, uy = -v[1] / n;
+      var along = dx * ux + dy * uy, perp = Math.abs(dx * uy - dy * ux);
+      if (Math.abs(along) > s.R + 4) return;
+      if (perp < bd){ bd = perp; best = i; }
+    });
+    return bd <= FOLD.tol ? best : null;
+  }
+  /* 按「找完了」：找到的條數 ＝ 對稱軸的條數才收 */
+  function foldDone(e, found){ return found === foldAxes(e) ? null : 'more'; }
+
+  /* ---- 第 3 關：找對稱點 —— 點陣一格 MIR.U px。ax 'v'：摺線是直的（x = 0），點陣 x = −3～3、y = 0～4，A、B、C 在左邊；
+         ax 'h'：摺線是橫的（y = 0），點陣 x = 0～4、y = −3～3，A、B、C 在上面。 ---- */
+  var MIR = { U:46, pinW:46, pinY:{ v:288, h:350 }, pinX:[80, 150, 220], lblD:22 }, MIR_H = { v:322, h:380 };
+  var GAME_MIRROR = [
+    { ax:'v', pts:[[-3, 4], [-1, 2], [-2, 0]] }, { ax:'v', pts:[[-1, 4], [-3, 3], [-2, 0]] },
+    { ax:'v', pts:[[-2, 4], [-3, 1], [-1, 0]] }, { ax:'v', pts:[[-3, 0], [-1, 1], [-2, 4]] },
+    { ax:'h', pts:[[0, 3], [2, 1], [4, 2]] }, { ax:'h', pts:[[1, 1], [4, 3], [0, 2]] }, { ax:'h', pts:[[3, 3], [0, 1], [4, 1]] }
+  ];
+  var MIR_LETTERS = ['A', 'B', 'C'];
+  function mirRange(ax){ return ax === 'v' ? { x0:-3, x1:3, y0:0, y1:4 } : { x0:0, x1:4, y0:-3, y1:3 }; }
+  function mirPt(ax, x, y){ return ax === 'v' ? { x:150 + x * MIR.U, y:32 + (4 - y) * MIR.U } : { x:58 + x * MIR.U, y:20 + (3 - y) * MIR.U }; }
+  function mirOf(ax, p){ return ax === 'v' ? [-p[0], p[1]] : [p[0], -p[1]]; }
+  /* 離摺線幾格（正：A、B、C 那一邊；負：另一邊） */
+  function mirSide(ax, p){ return ax === 'v' ? -p[0] : p[1]; }
+  /* 畫板上的一點落在哪一個點上：點陣（四邊各多半格）之內一律吸到最近的那一點（每一點自己一格）；外面回 null */
+  function mirPick(ax, pt){
+    var R = mirRange(ax), o = mirPt(ax, R.x0, R.y1), U = MIR.U;
+    var fx = (pt.x - o.x) / U, fy = (pt.y - o.y) / U;
+    if (fx < -0.5 || fx > R.x1 - R.x0 + 0.5 || fy < -0.5 || fy > R.y1 - R.y0 + 0.5) return null;
+    var cx = Math.max(0, Math.min(R.x1 - R.x0, Math.round(fx))), cy = Math.max(0, Math.min(R.y1 - R.y0, Math.round(fy)));
+    return [R.x0 + cx, R.y1 - cy];
+  }
+  /* 把 A′（i ＝ 0）放到點 q：對了回 null；不對回 { why:'side'|'row'|'dist', d:該離幾格, got:放的離幾格 } */
+  function mirRefuse(e, i, q){
+    var p = e.pts[i], d = mirSide(e.ax, p), got = -mirSide(e.ax, q);
+    if (got <= 0) return { why:'side', d:d, got:Math.abs(got) };
+    var same = e.ax === 'v' ? q[1] === p[1] : q[0] === p[0];
+    if (!same) return { why:'row', d:d, got:got };
+    if (got !== d) return { why:'dist', d:d, got:got };
+    return null;
+  }
+  /* A、B、C 的字母放哪裡：繞著那一點試八個方向，離三角形的每一條邊、摺線、別的點都要夠遠 */
+  function mirLabels(e){
+    var P = e.pts.map(function(p){ return mirPt(e.ax, p[0], p[1]); });
+    var strokes = [[P[0], P[1]], [P[1], P[2]], [P[2], P[0]]], R = mirRange(e.ax);
+    var A0 = e.ax === 'v' ? mirPt('v', 0, R.y0) : mirPt('h', R.x0, 0), A1 = e.ax === 'v' ? mirPt('v', 0, R.y1) : mirPt('h', R.x1, 0);
+    var dirs = [], grid = [];
+    [MIR.lblD, MIR.U / 2, MIR.lblD + 8].forEach(function(r){ [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [-1, 0], [0, 1], [1, 0]].forEach(function(v){ dirs.push([v[0], v[1], r]); }); });
+    for (var gx = R.x0; gx <= R.x1; gx++) for (var gy = R.y0; gy <= R.y1; gy++) grid.push(mirPt(e.ax, gx, gy));
+    return P.map(function(c, i){
+      for (var k = 0; k < dirs.length; k++){
+        var n = Math.hypot(dirs[k][0], dirs[k][1]), x = c.x + dirs[k][0] / n * dirs[k][2], y = c.y + dirs[k][1] / n * dirs[k][2];
+        var r = lblBox(MIR_LETTERS[i], LBL_FS, x, y);
+        if (r.x < 2 || r.x + r.w > GW - 2 || r.y < 2) continue;
+        if (strokes.some(function(s){ return rectSegDist(r, s[0], s[1]) < 2 + LBL_CLEAR; })) continue;
+        if (rectSegDist(r, A0, A1) < 1 + LBL_CLEAR) continue;
+        if (P.some(function(q){ return ptRectDist(q, r) < 6 + LBL_CLEAR; })) continue;
+        if (grid.some(function(q){ return ptRectDist(q, r) < 3.5 + LBL_CLEAR; })) continue;   /* 點陣的小點也不可以碰到字 */
+        return { x:x, y:y };
+      }
+      return null;
+    });
+  }
+
+  /* ---- 第 4 關：對稱邊 —— 線對稱的多邊形（單位：公分；ax 'v' 對稱軸是 x = 0，'h' 是 y = 0），每一條邊 i 從 pts[i] 到 pts[i + 1]。
+         give：標出長度的邊；ask：空格（要放的數 ＝ 它的對稱邊的長度）；cards：數字卡（拿不完）。
+         梯形的上下底被對稱軸分成兩半，各自當一條邊（左半段和右半段是一組對稱邊）。
+         版面（比例、標籤與空格的位置）由 sidesScene() 算：每一個標籤、空格放在那一條邊外側的中間。 ---- */
+  var GAME_SIDES = [
+    { ax:'v', pts:[[-3, 0], [3, 0], [3, 4], [0, 8], [-3, 4]], give:[0, 4, 2], ask:[1, 3], cards:[4, 5, 6] },
+    { ax:'v', pts:[[-4, 0], [4, 0], [4, 3], [0, 6], [-4, 3]], give:[0, 1, 3], ask:[4, 2], cards:[3, 5, 8] },
+    { ax:'v', pts:[[-6, 0], [0, 0], [6, 0], [3, 4], [0, 4], [-3, 4]], give:[0, 3, 5], ask:[1, 4, 2], cards:[3, 5, 6] },
+    { ax:'h', pts:[[0, -1], [6, -1], [6, -3], [10, 0], [6, 3], [6, 1], [0, 1]], give:[5, 1, 2], ask:[0, 3], cards:[2, 5, 6] },
+    { ax:'h', pts:[[0, 3], [0, -3], [4, -3], [8, 0], [4, 3]], give:[0, 4, 2], ask:[1, 3], cards:[4, 5, 6] }
+  ];
+  var SIDES = { top:24, areaW:190, areaH:196, maxS:28, slotW:46, slotH:40, gap:6, pad:10, tol:14, cardW:58, cardH:48, cardY:286, cardX:[80, 150, 220] }, SIDES_H = 322;
+  function sidesLen(e, i){ var a = e.pts[i], b = e.pts[(i + 1) % e.pts.length]; return Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) * 1e9) / 1e9; }
+  /* 邊 i 對摺過去落在哪一條邊上（兩個端點對到兩個端點） */
+  function sidesPartner(e, i){
+    var n = e.pts.length, a = e.pts[i], b = e.pts[(i + 1) % n];
+    var fa = e.ax === 'v' ? [-a[0], a[1]] : [a[0], -a[1]], fb = e.ax === 'v' ? [-b[0], b[1]] : [b[0], -b[1]];
+    var same = function(p, q){ return Math.abs(p[0] - q[0]) < 1e-9 && Math.abs(p[1] - q[1]) < 1e-9; };
+    for (var j = 0; j < n; j++){
+      var c = e.pts[j], d = e.pts[(j + 1) % n];
+      if ((same(fa, c) && same(fb, d)) || (same(fa, d) && same(fb, c))) return j;
+    }
+    return -1;
+  }
+  /* 放 v 到空格（邊 i）：對了回 null；不對回它的對稱邊上標的那個數 */
+  function sidesRefuse(e, i, v){ var p = sidesPartner(e, i); return v === sidesLen(e, p) ? null : sidesLen(e, p); }
+  function sidesScene(e){
+    var xs = e.pts.map(function(p){ return p[0]; }), ys = e.pts.map(function(p){ return p[1]; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    var s = Math.min(SIDES.maxS, Math.floor(Math.min(SIDES.areaW / (x1 - x0), SIDES.areaH / (y1 - y0))));
+    var ox = GW / 2 - (x0 + x1) / 2 * s, oy = SIDES.top + SIDES.areaH / 2 + (y0 + y1) / 2 * s;
+    var px = function(p){ return { x:ox + p[0] * s, y:oy - p[1] * s }; };
+    var P = e.pts.map(px), n = P.length;
+    /* 繞的方向：畫板座標（y 往下）裡鞋帶公式是正的 ＝ 螢幕上順時針，外側在每一條邊的左手邊 —— 反過來就翻面 */
+    var A2 = 0;
+    for (var i = 0; i < n; i++){ var p = P[i], q = P[(i + 1) % n]; A2 += p.x * q.y - q.x * p.y; }
+    var sg = A2 > 0 ? 1 : -1;
+    var place = function(i, w, h){
+      var a = P[i], b = P[(i + 1) % n], dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy);
+      var nx = sg * dy / L, ny = -sg * dx / L, m = { x:(a.x + b.x) / 2, y:(a.y + b.y) / 2 };
+      var d = Math.abs(nx) * w / 2 + Math.abs(ny) * h / 2 + SIDES.gap;
+      return { x:m.x + nx * d, y:m.y + ny * d, a:a, b:b };
+    };
+    var axis = e.ax === 'v' ? { a:px([0, y0]), b:px([0, y1]) } : { a:px([x0, 0]), b:px([x1, 0]) };
+    if (e.ax === 'v'){ axis.a.y += 18; axis.b.y -= 18; } else { axis.a.x -= 18; axis.b.x += 18; }
+    /* 一端碰到對稱軸的邊（梯形上下底的半段）：標籤或空格太靠近對稱軸就沿著那一條邊往外推，離對稱軸至少 gap */
+    var offAxis = function(c, w, h){
+      var d = e.ax === 'v' ? (c.x - axis.a.x) : (c.y - axis.a.y), half = e.ax === 'v' ? w / 2 : h / 2, need = half + SIDES.gap + 1.5;
+      if (Math.abs(d) >= need) return c;
+      var dx = c.b.x - c.a.x, dy = c.b.y - c.a.y, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+      var along = e.ax === 'v' ? ux : uy;
+      if (Math.abs(along) < 1e-9) return c;
+      var sgn = (d === 0 ? 1 : Math.sign(d)), t = (sgn * need - d) / along;
+      return { x:c.x + ux * t, y:c.y + uy * t, a:c.a, b:c.b };
+    };
+    var labels = e.give.map(function(i){
+      var v = sidesLen(e, i), r = lblBox(v, LBL_FS, 0, 0), c = place(i, r.w + 2 * LBL_CLEAR, r.h + 2 * LBL_CLEAR);
+      /* 被對稱軸切成兩半的那一條邊（自己對自己）：標籤往旁邊挪，不可以壓在對稱軸上 */
+      if (sidesPartner(e, i) === i){
+        var ux = (c.b.x - c.a.x) / Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y), uy = (c.b.y - c.a.y) / Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y);
+        var sh = Math.abs(ux) * r.w / 2 + Math.abs(uy) * r.h / 2 + 2 + LBL_CLEAR + 2;
+        c = { x:c.x + Math.abs(ux) * sh, y:c.y + Math.abs(uy) * sh };
+      }
+      else c = offAxis(c, r.w + 2 * LBL_CLEAR, r.h + 2 * LBL_CLEAR);
+      return { i:i, v:v, at:{ x:c.x, y:c.y } };
+    });
+    var slots = e.ask.map(function(i){ var c = offAxis(place(i, SIDES.slotW, SIDES.slotH), SIDES.slotW, SIDES.slotH); return { i:i, cx:c.x, cy:c.y, a:c.a, b:c.b }; });
+    return { s:s, P:P, axis:axis, labels:labels, slots:slots };
+  }
+  /* 放到哪一個空格：放開的點離「空格的方框」pad 以內、或離「那一條邊」tol 以內。
+     標了數字的邊與它的數字也一起比：最近的是它們（不是空格）就什麼都不做 —— 不可以跳過它、改放進旁邊的空格。 */
+  function sidesPick(sc, pt){
+    var best = null, bd = Infinity;
+    sc.slots.forEach(function(sl, j){
+      var box = { x:sl.cx - SIDES.slotW / 2, y:sl.cy - SIDES.slotH / 2, w:SIDES.slotW, h:SIDES.slotH };
+      var d = Math.min(ptRectDist(pt, box) <= SIDES.pad ? ptRectDist(pt, box) : Infinity, segDist(pt, sl.a, sl.b) <= SIDES.tol ? segDist(pt, sl.a, sl.b) : Infinity);
+      if (d < bd){ bd = d; best = j; }
+    });
+    if (best === null) return null;
+    var n = sc.P.length, blocked = false;
+    sc.labels.forEach(function(L){
+      var r = lblBox(L.v, LBL_FS, L.at.x, L.at.y), a = sc.P[L.i], b = sc.P[(L.i + 1) % n];
+      if (Math.min(ptRectDist(pt, r), segDist(pt, a, b)) < bd) blocked = true;
+    });
+    return blocked ? null : best;
+  }
+
+  /* ---- 第 5 關：剪紙展開 —— 方格一格 PAINT.U px。ax 'v'：摺線是直的，左邊 3 直行、右邊 3 直行、5 橫列；
+         ax 'h'：摺線是橫的，上面 3 橫列、下面 3 橫列、5 直行。cut 是剪掉的格子 [離摺線幾格 d（1～3）, 第幾列／第幾行 k（0 起，從上／從左數）]。
+         照抄過去（不是翻過去）的樣子一定和答案不一樣：每一個圖案都不是「自己左右翻一下還是自己」（設定檔守住）。 ---- */
+  var PAINT = { U:46, axis:{ v:150, h:146 } }, PAINT_H = { v:254, h:300 };
+  var GAME_PAINT = [
+    { ax:'v', cut:[[1, 0], [1, 1], [2, 1], [1, 2], [2, 2], [3, 2], [1, 3], [1, 4]] },
+    { ax:'v', cut:[[2, 0], [3, 0], [1, 1], [2, 1], [1, 2], [1, 3], [2, 3], [3, 4]] },
+    { ax:'v', cut:[[3, 0], [2, 1], [3, 1], [1, 2], [2, 2], [2, 3], [3, 3], [3, 4]] },
+    { ax:'v', cut:[[1, 0], [2, 0], [3, 1], [1, 2], [2, 2], [3, 3], [1, 4], [2, 4]] },
+    { ax:'h', cut:[[1, 0], [1, 1], [2, 1], [1, 2], [2, 2], [3, 2], [1, 3], [3, 4]] },
+    { ax:'h', cut:[[3, 0], [2, 1], [1, 2], [2, 2], [3, 2], [1, 4], [2, 4], [2, 3]] }
+  ];
+  /* 一格的方框（畫板座標）。side 0 ＝ 剪的那一半（左／上），1 ＝ 要塗的那一半（右／下） */
+  function paintCell(ax, side, d, k){
+    var U = PAINT.U;
+    if (ax === 'v'){ var x = side === 0 ? PAINT.axis.v - d * U : PAINT.axis.v + (d - 1) * U; return { x:x, y:8 + k * U, w:U, h:U }; }
+    var y = side === 0 ? PAINT.axis.h - d * U : PAINT.axis.h + (d - 1) * U;
+    return { x:35 + k * U, y:y, w:U, h:U };
+  }
+  /* 點在要塗的那一半的哪一格：回 [d, k] 或 null（剪的那一半、摺線外面都不算） */
+  function paintPick(ax, pt){
+    var U = PAINT.U, d, k;
+    if (ax === 'v'){ d = Math.floor((pt.x - PAINT.axis.v) / U) + 1; k = Math.floor((pt.y - 8) / U); }
+    else { d = Math.floor((pt.y - PAINT.axis.h) / U) + 1; k = Math.floor((pt.x - 35) / U); }
+    return (d >= 1 && d <= 3 && k >= 0 && k <= 4) ? [d, k] : null;
+  }
+  function paintKey(c){ return c[0] + ',' + c[1]; }
+  /* 打開來看：塗的（painted：'d,k' → true）和剪的一樣 ＝ null；不一樣回第一個不對的格子 { kind:'miss'|'extra', d, k }，
+     由上到下（直的摺線）／由左到右（橫的摺線）一列一列找，同一列由靠摺線的那一格找起 */
+  function paintCheck(e, painted){
+    var cut = {};
+    e.cut.forEach(function(c){ cut[paintKey(c)] = true; });
+    for (var k = 0; k <= 4; k++) for (var d = 1; d <= 3; d++){
+      var key = paintKey([d, k]), a = !!cut[key], b = !!painted[key];
+      if (a && !b) return { kind:'miss', d:d, k:k };
+      if (b && !a) return { kind:'extra', d:d, k:k };
+    }
+    return null;
+  }
+  /* 第 k 列（行）剪了離摺線幾格的格子（第二層提示用） */
+  function paintRow(e, k){ return e.cut.filter(function(c){ return c[1] === k; }).map(function(c){ return c[0]; }).sort(); }
 
   /* ---------- axis-demo shapes (larger, with symmetry-axis lines) ---------- */
   var AXIS_TYPES = ['iso','equi','square','rect','circle','parallelo'];
@@ -333,10 +727,12 @@
         axes  = '<line x1="100" y1="18" x2="100" y2="182" stroke="' + AX + '" stroke-width="3" stroke-dasharray="6 5"/>';
         break;
       case 'equi':
-        shape = '<polygon points="100,25 176,160 24,160" fill="#E3F4EB" stroke="' + SH + '" stroke-width="4"/>';
-        axes  = '<line x1="100" y1="25" x2="100" y2="160" stroke="' + AX + '" stroke-width="3" stroke-dasharray="6 5"/>' +
-                '<line x1="176" y1="160" x2="62" y2="92.5" stroke="' + AX + '" stroke-width="3" stroke-dasharray="6 5"/>' +
-                '<line x1="24" y1="160" x2="138" y2="92.5" stroke="' + AX + '" stroke-width="3" stroke-dasharray="6 5"/>';
+        /* 正三角形：邊長 152，頂點的 y ＝ 160 − 76√3 ≈ 28.364139（以前畫在 y = 25，兩條斜邊比底邊長 2%，斜的那兩條「對稱軸」其實不是）；
+           斜的兩條軸通到對邊的中點，y ＝ (28.364139 + 160) ÷ 2 ≈ 94.18207 */
+        shape = '<polygon points="100,28.364139 176,160 24,160" fill="#E3F4EB" stroke="' + SH + '" stroke-width="4"/>';
+        axes  = '<line x1="100" y1="28.364139" x2="100" y2="160" stroke="' + AX + '" stroke-width="3" stroke-dasharray="6 5"/>' +
+                '<line x1="176" y1="160" x2="62" y2="94.18207" stroke="' + AX + '" stroke-width="3" stroke-dasharray="6 5"/>' +
+                '<line x1="24" y1="160" x2="138" y2="94.18207" stroke="' + AX + '" stroke-width="3" stroke-dasharray="6 5"/>';
         break;
       case 'square':
         shape = '<rect x="50" y="50" width="100" height="100" fill="#E3F4EB" stroke="' + SH + '" stroke-width="4"/>';
@@ -464,31 +860,73 @@
           opts:['長方形的對角線是對稱軸', '長方形只有兩條中線是對稱軸，對角線不是', '長方形有 4 條對稱軸，跟正方形一樣', '長方形沒有對稱軸'], ans:1,
           why:'長方形對摺時，只有直的和橫的兩條中線兩邊會重合；沿對角線摺，兩邊三角形大小不同，對不齊，所以長方形只有 2 條對稱軸（兩條中線），對角線不是。' }
       ],
-      s5h2: '魔鏡挑選',
-      s5lead: '點出這一關<strong>所有</strong>線對稱的圖形或文字，點錯會扣分，但不會結束。',
-      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數', gFoundLabel: '已找到',
+      s5h2: '對摺魔鏡闖關',
+      s5lead: '分一分、摺一摺、找對稱點、量對稱邊、剪紙展開 —— 五關五種玩法，每一關都在練同一件事：<strong>對摺之後，兩邊會不會完全重合</strong>。放錯會扣分，但不會結束。',
+      gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
       gNextBtn: '下一關', gRestartBtn: '重新開始',
-      gFindAll: '找出這一關所有線對稱的圖形或文字',
       gHintBtn: '💡 提示',
-      gHint1: '提示 1：想像把圖形往中間對摺，兩邊會不會完全重合？',
-      gHint2: function(n, roundHint){ return '提示 2：' + roundHint + '這一關一共有 ' + n + ' 個線對稱的圖形或文字。'; },
-      gHints: [
-        '提示：想像把圖形往中間對摺，兩邊會不會完全疊在一起？',
-        '提示：先找出摺線在哪裡，再看看兩邊是不是一樣。',
-        '提示：中文字也可以對摺看看，左右兩邊的筆畫一樣嗎？',
-        '提示：愛心和正方形都藏著一條摺線，仔細找找看。',
-        '提示：平行四邊形歪一邊，摺起來對不齊，是這一關的陷阱！'
-      ],
-      itemNames: {
-        square:'正方形', circle:'圓', parallelo:'平行四邊形', isoTri:'等腰三角形', lightning:'閃電',
-        heart:'愛心', letterF:'字母 F', letterA:'字母 A', equiTri:'正三角形', rect:'長方形',
-        rhombus:'菱形', star5:'五角星', letterN:'字母 N', letterR:'字母 R', letterL:'字母 L',
-        letterO:'字母 O', charWang:'「王」字', charTian:'「田」字', charZhong:'「中」字',
-        letterK:'字母 K', letterW:'字母 W', letterH:'字母 H', letterM:'字母 M', letterT:'字母 T'
+      gAsks: {
+        sort: '把每一張圖拖進對的箱子（也可以先點圖、再點箱子）：它是不是線對稱圖形？',
+        fold: '點一條虛線，就沿著它摺過去。找出所有的對稱軸，再按「找完了」。',
+        mirror: '把 A′、B′、C′ 放到 A、B、C 的對稱點上（拖過去，或先點、再點那一點）。',
+        sides: '數字卡拿不完：放進空格，空格旁邊那一邊有多長？（單位：公分）',
+        paint: '紙沿著虛線對摺，橘色的格子剪掉了。打開來，另一半哪些格子也剪掉了？點成藍色（再點一次取消），再按「打開來看」。橫列從上面數、直行從左邊數。'
       },
-      gHit: function(name){ return name + ' —— 對摺後兩邊完全重合，是線對稱！ +10 分'; },
-      gMiss: function(name){ return name + ' —— 對摺後兩邊對不齊，不是線對稱。扣 5 分。'; },
-      gClear: '過關！這一關的線對稱圖形都找到了，按「下一關」繼續。 +20 分',
+      gHints: {
+        sort: '提示 1：想像沿著一條線對摺 —— 直的、橫的、斜的都要想 —— 兩邊會完全疊在一起嗎？',
+        fold: '提示 1：摺過去的橘色虛線和原來的圖完全疊在一起，那條線才是對稱軸。每一條都可以試。',
+        mirror: '提示 1：對稱點在摺線的另一邊，離摺線一樣遠；兩點連起來的線和摺線垂直。',
+        sides: '提示 1：對摺之後，空格旁邊那一邊會疊在哪一邊上？對稱邊一樣長。',
+        paint: '提示 1：剪掉的每一格，對摺後會落在另一半離摺線一樣遠的那一格 —— 是翻過去，不是照抄過去。'
+      },
+      gNames: {
+        house: '房子形', isoTrap: '等腰梯形', tee: 'T 字形', arrow: '箭頭形', rhombus: '菱形', cross: '十字形', kite: '風箏形', kiteD: '斜放的風箏形',
+        parallelo: '平行四邊形', zee: 'Z 字形', ell: 'L 字形', scalene: '不等邊三角形', rightTrap: '直角梯形',
+        rect: '長方形', square: '正方形', equi: '正三角形', iso: '等腰三角形', hexagon: '正六邊形'
+      },
+      gBinYes: '✓ 線對稱', gBinNo: '✗ 不是線對稱',
+      gSortNow: function(k, n){ return '分好 ' + k + ' / ' + n + ' 張'; },
+      gSortYes: function(name){ return name + ' ✓ 沿著對稱軸對摺，兩邊完全重合。'; },
+      gSortNo: function(name){ return name + ' ✓ 怎麼摺都對不齊。'; },
+      gSortBadSym: function(name, kind){ return name + '：沿著' + { v:'直的', h:'橫的', d:'斜的' }[kind] + '那一條線（卡片上的橘色虛線）對摺，兩邊完全重合 —— 它是線對稱圖形。'; },
+      gSortBadNot: function(name, half){ return name + '：不管沿著哪一條線對摺，兩邊都對不齊 —— 它沒有對稱軸。' + (half ? '轉半圈會和原來一樣，可是轉不是對摺。' : ''); },
+      gSortDone: '分好了！找得到一條摺線、讓兩邊完全重合的，才是線對稱圖形。',
+      gSort2: function(name, sym){ return '提示 2：' + name + (sym ? '找得到一條摺線讓兩邊完全重合 —— 放進「線對稱」。' : '怎麼摺都對不齊 —— 放進「不是線對稱」。'); },
+      gFoldBtn: '找完了',
+      gFoldNow: function(k){ return '已經找到 ' + k + ' 條對稱軸'; },
+      gFoldYes: '摺過去完全重合 ✓ 這一條是對稱軸。',
+      gFoldNo: '沿著這條線摺過去（橘色虛線），和原來的圖對不齊 —— 它不是對稱軸。',
+      gFoldMore: function(name, k){ return (k === 0 ? name + '有對稱軸' : name + '的對稱軸不只 ' + k + ' 條') + ' —— 每一條虛線都摺摺看。'; },
+      gFoldDone: function(name, n){ return n === 0 ? name + '怎麼摺都對不齊，一條對稱軸都沒有。' : name + '有 ' + n + ' 條對稱軸。'; },
+      gFold2: function(name, n, k){ return '提示 2：' + (n === 0 ? name + '一條對稱軸都沒有 —— 直接按「找完了」。' : name + '一共有 ' + n + ' 條對稱軸，你找到 ' + k + ' 條。'); },
+      gMirNow: function(k){ return '放好 ' + k + ' / 3 個對稱點'; },
+      gMirOk: function(Lt, dd){ return Lt + '′ ✓ 和 ' + Lt + ' 一樣，離摺線 ' + dd + ' 格。'; },
+      gMirSide: function(Lt, ax){ return Lt + ' 在摺線的' + (ax === 'v' ? '左邊' : '上面') + '，它的對稱點 ' + Lt + '′ 要在摺線的另一邊。'; },
+      gMirRow: function(Lt, ax){ return Lt + '′ 要和 ' + Lt + (ax === 'v' ? ' 在同一條橫線上' : ' 在同一條直線上') + ' —— 對稱點連起來的線，和摺線垂直。'; },
+      gMirDist: function(Lt, dd, got){ return Lt + ' 離摺線 ' + dd + ' 格，' + Lt + '′ 也要離摺線 ' + dd + ' 格（這裡離摺線 ' + got + ' 格）。'; },
+      gMirDone: '三個對稱點都和原來的點離摺線一樣遠 —— A′B′C′ 和 ABC 對摺後完全重合，對稱邊也一樣長。',
+      gMir2: function(Lt, dd, ax){ return '提示 2：' + Lt + ' 離摺線 ' + dd + ' 格 → ' + Lt + '′ 放在摺線的另一邊、和 ' + Lt + (ax === 'v' ? ' 同一條橫線上' : ' 同一條直線上') + '，也離摺線 ' + dd + ' 格。'; },
+      gSidesNow: function(k, n){ return '填好 ' + k + ' / ' + n + ' 個空格'; },
+      gSidesOk: function(v){ return v + ' 公分 ✓ 和它的對稱邊一樣長。'; },
+      gSidesBad: function(p, v){ return '這一邊對摺後會和標著 ' + p + ' 的那一邊（發亮的那一條）疊在一起 —— 對稱邊一樣長，所以不是 ' + v + '。'; },
+      gSidesDone: '每一組對稱邊都一樣長 —— 對摺後疊在一起的邊，長度一定相等。',
+      gSides2: function(p){ return '提示 2：發亮的那一邊標著 ' + p + '，它對摺後就疊在框起來的那個空格旁邊的那一邊上。'; },
+      gPaintBtn: '打開來看',
+      gPaintNow: function(k){ return '已經塗了 ' + k + ' 格'; },
+      gPaintEmpty: '先把另一半也被剪掉的格子點成藍色，再按「打開來看」。',
+      gPaintMiss: function(ax, k, dd){ return ax === 'v'
+        ? '第 ' + k + ' 橫列：左邊離摺線 ' + dd + ' 格的那一格剪掉了，右邊離摺線 ' + dd + ' 格的那一格也會被剪掉（紅框）。'
+        : '第 ' + k + ' 直行：上面離摺線 ' + dd + ' 格的那一格剪掉了，下面離摺線 ' + dd + ' 格的那一格也會被剪掉（紅框）。'; },
+      gPaintExtra: function(ax, k, dd){ return ax === 'v'
+        ? '第 ' + k + ' 橫列：右邊離摺線 ' + dd + ' 格的這一格（紅框）塗了，可是左邊離摺線 ' + dd + ' 格的那一格沒有剪 —— 打開來對不上。'
+        : '第 ' + k + ' 直行：下面離摺線 ' + dd + ' 格的這一格（紅框）塗了，可是上面離摺線 ' + dd + ' 格的那一格沒有剪 —— 打開來對不上。'; },
+      gPaintDone: '打開來，兩半完全對稱：剪掉的每一格，另一半離摺線一樣遠的那一格也剪掉了。',
+      gPaint2: function(ax, k, ds){ var w = ax === 'v' ? ['第 ' + k + ' 橫列', '左邊', '右邊'] : ['第 ' + k + ' 直行', '上面', '下面'];
+        return '提示 2：' + w[0] + (ds.length ? '：' + w[1] + '剪了離摺線 ' + ds.join('、') + ' 格的格子，' + w[2] + '也只塗離摺線 ' + ds.join('、') + ' 格的格子。' : '：' + w[1] + '一格都沒剪，' + w[2] + '也一格都不塗。'); },
+      gPaint2Done: '提示 2：全部都對好了 —— 按「打開來看」。',
+      gMinus: '（−5 分）',
+      gPts: function(n){ return '＋' + n + ' 分！'; },
+      gClear: '按「下一關」繼續。',
       gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
       ebNext: '學完之後', nextH2: '把它記牢的三個動作',
       next1: '🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
@@ -589,31 +1027,74 @@
           opts:['A rectangle’s diagonals are its axes of symmetry', 'Only the two midlines are axes; the diagonals are not', 'A rectangle has 4 axes, just like a square', 'A rectangle has no axis of symmetry'], ans:1,
           why:'Folding a rectangle, only the vertical and horizontal midlines make the two sides overlap; folding along a diagonal leaves two differently sized triangles that do not line up — so a rectangle has 2 axes (the midlines), not the diagonals.' }
       ],
-      s5h2: 'Mirror Match',
-      s5lead: 'Tap <strong>every</strong> line-symmetric shape or character this round. Wrong taps cost points, but the game never ends.',
-      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score', gFoundLabel: 'Found',
+      s5h2: 'Folding Mirror Challenge',
+      s5lead: 'Sort, fold, find symmetric points, match symmetric sides, unfold the paper — five rounds, five ways to play, all practising one thing: <strong>after folding, do the two sides overlap exactly?</strong> Mistakes cost points, but the game never ends.',
+      gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
       gNextBtn: 'Next round', gRestartBtn: 'Restart',
-      gFindAll: 'Find every line-symmetric shape or character this round',
       gHintBtn: '💡 Hint',
-      gHint1: 'Hint 1: imagine folding the shape in half — do the two sides land exactly together?',
-      gHint2: function(n, roundHint){ return 'Hint 2: ' + roundHint + 'This round has ' + n + ' line-symmetric items in total.'; },
-      gHints: [
-        'Hint: imagine folding the shape in half — do the two sides land exactly together?',
-        'Hint: find where the fold line would be, then check if both sides match.',
-        'Hint: Chinese characters can be folded too — are the left and right strokes the same?',
-        'Hint: the heart and the square each hide a fold line — look carefully.',
-        'Hint: the parallelogram leans to one side — folding it never lines up. Watch out!'
-      ],
-      itemNames: {
-        square:'Square', circle:'Circle', parallelo:'Parallelogram', isoTri:'Isosceles triangle', lightning:'Lightning bolt',
-        heart:'Heart', letterF:'Letter F', letterA:'Letter A', equiTri:'Equilateral triangle', rect:'Rectangle',
-        rhombus:'Rhombus', star5:'Five-pointed star', letterN:'Letter N', letterR:'Letter R', letterL:'Letter L',
-        letterO:'Letter O', charWang:'Character 王', charTian:'Character 田', charZhong:'Character 中',
-        letterK:'Letter K', letterW:'Letter W', letterH:'Letter H', letterM:'Letter M', letterT:'Letter T'
+      gAsks: {
+        sort: 'Drag each picture into the right box (or tap the picture, then tap the box): is it line-symmetric?',
+        fold: 'Tap a dashed line to fold along it. Find every axis of symmetry, then press "That’s all".',
+        mirror: 'Put A′, B′ and C′ on the symmetric points of A, B and C (drag them, or tap one, then tap the dot).',
+        sides: 'The number cards never run out: put one in each empty box — how long is the side next to it? (in cm)',
+        paint: 'The paper is folded along the dashed line and the orange squares are cut out. Which squares on the other half are cut out too? Tap them blue (tap again to undo), then press "Unfold". Rows count from the top, columns from the left.'
       },
-      gHit: function(name){ return name + ' — folded, the two sides overlap exactly: line-symmetric! +10 pts'; },
-      gMiss: function(name){ return name + ' — folded, the two sides do not line up: not line-symmetric. -5 pts.'; },
-      gClear: 'Round cleared! You found every line-symmetric item — press "Next round" to continue. +20 pts',
+      gHints: {
+        sort: 'Hint 1: imagine folding along a line — vertical, horizontal or slanted — do the two sides land exactly on each other?',
+        fold: 'Hint 1: a line is an axis of symmetry only when the folded copy (orange dashes) lands exactly on the shape. You can try every line.',
+        mirror: 'Hint 1: a symmetric point is on the other side of the fold, the same distance away; the line joining the two points is perpendicular to the fold.',
+        sides: 'Hint 1: after folding, which side does the side next to the box land on? Symmetric sides are the same length.',
+        paint: 'Hint 1: every cut square lands, after folding, on the square the same distance from the fold on the other half — it is flipped over, not copied across.'
+      },
+      gNames: {
+        house: 'The house shape', isoTrap: 'The isosceles trapezoid', tee: 'The T shape', arrow: 'The arrow', rhombus: 'The rhombus', cross: 'The plus sign', kite: 'The kite', kiteD: 'The tilted kite',
+        parallelo: 'The parallelogram', zee: 'The Z shape', ell: 'The L shape', scalene: 'The scalene triangle', rightTrap: 'The right trapezoid',
+        rect: 'The rectangle', square: 'The square', equi: 'The equilateral triangle', iso: 'The isosceles triangle', hexagon: 'The regular hexagon'
+      },
+      gBinYes: '✓ Line-symmetric', gBinNo: '✗ Not line-symmetric',
+      gSortNow: function(k, n){ return k + ' / ' + n + ' sorted'; },
+      gSortYes: function(name){ return name + ' ✓ folded along its axis, the two sides overlap exactly.'; },
+      gSortNo: function(name){ return name + ' ✓ no fold ever lines up.'; },
+      gSortBadSym: function(name, kind){ return name + ': fold it along the ' + { v:'vertical', h:'horizontal', d:'slanted' }[kind] + ' line (the orange dashes on the card) and the two sides overlap exactly — it is line-symmetric.'; },
+      gSortBadNot: function(name, half){ return name + ': whichever line you fold along, the two sides never line up — it has no axis of symmetry.' + (half ? ' A half turn brings it back to itself, but turning is not folding.' : ''); },
+      gSortDone: 'All sorted! A shape is line-symmetric only when some fold makes the two sides overlap exactly.',
+      gSort2: function(name, sym){ return 'Hint 2: ' + name + (sym ? ' has a fold that makes the two sides overlap — put it in “Line-symmetric”.' : ' never lines up, whichever way you fold it — put it in “Not line-symmetric”.'); },
+      gFoldBtn: 'That’s all',
+      gFoldNow: function(k){ return k + (k === 1 ? ' axis' : ' axes') + ' of symmetry found'; },
+      gFoldYes: 'The fold lands exactly on the shape ✓ this line is an axis of symmetry.',
+      gFoldNo: 'Folded along this line (orange dashes), it does not land on the shape — not an axis of symmetry.',
+      gFoldMore: function(name, k){ return (k === 0 ? name + ' does have at least one axis of symmetry' : name + ' has more than ' + k + (k === 1 ? ' axis' : ' axes') + ' of symmetry') + ' — try folding along every dashed line.'; },
+      gFoldDone: function(name, n){ return n === 0 ? name + ' never lines up, whichever way you fold it: no axis of symmetry at all.' : name + ' has ' + n + (n === 1 ? ' axis' : ' axes') + ' of symmetry.'; },
+      gFold2: function(name, n, k){ return 'Hint 2: ' + (n === 0 ? name + ' has no axis of symmetry at all — just press “That’s all”.' : name + ' has ' + n + (n === 1 ? ' axis' : ' axes') + ' of symmetry in total; you have found ' + k + '.'); },
+      gMirNow: function(k){ return k + ' / 3 symmetric points placed'; },
+      gMirOk: function(Lt, dd){ return Lt + '′ ✓ ' + dd + (dd === 1 ? ' square' : ' squares') + ' from the fold, just like ' + Lt + '.'; },
+      gMirSide: function(Lt, ax){ return Lt + ' is ' + (ax === 'v' ? 'left of' : 'above') + ' the fold, so its symmetric point ' + Lt + '′ must be on the other side.'; },
+      gMirRow: function(Lt, ax){ return Lt + '′ must be on the same ' + (ax === 'v' ? 'row' : 'column') + ' as ' + Lt + ' — the line joining symmetric points is perpendicular to the fold.'; },
+      gMirDist: function(Lt, dd, got){ return Lt + ' is ' + dd + (dd === 1 ? ' square' : ' squares') + ' from the fold, so ' + Lt + '′ must be ' + dd + (dd === 1 ? ' square' : ' squares') + ' from it too (this dot is ' + got + (got === 1 ? ' square' : ' squares') + ' away).'; },
+      gMirDone: 'All three points are the same distance from the fold as A, B and C — folded, A′B′C′ lands exactly on ABC, and symmetric sides are the same length.',
+      gMir2: function(Lt, dd, ax){ return 'Hint 2: ' + Lt + ' is ' + dd + (dd === 1 ? ' square' : ' squares') + ' from the fold → put ' + Lt + '′ on the other side, on the same ' + (ax === 'v' ? 'row' : 'column') + ' as ' + Lt + ', ' + dd + (dd === 1 ? ' square' : ' squares') + ' from the fold.'; },
+      gSidesNow: function(k, n){ return k + ' / ' + n + ' boxes filled'; },
+      gSidesOk: function(v){ return v + ' cm ✓ the same length as its symmetric side.'; },
+      gSidesBad: function(p, v){ return 'Folded, this side lands on the side marked ' + p + ' (the glowing one) — symmetric sides are the same length, so it is not ' + v + '.'; },
+      gSidesDone: 'Every pair of symmetric sides is the same length — sides that land on each other after folding are always equal.',
+      gSides2: function(p){ return 'Hint 2: the glowing side is marked ' + p + ' — folded, it lands on the side next to the highlighted box.'; },
+      gPaintBtn: 'Unfold',
+      gPaintNow: function(k){ return k + (k === 1 ? ' square' : ' squares') + ' painted'; },
+      gPaintEmpty: 'First tap the squares on the other half that are cut out too, then press "Unfold".',
+      gPaintMiss: function(ax, k, dd){ return ax === 'v'
+        ? 'Row ' + k + ': the square ' + dd + ' from the fold on the left is cut out, so the square ' + dd + ' from the fold on the right is cut out too (red frame).'
+        : 'Column ' + k + ': the square ' + dd + ' from the fold on top is cut out, so the square ' + dd + ' from the fold below is cut out too (red frame).'; },
+      gPaintExtra: function(ax, k, dd){ return ax === 'v'
+        ? 'Row ' + k + ': you painted the square ' + dd + ' from the fold on the right (red frame), but the square ' + dd + ' from the fold on the left is not cut — unfolded, they would not match.'
+        : 'Column ' + k + ': you painted the square ' + dd + ' from the fold below (red frame), but the square ' + dd + ' from the fold on top is not cut — unfolded, they would not match.'; },
+      gPaintDone: 'Unfolded, the two halves match exactly: every cut square has a cut partner the same distance from the fold.',
+      gPaint2: function(ax, k, ds){ var w = ax === 'v' ? ['Row ' + k, 'on the left', 'on the right'] : ['Column ' + k, 'on top', 'below'];
+        var one = ds.length === 1, sq = one ? 'the square ' : 'the squares ';
+        return 'Hint 2: ' + w[0] + (ds.length ? ': ' + sq + ds.join(' and ') + ' from the fold ' + w[1] + (one ? ' is' : ' are') + ' cut, so paint only ' + sq + ds.join(' and ') + ' from the fold ' + w[2] + '.' : ': nothing is cut ' + w[1] + ', so paint nothing ' + w[2] + '.'); },
+      gPaint2Done: 'Hint 2: everything matches now — press "Unfold".',
+      gMinus: '(−5 points)',
+      gPts: function(n){ return '+' + n + ' points!'; },
+      gClear: 'Press "Next round" to go on.',
       gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press "Restart" to play again.'; },
       ebNext: 'After the lesson', nextH2: 'Three moves that make it stick',
       next1: '🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
@@ -784,108 +1265,589 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：魔鏡挑選 ---------- */
-  var ROUNDS = [
-    [ {t:'square',s:true}, {t:'circle',s:true}, {t:'parallelo',s:false}, {t:'isoTri',s:true},
-      {t:'lightning',s:false}, {t:'heart',s:true}, {t:'letterF',s:false}, {t:'letterA',s:true} ],
-    [ {t:'equiTri',s:true}, {t:'rect',s:true}, {t:'rhombus',s:true}, {t:'star5',s:true},
-      {t:'letterN',s:false}, {t:'letterR',s:false}, {t:'letterL',s:false}, {t:'letterO',s:true} ],
-    [ {t:'charWang',s:true}, {t:'charTian',s:true}, {t:'charZhong',s:true}, {t:'parallelo',s:false},
-      {t:'letterF',s:false}, {t:'letterK',s:true}, {t:'letterW',s:true}, {t:'lightning',s:false} ],
-    [ {t:'square',s:true}, {t:'circle',s:true}, {t:'letterH',s:true}, {t:'letterM',s:true},
-      {t:'parallelo',s:false}, {t:'letterN',s:false}, {t:'heart',s:true}, {t:'lightning',s:false} ],
-    [ {t:'isoTri',s:true}, {t:'equiTri',s:true}, {t:'parallelo',s:false}, {t:'rect',s:true},
-      {t:'letterT',s:true}, {t:'letterL',s:false}, {t:'letterR',s:false}, {t:'lightning',s:false} ]
-  ];
-
-  var gRound = 0, gScore = 0, foundCount = 0, needCount = 0;
+  /* ===================== 小遊戲：對摺魔鏡闖關（五關五種玩法，§六之五） =====================
+     分一分（範例 1）、摺一摺（範例 2）、找對稱點（範例 3）、對稱邊（範例 3）、剪紙展開（進階題 3）。
+     計分（高年級，和其他五年級課一致）：一關沒犯錯 +20、犯過錯 +10；每一次「放錯並說明為什麼」−5，最低 0 分。
+     同一個錯再犯一次只把說明再說一次，不再扣分；放到空白處、已經放好的地方、還沒塗就按「打開來看」都不算錯。
+     每一個拖拉都可以「先點東西、再點目的地」。題庫、版面常數與「收不收」的純函式都在 i18n 前面的資料區。 */
+  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
+     它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加分；二年級 length 的 codex 抓到的）。 */
+  var gGen = 0;
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var elFound = document.getElementById('gFound');
-  var elTotal = document.getElementById('gTotal');
-  var elHint = document.getElementById('gHint');
-  var gGrid = document.getElementById('gGrid');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
-  var hintLevel = 0;
+  var elHint = document.getElementById('gHint');
+  var NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs, text){
+    var el = document.createElementNS(NS, tag);
+    for (var a in attrs) el.setAttribute(a, attrs[a]);
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function ptsAttr(list){ return list.map(function(p){ return p.x + ',' + p.y; }).join(' '); }
+
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, kept:null, onTap:null, onDrop:null, onPointTap:null, onBoardTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    /* 點畫板（不是點在積木上）：只認第一根手指，按下和放開在同一個地方才算「點一下」 */
+    board.addEventListener('pointerdown', function(e){
+      if (e.target.closest && e.target.closest('.gpiece, button')) return;
+      if (!e.isPrimary) return;   /* 第二根手指：不理 */
+      BOARD_TAP = { id:e.pointerId, x:e.clientX, y:e.clientY, far:false };
+    });
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece, button')) return;
+      var t = BOARD_TAP, pt = B.toBoard(e);
+      if (t && t.id === e.pointerId) BOARD_TAP = null;
+      /* 「點目的地」也一樣只認第一根手指的「點一下」：別的手指放開、或滑動之後放開，都不算（不然想捲動也會被扣分） */
+      if (!t || t.id !== e.pointerId) return;
+      if (t.far || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10) return;   /* 中途離開按下去的地方超過 10px 就不是「點一下」 */
+      if (gSolved) return;
+      if (B.selected && B.onPointTap){ B.onPointTap(B.selected, pt); return; }
+      if (B.onBoardTap) B.onBoardTap(pt);
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」；BOARD_TAP 記「按在畫板上的第一根手指」。
+     任何地方的 pointerup／pointercancel 傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {}, BOARD_TAP = null;
+  function clearPtr(e){ delete PIECE_PTR[e.pointerId]; if (BOARD_TAP && BOARD_TAP.id === e.pointerId) BOARD_TAP = null; }
+  window.addEventListener('pointerup', clearPtr);
+  window.addEventListener('pointercancel', clearPtr);
+  window.addEventListener('pointerdown', function(e){ delete PIECE_PTR[e.pointerId]; }, true);
+  window.addEventListener('pointermove', function(e){
+    if (BOARD_TAP && BOARD_TAP.id === e.pointerId && Math.hypot(e.clientX - BOARD_TAP.x, e.clientY - BOARD_TAP.y) > 10) BOARD_TAP.far = true;
+  });
+  /* 指標離開視窗時收不到 pointermove：一離開就當成走遠了（滑鼠拖出視窗再回來放開，不算點一下） */
+  window.addEventListener('pointerout', function(e){ if (BOARD_TAP && BOARD_TAP.id === e.pointerId && !e.relatedTarget) BOARD_TAP.far = true; });
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 畫板上的一張 SVG（整塊畫板大小，不接指標）。⚠️ 不給 viewBox：頁尾「讓 SVG 的畫布容得下自己的標籤」那段只撐開
+     有 viewBox 的圖，遊戲的畫布不可以被它撐開（一撐開，畫出來的位置就和吸附、點選量的位置對不上）。 */
+  function gSvg(B){
+    var s = svgEl('svg', { 'class':'gsvg', width:B.W, height:B.H, 'aria-hidden':'true' });
+    B.el.appendChild(s);
+    return s;
+  }
+  function gText(svg, x, y, text, attrs){
+    var a = { x:x, y:lblBaseline(LBL_FS, y), 'font-size':LBL_FS, 'font-weight':800, fill:'#2B2A33', 'text-anchor':'middle' };
+    for (var k in attrs) a[k] = attrs[k];
+    var t = svgEl('text', a, String(text));
+    svg.appendChild(t);
+    return t;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫板下面的一排按鈕（摺一摺的「找完了」、剪紙的「打開來看」） */
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, cls){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = text;
+    row.appendChild(b);
+    return b;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。
+         o.snap(cx, cy)：拖的時候中心點吸到哪裡（回 null 就跟著手指）—— 吸到的位置就是放開時判斷的位置。 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.node) el.appendChild(o.node);
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {}, finger:null };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P){ B.selected = null; B.kept = null; }
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣） */
+      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      P.finger = p;
+      var nx = orig.x + dx, ny = orig.y + dy, s = o.snap ? o.snap(nx, ny) : null;
+      if (s) P.place(s.x, s.y); else P.place(nx, ny);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */
+      /* 先點選、後來又直接拖走的那一塊：拖完就不再是「選起來」的，不然下一次點目的地會多放一次 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; B.kept = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      /* 放在哪裡：卡片的中心點（§六之五：位置一律記中心點）；中心點不在任何目標上時，再看手指的位置
+         （從卡片邊緣拿起來、手指放在對的框上，也要收） */
+      var f = P.finger || { x:P.cx, y:P.cy };
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy, finger:{ x:f.x, y:f.y } }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      /* 放好之後「繼續選著」的那一張（拿不完的數字卡）：孩子照說明再點它一下，它要還是選著，不可以變成取消 */
+      if (B.selected === P && B.kept === P){ B.kept = null; return; }
+      B.kept = null;
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null; B.kept = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 拿不完的數字卡用點的放好之後繼續選著，不用每一次都重點 */
+  function keepSelected(B, P){ if (!P.locked && !gSolved){ B.selected = P; B.kept = P; P.el.classList.add('sel'); } }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（三年級 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字（四年級 chart 的驗證者抓到的） */
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「−5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 已經說明過、也扣過分的同一個錯：把說明再說一次，不再算錯、不扣分 */
+  function roundAgain(text){ gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  /* 只是提醒（還沒塗就按「打開來看」）：不算錯、不扣分 */
+  function roundNote(text){ gMsg.innerHTML = '<span class="gnote">' + text + '</span>'; }
+  /* 同一個錯（key 一樣）只扣一次分：第一次 roundMiss，之後只把說明再說一次 */
+  function missOnce(seen, key, text){
+    if (seen[key]){ roundAgain(text); return; }
+    seen[key] = true;
+    roundMiss(text);
+  }
+
+  var RENDER = {
+    /* 第 1 關：分一分（範例 1）—— 六張圖卡（3 張線對稱、3 張不是），拖進（或先點卡片、再點箱子）「✓ 線對稱」「✗ 不是線對稱」。
+       兩個箱子左右相鄰，放寬之後會重疊：挑最近的箱子。放錯彈回並說為什麼；把線對稱的圖放錯時，卡片上畫出它的對稱軸。 */
+    sort: function(d){
+      var keys = sortTray(sortDeal()), done = 0, seen = {};
+      var line = trailLine(d.gSortNow(0, keys.length));
+      var B = makeBoard(GW, SORT_H);
+      var bins = SORT_BINS.map(function(v, i){
+        addZone(B, SORT.binX[i], SORT.binY, SORT.binW, SORT.binH, 'gbin gbin-' + v);
+        addZone(B, SORT.binX[i] + 4, SORT.binY + 4, SORT.binW - 8, SORT.lblH, 'gbinlbl', v === 'yes' ? d.gBinYes : d.gBinNo);
+        return { v:v, i:i, n:0, cx:SORT.binX[i] + SORT.binW / 2, cy:SORT.binY + SORT.binH / 2, hw:SORT.binW / 2, hh:SORT.binH / 2, done:false };
+      });
+      var cards = keys.map(function(k, j){
+        var s = svgEl('svg', { width:SORT.cardW - 6, height:SORT.cardH - 6, viewBox:'0 0 ' + (SORT.cardW - 6) + ' ' + (SORT.cardH - 6), 'aria-hidden':'true', 'class':'gcardsvg' });
+        s.appendChild(svgEl('polygon', { points:ptsAttr(sortCardPts(k, SORT.cardW - 6, SORT.cardH - 6, SORT.U)), fill:'#E8F0FB', stroke:'#3B7DD8', 'stroke-width':2.5, 'stroke-linejoin':'round', 'class':'gshape' }));
+        return addPiece(B, { w:SORT.cardW, h:SORT.cardH, cx:SORT.trayX[j % 3], cy:SORT.trayY[Math.floor(j / 3)], cls:'gcard gshapecard', node:s,
+          label:d.gNames[k], data:{ k:k, svg:s } });
+      });
+      gCtx.hint2 = function(){
+        for (var j = 0; j < cards.length; j++) if (!cards[j].locked){ var k = cards[j].data.k; return d.gSort2(d.gNames[k], sortSym(k)); }
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var bin = nearestOpen(bins, pt, SORT.pad) || (pt.finger ? nearestOpen(bins, pt.finger, SORT.pad) : null);
+        if (!bin) return false;
+        var k = P.data.k, why = sortRefuse(k, bin.v), name = d.gNames[k];
+        if (why){
+          if (why === 'isSym' && !P.data.axisShown){
+            /* 放錯的線對稱圖：在卡片上畫出它的一條對稱軸 */
+            var seg = sortAxisSeg(k, SORT.cardW - 6, SORT.cardH - 6, SORT.U);
+            P.data.svg.appendChild(svgEl('line', { x1:seg.a.x, y1:seg.a.y, x2:seg.b.x, y2:seg.b.y, stroke:'#E8871E', 'stroke-width':2.5, 'stroke-dasharray':'5 4', 'class':'gcardaxis' }));
+            P.data.axisShown = true;
+          }
+          missOnce(seen, k + '>' + bin.v, why === 'isSym' ? d.gSortBadSym(name, axisKind(sortAxis(k))) : d.gSortBadNot(name, halfTurn(SORT_SHAPES[k])));
+          return false;
+        }
+        /* 放好的卡片縮成小圖，排在箱子裡（一個箱子最多 3 張） */
+        P.w = P.h = SORT.miniW; P.el.style.width = P.el.style.height = SORT.miniW + 'px';
+        P.lock(sortMiniX(bin.i, bin.n), SORT.miniY);
+        P.el.classList.add('placed');
+        bin.n++; done++;
+        line.textContent = d.gSortNow(done, cards.length);
+        if (done === cards.length) roundSolved(d.gSortDone);
+        else { roundInfo(bin.v === 'yes' ? d.gSortYes(name) : d.gSortNo(name)); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 2 關：摺一摺（範例 2）—— 圖形上畫了幾條通過中心的虛線。點一條：沿著它摺過去（橘色虛線畫出摺過去的樣子）；
+       完全重合 → 那條線變成綠色實線，算找到一條；對不齊 → 那條線變紅、說為什麼。
+       找完了按「找完了」：找到的條數不對 → 說還沒找完。同一條錯的線、同樣條數再按一次，不再扣分。
+       沒有東西可以拿，「點一條線」本身就是摺（§六之五 第 4 點的例外）。 */
+    fold: function(d){
+      var e = pick(GAME_FOLD), name = d.gNames[e.k], found = 0, seen = {}, state = e.dirs.map(function(){ return 0; });
+      var line = trailLine(d.gFoldNow(0));
+      var B = makeBoard(GW, FOLD_H);
+      var svg = gSvg(B);
+      var shape = svgEl('polygon', { points:ptsAttr(e.pts.map(function(p){ return foldPt(p[0], p[1]); })), fill:'#E3F4EB', stroke:'#2F9E69', 'stroke-width':3, 'stroke-linejoin':'round', 'class':'gfoldshape' });
+      svg.appendChild(shape);
+      var lines = e.dirs.map(function(v, i){
+        var s = foldSeg(e, i);
+        var ln = svgEl('line', { x1:s.a.x, y1:s.a.y, x2:s.b.x, y2:s.b.y, stroke:'#8A8496', 'stroke-width':2.5, 'stroke-dasharray':'6 5', 'class':'gfoldline' });
+        ln.setAttribute('data-i', i);
+        svg.appendChild(ln);
+        return ln;
+      });
+      var ghost = svgEl('polygon', { points:'', fill:'none', stroke:'#E8871E', 'stroke-width':3, 'stroke-dasharray':'7 5', 'class':'gghost' });
+      svg.appendChild(ghost);
+      var row = actionRow();
+      var doneBtn = actionBtn(row, d.gFoldBtn, '');
+      gCtx.hint2 = function(){ return d.gFold2(name, foldAxes(e), found); };
+      B.onBoardTap = function(pt){
+        var i = foldPick(e, pt);
+        if (i === null) return;
+        ghost.setAttribute('points', ptsAttr(foldGhost(e, i)));
+        ghost.setAttribute('data-i', i);
+        if (foldIsAxis(e, i)){
+          if (state[i] === 1) return;
+          state[i] = 1; found++;
+          lines[i].setAttribute('stroke', '#2F9E69'); lines[i].setAttribute('stroke-width', 3.5); lines[i].removeAttribute('stroke-dasharray');
+          lines[i].setAttribute('class', 'gfoldline gok');
+          line.textContent = d.gFoldNow(found);
+          roundInfo(d.gFoldYes);
+          refreshHint();
+          return;
+        }
+        state[i] = -1;
+        lines[i].setAttribute('stroke', '#D64545'); lines[i].setAttribute('class', 'gfoldline gbad');
+        missOnce(seen, 'line' + i, d.gFoldNo);
+      };
+      doneBtn.addEventListener('click', function(){
+        if (gSolved) return;
+        if (foldDone(e, found)){ missOnce(seen, 'done' + found, d.gFoldMore(name, found)); return; }
+        doneBtn.disabled = true;
+        ghost.setAttribute('points', '');
+        roundSolved(d.gFoldDone(name, found));
+      });
+    },
+
+    /* 第 3 關：找對稱點（範例 3）—— 點陣、一條摺線（虛線）、A、B、C 三點連成三角形。
+       把 A′、B′、C′ 拖到（或先點、再點）點陣上：拖的時候就吸到最近的那一點，放開判的就是那一點。
+       放在同一邊／摺線上、不在同一條橫線（直線）上、離摺線的格數不一樣，各有一句為什麼；放到點陣外面、已經放了別的點的地方，靜靜回去。 */
+    mirror: function(d){
+      var e = pick(GAME_MIRROR), ax = e.ax, R = mirRange(ax), placed = [], done = 0, seen = {};
+      var line = trailLine(d.gMirNow(0));
+      var B = makeBoard(GW, MIR_H[ax]);
+      var svg = gSvg(B);
+      var a0 = ax === 'v' ? mirPt(ax, 0, R.y0) : mirPt(ax, R.x0, 0), a1 = ax === 'v' ? mirPt(ax, 0, R.y1) : mirPt(ax, R.x1, 0);
+      var ext = MIR.U / 2;
+      svg.appendChild(svgEl('line', { x1:a0.x + (ax === 'h' ? -ext : 0), y1:a0.y + (ax === 'v' ? ext : 0), x2:a1.x + (ax === 'h' ? ext : 0), y2:a1.y - (ax === 'v' ? ext : 0),
+        stroke:'#E8871E', 'stroke-width':3, 'stroke-dasharray':'8 6', 'class':'gmiraxis' }));
+      for (var x = R.x0; x <= R.x1; x++) for (var y = R.y0; y <= R.y1; y++){
+        var q = mirPt(ax, x, y);
+        svg.appendChild(svgEl('circle', { cx:q.x, cy:q.y, r:3.5, fill:'#C9C4B8', 'class':'gdot', 'data-x':x, 'data-y':y }));
+      }
+      var P0 = e.pts.map(function(p){ return mirPt(ax, p[0], p[1]); });
+      svg.appendChild(svgEl('polygon', { points:ptsAttr(P0), fill:'#E8F0FB', stroke:'#3B7DD8', 'stroke-width':2.5, 'stroke-linejoin':'round', 'class':'gmirtri' }));
+      P0.forEach(function(q){ svg.appendChild(svgEl('circle', { cx:q.x, cy:q.y, r:6, fill:'#3B7DD8', 'class':'gmirpt' })); });
+      mirLabels(e).forEach(function(at, i){ gText(svg, at.x, at.y, MIR_LETTERS[i], { fill:'#3B7DD8', 'class':'gmirlbl', 'data-i':i }); });
+      var links = svgEl('g', { 'class':'gmirlinks' });
+      svg.insertBefore(links, svg.firstChild);
+      var snap = function(cx, cy){ var c = mirPick(ax, { x:cx, y:cy }); return c ? mirPt(ax, c[0], c[1]) : null; };
+      var pins = MIR_LETTERS.map(function(Lt, i){
+        return addPiece(B, { w:MIR.pinW, h:MIR.pinW, cx:MIR.pinX[i], cy:MIR.pinY[ax], cls:'gpin', text:Lt + '′', label:Lt + '′', data:{ i:i }, snap:snap });
+      });
+      gCtx.hint2 = function(){
+        for (var i = 0; i < 3; i++) if (!pins[i].locked) return d.gMir2(MIR_LETTERS[i], mirSide(ax, e.pts[i]), ax);
+        return '';
+      };
+      var taken = function(c){ return placed.some(function(p){ return p[0] === c[0] && p[1] === c[1]; }); };
+      useTapSelect(B, function(P, pt){
+        var c = mirPick(ax, pt);
+        if (!c && pt.finger) c = mirPick(ax, pt.finger);
+        if (!c || taken(c)) return false;
+        var i = P.data.i, Lt = MIR_LETTERS[i], bad = mirRefuse(e, i, c);
+        if (bad){
+          var msg = bad.why === 'side' ? d.gMirSide(Lt, ax) : (bad.why === 'row' ? d.gMirRow(Lt, ax) : d.gMirDist(Lt, bad.d, bad.got));
+          missOnce(seen, i + '@' + c[0] + ',' + c[1], msg);
+          return false;
+        }
+        var q = mirPt(ax, c[0], c[1]);
+        P.lock(q.x, q.y);
+        P.el.classList.add('placed');
+        placed.push(c);
+        links.appendChild(svgEl('line', { x1:P0[i].x, y1:P0[i].y, x2:q.x, y2:q.y, stroke:'#2F9E69', 'stroke-width':2, 'stroke-dasharray':'4 4', 'class':'gmirlink' }));
+        done++;
+        line.textContent = d.gMirNow(done);
+        if (done === 3){
+          svg.appendChild(svgEl('polygon', { points:ptsAttr(e.pts.map(function(p){ var m = mirOf(ax, p); return mirPt(ax, m[0], m[1]); })), fill:'none', stroke:'#2F9E69', 'stroke-width':2.5, 'stroke-linejoin':'round', 'class':'gmirimg' }));
+          roundSolved(d.gMirDone);
+        } else { roundInfo(d.gMirOk(Lt, mirSide(ax, e.pts[i]))); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 4 關：對稱邊（範例 3）—— 線對稱的多邊形畫了對稱軸（虛線），幾條邊標了長度，幾條邊旁邊是空格。
+       數字卡拿不完：拖到（或先點卡片、再點）空格或空格旁邊的那一條邊；那一邊和它的對稱邊一樣長才收。
+       放錯彈回並說它的對稱邊是標著幾的那一條（那一條會發亮）。放到標了數字的邊、它的數字或空白處：靜靜回去。 */
+    sides: function(d){
+      var e = pick(GAME_SIDES), sc = sidesScene(e), done = 0, seen = {};
+      var line = trailLine(d.gSidesNow(0, e.ask.length));
+      var B = makeBoard(GW, SIDES_H);
+      var svg = gSvg(B);
+      svg.appendChild(svgEl('polygon', { points:ptsAttr(sc.P), fill:'#E3F4EB', stroke:'none' }));
+      svg.appendChild(svgEl('line', { x1:sc.axis.a.x, y1:sc.axis.a.y, x2:sc.axis.b.x, y2:sc.axis.b.y, stroke:'#E8871E', 'stroke-width':2.5, 'stroke-dasharray':'8 6', 'class':'gsidesaxis' }));
+      var n = sc.P.length;
+      var edges = sc.P.map(function(a, i){
+        var b = sc.P[(i + 1) % n];
+        return svg.appendChild(svgEl('line', { x1:a.x, y1:a.y, x2:b.x, y2:b.y, stroke:'#2F9E69', 'stroke-width':3.5, 'stroke-linecap':'round', 'class':'gedge', 'data-i':i }));
+      });
+      sc.labels.forEach(function(Lb){ gText(svg, Lb.at.x, Lb.at.y, Lb.v, { 'class':'gsideslbl', 'data-i':Lb.i }); });
+      var slots = sc.slots.map(function(sl, j){
+        var z = addZone(B, sl.cx - SIDES.slotW / 2, sl.cy - SIDES.slotH / 2, SIDES.slotW, SIDES.slotH, 'gslot');
+        z.setAttribute('data-i', sl.i);
+        return { j:j, i:sl.i, z:z, done:false };
+      });
+      var cards = e.cards.map(function(v, j){
+        return addPiece(B, { w:SIDES.cardW, h:SIDES.cardH, cx:SIDES.cardX[j], cy:SIDES.cardY, cls:'gcard gnumcard', text:String(v), label:String(v), data:{ v:v } });
+      });
+      var glow = function(i, on){ edges[i].setAttribute('stroke', on ? '#E8871E' : '#2F9E69'); edges[i].setAttribute('stroke-width', on ? 6 : 3.5); };
+      /* 第二層提示說的那一格：剛剛放錯的那一格（還沒填），不然是第一個空格。那一格框起來、它的對稱邊發亮 ——
+         放錯時發亮的也是同一條邊，畫面和提示的字永遠說同一件事（驗證者 2026-10-11：以前放錯會換一條邊發亮，提示還寫著舊的數） */
+      var focus = null;
+      var hintSlot = function(){ if (focus && !focus.done) return focus; for (var j = 0; j < slots.length; j++) if (!slots[j].done) return slots[j]; return null; };
+      gCtx.hint2 = function(){
+        var sl = hintSlot();
+        slots.forEach(function(x){ x.z.classList.toggle('ghint', x === sl); });
+        if (!sl) return '';
+        var p = sidesPartner(e, sl.i);
+        edges.forEach(function(ed, i){ glow(i, i === p); });
+        return d.gSides2(sidesLen(e, p));
+      };
+      useTapSelect(B, function(P, pt){
+        var j = sidesPick(sc, pt);
+        if (j === null && pt.finger) j = sidesPick(sc, pt.finger);
+        if (j === null || slots[j].done) return false;
+        var sl = slots[j], v = P.data.v, bad = sidesRefuse(e, sl.i, v);
+        if (bad !== null){
+          focus = sl;
+          edges.forEach(function(ed, i){ glow(i, i === sidesPartner(e, sl.i)); });
+          missOnce(seen, sl.i + '=' + v, d.gSidesBad(bad, v));
+          refreshHint();
+          return false;
+        }
+        sl.done = true;
+        sl.z.textContent = v;
+        sl.z.classList.add('filled'); sl.z.classList.remove('ghint');
+        edges.forEach(function(ed, i){ glow(i, false); });
+        done++;
+        line.textContent = d.gSidesNow(done, slots.length);
+        P.home();
+        if (done === slots.length){ cards.forEach(function(c){ c.lock(c.homeX, c.homeY); }); roundSolved(d.gSidesDone); }
+        else {
+          roundInfo(d.gSidesOk(v));
+          if (pt.tap) keepSelected(B, P);
+          refreshHint();
+        }
+        return true;
+      });
+    },
+
+    /* 第 5 關：剪紙展開（進階題 3）—— 紙沿著虛線對摺，剪的那一半（左／上）橘色的格子剪掉了。
+       點要塗的那一半的格子（再點一次就取消），塗出打開之後也被剪掉的格子，再按「打開來看」：
+       一模一樣才收；不一樣 → 第一個不對的格子框紅、說為什麼。同一個塗法再按一次不再扣分；一格都沒塗就按只提醒。
+       沒有東西可以拿，「點一格」本身就是塗（§六之五 第 4 點的例外）。 */
+    paint: function(d){
+      var e = pick(GAME_PAINT), ax = e.ax, painted = {}, count = 0, seen = {};
+      var line = trailLine(d.gPaintNow(0));
+      var B = makeBoard(GW, PAINT_H[ax]);
+      var svg = gSvg(B);
+      var cutSet = {};
+      e.cut.forEach(function(c){ cutSet[paintKey(c)] = true; });
+      var cells = {};
+      [0, 1].forEach(function(side){
+        for (var k = 0; k <= 4; k++) for (var dd = 1; dd <= 3; dd++){
+          var r = paintCell(ax, side, dd, k), cut = side === 0 && cutSet[paintKey([dd, k])];
+          var el = svgEl('rect', { x:r.x, y:r.y, width:r.w, height:r.h, fill:cut ? '#E8871E' : '#FFFFFF', stroke:'#D9CBB0', 'stroke-width':1.5,
+            'class':'gcell' + (side ? ' gpaint' : ' gcut' + (cut ? ' on' : '')), 'data-d':dd, 'data-k':k });
+          svg.appendChild(el);
+          if (side) cells[paintKey([dd, k])] = el;
+        }
+      });
+      var mark = svgEl('rect', { x:0, y:0, width:0, height:0, fill:'none', stroke:'#D64545', 'stroke-width':4, 'class':'gpaintbad', visibility:'hidden' });
+      svg.appendChild(mark);
+      var A = ax === 'v' ? { x1:PAINT.axis.v, y1:2, x2:PAINT.axis.v, y2:PAINT_H.v - 2 } : { x1:28, y1:PAINT.axis.h, x2:272, y2:PAINT.axis.h };
+      svg.appendChild(svgEl('line', { x1:A.x1, y1:A.y1, x2:A.x2, y2:A.y2, stroke:'#2B2A33', 'stroke-width':3, 'stroke-dasharray':'8 6', 'class':'gpaintaxis' }));
+      var row = actionRow();
+      var openBtn = actionBtn(row, d.gPaintBtn, '');
+      gCtx.hint2 = function(){
+        var bad = paintCheck(e, painted);
+        return bad ? d.gPaint2(ax, bad.k + 1, paintRow(e, bad.k)) : d.gPaint2Done;
+      };
+      B.onBoardTap = function(pt){
+        var c = paintPick(ax, pt);
+        if (!c) return;
+        var key = paintKey(c);
+        if (painted[key]){ delete painted[key]; count--; } else { painted[key] = true; count++; }
+        cells[key].setAttribute('fill', painted[key] ? '#3B7DD8' : '#FFFFFF');
+        cells[key].setAttribute('class', 'gcell gpaint' + (painted[key] ? ' on' : ''));
+        mark.setAttribute('visibility', 'hidden');
+        line.textContent = d.gPaintNow(count);
+        refreshHint();
+      };
+      openBtn.addEventListener('click', function(){
+        if (gSolved) return;
+        if (!count){ roundNote(d.gPaintEmpty); return; }
+        var bad = paintCheck(e, painted);
+        if (bad){
+          var r = paintCell(ax, 1, bad.d, bad.k);
+          mark.setAttribute('x', r.x + 2); mark.setAttribute('y', r.y + 2); mark.setAttribute('width', r.w - 4); mark.setAttribute('height', r.h - 4);
+          mark.setAttribute('visibility', 'visible');
+          var stateKey = Object.keys(painted).sort().join(';');
+          missOnce(seen, stateKey, bad.kind === 'miss' ? d.gPaintMiss(ax, bad.k + 1, bad.d) : d.gPaintExtra(ax, bad.k + 1, bad.d));
+          return;
+        }
+        openBtn.disabled = true;
+        var ok = ax === 'v' ? { x:PAINT.axis.v - 3 * PAINT.U, y:8, width:6 * PAINT.U, height:5 * PAINT.U } : { x:35, y:PAINT.axis.h - 3 * PAINT.U, width:5 * PAINT.U, height:6 * PAINT.U };
+        ok.fill = 'none'; ok.stroke = '#2F9E69'; ok['stroke-width'] = 4; ok['class'] = 'gpaintok';
+        svg.appendChild(svgEl('rect', ok));   /* 打開來：整張紙框成綠色 */
+        roundSolved(d.gPaintDone);
+      });
+    }
+  };
 
   function startRound(){
     var d = L();
-    var items = ROUNDS[gRound];
-    foundCount = 0; needCount = 0;
-    items.forEach(function(it){ if (it.s) needCount++; });
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {}; gGen++; BOARD_TAP = null; PIECE_PTR = {};   /* 上一關沒收尾的手指不帶到下一關 */
     elRound.textContent = gRound + 1;
-    elFound.textContent = '0';
-    elTotal.textContent = needCount;
-    hintLevel = 0;
-    gHintBtn.disabled = false;
-    gHintBtn.textContent = L().gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = d.gHint1;
-    } else {
-      elHint.textContent = '';
-    }
     gMsg.textContent = '';
     gNext.disabled = true;
-    gGrid.textContent = '';
-    items.forEach(function(it){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'gicon';
-      b.innerHTML = iconSVG(it.t);
-      b.setAttribute('aria-label', d.itemNames[it.t]);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        var name = L().itemNames[it.t];
-        if (it.s){
-          b.disabled = true; b.classList.add('found');
-          foundCount++; gScore += 10;
-          elFound.textContent = foundCount;
-          gMsg.innerHTML = '<span class="yes">' + L().gHit(name) + '</span>';
-          if (foundCount === needCount){
-            gScore += 20;              /* 通關獎勵，對應 gClear／gWin 文字寫的 +20 分 */
-            elScore.textContent = gScore;
-            /* 全部找到後，剩下的（不對稱的）按鈕不能再點，否則會扣分或蓋掉通關訊息 */
-            var rest = gGrid.querySelectorAll('button');
-            for (var ri = 0; ri < rest.length; ri++){ rest[ri].disabled = true; }
-            if (gRound === ROUNDS.length - 1){
-              gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore) + '</span>';
-            } else {
-              gMsg.innerHTML = '<span class="yes">' + L().gClear + '</span>';
-              gNext.disabled = false;
-            }
-          }
-        } else {
-          b.classList.add('miss');
-          gScore = Math.max(0, gScore - 5);
-          gMsg.innerHTML = '<span class="no">' + L().gMiss(name) + '</span>';
-          setTimeout(function(){ b.classList.remove('miss'); }, 700);
-        }
-        elScore.textContent = gScore;
-      });
-      gGrid.appendChild(b);
-    });
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = d.gAsks[type];
+    gameStage.appendChild(ask);
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕），第二層跟著畫面走 */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
-
   gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2 || gSolved) return;
     hintLevel++;
-    if (hintLevel === 1){
-      elHint.textContent = L().gHint1;
-    } else {
-      elHint.textContent = L().gHint2(needCount, L().gHints[gRound] || '');
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */

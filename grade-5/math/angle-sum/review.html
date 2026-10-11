@@ -190,17 +190,22 @@
     var opts = shuffle([correct].concat(wrongs));
     return { opts: opts, ans: opts.indexOf(correct) };
   }
-  /* 確保錯誤選項都是正整數、且互不重複、也不等於正解：碰撞就 +5 直到安全 */
-  function safeWrongs(ans, raw){
-    var used = [ans];
-    var out = [];
+  /* 錯誤選項：正整數、互不重複、不等於正解，也不把題幹上印出來的數字抄回來（avoid，framework §六之三第 4 點）、
+     不超過 top（三角形、凸四邊形的一個角都小於 180°）。碰撞就 +5；往上找到 top 還不行就從原來的數往下找。
+     刻意的迷思誘答（例如「忘了除以 2」）剛好等於題幹的數字時要留著 —— 呼叫端用 avoidExcept() 把它從 avoid 拿掉。 */
+  function safeWrongs(ans, raw, avoid, top){
+    var used = [ans].concat(avoid || []), out = [], hi = top || 175;
     raw.forEach(function(v){
-      while (v <= 0 || used.indexOf(v) >= 0) v += 5;
-      used.push(v);
-      out.push(v);
+      var w = null, k;
+      for (k = v; k <= hi && w === null; k += 5) if (k >= 1 && used.indexOf(k) < 0) w = k;
+      for (k = v - 5; k >= 1 && w === null; k -= 5) if (k <= hi && used.indexOf(k) < 0) w = k;
+      if (w === null) return;   /* 找不到就少一個選項 —— simgen 的選項數檢查會響，不會默默端出垃圾 */
+      used.push(w);
+      out.push(w);
     });
     return out;
   }
+  function avoidExcept(stemNums, keep){ return stemNums.filter(function(x){ return keep.indexOf(x) < 0; }); }
 
   /* ---------- 題目產生器：每次 make() 都用新數字 ---------- */
   var GENS = [
@@ -213,7 +218,7 @@
         for (var v = 5; v <= rem - 5; v += 5) aOptions.push(v);
         var a = pick(aOptions);
         var b = rem - a;
-        var wrongs = safeWrongs(ans, [rem, ans + 10, ans - 10]);
+        var wrongs = safeWrongs(ans, [rem, ans + 10, ans - 10], [a, b]);
         var m = mixOpts(ans, wrongs);
         return { a:a, b:b, ans:ans, opts:m.opts, ansIdx:m.ans };
       },
@@ -242,7 +247,7 @@
           tries++;
         } while ((c < 40 || c > 150) && tries < 30);
         if (c < 40 || c > 150){ a = 100; b = 90; c = sum - 190; }
-        var wrongs = safeWrongs(ans, [ans - 10, ans + 10, ans + 20]);
+        var wrongs = safeWrongs(ans, [ans - 10, ans + 10, ans + 20], [a, b, c]);
         var m = mixOpts(ans, wrongs);
         return { a:a, b:b, c:c, ans:ans, opts:m.opts, ansIdx:m.ans };
       },
@@ -263,7 +268,7 @@
         var apexPool = [20,24,30,36,40,44,50,56,60,64,70,76,80,86,90,96,100,110,120,130,140];
         var apex = pickUnused(apexPool, used);
         var base = (180 - apex) / 2;
-        var wrongs = safeWrongs(base, [180 - apex, base + 5, base - 5]);
+        var wrongs = safeWrongs(base, [180 - apex, base + 5, base - 5], avoidExcept([apex], [180 - apex]));
         var m = mixOpts(base, wrongs);
         return { apex:apex, base:base, opts:m.opts, ans:m.ans };
       },
@@ -284,7 +289,7 @@
         var basePool = [20,25,30,35,40,45,50,55,60,65,70,75,80];
         var base = pickUnused(basePool, used);
         var top = 180 - 2 * base;
-        var wrongs = safeWrongs(top, [base, top + 10, top - 10]);
+        var wrongs = safeWrongs(top, [base, top + 10, top - 10], []);
         var m = mixOpts(top, wrongs);
         return { base:base, top:top, opts:m.opts, ans:m.ans };
       },
@@ -305,7 +310,7 @@
         var pool = [5,10,15,20,25,30,35,40,50,55,60,65,70,75,80,85];
         var a = pickUnused(pool, used);
         var other = 90 - a;
-        var wrongs = safeWrongs(other, [180 - a, other + 10, other - 10]);
+        var wrongs = safeWrongs(other, [180 - a, other + 10, other - 10], [a]);
         var m = mixOpts(other, wrongs);
         return { a:a, other:other, opts:m.opts, ans:m.ans };
       },
@@ -335,7 +340,7 @@
         var largest = Math.max.apply(null, angles);
         var others = angles.filter(function(x){ return x !== largest; });
         while (others.length < 2) others.push(others[0] || unit);
-        var wrongs = safeWrongs(largest, [others[0], others[1], largest + 10]);
+        var wrongs = safeWrongs(largest, [others[0], others[1], largest + 10], []);
         var m = mixOpts(largest, wrongs);
         return { r:p.r, angles:angles, largest:largest, opts:m.opts, ans:m.ans };
       },

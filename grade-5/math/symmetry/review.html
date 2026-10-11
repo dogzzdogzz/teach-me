@@ -193,9 +193,11 @@
   }
   /* 誘答選項要「彼此」也不重複：只跟正解比較的話，兩個誘答可能算出同一個數，
      孩子就只看到 3 個不同的選項（例：三角形第三角 85 度時 a+b 和 c+10 都是 95）。 */
-  function uniqWrongs(correct, cands, nextVal){
+  /* avoid：題幹上印出來的數字，先當成已經用過（§六之三第 4 點：誘答不可以把題幹的數字抄回來） */
+  function uniqWrongs(correct, cands, nextVal, avoid){
     var out = [], seen = {};
     seen[String(correct)] = true;
+    (avoid || []).forEach(function(v){ seen[String(v)] = true; });
     for (var i = 0; i < cands.length; i++){
       var v = cands[i];
       if (v == null || seen[String(v)]) continue;
@@ -276,9 +278,11 @@
           stem: lang === 'zh' ? entry.zh + '有幾條對稱軸？' : 'How many axes of symmetry does ' + article(entry.en) + ' ' + entry.en.toLowerCase() + ' have?',
           opts: d.opts.map(function(c){ return countLabel(c, lang); }),
           ans: d.ans,
+          /* 單複數與「無數條」：以前英文會印出 “has 1 axes”、“has Infinitely many axes”，中文是「有 無數條」 */
           why: lang === 'zh'
-            ? entry.zh + '有 ' + countLabel(entry.count, 'zh') + '對稱軸。'
-            : article(entry.en).charAt(0).toUpperCase() + article(entry.en).slice(1) + ' ' + entry.en.toLowerCase() + ' has ' + countLabel(entry.count, 'en') + ' axes of symmetry.'
+            ? entry.zh + '有' + (entry.count === 'inf' ? '無數條' : ' ' + entry.count + ' 條') + '對稱軸。'
+            : article(entry.en).charAt(0).toUpperCase() + article(entry.en).slice(1) + ' ' + entry.en.toLowerCase() + ' has ' +
+              (entry.count === 'inf' ? 'infinitely many axes' : entry.count + (entry.count === 1 ? ' axis' : ' axes')) + ' of symmetry.'
         };
       } },
     { id:'shapeNoAxis', cat:'symmetry',
@@ -379,12 +383,13 @@
           b = 20 + rand(120);
           c = 180 - a - b;
         } while (c < 10 || c > 140);
-        var wrongs = uniqWrongs(c, [a + b, c + 10, Math.max(1, c - 10)], function(k){ return c + 20 + k * 5; });
+        /* c ± 10 可能剛好等於題幹的 a 或 b（a = 80、b = 30、c = 70 → 80）—— 題幹的兩個角先當成用過 */
+        var wrongs = uniqWrongs(c, [a + b, c + 10, c - 10 >= 5 ? c - 10 : null], function(k){ return c + 20 + k * 5; }, [a, b]);
         var m = mixOpts(c, wrongs);
         return { a:a, b:b, c:c, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
-        var unit = lang === 'zh' ? '度' : '°';
+        var unit = lang === 'zh' ? ' 度' : '°';
         return {
           stem: lang === 'zh'
             ? '三角形的三個內角加起來是 180 度。已知兩角是 ' + d.a + ' 度和 ' + d.b + ' 度，第三個角是多少度？'
@@ -405,12 +410,13 @@
           c = 50 + rand(80);
           d4 = 360 - a - b - c;
         } while (d4 < 10 || d4 > 170);
-        var wrongs = uniqWrongs(d4, [a, d4 + 10, Math.max(1, d4 - 10)], function(k){ return d4 + 20 + k * 5; });
+        /* 以前第一個誘答就是題幹的 a（把題目的數字抄回來）。改成「三個角加起來、忘了用 360 去減」 */
+        var wrongs = uniqWrongs(d4, [a + b + c, d4 + 10, d4 - 10 >= 5 ? d4 - 10 : null], function(k){ return d4 + 20 + k * 5; }, [a, b, c]);
         var m = mixOpts(d4, wrongs);
         return { a:a, b:b, c:c, d:d4, opts:m.opts, ans:m.ans };
       },
       fmt: function(d, lang){
-        var unit = lang === 'zh' ? '度' : '°';
+        var unit = lang === 'zh' ? ' 度' : '°';
         return {
           stem: lang === 'zh'
             ? '四邊形的四個內角加起來是 360 度。已知三個角是 ' + d.a + '、' + d.b + '、' + d.c + ' 度，第四個角是多少度？'

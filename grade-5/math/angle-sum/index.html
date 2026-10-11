@@ -113,6 +113,50 @@
   .num:disabled{cursor:default}
   .gamemsg{margin-top:14px;font-size:17px;min-height:28px}
   .btnrow{display:flex;gap:12px;margin-top:16px}
+  /* ---- 小遊戲「神祕角獵人」：撕角拼直線、切一刀、轉一轉、分一分、打出來（§六之五） ---- */
+  .game .stats{justify-content:center}
+  .game .hint, .game .gamemsg{text-align:center}
+  .game .btnrow{justify-content:center;flex-wrap:wrap}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:18px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div, .gboard > button{position:absolute}
+  .gsvg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gpiece svg{pointer-events:none;overflow:visible}
+  /* 第 1 關：撕下來的角（整塊方形都拿得起來） */
+  .gwedge{background:var(--card);border-radius:14px;box-shadow:inset 0 0 0 2px var(--line)}
+  .gwedge svg{position:absolute;left:0;top:0}
+  /* 第 2 關：角的圓點；第二層提示時，要連起來的兩個角會閃 */
+  .gvdot.ghint{stroke:var(--orange);stroke-width:4;animation:gblink 1s ease-in-out infinite}
+  @keyframes gblink{50%{opacity:.35}}
+  /* 第 3 關：轉 B 角的圈圈（空心：B 邊和它的虛線從圈裡看得到） */
+  .ggrip{background:transparent;border:3px solid var(--orange);border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+  .ggrip.sel{border-radius:50%}
+  /* 第 4 關：卡片與三個箱子 */
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-weight:800;color:var(--ink);text-align:center;white-space:nowrap;line-height:1.2}
+  .gangcard{font-size:20px}
+  .gbin{border:3px dashed #C9BFA9;border-radius:14px;background:var(--card);pointer-events:none}
+  .gbinlbl{display:flex;align-items:center;justify-content:center;text-align:center;font-size:14px;line-height:1.2;font-weight:800;color:var(--ink);pointer-events:none}
+  .gplaced{display:flex;align-items:center;justify-content:center;border:2px solid var(--green);border-radius:8px;background:var(--green-soft);pointer-events:none;
+    color:var(--green);font-size:15px;line-height:1.2;font-weight:800;white-space:nowrap}
+  /* 第 5 關：輸入框 */
+  .ginput{width:96px;height:48px;font-size:22px;font-weight:800;text-align:center;border:3px solid var(--blue);border-radius:12px;background:var(--card);color:var(--ink)}
+  .ginput:disabled{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+  .gdeg{font-size:22px;font-weight:800;margin-left:-8px}
+  /* 提示／下一關／重新開始 在 375px 手機上一排放得下，不要把「下一關」折成兩行 */
+  .game .btnrow .btn{white-space:nowrap;padding:10px 16px}
+  .gaction{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
+  .gaction .btn{min-height:48px;min-width:48px}
+  .gnote{color:var(--muted)}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
   footer{
     margin-top:64px;text-align:center;background:var(--orange-soft);
     border-radius:20px;padding:24px;font-size:18px;
@@ -287,18 +331,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">神祕角獵人</h2>
-    <p class="lead" data-i18n="s6lead">看圖找出「？」代表的角度，點卡片回答。答錯扣分，答對加分，第一次就答對還有獎勵分！</p>
+    <p class="lead" data-i18n="s6lead">撕角拼直線、切一刀、轉一轉、分一分、打出來 —— 五關五種玩法，每一關都靠同一件事：<strong>三角形的內角和是 180°，四邊形是 360°</strong>。放錯會扣 5 分，同一個錯不會扣兩次 —— 慢慢想比手快重要。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <div id="gScene"></div>
-      <p class="hint"><button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px" data-i18n="gHintBtn">💡 提示</button></p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div id="gCards" class="opts"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -361,19 +404,353 @@
       '</svg>';
   }
 
-  function quadShape(txtA, txtB, txtC, txtD, aria){
-    return '<svg class="scene" viewBox="0 0 340 190" role="img" aria-label="' + aria + '">' +
-      '<polygon points="60,150 280,150 255,45 85,45" fill="none" stroke="#2B2A33" stroke-width="3"/>' +
-      '<circle cx="60" cy="150" r="24" fill="#D64545"/>' +
-      '<text x="60" y="157" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtA + '</text>' +
-      '<circle cx="280" cy="150" r="24" fill="#3B7DD8"/>' +
-      '<text x="280" y="157" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtB + '</text>' +
-      '<circle cx="255" cy="45" r="24" fill="#E8871E"/>' +
-      '<text x="255" y="52" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtC + '</text>' +
-      '<circle cx="85" cy="45" r="24" fill="#2F9E69"/>' +
-      '<text x="85" y="52" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">' + txtD + '</text>' +
-      '</svg>';
+  /* ============ 小遊戲「神祕角獵人」的題庫與版面（語言無關；tools/checks/grade-5-angle-sum.js 直接讀這一段） ============
+     五關五種玩法（§六之五），每一關對應一個範例：
+       tear  撕角拼直線（範例 1）：兩個形狀不一樣的三角形，六個撕下來的角。一個一個拖到（或點一下、再點）它自己那個三角形的直線上，
+             頂點對準黑點、接在前一個旁邊。同一個三角形的三個角剛好排成一條直線；放到另一個三角形的直線上 → 彈回、說為什麼。
+       cut   切一刀（範例 2）：照比例畫的四邊形。點一個角、再點另一個角，就是沿著這兩點切一刀。
+             連到不相鄰的角（對角線）才切得成兩個三角形；連到相鄰的角，那是本來就有的邊。
+       turn  轉一轉（範例 3）：底邊兩端，A 角固定；拖 B 那一邊的把手轉 B 角（每 5° 一格，拖的時候就吸過去），三角形跟著變。
+             C 角只畫不寫；轉到 C 剛好是目標再按「就是這個」。
+       sort  分一分（範例 4）：四張卡各寫兩個角和「?」。先算出 ?，再分進正三角形／等腰三角形／直角三角形。
+       input 打出來（範例 2、3）：照比例畫的四邊形，三個角寫著度數，第四個是「?」；在框裡打出 ? 是幾度。
+     每一關「收不收、為什麼不收」都是這裡的純函式，畫面只負責呼叫 —— 設定檔可以直接跑。
+     座標一律是畫板座標（px，y 往下），寬一律 GW；角度一律是「度」。
+     「畫面決定答案」：每一個畫出來的角都照它的度數畫（等比縮放，角度不變），設定檔用自己的 atan2 逐一量過。 */
+  var GAME_ORDER = ['tear', 'cut', 'turn', 'sort', 'input'];
+  var GW = 300;
+  var GPICK = 48;   /* 拿得起來的東西最小 48 ×（畫板縮放 ≥ 0.92 時，手機上仍 ≥ 44px） */
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：檢查工具會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
   }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  /* 托盤洗牌之後，不可以剛好已經是答案的排法（inOrder 說是）：那樣就把第一張和後面第一張「換了就不再是答案排法」的對調 */
+  function unsorted(list, inOrder){
+    var t = shuffle(list);
+    for (var i = 1; inOrder(t) && i < t.length; i++){
+      var u = t.slice(), x = u[0]; u[0] = u[i]; u[i] = x;
+      if (!inOrder(u)) t = u;
+    }
+    return t;
+  }
+
+  /* ---- 幾何工具 ---- */
+  function P2(p){ return Array.isArray(p) ? { x:p[0], y:p[1] } : p; }
+  function rad(d){ return d * Math.PI / 180; }
+  function segDist(p, a, b){
+    var dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+    var t = L2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2)) : 0;
+    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  }
+  function inPoly(p, pts){
+    var inside = false;
+    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++){
+      var a = P2(pts[i]), b = P2(pts[j]);
+      if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+    }
+    return inside;
+  }
+  function centroid(pts){
+    var x = 0, y = 0;
+    pts.forEach(function(q){ q = P2(q); x += q.x; y += q.y; });
+    return { x:x / pts.length, y:y / pts.length };
+  }
+  /* 頂點 Q 的內角：Q→P 與 Q→R 夾的角（0～180 度） */
+  function angleAt(P, Q, R){
+    var d = Math.abs(Math.atan2(P.y - Q.y, P.x - Q.x) - Math.atan2(R.y - Q.y, R.x - Q.x)) * 180 / Math.PI;
+    return d > 180 ? 360 - d : d;
+  }
+  /* 一組點等比縮放、置中放進 box —— 等比才不會改變任何一個角 */
+  function fitPts(pts, box){
+    var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    pts.forEach(function(p){ x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); });
+    var k = Math.min(box.w / (x1 - x0), box.h / (y1 - y0));
+    var ox = box.x + (box.w - (x1 - x0) * k) / 2, oy = box.y + (box.h - (y1 - y0) * k) / 2;
+    return pts.map(function(p){ return { x:ox + (p.x - x0) * k, y:oy + (p.y - y0) * k }; });
+  }
+  /* 三個角 [A, B, C] 的三角形：A 在底邊左端、B 在右端、C 在上面（正弦定理：AB 長 1 時 AC ＝ sin B ÷ sin C） */
+  function triPts(ang, box){
+    var AC = Math.sin(rad(ang[1])) / Math.sin(rad(ang[2]));
+    return fitPts([{ x:0, y:0 }, { x:1, y:0 }, { x:AC * Math.cos(rad(ang[0])), y:-AC * Math.sin(rad(ang[0])) }], box);
+  }
+  /* 四個角 [A, B, C, D, s]（A 左下、B 右下、C 右上、D 左上；s ＝ BC 的長，AB 長 1）。
+     從 A 往右走到 B；在 B 往左轉 180 − B 走 s 到 C；CD 的方向是 360 − B − C；D 在「從 A 往 A 度方向」那一條線上 —— 兩條線的交點。
+     （數學座標 y 往上算，最後翻成畫板座標）。D 不在兩條線的前方（畫不出這個四邊形）就回 null。 */
+  function quadPts(q, box){
+    var tb = rad(180 - q[1]), C = { x:1 + q[4] * Math.cos(tb), y:q[4] * Math.sin(tb) };
+    var th = rad(360 - q[1] - q[2]), u = { x:Math.cos(th), y:Math.sin(th) }, v = { x:Math.cos(rad(q[0])), y:Math.sin(rad(q[0])) };
+    var det = u.x * v.y - v.x * u.y;
+    if (Math.abs(det) < 1e-9) return null;
+    var p = (u.x * C.y - u.y * C.x) / det, t = (v.x * C.y - v.y * C.x) / det;
+    if (!(p > 0 && t > 0)) return null;
+    return fitPts([{ x:0, y:0 }, { x:1, y:0 }, C, { x:p * v.x, y:p * v.y }].map(function(m){ return { x:m.x, y:-m.y }; }), box);
+  }
+  function f1(n){ return Math.round(n * 10) / 10; }
+  /* 頂點 V 的扇形（往 U、W 兩邊張開、半徑 r）：SVG path，掃過的就是那個內角（小於 180°） */
+  function wedgePath(V, U, W, r){
+    var a = Math.atan2(U.y - V.y, U.x - V.x), b = Math.atan2(W.y - V.y, W.x - V.x);
+    var p = { x:V.x + r * Math.cos(a), y:V.y + r * Math.sin(a) }, q = { x:V.x + r * Math.cos(b), y:V.y + r * Math.sin(b) };
+    var cross = (p.x - V.x) * (q.y - V.y) - (p.y - V.y) * (q.x - V.x);
+    return 'M' + f1(V.x) + ',' + f1(V.y) + ' L' + f1(p.x) + ',' + f1(p.y) + ' A' + r + ',' + r + ' 0 0,' + (cross > 0 ? 1 : 0) + ' ' + f1(q.x) + ',' + f1(q.y) + ' Z';
+  }
+  /* 只有弧的那一段（角裡的小弧，不畫兩條半徑） */
+  function arcPath(V, U, W, r){ return wedgePath(V, U, W, r).replace(/^M[^L]*L/, 'M').replace(/ Z$/, ''); }
+  /* 頂點 V 往裡面（兩條邊中間）的單位向量；往外就是它的反方向 */
+  function bisector(V, U, W){
+    var a = Math.hypot(U.x - V.x, U.y - V.y), b = Math.hypot(W.x - V.x, W.y - V.y);
+    var x = (U.x - V.x) / a + (W.x - V.x) / b, y = (U.y - V.y) / a + (W.y - V.y) / b, n = Math.hypot(x, y);
+    return { x:x / n, y:y / n };
+  }
+
+  /* ---- 圖上的字放哪裡（和五年級 area 同一套）：每一個標籤當成一個字框：中心 (x, y)、寬 ＝ 字數 × 0.62 × 字級 ＋ 2、高 ＝ 1.45 × 字級。
+         它離圖上每一條線（線寬的一半 ＋ LBL_CLEAR）都要有空隙。從「它該在的地方」出發，照 dirs 的順序一次走 0.5px 往外找第一個
+         放得下、又不出界的位置。線：{ a:{x, y}, b:{x, y}, w:線寬 }；長度 0 的線就是一個圓（第 3 關的把手：圓心、w ＝ 直徑）。
+         每一關的「線」與「標籤」都是這裡的純函式算出來的（xxxScene），畫面照著畫 —— 設定檔把題庫每一題都跑過、自己量空隙。 ---- */
+  var LBL_CLEAR = 3, LBL_FS = 16;
+  function lblBox(text, fs, cx, cy){ var w = String(text).length * 0.62 * fs + 2, h = 1.45 * fs; return { x:cx - w / 2, y:cy - h / 2, w:w, h:h }; }
+  function lblBaseline(fs, cy){ return cy + 0.36 * fs; }   /* 字框中心在 cy 時，text 的 y（基線）放這裡 */
+  function segsCross(p, q, r, s){
+    var d = (q.x - p.x) * (s.y - r.y) - (q.y - p.y) * (s.x - r.x);
+    if (d === 0) return false;
+    var t = ((r.x - p.x) * (s.y - r.y) - (r.y - p.y) * (s.x - r.x)) / d, u = ((r.x - p.x) * (q.y - p.y) - (r.y - p.y) * (q.x - p.x)) / d;
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+  }
+  function ptRectDist(p, r){ var dx = Math.max(r.x - p.x, 0, p.x - (r.x + r.w)), dy = Math.max(r.y - p.y, 0, p.y - (r.y + r.h)); return Math.hypot(dx, dy); }
+  /* 字框到一條線段的距離（碰到或穿過就是 0） */
+  function rectSegDist(r, a, b){
+    var C = [{ x:r.x, y:r.y }, { x:r.x + r.w, y:r.y }, { x:r.x + r.w, y:r.y + r.h }, { x:r.x, y:r.y + r.h }];
+    if (ptRectDist(a, r) === 0 || ptRectDist(b, r) === 0) return 0;
+    for (var i = 0; i < 4; i++) if (segsCross(a, b, C[i], C[(i + 1) % 4])) return 0;
+    var d = Math.min(ptRectDist(a, r), ptRectDist(b, r));
+    for (var j = 0; j < 4; j++) d = Math.min(d, segDist(C[j], a, b));
+    return d;
+  }
+  function lblClear(r, strokes){ return strokes.every(function(s){ return rectSegDist(r, s.a, s.b) >= s.w / 2 + LBL_CLEAR; }); }
+  /* poly（可以不給）：標籤的中心一定要在這個多邊形裡（第 2 關切好之後，每一個「180°」要在它自己的三角形裡；邊也是線，所以整個字框都在裡面） */
+  function lblSpot(text, fs, start, dirs, strokes, bounds, poly){
+    for (var k = 0; k <= 120; k += 0.5) for (var i = 0; i < dirs.length; i++){
+      var cx = start.x + dirs[i][0] * k, cy = start.y + dirs[i][1] * k, r = lblBox(text, fs, cx, cy);
+      if (r.x < bounds.x0 || r.y < bounds.y0 || r.x + r.w > bounds.x1 || r.y + r.h > bounds.y1) continue;
+      if (poly && !inPoly({ x:cx, y:cy }, poly)) continue;
+      if (lblClear(r, strokes)) return { x:cx, y:cy };
+    }
+    return null;
+  }
+  function polyStrokes(pts, w){ return pts.map(function(p, i){ return { a:P2(p), b:P2(pts[(i + 1) % pts.length]), w:w }; }); }
+  /* 一個角的小弧（半徑 r，畫在角裡面）當成幾段短線，給標籤量距離用 */
+  function arcStrokes(V, U, W, r, w){
+    var a = Math.atan2(U.y - V.y, U.x - V.x), b = Math.atan2(W.y - V.y, W.x - V.x), d = b - a;
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    var out = [], n = 8;
+    for (var i = 0; i < n; i++){
+      var t0 = a + d * i / n, t1 = a + d * (i + 1) / n;
+      out.push({ a:{ x:V.x + r * Math.cos(t0), y:V.y + r * Math.sin(t0) }, b:{ x:V.x + r * Math.cos(t1), y:V.y + r * Math.sin(t1) }, w:w });
+    }
+    return out;
+  }
+  /* 一張圖的所有標籤：每一個依序放，放好的字框也算進後面的「線」（標籤彼此不重疊） */
+  function placeLabels(list, strokes, bounds){
+    var taken = strokes.slice();
+    return list.map(function(L){
+      var at = lblSpot(L.v, L.fs, L.start, L.dirs, taken, bounds, L.poly) || (L.dirs2 ? lblSpot(L.v, L.fs, L.start, L.dirs2, taken, bounds, L.poly) : null);
+      if (at){ var r = lblBox(L.v, L.fs, at.x, at.y); polyStrokes([[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]], 0).forEach(function(s){ taken.push(s); }); }
+      return { k:L.k, v:L.v, fs:L.fs, at:at };
+    });
+  }
+  /* 從 start 往 d 的方向（再左右各偏 30°、60°）找位置 */
+  function fanDirs(d){
+    var out = [[d.x, d.y]];
+    [30, -30, 60, -60].forEach(function(g){ var c = Math.cos(rad(g)), s = Math.sin(rad(g)); out.push([d.x * c - d.y * s, d.x * s + d.y * c]); });
+    return out;
+  }
+  var BOARD_IN = function(H){ return { x0:2, y0:2, x1:GW - 2, y1:H - 2 }; };
+  function lblAttrs(L){ return { x:f1(L.at.x), y:f1(lblBaseline(L.fs, L.at.y)), 'font-size':L.fs }; }
+
+  /* ---- 第 1 關：撕角拼直線 —— 兩個三角形（各三個角 [A, B, C]：A 左下、B 右下、C 上；兩個形狀不一樣），畫在上面兩個框裡。
+         每一個角畫一塊半徑 R 的扇形（撕下來的那一塊），托盤上是六塊一樣的扇形，方向和它在三角形裡一樣。
+         下面兩條直線（各有一個黑點 O，一條是 △ABC 的、一條是 △DEF 的）。放到一條直線的範圍裡：
+         是這個三角形的角 → 頂點對準 O，接在已經排好的那幾塊旁邊（從左邊那一半開始往右排）；三塊排完剛好到右邊那一半 ＝ 一條直線（180°）。
+         是另一個三角形的角 → 不收、說為什麼。兩條直線的範圍放寬之後會重疊：挑最近的那一條。 ---- */
+  var TEAR = { R:24, ly:196, ox:[75, 225], half:62, zw:72, zh:34, zcy:178, pad:8, lblD:4, lblY:214, box:[{ x:20, y:30, w:110, h:84 }, { x:170, y:30, w:110, h:84 }],
+               pw:64, trayX:[52, 150, 248], trayY:[262, 334] }, TEAR_H = 372;
+  var GAME_TEAR = [
+    [[50, 60, 70], [30, 40, 110]], [[60, 60, 60], [30, 35, 115]], [[45, 75, 60], [100, 45, 35]],
+    [[70, 50, 60], [90, 30, 60]], [[40, 80, 60], [30, 115, 35]], [[65, 65, 50], [35, 40, 105]]
+  ];
+  var TEAR_NAMES = [['A', 'B', 'C'], ['D', 'E', 'F']];
+  function tearTri(i, ang){ return triPts(ang, TEAR.box[i]); }
+  /* 三角形 pts 的第 j 個角：頂點 V、兩邊往 U、W */
+  function tearCorner(pts, j){ return { V:pts[j], U:pts[(j + 1) % 3], W:pts[(j + 2) % 3] }; }
+  /* 第 i 條直線的放置範圍（方框：直線與它上面那一半圓） */
+  function tearZones(){ return TEAR.ox.map(function(x, i){ return { i:i, cx:x, cy:TEAR.zcy, hw:TEAR.zw, hh:TEAR.zh, done:false }; }); }
+  /* 三角形 tri 的一個角放到第 line 條直線：收 → null；不收 → 'other'（那是另一個三角形的角） */
+  function tearRefuse(tri, line){ return tri === line ? null : 'other'; }
+  /* 直線上已經排了 from 度（從左邊那一半算起），再排一個 deg 度的角：那一塊扇形的兩條邊（數學角度：180 − from 到 180 − from − deg） */
+  function tearSlot(line, from, deg){
+    var O = { x:TEAR.ox[line], y:TEAR.ly }, a0 = rad(180 - from), a1 = rad(180 - from - deg);
+    return { V:O, U:{ x:O.x + Math.cos(a0), y:O.y - Math.sin(a0) }, W:{ x:O.x + Math.cos(a1), y:O.y - Math.sin(a1) } };
+  }
+  /* 兩個三角形、六個角的字（A～F）放哪裡：頂點外面（兩條邊的外角平分線方向） */
+  function tearScene(e){
+    var strokes = [], labels = [], tris = [0, 1].map(function(i){ return tearTri(i, e[i]); });
+    tris.forEach(function(P){
+      strokes = strokes.concat(polyStrokes(P, 3));
+      for (var j = 0; j < 3; j++){ var c = tearCorner(P, j); strokes = strokes.concat(arcStrokes(c.V, c.U, c.W, TEAR.R, 2)); }
+    });
+    tris.forEach(function(P, i){
+      for (var j = 0; j < 3; j++){
+        var c = tearCorner(P, j), o = bisector(c.V, c.U, c.W), d = { x:-o.x, y:-o.y };
+        labels.push({ k:TEAR_NAMES[i][j], v:TEAR_NAMES[i][j], fs:15, start:{ x:c.V.x + d.x * TEAR.lblD, y:c.V.y + d.y * TEAR.lblD }, dirs:fanDirs(d) });
+      }
+    });
+    return { tris:tris, strokes:strokes, labels:placeLabels(labels, strokes, { x0:2, y0:2, x1:GW - 2, y1:TEAR.ly - 40 }) };
+  }
+  /* 托盤上一塊扇形：頂點在那一塊的正中間，方向和它在三角形裡一樣；字放在頂點後面（扇形的反方向） */
+  function tearPiece(P, j){
+    var c = tearCorner(P, j), m = { x:TEAR.pw / 2, y:TEAR.pw / 2 }, sh = function(q){ return { x:m.x + q.x - c.V.x, y:m.y + q.y - c.V.y }; };
+    var o = bisector(c.V, c.U, c.W), U = sh(c.U), W = sh(c.W), a = Math.atan2(U.y - m.y, U.x - m.x), b = Math.atan2(W.y - m.y, W.x - m.x);
+    var strokes = [{ a:m, b:{ x:m.x + TEAR.R * Math.cos(a), y:m.y + TEAR.R * Math.sin(a) }, w:2 }, { a:m, b:{ x:m.x + TEAR.R * Math.cos(b), y:m.y + TEAR.R * Math.sin(b) }, w:2 }].concat(arcStrokes(m, U, W, TEAR.R, 2));
+    var lbl = placeLabels([{ k:'n', v:'X', fs:15, start:{ x:m.x - o.x * 8, y:m.y - o.y * 8 }, dirs:fanDirs({ x:-o.x, y:-o.y }) }], strokes, { x0:4, y0:4, x1:TEAR.pw - 4, y1:TEAR.pw - 4 })[0];
+    return { V:m, U:U, W:W, lbl:lbl.at, strokes:strokes };
+  }
+  /* 托盤的順序不可以剛好是答案（前三塊剛好是同一個三角形的三個角） */
+  function tearInOrder(list){ return list[0].t === list[1].t && list[1].t === list[2].t; }
+  function tearTray(){ var list = []; [0, 1].forEach(function(t){ [0, 1, 2].forEach(function(j){ list.push({ t:t, j:j }); }); }); return unsorted(list, tearInOrder); }
+
+  /* ---- 第 2 關：切一刀 —— 照比例畫的四邊形（四個角 [A, B, C, D] 都寫在角的外面）。點一個角、再點另一個角就是沿著它們切一刀：
+         不相鄰的兩個角（對角線）→ 切成兩個三角形，每一個 180°，兩個 360°；相鄰的兩個角 → 那是本來就有的邊，不收、說為什麼；
+         同一個角再點一次 → 取消。點的範圍：頂點的圓點與它的度數字框，PICK 以內，挑最近的那一個角（每一個看得到的東西各佔自己的一格）。 ---- */
+  var QUAD = { box:{ x:58, y:40, w:184, h:136 }, dot:7, arc:16, pick:24, lblD:6 }, CUT_H = 222;
+  var GAME_CUT = [[75, 110, 95, 80, 0.9], [90, 90, 100, 80, 0.9], [70, 100, 80, 110, 0.9], [85, 95, 105, 75, 0.85], [120, 60, 100, 80, 0.9], [65, 115, 65, 115, 0.8], [100, 70, 115, 75, 0.9]];
+  /* 四邊形的四個點、四個角的字（v：寫在角外面的字），給第 2、5 關共用 */
+  function quadScene(q, box, H, texts){
+    var P = quadPts(q, box), strokes = polyStrokes(P, 3), labels = [];
+    P.forEach(function(V, j){ strokes = strokes.concat(arcStrokes(V, P[(j + 1) % 4], P[(j + 3) % 4], QUAD.arc, 2)); });
+    P.forEach(function(V, j){
+      var o = bisector(V, P[(j + 1) % 4], P[(j + 3) % 4]), d = { x:-o.x, y:-o.y };
+      strokes.push({ a:V, b:V, w:2 * QUAD.dot });
+      labels.push({ k:j, v:texts[j], fs:LBL_FS, start:{ x:V.x + d.x * (QUAD.dot + QUAD.lblD), y:V.y + d.y * (QUAD.dot + QUAD.lblD) }, dirs:fanDirs(d) });
+    });
+    return { P:P, strokes:strokes, labels:placeLabels(labels, strokes, BOARD_IN(H)) };
+  }
+  function quadTexts(q, ask){ return [0, 1, 2, 3].map(function(j){ return j === ask ? '?' : q[j] + '°'; }); }
+  /* 點在 pt：選到第幾個角（離圓點或它的字框最近、而且在 PICK 以內），沒有就是 null */
+  function cutPick(sc, pt){
+    var best = null, bd = Infinity;
+    sc.P.forEach(function(V, j){
+      var d = Math.hypot(pt.x - V.x, pt.y - V.y), L = sc.labels[j];
+      if (L.at) d = Math.min(d, ptRectDist(pt, lblBox(L.v, L.fs, L.at.x, L.at.y)));
+      if (d <= QUAD.pick && d < bd){ bd = d; best = j; }
+    });
+    return best;
+  }
+  /* 先點 i 再點 j：收 → null；'same'：同一個角（取消）；'side'：相鄰（本來就有的邊） */
+  function cutRefuse(i, j){ var k = (j - i + 4) % 4; return k === 0 ? 'same' : (k === 2 ? null : 'side'); }
+  /* 沿著 i–(i+2) 切開之後的兩個三角形（點的編號） */
+  function cutHalves(i){ i = i % 2; return [[i, i + 1, i + 2], [i + 2, (i + 3) % 4, i]]; }
+  /* 切好之後兩個三角形裡的「180°」放哪裡：從重心出發，離每一條線（四條邊、對角線、角的小弧、圓點）都夠遠 */
+  function cutScene(q, i){
+    var sc = quadScene(q, QUAD.box, CUT_H, quadTexts(q, -1)), P = sc.P, halves = cutHalves(i);
+    var strokes = sc.strokes.concat([{ a:P[i % 2], b:P[i % 2 + 2], w:3 }]);
+    sc.labels.forEach(function(L){ if (L.at){ var r = lblBox(L.v, L.fs, L.at.x, L.at.y); strokes = strokes.concat(polyStrokes([[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]], 0)); } });
+    var ALL = [];
+    for (var g = 0; g < 360; g += 15) ALL.push([Math.cos(rad(g)), Math.sin(rad(g))]);
+    var halfLbl = placeLabels(halves.map(function(h, n){ var T = h.map(function(j){ return P[j]; }); return { k:'h' + n, v:'180°', fs:14, start:centroid(T), dirs:ALL, poly:T }; }), strokes, BOARD_IN(CUT_H));
+    return { P:P, labels:sc.labels, halves:halves, halfLabels:halfLbl, strokes:strokes };
+  }
+
+  /* ---- 第 3 關：轉一轉 —— 底邊 AB（A 在左、B 在右，長 L）；A 角固定 a 度。B 那一條邊像一根棍子，在 B 釘住、穿過 B 往底邊下面多伸出 rh：
+         圈圈（把手）在伸出去的那一頭，軌道畫在底邊下面 —— 三角形裡面只有三個角的小弧和度數，不會被軌道擋住。
+         拖圈圈（或點軌道上的一格、或按 −5°／＋5°）轉 B 角，每 5° 一格、拖的時候就吸過去、畫面跟著變；兩條邊的交點就是 C。
+         題目只說「讓 C 角變成 t°」；圖上寫 A、B 的度數，C 只畫一個「?」。按「就是這個」才判斷：180 − a − b ＝ t 才收。
+         B 角的範圍 [lo, hi]（題庫每一題自己的）：C 永遠 ≥ 25°、整個三角形與標籤放得進畫板；一開始的 b0 不是答案。 ---- */
+  var TURN = { ax:46, by:186, L:170, rh:56, step:5, track:20, arc:18, lblD:22 }, TURN_H = 272;
+  var GAME_TURN = [[40, 60, 55, 95, 60], [50, 70, 45, 80, 75], [50, 55, 45, 80, 50], [35, 70, 65, 110, 100], [65, 60, 35, 60, 40], [45, 75, 45, 90, 85]];   /* [a, t, lo, hi, b0] */
+  function turnA(){ return { x:TURN.ax, y:TURN.by }; }
+  function turnB(){ return { x:TURN.ax + TURN.L, y:TURN.by }; }
+  /* C：從 A 往 a 度、從 B 往 180 − b 度，兩條線的交點（正弦定理：AC ＝ L × sin b ÷ sin(a ＋ b)） */
+  function turnApex(a, b){ var AC = TURN.L * Math.sin(rad(b)) / Math.sin(rad(a + b)); return { x:TURN.ax + AC * Math.cos(rad(a)), y:TURN.by - AC * Math.sin(rad(a)) }; }
+  /* 圈圈：BC 那一根棍子穿過 B 往下伸出去 rh 的那一頭（和 C 在 B 的兩邊，方向正好相反） */
+  function turnHandle(b){ var B = turnB(); return { x:B.x + TURN.rh * Math.cos(rad(b)), y:B.y + TURN.rh * Math.sin(rad(b)) }; }
+  /* pt 在 B 的哪一個方向：從 B 往右是 0°、往下是 90°（畫板座標 y 往下）—— 就是圈圈在這裡時的 B 角 */
+  function turnDeg(pt){ var B = turnB(), d = Math.atan2(pt.y - B.y, pt.x - B.x) * 180 / Math.PI; return d < -90 ? d + 360 : d; }
+  /* 拖到（或點在）pt：B 角是最近的那一格（每 5° 一格，每一格自己一格），夾在 [lo, hi] 裡 */
+  function turnSnap(e, pt){ return Math.max(e[2], Math.min(e[3], Math.round(turnDeg(pt) / TURN.step) * TURN.step)); }
+  /* 點在軌道上（離 B 的距離和 rh 差不到 track，角度在 [lo − 半格, hi ＋ 半格] 裡）才算點到軌道 */
+  function turnOnTrack(e, pt){
+    var B = turnB(), r = Math.hypot(pt.x - B.x, pt.y - B.y), b = turnDeg(pt);
+    return Math.abs(r - TURN.rh) <= TURN.track && b >= e[2] - TURN.step / 2 && b <= e[3] + TURN.step / 2;
+  }
+  /* 按「就是這個」：收 → null；不收 → { s:a ＋ b, c:C 角, more:C 比目標大（B 要轉大一點） } */
+  function turnRefuse(a, b, t){ var c = 180 - a - b; return c === t ? null : { s:a + b, c:c, more:c > t }; }
+  /* 這一個 B 角的畫面：三個點、所有的線（三條邊、三個小弧、把手到 C 的虛線、把手的圈）、四個標籤（A、B 的度數、C 的「?」） */
+  /* 軌道（B 為圓心、半徑 rh，從 lo 到 hi）與每 5° 一格的刻度：畫面與標籤的距離都用這一份 */
+  function turnTrack(e){
+    var B = turnB(), at = function(b, r){ return { x:B.x + r * Math.cos(rad(b)), y:B.y + r * Math.sin(rad(b)) }; }, ticks = [];
+    for (var b = e[2]; b <= e[3]; b += TURN.step) ticks.push({ b:b, a:at(b, TURN.rh - 6), c:at(b, TURN.rh + 6) });
+    return { at:at, ticks:ticks };
+  }
+  function turnScene(e, b, cText){
+    var a = e[0], A = turnA(), B = turnB(), C = turnApex(a, b), H = turnHandle(b), tr = turnTrack(e);
+    var strokes = polyStrokes([A, B, C], 3).concat(arcStrokes(A, B, C, TURN.arc, 2), arcStrokes(B, C, A, TURN.arc, 2), arcStrokes(C, A, B, TURN.arc, 2));
+    tr.ticks.forEach(function(t, i){ strokes.push({ a:t.a, b:t.c, w:2 }); if (i) strokes.push({ a:tr.at(t.b - TURN.step, TURN.rh), b:tr.at(t.b, TURN.rh), w:2 }); });
+    strokes.push({ a:B, b:H, w:2 });
+    strokes.push({ a:H, b:H, w:GPICK + 4 });   /* 把手的圈（直徑 GPICK）和它的白邊 */
+    /* 角的度數寫在角裡面（沿著角平分線往裡走到放得下）；真的放不下才往兩邊偏 */
+    var lbl = function(k, v, V, U, W){ var o = bisector(V, U, W); return { k:k, v:v, fs:LBL_FS, start:{ x:V.x + o.x * TURN.lblD, y:V.y + o.y * TURN.lblD }, dirs:[[o.x, o.y]], dirs2:fanDirs(o) }; };
+    var labels = placeLabels([lbl('a', a + '°', A, B, C), lbl('b', b + '°', B, C, A), lbl('c', cText || '?', C, A, B)], strokes, BOARD_IN(TURN_H));
+    return { A:A, B:B, C:C, H:H, strokes:strokes, labels:labels };
+  }
+
+  /* ---- 第 4 關：分一分 —— 每一組四張卡，卡上寫兩個角和「?」。三個箱子：正三角形、等腰三角形、直角三角形。
+         每一組：一張 60°、60°、?（正三角形）、一張 ? 和其中一個角一樣大（要算才看得出是等腰）、一張 ? ＝ 90°（要算才看得出是直角），
+         再一張等腰或直角。沒有「等腰直角」（45、45、90 兩個箱子都對）。
+         正三角形放進等腰 → 不扣分、彈回，說它也是等腰、要放最精確的那一格；其他放錯 → 彈回、算給他看為什麼不是。 ---- */
+  var SORT = { cardW:140, cardH:54, trayX:[76, 224], trayY:[36, 100], binX:[2, 102, 202], binY:140, binW:96, binH:168, lblH:46, chipW:88, chipH:30, chipY:[214, 252], pad:8 }, SORT_H = 314;
+  var SORT_KINDS = ['eq', 'iso', 'right'];
+  var GAME_SORT = [
+    [[60, 60], [40, 70], [35, 55], [50, 50]], [[60, 60], [80, 20], [30, 60], [90, 25]], [[60, 60], [30, 75], [25, 65], [70, 70]],
+    [[60, 60], [50, 65], [40, 50], [90, 40]], [[60, 60], [100, 40], [20, 70], [55, 55]], [[60, 60], [20, 80], [65, 25], [40, 40]]
+  ];
+  function sortThird(c){ return 180 - c[0] - c[1]; }
+  /* 三個角都是 60° → 正三角形；有一個 90° → 直角；有兩個一樣大 → 等腰；都不是 → null（題庫裡不可以有） */
+  function sortKind(c){
+    var t = [c[0], c[1], sortThird(c)];
+    if (t[0] === 60 && t[1] === 60 && t[2] === 60) return 'eq';
+    if (t.indexOf(90) >= 0) return 'right';
+    if (t[0] === t[1] || t[0] === t[2] || t[1] === t[2]) return 'iso';
+    return null;
+  }
+  /* 放進 bin 那個箱子：收 → null；'alsoIso'：正三角形放進等腰（不扣分、彈回）；其他 → 那張卡真正的種類（說明用） */
+  function sortRefuse(c, bin){ var k = sortKind(c); return k === bin ? null : (k === 'eq' && bin === 'iso' ? 'alsoIso' : k); }
+  /* 托盤的順序不可以剛好是答案（照箱子由左到右排好） */
+  function sortInOrder(list){
+    for (var i = 1; i < list.length; i++) if (SORT_KINDS.indexOf(sortKind(list[i - 1])) > SORT_KINDS.indexOf(sortKind(list[i]))) return false;
+    return true;
+  }
+  function sortTray(g){ return unsorted(g, sortInOrder); }
+  /* 三個箱子放東西的範圍：就是畫出來的箱子（設定檔用 SORT 自己畫的方框逐點比） */
+  function sortBins(){ return SORT_KINDS.map(function(k, i){ return { k:k, i:i, n:0, cx:SORT.binX[i] + SORT.binW / 2, cy:SORT.binY + SORT.binH / 2, hw:SORT.binW / 2, hh:SORT.binH / 2, done:false }; }); }
+  function sortCardText(c){ return c[0] + '°　' + c[1] + '°　?'; }
+  function sortChipText(c){ return '? ＝ ' + sortThird(c) + '°'; }
+
+  /* ---- 第 5 關：打出來 —— 照比例畫的四邊形 [A, B, C, D, BC 的長, ? 在第幾個角]：三個角寫度數，? 的那一個只畫弧、寫「?」。
+         在框裡打一個整數，按「檢查」（或 Enter）。寫法不正常（空白、小數點、開頭的 0、空的）只提醒、不算錯；
+         打錯 → 把四個角加起來給他看（不是 360）；同一個數再打一次不再扣分。 ---- */
+  var IN_H = 214;
+  var GAME_INPUT = [[75, 110, 95, 80, 0.9, 3], [90, 85, 100, 85, 0.9, 1], [70, 100, 80, 110, 0.9, 2], [120, 60, 105, 75, 0.9, 0], [95, 75, 115, 75, 0.9, 2], [80, 120, 60, 100, 0.8, 3], [105, 85, 70, 100, 0.9, 1]];
+  /* 打的字 → 數（只收寫法正常的整數：0 或不是 0 開頭的一到三位數，前後的空白可以），其他 → null */
+  function inParse(text){ var m = String(text).match(/^\s*(0|[1-9]\d{0,2})\s*$/); return m ? +m[1] : null; }
+  function inKnown(q){ var out = []; for (var j = 0; j < 4; j++) if (j !== q[5]) out.push(q[j]); return out; }
+  /* 打了 v：收 → null；不收 → { s:四個角加起來（三個已知 ＋ v）, more:比 360 多 } */
+  function inRefuse(q, v){ var s = v; inKnown(q).forEach(function(x){ s += x; }); return s === 360 ? null : { s:s, more:s > 360 }; }
 
   /* ---------- i18n ---------- */
   var I18N = {
@@ -482,26 +859,63 @@
           why: '等腰三角形是「兩個底角」相等；頂角通常和底角不一樣大（除非是正三角形）。' }
       ],
       s6h2: '神祕角獵人',
-      s6lead: '看圖找出「？」代表的角度，點卡片回答。答錯扣分，答對加分，第一次就答對還有獎勵分！',
+      s6lead: '撕角拼直線、切一刀、轉一轉、分一分、打出來 —— 五關五種玩法，每一關都靠同一件事：<strong>三角形的內角和是 180°，四邊形是 360°</strong>。放錯會扣 5 分，同一個錯不會扣兩次 —— 慢慢想比手快重要。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
-      gNextBtn: '下一關', gRestartBtn: '重新開始',
-      ariaTri: '三角形，兩個角已知，一個角是神祕角',
-      ariaQuad: '四邊形，三個角已知，一個角是神祕角',
-      ariaIso: '等腰三角形，頂角已知，兩個底角是神祕角',
-      hintTri: '提示 1：三角形的三個角加起來是 180°。',
-      hintQuad: '提示 1：四邊形的四個角加起來是 360°，可以想成兩個三角形。',
-      hintIso: '提示 1：先算 180° − 頂角，再把剩下的角平分成兩份（兩個底角相等）。',
-      hint2Tri: function(a, b){ return '提示 2：180 − ' + a + ' − ' + b + ' = ?，算出來就是答案。'; },
-      hint2Quad: function(a, b, c){ return '提示 2：360 − ' + a + ' − ' + b + ' − ' + c + ' = ?，算出來就是答案。'; },
-      hint2Iso: function(apex){ return '提示 2：先算 180 − ' + apex + '，再把結果除以 2，就是答案。'; },
-      gHintBtn: '💡 提示',
-      explainTri: function(a, b, ans){ return '180 − ' + a + ' − ' + b + ' = ' + ans + '°，找到神祕角了！'; },
-      explainQuad: function(a, b, c, ans){ return '360 − ' + a + ' − ' + b + ' − ' + c + ' = ' + ans + '°，找到神祕角了！'; },
-      explainIso: function(apex, ans){ return '(180 − ' + apex + ') ÷ 2 = ' + ans + '°，找到神祕角了！'; },
-      pointsSuffix: function(bonus){ return bonus ? '（一次就找到，+20 分！）' : '（+10 分）'; },
-      gMiss: function(v){ return v + '° 不對，再試一次！扣 5 分。'; },
+      gNextBtn: '下一關', gRestartBtn: '重新開始', gHintBtn: '💡 提示',
+      gAsks: {
+        tear: '把撕下來的角排到它自己那個三角形的直線上（頂點對準黑點，一個接著一個）。',
+        cut: '切一刀，把四邊形切成兩個三角形：先點一個角，再點另一個角。',
+        turn: function(t){ return '拖橘色的圈圈轉 B 角（也可以點軌道或按 −5°／＋5°），讓 C 角變成 ' + t + '°，再按「就是這個」。'; },
+        sort: '先算出 ? 是幾度，再把卡片放進它是哪一種三角形的箱子。',
+        input: '四邊形的 ? 角是幾度？在框裡打出來，按「檢查」。'
+      },
+      gHints: {
+        tear: '提示 1：同一個三角形的三個角，一個接著一個排在它自己的直線上 —— 看看三個排完是什麼形狀。',
+        cut: '提示 1：連接兩個「不相鄰」的角（對角線），四邊形就變成兩個三角形。',
+        turn: '提示 1：三個角加起來是 180°：B 角轉大，C 角就變小；B 角轉小，C 角就變大。',
+        sort: '提示 1：? ＝ 180 − 兩個角。三個角都是 60° 是正三角形；有一個 90° 是直角三角形；有兩個一樣大是等腰三角形。',
+        input: '提示 1：四邊形可以切成兩個三角形，四個角加起來是 180° × 2 ＝ 360°。'
+      },
+      gPts: function(p){ return '（＋' + p + ' 分）'; },
+      gMinus: '−5 分',
       gClear: '過關！按「下一關」繼續。',
       gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gTearNow: function(n0, n1){ return '△ABC ' + n0 + ' / 3　　△DEF ' + n1 + ' / 3'; },
+      gTearLine: function(i){ return ['△ABC', '△DEF'][i]; },
+      gTearLineDone: function(i){ return ['△ABC', '△DEF'][i] + ' ＝ 180°'; },
+      gTearPiece: function(n){ return n + ' 角'; },
+      gTearOk: function(n, t, k){ return n + ' 角排好了 ✓（' + ['△ABC', '△DEF'][t] + '：' + k + ' / 3）'; },
+      gTearBad: function(n, t){ var me = ['△ABC', '△DEF'][t], other = ['△ABC', '△DEF'][1 - t]; return n + ' 角是 ' + me + ' 撕下來的 —— ' + other + ' 那一條直線只排 ' + other + ' 自己的三個角：我們要看的是「同一個三角形」的三個角拼起來是什麼。'; },
+      gTear2: function(n, t){ return '提示 2：下一個，把 ' + n + ' 角排到 ' + ['△ABC', '△DEF'][t] + ' 的直線上。'; },
+      gTearDone: '兩個形狀不一樣的三角形，三個角都剛好排成一條直線 —— 內角和都是 180°！',
+      gCutNow0: '點一個角開始切',
+      gCutNow1: '再點另一個角',
+      gCutNowDone: '180° ＋ 180° ＝ 360°',
+      gCutSide: '這兩個角相鄰，連起來是四邊形本來就有的邊，沒有把它切開 —— 要連到不相鄰的那一個角。',
+      gCut2: '提示 2：點亮的那兩個角不相鄰 —— 把它們連起來。',
+      gCutDone: function(q){ return '沿著對角線切成兩個三角形：180° × 2 ＝ 360°。四個角 ' + q[0] + ' ＋ ' + q[1] + ' ＋ ' + q[2] + ' ＋ ' + q[3] + ' ＝ 360，對得上 ✓'; },
+      gTurnNow: function(a, b, c){ return 'A ' + a + '°　　B ' + b + '°　　C ' + (c || '?'); },
+      gTurnBtn: '就是這個', gTurnLess: 'B 角小 5°', gTurnMore: 'B 角大 5°', gTurnGrip: '轉 B 角的橘色圈圈',
+      gTurnBad: function(a, b, c, t, more){ return a + ' ＋ ' + b + ' ＝ ' + (a + b) + '，180 − ' + (a + b) + ' ＝ ' + c + '：C 是 ' + c + '°，不是 ' + t + '° —— B 角要轉' + (more ? '大' : '小') + '一點。'; },
+      gTurnDone: function(a, b, t){ return a + ' ＋ ' + b + ' ＝ ' + (a + b) + '，180 − ' + (a + b) + ' ＝ ' + t + ' —— C 剛好是 ' + t + '°！'; },
+      gTurn2: function(a, t){ return '提示 2：C 要是 ' + t + '°，A ＋ B 就要是 180 − ' + t + ' ＝ ' + (180 - t) + '；A 已經是 ' + a + '°。'; },
+      gKinds: { eq:'正三角形', iso:'等腰三角形', right:'直角三角形' },
+      gSortNow: function(n, total){ return '分好了 ' + n + ' / ' + total + ' 張'; },
+      gSortOk: function(a, b, c, kind){ return '? ＝ 180 − ' + a + ' − ' + b + ' ＝ ' + c + '：' + kind + ' ✓'; },
+      gSortBad: function(a, b, c, bin){
+        return '? ＝ 180 − ' + a + ' − ' + b + ' ＝ ' + c + '，三個角是 ' + a + '°、' + b + '°、' + c + '°' +
+          (bin === 'eq' ? '，不是三個都是 60° —— 不是正三角形。' : (bin === 'iso' ? '，沒有兩個一樣大 —— 不是等腰三角形。' : '，沒有 90° —— 不是直角三角形。'));
+      },
+      gSortAlso: '三個角都是 60°：它是正三角形（正三角形也算是等腰三角形）—— 放進最精確的「正三角形」那一格。',
+      gSort2: function(a, b, c){ return '提示 2：下一張 ' + a + '°、' + b + '°、? —— ? ＝ 180 − ' + a + ' − ' + b + ' ＝ ' + c + '。'; },
+      gSortDone: '四張都分好了 —— 先用 180° 算出第三個角，才看得出是哪一種三角形。',
+      gInNow: function(texts){ return '四個角：' + texts.join('、'); },
+      gInBtn: '檢查', gInAria: '? 是幾度',
+      gInRemind: '請打一個整數（數字中間不要有空格，也不要小數點或開頭的 0）。',
+      gInBad: function(k, v, s, more){ return k[0] + ' ＋ ' + k[1] + ' ＋ ' + k[2] + ' ＋ ' + v + ' ＝ ' + s + '，不是 360 —— 四邊形的四個角加起來一定是 360°，' + v + '° 太' + (more ? '大' : '小') + '了。'; },
+      gInDone: function(k, v){ return '360 − ' + k[0] + ' − ' + k[1] + ' − ' + k[2] + ' ＝ ' + v + ' —— ? 是 ' + v + '°！'; },
+      gIn2: function(k){ return '提示 2：360 − ' + k[0] + ' − ' + k[1] + ' − ' + k[2] + ' ＝ ?'; },
+      ariaTri: '三角形，兩個角已知，一個角是神祕角',
       ebNext: '學完之後', nextH2: '把它記牢的三個動作',
       next1: '🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2: '🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
@@ -613,26 +1027,63 @@
           why: 'It’s the two base angles that are equal in an isosceles triangle — the top angle is usually different (unless it’s equilateral).' }
       ],
       s6h2: 'Mystery Angle Hunter',
-      s6lead: 'Look at the shape and find the angle marked "?". Tap a card to answer. Wrong guesses cost points, correct ones earn points — and a first-try correct guess earns a bonus!',
+      s6lead: 'Line up torn corners, cut once, turn, sort, type it in — five rounds, five ways to play, and every round runs on the same fact: <strong>a triangle’s angles add up to 180°, a quadrilateral’s to 360°</strong>. A wrong move costs 5 points, and the same mistake is never charged twice — thinking slowly beats moving fast.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
-      gNextBtn: 'Next round', gRestartBtn: 'Restart',
+      gNextBtn: 'Next round', gRestartBtn: 'Restart', gHintBtn: '💡 Hint',
+      gAsks: {
+        tear: 'Put each torn corner on its own triangle’s straight line (tip on the black dot, one next to the other).',
+        cut: 'Cut the quadrilateral into two triangles with one cut: tap a corner, then tap another corner.',
+        turn: function(t){ return 'Drag the orange ring to turn angle B (or tap the track, or press −5° / +5°) until angle C is ' + t + '°, then press “That’s it”.'; },
+        sort: 'Work out the ? angle first, then put each card in the box for its kind of triangle.',
+        input: 'How many degrees is the ? angle of the quadrilateral? Type it in the box and press “Check”.'
+      },
+      gHints: {
+        tear: 'Hint 1: line up the three corners of one triangle, one next to the other, on that triangle’s own line — see what shape the three of them make.',
+        cut: 'Hint 1: join two corners that are NOT next to each other (a diagonal), and the quadrilateral becomes two triangles.',
+        turn: 'Hint 1: the three angles add up to 180°. Turn angle B bigger and angle C gets smaller; turn B smaller and C gets bigger.',
+        sort: 'Hint 1: ? = 180 − the two angles. A triangle with three 60° angles is equilateral; a triangle with one 90° angle is a right triangle; a triangle with two equal angles is isosceles.',
+        input: 'Hint 1: a quadrilateral splits into two triangles, so its four angles add up to 180° × 2 = 360°.'
+      },
+      gPts: function(p){ return '(+' + p + ' points)'; },
+      gMinus: '−5 points',
+      gClear: 'Round cleared! Press “Next round” to continue.',
+      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gTearNow: function(n0, n1){ return '△ABC ' + n0 + ' / 3　　△DEF ' + n1 + ' / 3'; },
+      gTearLine: function(i){ return ['△ABC', '△DEF'][i]; },
+      gTearLineDone: function(i){ return ['△ABC', '△DEF'][i] + ' = 180°'; },
+      gTearPiece: function(n){ return 'corner ' + n; },
+      gTearOk: function(n, t, k){ return 'Corner ' + n + ' is in place ✓ (' + ['△ABC', '△DEF'][t] + ': ' + k + ' / 3)'; },
+      gTearBad: function(n, t){ var me = ['△ABC', '△DEF'][t], other = ['△ABC', '△DEF'][1 - t]; return 'Corner ' + n + ' was torn off ' + me + ' — the ' + other + ' line only takes ' + other + '’s own three corners: we want to see what the three corners of ONE triangle make together.'; },
+      gTear2: function(n, t){ return 'Hint 2: next, put corner ' + n + ' on the ' + ['△ABC', '△DEF'][t] + ' line.'; },
+      gTearDone: 'Two triangles of different shapes, and each one’s three corners line up into a straight line — both angle sums are 180°!',
+      gCutNow0: 'Tap a corner to start the cut',
+      gCutNow1: 'Now tap another corner',
+      gCutNowDone: '180° + 180° = 360°',
+      gCutSide: 'Those two corners are next to each other — joining them is a side the quadrilateral already has, so nothing gets cut. Join the corner that is NOT next to it.',
+      gCut2: 'Hint 2: the two glowing corners are not next to each other — join them.',
+      gCutDone: function(q){ return 'Cut along the diagonal into two triangles: 180° × 2 = 360°. The four angles ' + q[0] + ' + ' + q[1] + ' + ' + q[2] + ' + ' + q[3] + ' = 360 — it checks out ✓'; },
+      gTurnNow: function(a, b, c){ return 'A ' + a + '°　　B ' + b + '°　　C ' + (c || '?'); },
+      gTurnBtn: 'That’s it', gTurnLess: 'Angle B 5° smaller', gTurnMore: 'Angle B 5° bigger', gTurnGrip: 'Orange ring that turns angle B',
+      gTurnBad: function(a, b, c, t, more){ return a + ' + ' + b + ' = ' + (a + b) + ', 180 − ' + (a + b) + ' = ' + c + ': C is ' + c + '°, not ' + t + '° — turn angle B ' + (more ? 'bigger' : 'smaller') + '.'; },
+      gTurnDone: function(a, b, t){ return a + ' + ' + b + ' = ' + (a + b) + ', 180 − ' + (a + b) + ' = ' + t + ' — C is exactly ' + t + '°!'; },
+      gTurn2: function(a, t){ return 'Hint 2: for C to be ' + t + '°, A + B must be 180 − ' + t + ' = ' + (180 - t) + '; A is already ' + a + '°.'; },
+      gKinds: { eq:'Equilateral', iso:'Isosceles', right:'Right' },
+      gSortNow: function(n, total){ return 'Sorted ' + n + ' / ' + total + ' cards'; },
+      gSortOk: function(a, b, c, kind){ return '? = 180 − ' + a + ' − ' + b + ' = ' + c + ': ' + kind + ' ✓'; },
+      gSortBad: function(a, b, c, bin){
+        return '? = 180 − ' + a + ' − ' + b + ' = ' + c + ', so the three angles are ' + a + '°, ' + b + '° and ' + c + '°' +
+          (bin === 'eq' ? ' — they are not all 60°, so it is not equilateral.' : (bin === 'iso' ? ' — no two of them are equal, so it is not isosceles.' : ' — none of them is 90°, so it is not a right triangle.'));
+      },
+      gSortAlso: 'All three angles are 60°: it is an equilateral triangle (and an equilateral triangle is also isosceles) — put it in the most exact box, “Equilateral”.',
+      gSort2: function(a, b, c){ return 'Hint 2: next card ' + a + '°, ' + b + '°, ? — ? = 180 − ' + a + ' − ' + b + ' = ' + c + '.'; },
+      gSortDone: 'All four cards sorted — work out the third angle with 180° first, then you can tell which kind of triangle it is.',
+      gInNow: function(texts){ return 'Four angles: ' + texts.join(', '); },
+      gInBtn: 'Check', gInAria: 'How many degrees is ?',
+      gInRemind: 'Please type a whole number (no spaces between the digits, no decimal point, no leading 0).',
+      gInBad: function(k, v, s, more){ return k[0] + ' + ' + k[1] + ' + ' + k[2] + ' + ' + v + ' = ' + s + ', not 360 — the four angles of a quadrilateral always add up to 360°, so ' + v + '° is too ' + (more ? 'big' : 'small') + '.'; },
+      gInDone: function(k, v){ return '360 − ' + k[0] + ' − ' + k[1] + ' − ' + k[2] + ' = ' + v + ' — ? is ' + v + '°!'; },
+      gIn2: function(k){ return 'Hint 2: 360 − ' + k[0] + ' − ' + k[1] + ' − ' + k[2] + ' = ?'; },
       ariaTri: 'A triangle with two known angles and one mystery angle',
-      ariaQuad: 'A quadrilateral with three known angles and one mystery angle',
-      ariaIso: 'An isosceles triangle with a known top angle and two mystery base angles',
-      hintTri: 'Hint 1: the three angles of a triangle always add up to 180°.',
-      hintQuad: 'Hint 1: the four angles of a quadrilateral add up to 360° — think of it as two triangles.',
-      hintIso: 'Hint 1: first work out 180° minus the top angle, then split what’s left into two equal parts (the base angles are equal).',
-      hint2Tri: function(a, b){ return 'Hint 2: 180 − ' + a + ' − ' + b + ' = ? — work it out and that’s the answer.'; },
-      hint2Quad: function(a, b, c){ return 'Hint 2: 360 − ' + a + ' − ' + b + ' − ' + c + ' = ? — work it out and that’s the answer.'; },
-      hint2Iso: function(apex){ return 'Hint 2: first work out 180 − ' + apex + ', then divide the result by 2 — that’s the answer.'; },
-      gHintBtn: '💡 Hint',
-      explainTri: function(a, b, ans){ return '180 − ' + a + ' − ' + b + ' = ' + ans + '° — found it!'; },
-      explainQuad: function(a, b, c, ans){ return '360 − ' + a + ' − ' + b + ' − ' + c + ' = ' + ans + '° — found it!'; },
-      explainIso: function(apex, ans){ return '(180 − ' + apex + ') ÷ 2 = ' + ans + '° — found it!'; },
-      pointsSuffix: function(bonus){ return bonus ? ' (first try, +20 points!)' : ' (+10 points)'; },
-      gMiss: function(v){ return v + '° isn’t it — try again! −5 points.'; },
-      gClear: 'Round cleared! Press "Next round" to continue.',
-      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press "Restart" to play again.'; },
       ebNext: 'After the lesson', nextH2: 'Three moves that make it stick',
       next1: '🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2: '🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
@@ -805,127 +1256,574 @@
     });
   }
 
-  /* ---------- 6. 小遊戲：神祕角獵人 ---------- */
-  var ROUNDS = [
-    { shape: 'triangle',  given: [65, 75],     answer: 40,  cards: [140, 40, 105, 65, 115, 75] },
-    { shape: 'triangle',  given: [90, 35],     answer: 55,  cards: [125, 90, 55, 65, 145, 35] },
-    { shape: 'quad',      given: [100, 80, 60],answer: 120, cards: [240, 60, 120, 100, 180, 80] },
-    { shape: 'isosceles', given: [50],         answer: 65,  cards: [130, 65, 50, 15, 90, 25] },
-    { shape: 'triangle',  given: [30, 45],     answer: 105, cards: [75, 150, 105, 30, 135, 45] }
-  ];
-  var gRoundIdx = 0, gScore = 0, gFirstTry = true;
-  var elGRound = document.getElementById('gRound');
-  var elGScore = document.getElementById('gScore');
-  var gScene = document.getElementById('gScene');
-  var elHint = document.getElementById('gHint');
-  var gCards = document.getElementById('gCards');
+  /* ===================== 小遊戲：神祕角獵人（§六之五：五關五種玩法） ===================== */
+  var gRound = 0, gScore = 0, gSolved = false, gMistake = false, hintLevel = 0, gCtx = {};
+  /* 畫板世代：重新開始、切換語言、下一關都換一個新的畫板。還拿在手上的舊積木放開時，不可以替新的畫板做任何事 */
+  var gGen = 0;
+  var elRound = document.getElementById('gRound');
+  var elScore = document.getElementById('gScore');
+  var gameStage = document.getElementById('gameStage');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
-
-  function renderRoundScene(round, revealed){
-    var ansTxt = revealed ? round.answer + '°' : '?';
-    if (round.shape === 'triangle'){
-      return triShape(round.given[0] + '°', round.given[1] + '°', ansTxt, L().ariaTri, round.given[0], round.given[1]);
-    } else if (round.shape === 'quad'){
-      return quadShape(round.given[0] + '°', round.given[1] + '°', round.given[2] + '°', ansTxt, L().ariaQuad);
-    } else {
-      return triShape(ansTxt, ansTxt, round.given[0] + '°', L().ariaIso, (180 - round.given[0]) / 2, (180 - round.given[0]) / 2);
-    }
-  }
-
-  function explainRound(round){
-    var d = L();
-    if (round.shape === 'triangle'){
-      return d.explainTri(round.given[0], round.given[1], round.answer);
-    } else if (round.shape === 'quad'){
-      return d.explainQuad(round.given[0], round.given[1], round.given[2], round.answer);
-    } else {
-      return d.explainIso(round.given[0], round.answer);
-    }
-  }
-
-  function hintForRound(round){
-    var d = L();
-    if (round.shape === 'triangle') return d.hintTri;
-    if (round.shape === 'quad') return d.hintQuad;
-    return d.hintIso;
-  }
-
-  function hint2ForRound(round){
-    var d = L();
-    if (round.shape === 'triangle') return d.hint2Tri(round.given[0], round.given[1]);
-    if (round.shape === 'quad') return d.hint2Quad(round.given[0], round.given[1], round.given[2]);
-    return d.hint2Iso(round.given[0]);
-  }
-
   var gHintBtn = document.getElementById('gHintBtn');
-  var hintLevel = 0;
+  var elHint = document.getElementById('gHint');
+  var NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs, text){
+    var el = document.createElementNS(NS, tag);
+    for (var a in attrs) el.setAttribute(a, attrs[a]);
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function ptsAttr(list){ return list.map(function(p){ return p.x + ',' + p.y; }).join(' '); }
 
-  function showHint(){
-    if (hintLevel === 0){ elHint.textContent = ''; return; }
-    var round = ROUNDS[gRoundIdx];
-    if (hintLevel === 1){ elHint.textContent = hintForRound(round); }
-    else { elHint.textContent = hint2ForRound(round); gHintBtn.disabled = true; }
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null, onBoardTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    /* 點畫板（不是點在積木上）：只認第一根手指，按下和放開在同一個地方才算「點一下」 */
+    board.addEventListener('pointerdown', function(e){
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (!e.isPrimary) return;   /* 第二根手指：不理 —— 第一根手指按在畫板外、按鈕或積木上時也一樣 */
+      BOARD_TAP = { id:e.pointerId, x:e.clientX, y:e.clientY, far:false };
+    });
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      var t = BOARD_TAP, pt = B.toBoard(e);
+      if (t && t.id === e.pointerId) BOARD_TAP = null;
+      /* 「點目的地」也一樣只認第一根手指的「點一下」：別的手指放開、或滑動之後放開，都不算（不然想捲動也會被扣分） */
+      if (!t || t.id !== e.pointerId) return;
+      if (t.far || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10) return;   /* 中途離開按下去的地方超過 10px 就不是「點一下」 */
+      if (B.selected && B.onPointTap){ B.onPointTap(B.selected, pt); return; }
+      if (B.onBoardTap && !gSolved) B.onBoardTap(pt);
+    });
+    gameStage.appendChild(wrap);
+    return B;
+  }
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」；BOARD_TAP 記「按在畫板上的第一根手指」。
+     任何地方的 pointerup／pointercancel 傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {}, BOARD_TAP = null;
+  function clearPtr(e){ delete PIECE_PTR[e.pointerId]; if (BOARD_TAP && BOARD_TAP.id === e.pointerId) BOARD_TAP = null; }
+  window.addEventListener('pointerup', clearPtr);
+  window.addEventListener('pointercancel', clearPtr);
+  window.addEventListener('pointerdown', function(e){ delete PIECE_PTR[e.pointerId]; }, true);
+  window.addEventListener('pointermove', function(e){
+    if (BOARD_TAP && BOARD_TAP.id === e.pointerId && Math.hypot(e.clientX - BOARD_TAP.x, e.clientY - BOARD_TAP.y) > 10) BOARD_TAP.far = true;
+  });
+  /* 指標離開視窗時收不到 pointermove：一離開就當成走遠了（滑鼠拖出視窗再回來放開，不算點一下） */
+  window.addEventListener('pointerout', function(e){ if (BOARD_TAP && BOARD_TAP.id === e.pointerId && !e.relatedTarget) BOARD_TAP.far = true; });
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
+  }
+  /* 畫板上的一張 SVG（整塊畫板大小，不接指標）。⚠️ 不給 viewBox：頁尾「讓 SVG 的畫布容得下自己的標籤」那段只撐開
+     有 viewBox 的圖，遊戲的畫布不可以被它撐開（一撐開，畫出來的位置就和吸附、點選量的位置對不上）。 */
+  function gSvg(B){
+    var s = svgEl('svg', { 'class':'gsvg', width:B.W, height:B.H, 'aria-hidden':'true' });
+    B.el.appendChild(s);
+    return s;
+  }
+  /* 畫 xxxScene() 算好的標籤；fills：每一種標籤的顏色（高的數字和它的虛線同一個顏色） */
+  function drawLabels(svg, labels, fills, extra){
+    labels.forEach(function(L){
+      var a = lblAttrs(L);
+      a.fill = fills[L.k] || '#2B2A33'; a['data-k'] = L.k;
+      for (var k in extra) a[k] = extra[k];
+      gText(svg, a.x, a.y, L.v, a);
+    });
+  }
+  function gText(svg, x, y, text, attrs){
+    var a = { x:x, y:y, 'font-size':17, 'font-weight':800, fill:'#2B2A33', 'text-anchor':'middle' };
+    for (var k in attrs) a[k] = attrs[k];
+    var t = svgEl('text', a, String(text));
+    svg.appendChild(t);
+    return t;
+  }
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫板下面的一排按鈕（第 3 關的 −5°／＋5° 與「就是這個」、第 5 關的輸入框與「檢查」） */
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, cls, aria){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = text;
+    if (aria) b.setAttribute('aria-label', aria);
+    row.appendChild(b);
+    return b;
   }
 
-  gHintBtn.addEventListener('click', function(){
-    hintLevel++;
-    showHint();
-  });
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指。
+         o.snap：拖的時候把中心點吸到最近的那一格（第 3 關的把手：吸到軌道上最近的 5°）—— 拖的時候就畫在吸到的位置；
+         o.node：放在裡面的東西（SVG）；o.onPlace：每次位置改變（含彈回）都通知 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.node) el.appendChild(o.node);
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+      if (o.onPlace) o.onPlace(P);
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    /* 換一個家（第 3 關的把手停在哪一格，那裡就是它的家） */
+    P.rehome = function(cx, cy){
+      stopGesture();
+      P.homeX = cx; P.homeY = cy;
+      P.home();
+    };
+    P.lock = function(cx, cy){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel');
+      if (B.selected === P) B.selected = null;
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+    }
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣） */
+      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      if (o.snap){ var q = o.snap({ x:orig.x + dx, y:orig.y + dy }); P.place(q.x, q.y); }
+      else P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */
+      /* 先點選、後來又直接拖走的那一塊：拖完就不再是「選起來」的，不然下一次點目的地會多放一次 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P, B.toBoard(e)); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
+  }
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
+  }
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（三年級 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
+  }
+
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字（四年級 chart 的驗證者抓到的） */
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+  }
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
+  }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 提醒（不是錯，不扣分、不算犯錯）：輸入框的寫法不正常、正三角形放進等腰 */
+  function roundNote(text){ gMsg.innerHTML = '<span class="gnote">' + text + '</span>'; }
+  /* 已經說明過、也扣過分的同一個錯：把說明再說一次，不再算錯、不扣分 */
+  function roundAgain(text){ gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+
+
+  var COLS = [['#E3F4EB', '#2F9E69'], ['#FDF0E0', '#E8871E']];   /* 第 1 關兩個三角形的顏色（淡色填、深色邊） */
+  var RENDER = {
+    /* 第 1 關：撕角拼直線（範例 1）—— 兩個形狀不一樣的三角形，每一個角塗了一塊扇形（撕下來的那一塊）；托盤上是六塊撕下來的角，
+       方向和它在三角形裡一樣。拖到（或先點、再點）一條直線：是這個三角形的角 → 頂點對準黑點、接在已經排好的旁邊，三角形上那一塊變成空的；
+       是另一個三角形的角 → 彈回、說為什麼（同一個錯不重複扣分）。放在別的地方靜靜彈回。三塊排完，那一條直線寫出 180°。 */
+    tear: function(d){
+      var e = pick(GAME_TEAR), sc = tearScene(e), lastBad = null, badSeen = {}, done = 0, used = [0, 0], filled = [0, 0];
+      var line = trailLine(d.gTearNow(0, 0));
+      var B = makeBoard(GW, TEAR_H);
+      var svg = gSvg(B), corners = [[], []], lineLbl = [];
+      sc.tris.forEach(function(P, i){
+        svg.appendChild(svgEl('polygon', { points:ptsAttr(P.map(function(p){ return { x:f1(p.x), y:f1(p.y) }; })), fill:'#FFFFFF', stroke:COLS[i][1], 'stroke-width':3, 'stroke-linejoin':'round', 'class':'gtri', 'data-t':i }));
+        for (var j = 0; j < 3; j++){
+          var c = tearCorner(P, j), w = svgEl('path', { d:wedgePath(c.V, c.U, c.W, TEAR.R), fill:COLS[i][0], stroke:COLS[i][1], 'stroke-width':2, 'class':'gcorner', 'data-t':i, 'data-j':j });
+          svg.appendChild(w);
+          corners[i].push(w);
+        }
+      });
+      drawLabels(svg, sc.labels, {}, { 'class':'gname' });
+      TEAR.ox.forEach(function(x, i){
+        svg.appendChild(svgEl('path', { d:'M' + (x - TEAR.R) + ',' + TEAR.ly + ' A' + TEAR.R + ',' + TEAR.R + ' 0 0,1 ' + (x + TEAR.R) + ',' + TEAR.ly, fill:'none', stroke:'#C9BFA9', 'stroke-width':1.5, 'stroke-dasharray':'3 3', 'class':'gguide', 'data-i':i }));
+        svg.appendChild(svgEl('line', { x1:x - TEAR.half, y1:TEAR.ly, x2:x + TEAR.half, y2:TEAR.ly, stroke:COLS[i][1], 'stroke-width':3, 'stroke-linecap':'round', 'class':'gline', 'data-i':i }));
+        svg.appendChild(svgEl('circle', { cx:x, cy:TEAR.ly, r:3.5, fill:'#2B2A33' }));
+        lineLbl.push(gText(svg, x, f1(lblBaseline(15, TEAR.lblY)), d.gTearLine(i), { 'font-size':15, fill:COLS[i][1], 'class':'glinelbl' }));
+      });
+      var pieces = tearTray().map(function(o, k){
+        var wp = tearPiece(sc.tris[o.t], o.j), s = svgEl('svg', { width:TEAR.pw, height:TEAR.pw, 'aria-hidden':'true' });
+        s.appendChild(svgEl('path', { d:wedgePath(wp.V, wp.U, wp.W, TEAR.R), fill:COLS[o.t][0], stroke:COLS[o.t][1], 'stroke-width':2 }));
+        gText(s, f1(wp.lbl.x), f1(lblBaseline(15, wp.lbl.y)), TEAR_NAMES[o.t][o.j], { 'font-size':15, fill:COLS[o.t][1] });
+        return addPiece(B, { w:TEAR.pw, h:TEAR.pw, cx:TEAR.trayX[k % 3], cy:TEAR.trayY[Math.floor(k / 3)], cls:'gwedge', node:s, label:d.gTearPiece(TEAR_NAMES[o.t][o.j]), data:{ t:o.t, j:o.j } });
+      });
+      var zones = tearZones();
+      gCtx.hint2 = function(){
+        /* 下一塊：先把已經開始排的那一條排完 */
+        var want = filled[1] > filled[0] && filled[1] < 3 ? 1 : (filled[0] < 3 ? 0 : 1);
+        for (var k = 0; k < pieces.length; k++) if (!pieces[k].locked && pieces[k].data.t === want) return d.gTear2(TEAR_NAMES[want][pieces[k].data.j], want);
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var z = nearestOpen(zones, pt, TEAR.pad);
+        if (!z) return false;
+        var t = P.data.t, j = P.data.j, name = TEAR_NAMES[t][j], key = t + '' + j + '>' + z.i;
+        if (tearRefuse(t, z.i)){
+          /* 已經說明過的錯（同一塊放到同一條）再放一次：不再扣分；不是剛剛那一個就把它的說明再說一次 */
+          if (badSeen[key]){ if (lastBad !== key){ lastBad = key; roundAgain(d.gTearBad(name, t)); } return false; }
+          badSeen[key] = true; lastBad = key;
+          roundMiss(d.gTearBad(name, t));
+          return false;
+        }
+        var slot = tearSlot(t, used[t], e[t][j]);
+        svg.appendChild(svgEl('path', { d:wedgePath(slot.V, slot.U, slot.W, TEAR.R), fill:COLS[t][0], stroke:COLS[t][1], 'stroke-width':2, 'class':'gplacedw', 'data-t':t, 'data-j':j }));
+        corners[t][j].setAttribute('fill', '#FFFFFF');
+        corners[t][j].setAttribute('stroke-dasharray', '3 3');
+        used[t] += e[t][j]; filled[t]++; done++;
+        P.lock(P.homeX, P.homeY);
+        P.el.style.visibility = 'hidden';
+        if (filled[t] === 3) lineLbl[t].textContent = d.gTearLineDone(t);
+        line.textContent = d.gTearNow(filled[0], filled[1]);
+        if (done === 6) roundSolved(d.gTearDone);
+        else { roundInfo(d.gTearOk(name, t, filled[t])); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 2 關：切一刀（範例 2）—— 照比例畫的四邊形，四個角的度數寫在角外面。點一個角（圓點或它的度數）、再點另一個角，就是沿著它們切一刀：
+       不相鄰（對角線）→ 切成兩個三角形，各寫 180°；相鄰 → 那是本來就有的邊，彈回、說為什麼（同一條邊不重複扣分）；同一個角再點一次 → 取消。
+       沒有東西可以拿，「點兩個角」本身就是切（§六之五 第 4 點的例外）。 */
+    cut: function(d){
+      var q = pick(GAME_CUT), sc = quadScene(q, QUAD.box, CUT_H, quadTexts(q, -1)), P = sc.P, first = null, lastBad = null, badSeen = {};
+      var line = trailLine(d.gCutNow0);
+      var B = makeBoard(GW, CUT_H);
+      var svg = gSvg(B);
+      var fillG = svgEl('g', {}), sideG = svgEl('g', {});
+      svg.appendChild(fillG);
+      fillG.appendChild(svgEl('polygon', { points:ptsAttr(P.map(function(p){ return { x:f1(p.x), y:f1(p.y) }; })), fill:'#E8F0FB' }));
+      svg.appendChild(svgEl('polygon', { points:ptsAttr(P.map(function(p){ return { x:f1(p.x), y:f1(p.y) }; })), fill:'none', stroke:'#3B7DD8', 'stroke-width':3, 'stroke-linejoin':'round', 'class':'gquad' }));
+      svg.appendChild(sideG);
+      P.forEach(function(V, j){ svg.appendChild(svgEl('path', { d:arcPath(V, P[(j + 1) % 4], P[(j + 3) % 4], QUAD.arc), fill:'none', stroke:'#2B2A33', 'stroke-width':2, 'class':'garc' })); });
+      var dots = P.map(function(V, j){ return svg.appendChild(svgEl('circle', { cx:f1(V.x), cy:f1(V.y), r:QUAD.dot, fill:'#FFFFFF', stroke:'#2B2A33', 'stroke-width':2, 'class':'gvdot', 'data-j':j })); });
+      drawLabels(svg, sc.labels, {}, { 'class':'gqlbl' });
+      function mark(j, on){ dots[j].setAttribute('fill', on ? '#3B7DD8' : '#FFFFFF'); dots[j].classList.toggle('gon', on); }
+      gCtx.hint2 = function(){
+        var a = first === null ? 0 : first;
+        dots.forEach(function(c, j){ c.classList.toggle('ghint', j === a || j === (a + 2) % 4); });
+        return d.gCut2;
+      };
+      B.onBoardTap = function(pt){
+        var j = cutPick(sc, pt);
+        if (j === null) return;
+        if (first === null){ first = j; mark(j, true); line.textContent = d.gCutNow1; refreshHint(); return; }
+        var bad = cutRefuse(first, j), i = first;
+        mark(i, false); first = null;
+        if (bad === 'same'){ line.textContent = d.gCutNow0; refreshHint(); return; }
+        if (bad){
+          var key = Math.min(i, j) + '-' + Math.max(i, j);
+          sideG.textContent = '';
+          sideG.appendChild(svgEl('line', { x1:f1(P[i].x), y1:f1(P[i].y), x2:f1(P[j].x), y2:f1(P[j].y), stroke:'#D64545', 'stroke-width':5, 'stroke-linecap':'round', 'class':'gside' }));
+          line.textContent = d.gCutNow0;
+          refreshHint();
+          if (badSeen[key]){ if (lastBad !== key){ lastBad = key; roundAgain(d.gCutSide); } return; }
+          badSeen[key] = true; lastBad = key;
+          roundMiss(d.gCutSide);
+          return;
+        }
+        /* 切對了：沿著對角線切成兩個三角形，各塗一個顏色、各寫 180° */
+        var cs = cutScene(q, i);
+        sideG.textContent = ''; fillG.textContent = '';
+        cs.halves.forEach(function(h, n){ fillG.appendChild(svgEl('polygon', { points:ptsAttr(h.map(function(k){ return { x:f1(P[k].x), y:f1(P[k].y) }; })), fill:COLS[n][0], 'class':'ghalf' })); });
+        svg.appendChild(svgEl('line', { x1:f1(P[i % 2].x), y1:f1(P[i % 2].y), x2:f1(P[i % 2 + 2].x), y2:f1(P[i % 2 + 2].y), stroke:'#2B2A33', 'stroke-width':3, 'stroke-linecap':'round', 'class':'gdiag' }));
+        drawLabels(svg, cs.halfLabels, { h0:COLS[0][1], h1:COLS[1][1] }, { 'class':'g180' });
+        dots.forEach(function(c){ c.classList.remove('ghint'); });
+        line.textContent = d.gCutNowDone;
+        roundSolved(d.gCutDone(q));
+      };
+    },
+
+    /* 第 3 關：轉一轉（範例 3）—— 底邊 AB；A 角固定，拖 B 邊上的把手轉 B 角（拖的時候就吸到最近的 5°，三角形跟著變），
+       也可以點軌道上的一格、或按 −5°／＋5°。轉動永遠不算錯；按「就是這個」才判斷：C ＝ 180 − A − B 不是目標 → 算給他看、說 B 要轉大還是轉小；
+       同一個 B 再按一次不再扣分；把手正被拖著時按「就是這個」不判斷。 */
+    turn: function(d){
+      var e = pick(GAME_TURN), a = e[0], t = e[1], b = e[4], lastBad = null, badSeen = {};
+      gCtx.ask.textContent = d.gAsks.turn(t);
+      var line = trailLine(d.gTurnNow(a, b));
+      var B = makeBoard(GW, TURN_H);
+      var svg = gSvg(B), Bp = turnB(), tr = turnTrack(e);
+      var lo = tr.at(e[2], TURN.rh), hi = tr.at(e[3], TURN.rh);
+      var tri = svgEl('polygon', { fill:'#E8F0FB', stroke:'#3B7DD8', 'stroke-width':3, 'stroke-linejoin':'round', 'class':'gtri' });
+      svg.appendChild(tri);
+      /* 軌道與刻度畫在三角形上面（三角形塗了底色，畫在下面會被蓋掉） */
+      svg.appendChild(svgEl('path', { d:'M' + f1(lo.x) + ',' + f1(lo.y) + ' A' + TURN.rh + ',' + TURN.rh + ' 0 0,1 ' + f1(hi.x) + ',' + f1(hi.y), fill:'none', stroke:'#A89F8C', 'stroke-width':2, 'class':'gtrack' }));
+      tr.ticks.forEach(function(k){ svg.appendChild(svgEl('line', { x1:f1(k.a.x), y1:f1(k.a.y), x2:f1(k.c.x), y2:f1(k.c.y), stroke:'#A89F8C', 'stroke-width':2, 'class':'gtick', 'data-b':k.b })); });
+      var arcs = [0, 1, 2].map(function(i){ var p = svgEl('path', { fill:'none', stroke:i === 2 ? '#D64545' : '#2B2A33', 'stroke-width':2, 'class':'garc' }); svg.appendChild(p); return p; });
+      var arm = svgEl('line', { stroke:'#E8871E', 'stroke-width':2, 'stroke-dasharray':'5 4', 'class':'garm' });
+      svg.appendChild(arm);
+      var lg = svgEl('g', {});
+      svg.appendChild(lg);
+      function draw(cText){
+        var s = turnScene(e, b, cText), A = s.A, C = s.C, H = s.H;
+        tri.setAttribute('points', ptsAttr([A, Bp, C].map(function(p){ return { x:f1(p.x), y:f1(p.y) }; })));
+        arcs[0].setAttribute('d', arcPath(A, Bp, C, TURN.arc));
+        arcs[1].setAttribute('d', arcPath(Bp, C, A, TURN.arc));
+        arcs[2].setAttribute('d', arcPath(C, A, Bp, TURN.arc));
+        arm.setAttribute('x1', f1(Bp.x)); arm.setAttribute('y1', f1(Bp.y)); arm.setAttribute('x2', f1(H.x)); arm.setAttribute('y2', f1(H.y));
+        lg.textContent = '';
+        drawLabels(lg, s.labels, { c:'#D64545' }, { 'class':'gtlbl' });
+        line.textContent = d.gTurnNow(a, b, cText);
+      }
+      draw();
+      var h0 = turnHandle(b);
+      var grip = addPiece(B, { w:GPICK, h:GPICK, cx:h0.x, cy:h0.y, cls:'ggrip', label:d.gTurnGrip,
+        snap:function(p){ return turnHandle(turnSnap(e, p)); },
+        onPlace:function(P){ var nb = turnSnap(e, { x:P.cx, y:P.cy }); if (nb !== b){ b = nb; draw(); refreshHint(); } } });
+      function setB(v){
+        if (gSolved) return;
+        v = Math.max(e[2], Math.min(e[3], v));
+        var h = turnHandle(v);
+        grip.rehome(h.x, h.y);
+      }
+      B.onDrop = function(P){ P.rehome(P.cx, P.cy); return true; };   /* 放開：停在吸到的那一格（不判斷） */
+      B.onBoardTap = function(pt){ if (turnOnTrack(e, pt)) setB(turnSnap(e, pt)); };
+      B.onTap = function(P, pt){ if (turnOnTrack(e, pt)) setB(turnSnap(e, pt)); };   /* 點在圈圈蓋住的那一格上：一樣是點那一格 */
+      var row = actionRow();
+      var less = actionBtn(row, '−5°', 'ghost', d.gTurnLess), more = actionBtn(row, '＋5°', 'ghost', d.gTurnMore), ok = actionBtn(row, d.gTurnBtn, '');
+      less.addEventListener('click', function(){ if (!grip.busy()) setB(b - TURN.step); });
+      more.addEventListener('click', function(){ if (!grip.busy()) setB(b + TURN.step); });
+      ok.addEventListener('click', function(){
+        if (gSolved || grip.busy()) return;   /* 把手正被拖著：等它放開再判斷 */
+        var bad = turnRefuse(a, b, t);
+        if (bad){
+          /* 同一個 B 再按一次：不再扣分；不是剛剛那一個就把它的說明再說一次 */
+          if (badSeen[b]){ if (lastBad !== b){ lastBad = b; roundAgain(d.gTurnBad(a, b, bad.c, t, bad.more)); } return; }
+          badSeen[b] = true; lastBad = b;
+          roundMiss(d.gTurnBad(a, b, bad.c, t, bad.more));
+          return;
+        }
+        grip.lock(grip.cx, grip.cy);
+        less.disabled = more.disabled = ok.disabled = true;
+        draw(t + '°');
+        roundSolved(d.gTurnDone(a, b, t));
+      });
+      gCtx.hint2 = function(){ return d.gTurn2(a, t); };
+    },
+
+    /* 第 4 關：分一分（範例 4）—— 四張卡各寫兩個角和「?」，分進正三角形／等腰三角形／直角三角形三個箱子（相鄰的箱子放寬之後會重疊：挑最近的）。
+       放對 → 箱子裡寫出算出來的 ?；放錯 → 彈回、把 ? 算出來、說為什麼不是（同一張放進同一個箱子不重複扣分）；
+       正三角形放進等腰 → 不扣分、彈回，說它也是等腰、要放最精確的那一格。托盤洗牌後不可以已經照箱子排好。 */
+    sort: function(d){
+      var g = pick(GAME_SORT), done = 0, lastBad = null, badSeen = {};
+      var line = trailLine(d.gSortNow(0, g.length));
+      var B = makeBoard(GW, SORT_H);
+      var bins = sortBins();
+      bins.forEach(function(bin, i){
+        addZone(B, SORT.binX[i], SORT.binY, SORT.binW, SORT.binH, 'gbin');
+        addZone(B, SORT.binX[i] + 4, SORT.binY + 4, SORT.binW - 8, SORT.lblH, 'gbinlbl', d.gKinds[bin.k]);
+      });
+      var cards = sortTray(g).map(function(c, j){
+        return addPiece(B, { w:SORT.cardW, h:SORT.cardH, cx:SORT.trayX[j % 2], cy:SORT.trayY[Math.floor(j / 2)], cls:'gcard gangcard', text:sortCardText(c), data:{ c:c } });
+      });
+      gCtx.hint2 = function(){
+        for (var j = 0; j < cards.length; j++) if (!cards[j].locked){ var c = cards[j].data.c; return d.gSort2(c[0], c[1], sortThird(c)); }
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var bin = nearestOpen(bins, pt, SORT.pad);
+        if (!bin) return false;
+        var c = P.data.c, why = sortRefuse(c, bin.k), key = c.join('/') + '>' + bin.k;
+        if (why === 'alsoIso'){ roundNote(d.gSortAlso); return false; }   /* 不是錯：它也是等腰，只是不是最精確的那一格 */
+        if (why){
+          if (badSeen[key]){ if (lastBad !== key){ lastBad = key; roundAgain(d.gSortBad(c[0], c[1], sortThird(c), bin.k)); } return false; }
+          badSeen[key] = true; lastBad = key;
+          roundMiss(d.gSortBad(c[0], c[1], sortThird(c), bin.k));
+          return false;
+        }
+        P.lock(P.homeX, P.homeY);
+        P.el.style.visibility = 'hidden';
+        addZone(B, bin.cx - SORT.chipW / 2, SORT.chipY[bin.n] - SORT.chipH / 2, SORT.chipW, SORT.chipH, 'gplaced', sortChipText(c));
+        bin.n++; done++;
+        line.textContent = d.gSortNow(done, cards.length);
+        if (done === cards.length) roundSolved(d.gSortDone);
+        else { roundInfo(d.gSortOk(c[0], c[1], sortThird(c), d.gKinds[bin.k])); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 5 關：打出來（範例 2、3）—— 照比例畫的四邊形：三個角寫度數，? 那一個只畫紅色的弧。在框裡打一個整數，按「檢查」或 Enter：
+       寫法不正常 → 只提醒、不算錯；打錯 → 把四個角加起來給他看（不是 360），同一個數再打一次不再扣分；打對 → ? 換成度數。 */
+    input: function(d){
+      var q = pick(GAME_INPUT), k = q[5], lastBad = null, badSeen = {};
+      var sc = quadScene(q, QUAD.box, IN_H, quadTexts(q, k)), P = sc.P;
+      var line = trailLine(d.gInNow(quadTexts(q, k)));
+      var B = makeBoard(GW, IN_H);
+      var svg = gSvg(B);
+      svg.appendChild(svgEl('polygon', { points:ptsAttr(P.map(function(p){ return { x:f1(p.x), y:f1(p.y) }; })), fill:'#E8F0FB', stroke:'#3B7DD8', 'stroke-width':3, 'stroke-linejoin':'round', 'class':'gquad' }));
+      P.forEach(function(V, j){ svg.appendChild(svgEl('path', { d:arcPath(V, P[(j + 1) % 4], P[(j + 3) % 4], QUAD.arc), fill:'none', stroke:j === k ? '#D64545' : '#2B2A33', 'stroke-width':2, 'class':'garc' })); });
+      P.forEach(function(V){ svg.appendChild(svgEl('circle', { cx:f1(V.x), cy:f1(V.y), r:QUAD.dot, fill:'#FFFFFF', stroke:'#2B2A33', 'stroke-width':2 })); });
+      var lg = svgEl('g', {});
+      svg.appendChild(lg);
+      drawLabels(lg, sc.labels, { 0:k === 0 ? '#D64545' : '', 1:k === 1 ? '#D64545' : '', 2:k === 2 ? '#D64545' : '', 3:k === 3 ? '#D64545' : '' }, { 'class':'gqlbl' });
+      var row = actionRow();
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.className = 'ginput'; inp.setAttribute('inputmode', 'numeric'); inp.setAttribute('autocomplete', 'off'); inp.setAttribute('aria-label', d.gInAria);
+      row.appendChild(inp);
+      var degSign = document.createElement('span');
+      degSign.className = 'gdeg'; degSign.textContent = '°';
+      row.appendChild(degSign);
+      var ok = actionBtn(row, d.gInBtn, '');
+      function check(){
+        if (gSolved) return;
+        var v = inParse(inp.value);
+        if (v === null){ roundNote(d.gInRemind); return; }   /* 寫法不正常：只提醒，不算錯 */
+        var bad = inRefuse(q, v);
+        if (bad){
+          if (badSeen[v]){ if (lastBad !== v){ lastBad = v; roundAgain(d.gInBad(inKnown(q), v, bad.s, bad.more)); } return; }
+          badSeen[v] = true; lastBad = v;
+          roundMiss(d.gInBad(inKnown(q), v, bad.s, bad.more));
+          return;
+        }
+        inp.disabled = true; ok.disabled = true;
+        lg.textContent = '';
+        drawLabels(lg, quadScene(q, QUAD.box, IN_H, quadTexts(q, -1)).labels, { 0:k === 0 ? '#2F9E69' : '', 1:k === 1 ? '#2F9E69' : '', 2:k === 2 ? '#2F9E69' : '', 3:k === 3 ? '#2F9E69' : '' }, { 'class':'gqlbl' });
+        line.textContent = d.gInNow(quadTexts(q, -1));
+        roundSolved(d.gInDone(inKnown(q), v));
+      }
+      ok.addEventListener('click', check);
+      inp.addEventListener('keydown', function(ev){ if (ev.key === 'Enter') check(); });
+      gCtx.hint2 = function(){ return d.gIn2(inKnown(q)); };
+    }
+  };
 
   function startRound(){
     var d = L();
-    var round = ROUNDS[gRoundIdx];
-    gFirstTry = true;
-    elGRound.textContent = gRoundIdx + 1;
-    gScene.innerHTML = renderRoundScene(round, false);
-    hintLevel = (mode === 'ahead') ? 1 : 0;
-    gHintBtn.disabled = false;
-    gHintBtn.textContent = d.gHintBtn;
-    showHint();
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {}; gGen++; BOARD_TAP = null; PIECE_PTR = {};   /* 上一關沒收尾的手指不帶到下一關 */
+    elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-    gCards.textContent = '';
-    round.cards.forEach(function(v){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = v + '°';
-      b.addEventListener('click', function(){
-        if (v === round.answer){
-          var all = gCards.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          var pts = gFirstTry ? 20 : 10;
-          gScore += pts;
-          elGScore.textContent = gScore;
-          gScene.innerHTML = renderRoundScene(round, true);
-          var msg = '<span class="yes">' + explainRound(round) + d.pointsSuffix(gFirstTry) + '</span>';
-          if (gRoundIdx === ROUNDS.length - 1){
-            gMsg.innerHTML = msg + '<br><span class="yes">' + d.gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML = msg + '<br><span class="yes">' + d.gClear + '</span>';
-            gNext.disabled = false;
-          }
-        } else {
-          b.disabled = true; b.classList.add('wrong');
-          gFirstTry = false;
-          gScore = Math.max(0, gScore - 5);
-          elGScore.textContent = gScore;
-          gMsg.innerHTML = '<span class="no">' + d.gMiss(v) + '</span>';
-        }
-      });
-      gCards.appendChild(b);
-    });
+    hintLevel = 0;
+    gHintBtn.disabled = false;
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = typeof d.gAsks[type] === 'string' ? d.gAsks[type] : '';
+    gameStage.appendChild(ask);
+    gCtx.ask = ask;
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRoundIdx = 0; gScore = 0; elGScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕），第二層跟著畫面走 */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
-    if (gRoundIdx < ROUNDS.length - 1){ gRoundIdx++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
+  gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2) return;
+    hintLevel++;
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
+  });
 
   /* ---------- 語言切換：靜態文字＋所有動態區重新渲染 ---------- */
   function renderAll(){
