@@ -54,6 +54,7 @@
   .faceBase{fill:#fff;stroke:#000;stroke-width:2}
   .faceRect{fill:#fff;stroke:#000;stroke-width:2}
   .apexDot{fill:#000}
+  .apexDot{fill:#000}
   .printbtn{
     margin-top:18px;border:none;border-radius:12px;background:var(--green);color:#fff;
     font-size:16px;font-weight:700;padding:10px 22px;cursor:pointer;
@@ -148,146 +149,217 @@
   function prismCounts(n){ return { f: n + 2, e: 3 * n, v: 2 * n }; }
   function pyramidCounts(n){ return { f: n + 1, e: 2 * n, v: n + 1 }; }
 
-  function ngonPoints(n, cx, cy, rx, ry, rotDeg){
-    var pts = [];
-    for (var i = 0; i < n; i++){
-      var theta = (rotDeg == null ? -90 : rotDeg) + i * 360 / n;
-      var rad = theta * Math.PI / 180;
-      pts.push([cx + rx * Math.cos(rad), cy + ry * Math.sin(rad)]);
+  /* ---------- 立體圖引擎（index / reference / review 三頁共用同一份，一字不差；設定檔會比對） ----------
+     立體先用真的 3D 座標建出來（y 朝上、z 朝向看的人），再從前上方 SOLID_EL 度正投影到紙上。
+     一個面看不看得到：它朝外的法向量和「朝向看的人」的方向內積 > 0。
+     一條稜：旁邊兩個面有一個看得到就畫實線，兩個都看不到就畫虛線（被擋住的稜）。
+     圓柱、圓錐的側面是曲面（用 SOLID_SEG 片窄窄的平面拼成），兩片曲面之間的接縫不是稜 ——
+     只有「一片看得到、一片看不到」的那一條（輪廓）畫實線，其他接縫不畫。
+     底面頂點的起始角 solidPhase(n)：任兩個頂點都不會左右對稱地落在同一條鉛直線上（不然兩條稜會畫在一起）。 */
+  var SOLID_EL = 22, SOLID_SEG = 48;
+  var SOLID_SHAPE = { prism:{ r:1, h:1.25 }, pyramid:{ r:1, h:1.55 }, cylinder:{ r:1, h:1.3 }, cone:{ r:1, h:1.6 } };
+  function solidPhase(n){ var s = 360 / n; return 90 + s / 2 + (n % 2 === 0 ? s / 4 : 0); }
+  function solidModel(kind, n, phase){
+    var S = SOLID_SHAPE[kind], curved = kind === 'cylinder' || kind === 'cone';
+    var m = curved ? SOLID_SEG : n, ph = (phase == null) ? solidPhase(m) : phase, V = [], F = [], i, j;
+    function ring(y){
+      var a = [];
+      for (var k = 0; k < m; k++){ var t = (ph + k * 360 / m) * Math.PI / 180; a.push(V.length); V.push([S.r * Math.cos(t), y, S.r * Math.sin(t)]); }
+      return a;
+    }
+    var bot = ring(0), apex = -1;
+    if (kind === 'prism' || kind === 'cylinder'){
+      var top = ring(S.h);
+      F.push({ v:bot.slice(), base:true }); F.push({ v:top.slice(), base:true });
+      for (i = 0; i < m; i++){ j = (i + 1) % m; F.push({ v:[bot[i], bot[j], top[j], top[i]], curved:curved }); }
+    } else {
+      apex = V.length; V.push([0, S.h, 0]);
+      F.push({ v:bot.slice(), base:true });
+      for (i = 0; i < m; i++){ j = (i + 1) % m; F.push({ v:[bot[i], bot[j], apex], curved:curved }); }
+    }
+    return { V:V, F:F, apex:apex };
+  }
+  /* pose：phase ＝ 底面第一個頂點的角度（不給就用 solidPhase）、roll ＝ 繞 z 軸轉（90 就是躺下來）、flip ＝ 上下顛倒、
+     yaw ＝ 最後繞鉛直軸轉（躺著的柱體要轉一點，底面才看得到） */
+  function solidPose(V, pose){
+    pose = pose || {};
+    var c = [0, 0, 0];
+    V.forEach(function(p){ c[0] += p[0] / V.length; c[1] += p[1] / V.length; c[2] += p[2] / V.length; });
+    var r = (pose.roll || 0) * Math.PI / 180, y = (pose.yaw || 0) * Math.PI / 180;
+    return V.map(function(p){
+      var x = p[0] - c[0], yy = p[1] - c[1], z = p[2] - c[2], t;
+      t = x * Math.cos(r) - yy * Math.sin(r); yy = x * Math.sin(r) + yy * Math.cos(r); x = t;
+      if (pose.flip){ yy = -yy; z = -z; }
+      t = x * Math.cos(y) + z * Math.sin(y); z = -x * Math.sin(y) + z * Math.cos(y); x = t;
+      return [x, yy, z];
+    });
+  }
+  /* 純資料的「怎麼畫」：投影後的點 P、每一條要畫的線（a、b 是點的編號，k 是 solid／hidden）、每一個面看不看得到。不碰 DOM。 */
+  function solidPlan(kind, n, pose){
+    var M = solidModel(kind, n, pose && pose.phase), V = solidPose(M.V, pose), e = SOLID_EL * Math.PI / 180;
+    var eye = [0, Math.sin(e), Math.cos(e)], C = [0, 0, 0];
+    var P = V.map(function(p){ return [p[0], -(p[1] * Math.cos(e) - p[2] * Math.sin(e))]; });
+    var faces = M.F.map(function(f){
+      var nx = 0, ny = 0, nz = 0, cx = 0, cy = 0, cz = 0;
+      f.v.forEach(function(a, i){
+        var p = V[a], q = V[f.v[(i + 1) % f.v.length]];
+        nx += (p[1] - q[1]) * (p[2] + q[2]); ny += (p[2] - q[2]) * (p[0] + q[0]); nz += (p[0] - q[0]) * (p[1] + q[1]);
+        cx += p[0] / f.v.length; cy += p[1] / f.v.length; cz += p[2] / f.v.length;
+      });
+      if (nx * (cx - C[0]) + ny * (cy - C[1]) + nz * (cz - C[2]) < 0){ nx = -nx; ny = -ny; nz = -nz; }
+      var len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+      return { v:f.v, base:!!f.base, curved:!!f.curved, vis:(nx * eye[0] + ny * eye[1] + nz * eye[2]) / len > 1e-6 };
+    });
+    var map = {}, list = [];
+    faces.forEach(function(f, fi){
+      f.v.forEach(function(a, i){
+        var b = f.v[(i + 1) % f.v.length], key = Math.min(a, b) + '-' + Math.max(a, b);
+        if (!map[key]){ map[key] = { a:Math.min(a, b), b:Math.max(a, b), f:[] }; list.push(map[key]); }
+        map[key].f.push(fi);
+      });
+    });
+    var lines = [];
+    list.forEach(function(E){
+      var f1 = faces[E.f[0]], f2 = faces[E.f[1]];
+      if (f1.curved && f2.curved){ if (f1.vis !== f2.vis) lines.push({ a:E.a, b:E.b, k:'solid', seam:true }); return; }
+      lines.push({ a:E.a, b:E.b, k:(f1.vis || f2.vis) ? 'solid' : 'hidden', seam:false });
+    });
+    return { P:P, lines:lines, faces:faces, apex:M.apex };
+  }
+  /* 把投影的點等比縮放、置中放進框 { x, y, w, h } */
+  function solidFit(plan, box){
+    var xs = plan.P.map(function(p){ return p[0]; }), ys = plan.P.map(function(p){ return p[1]; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    var s = Math.min(box.w / (x1 - x0), box.h / (y1 - y0));
+    var ox = box.x + (box.w - (x1 - x0) * s) / 2 - x0 * s, oy = box.y + (box.h - (y1 - y0) * s) / 2 - y0 * s;
+    return plan.P.map(function(p){ return [ox + p[0] * s, oy + p[1] * s]; });
+  }
+  /* 同一種線接成一條一條的折線（虛線的節奏才不會每一小段重新開始） */
+  function solidChains(lines, k){
+    var segs = lines.filter(function(L){ return L.k === k; }).map(function(L){ return [L.a, L.b]; }), used = [], out = [];
+    for (var s = 0; s < segs.length; s++){
+      if (used[s]) continue;
+      used[s] = true;
+      var ch = segs[s].slice(), grew = true;
+      while (grew){
+        grew = false;
+        for (var t = 0; t < segs.length; t++){
+          if (used[t]) continue;
+          var a = segs[t][0], b = segs[t][1], last = ch[ch.length - 1];
+          if (a === last){ ch.push(b); used[t] = true; grew = true; }
+          else if (b === last){ ch.push(a); used[t] = true; grew = true; }
+          else if (a === ch[0]){ ch.unshift(b); used[t] = true; grew = true; }
+          else if (b === ch[0]){ ch.unshift(a); used[t] = true; grew = true; }
+        }
+      }
+      out.push(ch);
+    }
+    return out;
+  }
+  function solidSVG(kind, n, pose, W, H, extra){
+    W = W || 300; H = H || 220;
+    var m = extra ? 6 : 14, plan = solidPlan(kind, n, pose), Q = solidFit(plan, { x:m, y:m, w:W - 2 * m, h:H - 2 * m });
+    var f2 = function(v){ return v.toFixed(1); }, pt = function(i){ return f2(Q[i][0]) + ',' + f2(Q[i][1]); };
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" ' + (extra || 'class="solidSvg" role="img"') + '>';
+    plan.faces.forEach(function(f){ if (f.base && f.vis) svg += '<polygon class="faceTop" points="' + f.v.map(pt).join(' ') + '"></polygon>'; });
+    ['hidden', 'solid'].forEach(function(k){
+      solidChains(plan.lines, k).forEach(function(ch){ svg += '<polyline class="' + (k === 'solid' ? 'edgeSolid' : 'edgeHidden') + '" points="' + ch.map(pt).join(' ') + '"></polyline>'; });
+    });
+    if (plan.apex >= 0) svg += '<circle class="apexDot" cx="' + f2(Q[plan.apex][0]) + '" cy="' + f2(Q[plan.apex][1]) + '" r="4"></circle>';
+    return svg + '</svg>';
+  }
+  function drawPrismSVG(n){ return solidSVG('prism', n); }
+  function drawPyramidSVG(n){ return solidSVG('pyramid', n); }
+  function drawCylinderSVG(){ return solidSVG('cylinder', 0); }
+  function drawConeSVG(){ return solidSVG('cone', 0); }
+  /* 球：一個圓（輪廓）＋赤道（前半圈實線、後半圈虛線）。extra：畫在小圖卡上（框緊一點，另外給屬性） */
+  function drawSphereSVG(extra){
+    var cx = 150, cy = 110, r = 78;
+    var arc = function(front){ return '<path class="' + (front ? 'edgeSolid' : 'edgeHidden') + '" d="M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + (r * 0.32).toFixed(2) + ' 0 0 ' + (front ? 1 : 0) + ' ' + (cx + r) + ' ' + cy + '" fill="none"></path>'; };
+    return '<svg viewBox="' + (extra ? '64 24 172 172' : '0 0 300 220') + '" ' + (extra || 'class="solidSvg" role="img"') + '><circle class="faceTop" cx="' + cx + '" cy="' + cy + '" r="' + r + '"></circle>' + arc(false) + arc(true) + '</svg>';
+  }
+  function drawSolidByKind(kind, n){
+    if (kind === 'prism') return drawPrismSVG(n);
+    if (kind === 'pyramid') return drawPyramidSVG(n);
+    if (kind === 'cylinder') return drawCylinderSVG();
+    if (kind === 'cone') return drawConeSVG();
+    return drawSphereSVG();
+  }
+
+  /* ---------- 展開圖：每一張都真的摺得起來 ----------
+     角柱：n 個長方形排成一排（寬 ＝ 底面的邊長），兩個正 n 邊形各貼著一個長方形的上邊、下邊（摺起來在相對的兩頭）。
+     角錐：正 n 邊形的每一條邊貼一個等腰三角形（高比底面的內切圓半徑長，三個角才收得到一點）。
+     圓柱：長方形的長 ＝ 圓周長（2 × 3.14 × 半徑），兩個圓貼著長方形的上下兩邊。
+     圓錐：扇形的弧長 ＝ 底面的圓周長（圓心角 ＝ 360° × 底面半徑 ÷ 扇形半徑），圓貼著弧的正中間。 */
+  function ngonOnEdge(A, B, n){
+    var pts = [A, B], d = [B[0] - A[0], B[1] - A[1]], t = -2 * Math.PI / n;
+    for (var k = 2; k < n; k++){
+      d = [d[0] * Math.cos(t) - d[1] * Math.sin(t), d[0] * Math.sin(t) + d[1] * Math.cos(t)];
+      var p = pts[pts.length - 1];
+      pts.push([p[0] + d[0], p[1] + d[1]]);
     }
     return pts;
-  }
-  function polySideLen(n, r){ return 2 * r * Math.sin(Math.PI / n); }
-  function pyramidNetFaces(n){
-    var base = ngonPoints(n, 150, 110, 40, 40, -90);
-    var tris = [];
-    for (var i = 0; i < n; i++){
-      var j = (i + 1) % n;
-      var mx = (base[i][0] + base[j][0]) / 2, my = (base[i][1] + base[j][1]) / 2;
-      var dx = mx - 150, dy = my - 110;
-      var len = Math.sqrt(dx * dx + dy * dy) || 1;
-      var apex = [mx + (dx / len) * 55, my + (dy / len) * 55];
-      tris.push([base[i], base[j], apex]);
-    }
-    return { base: base, tris: tris };
-  }
-  function line(p1, p2, cls){
-    return '<line class="' + cls + '" x1="' + p1[0].toFixed(1) + '" y1="' + p1[1].toFixed(1) + '" x2="' + p2[0].toFixed(1) + '" y2="' + p2[1].toFixed(1) + '"></line>';
   }
   function polygonEl(pts, cls){
     return '<polygon class="' + cls + '" points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"></polygon>';
   }
-  function frontSin(deg){ return Math.sin(deg * Math.PI / 180); }
-  function drawPrismSVG(n){
-    var cx = 150, topY = 62, rx = 78, ry = 26, H = 96;
-    var top = ngonPoints(n, cx, topY, rx, ry, -90);
-    var bot = top.map(function(p){ return [p[0], p[1] + H]; });
-    var svg = '<svg viewBox="0 0 300 220">';
-    var i, j, midDeg, front;
-    for (i = 0; i < n; i++){ j = (i+1)%n; midDeg=-90+i*360/n+(360/n)/2; front=frontSin(midDeg)>0.02; if(!front) svg+=line(bot[i],bot[j],'edgeHidden'); }
-    for (i = 0; i < n; i++){ var deg=-90+i*360/n; front=frontSin(deg)>-0.02; svg+=line(top[i],bot[i],front?'edgeSolid':'edgeHidden'); }
-    for (i = 0; i < n; i++){ j=(i+1)%n; midDeg=-90+i*360/n+(360/n)/2; front=frontSin(midDeg)>0.02; if(front) svg+=line(bot[i],bot[j],'edgeSolid'); }
-    svg += polygonEl(top, 'faceTop');
-    svg += '</svg>';
-    return svg;
-  }
-  function drawPyramidSVG(n){
-    var cx = 150, baseY = 172, rx = 80, ry = 26, apex = [cx, 40];
-    var base = ngonPoints(n, cx, baseY, rx, ry, -90);
-    var svg = '<svg viewBox="0 0 300 220">';
-    var i, j, midDeg, front;
-    for (i = 0; i < n; i++){ j=(i+1)%n; midDeg=-90+i*360/n+(360/n)/2; front=frontSin(midDeg)>0.02; if(!front) svg+=line(base[i],base[j],'edgeHidden'); }
-    for (i = 0; i < n; i++){ var deg=-90+i*360/n; front=frontSin(deg)>-0.02; if(!front) svg+=line(apex,base[i],'edgeHidden'); }
-    for (i = 0; i < n; i++){ var deg2=-90+i*360/n; front=frontSin(deg2)>-0.02; if(front) svg+=line(apex,base[i],'edgeSolid'); }
-    for (i = 0; i < n; i++){ j=(i+1)%n; midDeg=-90+i*360/n+(360/n)/2; front=frontSin(midDeg)>0.02; if(front) svg+=line(base[i],base[j],'edgeSolid'); }
-    svg += '<circle class="apexDot" cx="' + apex[0] + '" cy="' + apex[1] + '" r="4"></circle>';
-    svg += '</svg>';
-    return svg;
-  }
-  function ellipseArc(cx, cy, rx, ry, front){
-    var sweep = front ? 1 : 0;
-    var cls = front ? 'edgeSolid' : 'edgeHidden';
-    return '<path class="' + cls + '" d="M ' + (cx - rx) + ' ' + cy + ' A ' + rx + ' ' + ry + ' 0 0 ' + sweep + ' ' + (cx + rx) + ' ' + cy + '" fill="none"></path>';
-  }
-  function drawCylinderSVG(){
-    var cx = 150, topY = 56, rx = 74, ry = 24, H = 104;
-    var svg = '<svg viewBox="0 0 300 220">';
-    svg += ellipseArc(cx, topY + H, rx, ry, false);
-    svg += line([cx - rx, topY], [cx - rx, topY + H], 'edgeSolid');
-    svg += line([cx + rx, topY], [cx + rx, topY + H], 'edgeSolid');
-    svg += ellipseArc(cx, topY + H, rx, ry, true);
-    svg += '<ellipse class="faceTop" cx="' + cx + '" cy="' + topY + '" rx="' + rx + '" ry="' + ry + '"></ellipse>';
-    svg += '</svg>';
-    return svg;
-  }
-  function drawConeSVG(){
-    var cx = 150, apexY = 40, baseY = 178, rx = 76, ry = 24;
-    var svg = '<svg viewBox="0 0 300 220">';
-    svg += ellipseArc(cx, baseY, rx, ry, false);
-    svg += line([cx, apexY], [cx - rx, baseY], 'edgeSolid');
-    svg += line([cx, apexY], [cx + rx, baseY], 'edgeSolid');
-    svg += ellipseArc(cx, baseY, rx, ry, true);
-    svg += '<circle class="apexDot" cx="' + cx + '" cy="' + apexY + '" r="4"></circle>';
-    svg += '</svg>';
-    return svg;
-  }
-  function drawSphereSVG(){
-    var cx = 150, cy = 110, r = 78;
-    var svg = '<svg viewBox="0 0 300 220">';
-    svg += '<circle class="faceTop" cx="' + cx + '" cy="' + cy + '" r="' + r + '"></circle>';
-    svg += ellipseArc(cx, cy, r, r * 0.32, false);
-    svg += ellipseArc(cx, cy, r, r * 0.32, true);
-    svg += '<ellipse class="edgeHidden" cx="' + cx + '" cy="' + cy + '" rx="' + (r * 0.32) + '" ry="' + r + '" fill="none"></ellipse>';
-    svg += '</svg>';
-    return svg;
+  function prismNetPlan(n){
+    var a = Math.min(46, 230 / n), H = 64, k = Math.floor((n - 1) / 2);
+    var ap = a / (2 * Math.tan(Math.PI / n)), R = a / (2 * Math.sin(Math.PI / n));
+    var up = (n % 2 === 0) ? 2 * ap : ap + R;   /* 正 n 邊形貼著一條水平的邊時，離那條邊最遠的地方 */
+    var x0 = 12, y0 = 12 + up, rects = [];
+    for (var i = 0; i < n; i++) rects.push([[x0 + i * a, y0], [x0 + (i + 1) * a, y0], [x0 + (i + 1) * a, y0 + H], [x0 + i * a, y0 + H]]);
+    var top = ngonOnEdge([x0 + k * a, y0], [x0 + (k + 1) * a, y0], n);
+    var bot = ngonOnEdge([x0 + (k + 1) * a, y0 + H], [x0 + k * a, y0 + H], n);
+    return { W:2 * x0 + n * a, H:2 * 12 + 2 * up + H, rects:rects, bases:[top, bot], a:a, h:H };
   }
   function drawPrismNetSVG(n){
-    var r = 30, H = 70, gap = 6, side = polySideLen(n, r);
-    var totalW = side * n + 2 * (2 * r + gap);
-    var startX = 2 * r + gap + 4, y0 = 90;
-    var svg = '<svg viewBox="0 0 ' + Math.max(300, totalW + 20) + ' 200">';
-    var i;
-    for (i = 0; i < n; i++){
-      var x = startX + i * side;
-      svg += '<rect class="faceRect" x="' + x.toFixed(1) + '" y="' + y0 + '" width="' + side.toFixed(1) + '" height="' + H + '"></rect>';
-    }
-    var c1 = [startX - r - gap, y0 + H / 2];
-    svg += polygonEl(ngonPoints(n, c1[0], c1[1], r, r, -90), 'faceBase');
-    var c2 = [startX + n * side + r + gap, y0 + H / 2];
-    svg += polygonEl(ngonPoints(n, c2[0], c2[1], r, r, -90), 'faceBase');
-    svg += line([c1[0] + r, c1[1]], [startX, y0 + H / 2], 'edgeHidden');
-    svg += line([c2[0] - r, c2[1]], [startX + n * side, y0 + H / 2], 'edgeHidden');
-    svg += '</svg>';
-    return svg;
+    var p = prismNetPlan(n), svg = '<svg viewBox="0 0 ' + p.W.toFixed(1) + ' ' + p.H.toFixed(1) + '" class="netSvg" role="img">';
+    p.rects.forEach(function(r){ svg += polygonEl(r, 'faceRect'); });
+    p.bases.forEach(function(b){ svg += polygonEl(b, 'faceBase'); });
+    return svg + '</svg>';
+  }
+  function pyramidNetPlan(n){
+    var cx = 150, cy = 110, R = 40, slant = 55, base = [];
+    for (var i = 0; i < n; i++){ var t = (-90 + i * 360 / n) * Math.PI / 180; base.push([cx + R * Math.cos(t), cy + R * Math.sin(t)]); }
+    var tris = base.map(function(p, i){
+      var q = base[(i + 1) % n], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2, dx = mx - cx, dy = my - cy, len = Math.sqrt(dx * dx + dy * dy);
+      return [p, q, [mx + dx / len * slant, my + dy / len * slant]];
+    });
+    return { W:300, H:220, base:base, tris:tris, inradius:R * Math.cos(Math.PI / n), slant:slant };
   }
   function drawPyramidNetSVG(n){
-    var f = pyramidNetFaces(n);
-    var svg = '<svg viewBox="0 0 300 220">';
-    f.tris.forEach(function(t){ svg += polygonEl(t, 'faceRect'); });
-    svg += polygonEl(f.base, 'faceBase');
-    svg += '</svg>';
-    return svg;
+    var p = pyramidNetPlan(n), svg = '<svg viewBox="0 0 300 220" class="netSvg" role="img">';
+    p.tris.forEach(function(t){ svg += polygonEl(t, 'faceRect'); });
+    return svg + polygonEl(p.base, 'faceBase') + '</svg>';
+  }
+  function cylinderNetPlan(){
+    var r = 24, H = 70, L = 2 * 3.14 * r, x0 = 14, y0 = 14 + 2 * r;
+    return { W:2 * x0 + L, H:2 * 14 + 4 * r + H, r:r, rect:{ x:x0, y:y0, w:L, h:H }, circles:[[x0 + L / 2, y0 - r], [x0 + L / 2, y0 + H + r]] };
   }
   function drawCylinderNetSVG(){
-    var r = 30, w = 130, h = 90, gap = 10, y0 = 55;
-    var x0 = r * 2 + gap * 2;
-    var svg = '<svg viewBox="0 0 ' + (x0 + w + gap + 2 * r + 10) + ' 200">';
-    svg += '<circle class="faceBase" cx="' + r + '" cy="' + (y0 + h / 2) + '" r="' + r + '"></circle>';
-    svg += '<rect class="faceRect" x="' + x0 + '" y="' + y0 + '" width="' + w + '" height="' + h + '"></rect>';
-    svg += '<circle class="faceBase" cx="' + (x0 + w + gap + r) + '" cy="' + (y0 + h / 2) + '" r="' + r + '"></circle>';
-    svg += '</svg>';
-    return svg;
+    var p = cylinderNetPlan(), f = function(v){ return v.toFixed(1); };
+    var svg = '<svg viewBox="0 0 ' + f(p.W) + ' ' + f(p.H) + '" class="netSvg" role="img">';
+    svg += '<rect class="faceRect" x="' + f(p.rect.x) + '" y="' + f(p.rect.y) + '" width="' + f(p.rect.w) + '" height="' + f(p.rect.h) + '"></rect>';
+    p.circles.forEach(function(c){ svg += '<circle class="faceBase" cx="' + f(c[0]) + '" cy="' + f(c[1]) + '" r="' + p.r + '"></circle>'; });
+    return svg + '</svg>';
+  }
+  function coneNetPlan(){
+    var r = 26, s = 78, ang = 360 * r / s, apex = [14 + s * Math.sin(ang / 2 * Math.PI / 180), 14];
+    var at = function(deg){ var t = deg * Math.PI / 180; return [apex[0] + s * Math.sin(t), apex[1] + s * Math.cos(t)]; };
+    return { W:2 * (apex[0]), H:14 + s + 2 * r + 14, r:r, s:s, ang:ang, apex:apex, p1:at(-ang / 2), p2:at(ang / 2), circle:[apex[0], apex[1] + s + r] };
   }
   function drawConeNetSVG(){
-    var r = 34, cx1 = 40, cy = 140;
-    var apex = [190, 40], radius = 130;
-    function pt(deg){ var rad = deg * Math.PI / 180; return [apex[0] + radius * Math.sin(rad), apex[1] + radius * Math.cos(rad)]; }
-    var p1 = pt(-105), p2 = pt(105);
-    var svg = '<svg viewBox="0 0 320 200">';
-    svg += '<circle class="faceBase" cx="' + cx1 + '" cy="' + cy + '" r="' + r + '"></circle>';
-    svg += '<path class="faceRect" d="M ' + apex[0] + ' ' + apex[1] + ' L ' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1) + ' A ' + radius + ' ' + radius + ' 0 1 1 ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1) + ' Z"></path>';
-    svg += '</svg>';
-    return svg;
+    var p = coneNetPlan(), f = function(v){ return v.toFixed(1); };
+    var svg = '<svg viewBox="0 0 ' + f(p.W) + ' ' + f(p.H) + '" class="netSvg" role="img">';
+    svg += '<path class="faceRect" d="M ' + f(p.apex[0]) + ' ' + f(p.apex[1]) + ' L ' + f(p.p1[0]) + ' ' + f(p.p1[1]) + ' A ' + p.s + ' ' + p.s + ' 0 0 0 ' + f(p.p2[0]) + ' ' + f(p.p2[1]) + ' Z"></path>';
+    return svg + '<circle class="faceBase" cx="' + f(p.circle[0]) + '" cy="' + f(p.circle[1]) + '" r="' + p.r + '"></circle></svg>';
+  }
+  function drawNetByShape(kind, n){
+    if (kind === 'prism') return drawPrismNetSVG(n);
+    if (kind === 'pyramid') return drawPyramidNetSVG(n);
+    if (kind === 'cylinder') return drawCylinderNetSVG();
+    return drawConeNetSVG();
   }
 
   /* ---------- 語言字典 ---------- */

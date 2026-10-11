@@ -131,6 +131,57 @@
   .sphereBtn{margin-top:14px}
   .sphereAnswer{margin-top:12px;background:var(--blue-soft);border-radius:14px;padding:14px 18px;font-size:16px;display:none}
   .sphereAnswer.show{display:block}
+  /* ---- 小遊戲「立體點名」：數稜、做角柱、分家族、拼展開圖、填規律表（§六之五） ---- */
+  .game .stats{justify-content:center}
+  .gstage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+  .gask{font-weight:700;text-align:center;font-size:17px;line-height:1.5}
+  /* 讀數那一行在手機上可能折成兩行：先留好兩行高，文字變長變短時畫板不會跳動 */
+  .gtrail{font-size:19px;font-weight:800;color:var(--ink);text-align:center;line-height:1.3;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .gwrap{position:relative;margin:0 auto}
+  .gboard{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--bg);border-radius:16px}
+  .gboard > div, .gboard > button{position:absolute}
+  .gsvg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+  .gpiece{left:0;top:0;display:flex;align-items:center;justify-content:center;
+    touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .25s ease;z-index:5}
+  .gpiece.dragging{transition:none;cursor:grabbing;z-index:50 !important;filter:drop-shadow(0 6px 8px rgba(70,60,40,.25))}
+  .gpiece.sel{outline:3px dashed var(--blue);outline-offset:2px}
+  .gpiece.locked{cursor:default;pointer-events:none}
+  .gpiece svg{pointer-events:none;overflow:visible}
+  /* 第二層提示：發亮的那一個 */
+  .gglow{box-shadow:0 0 0 4px var(--orange),0 0 14px 4px rgba(232,135,30,.55) !important}
+  /* 立體圖（畫板上：每一條稜一條線） */
+  .gedge{stroke:var(--ink);stroke-width:3;stroke-linecap:round}
+  .gedge.ghid{stroke:var(--muted);stroke-width:2;stroke-dasharray:6 5;stroke-linecap:butt}
+  .gbase{fill:var(--blue-soft);stroke:none}
+  .gapex{fill:var(--ink)}
+  /* 第 1 關：點過的稜（底面藍、斜的橘；被擋住的還是虛線）與第二層提示的那一條 */
+  .gmark{stroke-width:6;stroke-linecap:round;opacity:.9}
+  .gmark.gmbase{stroke:var(--blue)}
+  .gmark.gmside{stroke:var(--orange)}
+  .gmark.gmhid{stroke-dasharray:9 6;stroke-linecap:butt}
+  .gflash{stroke:var(--red);stroke-width:7;stroke-linecap:round;opacity:.75;animation:gflash 1s ease-in-out infinite}
+  @keyframes gflash{50%{opacity:.15}}
+  .gnote{color:var(--muted);font-weight:700}
+  /* 卡片 */
+  .gcard{background:var(--card);border:3px solid var(--orange);border-radius:12px;font-weight:800;color:var(--ink);text-align:center;white-space:nowrap}
+  .gshape{border-color:var(--blue);padding:0}
+  .gpic{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+  .gpic svg{width:100%;height:100%;display:block}
+  .gpic .edgeSolid{stroke-width:5}
+  .gpic .edgeHidden{stroke-width:3.5;stroke-dasharray:9 7}
+  .gnum{font-size:24px;line-height:1.2}
+  .gpiece.locked.gshape{border-width:2px;border-radius:8px}
+  /* 第 3、5 關：框與標籤 */
+  .gslot{border:3px dashed var(--blue);border-radius:12px;background:var(--blue-soft);pointer-events:none}
+  .gslot.filled{border-style:solid;border-color:var(--green);background:var(--green-soft)}
+  .gbinlbl{display:flex;align-items:center;justify-content:center;text-align:center;font-size:15px;line-height:1.2;font-weight:800;color:var(--ink);pointer-events:none}
+  /* 第 4 關：側面的長方形與底面 */
+  .grect{fill:var(--orange-soft);stroke:var(--ink);stroke-width:2.5}
+  .gngonp{background:transparent}
+  .gngon{fill:var(--green-soft);stroke:var(--ink);stroke-width:2.5;stroke-linejoin:round}
+  .gaction{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
+  .gaction .btn{min-height:48px;min-width:48px}
+  .gminus{color:var(--muted);font-weight:400;font-size:15px}
 </style>
 </head>
 <body>
@@ -262,21 +313,17 @@
   <section>
     <span class="eyebrow" data-i18n="eb7">小遊戲</span>
     <h2 data-i18n="s7h2">立體點名</h2>
-    <p class="lead" data-i18n="s7lead">每一關出現一個立體或展開圖，回答關於它的問題！</p>
+    <p class="lead" data-i18n="s7lead">數稜、做角柱、分家族、拼展開圖、填規律表 —— 五關五種玩法，五關都在看同一件事：<strong>柱體有兩個一樣大、互相平行的底面，錐體只有一個底面、收成一個尖點</strong>。放錯會扣分，先想清楚再動手。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
         <span><span data-i18n="gScoreLabel">分數</span> <b id="gScore">0</b></span>
       </div>
-      <p class="target" id="gAskLine" style="margin-top:10px;font-size:19px">
-        <span id="gAskText"></span>
-        <button id="gHintBtn" class="btn ghost" type="button" style="font-size:14px;padding:6px 14px;margin-left:10px" data-i18n="gHintBtn">💡 提示</button>
-      </p>
+      <div class="gstage" id="gameStage"></div>
       <p class="hint" id="gHint"></p>
-      <div class="solidWrap" id="gVisual"></div>
-      <div class="opts" id="gAnswers"></div>
       <p id="gMsg" class="gamemsg"></p>
       <div class="btnrow">
+        <button id="gHintBtn" class="btn ghost" type="button" data-i18n="gHintBtn">💡 提示</button>
         <button id="gNext" class="btn" type="button" disabled data-i18n="gNextBtn">下一關</button>
         <button id="gRestart" class="btn ghost" type="button" data-i18n="gRestartBtn">重新開始</button>
       </div>
@@ -309,145 +356,142 @@
   var POLY_ORD_ZH = {3:'三角',4:'四角',5:'五角',6:'六角',7:'七角',8:'八角',9:'九角',10:'十角'};
   var POLY_ORD_EN = {3:'triangular',4:'quadrangular',5:'pentagonal',6:'hexagonal',7:'heptagonal',8:'octagonal',9:'nonagonal',10:'decagonal'};
   function polyOrd(n, lang){ var d = lang === 'zh' ? POLY_ORD_ZH : POLY_ORD_EN; return d[n] || (lang === 'zh' ? (n + '角') : (n + '-gonal')); }
+  var POLY_SHAPE_ZH = {3:'三角形',4:'四邊形',5:'五邊形',6:'六邊形',7:'七邊形',8:'八邊形',9:'九邊形',10:'十邊形'};
+  var POLY_SHAPE_EN = {3:'triangle',4:'quadrilateral',5:'pentagon',6:'hexagon',7:'heptagon',8:'octagon',9:'nonagon',10:'decagon'};
+  function polyShapeName(n, lang){ var d = lang === 'zh' ? POLY_SHAPE_ZH : POLY_SHAPE_EN; return d[n] || (lang === 'zh' ? (n + ' 邊形') : (n + '-gon')); }
   function prismName(n, lang){ return lang === 'zh' ? (polyOrd(n,'zh') + '柱') : (polyOrd(n,'en') + ' prism'); }
   function pyramidName(n, lang){ return lang === 'zh' ? (polyOrd(n,'zh') + '錐') : (polyOrd(n,'en') + ' pyramid'); }
   function prismCounts(n){ return { f: n + 2, e: 3 * n, v: 2 * n }; }
   function pyramidCounts(n){ return { f: n + 1, e: 2 * n, v: n + 1 }; }
 
-  function ngonPoints(n, cx, cy, rx, ry, rotDeg){
-    var pts = [];
-    for (var i = 0; i < n; i++){
-      var theta = (rotDeg == null ? -90 : rotDeg) + i * 360 / n;
-      var rad = theta * Math.PI / 180;
-      pts.push([cx + rx * Math.cos(rad), cy + ry * Math.sin(rad)]);
+  /* ---------- 立體圖引擎（index / reference / review 三頁共用同一份，一字不差；設定檔會比對） ----------
+     立體先用真的 3D 座標建出來（y 朝上、z 朝向看的人），再從前上方 SOLID_EL 度正投影到紙上。
+     一個面看不看得到：它朝外的法向量和「朝向看的人」的方向內積 > 0。
+     一條稜：旁邊兩個面有一個看得到就畫實線，兩個都看不到就畫虛線（被擋住的稜）。
+     圓柱、圓錐的側面是曲面（用 SOLID_SEG 片窄窄的平面拼成），兩片曲面之間的接縫不是稜 ——
+     只有「一片看得到、一片看不到」的那一條（輪廓）畫實線，其他接縫不畫。
+     底面頂點的起始角 solidPhase(n)：任兩個頂點都不會左右對稱地落在同一條鉛直線上（不然兩條稜會畫在一起）。 */
+  var SOLID_EL = 22, SOLID_SEG = 48;
+  var SOLID_SHAPE = { prism:{ r:1, h:1.25 }, pyramid:{ r:1, h:1.55 }, cylinder:{ r:1, h:1.3 }, cone:{ r:1, h:1.6 } };
+  function solidPhase(n){ var s = 360 / n; return 90 + s / 2 + (n % 2 === 0 ? s / 4 : 0); }
+  function solidModel(kind, n, phase){
+    var S = SOLID_SHAPE[kind], curved = kind === 'cylinder' || kind === 'cone';
+    var m = curved ? SOLID_SEG : n, ph = (phase == null) ? solidPhase(m) : phase, V = [], F = [], i, j;
+    function ring(y){
+      var a = [];
+      for (var k = 0; k < m; k++){ var t = (ph + k * 360 / m) * Math.PI / 180; a.push(V.length); V.push([S.r * Math.cos(t), y, S.r * Math.sin(t)]); }
+      return a;
     }
-    return pts;
-  }
-  function polySideLen(n, r){ return 2 * r * Math.sin(Math.PI / n); }
-  function pyramidNetFaces(n){
-    var base = ngonPoints(n, 150, 110, 40, 40, -90);
-    var tris = [];
-    for (var i = 0; i < n; i++){
-      var j = (i + 1) % n;
-      var mx = (base[i][0] + base[j][0]) / 2, my = (base[i][1] + base[j][1]) / 2;
-      var dx = mx - 150, dy = my - 110;
-      var len = Math.sqrt(dx * dx + dy * dy) || 1;
-      var apex = [mx + (dx / len) * 55, my + (dy / len) * 55];
-      tris.push([base[i], base[j], apex]);
+    var bot = ring(0), apex = -1;
+    if (kind === 'prism' || kind === 'cylinder'){
+      var top = ring(S.h);
+      F.push({ v:bot.slice(), base:true }); F.push({ v:top.slice(), base:true });
+      for (i = 0; i < m; i++){ j = (i + 1) % m; F.push({ v:[bot[i], bot[j], top[j], top[i]], curved:curved }); }
+    } else {
+      apex = V.length; V.push([0, S.h, 0]);
+      F.push({ v:bot.slice(), base:true });
+      for (i = 0; i < m; i++){ j = (i + 1) % m; F.push({ v:[bot[i], bot[j], apex], curved:curved }); }
     }
-    return { base: base, tris: tris };
+    return { V:V, F:F, apex:apex };
   }
-  function prismNetPieces(n){
-    var r = 30, H = 70;
-    var side = polySideLen(n, r);
-    var rects = [];
-    for (var i = 0; i < n; i++) rects.push({ w: side, h: H, x: i * side });
-    return { rects: rects, side: side };
+  /* pose：phase ＝ 底面第一個頂點的角度（不給就用 solidPhase）、roll ＝ 繞 z 軸轉（90 就是躺下來）、flip ＝ 上下顛倒、
+     yaw ＝ 最後繞鉛直軸轉（躺著的柱體要轉一點，底面才看得到） */
+  function solidPose(V, pose){
+    pose = pose || {};
+    var c = [0, 0, 0];
+    V.forEach(function(p){ c[0] += p[0] / V.length; c[1] += p[1] / V.length; c[2] += p[2] / V.length; });
+    var r = (pose.roll || 0) * Math.PI / 180, y = (pose.yaw || 0) * Math.PI / 180;
+    return V.map(function(p){
+      var x = p[0] - c[0], yy = p[1] - c[1], z = p[2] - c[2], t;
+      t = x * Math.cos(r) - yy * Math.sin(r); yy = x * Math.sin(r) + yy * Math.cos(r); x = t;
+      if (pose.flip){ yy = -yy; z = -z; }
+      t = x * Math.cos(y) + z * Math.sin(y); z = -x * Math.sin(y) + z * Math.cos(y); x = t;
+      return [x, yy, z];
+    });
   }
-
-  /* ---------- SVG 繪圖 ---------- */
-  function line(p1, p2, cls){
-    return '<line class="' + cls + '" x1="' + p1[0].toFixed(1) + '" y1="' + p1[1].toFixed(1) + '" x2="' + p2[0].toFixed(1) + '" y2="' + p2[1].toFixed(1) + '"></line>';
+  /* 純資料的「怎麼畫」：投影後的點 P、每一條要畫的線（a、b 是點的編號，k 是 solid／hidden）、每一個面看不看得到。不碰 DOM。 */
+  function solidPlan(kind, n, pose){
+    var M = solidModel(kind, n, pose && pose.phase), V = solidPose(M.V, pose), e = SOLID_EL * Math.PI / 180;
+    var eye = [0, Math.sin(e), Math.cos(e)], C = [0, 0, 0];
+    var P = V.map(function(p){ return [p[0], -(p[1] * Math.cos(e) - p[2] * Math.sin(e))]; });
+    var faces = M.F.map(function(f){
+      var nx = 0, ny = 0, nz = 0, cx = 0, cy = 0, cz = 0;
+      f.v.forEach(function(a, i){
+        var p = V[a], q = V[f.v[(i + 1) % f.v.length]];
+        nx += (p[1] - q[1]) * (p[2] + q[2]); ny += (p[2] - q[2]) * (p[0] + q[0]); nz += (p[0] - q[0]) * (p[1] + q[1]);
+        cx += p[0] / f.v.length; cy += p[1] / f.v.length; cz += p[2] / f.v.length;
+      });
+      if (nx * (cx - C[0]) + ny * (cy - C[1]) + nz * (cz - C[2]) < 0){ nx = -nx; ny = -ny; nz = -nz; }
+      var len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+      return { v:f.v, base:!!f.base, curved:!!f.curved, vis:(nx * eye[0] + ny * eye[1] + nz * eye[2]) / len > 1e-6 };
+    });
+    var map = {}, list = [];
+    faces.forEach(function(f, fi){
+      f.v.forEach(function(a, i){
+        var b = f.v[(i + 1) % f.v.length], key = Math.min(a, b) + '-' + Math.max(a, b);
+        if (!map[key]){ map[key] = { a:Math.min(a, b), b:Math.max(a, b), f:[] }; list.push(map[key]); }
+        map[key].f.push(fi);
+      });
+    });
+    var lines = [];
+    list.forEach(function(E){
+      var f1 = faces[E.f[0]], f2 = faces[E.f[1]];
+      if (f1.curved && f2.curved){ if (f1.vis !== f2.vis) lines.push({ a:E.a, b:E.b, k:'solid', seam:true }); return; }
+      lines.push({ a:E.a, b:E.b, k:(f1.vis || f2.vis) ? 'solid' : 'hidden', seam:false });
+    });
+    return { P:P, lines:lines, faces:faces, apex:M.apex };
   }
-  function polygonEl(pts, cls){
-    return '<polygon class="' + cls + '" points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"></polygon>';
+  /* 把投影的點等比縮放、置中放進框 { x, y, w, h } */
+  function solidFit(plan, box){
+    var xs = plan.P.map(function(p){ return p[0]; }), ys = plan.P.map(function(p){ return p[1]; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    var s = Math.min(box.w / (x1 - x0), box.h / (y1 - y0));
+    var ox = box.x + (box.w - (x1 - x0) * s) / 2 - x0 * s, oy = box.y + (box.h - (y1 - y0) * s) / 2 - y0 * s;
+    return plan.P.map(function(p){ return [ox + p[0] * s, oy + p[1] * s]; });
   }
-  function frontSin(deg){ return Math.sin(deg * Math.PI / 180); }
-
-  function drawPrismSVG(n){
-    var cx = 150, topY = 62, rx = 78, ry = 26, H = 96;
-    var top = ngonPoints(n, cx, topY, rx, ry, -90);
-    var bot = top.map(function(p){ return [p[0], p[1] + H]; });
-    var svg = '<svg viewBox="0 0 300 220" class="solidSvg" role="img">';
-    var i, j, midDeg, front;
-    for (i = 0; i < n; i++){
-      j = (i + 1) % n;
-      midDeg = -90 + i * 360 / n + (360 / n) / 2;
-      front = frontSin(midDeg) > 0.02;
-      if (!front) svg += line(bot[i], bot[j], 'edgeHidden');
+  /* 同一種線接成一條一條的折線（虛線的節奏才不會每一小段重新開始） */
+  function solidChains(lines, k){
+    var segs = lines.filter(function(L){ return L.k === k; }).map(function(L){ return [L.a, L.b]; }), used = [], out = [];
+    for (var s = 0; s < segs.length; s++){
+      if (used[s]) continue;
+      used[s] = true;
+      var ch = segs[s].slice(), grew = true;
+      while (grew){
+        grew = false;
+        for (var t = 0; t < segs.length; t++){
+          if (used[t]) continue;
+          var a = segs[t][0], b = segs[t][1], last = ch[ch.length - 1];
+          if (a === last){ ch.push(b); used[t] = true; grew = true; }
+          else if (b === last){ ch.push(a); used[t] = true; grew = true; }
+          else if (a === ch[0]){ ch.unshift(b); used[t] = true; grew = true; }
+          else if (b === ch[0]){ ch.unshift(a); used[t] = true; grew = true; }
+        }
+      }
+      out.push(ch);
     }
-    for (i = 0; i < n; i++){
-      var deg = -90 + i * 360 / n;
-      front = frontSin(deg) > -0.02;
-      svg += line(top[i], bot[i], front ? 'edgeSolid' : 'edgeHidden');
-    }
-    for (i = 0; i < n; i++){
-      j = (i + 1) % n;
-      midDeg = -90 + i * 360 / n + (360 / n) / 2;
-      front = frontSin(midDeg) > 0.02;
-      if (front) svg += line(bot[i], bot[j], 'edgeSolid');
-    }
-    svg += polygonEl(top, 'faceTop');
-    svg += '</svg>';
-    return svg;
+    return out;
   }
-  function drawPyramidSVG(n){
-    var cx = 150, baseY = 172, rx = 80, ry = 26, apex = [cx, 40];
-    var base = ngonPoints(n, cx, baseY, rx, ry, -90);
-    var svg = '<svg viewBox="0 0 300 220" class="solidSvg" role="img">';
-    var i, j, midDeg, front;
-    for (i = 0; i < n; i++){
-      j = (i + 1) % n;
-      midDeg = -90 + i * 360 / n + (360 / n) / 2;
-      front = frontSin(midDeg) > 0.02;
-      if (!front) svg += line(base[i], base[j], 'edgeHidden');
-    }
-    for (i = 0; i < n; i++){
-      var deg = -90 + i * 360 / n;
-      front = frontSin(deg) > -0.02;
-      if (!front) svg += line(apex, base[i], 'edgeHidden');
-    }
-    for (i = 0; i < n; i++){
-      var deg2 = -90 + i * 360 / n;
-      front = frontSin(deg2) > -0.02;
-      if (front) svg += line(apex, base[i], 'edgeSolid');
-    }
-    for (i = 0; i < n; i++){
-      j = (i + 1) % n;
-      midDeg = -90 + i * 360 / n + (360 / n) / 2;
-      front = frontSin(midDeg) > 0.02;
-      if (front) svg += line(base[i], base[j], 'edgeSolid');
-    }
-    svg += '<circle class="apexDot" cx="' + apex[0] + '" cy="' + apex[1] + '" r="4"></circle>';
-    svg += '</svg>';
-    return svg;
+  function solidSVG(kind, n, pose, W, H, extra){
+    W = W || 300; H = H || 220;
+    var m = extra ? 6 : 14, plan = solidPlan(kind, n, pose), Q = solidFit(plan, { x:m, y:m, w:W - 2 * m, h:H - 2 * m });
+    var f2 = function(v){ return v.toFixed(1); }, pt = function(i){ return f2(Q[i][0]) + ',' + f2(Q[i][1]); };
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" ' + (extra || 'class="solidSvg" role="img"') + '>';
+    plan.faces.forEach(function(f){ if (f.base && f.vis) svg += '<polygon class="faceTop" points="' + f.v.map(pt).join(' ') + '"></polygon>'; });
+    ['hidden', 'solid'].forEach(function(k){
+      solidChains(plan.lines, k).forEach(function(ch){ svg += '<polyline class="' + (k === 'solid' ? 'edgeSolid' : 'edgeHidden') + '" points="' + ch.map(pt).join(' ') + '"></polyline>'; });
+    });
+    if (plan.apex >= 0) svg += '<circle class="apexDot" cx="' + f2(Q[plan.apex][0]) + '" cy="' + f2(Q[plan.apex][1]) + '" r="4"></circle>';
+    return svg + '</svg>';
   }
-  function ellipseArc(cx, cy, rx, ry, front){
-    var sweep = front ? 1 : 0;
-    var cls = front ? 'edgeSolid' : 'edgeHidden';
-    return '<path class="' + cls + '" d="M ' + (cx - rx) + ' ' + cy + ' A ' + rx + ' ' + ry + ' 0 0 ' + sweep + ' ' + (cx + rx) + ' ' + cy + '" fill="none"></path>';
-  }
-  function drawCylinderSVG(){
-    var cx = 150, topY = 56, rx = 74, ry = 24, H = 104;
-    var svg = '<svg viewBox="0 0 300 220" class="solidSvg" role="img">';
-    svg += ellipseArc(cx, topY + H, rx, ry, false);
-    svg += line([cx - rx, topY], [cx - rx, topY + H], 'edgeSolid');
-    svg += line([cx + rx, topY], [cx + rx, topY + H], 'edgeSolid');
-    svg += ellipseArc(cx, topY + H, rx, ry, true);
-    svg += '<ellipse class="faceTop" cx="' + cx + '" cy="' + topY + '" rx="' + rx + '" ry="' + ry + '"></ellipse>';
-    svg += '</svg>';
-    return svg;
-  }
-  function drawConeSVG(){
-    var cx = 150, apexY = 40, baseY = 178, rx = 76, ry = 24;
-    var svg = '<svg viewBox="0 0 300 220" class="solidSvg" role="img">';
-    svg += ellipseArc(cx, baseY, rx, ry, false);
-    svg += line([cx, apexY], [cx - rx, baseY], 'edgeSolid');
-    svg += line([cx, apexY], [cx + rx, baseY], 'edgeSolid');
-    svg += ellipseArc(cx, baseY, rx, ry, true);
-    svg += '<circle class="apexDot" cx="' + cx + '" cy="' + apexY + '" r="4"></circle>';
-    svg += '</svg>';
-    return svg;
-  }
-  function drawSphereSVG(){
+  function drawPrismSVG(n){ return solidSVG('prism', n); }
+  function drawPyramidSVG(n){ return solidSVG('pyramid', n); }
+  function drawCylinderSVG(){ return solidSVG('cylinder', 0); }
+  function drawConeSVG(){ return solidSVG('cone', 0); }
+  /* 球：一個圓（輪廓）＋赤道（前半圈實線、後半圈虛線）。extra：畫在小圖卡上（框緊一點，另外給屬性） */
+  function drawSphereSVG(extra){
     var cx = 150, cy = 110, r = 78;
-    var svg = '<svg viewBox="0 0 300 220" class="solidSvg" role="img">';
-    svg += '<circle class="faceTop" cx="' + cx + '" cy="' + cy + '" r="' + r + '"></circle>';
-    svg += ellipseArc(cx, cy, r, r * 0.32, false);
-    svg += ellipseArc(cx, cy, r, r * 0.32, true);
-    svg += '<ellipse class="edgeHidden" cx="' + cx + '" cy="' + cy + '" rx="' + (r * 0.32) + '" ry="' + r + '" fill="none"></ellipse>';
-    svg += '</svg>';
-    return svg;
+    var arc = function(front){ return '<path class="' + (front ? 'edgeSolid' : 'edgeHidden') + '" d="M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + (r * 0.32).toFixed(2) + ' 0 0 ' + (front ? 1 : 0) + ' ' + (cx + r) + ' ' + cy + '" fill="none"></path>'; };
+    return '<svg viewBox="' + (extra ? '64 24 172 172' : '0 0 300 220') + '" ' + (extra || 'class="solidSvg" role="img"') + '><circle class="faceTop" cx="' + cx + '" cy="' + cy + '" r="' + r + '"></circle>' + arc(false) + arc(true) + '</svg>';
   }
   function drawSolidByKind(kind, n){
     if (kind === 'prism') return drawPrismSVG(n);
@@ -456,62 +500,226 @@
     if (kind === 'cone') return drawConeSVG();
     return drawSphereSVG();
   }
-  function drawPrismNetSVG(n){
-    var pieces = prismNetPieces(n);
-    var r = 30, H = 70, gap = 6;
-    var totalW = pieces.side * n + 2 * (2 * r + gap);
-    var startX = 2 * r + gap + 4, y0 = 90;
-    var svg = '<svg viewBox="0 0 ' + Math.max(300, totalW + 20) + ' 200" class="netSvg" role="img">';
-    var i;
-    for (i = 0; i < n; i++){
-      var x = startX + i * pieces.side;
-      svg += '<rect class="faceRect" x="' + x.toFixed(1) + '" y="' + y0 + '" width="' + pieces.side.toFixed(1) + '" height="' + H + '"></rect>';
+
+  /* ---------- 展開圖：每一張都真的摺得起來 ----------
+     角柱：n 個長方形排成一排（寬 ＝ 底面的邊長），兩個正 n 邊形各貼著一個長方形的上邊、下邊（摺起來在相對的兩頭）。
+     角錐：正 n 邊形的每一條邊貼一個等腰三角形（高比底面的內切圓半徑長，三個角才收得到一點）。
+     圓柱：長方形的長 ＝ 圓周長（2 × 3.14 × 半徑），兩個圓貼著長方形的上下兩邊。
+     圓錐：扇形的弧長 ＝ 底面的圓周長（圓心角 ＝ 360° × 底面半徑 ÷ 扇形半徑），圓貼著弧的正中間。 */
+  function ngonOnEdge(A, B, n){
+    var pts = [A, B], d = [B[0] - A[0], B[1] - A[1]], t = -2 * Math.PI / n;
+    for (var k = 2; k < n; k++){
+      d = [d[0] * Math.cos(t) - d[1] * Math.sin(t), d[0] * Math.sin(t) + d[1] * Math.cos(t)];
+      var p = pts[pts.length - 1];
+      pts.push([p[0] + d[0], p[1] + d[1]]);
     }
-    var c1 = [startX - r - gap, y0 + H / 2];
-    var poly1 = ngonPoints(n, c1[0], c1[1], r, r, -90);
-    svg += polygonEl(poly1, 'faceBase');
-    var c2 = [startX + n * pieces.side + r + gap, y0 + H / 2];
-    var poly2 = ngonPoints(n, c2[0], c2[1], r, r, -90);
-    svg += polygonEl(poly2, 'faceBase');
-    svg += line([c1[0] + r, c1[1]], [startX, y0 + H / 2], 'edgeHidden');
-    svg += line([c2[0] - r, c2[1]], [startX + n * pieces.side, y0 + H / 2], 'edgeHidden');
-    svg += '</svg>';
-    return svg;
+    return pts;
+  }
+  function polygonEl(pts, cls){
+    return '<polygon class="' + cls + '" points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"></polygon>';
+  }
+  function prismNetPlan(n){
+    var a = Math.min(46, 230 / n), H = 64, k = Math.floor((n - 1) / 2);
+    var ap = a / (2 * Math.tan(Math.PI / n)), R = a / (2 * Math.sin(Math.PI / n));
+    var up = (n % 2 === 0) ? 2 * ap : ap + R;   /* 正 n 邊形貼著一條水平的邊時，離那條邊最遠的地方 */
+    var x0 = 12, y0 = 12 + up, rects = [];
+    for (var i = 0; i < n; i++) rects.push([[x0 + i * a, y0], [x0 + (i + 1) * a, y0], [x0 + (i + 1) * a, y0 + H], [x0 + i * a, y0 + H]]);
+    var top = ngonOnEdge([x0 + k * a, y0], [x0 + (k + 1) * a, y0], n);
+    var bot = ngonOnEdge([x0 + (k + 1) * a, y0 + H], [x0 + k * a, y0 + H], n);
+    return { W:2 * x0 + n * a, H:2 * 12 + 2 * up + H, rects:rects, bases:[top, bot], a:a, h:H };
+  }
+  function drawPrismNetSVG(n){
+    var p = prismNetPlan(n), svg = '<svg viewBox="0 0 ' + p.W.toFixed(1) + ' ' + p.H.toFixed(1) + '" class="netSvg" role="img">';
+    p.rects.forEach(function(r){ svg += polygonEl(r, 'faceRect'); });
+    p.bases.forEach(function(b){ svg += polygonEl(b, 'faceBase'); });
+    return svg + '</svg>';
+  }
+  function pyramidNetPlan(n){
+    var cx = 150, cy = 110, R = 40, slant = 55, base = [];
+    for (var i = 0; i < n; i++){ var t = (-90 + i * 360 / n) * Math.PI / 180; base.push([cx + R * Math.cos(t), cy + R * Math.sin(t)]); }
+    var tris = base.map(function(p, i){
+      var q = base[(i + 1) % n], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2, dx = mx - cx, dy = my - cy, len = Math.sqrt(dx * dx + dy * dy);
+      return [p, q, [mx + dx / len * slant, my + dy / len * slant]];
+    });
+    return { W:300, H:220, base:base, tris:tris, inradius:R * Math.cos(Math.PI / n), slant:slant };
   }
   function drawPyramidNetSVG(n){
-    var f = pyramidNetFaces(n);
-    var svg = '<svg viewBox="0 0 300 220" class="netSvg" role="img">';
-    f.tris.forEach(function(t){ svg += polygonEl(t, 'faceRect'); });
-    svg += polygonEl(f.base, 'faceBase');
-    svg += '</svg>';
-    return svg;
+    var p = pyramidNetPlan(n), svg = '<svg viewBox="0 0 300 220" class="netSvg" role="img">';
+    p.tris.forEach(function(t){ svg += polygonEl(t, 'faceRect'); });
+    return svg + polygonEl(p.base, 'faceBase') + '</svg>';
+  }
+  function cylinderNetPlan(){
+    var r = 24, H = 70, L = 2 * 3.14 * r, x0 = 14, y0 = 14 + 2 * r;
+    return { W:2 * x0 + L, H:2 * 14 + 4 * r + H, r:r, rect:{ x:x0, y:y0, w:L, h:H }, circles:[[x0 + L / 2, y0 - r], [x0 + L / 2, y0 + H + r]] };
   }
   function drawCylinderNetSVG(){
-    var r = 30, w = 130, h = 90, gap = 10, y0 = 55;
-    var x0 = r * 2 + gap * 2;
-    var svg = '<svg viewBox="0 0 ' + (x0 + w + gap + 2 * r + 10) + ' 200" class="netSvg" role="img">';
-    svg += '<circle class="faceBase" cx="' + r + '" cy="' + (y0 + h / 2) + '" r="' + r + '"></circle>';
-    svg += '<rect class="faceRect" x="' + x0 + '" y="' + y0 + '" width="' + w + '" height="' + h + '"></rect>';
-    svg += '<circle class="faceBase" cx="' + (x0 + w + gap + r) + '" cy="' + (y0 + h / 2) + '" r="' + r + '"></circle>';
-    svg += '</svg>';
-    return svg;
+    var p = cylinderNetPlan(), f = function(v){ return v.toFixed(1); };
+    var svg = '<svg viewBox="0 0 ' + f(p.W) + ' ' + f(p.H) + '" class="netSvg" role="img">';
+    svg += '<rect class="faceRect" x="' + f(p.rect.x) + '" y="' + f(p.rect.y) + '" width="' + f(p.rect.w) + '" height="' + f(p.rect.h) + '"></rect>';
+    p.circles.forEach(function(c){ svg += '<circle class="faceBase" cx="' + f(c[0]) + '" cy="' + f(c[1]) + '" r="' + p.r + '"></circle>'; });
+    return svg + '</svg>';
+  }
+  function coneNetPlan(){
+    var r = 26, s = 78, ang = 360 * r / s, apex = [14 + s * Math.sin(ang / 2 * Math.PI / 180), 14];
+    var at = function(deg){ var t = deg * Math.PI / 180; return [apex[0] + s * Math.sin(t), apex[1] + s * Math.cos(t)]; };
+    return { W:2 * (apex[0]), H:14 + s + 2 * r + 14, r:r, s:s, ang:ang, apex:apex, p1:at(-ang / 2), p2:at(ang / 2), circle:[apex[0], apex[1] + s + r] };
   }
   function drawConeNetSVG(){
-    var r = 34, cx1 = 40, cy = 140;
-    var apex = [190, 40], radius = 130;
-    function pt(deg){ var rad = deg * Math.PI / 180; return [apex[0] + radius * Math.sin(rad), apex[1] + radius * Math.cos(rad)]; }
-    var p1 = pt(-105), p2 = pt(105);
-    var svg = '<svg viewBox="0 0 320 200" class="netSvg" role="img">';
-    svg += '<circle class="faceBase" cx="' + cx1 + '" cy="' + cy + '" r="' + r + '"></circle>';
-    svg += '<path class="faceRect" d="M ' + apex[0] + ' ' + apex[1] + ' L ' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1) + ' A ' + radius + ' ' + radius + ' 0 1 1 ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1) + ' Z"></path>';
-    svg += '</svg>';
-    return svg;
+    var p = coneNetPlan(), f = function(v){ return v.toFixed(1); };
+    var svg = '<svg viewBox="0 0 ' + f(p.W) + ' ' + f(p.H) + '" class="netSvg" role="img">';
+    svg += '<path class="faceRect" d="M ' + f(p.apex[0]) + ' ' + f(p.apex[1]) + ' L ' + f(p.p1[0]) + ' ' + f(p.p1[1]) + ' A ' + p.s + ' ' + p.s + ' 0 0 0 ' + f(p.p2[0]) + ' ' + f(p.p2[1]) + ' Z"></path>';
+    return svg + '<circle class="faceBase" cx="' + f(p.circle[0]) + '" cy="' + f(p.circle[1]) + '" r="' + p.r + '"></circle></svg>';
   }
   function drawNetByShape(kind, n){
     if (kind === 'prism') return drawPrismNetSVG(n);
     if (kind === 'pyramid') return drawPyramidNetSVG(n);
     if (kind === 'cylinder') return drawCylinderNetSVG();
     return drawConeNetSVG();
+  }
+
+  /* ============ 小遊戲「立體點名」資料區：題庫、版面常數、「收不收、為什麼」的純函式（不碰 DOM；設定檔會切出來真的跑） ============
+     五關：數稜（範例 2）、做角柱（範例 1 倒過來）、分家族（範例 3、5）、拼展開圖（範例 4）、填規律表（範例 1、2 的規律）。 */
+  var GAME_ORDER = ['edges', 'build', 'sort', 'net', 'table'];
+  var GW = 300;
+  var GPICK = 48;   /* 拿得起來的東西最小 48 ×（畫板縮放 ≥ 0.92 時，手機上仍 ≥ 44px） */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var j = a.length - 1; j > 0; j--){
+      var k = Math.floor(Math.random() * (j + 1));   /* 自足：設定檔會把這個函式單獨切出來執行 */
+      var t = a[j]; a[j] = a[k]; a[k] = t;
+    }
+    return a;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  /* 托盤不可以一開始就是答案的排法：洗牌之後如果剛好排好了，把第一個移到最後（排好的前提是至少兩類，移動之後一定亂掉） */
+  function unsorted(list, inOrder){
+    var t = shuffle(list);
+    if (inOrder(t)) t.push(t.shift());
+    return t;
+  }
+  /* 點到線段的距離（點稜、量吸附都用它） */
+  function segDist(p, a, b){
+    var dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy;
+    var t = L2 ? Math.max(0, Math.min(1, ((p.x - a[0]) * dx + (p.y - a[1]) * dy) / L2)) : 0;
+    return Math.hypot(p.x - (a[0] + t * dx), p.y - (a[1] + t * dy));
+  }
+
+  /* ---- 第 1 關：數稜（範例 2）—— 一個 n 角錐（實線看得到、虛線被擋住），點每一條稜；點過的稜變色（底面一圈藍色、斜的橘色）。
+         點的位置離哪一條稜最近、而且在 EDGE.tap 以內，就是點到那一條。按「數完了」才判斷。 ---- */
+  var EDGE = { box:{ x:30, y:16, w:240, h:218 }, tap:24 }, EDGE_H = 250;
+  /* [底面幾條邊, 底面第一個頂點的角度]：角度挑過 —— 每一條稜的中點離別的稜至少 8px、±35% 的地方（尖點附近以外）至少 6px，手指點得開。
+     六角錐的斜稜在尖點附近擠成一團、被擋住的稜又剛好穿過看得到的稜的中點，所以不出。 */
+  var GAME_EDGES = [[3, 77], [4, 9], [5, 54]];
+  function edgePlan(n, phase){
+    var p = solidPlan('pyramid', n, { phase:phase }), Q = solidFit(p, EDGE.box);
+    return { apex:Q[p.apex], lines:p.lines.map(function(L, i){
+      return { i:i, a:Q[L.a], b:Q[L.b], k:L.k, base:L.a !== p.apex && L.b !== p.apex };
+    }) };
+  }
+  /* 點到哪一條稜：最近的那一條（不是陣列裡第一條夠近的）；EDGE.tap 以外不算 */
+  function edgePick(lines, pt){
+    var best = null, bd = Infinity;
+    lines.forEach(function(L){ var d = segDist(pt, L.a, L.b); if (d < bd){ bd = d; best = L; } });
+    return best && bd <= EDGE.tap ? best : null;
+  }
+
+  /* ---- 第 2 關：做角柱（範例 1 倒過來）—— 按 ◀ ▶ 改底面的邊數，畫面上的角柱跟著變；做出「有 T 個面／T 條稜／T 個頂點」的角柱再按「做好了」。 ---- */
+  var BUILD = { nMin:3, nMax:10, n0:3, box:{ x:40, y:10, w:220, h:180 } }, BUILD_H = 200;
+  var GAME_BUILD = [['e', 6], ['v', 5], ['f', 7], ['e', 4], ['v', 6], ['f', 6], ['e', 5], ['v', 7]];   /* [問哪一種, 答案的 n] */
+  function buildCount(attr, n){ return prismCounts(n)[attr]; }
+  function buildRefuse(attr, n, T){ var x = buildCount(attr, n); return x === T ? null : { x:x }; }
+
+  /* ---- 第 3 關：分家族（範例 3、5）—— 六張立體圖卡（有的躺著、有的倒過來）拖進「柱體／錐體／球」。 ---- */
+  var SORT = { cardW:88, cardH:80, trayX:[52, 150, 248], trayY:[44, 130], binX:[50, 150, 250], binW:94, lblY:180, lblH:46, bodyY:228, bodyH:98, thumb:40, pad:8 }, SORT_H = 332;   /* 標籤高 46：英文 "Pyramid family" 折成兩行，手機上上下還各留 2px 以上 */
+  var SORT_BINS = ['prism', 'pyramid', 'sphere'];
+  var SORT_ITEMS = {
+    tent:{ kind:'prism', n:3, pose:{ phase:0, roll:90, yaw:55 }, lying:true },   /* 躺著的三角柱（像帳篷）：三角形的底面朝左前方，看得到 */
+    log:{ kind:'cylinder', n:0, pose:{ roll:90, yaw:30 }, lying:true },             /* 躺著的圓柱（像木頭） */
+    can:{ kind:'cylinder', n:0, pose:{} },
+    prism4:{ kind:'prism', n:4, pose:{} },
+    prism5:{ kind:'prism', n:5, pose:{} },
+    prism6:{ kind:'prism', n:6, pose:{} },
+    pyr3:{ kind:'pyramid', n:3, pose:{} },
+    pyr4:{ kind:'pyramid', n:4, pose:{} },
+    pyr5down:{ kind:'pyramid', n:5, pose:{ flip:true }, flipped:true },
+    cone:{ kind:'cone', n:0, pose:{} },
+    icecream:{ kind:'cone', n:0, pose:{ flip:true }, flipped:true },
+    ball:{ kind:'sphere', n:0, pose:{} }
+  };
+  var GAME_SORT = [
+    ['tent', 'can', 'prism6', 'pyr4', 'icecream', 'ball'],
+    ['log', 'prism4', 'prism5', 'pyr3', 'cone', 'ball'],
+    ['tent', 'can', 'pyr5down', 'cone', 'pyr4', 'ball'],
+    ['log', 'prism6', 'pyr3', 'icecream', 'pyr5down', 'ball']
+  ];
+  function sortFam(id){ var k = SORT_ITEMS[id].kind; return (k === 'prism' || k === 'cylinder') ? 'prism' : (k === 'sphere' ? 'sphere' : 'pyramid'); }
+  function sortInOrder(list){
+    for (var i = 1; i < list.length; i++) if (SORT_BINS.indexOf(sortFam(list[i])) < SORT_BINS.indexOf(sortFam(list[i - 1]))) return false;
+    return true;
+  }
+  function sortTray(set){ return unsorted(set, sortInOrder); }
+  function sortRefuse(id, bin){ return sortFam(id) === SORT_BINS[bin] ? null : sortFam(id); }
+  /* 收的範圍：標籤＋框；放好的圖卡縮成小圖，排在框裡 2 × 2 的格子 */
+  function sortBin(b){ var top = SORT.lblY, bottom = SORT.bodyY + SORT.bodyH; return { cx:SORT.binX[b], cy:(top + bottom) / 2, hw:SORT.binW / 2, hh:(bottom - top) / 2 }; }
+  function sortThumbXY(b, k){ return { x:SORT.binX[b] + (k % 2 === 0 ? -1 : 1) * (SORT.thumb / 2 + 3), y:SORT.bodyY + 6 + SORT.thumb / 2 + Math.floor(k / 2) * (SORT.thumb + 6) }; }
+
+  /* ---- 第 4 關：拼展開圖（範例 4）—— n 個長方形（一個角柱的側面）排成一排；托盤上兩個正 n 邊形和一個邊數不對的多邊形，邊長都和長方形的寬一樣。
+         把底面拖到某一個長方形的上邊或下邊：要是 n 邊形，而且兩個底面一個在上、一個在下。 ---- */
+  var NETG = { RH:56, top:12, trayGap:18, trayX:[54, 150, 246], pad:10, bottom:10 };
+  var GAME_NET = [3, 5, 6];
+  /* 邊長都比長方形的高（NETG.RH ＝ 56）短：側面一定是長方形、不是正方形 —— 不然四邊形的誘答就和側面一模一樣 */
+  function netSide(n){ return n === 3 ? 48 : (n === 5 ? 46 : 40); }
+  function netDecoy(n){ return n === 3 ? 4 : n - 1; }
+  /* 正 k 邊形（邊長 a）貼著一條水平的邊時，離那條邊最遠的距離，和左右的寬 */
+  function ngonUp(k, a){ var ap = a / (2 * Math.tan(Math.PI / k)), R = a / (2 * Math.sin(Math.PI / k)); return k % 2 === 0 ? 2 * ap : ap + R; }
+  function ngonWide(k, a){ var xs = ngonOnEdge([0, 0], [a, 0], k).map(function(p){ return p[0]; }); return Math.max.apply(null, xs) - Math.min.apply(null, xs); }
+  function netLayout(n){
+    var a = netSide(n), up = ngonUp(n, a), x0 = (GW - n * a) / 2, y0 = NETG.top + up, y1 = y0 + NETG.RH;
+    var trayTop = y1 + up + NETG.trayGap;
+    var pieceH = Math.max(GPICK, ngonUp(n, a), ngonUp(netDecoy(n), a));
+    var slots = [];
+    for (var i = 0; i < n; i++){
+      slots.push({ i:i, side:'top', cx:x0 + (i + 0.5) * a, cy:y0 - up / 2, hw:a / 2, hh:up / 2, edge:[[x0 + i * a, y0], [x0 + (i + 1) * a, y0]] });
+      slots.push({ i:i, side:'bottom', cx:x0 + (i + 0.5) * a, cy:y1 + up / 2, hw:a / 2, hh:up / 2, edge:[[x0 + (i + 1) * a, y1], [x0 + i * a, y1]] });
+    }
+    return { n:n, a:a, up:up, x0:x0, y0:y0, y1:y1, slots:slots, trayY:trayTop + pieceH / 2, pieceH:pieceH, H:trayTop + pieceH + NETG.bottom };
+  }
+  function netTray(n){ return shuffle([n, n, netDecoy(n)]); }
+  /* k：放上去的那一塊有幾條邊；side：放到上邊還是下邊；baseSide：已經接好的那一個底面在哪一邊（還沒有就是 null） */
+  function netRefuse(n, k, side, baseSide){
+    if (k !== n) return 'decoy';
+    if (baseSide && side === baseSide) return 'same';
+    return null;
+  }
+
+  /* ---- 第 5 關：填規律表（範例 1、2 的規律）—— 底面邊數很大、畫不出來的角柱或角錐；五張數字卡放進「面、稜、頂點」三格。
+         多的兩張是常見的錯：角柱用了 n、n ＋ 1（忘了兩個底面、用了角錐的規則）；角錐用了 3 × n、n（用了角柱的稜、忘了頂端的尖點）。 ---- */
+  var TABLE = { slotX:[52, 150, 248], lblY:8, lblH:28, slotY:40, slotW:90, slotH:60, cardW:80, cardH:48, trayX:[52, 150, 248, 101, 199], trayY:[140, 140, 140, 200, 200], pad:8 }, TABLE_H = 232;
+  var TABLE_ATTR = ['f', 'e', 'v'];
+  var GAME_TABLE = [['prism', 12], ['pyramid', 10], ['prism', 9], ['pyramid', 15], ['prism', 20], ['pyramid', 12]];
+  function famCounts(fam, n){ return fam === 'prism' ? prismCounts(n) : pyramidCounts(n); }
+  function tableCards(fam, n){ var c = famCounts(fam, n); return fam === 'prism' ? [c.f, c.e, c.v, n, n + 1] : [c.f, c.e, c.v, 3 * n, n]; }
+  function tableInOrder(fam, n){ var c = famCounts(fam, n); return function(list){ return list[0] === c.f && list[1] === c.e && list[2] === c.v; }; }
+  function tableTray(fam, n){ return unsorted(tableCards(fam, n), tableInOrder(fam, n)); }
+  function tableRefuse(fam, n, slot, val){ var want = famCounts(fam, n)[TABLE_ATTR[slot]]; return want === val ? null : { want:want }; }
+  function tableHit(s){ var top = TABLE.lblY, bottom = TABLE.slotY + TABLE.slotH; return { cx:TABLE.slotX[s], cy:(top + bottom) / 2, hw:TABLE.slotW / 2, hh:(bottom - top) / 2 }; }
+
+  /* ---- 規律句子（兩種語言；遊戲的說明都從這裡組，數字一律現算） ---- */
+  var G_WORD = { zh:{ f:'面', e:'稜', v:'頂點' }, en:{ f:'faces', e:'edges', v:'vertices' } };
+  var G_UNIT_ZH = { f:'個', e:'條', v:'個' };
+  function gRule(fam, attr, n, lang){
+    var plus = lang === 'zh' ? ' ＋ ' : ' + ';
+    if (fam === 'prism') return attr === 'f' ? n + plus + '2' : (attr === 'e' ? '3 × ' + n : '2 × ' + n);
+    return attr === 'e' ? '2 × ' + n : n + plus + '1';
+  }
+  function gRuleSentence(fam, n, attr, lang){
+    var c = famCounts(fam, n)[attr], r = gRule(fam, attr, n, lang), eq = lang === 'zh' ? ' ＝ ' : ' = ';
+    if (lang === 'zh'){
+      if (fam === 'prism') return '角柱的' + G_WORD.zh[attr] + '：' + (attr === 'f' ? n + ' 個長方形側面和上下 2 個底面' : (attr === 'e' ? '上底 ' + n + ' 條、下底 ' + n + ' 條、連接上下的 ' + n + ' 條' : '上底 ' + n + ' 個、下底 ' + n + ' 個')) + '，' + r + eq + c;
+      return '角錐的' + G_WORD.zh[attr] + '：' + (attr === 'f' ? n + ' 個三角形側面和 1 個底面' : (attr === 'e' ? '底面 ' + n + ' 條、往上收到尖點的 ' + n + ' 條' : '底面 ' + n + ' 個和頂端的尖點 1 個')) + '，' + r + eq + c;
+    }
+    if (fam === 'prism') return 'A prism’s ' + G_WORD.en[attr] + ': ' + (attr === 'f' ? n + ' rectangles and 2 bases' : (attr === 'e' ? n + ' on the top base, ' + n + ' on the bottom and ' + n + ' joining them' : n + ' on the top base and ' + n + ' on the bottom')) + ', so ' + r + eq + c;
+    return 'A pyramid’s ' + G_WORD.en[attr] + ': ' + (attr === 'f' ? n + ' triangles and 1 base' : (attr === 'e' ? n + ' around the base and ' + n + ' rising to the tip' : n + ' on the base and 1 tip')) + ', so ' + r + eq + c;
   }
 
   /* ================= 語言字典 ================= */
@@ -558,8 +766,8 @@
       netCaptionSolid:function(name){ return '這是' + name + '的立體圖。'; },
       netCaptionCyl:'展開圖：<strong>2 個圓形＋1 個長方形</strong>，長方形的長剛好等於圓的圓周長，摺起來會剛好包住兩個圓一圈。',
       netCaptionCone:'展開圖：<strong>1 個圓形＋1 個扇形</strong>，扇形捲起來變成側面，圓形是底面。',
-      netCaptionPrism:function(name){ return '展開圖：<strong>2 個' + name + '＋幾個長方形</strong>（長方形數量＝底面邊數），每個長方形是一個側面。'; },
-      netCaptionPyr:function(name){ return '展開圖：<strong>1 個' + name + '＋幾個三角形</strong>（三角形數量＝底面邊數），每個三角形是一個側面，摺起來會在中間收成一個頂點。'; },
+      netCaptionPrism:function(n){ return '展開圖：<strong>2 個' + polyShapeName(n, 'zh') + '＋' + n + ' 個長方形</strong>（長方形的個數＝底面的邊數），每個長方形是一個側面；兩個底面接在相對的兩頭。'; },
+      netCaptionPyr:function(n){ return '展開圖：<strong>1 個' + polyShapeName(n, 'zh') + '＋' + n + ' 個三角形</strong>（三角形的個數＝底面的邊數），每個三角形是一個側面，摺起來會收成一個尖點。'; },
       s5h2:'辨識與分類：生活中的柱體與錐體',
       s5lead:'先點一個物品，再點它屬於哪一類，看看猜得對不對。',
       famPrism:'柱體', famPyramid:'錐體', famSphere:'球',
@@ -613,23 +821,64 @@
         { stem:'迷思檢查：圓柱有幾條稜、幾個頂點？', opts:['2 條稜、2 個頂點','0 條稜、0 個頂點','1 條稜、1 個頂點','2 條稜、0 個頂點'], ans:1, draw:{shape:'cylinder'},
           why:'稜是「兩個平面相交、直直的邊」，頂點是「稜與稜交會的角」。圓柱的兩個圓形邊界是彎曲的，不是直直的稜；圓柱也沒有任何角可以稱作頂點。所以圓柱的稜和頂點都是 0。' }
       ],
-      s7h2:'立體點名', s7lead:'每一關出現一個立體或展開圖，回答關於它的問題！',
+      s7h2:'立體點名',
+      s7lead:'數稜、做角柱、分家族、拼展開圖、填規律表 —— 五關五種玩法，五關都在看同一件事：<strong>柱體有兩個一樣大、互相平行的底面，錐體只有一個底面、收成一個尖點</strong>。放錯會扣分，先想清楚再動手。',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
       gHintBtn:'💡 提示',
       gNextBtn:'下一關', gRestartBtn:'重新開始',
-      gAskCount:function(name, kindLabel){ return name + '總共有幾個' + kindLabel + '？'; },
-      gAskFamily:function(name){ return name + '屬於柱體、錐體，還是球？'; },
-      gAskNet:'這張展開圖摺起來會變成什麼形狀？',
-      gKindFace:'面', gKindEdge:'稜', gKindVert:'頂點',
-      gHint1Count:'策略提示：面是「一整片平平的」，稜是「兩片交界的直直的邊」，頂點是「稜交會的角」。',
-      gHint1Family:'策略提示：柱體有兩個一樣大又平行的底面；錐體只有一個底面、收成一個頂點；球整個是曲面。',
-      gHint1Net:'策略提示：數一數展開圖裡有幾個一樣的三角形、還是幾個長方形，或是圓形加扇形。',
-      gHint2:function(ans){ return '接近答案：正確答案是「' + ans + '」。'; },
-      gCorrectFirst:'答對了！+20 分！',
-      gCorrectRetry:'答對了！+10 分。',
-      gWrong:'不是這個答案，再試一次，−5 分。',
-      gClear:'按「下一關」繼續下一關。',
-      gWin:function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gAsks: {
+        edges: function(n){ return '點出這個' + pyramidName(n, 'zh') + '的每一條稜（被擋住、畫成虛線的也算），點完按「數完了」。'; },
+        build: function(attr, T){ return '按 ◀ ▶ 改底面的邊數，做出一個有 ' + T + ' ' + G_UNIT_ZH[attr] + G_WORD.zh[attr] + '的角柱，再按「做好了」。'; },
+        sort: '把每一個立體拖進它的家族（也可以先點立體、再點家族）。有的躺著、有的倒過來 —— 看底面。',
+        net: function(n){ return '這 ' + n + ' 個長方形是一個角柱的側面。把兩個底面拖到長方形的上邊或下邊，拼成摺得起來的展開圖。'; },
+        table: function(fam, n){ return '底面是 ' + n + ' 邊形的' + (fam === 'prism' ? '角柱' : '角錐') + '（畫不出來，要用規律）：把面、稜、頂點的數放進表格，有兩張卡用不到。'; }
+      },
+      gHints: {
+        edges: '稜是兩個面交界的直線。先繞底面數一圈，再數從底面往上收到尖點的斜線 —— 被擋住的稜畫成虛線，也要數。',
+        build: '角柱的規律（n 是底面的邊數）：面 ＝ n ＋ 2、稜 ＝ 3 × n、頂點 ＝ 2 × n。倒過來想：面 − 2、稜 ÷ 3、頂點 ÷ 2，就是底面的邊數。',
+        sort: '先找底面：有兩個一樣大、互相平行的底面 → 柱體；只有一個底面、另一頭收成一個尖點 → 錐體；整個都是彎的、沒有底面 → 球。躺著、倒過來，家族都不會變。',
+        net: '數一數有幾個長方形 —— 底面的每一條邊都要接一個長方形，所以底面的邊數和長方形一樣多。兩個底面要在相對的兩頭。',
+        table: '角柱：面 ＝ n ＋ 2、稜 ＝ 3 × n、頂點 ＝ 2 × n。角錐：面 ＝ n ＋ 1、稜 ＝ 2 × n、頂點 ＝ n ＋ 1。先看它是角柱還是角錐，再代入 n。'
+      },
+      gEdgeBtn:'數完了',
+      gEdgeNow: function(b, s){ return '底面 ' + b + ' 條・斜的 ' + s + ' 條'; },
+      gEdgeAgain:'這條已經點過了 —— 每一條稜只數一次。',
+      gEdgeEarly: function(hid){ return '還有稜沒有點到' + (hid ? ' —— 被擋住、畫成虛線的也是稜，也要數。' : '。看看實線裡還有哪一條沒有變色。'); },
+      gEdgeDone: function(n){ return pyramidName(n, 'zh') + '：底面一圈 ' + n + ' 條＋往上收到尖點的 ' + n + ' 條，2 × ' + n + ' ＝ ' + (2 * n) + ' 條稜。'; },
+      gEdge2: function(hid){ return '還沒點到的一條稜正在閃' + (hid ? '（它是被擋住的虛線）。' : '。'); },
+      gEdge2none:'每一條稜都點到了 —— 按「數完了」。',
+      gBuildBtn:'做好了', gBuildLess:'少一條底邊', gBuildMore:'多一條底邊',
+      gBuildNow: function(n){ return '現在：' + prismName(n, 'zh') + '（底面 ' + n + ' 條邊）'; },
+      gBuildBad: function(attr, n, x, T){ return '這是' + prismName(n, 'zh') + '：' + G_WORD.zh[attr] + ' ' + gRule('prism', attr, n, 'zh') + ' ＝ ' + x + ' ' + G_UNIT_ZH[attr] + '，不是 ' + T + ' ' + G_UNIT_ZH[attr] + '。'; },
+      gBuildDone: function(attr, n, T){ return prismName(n, 'zh') + '：' + G_WORD.zh[attr] + ' ' + gRule('prism', attr, n, 'zh') + ' ＝ ' + T + ' ' + G_UNIT_ZH[attr] + '。每多一條底邊，就多 1 個面、3 條稜、2 個頂點。'; },
+      gBuild2: function(attr, T, n){ return (attr === 'f' ? T + ' − 2' : (attr === 'e' ? T + ' ÷ 3' : T + ' ÷ 2')) + ' ＝ ' + n + '，做一個' + prismName(n, 'zh') + '。'; },
+      gSortBins: ['柱體', '錐體', '球'],
+      gSortNow: function(k){ return '分好了 ' + k + ' / 6 個'; },
+      gSortBad: function(fam, it){
+        var round = it.kind === 'cylinder' || it.kind === 'cone';
+        if (fam === 'prism') return '它有兩個一樣大、互相平行的底面' + (round ? '（底面是圓形也算）' : '') + (it.lying ? '，躺著也一樣' : '') + ' —— 是柱體。';
+        if (fam === 'pyramid') return '它只有一個底面，另一頭收成一個尖點' + (round ? '（底面是圓形也算）' : '') + (it.flipped ? '，倒過來也一樣' : '') + ' —— 是錐體。';
+        return '它整個都是彎的曲面，沒有平平的底面 —— 球自己一類。';
+      },
+      gSortOk: function(bin){ return '放對了 —— ' + bin + '。'; },
+      gSortDone:'柱體看兩個一樣大、互相平行的底面，錐體看一個底面收成尖點，球整個是曲面 —— 躺著、倒過來，家族都不會變。',
+      gSort2: function(fam, it){ return '發亮的那一張：' + (fam === 'prism' ? '兩個一樣大、互相平行的底面' : (fam === 'pyramid' ? '一個底面、收成一個尖點' : '整個都是曲面')) + ' → 放進「' + (fam === 'prism' ? '柱體' : (fam === 'pyramid' ? '錐體' : '球')) + '」。'; },
+      gNetNow: function(k){ return '底面：接好了 ' + k + ' / 2 個'; },
+      gNetDecoy: function(k, n){ return '這一塊是 ' + k + ' 邊形。側面有 ' + n + ' 個長方形，底面的每一條邊都要接一個長方形 —— 底面要是 ' + n + ' 邊形。'; },
+      gNetSame: function(top){ return '兩個底面都接在' + (top ? '上面' : '下面') + '，摺起來會疊在同一頭，另一頭是空的 —— 角柱的兩個底面在相對的兩頭。'; },
+      gNetOk1: function(top){ return '接好一個底面了。另一個要接在' + (top ? '下面' : '上面') + '那一排邊上。'; },
+      gNetDone: function(n){ return '一個在上、一個在下：摺起來兩個 ' + n + ' 邊形一樣大、互相平行，' + n + ' 個長方形圍成側面 —— ' + prismName(n, 'zh') + '有 ' + n + ' ＋ 2 ＝ ' + (n + 2) + ' 個面。'; },
+      gNet2: function(n, baseSide){ return '用 ' + n + ' 邊形（數它的邊：' + n + ' 條）' + (baseSide ? '，接在' + (baseSide === 'top' ? '下面' : '上面') + '任何一個長方形的邊上。' : '，先接在任何一個長方形的上邊或下邊。'); },
+      gTableSlots: ['面', '稜', '頂點'],
+      gTableNow: function(k){ return '填好了 ' + k + ' / 3 格'; },
+      gTableBad: function(fam, n, s, v){ return gRuleSentence(fam, n, TABLE_ATTR[s], 'zh') + '，不是 ' + v + '。'; },
+      gTableOk: function(fam, n, s){ return '對！' + gRuleSentence(fam, n, TABLE_ATTR[s], 'zh') + '。'; },
+      gTableDone: function(fam, n){ var c = famCounts(fam, n); return '底面 ' + n + ' 邊形的' + (fam === 'prism' ? '角柱' : '角錐') + '：面 ' + gRule(fam, 'f', n, 'zh') + ' ＝ ' + c.f + '、稜 ' + gRule(fam, 'e', n, 'zh') + ' ＝ ' + c.e + '、頂點 ' + gRule(fam, 'v', n, 'zh') + ' ＝ ' + c.v + ' —— 邊數再大，規律也一樣。'; },
+      gTable2: function(fam, n, s){ return '發亮的那一格：' + gRuleSentence(fam, n, TABLE_ATTR[s], 'zh') + '。'; },
+      gPts: function(p){ return '＋' + p + ' 分'; },
+      gMinus:'扣 5 分',
+      gClear:'按「下一關」繼續。',
+      gWin: function(score){ return '五關全破！總分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
       footer:'把整頁縮成一句：<strong>柱體兩個底面一樣大，錐體只有一個底面收成一點 —— 面稜頂點的規律，用看的就找得到。</strong>'
     },
     en: {
@@ -674,8 +923,8 @@
       netCaptionSolid:function(name){ return 'This is the solid view of a ' + name + '.'; },
       netCaptionCyl:'Net: <strong>2 circles + 1 rectangle</strong> — the rectangle’s length is exactly equal to the circle’s circumference, so it wraps perfectly around both circles.',
       netCaptionCone:'Net: <strong>1 circle + 1 sector</strong> — the sector rolls up into the curved side, and the circle is the base.',
-      netCaptionPrism:function(name){ return 'Net: <strong>2 ' + name + 's + several rectangles</strong> (the number of rectangles equals the number of base edges) — each rectangle is one side face.'; },
-      netCaptionPyr:function(name){ return 'Net: <strong>1 ' + name + ' + several triangles</strong> (the number of triangles equals the number of base edges) — each triangle is one side face, meeting at a single point when folded.'; },
+      netCaptionPrism:function(n){ return 'Net: <strong>2 ' + polyShapeName(n, 'en') + 's + ' + n + ' rectangles</strong> (as many rectangles as the base has sides) — each rectangle is one side face, and the two bases are joined at opposite ends.'; },
+      netCaptionPyr:function(n){ return 'Net: <strong>1 ' + polyShapeName(n, 'en') + ' + ' + n + ' triangles</strong> (as many triangles as the base has sides) — each triangle is one side face, and they meet at a single point when folded.'; },
       s5h2:'Identify and Classify: Prisms and Pyramids Around You',
       s5lead:'Tap an object first, then tap the family it belongs to, and see if your guess is right.',
       famPrism:'Prism family', famPyramid:'Pyramid family', famSphere:'Sphere',
@@ -709,7 +958,7 @@
         { stem:'Which of these belongs to the prism family?', opts:['Pyramid (Egypt-shaped)','Cone','Cylinder','Sphere'], ans:2,
           why:'A prism has two equal, parallel bases — a cylinder is exactly that (two circular bases). A cone and a pyramid only have one base, and a sphere has no flat face at all.' },
         { stem:'How many faces does a pentagonal pyramid have?', opts:['5','11','10','6'], ans:3, draw:{shape:'pyramid',n:5},
-          why:'For an n-gonal pyramid, faces = n+1, so a pentagonal pyramid has 5+1 = 6 faces (1 base + 5 triangular sides).' },
+          why:'For an n-gonal pyramid, faces = n+1, so a pentagonal pyramid has 5+1 = 6 faces: 1 base and 5 triangular sides.' },
         { stem:'Can a sphere be unfolded into a net?', opts:['Yes, just like a cube','Yes, but only after cutting it in half','No — a sphere is curved all over, with no flat part to unfold','No, because it is too heavy'], ans:2, draw:{shape:'sphere'},
           why:'A net comes from unfolding flat faces. A sphere is curved from every angle — there’s no flat piece anywhere to flatten out — so a sphere has no net.' }
       ],
@@ -729,23 +978,64 @@
         { stem:'Misconception check: how many edges and vertices does a cylinder have?', opts:['2 edges, 2 vertices','0 edges, 0 vertices','1 edge, 1 vertex','2 edges, 0 vertices'], ans:1, draw:{shape:'cylinder'},
           why:'An edge is a straight line where two flat faces meet, and a vertex is a corner where edges meet. A cylinder’s circular rims are curved, not straight edges, and it has no corner that could be called a vertex — so both its edges and vertices are 0.' }
       ],
-      s7h2:'Solid Roll Call', s7lead:'Each round shows a solid or a net — answer the question about it!',
+      s7h2:'Solid Roll Call',
+      s7lead:'Count edges, build a prism, sort the families, assemble a net, fill in the rule table — five rounds, five ways to play, all about one idea: <strong>a prism has two equal, parallel bases; a pyramid has one base rising to a single point</strong>. Wrong moves cost points, so think before you move.',
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
       gHintBtn:'💡 Hint',
       gNextBtn:'Next round', gRestartBtn:'Restart',
-      gAskCount:function(name, kindLabel){ return 'How many ' + kindLabel + ' does a ' + name + ' have in total?'; },
-      gAskFamily:function(name){ return 'Does a ' + name + ' belong to the prism family, the pyramid family, or is it a sphere?'; },
-      gAskNet:'What shape does this net fold into?',
-      gKindFace:'faces', gKindEdge:'edges', gKindVert:'vertices',
-      gHint1Count:'Strategy hint: a face is a whole flat panel, an edge is a straight line where two panels meet, a vertex is a corner where edges meet.',
-      gHint1Family:'Strategy hint: a prism has two equal, parallel bases; a pyramid has one base rising to a single point; a sphere is curved all over.',
-      gHint1Net:'Strategy hint: count how many matching triangles or rectangles the net has, or whether it’s a circle plus a sector.',
-      gHint2:function(ans){ return 'Near-answer: the correct answer is "' + ans + '".'; },
-      gCorrectFirst:'Correct on the first try! +20 points!',
-      gCorrectRetry:'Correct! +10 points.',
-      gWrong:'Not quite — try again. −5 points.',
+      gAsks: {
+        edges: function(n){ return 'Tap every edge of this ' + pyramidName(n, 'en') + ' (the hidden ones, drawn dashed, count too), then press "Done counting".'; },
+        build: function(attr, T){ return 'Use ◀ ▶ to change how many sides the base has, and make a prism with ' + T + ' ' + G_WORD.en[attr] + '. Then press "Done".'; },
+        sort: 'Drag each solid into its family (or tap a solid, then tap a family). Some are lying down or upside down — look at the bases.',
+        net: function(n){ return 'These ' + n + ' rectangles are the sides of a prism. Drag the two bases onto the top or bottom edge of a rectangle to make a net that folds up.'; },
+        table: function(fam, n){ return 'A ' + (fam === 'prism' ? 'prism' : 'pyramid') + ' whose base has ' + n + ' sides (too many to draw — use the rules): put its numbers of faces, edges and vertices into the table. Two cards are left over.'; }
+      },
+      gHints: {
+        edges: 'An edge is a straight line where two faces meet. Go once around the base, then count the slanted lines rising to the tip — hidden edges are drawn dashed, and they count too.',
+        build: 'Prism rules (n = number of base sides): faces = n + 2, edges = 3 × n, vertices = 2 × n. Work backwards: faces − 2, edges ÷ 3 or vertices ÷ 2 gives the number of base sides.',
+        sort: 'Look for the bases: two equal, parallel bases → prism family; one base with the other end rising to a point → pyramid family; curved all over with no base → sphere. Lying down or upside down, the family never changes.',
+        net: 'Count the rectangles — every side of a base needs its own rectangle, so the base has as many sides as there are rectangles. The two bases go at opposite ends.',
+        table: 'Prism: faces = n + 2, edges = 3 × n, vertices = 2 × n. Pyramid: faces = n + 1, edges = 2 × n, vertices = n + 1. First decide prism or pyramid, then put in n.'
+      },
+      gEdgeBtn:'Done counting',
+      gEdgeNow: function(b, s){ return 'Base: ' + b + ' · slanted: ' + s; },
+      gEdgeAgain:'You already tapped that one — each edge counts once.',
+      gEdgeEarly: function(hid){ return 'Some edges are not tapped yet' + (hid ? ' — the hidden ones, drawn dashed, are edges too.' : '. Look for a solid line that has not changed colour.'); },
+      gEdgeDone: function(n){ return 'A ' + pyramidName(n, 'en') + ': ' + n + ' edges around the base and ' + n + ' rising to the tip, 2 × ' + n + ' = ' + (2 * n) + ' edges.'; },
+      gEdge2: function(hid){ return 'One edge you have not tapped is flashing' + (hid ? ' (it is a hidden, dashed one).' : '.'); },
+      gEdge2none:'Every edge is tapped — press "Done counting".',
+      gBuildBtn:'Done', gBuildLess:'One base side fewer', gBuildMore:'One base side more',
+      gBuildNow: function(n){ return 'Now: a ' + prismName(n, 'en') + ' (base has ' + n + ' sides)'; },
+      gBuildBad: function(attr, n, x, T){ return 'This is a ' + prismName(n, 'en') + ': ' + G_WORD.en[attr] + ' = ' + gRule('prism', attr, n, 'en') + ' = ' + x + ', not ' + T + '.'; },
+      gBuildDone: function(attr, n, T){ return 'A ' + prismName(n, 'en') + ': ' + G_WORD.en[attr] + ' = ' + gRule('prism', attr, n, 'en') + ' = ' + T + '. Each extra base side adds 1 face, 3 edges and 2 vertices.'; },
+      gBuild2: function(attr, T, n){ return (attr === 'f' ? T + ' − 2' : (attr === 'e' ? T + ' ÷ 3' : T + ' ÷ 2')) + ' = ' + n + ' — make a ' + prismName(n, 'en') + '.'; },
+      gSortBins: ['Prism family', 'Pyramid family', 'Sphere'],
+      gSortNow: function(k){ return 'Sorted ' + k + ' / 6'; },
+      gSortBad: function(fam, it){
+        var round = it.kind === 'cylinder' || it.kind === 'cone';
+        if (fam === 'prism') return 'It has two equal, parallel bases' + (round ? ' (round bases count too)' : '') + (it.lying ? ', even lying down' : '') + ' — it belongs to the prism family.';
+        if (fam === 'pyramid') return 'It has just one base, and the other end rises to a single point' + (round ? ' (a round base counts too)' : '') + (it.flipped ? ', even upside down' : '') + ' — it belongs to the pyramid family.';
+        return 'It is curved all over, with no flat base — a sphere is a family of its own.';
+      },
+      gSortOk: function(bin){ return 'Right — ' + bin + '.'; },
+      gSortDone:'Prisms: two equal, parallel bases. Pyramids: one base rising to a point. Spheres: curved all over. Lying down or upside down, the family never changes.',
+      gSort2: function(fam, it){ return 'The glowing card: ' + (fam === 'prism' ? 'two equal, parallel bases' : (fam === 'pyramid' ? 'one base rising to a point' : 'curved all over')) + ' → put it in "' + (fam === 'prism' ? 'Prism family' : (fam === 'pyramid' ? 'Pyramid family' : 'Sphere')) + '".'; },
+      gNetNow: function(k){ return 'Bases attached: ' + k + ' / 2'; },
+      gNetDecoy: function(k, n){ return 'This piece has ' + k + ' sides. There are ' + n + ' rectangles, and every side of a base needs its own rectangle — the base must have ' + n + ' sides.'; },
+      gNetSame: function(top){ return 'Both bases on the ' + (top ? 'top' : 'bottom') + ' would fold onto the same end and leave the other end open — a prism’s two bases are at opposite ends.'; },
+      gNetOk1: function(top){ return 'One base attached. The other one goes on the ' + (top ? 'bottom' : 'top') + ' row of edges.'; },
+      gNetDone: function(n){ return 'One on top, one on the bottom: folded up, the two ' + n + '-sided bases are equal and parallel, and the ' + n + ' rectangles wrap the sides — a ' + prismName(n, 'en') + ' has ' + n + ' + 2 = ' + (n + 2) + ' faces.'; },
+      gNet2: function(n, baseSide){ return 'Use a ' + n + '-sided piece (count its sides: ' + n + ')' + (baseSide ? ', on the ' + (baseSide === 'top' ? 'bottom' : 'top') + ' edge of any rectangle.' : ', on the top or bottom edge of any rectangle.'); },
+      gTableSlots: ['Faces', 'Edges', 'Vertices'],
+      gTableNow: function(k){ return 'Filled ' + k + ' / 3'; },
+      gTableBad: function(fam, n, s, v){ return gRuleSentence(fam, n, TABLE_ATTR[s], 'en') + ' — not ' + v + '.'; },
+      gTableOk: function(fam, n, s){ return 'Right! ' + gRuleSentence(fam, n, TABLE_ATTR[s], 'en') + '.'; },
+      gTableDone: function(fam, n){ var c = famCounts(fam, n); return 'A ' + (fam === 'prism' ? 'prism' : 'pyramid') + ' with a ' + n + '-sided base: faces ' + gRule(fam, 'f', n, 'en') + ' = ' + c.f + ', edges ' + gRule(fam, 'e', n, 'en') + ' = ' + c.e + ', vertices ' + gRule(fam, 'v', n, 'en') + ' = ' + c.v + ' — however many sides, the rules stay the same.'; },
+      gTable2: function(fam, n, s){ return 'The glowing box: ' + gRuleSentence(fam, n, TABLE_ATTR[s], 'en') + '.'; },
+      gPts: function(p){ return '+' + p + ' points'; },
+      gMinus:'5 points off',
       gClear:'Press "Next round" to continue.',
-      gWin:function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press "Restart" to play again.'; },
+      gWin: function(score){ return 'All 5 rounds cleared! Total ' + score + ' points 🏆 Press "Restart" to play again.'; },
       footer:'The whole page in one line: <strong>a prism’s two bases match; a pyramid’s one base rises to a point — the rules for faces, edges and vertices follow from what you see.</strong>'
     }
   };
@@ -939,8 +1229,8 @@
       netWrap.innerHTML = drawNetByShape(netSel.kind, netSel.n);
       if (netSel.kind === 'cylinder') netCaption.innerHTML = d.netCaptionCyl;
       else if (netSel.kind === 'cone') netCaption.innerHTML = d.netCaptionCone;
-      else if (netSel.kind === 'prism') netCaption.innerHTML = d.netCaptionPrism(name);
-      else netCaption.innerHTML = d.netCaptionPyr(name);
+      else if (netSel.kind === 'prism') netCaption.innerHTML = d.netCaptionPrism(netSel.n);
+      else netCaption.innerHTML = d.netCaptionPyr(netSel.n);
       netToggleBtn.textContent = d.netFoldBtn;
     }
     buildNetChips();
@@ -1063,147 +1353,511 @@
     });
   }
 
-  /* ================= 7. 小遊戲：立體點名 ================= */
-  var ROUNDS = [
-    { kind:'count', shape:'prism', n:4, attr:'f', correct:6, choices:[6,12,8,7] },
-    { kind:'count', shape:'pyramid', n:5, attr:'e', correct:10, choices:[10,6,9,11] },
-    { kind:'family', shape:'cone', fam:'pyramid' },
-    { kind:'net', shape:'prism', n:3 },
-    { kind:'count', shape:'prism', n:6, attr:'v', correct:12, choices:[12,8,6,10] }
-  ];
-
-  var gRound = 0, gScore = 0, gMistake = false;
+  /* ===================== 小遊戲：立體點名（§六之五：五關五種玩法） ===================== */
+  var gameStage = document.getElementById('gameStage');
+  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gGen = 0, gCtx = {};
   var elRound = document.getElementById('gRound');
   var elScore = document.getElementById('gScore');
-  var gAskText = document.getElementById('gAskText');
-  var gVisual = document.getElementById('gVisual');
-  var gAnswers = document.getElementById('gAnswers');
   var gMsg = document.getElementById('gMsg');
   var gNext = document.getElementById('gNext');
   var gRestart = document.getElementById('gRestart');
   var gHintBtn = document.getElementById('gHintBtn');
   var elHint = document.getElementById('gHint');
   var hintLevel = 0;
+  var NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs, text){
+    var el = document.createElementNS(NS, tag);
+    for (var a in attrs) el.setAttribute(a, attrs[a]);
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function ptsAttr(list){ return list.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' '); }
 
-  function shapeDisplayName(round, l){
-    if (round.shape === 'prism') return prismName(round.n, l);
-    if (round.shape === 'pyramid') return pyramidName(round.n, l);
-    if (round.shape === 'cylinder') return l === 'zh' ? '圓柱' : 'cylinder';
-    if (round.shape === 'cone') return l === 'zh' ? '圓錐' : 'cone';
-    return l === 'zh' ? '球' : 'sphere';
+  /* ---- 畫板：固定的邏輯大小，整塊等比縮放到螢幕寬度 ---- */
+  function makeBoard(W, H){
+    var avail = gameStage.clientWidth || W;
+    var k = Math.min(1.5, avail / W);
+    var wrap = document.createElement('div');
+    wrap.className = 'gwrap';
+    wrap.style.width = Math.floor(W * k) + 'px';
+    wrap.style.height = Math.floor(H * k) + 'px';
+    var board = document.createElement('div');
+    board.className = 'gboard';
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    board.style.transform = 'scale(' + k + ')';
+    wrap.appendChild(board);
+    var B = { wrap:wrap, el:board, k:k, W:W, H:H, selected:null, onTap:null, onDrop:null, onPointTap:null, onBoardTap:null };
+    B.toBoard = function(e){
+      var r = board.getBoundingClientRect();
+      return { x:(e.clientX - r.left) / k, y:(e.clientY - r.top) / k };
+    };
+    /* 點畫板（不是點在積木上）：只認第一根手指，按下和放開在同一個地方才算「點一下」 */
+    board.addEventListener('pointerdown', function(e){
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      if (!e.isPrimary) return;   /* 第二根手指：不理 —— 第一根手指按在畫板外、按鈕或積木上時也一樣 */
+      BOARD_TAP = { id:e.pointerId, x:e.clientX, y:e.clientY, far:false };
+    });
+    board.addEventListener('pointerup', function(e){
+      if (PIECE_PTR[e.pointerId]) return;   /* 這根手指是從積木上按下去的：放開不是「點目的地」 */
+      if (e.target.closest && e.target.closest('.gpiece')) return;
+      var t = BOARD_TAP, pt = B.toBoard(e);
+      if (t && t.id === e.pointerId) BOARD_TAP = null;
+      /* 「點目的地」也一樣只認第一根手指的「點一下」：別的手指放開、或滑動之後放開，都不算（不然想捲動也會被扣分） */
+      if (!t || t.id !== e.pointerId) return;
+      if (t.far || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10) return;   /* 中途離開按下去的地方超過 10px 就不是「點一下」 */
+      if (B.selected && B.onPointTap){ B.onPointTap(B.selected, pt); return; }
+      if (B.onBoardTap && !gSolved) B.onBoardTap(pt);
+    });
+    gameStage.appendChild(wrap);
+    return B;
   }
-  function kindLabelOf(attr){
-    var d = L();
-    return attr === 'f' ? d.gKindFace : (attr === 'e' ? d.gKindEdge : d.gKindVert);
+  /* 從積木上按下去的那根手指，放開時不是「點目的地」：capture 遺失之後，那一下 pointerup 會落在畫板上，
+     不可以把先前選起來的另一塊放過去。PIECE_PTR 記「按在積木上的 pointerId」；BOARD_TAP 記「按在畫板上的第一根手指」。
+     任何地方的 pointerup／pointercancel 傳到 window 時清掉。整頁唯一一組常駐的監聽，只掛一次，不會越積越多。 */
+  var PIECE_PTR = {}, BOARD_TAP = null;
+  function clearPtr(e){ delete PIECE_PTR[e.pointerId]; if (BOARD_TAP && BOARD_TAP.id === e.pointerId) BOARD_TAP = null; }
+  window.addEventListener('pointerup', clearPtr);
+  window.addEventListener('pointercancel', clearPtr);
+  window.addEventListener('pointerdown', function(e){ delete PIECE_PTR[e.pointerId]; }, true);
+  window.addEventListener('pointermove', function(e){
+    if (BOARD_TAP && BOARD_TAP.id === e.pointerId && Math.hypot(e.clientX - BOARD_TAP.x, e.clientY - BOARD_TAP.y) > 10) BOARD_TAP.far = true;
+  });
+  /* 指標離開視窗時收不到 pointermove：一離開就當成走遠了（滑鼠拖出視窗再回來放開，不算點一下） */
+  window.addEventListener('pointerout', function(e){ if (BOARD_TAP && BOARD_TAP.id === e.pointerId && !e.relatedTarget) BOARD_TAP.far = true; });
+  function addZone(B, x, y, w, h, cls, text){
+    var z = document.createElement('div');
+    z.className = cls;
+    z.style.left = x + 'px'; z.style.top = y + 'px'; z.style.width = w + 'px'; z.style.height = h + 'px';
+    if (text !== undefined) z.textContent = text;
+    B.el.appendChild(z);
+    return z;
   }
-  function roundOptions(round){
-    var d = L();
-    if (round.kind === 'count') return round.choices.map(String);
-    if (round.kind === 'family') return [d.famPrism, d.famPyramid, d.famSphere];
-    /* net */
-    return [prismName(3, lang), pyramidName(3, lang), (lang === 'zh' ? '圓柱' : 'cylinder'), prismName(4, lang)];
+  /* 畫板上的一張 SVG（整塊畫板大小，不接指標）。不給 viewBox：畫出來的位置要和吸附、點選量的位置一模一樣。 */
+  function gSvg(B){
+    var s = svgEl('svg', { 'class':'gsvg', width:B.W, height:B.H, 'aria-hidden':'true' });
+    B.el.appendChild(s);
+    return s;
   }
-  function roundAnswerIndex(round){
-    var opts = roundOptions(round);
-    if (round.kind === 'count') return opts.indexOf(String(round.correct));
-    if (round.kind === 'family'){
-      var famText = round.fam === 'prism' ? L().famPrism : (round.fam === 'pyramid' ? L().famPyramid : L().famSphere);
-      return opts.indexOf(famText);
+  function trailLine(text){
+    var p = document.createElement('p');
+    p.className = 'gtrail';
+    p.textContent = text;
+    gameStage.appendChild(p);
+    return p;
+  }
+  /* 畫板下面的一排按鈕 */
+  function actionRow(){
+    var row = document.createElement('div');
+    row.className = 'gaction';
+    gameStage.appendChild(row);
+    return row;
+  }
+  function actionBtn(row, text, cls, aria){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (cls ? ' ' + cls : ''); b.textContent = text;
+    if (aria) b.setAttribute('aria-label', aria);
+    row.appendChild(b);
+    return b;
+  }
+  /* 一個立體畫在畫板上（每一條稜一條 <line>，data-e 是它的編號）；回傳畫出來的點與線 */
+  function drawSolidOnBoard(host, kind, n, pose, box){
+    var p = solidPlan(kind, n, pose), Q = solidFit(p, box), g = svgEl('g', { 'class':'gsolid', 'data-kind':kind, 'data-n':n });
+    p.faces.forEach(function(f){ if (f.base && f.vis) g.appendChild(svgEl('polygon', { 'class':'gbase', points:ptsAttr(f.v.map(function(i){ return Q[i]; })) })); });
+    ['hidden', 'solid'].forEach(function(k){
+      p.lines.forEach(function(L, i){
+        if (L.k !== k) return;
+        g.appendChild(svgEl('line', { 'class':k === 'solid' ? 'gedge' : 'gedge ghid', 'data-e':i, x1:Q[L.a][0].toFixed(2), y1:Q[L.a][1].toFixed(2), x2:Q[L.b][0].toFixed(2), y2:Q[L.b][1].toFixed(2) }));
+      });
+    });
+    if (p.apex >= 0) g.appendChild(svgEl('circle', { 'class':'gapex', cx:Q[p.apex][0].toFixed(2), cy:Q[p.apex][1].toFixed(2), r:4 }));
+    host.appendChild(g);
+    return { plan:p, Q:Q, g:g };
+  }
+  /* 一個正 k 邊形（邊長 a，一條邊水平朝下），畫在 w × h 的小 SVG 正中間；flip ＝ 上下顛倒（接在長方形的下邊時，那條邊朝上） */
+  function ngonSvg(k, a, w, h, flip){
+    var pts = ngonOnEdge([0, 0], [a, 0], k), xs = pts.map(function(p){ return p[0]; }), ys = pts.map(function(p){ return p[1]; });
+    var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs), minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+    var dx = (w - (maxX - minX)) / 2 - minX, dy = (h - (maxY - minY)) / 2 - minY;
+    var s = svgEl('svg', { width:w, height:h, 'aria-hidden':'true' });
+    s.appendChild(svgEl('polygon', { 'class':'gngon', 'data-k':k, points:ptsAttr(pts.map(function(p){ return [p[0] + dx, flip ? h - (p[1] + dy) : p[1] + dy]; })) }));
+    return s;
+  }
+
+  /* ---- 拖得動的東西：位置一律記「中心點」；只跟著第一根手指 ---- */
+  function addPiece(B, o){
+    var el = document.createElement('div');
+    el.className = 'gpiece ' + (o.cls || '');
+    el.style.width = o.w + 'px'; el.style.height = o.h + 'px';
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.node) el.appendChild(o.node);
+    if (o.label) el.setAttribute('aria-label', o.label);
+    var P = { el:el, w:o.w, h:o.h, homeX:o.cx, homeY:o.cy, cx:o.cx, cy:o.cy, locked:false, data:o.data || {} };
+    P.place = function(cx, cy){
+      P.cx = cx; P.cy = cy;
+      el.style.transform = 'translate(' + (cx - P.w / 2) + 'px,' + (cy - P.h / 2) + 'px)';
+    };
+    P.home = function(){ P.place(P.homeX, P.homeY); };
+    P.lock = function(cx, cy, w, h){
+      stopGesture();          /* 被放好（例如另一根手指點了目的地）時，還在進行的拖拉一律結束，不可以再放第二次 */
+      P.locked = true;
+      el.classList.add('locked'); el.classList.remove('sel'); el.classList.remove('gglow');
+      if (B.selected === P) B.selected = null;
+      if (w){ P.w = w; P.h = h; el.style.width = w + 'px'; el.style.height = h + 'px'; }   /* 放好的圖卡縮成小圖 */
+      P.place(cx, cy);
+    };
+    /* 只跟著第一根手指（pid）；保險：capture 遺失或在別處放開 → 放回原位，不讓這塊卡死。
+       document 上的監聽只在拖拉進行中掛著。 */
+    var start = null, orig = null, moved = false, pid = null, gen = gGen;
+    function onDocEnd(e){ end(e, true); }
+    function stopGesture(){
+      if (!start) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
     }
-    return 0; // net: prism3 name is always option 0
+    P.busy = function(){ return !!start; };
+    el.addEventListener('pointerdown', function(e){
+      PIECE_PTR[e.pointerId] = true;
+      /* 只跟著第一根手指：第二根手指不能拿起任何一塊（第一根手指按在別處時也一樣） */
+      if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;
+      e.preventDefault();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      start = B.toBoard(e); orig = { x:P.cx, y:P.cy }; moved = false;
+      document.addEventListener('pointerup', onDocEnd);
+      document.addEventListener('pointercancel', onDocEnd);
+    });
+    el.addEventListener('pointermove', function(e){
+      if (!start || e.pointerId !== pid) return;
+      var p = B.toBoard(e), dx = p.x - start.x, dy = p.y - start.y;
+      if (!moved && dx * dx + dy * dy > 36){ moved = true; el.classList.add('dragging'); }
+      if (!moved) return;
+      P.place(orig.x + dx, orig.y + dy);
+    });
+    function end(e, cancelled){
+      if (!start || e.pointerId !== pid) return;
+      start = null; pid = null;
+      document.removeEventListener('pointerup', onDocEnd);
+      document.removeEventListener('pointercancel', onDocEnd);
+      el.classList.remove('dragging');
+      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */
+      /* 先點選、後來又直接拖走的那一塊：拖完就不再是「選起來」的，不然下一次點目的地會多放一次 */
+      if (moved && B.selected === P){ el.classList.remove('sel'); B.selected = null; }
+      if (cancelled || gSolved){ P.home(); return; }   /* 過關之後，另一根手指還拿著的那一塊一律放回去，不能再改畫面 */
+      if (!moved){ if (B.onTap) B.onTap(P); return; }
+      if (!(B.onDrop && B.onDrop(P, { x:P.cx, y:P.cy }))) P.home();
+    }
+    el.addEventListener('pointerup', function(e){ end(e, false); });
+    el.addEventListener('pointercancel', function(e){ end(e, true); });
+    el.addEventListener('lostpointercapture', function(e){ end(e, true); });
+    B.el.appendChild(el);
+    P.home();
+    return P;
   }
-  function roundAnswerText(round){
-    var opts = roundOptions(round);
-    return opts[roundAnswerIndex(round)];
+  /* 「先點東西、再點位置」：tryDrop 放成功回 true；點到空白處不算犯錯。點目的地時 pt.tap = true。 */
+  function useTapSelect(B, tryDrop){
+    B.onTap = function(P){
+      if (B.selected === P){ P.el.classList.remove('sel'); B.selected = null; return; }
+      if (B.selected) B.selected.el.classList.remove('sel');
+      B.selected = P; P.el.classList.add('sel');
+    };
+    B.onPointTap = function(P, pt){
+      if (P.busy()) return;   /* 這一塊正被另一根手指拖著：點目的地不算數，等它放開 */
+      P.el.classList.remove('sel'); B.selected = null;
+      if (!gSolved) tryDrop(P, { x:pt.x, y:pt.y, tap:true });
+    };
+    B.onDrop = tryDrop;
   }
-  function roundAskText(round){
-    var d = L();
-    if (round.kind === 'count') return d.gAskCount(shapeDisplayName(round, lang), kindLabelOf(round.attr));
-    if (round.kind === 'family') return d.gAskFamily(shapeDisplayName(round, lang));
-    return d.gAskNet;
+  /* 放進哪一格：放開的點落在格子的方框裡（四邊各放寬 pad）。相鄰格子放寬之後會重疊 ——
+     先在「所有」格子裡挑最近的一格，最近的那格已經放好了就不收（不可以跳過它、改放進旁邊的空格）。
+     「最近」量的是到**方框**的距離（點在框裡就是 0），一樣近才比到中心的距離（三年級 multiply 的 e2e 抓到的）。 */
+  function nearestOpen(list, pt, pad){
+    var best = null, bd = Infinity, bc = Infinity;
+    list.forEach(function(b){
+      var dx = pt.x - b.cx, dy = pt.y - b.cy;
+      if (Math.abs(dx) > b.hw + pad || Math.abs(dy) > b.hh + pad) return;
+      var ex = Math.max(0, Math.abs(dx) - b.hw), ey = Math.max(0, Math.abs(dy) - b.hh);
+      var dd = ex * ex + ey * ey, dc = dx * dx + dy * dy;
+      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }
+    });
+    return best && !best.done ? best : null;
   }
-  function roundVisual(round){
-    if (round.kind === 'net') return drawNetByShape(round.shape, round.n);
-    return drawSolidByKind(round.shape, round.n);
+
+  function roundSolved(text){
+    if (gSolved) return;
+    gSolved = true;
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.sel, .gglow'), function(x){ x.classList.remove('sel'); x.classList.remove('gglow'); });
+    var pts = gMistake ? 10 : 20;
+    gScore += pts; elScore.textContent = gScore;
+    gHintBtn.disabled = true;
+    elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字 */
+    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
+    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
   }
-  function roundHint1(round){
-    var d = L();
-    if (round.kind === 'count') return d.gHint1Count;
-    if (round.kind === 'family') return d.gHint1Family;
-    return d.gHint1Net;
+  /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
+  function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
+  function roundMiss(text){
+    gMistake = true;
+    var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
+    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
+    gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
   }
+  function roundInfo(text){ gMsg.innerHTML = '<span class="yes">' + text + '</span>'; }
+  /* 不算錯的提醒（點到已經點過的稜）：中性的顏色，不扣分 */
+  function roundNote(text){ gMsg.innerHTML = '<span class="gnote">' + text + '</span>'; }
+  /* 已經說明過、也扣過分的同一個錯：把說明再說一次，不再算錯、不扣分 */
+  function roundAgain(text){ gMsg.innerHTML = '<span class="no">' + text + '</span>'; }
+  /* 同一個錯（key 一樣）只扣一次：第一次 roundMiss；之後不管中間做過什麼都不再扣分 —— 不是剛剛那一個就把說明再說一次 */
+  function missOnce(seen, key, text){
+    if (seen.keys[key]){ if (seen.last !== key){ seen.last = key; roundAgain(text); } return; }
+    seen.keys[key] = true; seen.last = key;
+    roundMiss(text);
+  }
+  /* 第二層提示的「發亮」：一次只亮一個 */
+  function glow(el){
+    Array.prototype.forEach.call(gameStage.querySelectorAll('.gglow'), function(x){ x.classList.remove('gglow'); });
+    if (el) el.classList.add('gglow');
+  }
+
+  var RENDER = {
+    /* 第 1 關：數稜（範例 2）—— 一個 n 角錐，實線是看得到的稜、虛線是被擋住的稜。點畫板上離稜最近的地方（EDGE.tap 以內）就點到那一條：
+       底面一圈變藍、往上收到尖點的變橘，讀數寫「底面幾條・斜的幾條」，不寫一共要幾條。按「數完了」才判斷：還有沒點到的 → 說為什麼
+       （沒點到的裡面有虛線時才說「虛線也算」）；同一個點了幾條的狀態按兩次不重複扣分。點已經點過的稜只提醒、不扣分；點空白處不算。
+       「點一下」本身就是數，這一關沒有拖拉（§六之五 第 4 點的例外）。 */
+    edges: function(d){
+      var e = pick(GAME_EDGES), n = e[0], plan = edgePlan(n, e[1]), marked = {}, cnt = { base:0, side:0 }, seen = { keys:{}, last:null };
+      gCtx.ask.textContent = d.gAsks.edges(n);
+      var line = trailLine(d.gEdgeNow(0, 0));
+      var B = makeBoard(GW, EDGE_H);
+      var svg = gSvg(B);
+      drawSolidOnBoard(svg, 'pyramid', n, { phase:e[1] }, EDGE.box);
+      var marks = svgEl('g', { 'class':'gmarks' });
+      svg.appendChild(marks);
+      function missing(){ return plan.lines.filter(function(L){ return !marked[L.i]; }); }
+      B.onBoardTap = function(pt){
+        var L = edgePick(plan.lines, pt);
+        if (!L) return;
+        if (marked[L.i]){ roundNote(d.gEdgeAgain); return; }
+        marked[L.i] = true;
+        Array.prototype.forEach.call(marks.querySelectorAll('.gflash[data-e="' + L.i + '"]'), function(x){ marks.removeChild(x); });   /* 閃的那一條點到了：不再閃 */
+        if (L.base) cnt.base++; else cnt.side++;
+        marks.appendChild(svgEl('line', { 'class':'gmark ' + (L.base ? 'gmbase' : 'gmside') + (L.k === 'hidden' ? ' gmhid' : ''), 'data-e':L.i,
+          x1:L.a[0].toFixed(2), y1:L.a[1].toFixed(2), x2:L.b[0].toFixed(2), y2:L.b[1].toFixed(2) }));
+        line.textContent = d.gEdgeNow(cnt.base, cnt.side);
+        gMsg.textContent = '';
+        refreshHint();
+      };
+      var row = actionRow(), ok = actionBtn(row, d.gEdgeBtn, '');
+      ok.addEventListener('click', function(){
+        if (gSolved) return;
+        var left = missing();
+        if (left.length){
+          var hid = left.some(function(L){ return L.k === 'hidden'; });
+          missOnce(seen, 'early' + (cnt.base + cnt.side), d.gEdgeEarly(hid));
+          return;
+        }
+        ok.disabled = true;
+        roundSolved(d.gEdgeDone(n));
+      });
+      gCtx.hint2 = function(){
+        var left = missing();
+        if (!left.length) return d.gEdge2none;
+        var L = left.filter(function(x){ return x.k === 'hidden'; })[0] || left[0];
+        Array.prototype.forEach.call(marks.querySelectorAll('.gflash'), function(x){ marks.removeChild(x); });
+        marks.appendChild(svgEl('line', { 'class':'gflash', 'data-e':L.i, x1:L.a[0].toFixed(2), y1:L.a[1].toFixed(2), x2:L.b[0].toFixed(2), y2:L.b[1].toFixed(2) }));
+        return d.gEdge2(L.k === 'hidden');
+      };
+    },
+
+    /* 第 2 關：做角柱（範例 1 倒過來）—— 畫面上一個角柱（從三角柱開始），◀ ▶ 改底面的邊數（3～10），角柱和讀數跟著變；
+       讀數寫名稱和底面幾條邊，不寫面、稜、頂點的數。改邊數永遠不算錯；按「做好了」才判斷：不是 T → 把這個角柱的那一種數算給他看
+       （同一個 n 按兩次不重複扣分）。 */
+    build: function(d){
+      var e = pick(GAME_BUILD), attr = e[0], T = buildCount(attr, e[1]), nn = BUILD.n0, seen = { keys:{}, last:null };
+      gCtx.ask.textContent = d.gAsks.build(attr, T);
+      var line = trailLine(d.gBuildNow(nn));
+      var B = makeBoard(GW, BUILD_H);
+      var svg = gSvg(B), host = svgEl('g', {});
+      svg.appendChild(host);
+      function draw(){
+        host.textContent = '';
+        drawSolidOnBoard(host, 'prism', nn, null, BUILD.box);
+        line.textContent = d.gBuildNow(nn);
+      }
+      var row = actionRow();
+      var less = actionBtn(row, '◀', 'ghost', d.gBuildLess), more = actionBtn(row, '▶', 'ghost', d.gBuildMore), ok = actionBtn(row, d.gBuildBtn, '');
+      function setN(v){
+        if (gSolved) return;
+        nn = Math.max(BUILD.nMin, Math.min(BUILD.nMax, v));
+        less.disabled = nn <= BUILD.nMin; more.disabled = nn >= BUILD.nMax;
+        draw();
+      }
+      less.addEventListener('click', function(){ setN(nn - 1); });
+      more.addEventListener('click', function(){ setN(nn + 1); });
+      ok.addEventListener('click', function(){
+        if (gSolved) return;
+        var bad = buildRefuse(attr, nn, T);
+        if (bad){ missOnce(seen, nn, d.gBuildBad(attr, nn, bad.x, T)); return; }
+        less.disabled = more.disabled = ok.disabled = true;
+        roundSolved(d.gBuildDone(attr, nn, T));
+      });
+      gCtx.hint2 = function(){ return d.gBuild2(attr, T, e[1]); };
+      setN(nn);
+    },
+
+    /* 第 3 關：分家族（範例 3、5）—— 六張立體圖卡（有的躺著、有的倒過來，一定有球）拖進（或先點、再點）「柱體／錐體／球」。
+       三個框左右相鄰，放寬之後會重疊：挑最近的那一個。放錯彈回並說為什麼（躺著、倒過來的要說「躺著／倒過來也一樣」）；
+       同一張卡放進同一個錯的框不重複扣分。放對的卡縮成小圖排在框裡。托盤洗牌後不可以已經照框的順序排好。 */
+    sort: function(d){
+      var set = pick(GAME_SORT), done = 0, seen = { keys:{}, last:null }, fill = [0, 0, 0];
+      var line = trailLine(d.gSortNow(0));
+      var B = makeBoard(GW, SORT_H);
+      var bins = SORT_BINS.map(function(f, b){
+        addZone(B, SORT.binX[b] - SORT.binW / 2, SORT.lblY, SORT.binW, SORT.lblH, 'gbinlbl', d.gSortBins[b]);
+        var z = addZone(B, SORT.binX[b] - SORT.binW / 2, SORT.bodyY, SORT.binW, SORT.bodyH, 'gslot');
+        var h = sortBin(b);
+        return { b:b, z:z, cx:h.cx, cy:h.cy, hw:h.hw, hh:h.hh, done:false };
+      });
+      var cards = sortTray(set).map(function(id, j){
+        var it = SORT_ITEMS[id], node = document.createElement('div');
+        node.className = 'gpic';
+        node.innerHTML = it.kind === 'sphere' ? drawSphereSVG('aria-hidden="true"') : solidSVG(it.kind, it.n, it.pose, 100, 90, 'aria-hidden="true"');
+        return addPiece(B, { w:SORT.cardW, h:SORT.cardH, cx:SORT.trayX[j % 3], cy:SORT.trayY[Math.floor(j / 3)], cls:'gcard gshape', node:node, data:{ id:id } });
+      });
+      gCtx.hint2 = function(){
+        for (var j = 0; j < cards.length; j++) if (!cards[j].locked){ var id = cards[j].data.id; glow(cards[j].el); return d.gSort2(sortFam(id), SORT_ITEMS[id]); }
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var bin = nearestOpen(bins, pt, SORT.pad);
+        if (!bin) return false;
+        var id = P.data.id, bad = sortRefuse(id, bin.b);
+        if (bad){ missOnce(seen, id + '@' + bin.b, d.gSortBad(bad, SORT_ITEMS[id])); return false; }
+        var xy = sortThumbXY(bin.b, fill[bin.b]++);
+        P.lock(xy.x, xy.y, SORT.thumb, SORT.thumb);
+        done++;
+        line.textContent = d.gSortNow(done);
+        if (done === cards.length) roundSolved(d.gSortDone);
+        else { roundInfo(d.gSortOk(d.gSortBins[bin.b])); refreshHint(); }
+        return true;
+      });
+    },
+
+    /* 第 4 關：拼展開圖（範例 4）—— n 個長方形排成一排（一個 n 角柱的側面）；托盤上兩個正 n 邊形、一個邊數不對的多邊形（邊長都一樣）。
+       拖到（或先點、再點）某一個長方形的上邊或下邊（收的範圍是底面貼上去之後會佔的那一塊；相鄰的會重疊，挑最近的）：
+       邊數不對 → 說底面要幾邊形；第二個底面和第一個在同一邊 → 說摺起來會疊在一起。放在長方形中間、空白處靜靜彈回。 */
+    net: function(d){
+      var n = pick(GAME_NET), Lt = netLayout(n), a = Lt.a, placed = 0, baseSide = null, seen = { keys:{}, last:null };
+      gCtx.ask.textContent = d.gAsks.net(n);
+      var line = trailLine(d.gNetNow(0));
+      var B = makeBoard(GW, Lt.H);
+      var svg = gSvg(B);
+      for (var i = 0; i < n; i++) svg.appendChild(svgEl('rect', { 'class':'grect', 'data-i':i, x:(Lt.x0 + i * a).toFixed(2), y:Lt.y0.toFixed(2), width:a.toFixed(2), height:NETG.RH }));
+      var slots = Lt.slots.map(function(s){ return { i:s.i, side:s.side, cx:s.cx, cy:s.cy, hw:s.hw, hh:s.hh, done:false }; });
+      var pieces = netTray(n).map(function(k, j){
+        var w = Math.max(GPICK, ngonWide(k, a)), h = Math.max(GPICK, ngonUp(k, a));
+        return addPiece(B, { w:w, h:h, cx:NETG.trayX[j], cy:Lt.trayY, cls:'gngonp', node:ngonSvg(k, a, w, h, false), label:String(k), data:{ k:k } });
+      });
+      gCtx.hint2 = function(){
+        for (var j = 0; j < pieces.length; j++) if (!pieces[j].locked && pieces[j].data.k === n){ glow(pieces[j].el); return d.gNet2(n, baseSide); }
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, NETG.pad);
+        if (!s) return false;
+        var bad = netRefuse(n, P.data.k, s.side, baseSide);
+        if (bad === 'decoy'){ missOnce(seen, 'decoy', d.gNetDecoy(P.data.k, n)); return false; }
+        if (bad === 'same'){ missOnce(seen, 'same', d.gNetSame(s.side === 'top')); return false; }
+        s.done = true;
+        if (s.side === 'bottom'){ P.el.textContent = ''; P.el.appendChild(ngonSvg(n, a, P.w, P.h, true)); }   /* 接在下邊：那條邊朝上 */
+        P.lock(s.cx, s.cy);   /* 多邊形在拿取範圍的正中間：中心對齊邊位的中心，那一條邊就剛好貼著長方形 */
+        P.el.setAttribute('data-slot', s.side + s.i);
+        placed++;
+        line.textContent = d.gNetNow(placed);
+        if (placed === 2){ roundSolved(d.gNetDone(n)); return true; }
+        baseSide = s.side;
+        roundInfo(d.gNetOk1(s.side === 'top'));
+        refreshHint();
+        return true;
+      });
+    },
+
+    /* 第 5 關：填規律表（範例 1、2 的規律）—— 底面邊數很大的角柱或角錐（畫不出來，要用規律）；五張數字卡拖進「面、稜、頂點」三格
+       （三格左右相鄰，放寬之後會重疊：挑最近的那一格；收的範圍是標籤＋格子）。放錯彈回並把那一格的規律算給他看（同一張卡放進同一格不重複扣分）。
+       多的兩張是常見的錯。托盤洗牌後前三張不可以剛好是「面、稜、頂點」的順序。 */
+    table: function(d){
+      var e = pick(GAME_TABLE), fam = e[0], n = e[1], done = 0, seen = { keys:{}, last:null };
+      gCtx.ask.textContent = d.gAsks.table(fam, n);
+      var line = trailLine(d.gTableNow(0));
+      var B = makeBoard(GW, TABLE_H);
+      var slots = [0, 1, 2].map(function(s){
+        addZone(B, TABLE.slotX[s] - TABLE.slotW / 2, TABLE.lblY, TABLE.slotW, TABLE.lblH, 'gbinlbl', d.gTableSlots[s]);
+        var z = addZone(B, TABLE.slotX[s] - TABLE.slotW / 2, TABLE.slotY, TABLE.slotW, TABLE.slotH, 'gslot');
+        var h = tableHit(s);
+        return { s:s, z:z, cx:h.cx, cy:h.cy, hw:h.hw, hh:h.hh, done:false };
+      });
+      var cards = tableTray(fam, n).map(function(v, j){
+        return addPiece(B, { w:TABLE.cardW, h:TABLE.cardH, cx:TABLE.trayX[j], cy:TABLE.trayY[j], cls:'gcard gnum', text:String(v), data:{ v:v } });
+      });
+      gCtx.hint2 = function(){
+        for (var s = 0; s < 3; s++) if (!slots[s].done){ glow(slots[s].z); return d.gTable2(fam, n, s); }
+        return '';
+      };
+      useTapSelect(B, function(P, pt){
+        var s = nearestOpen(slots, pt, TABLE.pad);
+        if (!s) return false;
+        var bad = tableRefuse(fam, n, s.s, P.data.v);
+        if (bad){ missOnce(seen, P.data.v + '@' + s.s, d.gTableBad(fam, n, s.s, P.data.v)); return false; }
+        s.done = true;
+        s.z.classList.remove('gglow'); s.z.classList.add('filled');
+        P.lock(TABLE.slotX[s.s], TABLE.slotY + TABLE.slotH / 2);
+        done++;
+        line.textContent = d.gTableNow(done);
+        if (done === 3) roundSolved(d.gTableDone(fam, n));
+        else { roundInfo(d.gTableOk(fam, n, s.s)); refreshHint(); }
+        return true;
+      });
+    }
+  };
 
   function startRound(){
-    var round = ROUNDS[gRound];
-    gMistake = false;
+    var d = L();
+    var type = GAME_ORDER[gRound];
+    gSolved = false; gMistake = false; gCtx = {}; gGen++; BOARD_TAP = null; PIECE_PTR = {};   /* 上一關沒收尾的手指不帶到下一關 */
     elRound.textContent = gRound + 1;
     gMsg.textContent = '';
     gNext.disabled = true;
-
     hintLevel = 0;
     gHintBtn.disabled = false;
-    gHintBtn.textContent = L().gHintBtn;
-    if (mode === 'ahead'){
-      hintLevel = 1;
-      elHint.textContent = roundHint1(round);
-    } else {
-      elHint.textContent = '';
-    }
-
-    gAskText.textContent = roundAskText(round);
-    gVisual.innerHTML = roundVisual(round);
-
-    var opts = roundOptions(round);
-    var ansIdx = roundAnswerIndex(round);
-    gAnswers.textContent = '';
-    opts.forEach(function(v, oi){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = v;
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        if (oi === ansIdx){
-          var all = gAnswers.querySelectorAll('.opt');
-          for (var i = 0; i < all.length; i++) all[i].disabled = true;
-          b.classList.add('right');
-          if (gMistake){ gScore += 10; gMsg.innerHTML = '<span class="yes">' + L().gCorrectRetry + '</span>'; }
-          else { gScore += 20; gMsg.innerHTML = '<span class="yes">' + L().gCorrectFirst + '</span>'; }
-          if (gRound === ROUNDS.length - 1){
-            gMsg.innerHTML = '<span class="yes">' + L().gWin(gScore) + '</span>';
-          } else {
-            gMsg.innerHTML += ' ' + L().gClear;
-            gNext.disabled = false;
-          }
-        } else {
-          gMistake = true;
-          b.disabled = true;
-          b.classList.add('wrong');
-          gScore = Math.max(0, gScore - 5);
-          gMsg.innerHTML = '<span class="no">' + L().gWrong + '</span>';
-        }
-        elScore.textContent = gScore;
-      });
-      gAnswers.appendChild(b);
-    });
+    elHint.textContent = '';
+    gameStage.textContent = '';
+    var ask = document.createElement('p');
+    ask.className = 'gask';
+    ask.textContent = typeof d.gAsks[type] === 'string' ? d.gAsks[type] : '';
+    gameStage.appendChild(ask);
+    gCtx.ask = ask;
+    RENDER[type](d);
+    if (mode === 'ahead'){ hintLevel = 1; showHint(); }   /* 超前模式：自動給第一層提示 */
   }
 
-  function restartGame(){
-    gRound = 0; gScore = 0; elScore.textContent = '0'; startRound();
+  /* 兩層提示：第一下給策略，第二下給接近答案的提示（並停用按鈕），第二層跟著畫面走 */
+  function showHint(){
+    var d = L(), type = GAME_ORDER[gRound];
+    elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
+  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
-    if (gRound < ROUNDS.length - 1){ gRound++; startRound(); }
+    if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
   gRestart.addEventListener('click', restartGame);
-
   gHintBtn.addEventListener('click', function(){
+    if (hintLevel >= 2) return;
     hintLevel++;
-    var round = ROUNDS[gRound];
-    if (hintLevel === 1){
-      elHint.textContent = roundHint1(round);
-    } else {
-      elHint.textContent = L().gHint2(roundAnswerText(round));
-      gHintBtn.disabled = true;
-    }
+    showHint();
+    if (hintLevel >= 2) gHintBtn.disabled = true;
   });
 
   /* ================= 語言切換：靜態文字＋所有動態區重新渲染 ================= */
