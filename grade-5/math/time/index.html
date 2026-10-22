@@ -289,7 +289,7 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">準時出發</h2>
-    <p class="lead" data-i18n="s6lead">點與段、滿 60 進位、一天一天疊起來、把時間平分、由短排到長 —— 五關五種玩法，練的都是上面的範例：<strong>時刻和時間量、60 進位、時間量的乘和除</strong>。放錯會扣分，但不會出局 —— 想清楚比手快重要。</p>
+    <p class="lead" data-i18n="s6lead">點與段、滿 60 進位、一天一天疊起來、把時間平分、由短排到長 —— 五關五種玩法，練的都是上面的範例：<strong>時刻和時間量、60 進位、時間量的乘和除</strong>。放錯扣 5 分，但遊戲不會結束；五關都沒放錯，最後再加 20 分 —— 想清楚比手快重要。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
@@ -519,7 +519,7 @@
       s5h2: '檢查一下',
       s5lead: '直接點答案，馬上告訴你為什麼。',
       s6h2: '準時出發',
-      s6lead: '點與段、滿 60 進位、一天一天疊起來、把時間平分、由短排到長 —— 五關五種玩法，練的都是上面的範例：<strong>時刻和時間量、60 進位、時間量的乘和除</strong>。放錯會扣分，但不會出局 —— 想清楚比手快重要。',
+      s6lead: '點與段、滿 60 進位、一天一天疊起來、把時間平分、由短排到長 —— 五關五種玩法，練的都是上面的範例：<strong>時刻和時間量、60 進位、時間量的乘和除</strong>。放錯扣 5 分，但遊戲不會結束；五關都沒放錯，最後再加 20 分 —— 想清楚比手快重要。',
       footer: '把整頁縮成一句：<strong>先統一成分再計算，滿 60 分就進 1 時。</strong>',
       stepPrevBtn: '上一步', stepNextBtn: '下一步',
 
@@ -650,7 +650,10 @@
       gPts: function(p){ return '分數 ＋' + p; },
       gMinus: '分數 −5',
       gClear: '按「下一關」繼續。',
-      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 🏆 按「重新開始」再挑戰一次。'; },
+      gWin: function(score, bonus){
+        return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + score + ' 分 🏆')
+                     : ('五關全破！總分 ' + score + ' 分 🏆 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');
+      },
       gDur: function(t){ var h = Math.floor(t / 60), m = t % 60; return h > 0 ? (m > 0 ? h + ' 時 ' + m + ' 分' : h + ' 時') : m + ' 分'; },
       gMin: function(t){ return t + ' 分'; },
       gClk: function(t){ var h = Math.floor(t / 60), m = t % 60; return h + ':' + (m < 10 ? '0' + m : String(m)); },
@@ -756,7 +759,7 @@
       s5h2: 'Quick Check',
       s5lead: 'Tap an answer and we’ll tell you why right away.',
       s6h2: 'Right On Time',
-      s6lead: 'Points and stretches, carrying at 60, stacking day by day, sharing time equally, shortest to longest — five rounds, five ways to play, all practising the examples above: <strong>points in time and lengths of time, base 60, multiplying and dividing lengths of time</strong>. A wrong move costs points, but you are never out — thinking it through beats being fast.',
+      s6lead: 'Points and stretches, carrying at 60, stacking day by day, sharing time equally, shortest to longest — five rounds, five ways to play, all practising the examples above: <strong>points in time and lengths of time, base 60, multiplying and dividing lengths of time</strong>. A wrong move costs 5 points but never ends the game; clear all five without a wrong move for a 20-point bonus — thinking it through beats being fast.',
       footer: 'The whole page in one line: <strong>convert everything into minutes first, and every 60 minutes becomes 1 hour.</strong>',
       stepPrevBtn: 'Back', stepNextBtn: 'Next',
 
@@ -887,7 +890,10 @@
       gPts: function(p){ return '+' + p + ' points'; },
       gMinus: '−5 points',
       gClear: 'Press “Next round” to go on.',
-      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gWin: function(score, bonus){
+        return bonus ? ('All 5 rounds cleared without a single wrong move — +20 bonus! Total score ' + score + ' 🏆')
+                     : ('All 5 rounds cleared! Total score ' + score + ' 🏆 Press “Restart” and try a run with no wrong moves (+20 bonus).');
+      },
       gDur: function(t){ var h = Math.floor(t / 60), m = t % 60; return h > 0 ? (m > 0 ? h + ' h ' + m + ' min' : h + ' h') : m + ' min'; },
       gMin: function(t){ return t + ' min'; },
       gClk: function(t){ var h = Math.floor(t / 60), m = t % 60; return h + ':' + (m < 10 ? '0' + m : String(m)); },
@@ -1347,7 +1353,7 @@
   }
 
   /* ===================== 6. 小遊戲：準時出發（§六之五：五關五種玩法） ===================== */
-  var gRound = 0, gScore = 0, gSolved = false, gMistake = false, hintLevel = 0, gCtx = { bad:{} };
+  var gRound = 0, gScore = 0, gSolved = false, gMistake = false, gAnyMistake = false, hintLevel = 0, gCtx = { bad:{} };
   /* 畫板世代：重新開始、切換語言、下一關都換一個新的畫板。還拿在手上的舊卡片放開時，不可以替新的畫板做任何事 */
   var gGen = 0;
   var elRound = document.getElementById('gRound');
@@ -1569,22 +1575,27 @@
     return best && !best.done ? best : null;
   }
 
+  /* 計分（高年級：有扣分機制）：這一關沒犯錯 +20、犯過錯 +10；每一次「放錯並說明為什麼」−5（最低 0 分）。
+     五關都沒犯錯，最後加碼 +20。免費提醒（roundNote）和重複的同一個錯（roundAgain）都不算犯錯。 */
   function roundSolved(text){
     if (gSolved) return;
     gSolved = true;
     Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
     var pts = gMistake ? 10 : 20;
-    gScore += pts; elScore.textContent = gScore;
+    gScore += pts;
+    var last = (gRound === GAME_ORDER.length - 1), bonus = last && !gAnyMistake;
+    if (bonus) gScore += 20;
+    elScore.textContent = gScore;
     gHintBtn.disabled = true;
     elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字（四年級 chart 的驗證者抓到的） */
-    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    var tail = last ? L().gWin(gScore, bonus) : L().gClear;
     gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
-    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+    if (!last) gNext.disabled = false;
   }
   /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
   function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
   function roundMiss(text){
-    gMistake = true;
+    gMistake = true; gAnyMistake = true;
     var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
     gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
     gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
@@ -1902,7 +1913,7 @@
     elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
-  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+  function restartGame(){ gRound = 0; gScore = 0; gAnyMistake = false; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
     if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
