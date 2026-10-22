@@ -601,7 +601,7 @@
           why:'因數不會比原來的數大，所以最大公因數最多就跟兩數中較小的那個一樣大（例如 8 和 12 的最大公因數是 4，比 8 還小）。' }
       ],
       s5h2: '好朋友車站大挑戰',
-      s5lead: '分一分、鋪地磚、青蛙跳、找公倍數、裝袋子 —— 五關五種玩法。每一關都先問自己：<strong>要「兩個數都能被它整除」（公因數），還是要「它被兩個數都整除」（公倍數）？</strong>放錯會說為什麼、扣 5 分，但遊戲不會結束。',
+      s5lead: '分一分、鋪地磚、青蛙跳、找公倍數、裝袋子 —— 五關五種玩法。每一關都先問自己：<strong>要「兩個數都能被它整除」（公因數），還是要「它被兩個數都整除」（公倍數）？</strong>放錯會說為什麼、扣 5 分，但遊戲不會結束；五關都沒放錯，最後再加 20 分。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
       gNextBtn: '下一關', gRestartBtn: '重新開始', gHintBtn: '💡 提示',
       gHints: {
@@ -614,7 +614,10 @@
       gPts: function(n){ return '＋' + n + ' 分'; },
       gMinus: '−5 分',
       gClear: '按「下一關」繼續。',
-      gWin: function(s){ return '五關全破！最後得分 ' + s + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gWin: function(s, bonus){
+        return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + s + ' 分 🏆')
+                     : ('五關全破！總分 ' + s + ' 分 🏆 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');
+      },
       /* 除法說明：整除寫「a ÷ v = q」，有餘數寫「a ÷ v = q 餘 r」 */
       gDiv: function(n, v){ var r = n % v; return n + ' ÷ ' + v + ' = ' + Math.floor(n / v) + (r ? ' 餘 ' + r : ''); },
       /* 第 1 關：分一分 */
@@ -801,7 +804,7 @@
           why:'A factor is never bigger than the number it belongs to, so the GCF can be at most as big as the smaller of the two numbers (e.g. the GCF of 8 and 12 is 4 — smaller than 8 itself).' }
       ],
       s5h2: 'Best-Friends Station Challenge',
-      s5lead: 'Sort, tile, hop, find, pack — five rounds, five ways to play. In every round, first ask yourself: <strong>does the number have to divide both numbers (a common factor), or do both numbers have to divide it (a common multiple)?</strong> A wrong move tells you why and costs 5 points, but the game never ends.',
+      s5lead: 'Sort, tile, hop, find, pack — five rounds, five ways to play. In every round, first ask yourself: <strong>does the number have to divide both numbers (a common factor), or do both numbers have to divide it (a common multiple)?</strong> A wrong move tells you why and costs 5 points, but the game never ends; clear all five without a wrong move for a 20-point bonus.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
       gNextBtn: 'Next round', gRestartBtn: 'Restart', gHintBtn: '💡 Hint',
       gHints: {
@@ -814,7 +817,10 @@
       gPts: function(n){ return '+' + n + ' points'; },
       gMinus: '−5 points',
       gClear: 'Press “Next round” to continue.',
-      gWin: function(s){ return 'All 5 rounds cleared! Final score: ' + s + ' 🏆 Press “Restart” to play again.'; },
+      gWin: function(s, bonus){
+        return bonus ? ('All five rounds cleared without a single wrong move — +20 bonus! Total score ' + s + ' 🏆')
+                     : ('All five rounds cleared! Total score ' + s + ' 🏆 Press “Restart” and try a run with no wrong moves (+20 bonus).');
+      },
       /* a division in words: "a ÷ v = q" when it divides evenly, "a ÷ v = q remainder r" when it does not */
       gDiv: function(n, v){ var r = n % v; return n + ' ÷ ' + v + ' = ' + Math.floor(n / v) + (r ? ' remainder ' + r : ''); },
       /* Round 1: sort */
@@ -1107,7 +1113,7 @@
   }
 
   /* ---------- 小遊戲：好朋友車站大挑戰（§六之五：五關五種玩法） ---------- */
-  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  var gRound = 0, gScore = 0, gMistake = false, gAnyMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
   /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊卡片放開時，
      它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加分）。二年級 length 的 codex 第一輪。 */
   var gGen = 0;
@@ -1283,24 +1289,27 @@
     return best;
   }
 
-  /* 計分（沿用中年級的規則，§三 高年級「扣分機制」）：這一關沒犯錯 +20、犯過錯 +10；
-     每一次「放錯並說明為什麼」−5，最低 0 分。 */
+  /* 計分（高年級：有扣分機制、可以挑戰連對 —— §三）：這一關沒犯錯 +20、犯過錯 +10；
+     每一次「放錯並說明為什麼」−5，最低 0 分。五關都沒犯錯，最後加碼 +20。 */
   function roundSolved(text){
     if (gSolved) return;
     gSolved = true;
     Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
     var pts = gMistake ? 10 : 20;
-    gScore += pts; elScore.textContent = gScore;
+    gScore += pts;
+    var last = (gRound === GAME_ORDER.length - 1), bonus = last && !gAnyMistake;
+    if (bonus) gScore += 20;
+    elScore.textContent = gScore;
     gHintBtn.disabled = true;
     elHint.textContent = '';   /* 過關後提示不再適用（四年級 chart 驗證者：第二層提示停在過期的那一步） */
-    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    var tail = last ? L().gWin(gScore, bonus) : L().gClear;
     gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
-    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+    if (!last) gNext.disabled = false;
   }
   /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
   function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
   function roundMiss(text){
-    gMistake = true;
+    gMistake = true; gAnyMistake = true;
     var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
     gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
     gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
@@ -1535,7 +1544,7 @@
     elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
-  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+  function restartGame(){ gRound = 0; gScore = 0; gAnyMistake = false; elScore.textContent = '0'; startRound(); }
 
   gNext.addEventListener('click', function(){
     if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
