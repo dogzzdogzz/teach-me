@@ -279,7 +279,7 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">轉盤大師</h2>
-    <p class="lead" data-i18n="s6lead">分一分、切三角形、算每個角、轉轉盤、拼分數 —— 五關五種玩法：先認出正多邊形，再算它的角，最後把扇形和整個圓連起來。放錯會扣分，但轉盤不會停 —— 慢慢想比手快重要。</p>
+    <p class="lead" data-i18n="s6lead">分一分、切三角形、算每個角、轉轉盤、拼分數 —— 五關五種玩法：先認出正多邊形，再算它的角，最後把扇形和整個圓連起來。放錯扣 5 分，但轉盤不會停；五關都沒放錯，最後再加 20 分 —— 慢慢想比手快重要。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
@@ -715,7 +715,7 @@
           why:'60° 是整個圓的 60/360=1/6，120° 是 120/360=1/3=2/6，比例確實變成兩倍；但半徑是圓本身的大小，不會因為圓心角改變而跟著變。' }
       ],
       s6h2: '轉盤大師',
-      s6lead: '分一分、切三角形、算每個角、轉轉盤、拼分數 —— 五關五種玩法：先認出正多邊形，再算它的角，最後把扇形和整個圓連起來。放錯會扣分，但轉盤不會停 —— 慢慢想比手快重要。',
+      s6lead: '分一分、切三角形、算每個角、轉轉盤、拼分數 —— 五關五種玩法：先認出正多邊形，再算它的角，最後把扇形和整個圓連起來。放錯扣 5 分，但轉盤不會停；五關都沒放錯，最後再加 20 分 —— 慢慢想比手快重要。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
       gHintBtn: '💡 提示',
       gNextBtn: '下一關', gRestartBtn: '重新開始',
@@ -736,7 +736,10 @@
       gPts: function(p){ return '＋' + p + ' 分'; },
       gMinus: '−5 分',
       gClear: '按「下一關」繼續。',
-      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再玩一次。'; },
+      gWin: function(s, bonus){
+        return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + s + ' 分 🏆')
+                     : ('五關全破！總分 ' + s + ' 分 🏆 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');
+      },
       gBin: { reg:'✅ 正多邊形', not:'❌ 不是正多邊形' },
       gSortNow: function(k, t){ return '分好了 ' + k + ' ／ ' + t + ' 張'; },
       gSortBad: function(why, kind, n){
@@ -913,7 +916,7 @@
           why:'60° is 60/360=1/6 of the circle, and 120° is 120/360=1/3=2/6 — exactly double. But the radius is a property of the circle itself; changing the central angle doesn’t change it.' }
       ],
       s6h2: 'Dial Master',
-      s6lead: 'Sort, cut, work out each angle, turn the dial, build a fraction — five rounds, five ways to play: spot the regular polygons, work out their angles, then link a sector to the whole circle. A wrong move costs points, but the dial never stops — thinking slowly beats moving fast.',
+      s6lead: 'Sort, cut, work out each angle, turn the dial, build a fraction — five rounds, five ways to play: spot the regular polygons, work out their angles, then link a sector to the whole circle. A wrong move costs 5 points, but the dial never stops; clear all five rounds without a wrong move for a 20-point bonus — thinking slowly beats moving fast.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
       gHintBtn: '💡 Hint',
       gNextBtn: 'Next round', gRestartBtn: 'Restart',
@@ -934,7 +937,10 @@
       gPts: function(p){ return '+' + p + ' points'; },
       gMinus: '−5 points',
       gClear: 'Press “Next round” to go on.',
-      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gWin: function(s, bonus){
+        return bonus ? ('All five rounds cleared without a single wrong move — +20 bonus! Total score ' + s + ' 🏆')
+                     : ('All five rounds cleared! Total score ' + s + ' 🏆 Press “Restart” and try a run with no wrong moves (+20 bonus).');
+      },
       gBin: { reg:'✅ Regular polygon', not:'❌ Not regular' },
       gSortNow: function(k, t){ return 'Sorted ' + k + ' / ' + t; },
       gSortBad: function(why, kind, n){
@@ -1329,7 +1335,7 @@
   }
 
   /* ===================== 小遊戲：轉盤大師（§六之五：五關五種玩法） ===================== */
-  var gRound = 0, gScore = 0, gSolved = false, gMistake = false, hintLevel = 0, gCtx = {};
+  var gRound = 0, gScore = 0, gSolved = false, gMistake = false, gAnyMistake = false, hintLevel = 0, gCtx = {};
   /* 畫板世代：重新開始、切換語言、下一關都換一個新的畫板。還拿在手上的舊積木放開時，不可以替新的畫板做任何事 */
   var gGen = 0;
   var elRound = document.getElementById('gRound');
@@ -1548,17 +1554,19 @@
     gSolved = true;
     Array.prototype.forEach.call(gameStage.querySelectorAll('.sel, .glow'), function(x){ x.classList.remove('sel'); x.classList.remove('glow'); });
     var pts = gMistake ? 10 : 20;
+    var last = (gRound === GAME_ORDER.length - 1), bonus = last && !gAnyMistake;
+    if (bonus) gScore += 20;   /* 五關都沒放錯（提醒不算錯）：最後一關過關再加 20 */
     gScore += pts; elScore.textContent = gScore;
     gHintBtn.disabled = true;
     elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字 */
-    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    var tail = last ? L().gWin(gScore, bonus) : L().gClear;
     gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
     if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
   }
   /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
   function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
   function roundMiss(text){
-    gMistake = true;
+    gMistake = true; gAnyMistake = true;
     var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
     gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
     gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
@@ -1855,7 +1863,7 @@
     elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
-  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+  function restartGame(){ gRound = 0; gScore = 0; gAnyMistake = false; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
     if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });

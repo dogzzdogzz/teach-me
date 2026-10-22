@@ -5474,3 +5474,9 @@ Tony 在線上看到範例 5 的「② 比較」兩條長條長得一模一樣�
 - 照 `fraction-multiply` 加上五關全對 +20（「沒移動就按完成」「全部卸下」兩種免費提醒不影響）；開場說明（中英）寫明「放錯扣 5 分，但遊戲不會結束；五關都沒放錯，最後再加 20 分」。
   設定檔釘住 `gAnyMistake = false;` 只出現在 `restartGame()`；e2e「只有第 1 關犯錯」結束是 90 分（第 1 關從 0 分開始不會再扣；10 ＋ 4×20）且沒有加碼。
   breaktest 139／139；e2e 8 組合全過；改壞頁面 Bbonus／Bbonusreset／Bbonusnext／Bbonusnote 各 8／8；獨立驗證 PASS（另做兩個改壞版本也都被抓到）。
+
+### 2026-10-23 —— 五年級 `polygon` 套上連對加碼
+
+- 照 `fraction-multiply` 加上五關全對 +20（`roundNote`／`roundAgain` 的免費提醒不影響）；開場說明（中英）寫明「放錯扣 5 分，但遊戲不會結束；五關都沒放錯，最後再加 20 分」。
+  設定檔釘住 `gAnyMistake = false;` 只出現在 `restartGame()`；e2e「只有第 1 關犯錯」結束是 90 分且沒有加碼，另外測第 2、4、5 關單獨犯錯、第 3 關免費提醒仍拿加碼、重新開始會清。
+  breaktest 126／126；e2e 8 組合全過；改壞頁面 Bbonus／Bbonusreset／Bbonusnext／Bbonusnote 各 8／8；獨立驗證 PASS（另做兩個改壞版本也都被抓到；卡片顏色、大小不洩漏答案的檢查仍全過）。
