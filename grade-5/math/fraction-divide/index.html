@@ -302,7 +302,7 @@
   <section>
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">巧克力大平分</h2>
-    <p class="lead" data-i18n="s6lead">五關五種玩法：把小塊輪流發給每一個人、把每一格切細再平分、用隔板直接分組、把數字卡放進分子和分母、點出所有一樣大的算式。放錯扣 5 分（最低 0 分），但遊戲不會結束。</p>
+    <p class="lead" data-i18n="s6lead">五關五種玩法：把小塊輪流發給每一個人、把每一格切細再平分、用隔板直接分組、把數字卡放進分子和分母、點出所有一樣大的算式。放錯扣 5 分（最低 0 分），但遊戲不會結束；五關都沒放錯，最後再加 20 分。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
@@ -592,7 +592,7 @@
 
       eb6: '小遊戲',
       s6h2: '巧克力大平分',
-      s6lead: '五關五種玩法：把小塊輪流發給每一個人、把每一格切細再平分、用隔板直接分組、把數字卡放進分子和分母、點出所有一樣大的算式。放錯扣 5 分（最低 0 分），但遊戲不會結束。',
+      s6lead: '五關五種玩法：把小塊輪流發給每一個人、把每一格切細再平分、用隔板直接分組、把數字卡放進分子和分母、點出所有一樣大的算式。放錯扣 5 分（最低 0 分），但遊戲不會結束；五關都沒放錯，最後再加 20 分。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
       gNextBtn: '下一關', gRestartBtn: '重新開始',
       gHintBtn: '💡 提示',
@@ -613,7 +613,10 @@
       gPts: function(p){ return '＋' + p + ' 分'; },
       gMinus: '−5 分',
       gClear: '按「下一關」繼續。',
-      gWin: function(s, clean){ return clean ? ('五關全破，一次都沒放錯！最後得分 ' + s + ' 分 🏆') : ('五關全破！最後得分 ' + s + ' 分 🏆 按「重新開始」可以再挑戰一次一關都不放錯。'); },
+      gWin: function(s, bonus){
+        return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + s + ' 分 🏆')
+                     : ('五關全破！總分 ' + s + ' 分 🏆 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');
+      },
       frac: function(n, d){ return n + '/' + d; },
 
       gShareNow: function(x, t){ return '發了 ' + x + ' / ' + t + ' 小塊'; },
@@ -798,7 +801,7 @@
 
       eb6: 'Game',
       s6h2: 'Sharing Chocolate Challenge',
-      s6lead: 'Five rounds, five ways to play: hand out pieces in turns, cut every part finer before sharing, split with dividers, put number cards into the numerator and denominator, and tap every expression of the same size. A wrong move costs 5 points (never below 0), but the game never ends.',
+      s6lead: 'Five rounds, five ways to play: hand out pieces in turns, cut every part finer before sharing, split with dividers, put number cards into the numerator and denominator, and tap every expression of the same size. A wrong move costs 5 points (never below 0) but never ends the game; clear all five without a wrong move for a 20-point bonus.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
       gNextBtn: 'Next round', gRestartBtn: 'Restart',
       gHintBtn: '💡 Hint',
@@ -819,7 +822,10 @@
       gPts: function(p){ return '+' + p + ' points'; },
       gMinus: '−5 points',
       gClear: 'Press “Next round” to go on.',
-      gWin: function(s, clean){ return clean ? ('All five rounds cleared without a single wrong move! Final score: ' + s + ' 🏆') : ('All five rounds cleared! Final score: ' + s + ' 🏆 Press “Restart” to try a run with no wrong moves.'); },
+      gWin: function(s, bonus){
+        return bonus ? ('All five rounds cleared without a single wrong move — +20 bonus! Total score ' + s + ' 🏆')
+                     : ('All five rounds cleared! Total score ' + s + ' 🏆 Press “Restart” and try a run with no wrong moves (+20 bonus).');
+      },
       frac: function(n, d){ return n + '/' + d; },
 
       gShareNow: function(x, t){ return 'Handed out: ' + x + ' / ' + t + ' pieces'; },
@@ -1402,11 +1408,12 @@
     Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
     var pts = gMistake ? 10 : 20;
     gScore += pts;
+    var last = (gRound === GAME_ORDER.length - 1), bonus = last && !gAnyMistake;
+    if (bonus) gScore += 20;
     elScore.textContent = gScore;
-    var last = (gRound === GAME_ORDER.length - 1);
     gHintBtn.disabled = true;
     elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字 */
-    var tail = last ? L().gWin(gScore, !gAnyMistake) : L().gClear;   /* 「再挑戰一次不放錯」只說給真的放錯過的人聽 */
+    var tail = last ? L().gWin(gScore, bonus) : L().gClear;   /* 「再挑戰一次不放錯」只說給真的放錯過的人聽 */
     gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
     if (!last) gNext.disabled = false;
   }

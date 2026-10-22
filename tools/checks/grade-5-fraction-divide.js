@@ -538,29 +538,33 @@ function checkGame(D, I18N, fail, src){
     });
     const ssrc = extractFunction(src, 'roundSolved');
     if (!ssrc) fail('scoring: cannot find roundSolved()');
-    else [[0, false, false, 20], [0, true, true, 10], [4, false, false, 20], [4, true, true, 10], [4, false, true, 20]].forEach(([round, mis, any, want]) => {
+    else [[0, false, false, 20], [0, true, true, 10], [4, false, false, 40], [4, true, true, 10], [4, false, true, 20]].forEach(([round, mis, any, want]) => {
       let r;
       try {
         r = new Function('var gSolved = false, gScore = 0, gMistake = ' + mis + ', gAnyMistake = ' + any + ', gRound = ' + round + ', GAME_ORDER = [1,2,3,4,5];' +
           'var gameStage = { querySelectorAll:function(){ return []; } }, elScore = {}, gHintBtn = {}, elHint = { textContent:"old hint" }, gMsg = {}, gNext = { disabled:true };' +
-          'function L(){ return { gPts:function(p){ return "+" + p; }, gWin:function(s, c){ return "WIN" + s + (c ? "C" : ""); }, gClear:"CLEAR" }; }\n' + ssrc +
+          'function L(){ return { gPts:function(p){ return "+" + p; }, gWin:function(s, b){ return "WIN" + s + (b ? "B" : ""); }, gClear:"CLEAR" }; }\n' + ssrc +
           '\nroundSolved("ok"); return { s:gScore, hint:elHint.textContent, dis:gHintBtn.disabled, next:gNext.disabled, html:gMsg.innerHTML };')();
       } catch (e){ return fail('scoring: roundSolved() could not run: ' + e.message); }
-      if (r.s !== want) fail('scoring: round ' + (round + 1) + (mis ? ' with' : ' without') + ' mistakes gives ' + r.s + ', expected ' + want);
+      if (r.s !== want) fail('scoring: round ' + (round + 1) + (mis ? ' with' : ' without') + ' mistakes' + (any ? ' (earlier mistakes in the run)' : '') + ' gives ' + r.s + ', expected ' + want);
       if (r.hint !== '' || r.dis !== true) fail('scoring: a solved round leaves the hint showing or the hint button enabled');
       if ((round < 4) === r.next) fail('scoring: Next is ' + (r.next ? 'disabled after a cleared round' : 'enabled after the last round'));
-      if (round === 4 && /C/.test(r.html) !== (!any)) fail('scoring: the final message is told the run was ' + (any ? 'clean although it had mistakes' : 'not clean although it was'));
+      if (round === 4 && /B/.test(r.html) !== (!any)) fail('scoring: the clean-run bonus line is ' + (any ? 'shown after mistakes' : 'missing'));
     });
   }
   LANGS.forEach(L => {
     sayCheck(fail, 'gPts ' + L, I18N[L].gPts(20), [20]);
     sayCheck(fail, 'gMinus ' + L, I18N[L].gMinus, [5]);
-    const w0 = I18N[L].gWin(85, false), w1 = I18N[L].gWin(100, true);
-    if (nums(w0).indexOf(85) < 0 || nums(w1).indexOf(100) < 0) fail('gWin ' + L + ' does not show the score');
+    const w0 = I18N[L].gWin(100, false), w1 = I18N[L].gWin(120, true);
+    if (nums(w0).indexOf(100) < 0 || nums(w1).indexOf(120) < 0) fail('gWin ' + L + ' does not show the score');
+    if (nums(w1).indexOf(20) < 0) fail('gWin ' + L + ' does not name the 20-point bonus');
     if (/(重新開始|Restart)/.test(w1)) fail('gWin ' + L + ': a clean run is still told to try again without mistakes');
-    if (!/(重新開始|Restart)/.test(w0)) fail('gWin ' + L + ': a run with mistakes is not invited to try again');
-    if (nums(I18N[L].s6lead).join() !== '5,0') fail('s6lead ' + L + ' should state −5 and the floor 0: ' + I18N[L].s6lead);
+    if (nums(w0).indexOf(20) < 0 || !(L === 'zh' ? /重新開始/ : /Restart/).test(w0) || !(L === 'zh' ? /不放錯/ : /no wrong moves/).test(w0)) fail('gWin ' + L + ' (no bonus) does not invite a restart for a run with no wrong moves (+20)');
+    if (nums(I18N[L].s6lead).join() !== '5,0,20') fail('s6lead ' + L + ' should state −5, the floor 0 and the 20-point bonus: ' + I18N[L].s6lead);
   });
+  needSrc(/function restartGame\(\)\{[^}]*gAnyMistake = false;/, 'restartGame() does not reset gAnyMistake (a clean run after a run with mistakes would never get the bonus)');
+  needSrc(/function roundNote\(text\)\{ gMsg\.innerHTML = /, 'roundNote() (a free reminder) must not record a mistake');
+  needSrc(/bonus = last && !gAnyMistake;\s*\n\s*if \(bonus\) gScore \+= 20;/, 'roundSolved() does not add the 20-point bonus only on a clean last round');
 
   /* ---------- 3. nearestOpen()／shuffle()：從原始碼切出來真的跑 ---------- */
   let nearestOpen = null, shuffle = null;
@@ -1034,7 +1038,7 @@ const CONFIG = {
     {"file": "index", "expect": "gives", "find": "    var pts = gMistake ? 10 : 20;", "replace": "    var pts = gMistake ? 15 : 20;"},
     {"file": "index", "expect": "leaves the hint showing", "find": "    elHint.textContent = '';   /* 過關了", "replace": "    /* 過關了"},
     {"file": "index", "expect": "record the mistake", "find": "    gMistake = true; gAnyMistake = true;", "replace": "    gMistake = true;"},
-    {"file": "index", "expect": "told the run was", "find": "L().gWin(gScore, !gAnyMistake)", "replace": "L().gWin(gScore, gAnyMistake)"},
+    {"file": "index", "expect": "bonus line", "find": "L().gWin(gScore, bonus)", "replace": "L().gWin(gScore, !bonus)"},
     {"file": "index", "expect": "no board-generation guard", "find": "      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */\n", "replace": ""},
     {"file": "index", "expect": "second finger", "find": "if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;", "replace": "if (P.locked || gSolved || start || gen !== gGen) return;"},
     {"file": "index", "expect": "lost pointer capture", "find": "    el.addEventListener('lostpointercapture', function(e){ end(e, true); });\n", "replace": ""},
@@ -1059,8 +1063,15 @@ const CONFIG = {
     {"file": "index", "expect": "prints \"1 pieces\"", "find": "'This person already has ' + has + ' ' + plural(has, 'piece', 'pieces')", "replace": "'This person already has ' + has + ' pieces'"},
     {"file": "index", "expect": "is/are", "find": "return 'There ' + plural(N, 'is', 'are') + ' ' + N + ' shaded '", "replace": "return 'There are ' + N + ' shaded '"},
     {"file": "index", "expect": "gAsks", "find": "可是塗色的 ' + a + ' 格不能整格分成一樣多的 ' + k + ' 組。", "replace": "可是塗色的格子不能整格分成一樣多的 ' + k + ' 組。"},
-    {"file": "index", "expect": "s6lead", "find": "      s6lead: '五關五種玩法：把小塊輪流發給每一個人、把每一格切細再平分、用隔板直接分組、把數字卡放進分子和分母、點出所有一樣大的算式。放錯扣 5 分（最低 0 分），但遊戲不會結束。',", "replace": "      s6lead: '五關五種玩法：把小塊輪流發給每一個人、把每一格切細再平分、用隔板直接分組、把數字卡放進分子和分母、點出所有一樣大的算式。放錯扣 10 分（最低 0 分），但遊戲不會結束。',"},
-    {"file": "index", "expect": "clean run is still told", "find": "('All five rounds cleared without a single wrong move! Final score: ' + s + ' 🏆')", "replace": "('All five rounds cleared without a single wrong move! Final score: ' + s + ' 🏆 Press “Restart” to play again.')"},
+    {"file": "index", "expect": "s6lead", "find": "      s6lead: '五關五種玩法：把小塊輪流發給每一個人、把每一格切細再平分、用隔板直接分組、把數字卡放進分子和分母、點出所有一樣大的算式。放錯扣 5 分（最低 0 分），但遊戲不會結束；五關都沒放錯，最後再加 20 分。',", "replace": "      s6lead: '五關五種玩法：把小塊輪流發給每一個人、把每一格切細再平分、用隔板直接分組、把數字卡放進分子和分母、點出所有一樣大的算式。放錯扣 10 分（最低 0 分），但遊戲不會結束；五關都沒放錯，最後再加 20 分。',"},
+    {"file": "index", "expect": "gWin zh", "find": "return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + s + ' 分 🏆')", "replace": "return bonus ? ('五關全破，而且一次都沒放錯！總分 ' + s + ' 分 🏆')"},
+    {"file": "index", "expect": "does not reset gAnyMistake", "find": "gScore = 0; gAnyMistake = false; elScore.textContent = '0'; startRound(); }", "replace": "gScore = 0; elScore.textContent = '0'; startRound(); }"},
+    {"file": "index", "expect": "must not record a mistake", "find": "  function roundNote(text){ gMsg.innerHTML", "replace": "  function roundNote(text){ gAnyMistake = true; gMsg.innerHTML"},
+    {"file": "index", "expect": "gWin en", "find": " Press “Restart” and try a run with no wrong moves (+20 bonus).');", "replace": "');"},
+    {"file": "index", "expect": "gWin zh", "find": " 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');", "replace": "');"},
+    {"file": "index", "expect": "gWin en", "find": "return bonus ? ('All five rounds cleared without a single wrong move — +20 bonus! Total score ' + s + ' 🏆')", "replace": "return bonus ? ('All five rounds cleared without a single wrong move! Total score ' + s + ' 🏆')"},
+    {"file": "index", "expect": "does not add the 20-point bonus", "find": "    if (bonus) gScore += 20;\n", "replace": "    if (bonus) gScore += 10;\n"},
+    {"file": "index", "expect": "gives", "find": "bonus = last && !gAnyMistake;", "replace": "bonus = last;"},
     {"file": "index", "expect": "a digit glued to Chinese", "find": "gShareNow: function(x, t){ return '發了 ' + x + ' / ' + t + ' 小塊'; },", "replace": "gShareNow: function(x, t){ return '發了 ' + x + ' / ' + t + '小塊'; },"},
     {"file": "index", "expect": "example 3 s3EqLine", "find": "' = ' + gn + '/' + gd + ' = ' + q + '/' + den + ' ✓ 一樣！';", "replace": "' = ' + gn + '/' + gd + ' = ' + q + '/' + (den + 1) + ' ✓ 一樣！';"},
     {"file": "index", "expect": "example 3", "find": "var S3_COMBOS = [ {num:6,den:7,k:3},", "replace": "var S3_COMBOS = [ {num:6,den:7,k:4},"},
