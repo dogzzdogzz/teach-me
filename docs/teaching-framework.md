@@ -5462,3 +5462,9 @@ Tony 在線上看到範例 5 的「② 比較」兩條長條長得一模一樣�
 - 照 `fraction-multiply` 加上五關全對 +20（磚數寫成「1 0000」、小數點沒動就按「換好了」兩種免費提醒不影響）；開場說明（中英）寫明「放錯扣 5 分，但遊戲不會結束；五關都沒放錯，最後再加 20 分」。
   e2e 新增「只有第 1 關犯錯」：第 1 關從 0 分開始，扣分到 0 為止，所以結束是 90 分（10 ＋ 4×20）且沒有加碼；設定檔釘住 `gAnyMistake = false;` 只出現在 `restartGame()`（抓「換關時清掉」）。
   breaktest 153／153；e2e 8 組合全過；改壞頁面 Bbonus／Bbonusreset／Bbonusnext／Bbonusnote 各 8／8；獨立驗證 PASS（另做兩個改壞版本也都被抓到）。
+
+### 2026-10-23 —— 五年級 `volume` 套上連對加碼
+
+- 照 `fraction-multiply` 加上五關全對 +20（`roundInfo`／`roundAgain` 的免費提醒不影響）；開場說明（中英）寫明「放錯扣 5 分，但遊戲不會結束；五關都沒放錯，最後再加 20 分」。
+  設定檔釘住 `gAnyMistake = false;` 只出現在 `restartGame()`；e2e「只有第 1 關犯錯」結束是 90 分（第 1 關從 0 分開始不會再扣；10 ＋ 4×20）且沒有加碼。
+  breaktest 120／120；e2e 8 組合全過；改壞頁面 Bbonus／Bbonusreset／Bbonusnext／Bbonusnote 各 8／8；獨立驗證 PASS（另做「只有真的扣到分才記錯」的改壞版本也被抓到）。

@@ -272,7 +272,7 @@
   <section>
     <span class="eyebrow" data-i18n="eb5">小遊戲</span>
     <h2 data-i18n="s5h2">搬家公司</h2>
-    <p class="lead" data-i18n="s5lead">鋪一層、疊幾層、排大小、換成公升、找一樣大 —— 五關五種玩法，五關都從同一件事出發：<strong>一層有 長 × 寬 塊，疊 高 層</strong>。放錯會扣分，但搬家公司不會關門 —— 慢慢想比手快重要。</p>
+    <p class="lead" data-i18n="s5lead">鋪一層、疊幾層、排大小、換成公升、找一樣大 —— 五關五種玩法，五關都從同一件事出發：<strong>一層有 長 × 寬 塊，疊 高 層</strong>。放錯扣 5 分，但搬家公司不會關門；五關都沒放錯，最後再加 20 分 —— 慢慢想比手快重要。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
@@ -569,7 +569,7 @@
           why:'邊長 1 公分的小方塊裝滿水恰好是 1 毫升，兩者是相等的關係，不是差 10 倍。' }
       ],
       s5h2: '搬家公司',
-      s5lead: '鋪一層、疊幾層、排大小、換成公升、找一樣大 —— 五關五種玩法，五關都從同一件事出發：<strong>一層有 長 × 寬 塊，疊 高 層</strong>。放錯會扣分，但搬家公司不會關門 —— 慢慢想比手快重要。',
+      s5lead: '鋪一層、疊幾層、排大小、換成公升、找一樣大 —— 五關五種玩法，五關都從同一件事出發：<strong>一層有 長 × 寬 塊，疊 高 層</strong>。放錯扣 5 分，但搬家公司不會關門；五關都沒放錯，最後再加 20 分 —— 慢慢想比手快重要。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
       gHintBtn: '💡 提示',
       gAsks: {
@@ -621,7 +621,10 @@
       gPts: function(p){ return '＋' + p + ' 分'; },
       gMinus: '扣 5 分',
       gClear: '按「下一關」繼續。',
-      gWin: function(score){ return '五個箱子都搬完了！總分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gWin: function(score, bonus){
+        return bonus ? ('五個箱子都搬完了，而且一次都沒放錯，再加 20 分！總分 ' + score + ' 分 🏆')
+                     : ('五個箱子都搬完了！總分 ' + score + ' 分 🏆 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');
+      },
       gNextBtn: '下一關', gRestartBtn: '重新開始',
       modeTitle: '今天想怎麼學？（隨時可以換）',
       modes: {
@@ -725,7 +728,7 @@
           why:'A small cube with a 1 cm edge, filled with water, holds exactly 1 milliliter — the two are equal, not off by a factor of 10.' }
       ],
       s5h2: 'The Moving Company',
-      s5lead: 'Lay a layer, stack the layers, order the boxes, turn cubic cm into liters, find the equal ones — five rounds, five ways to play, and every round starts from the same idea: <strong>one layer holds length × width cubes, and there are height layers</strong>. Wrong moves cost points, but the movers never close — thinking slowly beats moving fast.',
+      s5lead: 'Lay a layer, stack the layers, order the boxes, turn cubic cm into liters, find the equal ones — five rounds, five ways to play, and every round starts from the same idea: <strong>one layer holds length × width cubes, and there are height layers</strong>. A wrong move costs 5 points, but the movers never close; clear all five without a wrong move for a 20-point bonus — thinking slowly beats moving fast.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
       gHintBtn: '💡 Hint',
       gAsks: {
@@ -777,7 +780,10 @@
       gPts: function(p){ return '+' + p + ' points'; },
       gMinus: '5 points off',
       gClear: 'Press “Next round” to continue.',
-      gWin: function(score){ return 'All five boxes moved! Final score: ' + score + ' points 🏆 Press “Restart” to play again.'; },
+      gWin: function(score, bonus){
+        return bonus ? ('All five boxes moved without a single wrong move — +20 bonus! Final score: ' + score + ' points 🏆')
+                     : ('All five boxes moved! Final score: ' + score + ' points 🏆 Press “Restart” and try a run with no wrong moves (+20 bonus).');
+      },
       gNextBtn: 'Next round', gRestartBtn: 'Restart',
       modeTitle: 'How do you want to learn today? (switch anytime)',
       modes: {
@@ -966,7 +972,7 @@
   }
 
   /* ===================== 小遊戲：搬家公司（§六之五：五關五種玩法） ===================== */
-  var gRound = 0, gScore = 0, gSolved = false, gMistake = false, hintLevel = 0, gCtx = {};
+  var gRound = 0, gScore = 0, gSolved = false, gMistake = false, gAnyMistake = false, hintLevel = 0, gCtx = {};
   /* 畫板世代：重新開始、切換語言、下一關都換一個新的畫板。還拿在手上的舊積木放開時，不可以替新的畫板做任何事 */
   var gGen = 0;
   var elRound = document.getElementById('gRound');
@@ -1219,17 +1225,20 @@
     gSolved = true;
     Array.prototype.forEach.call(gameStage.querySelectorAll('.sel, .gglow'), function(x){ x.classList.remove('sel'); x.classList.remove('gglow'); });
     var pts = gMistake ? 10 : 20;
-    gScore += pts; elScore.textContent = gScore;
+    gScore += pts;
+    var last = (gRound === GAME_ORDER.length - 1), bonus = last && !gAnyMistake;
+    if (bonus) gScore += 20;   /* 五關都沒放錯：最後再加 20 分（提醒不算錯） */
+    elScore.textContent = gScore;
     gHintBtn.disabled = true;
     elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字 */
-    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    var tail = last ? L().gWin(gScore, bonus) : L().gClear;
     gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
     if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
   }
   /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
   function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
   function roundMiss(text){
-    gMistake = true;
+    gMistake = true; gAnyMistake = true;
     var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
     gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
     gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
@@ -1504,7 +1513,7 @@
     elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
-  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+  function restartGame(){ gRound = 0; gScore = 0; gAnyMistake = false; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
     if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });
