@@ -368,7 +368,7 @@
   <section>
     <span class="eyebrow" data-i18n="eb7">小遊戲</span>
     <h2 data-i18n="s7h2">概數工作站</h2>
-    <p class="lead" data-i18n="s7lead">開火車進站、剪一刀、排出概數、裝一裝剪一剪、估一估 —— 五關五種玩法。放錯會扣分，但不會結束 —— 慢慢想比手快重要。</p>
+    <p class="lead" data-i18n="s7lead">開火車進站、剪一刀、排出概數、裝一裝剪一剪、估一估 —— 五關五種玩法。放錯扣 5 分，但遊戲不會結束；五關都沒放錯，最後再加 20 分。慢慢想比手快重要。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
@@ -806,7 +806,7 @@
           why: '一次就到位，不要一步一步進。四捨五入要直接看目標位（整數位）後面那一位：3.46 小數點後第一位是 4，不到 5，直接捨去，正確答案是 3。' }
       ],
       s7h2: '概數工作站',
-      s7lead: '開火車進站、剪一刀、排出概數、裝一裝剪一剪、估一估 —— 五關五種玩法。放錯會扣分，但不會結束 —— 慢慢想比手快重要。',
+      s7lead: '開火車進站、剪一刀、排出概數、裝一裝剪一剪、估一估 —— 五關五種玩法。放錯扣 5 分，但遊戲不會結束；五關都沒放錯，最後再加 20 分。慢慢想比手快重要。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
       gHintBtn: '💡 提示',
       gNextBtn: '下一關', gRestartBtn: '重新開始',
@@ -895,7 +895,10 @@
       gMinus: '（−5 分）',
       gPts: function(n){ return '＋' + n + ' 分！'; },
       gClear: '按「下一關」繼續。',
-      gWin: function(score){ return '五關全破！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gWin: function(s, bonus){
+        return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + s + ' 分 🏆')
+                     : ('五關全破！總分 ' + s + ' 分 🏆 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');
+      },
       footer: '把整頁縮成一句：<strong>看下一位夠不夠 5 —— 夠了進，不夠就捨，四捨五入就是找數線上最近的那個點。</strong>'
     },
     en: {
@@ -1019,7 +1022,7 @@
           why: 'Round straight to the target in one step — don’t chain-round. Look directly at the digit after the whole-number place: 3.46’s first decimal digit is 4, less than 5, so round down — the correct answer is 3.' }
       ],
       s7h2: 'The Rounding Workshop',
-      s7lead: 'Drive the trains in, cut in the right gap, build the rounded number, pack and cut, estimate — five rounds, five ways to play. A wrong move costs points but never ends the game — thinking slowly beats moving fast.',
+      s7lead: 'Drive the trains in, cut in the right gap, build the rounded number, pack and cut, estimate — five rounds, five ways to play. A wrong move costs 5 points but never ends the game; clear all five without a wrong move for a 20-point bonus. Thinking slowly beats moving fast.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
       gHintBtn: '💡 Hint',
       gNextBtn: 'Next round', gRestartBtn: 'Restart',
@@ -1107,7 +1110,10 @@
       gMinus: '(−5 points)',
       gPts: function(n){ return '+' + n + ' points!'; },
       gClear: 'Press "Next round" to go on.',
-      gWin: function(score){ return 'All 5 rounds cleared! Final score: ' + score + ' 🏆 Press "Restart" to play again.'; },
+      gWin: function(s, bonus){
+        return bonus ? ('All five rounds cleared without a single wrong move — +20 bonus! Total score ' + s + ' 🏆')
+                     : ('All five rounds cleared! Total score ' + s + ' 🏆 Press “Restart” and try a run with no wrong moves (+20 bonus).');
+      },
       footer: 'The whole page in one line: <strong>check the next digit for 5 — enough, round up; not enough, round down. That’s just finding the nearest point on the number line.</strong>'
     }
   };
@@ -1437,9 +1443,10 @@
   /* ===================== 小遊戲：概數工作站（五關五種玩法，§六之五） =====================
      開進站（範例 2）、剪一刀（範例 3：看哪一位）、排出概數（範例 3：進位、留下的 0）、裝一裝剪一剪（範例 4）、估一估（範例 5）。
      計分：一關沒犯錯 +20、犯過錯 +10；每一次「放錯並說明為什麼」−5，最低 0 分（沿用舊版「答錯 −5、不會結束」）。
+     五關都沒有「放錯並說明為什麼」（只是提醒、手滑都不算），最後一關過關時再加 +20（gAnyMistake，重新開始歸零）。
      放到空白處、開到半路、剪在兩端、放進已經寫好的格子都只是手滑：靜靜回原位，不算錯。
      每一個拖拉都可以「先點東西、再點目的地」。題庫、版面常數與「收不收」的純函式都在 i18n 前面的資料區。 */
-  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  var gRound = 0, gScore = 0, gMistake = false, gAnyMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
   /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
      它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加分；二年級 length 的 codex 抓到的）。 */
   var gGen = 0;
@@ -1640,17 +1647,20 @@
     gSolved = true;
     Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
     var pts = gMistake ? 10 : 20;
-    gScore += pts; elScore.textContent = gScore;
+    gScore += pts;
+    var last = (gRound === GAME_ORDER.length - 1), bonus = last && !gAnyMistake;
+    if (bonus) gScore += 20;
+    elScore.textContent = gScore;
     gHintBtn.disabled = true;
     elHint.textContent = '';   /* 過關了：提示（尤其第二層「下一個是幾」）全部收掉，不留過期的數字（四年級 chart 的驗證者抓到的） */
-    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    var tail = last ? L().gWin(gScore, bonus) : L().gClear;
     gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
-    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+    if (!last) gNext.disabled = false;
   }
   /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
   function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
   function roundMiss(text){
-    gMistake = true;
+    gMistake = true; gAnyMistake = true;
     var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「−5 分」 */
     gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
     gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
@@ -1986,7 +1996,7 @@
     elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
-  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+  function restartGame(){ gRound = 0; gScore = 0; gAnyMistake = false; elScore.textContent = '0'; startRound(); }
 
   gNext.addEventListener('click', function(){
     if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
