@@ -563,6 +563,14 @@ function checkGame(D, I18N, fail, src){
     if (nums(I18N[L].s5lead).join() !== '5,20') fail('s5lead ' + L + ' should state −5 and the 20-point bonus: ' + I18N[L].s5lead);
   });
 
+  needSrc(/function restartGame\(\)\{[^}]*gAnyMistake = false;/, 'restartGame() does not reset gAnyMistake (a clean run after a run with mistakes would never get the bonus)');
+  needSrc(/function roundNote\(text\)\{ gMsg\.innerHTML = /, 'roundNote() (a free reminder) must not record a mistake');
+  LANGS.forEach(L => {
+    const w1 = I18N[L].gWin(120, true), w0 = I18N[L].gWin(100, false);
+    if (nums(w0).indexOf(20) < 0 || !(L === 'zh' ? /重新開始/ : /Restart/).test(w0) || !(L === 'zh' ? /不放錯/ : /no wrong moves/).test(w0)) fail('gWin ' + L + ' (no bonus) does not invite a restart for a run with no wrong moves (+20)');
+    if (/Restart|重新開始/.test(w1)) fail('gWin ' + L + ' (bonus) still shows the restart invite');
+  });
+
   /* ---------- 3. nearestOpen()／shuffle()：從原始碼切出來真的跑 ---------- */
   let nearestOpen = null, shuffle = null;
   try { nearestOpen = new Function(extractFunction(src, 'nearestOpen') + '\nreturn nearestOpen;')(); } catch (e){ fail('nearestOpen() could not be evaluated: ' + e.message); }
@@ -963,6 +971,11 @@ const CONFIG = {
     {"file": "index", "expect": "card fraction prints", "find": "fr: function(c){ return c[0] > 0 ? (c[0] + ' 又 ' + c[1] + '/' + c[2]) : (c[1] + '/' + c[2]); },", "replace": "fr: function(c){ return c[0] > 0 ? (c[0] + '又' + c[1] + '/' + c[2]) : (c[1] + '/' + c[2]); },"},
     {"file": "index", "expect": "gSizeBin en", "find": "gSizeBin: { small: '⬇️ smaller', same: '= same', big: '⬆️ bigger' },", "replace": "gSizeBin: { small: '⬇️ smaller', same: '= same', big: 'bigger' },"},
     {"file": "index", "expect": "gWin zh", "find": "return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + s + ' 分 🏆')", "replace": "return bonus ? ('五關全破，而且一次都沒放錯！總分 ' + s + ' 分 🏆')"},
+    {"file": "index", "expect": "does not reset gAnyMistake", "find": "gScore = 0; gAnyMistake = false; elScore.textContent = '0'; startRound(); }", "replace": "gScore = 0; elScore.textContent = '0'; startRound(); }"},
+    {"file": "index", "expect": "must not record a mistake", "find": "  function roundNote(text){ gMsg.innerHTML", "replace": "  function roundNote(text){ gAnyMistake = true; gMsg.innerHTML"},
+    {"file": "index", "expect": "gWin en", "find": " Press “Restart” and try a run with no wrong moves (+20 bonus).');", "replace": "');"},
+    {"file": "index", "expect": "gWin zh", "find": " 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');", "replace": "');"},
+    {"file": "index", "expect": "gWin en", "find": "return bonus ? ('All five rounds cleared without a single wrong move — +20 bonus! Total score ' + s + ' 🏆')", "replace": "return bonus ? ('All five rounds cleared without a single wrong move! Total score ' + s + ' 🏆')"},
     {"file": "index", "expect": "gMinus en", "find": "gMinus: '−5 points',", "replace": "gMinus: '−10 points',"},
     {"file": "index", "expect": "no board-generation guard", "find": "      if (gen !== gGen) return;   /* 這一塊屬於已經拿掉的畫板：放開什麼都不做 */\n", "replace": ""},
     {"file": "index", "expect": "second finger", "find": "if (!e.isPrimary || P.locked || gSolved || start || gen !== gGen) return;", "replace": "if (P.locked || gSolved || start || gen !== gGen) return;"},
