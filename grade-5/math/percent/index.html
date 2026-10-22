@@ -254,7 +254,7 @@
   <section class="game">
     <span class="eyebrow" data-i18n="eb5">小遊戲</span>
     <h2 data-i18n="s5h2">百分率探險隊</h2>
-    <p class="lead" data-i18n="s5lead">塗百格、三兄弟分家、剪價格條、命中率、圈出幾 % 的人 —— 五關五種玩法。放錯會說為什麼、扣 5 分，但不會結束。</p>
+    <p class="lead" data-i18n="s5lead">塗百格、三兄弟分家、剪價格條、命中率、圈出幾 % 的人 —— 五關五種玩法。放錯會說為什麼、扣 5 分，但不會結束；五關都沒放錯，最後再加 20 分。</p>
     <div class="card">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
@@ -541,13 +541,16 @@
           why:'100% 代表「全部」這個比例，不是數量 100。這批貨物本來就只有 50 件，100% 賣光就是 50 件全部賣完。' }
       ],
       s5h2: '百分率探險隊',
-      s5lead: '塗百格、三兄弟分家、剪價格條、命中率、圈出幾 % 的人 —— 五關五種玩法。放錯會說為什麼、扣 5 分，但不會結束。',
+      s5lead: '塗百格、三兄弟分家、剪價格條、命中率、圈出幾 % 的人 —— 五關五種玩法。放錯會說為什麼、扣 5 分，但不會結束；五關都沒放錯，最後再加 20 分。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
       gNextBtn: '下一關', gRestartBtn: '重新開始', gHintBtn: '💡 提示',
       gPts: function(p){ return '＋' + p + ' 分'; },
       gMinus: '扣 5 分',
       gClear: '按「下一關」繼續。',
-      gWin: function(score){ return '五關全破！總分 ' + score + ' 分 🏆 按「重新開始」可以再玩一次。'; },
+      gWin: function(s, bonus){
+        return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + s + ' 分 🏆')
+                     : ('五關全破！總分 ' + s + ' 分 🏆 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');
+      },
       gAsks: {
         grid: '從第一格開始拖，塗出🎨後面寫的百分率（也可以直接點最後一格）；塗好了按「塗好了」。',
         trio: '每一張卡是一個分數或小數：放進和它一樣大的百分率的家（也可以先點卡片、再點家）。',
@@ -745,13 +748,16 @@
           why:'100% means "the whole amount" as a proportion, not the number 100. Since the batch only had 50 items, "100% sold" means all 50 were sold.' }
       ],
       s5h2: 'Percent Explorers',
-      s5lead: 'Shade the grid, sort the three siblings, cut the price bar, shooting percentage, circle a percent of a group — five rounds, five ways to play. A wrong move tells you why and costs 5 points, but the game never ends.',
+      s5lead: 'Shade the grid, sort the three siblings, cut the price bar, shooting percentage, circle a percent of a group — five rounds, five ways to play. A wrong move tells you why and costs 5 points, but the game never ends; clear all five without a wrong move for a 20-point bonus.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
       gNextBtn: 'Next round', gRestartBtn: 'Restart', gHintBtn: '💡 Hint',
       gPts: function(p){ return '+' + p + ' ' + plEn(p, 'point'); },
       gMinus: '5 points off',
       gClear: 'Press “Next round” to go on.',
-      gWin: function(score){ return 'All five rounds cleared! Final score ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gWin: function(s, bonus){
+        return bonus ? ('All five rounds cleared without a single wrong move — +20 bonus! Total score ' + s + ' 🏆')
+                     : ('All five rounds cleared! Total score ' + s + ' 🏆 Press “Restart” and try a run with no wrong moves (+20 bonus).');
+      },
       gAsks: {
         grid: 'Drag from the first square to shade the percentage after 🎨 (or just tap the last square). Then press “Done”.',
         trio: 'Each card is a fraction or a decimal: put it in the house of the percentage it equals (or tap a card, then a house).',
@@ -1094,7 +1100,7 @@
   }
 
   /* ---------- 5. 小遊戲：百分率探險隊（§六之五） ---------- */
-  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  var gRound = 0, gScore = 0, gMistake = false, gAnyMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
   /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
      它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加分）。二年級 length 的 codex 第一輪。 */
   var gGen = 0;
@@ -1274,23 +1280,26 @@
   }
 
   /* 計分（沿用三、四年級的給法；§三 高年級的「扣分機制」就是這一條）：這一關沒犯錯 +20、犯過錯 +10；
-     每一次「放錯並說明為什麼」−5，最低 0 分。 */
+     每一次「放錯並說明為什麼」−5，最低 0 分。五關都沒犯錯，最後再加碼 +20。 */
   function roundSolved(text){
     if (gSolved) return;
     gSolved = true;
     Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
     var pts = gMistake ? 10 : 20;
-    gScore += pts; elScore.textContent = gScore;
+    gScore += pts;
+    var last = (gRound === GAME_ORDER.length - 1), bonus = last && !gAnyMistake;
+    if (bonus) gScore += 20;
+    elScore.textContent = gScore;
     gHintBtn.disabled = true;
     elHint.textContent = '';   /* 過關就把提示清掉：第二層提示寫的是「下一步」，過關之後已經沒有下一步（四年級 chart 的驗證者） */
-    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    var tail = last ? L().gWin(gScore, bonus) : L().gClear;
     gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
-    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+    if (!last) gNext.disabled = false;
   }
   /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
   function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
   function roundMiss(text){
-    gMistake = true;
+    gMistake = true; gAnyMistake = true;
     var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
     gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
     gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
@@ -1529,7 +1538,7 @@
     elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
-  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+  function restartGame(){ gRound = 0; gScore = 0; gAnyMistake = false; elScore.textContent = '0'; startRound(); }
 
   gNext.addEventListener('click', function(){
     if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
