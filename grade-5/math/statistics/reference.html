@@ -107,10 +107,11 @@
     <p class="bigline" id="workedLine"></p>
 
     <h2 data-i18n="s5">會騙人的圖表</h2>
-    <p data-i18n="s5lead">同一組資料，縱軸有沒有從 0 開始，看起來的差距完全不一樣。</p>
+    <p data-i18n="s5lead">同一組資料，縱軸有沒有從 0 開始，看起來的差距完全不一樣。縱軸沒有從 0 開始時，要在縱軸最下面畫省略符號（≈），提醒「下面省略了，要讀數字、不要比高矮」。</p>
     <div class="chartrow">
       <div><h4 data-i18n="fairTitle">✅ 縱軸從 0 開始</h4><div class="chartbox" id="fairChart"></div></div>
-      <div><h4 data-i18n="truncTitle">⚠️ 縱軸沒有從 0 開始</h4><div class="chartbox" id="truncChart"></div></div>
+      <div><h4 data-i18n="truncTitle">⚠️ 縱軸沒有從 0 開始，也沒有記號</h4><div class="chartbox" id="truncChart"></div></div>
+      <div><h4 data-i18n="breakTitle">✅ 沒有從 0 開始，但畫了省略符號（≈）</h4><div class="chartbox" id="breakChart"></div></div>
     </div>
     <p class="bigline" id="misleadLine"></p>
 
@@ -143,6 +144,12 @@
   function valueToY(value, axisMin, axisMax, plotTop, plotHeight){
     return plotTop + plotHeight - valueToPx(value, axisMin, axisMax, plotHeight);
   }
+  /* 一條橫的鋸齒線（省略符號的一半）：以 (x, y) 為中心，左右各 hw、上下各 amp —— 和課程頁的 breakZig() 一樣 */
+  function breakZig(x, y, hw, amp){
+    var pts = [];
+    for (var j = 0; j <= 4; j++) pts.push((x - hw + j * hw / 2) + ',' + (y + (j % 2 ? -amp : amp)));
+    return pts.join(' ');
+  }
   function makeChartFrame(container, spec){
     var W = spec.width || 400, H = spec.height || 240;
     var marginLeft = 46, marginRight = 16, marginTop = spec.title ? 30 : 14, marginBottom = 40;
@@ -166,6 +173,14 @@
       svg.appendChild(lbl);
     }
     svg.appendChild(svgEl('line', { x1: plotLeft, y1: plotTop, x2: plotLeft, y2: plotBottom, stroke: COLOR_INK, 'stroke-width': 2 }));
+    /* 省略符號（≈）：縱軸往下多畫一小段，被兩條鋸齒線切開 —— 和課程頁範例 5 一樣的畫法 */
+    if (spec.breakMark){
+      var bk = svgEl('g', { class: 'chart-brk' }), by1 = plotBottom + 14, by2 = plotBottom + 21;
+      bk.appendChild(svgEl('line', { x1: plotLeft, y1: plotBottom, x2: plotLeft, y2: plotBottom + 24, stroke: COLOR_INK, 'stroke-width': 2 }));
+      bk.appendChild(svgEl('rect', { x: plotLeft - 6, y: by1, width: 12, height: by2 - by1, fill: '#FFFFFF' }));
+      [by1, by2].forEach(function(y){ bk.appendChild(svgEl('polyline', { points: breakZig(plotLeft, y, 6, 2.5), fill: 'none', stroke: COLOR_INK, 'stroke-width': 2, 'stroke-linejoin': 'round' })); });
+      svg.appendChild(bk);
+    }
     var n = spec.categories.length;
     var slot = plotWidth / n;
     var catX = [];
@@ -237,15 +252,15 @@
       anatomy:['① 標題','② 橫軸（類別）','③ 縱軸（數量與單位）','④ 刻度（一格代表多少）','⑤ 長條（高度就是數量）'],
       s4:'一格代表多少（範例）',
       workedLine:function(cat, sq, unit, val){ return cat + '：' + sq + ' 格 × 一格代表 ' + unit + ' = <b>' + val + '</b> 本'; },
-      s5:'會騙人的圖表', s5lead:'同一組資料，縱軸有沒有從 0 開始，看起來的差距完全不一樣。',
-      fairTitle:'✅ 縱軸從 0 開始', truncTitle:'⚠️ 縱軸沒有從 0 開始',
-      misleadLine:function(diff){ return '兩張圖的資料一模一樣，實際只差 <b>' + diff + '</b> 杯 —— 縱軸沒有從 0 開始時，差距會被視覺放大！'; },
+      s5:'會騙人的圖表', s5lead:'同一組資料，縱軸有沒有從 0 開始，看起來的差距完全不一樣。縱軸沒有從 0 開始時，要在縱軸最下面畫省略符號（≈），提醒「下面省略了，要讀數字、不要比高矮」。',
+      fairTitle:'✅ 縱軸從 0 開始', truncTitle:'⚠️ 縱軸沒有從 0 開始，也沒有記號', breakTitle:'✅ 沒有從 0 開始，但畫了省略符號（≈）',
+      misleadLine:function(diff, min){ return '三張圖的資料一模一樣，實際只差 <b>' + diff + '</b> 杯。縱軸從 ' + min + ' 開始又沒有記號的那張，長條的高矮被放大了，會騙人；畫了省略符號（≈）的那張先告訴你 0 到 ' + min + ' 省略了，是誠實的 —— 但還是要讀數字、不要比高矮！'; },
       s6:'易混淆對照表', thWrong:'容易搞錯', thRight:'正確做法',
       confuse:[
         ['只數格子高度當答案（例如唸成「7 格」）','一定要「格數 × 一格代表多少」才是真正的數值'],
         ['類別資料（水果、班級）畫成折線圖','類別之間沒有順序關係，比較大小要用長條圖'],
         ['時間資料（每天、每月）畫成長條圖','隨時間變化要用折線圖，才看得出趨勢'],
-        ['長條看起來高兩倍，就以為數值也是兩倍','先檢查縱軸是否從 0 開始，沒有的話視覺會被放大'],
+        ['長條看起來高兩倍，就以為數值也是兩倍','先檢查縱軸是否從 0 開始；沒有的話，看有沒有省略符號（≈），並且讀數字、不要比高矮'],
         ['沒看圖例就比較複合長條圖','先看圖例，確認顏色/花紋各代表哪一組再比較']
       ],
       printBtn:'🖨️ 印出速查卡',
@@ -279,15 +294,15 @@
       anatomy:['① Title','② X-axis (categories)','③ Y-axis (amount and unit)','④ Scale (what each square means)','⑤ Bars (each height IS the amount)'],
       s4:'What Does Each Square Mean? (Worked Example)',
       workedLine:function(cat, sq, unit, val){ return cat + ': ' + sq + ' squares × ' + unit + ' each = <b>' + val + '</b> books'; },
-      s5:'Charts That Lie', s5lead:'The same data looks completely different depending on whether the axis starts at 0.',
-      fairTitle:'✅ Axis starts at 0', truncTitle:'⚠️ Axis does not start at 0',
-      misleadLine:function(diff){ return 'Both charts show the exact same data — the real difference is only <b>' + diff + '</b> cups. When the axis doesn’t start at 0, the gap looks bigger than it is!'; },
+      s5:'Charts That Lie', s5lead:'The same data looks completely different depending on whether the axis starts at 0. When an axis doesn’t start at 0, it should have a break mark (≈) at the bottom — a warning that says “the bottom is left out: read the numbers, don’t compare heights.”',
+      fairTitle:'✅ Axis starts at 0', truncTitle:'⚠️ Starts above 0, no mark', breakTitle:'✅ Starts above 0, with a break mark (≈)',
+      misleadLine:function(diff, min){ return 'All three charts show the exact same data — the real difference is only <b>' + diff + '</b> cups. The one that starts at ' + min + ' with no mark blows up the bar heights and misleads; the one with the break mark (≈) tells you 0 to ' + min + ' is left out, so it is honest — but you still read the numbers, not the heights!'; },
       s6:'Common Confusions', thWrong:'Easy to get wrong', thRight:'What to do instead',
       confuse:[
         ['Reading the square count as the answer (e.g. saying “7 squares”)','Always compute “squares × what each square is worth” for the real value'],
         ['Drawing category data (fruits, classes) as a line graph','Categories have no time order — use a bar chart to compare them'],
         ['Drawing time data (daily, monthly) as a bar chart','Use a line graph for change over time so the trend is visible'],
-        ['Assuming a bar twice as tall means twice the value','Check whether the axis starts at 0 first — if not, the visual is exaggerated'],
+        ['Assuming a bar twice as tall means twice the value','Check whether the axis starts at 0 first — if not, look for the break mark (≈) and read the numbers, not the heights'],
         ['Comparing a grouped bar chart without checking the legend','Check the legend first to know which color/pattern is which group']
       ],
       printBtn:'🖨️ Print this card',
@@ -396,7 +411,7 @@
   }
 
   /* 會騙人的圖表 */
-  var MISLEAD_VALUES = [48, 52];
+  var MISLEAD_VALUES = [48, 52], MISLEAD_MIN = 40;   /* 中間與右邊那張的縱軸從 MISLEAD_MIN 開始；右邊那張畫了省略符號 */
   function buildMisleading(){
     var d = I18N[lang];
     var geomFair = makeChartFrame(document.getElementById('fairChart'), {
@@ -404,10 +419,14 @@
     });
     addBars(geomFair, MISLEAD_VALUES, COLOR_GREEN, { showValue: true });
     var geomTrunc = makeChartFrame(document.getElementById('truncChart'), {
-      width: 220, height: 210, categories: d.DRINKS, axisMin: 40, axisMax: 55, gridStep: 5, yAxisLabel: d.YUNIT2
+      width: 220, height: 210, categories: d.DRINKS, axisMin: MISLEAD_MIN, axisMax: 55, gridStep: 5, yAxisLabel: d.YUNIT2
     });
     addBars(geomTrunc, MISLEAD_VALUES, COLOR_ORANGE, { showValue: true });
-    document.getElementById('misleadLine').innerHTML = d.misleadLine(Math.abs(MISLEAD_VALUES[0] - MISLEAD_VALUES[1]));
+    var geomBreak = makeChartFrame(document.getElementById('breakChart'), {
+      width: 220, height: 210, categories: d.DRINKS, axisMin: MISLEAD_MIN, axisMax: 55, gridStep: 5, breakMark: true, yAxisLabel: d.YUNIT2
+    });
+    addBars(geomBreak, MISLEAD_VALUES, COLOR_GREEN, { showValue: true });
+    document.getElementById('misleadLine').innerHTML = d.misleadLine(Math.abs(MISLEAD_VALUES[0] - MISLEAD_VALUES[1]), MISLEAD_MIN);
   }
 
   function renderAll(){

@@ -278,7 +278,7 @@
   <section>
     <span class="eyebrow" data-i18n="eb5">範例教學 5</span>
     <h2 data-i18n="s5h2">會騙人的圖表</h2>
-    <p class="lead" data-i18n="s5lead">同一組資料畫兩次：一個縱軸從 0 開始，一個不是。仔細看刻度再下結論！</p>
+    <p class="lead" data-i18n="s5lead">同一組資料畫三次：一張縱軸從 0 開始；一張從 40 開始卻什麼記號都沒有；一張也從 40 開始，可是在縱軸最下面畫了省略符號（≈）。仔細看刻度再下結論！</p>
     <div class="card">
       <div class="compare-charts">
         <div>
@@ -286,8 +286,12 @@
           <div class="chartbox" id="ex5FairChart"></div>
         </div>
         <div>
-          <h4 data-i18n="ex5TruncTitle">⚠️ 縱軸沒有從 0 開始</h4>
+          <h4 data-i18n="ex5TruncTitle">⚠️ 縱軸沒有從 0 開始，也沒有記號</h4>
           <div class="chartbox" id="ex5TruncChart"></div>
+        </div>
+        <div>
+          <h4 data-i18n="ex5BreakTitle">✅ 沒有從 0 開始，但畫了省略符號（≈）</h4>
+          <div class="chartbox" id="ex5BreakChart"></div>
         </div>
       </div>
       <div class="btnrow" style="justify-content:center">
@@ -314,7 +318,7 @@
   <section>
     <span class="eyebrow" data-i18n="ebGame">小遊戲</span>
     <h2 data-i18n="s7h2">偵察隊出任務</h2>
-    <p class="lead" data-i18n="s7lead">畫長條、描點連線、讀複合長條圖、選對圖表、抓出騙人的圖 —— 五關五種玩法，每一關都要<strong>先看刻度再動手</strong>。放錯會扣分，但任務不會失敗 —— 慢慢看比手快重要。</p>
+    <p class="lead" data-i18n="s7lead">畫長條、描點連線、讀複合長條圖、選對圖表、抓出騙人的圖 —— 五關五種玩法，每一關都要<strong>先看刻度再動手</strong>。放錯會扣分，但任務不會失敗 —— 慢慢看比手快重要；五關都沒放錯，最後再加 20 分。</p>
     <div class="card game">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
@@ -434,6 +438,14 @@
       svg.appendChild(lbl);
     }
     svg.appendChild(svgEl('line', { x1: plotLeft, y1: plotTop, x2: plotLeft, y2: plotBottom, stroke: '#2B2A33', 'stroke-width': 2 }));
+    /* 省略符號（≈）：縱軸往下多畫一小段，被兩條鋸齒線切開 —— 「下面省略了，不要比高矮」。放在最下面那個數字的下面（不碰它）、離橫軸的名字很遠 */
+    if (spec.breakMark){
+      var bk = svgEl('g', { class: 'chart-brk' }), by1 = plotBottom + 14, by2 = plotBottom + 21;
+      bk.appendChild(svgEl('line', { x1: plotLeft, y1: plotBottom, x2: plotLeft, y2: plotBottom + 24, stroke: '#2B2A33', 'stroke-width': 2 }));
+      bk.appendChild(svgEl('rect', { x: plotLeft - 6, y: by1, width: 12, height: by2 - by1, fill: '#FFFFFF' }));
+      [by1, by2].forEach(function(y){ bk.appendChild(svgEl('polyline', { points: breakZig(plotLeft, y, 6, 2.5), fill: 'none', stroke: '#2B2A33', 'stroke-width': 2, 'stroke-linejoin': 'round' })); });
+      svg.appendChild(bk);
+    }
 
     var n = spec.categories.length;
     var slot = plotWidth / n;
@@ -693,19 +705,32 @@
   /* 卡片 c 放進箱子 b：對 → null；錯 → 卡片自己的種類（說明講「它是哪一種、該放哪裡」） */
   function sortWhy(c, b){ var t = SORT_TYPES[c]; return SORT_BINS[b] === t ? null : t; }
 
-  /* 第 5 關：抓出騙人的圖（範例 5）—— 四張小長條圖，每張兩根（A、B）、長條上寫著數；點出所有「縱軸沒有從 0 開始」的圖。
-     縱軸最下面那一條線一定寫著它的數（沒有從 0 開始就照實寫出來），長條照比例畫。每一組有兩張騙人的、兩張從 0 開始的。
-     ⚠️ 不可以有「不看 0 也猜得到」的線索：每一張都是 3 格高，而且同一組裡騙人的兩張與誠實的兩張用的是同一對刻度（例如 5 和 10）——
-     看「一格多少」猜不出來，只能看最下面那一條線是不是 0（驗證者抓到的：舊版誠實的一律一格 20、騙人的一律一格 5 或 10）。
+  /* 第 5 關：抓出騙人的圖（範例 5）—— 四張小長條圖，每張兩根（A、B）、長條上寫著數；點出所有「縱軸沒有從 0 開始、又沒有畫省略符號（≈）」的圖。
+     縱軸最下面那一條線一定寫著它的數（沒有從 0 開始就照實寫出來），長條照比例畫。每一組三種都有（2026-10-22 Tony 的決定）：
+     兩張騙人的（縱軸沒有從 0 開始、沒有省略符號）、一張從 0 開始的、一張縱軸沒有從 0 開始但在縱軸最下面畫了省略符號的（brk：誠實 —— 它先告訴你下面省略了）。
+     要判斷的規則是「最下面不是 0，而且沒有省略符號 → 騙人」：只看 0 會把有省略符號的那一張也點掉，只看省略符號會把從 0 開始的那一張也點掉。
+     有省略符號的那一張是照騙人的圖的條件產生的（看起來的倍數 ≥ 1.4、真的倍數 < 1.2）—— 除了省略符號，畫面上沒有任何東西分得出它和騙人的圖。
+     ⚠️ 不可以有「不看最下面那一條線也猜得到」的線索：每一張都是 3 格高，而且同一組裡騙人的兩張與誠實的兩張用的是同一對刻度（例如 5 和 10）——
+     看「一格多少」猜不出來（驗證者抓到的：舊版誠實的一律一格 20、騙人的一律一格 5 或 10）。
      數的大小與長條的高矮也不洩題：照 A／B 的數、A／B 的高度、兩根看起來差幾倍、兩根頂端看起來差多高排，騙人的兩張不會在同一頭，而且沒有一個「排第幾名」的規則在三組裡都成立 ——
-     最大的那一張、最小的那一張，在不同的組裡有時騙人、有時誠實（codex 第七、八輪）。四張圖的位置每一次都重新洗牌。 */
+     最大的那一張、最小的那一張，在不同的組裡有時騙人、有時誠實（codex 第七、八輪）；有省略符號的那一張在三張「沒有從 0 開始」的圖裡排第幾，三組也不一樣。四張圖的位置每一次都重新洗牌。 */
   var TRUNC = { W:300, H:308, cw:146, ch:150, gap:8, px0:40, px1:136, py0:24, py1:112, catY:130 };
+  /* 省略符號（≈）：縱軸往下多畫一小段（到 end），中間被兩條橫的鋸齒線切開（y1、y2；左右各 hw、上下各 amp）。
+     放在最下面那一條線的數字下面（字框底 ≈ py1 + 4 + 0.35 × 12），離它 ≥ 2px；不碰 A／B 與編號 */
+  var TBRK = { y1:126, y2:133.5, hw:8, amp:2.5, end:138 };
+  /* 一條橫的鋸齒線（省略符號的一半）：以 (x, y) 為中心，左右各 hw、上下各 amp —— 範例 5 和第 5 關共用 */
+  function breakZig(x, y, hw, amp){
+    var pts = [];
+    for (var j = 0; j <= 4; j++) pts.push((x - hw + j * hw / 2) + ',' + (y + (j % 2 ? -amp : amp)));
+    return pts.join(' ');
+  }
   var GAME_TRUNC = [
-    [ { a:39, b:45, min:30, max:45, step:5 }, { a:42, b:46, min:40, max:100, step:20 }, { a:5, b:10, min:0, max:15, step:5 }, { a:49, b:54, min:0, max:60, step:20 } ],
-    [ { a:7, b:8, min:5, max:20, step:5 }, { a:59, b:70, min:40, max:70, step:10 }, { a:9, b:14, min:0, max:15, step:5 }, { a:13, b:27, min:0, max:30, step:10 } ],
-    [ { a:42, b:49, min:30, max:60, step:10 }, { a:195, b:215, min:160, max:220, step:20 }, { a:7, b:15, min:0, max:30, step:10 }, { a:52, b:56, min:0, max:60, step:20 } ]
+    [ { a:25, b:29, min:20, max:35, step:5 }, { a:156, b:187, min:140, max:200, step:20 }, { a:30, b:60, min:0, max:60, step:20 }, { a:36, b:43, min:35, max:50, step:5, brk:true } ],
+    [ { a:34, b:39, min:25, max:40, step:5 }, { a:65, b:76, min:60, max:90, step:10 }, { a:2, b:9, min:0, max:15, step:5 }, { a:53, b:61, min:40, max:70, step:10, brk:true } ],
+    [ { a:52, b:60, min:50, max:80, step:10 }, { a:182, b:203, min:160, max:220, step:20 }, { a:3, b:8, min:0, max:30, step:10 }, { a:196, b:213, min:160, max:220, step:20, brk:true } ]
   ];
-  function truncLie(c){ return c.min > 0; }
+  /* 騙人：縱軸沒有從 0 開始，而且沒有畫省略符號 */
+  function truncLie(c){ return c.min > 0 && !c.brk; }
   /* 畫出來 B 看起來是 A 的幾倍高（長條的高度從最下面那一條線量起），取到小數一位 —— 騙人的圖說的就是這件事 */
   function truncLooks(c){ return Math.round((c.b - c.min) / (c.a - c.min) * 10) / 10; }
   /* 第 i 張圖的左上角（2 × 2） */
@@ -794,13 +819,15 @@
       ],
       exRight:'<b>答對了。</b> ', exWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
       eb5:'範例教學 5', s5h2:'會騙人的圖表',
-      s5lead:'同一組資料畫兩次：一個縱軸從 0 開始，一個不是。仔細看刻度再下結論！',
-      ex5FairTitle:'✅ 縱軸從 0 開始', ex5TruncTitle:'⚠️ 縱軸沒有從 0 開始',
+      s5lead:'同一組資料畫三次：一張縱軸從 0 開始；一張從 40 開始卻什麼記號都沒有；一張也從 40 開始，可是在縱軸最下面畫了省略符號（≈）。仔細看刻度再下結論！',
+      ex5FairTitle:'✅ 縱軸從 0 開始', ex5TruncTitle:'⚠️ 縱軸沒有從 0 開始，也沒有記號', ex5BreakTitle:'✅ 沒有從 0 開始，但畫了省略符號（≈）',
       ex5YUnit:'杯', ex5Title:'兩款飲料本月銷售量',
       ex5RevealBtn:'這樣公平嗎？',
-      ex5Explain:function(vA, vB, diff){
-        return '兩張圖畫的是<strong>同一組資料</strong>（' + vA + ' 杯和 ' + vB + ' 杯），但右邊那張圖的縱軸不是從 0 開始，' +
-          '所以看起來差很多。實際上兩者只差 <b>' + diff + '</b> 杯 —— 看圖表一定要先檢查縱軸有沒有從 0 開始！';
+      ex5Explain:function(vA, vB, diff, min, k){
+        return '三張圖畫的是<strong>同一組資料</strong>（' + vA + ' 杯和 ' + vB + ' 杯）。⚠️ 那張的縱軸從 ' + min + ' 開始，又什麼記號都沒有，' +
+          'B 看起來是 A 的 ' + k + ' 倍高 —— <strong>它會騙人</strong>。最後那張也從 ' + min + ' 開始，可是縱軸最下面畫了<strong>省略符號（≈）</strong>，先告訴你：' +
+          '「0 到 ' + min + ' 省略了，要讀數字、不要比高矮。」所以它是誠實的。實際上兩者只差 <b>' + diff + '</b> 杯 —— ' +
+          '看圖表先檢查縱軸有沒有從 0 開始；沒有的話，找找有沒有省略符號，而且一定要讀數字！';
       },
       DRINKS:['飲料 A','飲料 B'],
       WEEKDAYS:['星期一','星期二','星期三','星期四','星期五','星期六','星期日'],
@@ -815,7 +842,7 @@
       fbRight:'<b>答對了。</b> ', fbWrong:function(ans){ return '<b>正確答案是「' + ans + '」。</b> '; },
       cAll:'全對！你已經是讀圖高手 🏆', cGood:'很棒！錯的那幾題再看一次說明。', cTry:'沒關係，回到上面的範例再看一次刻度怎麼讀。',
       ebGame:'小遊戲', s7h2:'偵察隊出任務',
-      s7lead:'畫長條、描點連線、讀複合長條圖、選對圖表、抓出騙人的圖 —— 五關五種玩法，每一關都要<strong>先看刻度再動手</strong>。放錯會扣分，但任務不會失敗 —— 慢慢看比手快重要。',
+      s7lead:'畫長條、描點連線、讀複合長條圖、選對圖表、抓出騙人的圖 —— 五關五種玩法，每一關都要<strong>先看刻度再動手</strong>。放錯會扣分，但任務不會失敗 —— 慢慢看比手快重要；五關都沒放錯，最後再加 20 分。',
       gRoundLabel:'第', gRoundUnit:'關', gScoreLabel:'分數',
       gHintBtn:'💡 提示',
       gNextBtn:'下一關', gRestartBtn:'重新開始',
@@ -826,7 +853,7 @@
         plot:'把每個月的點拖到折線圖上對的位置（也可以先點一個點、再點位置）。',
         group:'',
         sort:'每一件事要用哪一種圖？把卡片拖進對的箱子（也可以先點卡片、再點箱子）。',
-        trunc:'有的圖縱軸沒有從 0 開始，長條的高矮會騙人。點出所有會騙人的圖。'
+        trunc:'有的圖縱軸沒有從 0 開始，又沒有畫省略符號（≈），長條的高矮會騙人。點出所有會騙人的圖。'
       },
       gHints:{
         bar:'提示 1：一格代表的不是 1 —— 表上的數 ÷ 一格代表的數，就是要畫幾格。',
@@ -834,12 +861,15 @@
         seg:'提示 1：變化 ＝ 兩個點的數相減；增加和減少都算，比的是差多少。線越陡，變化越大。',
         group:'提示 1：先看圖例分清楚哪一根是哪一班，再找到題目說的那一週，用縱軸讀出兩根長條各是多少（一格 2 公斤）。',
         sort:'提示 1：先問自己 —— 是在比「不同的種類」，還是在看「隨著時間的變化」？有沒有兩組要並排比？',
-        trunc:'提示 1：先看每一張圖，縱軸最下面那一條線寫的數字是不是 0。'
+        trunc:'提示 1：先看每一張圖，縱軸最下面那一條線寫的數字是不是 0；不是 0 的，再看縱軸最下面有沒有畫省略符號（≈）。'
       },
       gPts:function(p){ return '+' + p + ' 分'; },
       gMinus:'−5 分',
       gClear:'按「下一關」繼續。',
-      gWin:function(score){ return '五個任務全部完成！最後得分 ' + score + ' 分 🏆 按「重新開始」再挑戰一次。'; },
+      gWin:function(s, bonus){
+        return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + s + ' 分 🏆')
+                     : ('五關全破！總分 ' + s + ' 分 🏆 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');
+      },
       /* 第 1 關：畫長條 */
       gBarCap:function(u, unit){ return '一格 ＝ ' + u + ' ' + unit; },
       gBarStart:'拉好一根長條，這裡會寫出它是幾格。',
@@ -887,10 +917,11 @@
       /* 第 5 關：抓出騙人的圖 */
       gTruncNo:['①', '②', '③', '④'],
       gTruncNow:function(k, n){ return '找到 ' + k + ' / ' + n + ' 張會騙人的圖'; },
-      gTruncFound:function(no, min, a, b, k){ return no + ' 的縱軸從 ' + min + ' 開始：B 看起來大約是 A 的 ' + k + ' 倍高，可是 A 是 ' + a + '、B 是 ' + b + '，其實只差 ' + (b - a) + '。'; },
+      gTruncFound:function(no, min, a, b, k){ return no + ' 的縱軸從 ' + min + ' 開始，又沒有畫省略符號：B 看起來大約是 A 的 ' + k + ' 倍高，可是 A 是 ' + a + '、B 是 ' + b + '，其實只差 ' + (b - a) + '。'; },
       gTruncBad:function(no, a, b){ return no + ' 的縱軸從 0 開始：A ' + a + '、B ' + b + '，長條看起來差多少，就真的差多少 —— 它沒有騙人。'; },
-      gTruncWin:'全部找到了：縱軸沒有從 0 開始，長條的高矮就和數字對不起來 —— 看起來的倍數比數字真正的倍數大。',
-      gTruncH2:function(n, mins){ return '還沒找到的 ' + n + ' 張，縱軸最下面那一條線寫的是 ' + mins.join('、') + '。'; },
+      gTruncBrk:function(no, min, a, b){ return no + ' 的縱軸從 ' + min + ' 開始，可是最下面畫了省略符號（≈）：它先告訴你 0 到 ' + min + ' 省略了，要讀數字、不要比高矮 —— A ' + a + '、B ' + b + '，只差 ' + (b - a) + '。它沒有騙人。'; },
+      gTruncWin:'全部找到了：縱軸沒有從 0 開始、又沒有畫省略符號，長條的高矮就和數字對不起來 —— 看起來的倍數比數字真正的倍數大。',
+      gTruncH2:function(n, mins){ return '還沒找到的 ' + n + ' 張，縱軸最下面那一條線寫的是 ' + mins.join('、') + '，而且沒有省略符號。'; },
       ebNext:'學完之後', nextH2:'把它記牢的三個動作',
       next1:'🗂️ 打開<a class="home" href="reference.html">速查卡</a>，印出來貼在書桌前。',
       next2:'🔁 明天回來玩一次<a class="home" href="review.html">複習挑戰</a> —— 隔一天還想得起來，才是真的記住。',
@@ -958,13 +989,15 @@
       ],
       exRight:'<b>Correct!</b> ', exWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
       eb5:'Example 5', s5h2:'Charts That Lie',
-      s5lead:'The same data drawn twice: one axis starts at 0, one doesn’t. Check the scale before you conclude anything!',
-      ex5FairTitle:'✅ Axis starts at 0', ex5TruncTitle:'⚠️ Axis does not start at 0',
+      s5lead:'The same data drawn three times: one axis starts at 0; one starts at 40 with no mark at all; one also starts at 40 but has a break mark (≈) at the bottom of the axis. Check the scale before you conclude anything!',
+      ex5FairTitle:'✅ Axis starts at 0', ex5TruncTitle:'⚠️ Starts above 0, no mark', ex5BreakTitle:'✅ Starts above 0, with a break mark (≈)',
       ex5YUnit:'cups', ex5Title:'Two Drinks’ Sales This Month',
       ex5RevealBtn:'Is this fair?',
-      ex5Explain:function(vA, vB, diff){
-        return 'Both charts show <strong>the exact same data</strong> (' + vA + ' cups and ' + vB + ' cups), but the right-hand chart’s axis doesn’t start at 0, ' +
-          'so it looks like a huge gap. The real difference is only <b>' + diff + '</b> cups — always check whether the axis starts at 0 before drawing conclusions!';
+      ex5Explain:function(vA, vB, diff, min, k){
+        return 'All three charts show <strong>the exact same data</strong> (' + vA + ' cups and ' + vB + ' cups). The ⚠️ chart’s axis starts at ' + min + ' with no mark at all, ' +
+          'so B looks ' + k + ' times as tall as A — <strong>that chart misleads</strong>. The last chart also starts at ' + min + ', but the <strong>break mark (≈)</strong> at the bottom of its axis warns you: ' +
+          '“0 to ' + min + ' is left out — read the numbers, don’t compare the heights.” So it is honest. The real difference is only <b>' + diff + '</b> cups. ' +
+          'Always check whether the axis starts at 0 — and if it doesn’t, look for the break mark and read the numbers!';
       },
       DRINKS:['Drink A','Drink B'],
       WEEKDAYS:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
@@ -979,7 +1012,7 @@
       fbRight:'<b>Correct!</b> ', fbWrong:function(ans){ return '<b>The correct answer is “' + ans + '”.</b> '; },
       cAll:'Perfect score! You’re a chart-reading master 🏆', cGood:'Great job! Re-read the explanations for the ones you missed.', cTry:'That’s okay — scroll up and check how to read the scale again.',
       ebGame:'Game', s7h2:'Detective Missions',
-      s7lead:'Draw bars, plot a line graph, read a grouped bar chart, pick the right chart, and catch the charts that lie — five rounds, five different moves, and every one starts with <strong>checking the scale</strong>. Mistakes cost points, but no mission ever fails — looking carefully beats being fast.',
+      s7lead:'Draw bars, plot a line graph, read a grouped bar chart, pick the right chart, and catch the charts that lie — five rounds, five different moves, and every one starts with <strong>checking the scale</strong>. Mistakes cost points, but no mission ever fails — looking carefully beats being fast. Clear all five without a wrong move for a +20 bonus.',
       gRoundLabel:'Round', gRoundUnit:'', gScoreLabel:'Score',
       gHintBtn:'💡 Hint',
       gNextBtn:'Next round', gRestartBtn:'Restart',
@@ -990,7 +1023,7 @@
         plot:'Drag each month’s point to the right spot on the line graph (or tap a point, then tap the spot).',
         group:'',
         sort:'Which chart fits each job? Drag every card into the right box (or tap a card, then tap a box).',
-        trunc:'Some charts’ axes don’t start at 0, so the bars’ heights lie. Tap every chart that lies.'
+        trunc:'Some charts’ axes don’t start at 0 and have no break mark (≈), so the bars’ heights lie. Tap every chart that lies.'
       },
       gHints:{
         bar:'Hint 1: one square is not worth 1 here — the table’s number ÷ what one square is worth = how many squares to draw.',
@@ -998,12 +1031,15 @@
         seg:'Hint 1: the change is one point’s number minus the other’s. Going up and going down both count — compare how much. The steeper the line, the bigger the change.',
         group:'Hint 1: check the key to tell the two classes’ bars apart, find the week in the question, then read both bars off the side axis (1 square = 2 kg).',
         sort:'Hint 1: ask yourself — are we comparing different kinds of things, or watching one thing change over time? Are there two groups to compare side by side?',
-        trunc:'Hint 1: on every chart, look at the number on the bottom line of the side axis — is it 0?'
+        trunc:'Hint 1: on every chart, look at the number on the bottom line of the side axis — is it 0? If not, look for a break mark (≈) at the bottom of the axis.'
       },
       gPts:function(p){ return '+' + p + ' points'; },
       gMinus:'−5 points',
       gClear:'Press “Next round” to go on.',
-      gWin:function(score){ return 'All five missions complete! Final score: ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gWin:function(s, bonus){
+        return bonus ? ('All five rounds cleared without a single wrong move — +20 bonus! Total score ' + s + ' 🏆')
+                     : ('All five rounds cleared! Total score ' + s + ' 🏆 Press “Restart” and try a run with no wrong moves (+20 bonus).');
+      },
       /* Round 1: draw bars */
       gBarCap:function(u, unit){ return '1 square = ' + u + ' ' + unit; },
       gBarStart:'Pull a bar up and its number of squares shows here.',
@@ -1051,10 +1087,11 @@
       /* Round 5: catch the charts that lie */
       gTruncNo:['①', '②', '③', '④'],
       gTruncNow:function(k, n){ return k + ' / ' + n + ' lying charts found'; },
-      gTruncFound:function(no, min, a, b, k){ return no + '’s axis starts at ' + min + ': B looks about ' + k + ' times as tall as A, but A is ' + a + ' and B is ' + b + ' — only ' + (b - a) + ' apart.'; },
+      gTruncFound:function(no, min, a, b, k){ return no + '’s axis starts at ' + min + ' with no break mark: B looks about ' + k + ' times as tall as A, but A is ' + a + ' and B is ' + b + ' — only ' + (b - a) + ' apart.'; },
       gTruncBad:function(no, a, b){ return no + '’s axis starts at 0: A ' + a + ', B ' + b + ' — the gap you see is the real gap. It doesn’t lie.'; },
-      gTruncWin:'Found them all: when the axis doesn’t start at 0, the bar heights no longer match the numbers — B looks bigger compared with A than the numbers really show.',
-      gTruncH2:function(n, mins){ return (n === 1 ? 'The one still to find has ' : 'The ' + n + ' still to find have ') + mins.join(' and ') + ' on the bottom line of the side axis.'; },
+      gTruncBrk:function(no, min, a, b){ return no + '’s axis starts at ' + min + ', but it has a break mark (≈) at the bottom: it tells you 0 to ' + min + ' is left out, so read the numbers, don’t compare heights — A ' + a + ', B ' + b + ', only ' + (b - a) + ' apart. It doesn’t lie.'; },
+      gTruncWin:'Found them all: when the axis doesn’t start at 0 and there is no break mark, the bar heights no longer match the numbers — B looks bigger compared with A than the numbers really show.',
+      gTruncH2:function(n, mins){ return (n === 1 ? 'The one still to find has ' : 'The ' + n + ' still to find have ') + mins.join(' and ') + ' on the bottom line of the side axis, and no break mark.'; },
       ebNext:'After the lesson', nextH2:'Three moves that make it stick',
       next1:'🗂️ Open the <a class="home" href="reference.html">cheat sheet</a> and print it for your desk.',
       next2:'🔁 Come back tomorrow for the <a class="home" href="review.html">review challenge</a> — remembering a day later is real remembering.',
@@ -1405,7 +1442,7 @@
   }
 
   /* ---------- 範例 5：會騙人的圖表 ---------- */
-  var EX5_VALUES = [48, 52];
+  var EX5_VALUES = [48, 52], EX5_MIN = 40;   /* 中間那張與右邊那張的縱軸都從 EX5_MIN 開始；右邊那張畫了省略符號 */
   function renderEx5Fixed(){
     var d = L();
     var cats = d.DRINKS;
@@ -1415,17 +1452,24 @@
     });
     addBars(geomFair, EX5_VALUES, COLOR_GREEN, { showValue: true });
     var geomTrunc = makeChartFrame(document.getElementById('ex5TruncChart'), {
-      width: 240, height: 220, categories: cats, axisMin: 40, axisMax: 55, gridStep: 5,
+      width: 240, height: 220, categories: cats, axisMin: EX5_MIN, axisMax: 55, gridStep: 5,
       yAxisLabel: d.ex5YUnit, ariaLabel: d.ex5TruncTitle
     });
     addBars(geomTrunc, EX5_VALUES, COLOR_ORANGE, { showValue: true });
+    var geomBreak = makeChartFrame(document.getElementById('ex5BreakChart'), {
+      width: 240, height: 220, categories: cats, axisMin: EX5_MIN, axisMax: 55, gridStep: 5, breakMark: true,
+      yAxisLabel: d.ex5YUnit, ariaLabel: d.ex5BreakTitle
+    });
+    addBars(geomBreak, EX5_VALUES, COLOR_GREEN, { showValue: true });
     document.getElementById('ex5Reveal').style.display = 'none';
   }
   document.getElementById('ex5RevealBtn').addEventListener('click', function(){
     var d = L();
     var diff = Math.abs(EX5_VALUES[0] - EX5_VALUES[1]);
     var el = document.getElementById('ex5Reveal');
-    el.innerHTML = d.ex5Explain(EX5_VALUES[0], EX5_VALUES[1], diff);
+    /* B 在「從 EX5_MIN 開始」的圖上看起來是 A 的幾倍高（長條從最下面那一條線量起） */
+    var looks = Math.round((EX5_VALUES[1] - EX5_MIN) / (EX5_VALUES[0] - EX5_MIN) * 10) / 10;
+    el.innerHTML = d.ex5Explain(EX5_VALUES[0], EX5_VALUES[1], diff, EX5_MIN, looks);
     el.style.display = 'block';
   });
 
@@ -1573,10 +1617,10 @@
   /* ===================== 小遊戲：偵察隊出任務（五關五種玩法，§六之五） =====================
      畫長條（範例 1）、描點連線＋變化最大的一段（範例 2）、讀複合長條圖（範例 3）、選對圖表（範例 4）、抓出騙人的圖（範例 5）。
      計分（高年級）：一關沒犯錯 +20、犯過錯 +10；每一次「放錯並說明為什麼」−5，最低 0 分；
-     同一個錯（同一個東西放到同一個地方、同一個答案）再犯一次只再說一次，不重複扣分。
+     同一個錯（同一個東西放到同一個地方、同一個答案）再犯一次只再說一次，不重複扣分。五關都沒犯錯，最後加碼 +20（§三，2026-10-22 定案）。
      放到空白處、移動把手、點在兩段線相接的地方、點在圖和圖之間都不算錯。提醒（還沒畫完、還沒打數字）不扣分。
      題庫、版面常數與「收不收、為什麼」的純函式都在 i18n 前面的資料區。 */
-  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  var gRound = 0, gScore = 0, gMistake = false, gAnyMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
   /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊東西放開時，
      它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加分；二年級 length 的 codex 抓到的）。 */
   var gGen = 0;
@@ -1807,18 +1851,21 @@
     gSolved = true;
     Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
     var pts = gMistake ? 10 : 20;
-    gScore += pts; elScore.textContent = gScore;
+    gScore += pts;
+    var last = (gRound === GAME_ORDER.length - 1), bonus = last && !gAnyMistake;
+    if (bonus) gScore += 20;
+    elScore.textContent = gScore;
     gHintBtn.disabled = true;
     elHint.textContent = '';   /* 過關了：提示（尤其第二層）全部收掉，不留過期的數字（四年級 chart 的驗證者抓到的） */
-    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    var tail = last ? L().gWin(gScore, bonus) : L().gClear;
     gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
-    if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
+    if (!last) gNext.disabled = false;
   }
   /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
   function refreshHint(){ if (hintLevel >= 1 && !gSolved) showHint(); }
   /* 放錯：說為什麼、扣 5 分（最低 0 分）。key 是「哪一樣放到哪裡／打了哪個數」：同一個錯再犯一次只再說一次，不重複扣分 */
   function roundMiss(text, key){
-    gMistake = true;
+    gMistake = true; gAnyMistake = true;
     var again = !!(gCtx.missed && gCtx.missed[key]);
     (gCtx.missed = gCtx.missed || {})[key] = true;
     var lost = !again && gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
@@ -2123,6 +2170,14 @@
           gText(s, TRUNC.px0 - 5, y + 4, v, { 'font-size':12, 'font-weight':600, fill:'#6B6875', 'text-anchor':'end', 'class':'gtick', 'data-v':v });
         }
         s.appendChild(gEl('line', { x1:TRUNC.px0, y1:TRUNC.py0, x2:TRUNC.px0, y2:TRUNC.py1, stroke:'#2B2A33', 'stroke-width':2 }));
+        /* 省略符號（≈）：縱軸往下多畫一小段，被兩條鋸齒線切開 —— 告訴看圖的人「下面省略了，不要比高矮」 */
+        if (c.brk){
+          var bk = gEl('g', { 'class':'gbrk' });
+          bk.appendChild(gEl('line', { x1:TRUNC.px0, y1:TRUNC.py1, x2:TRUNC.px0, y2:TBRK.end, stroke:'#2B2A33', 'stroke-width':2 }));
+          bk.appendChild(gEl('rect', { x:TRUNC.px0 - TBRK.hw, y:TBRK.y1, width:2 * TBRK.hw, height:TBRK.y2 - TBRK.y1, fill:'#FFFFFF' }));
+          [TBRK.y1, TBRK.y2].forEach(function(y){ bk.appendChild(gEl('polyline', { points:breakZig(TRUNC.px0, y, TBRK.hw, TBRK.amp), fill:'none', stroke:'#2B2A33', 'stroke-width':2, 'stroke-linejoin':'round' })); });
+          s.appendChild(bk);
+        }
         [c.a, c.b].forEach(function(v, side){
           var cx = TRUNC.px0 + (TRUNC.px1 - TRUNC.px0) * (side ? 0.72 : 0.28), y = truncY(c, v);
           s.appendChild(gEl('rect', { x:cx - 14, y:y, width:28, height:TRUNC.py1 - y, rx:3, fill:side ? COLOR_ORANGE : COLOR_GREEN, 'class':'gtbar', 'data-v':v }));
@@ -2135,7 +2190,7 @@
         var i = truncPick(pt);
         if (i < 0 || found[i]) return;
         var c = set[i];
-        if (!truncLie(c)){ cardsEl[i].classList.add('honest'); roundMiss(d.gTruncBad(d.gTruncNo[i], c.a, c.b), 'c' + i); return; }
+        if (!truncLie(c)){ cardsEl[i].classList.add('honest'); roundMiss(c.brk ? d.gTruncBrk(d.gTruncNo[i], c.min, c.a, c.b) : d.gTruncBad(d.gTruncNo[i], c.a, c.b), 'c' + i); return; }
         found[i] = true; nFound++;
         cardsEl[i].classList.add('found');
         gMsg.innerHTML = '<span class="yes">' + d.gTruncFound(d.gTruncNo[i], c.min, c.a, c.b, truncLooks(c)) + '</span>';
@@ -2178,7 +2233,7 @@
     elHint.textContent = h1 + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
-  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+  function restartGame(){ gRound = 0; gScore = 0; gAnyMistake = false; elScore.textContent = '0'; startRound(); }
   gNext.addEventListener('click', function(){
     if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }
   });

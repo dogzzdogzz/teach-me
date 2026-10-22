@@ -146,12 +146,32 @@ function checkData(D, I18N, fail, src){
     if (!rs || !/elHint\.textContent = '';/.test(rs)) fail('GAME: roundSolved() does not clear the hint — a level-2 hint stays on the solved board');
   }
   need(null, /var pts = gMistake \? 10 : 20;/, 'scoring: a round should give +20 with no mistakes and +10 after mistakes');
+  /* 五關都沒犯錯再 +20（§三，2026-10-22）：只在最後一關、只在整場都沒有算過錯的時候；重新開始要歸零；只有 roundMiss（算錯）會記下來，roundNote（提醒）不會 */
+  {
+    const rs = extractFunction(gsrc, 'roundSolved') || '';
+    if (!/var last = \(gRound === GAME_ORDER\.length - 1\), bonus = last && !gAnyMistake;\s*if \(bonus\) gScore \+= 20;/.test(rs)) fail('GAME scoring: roundSolved() does not add the +20 perfect-run bonus on the last round only when no mistake was made all game');
+    if (!/var tail = last \? L\(\)\.gWin\(gScore, bonus\) : L\(\)\.gClear;/.test(rs)) fail('GAME scoring: the last round does not tell gWin() whether the bonus was won');
+    const rm = extractFunction(gsrc, 'roundMiss') || '';
+    if (!/gAnyMistake = true;/.test(rm)) fail('GAME scoring: a charged mistake does not cancel the perfect-run bonus (roundMiss() never sets gAnyMistake)');
+    if (/gAnyMistake/.test(extractFunction(gsrc, 'roundNote') || '')) fail('GAME scoring: a free reminder (roundNote) touches the perfect-run bonus');
+    if ((gsrc.match(/gAnyMistake = true/g) || []).length !== 1) fail('GAME scoring: gAnyMistake is set outside roundMiss() — only a charged mistake may cancel the bonus');
+    /* 只有兩個地方可以把它清掉：宣告、restartGame()（語言切換也是走 restartGame()：整場重來、分數歸零）—— 其他地方清掉就會把前面的錯「洗掉」（codex 第十四輪） */
+    /* 任何寫法的指定（=、沒有空格、0、Boolean(0)…）都算：整頁只可以有三個 —— 宣告、roundMiss() 設成 true、restartGame() 清掉（codex 第十五輪） */
+    const anyW = (src.match(/\bgAnyMistake\s*=(?!=)/g) || []).length;
+    /* 這個名字整頁只可以出現 4 次：宣告、roundSolved() 讀、roundMiss() 設、restartGame() 清（任何別的讀寫形式 --x、&&=、x[...] 都會多一次）（codex 第十六輪） */
+    const anyN = (src.match(/gAnyMistake/g) || []).length;
+    if (/\beval\s*\(|new Function\s*\(|\bwith\s*\(/.test(src)) fail('GAME: the page uses eval / new Function / with — a variable could be changed without naming it, so the gAnyMistake guard proves nothing');
+    if (anyN !== 4 || anyW !== 3 || /gAnyMistake\s*(\+\+|--|[-+*\/|&]=)|\[\s*['"]gAnyMistake/.test(src)) fail('GAME scoring: gAnyMistake is cleared somewhere other than its declaration and restartGame() — an earlier mistake could be washed out (' + anyW + ' assignments, want 3; ' + anyN + ' mentions, want 4)');
+    if (!/function restartGame\(\)\{ gRound = 0; gScore = 0; gAnyMistake = false;/.test(gsrc)) fail('GAME scoring: Restart does not clear gAnyMistake — one mistake would cancel the bonus for every later run');
+    if (!/var gRound = 0, gScore = 0, gMistake = false, gAnyMistake = false,/.test(gsrc)) fail('GAME scoring: gAnyMistake does not start false');
+    if (/gAnyMistake = false/.test(extractFunction(gsrc, 'startRound') || '')) fail('GAME scoring: startRound() clears gAnyMistake — a mistake in an earlier round would not cancel the bonus');
+  }
   {
     const fsrc = extractFunction(gsrc, 'roundMiss');
     if (!fsrc) fail('GAME scoring: cannot find roundMiss() in index.html');
     else {
-      const run = (s0, keys) => new Function('var gMistake = false, gScore = ' + s0 + ', gCtx = {}, elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc +
-        '\nvar out = []; ' + JSON.stringify(keys) + '.forEach(function(k){ roundMiss("why " + k, k); out.push({ s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake }); }); return out;')();
+      const run = (s0, keys) => new Function('var gMistake = false, gAnyMistake = false, gScore = ' + s0 + ', gCtx = {}, elScore = {}, gMsg = {}; function L(){ return { gMinus:"@MINUS@" }; }\n' + fsrc +
+        '\nvar out = []; ' + JSON.stringify(keys) + '.forEach(function(k){ roundMiss("why " + k, k); out.push({ s:gScore, shown:elScore.textContent, html:gMsg.innerHTML, m:gMistake, am:gAnyMistake }); }); return out;')();
       let r;
       try {
         [[0, 0, false], [5, 0, true], [20, 15, true]].forEach(([s0, want, shows]) => {
@@ -159,6 +179,7 @@ function checkData(D, I18N, fail, src){
           if (r.s !== want || String(r.shown) !== String(want)) fail('GAME scoring: a mistake at ' + s0 + ' leaves ' + r.s + ' — a mistake does not cost 5, or the score goes below 0');
           if ((r.html.indexOf('@MINUS@') >= 0) !== shows) fail('GAME scoring: at ' + s0 + ' points the "−5" note is ' + (shows ? 'missing' : 'shown although nothing was taken'));
           if (r.html.indexOf('why a') < 0 || !r.m) fail('GAME scoring: roundMiss() does not show the reason or record the mistake');
+          if (!r.am) fail('GAME scoring: roundMiss() does not cancel the perfect-run bonus');
         });
         r = run(20, ['a', 'a', 'b', 'a']);
         if (r.map(x => x.s).join() !== '15,15,10,10') fail('GAME scoring: the same mistake again is charged again (scores ' + r.map(x => x.s).join() + ', expected 15,15,10,10)');
@@ -176,13 +197,14 @@ function checkData(D, I18N, fail, src){
   need('group', /roundMiss\(d\.gGroupOne\(n, n === a \? A : Bn, e\.kind\), 'n' \+ n\);/, 'the "just one class" reason does not name the class whose bar it is');
   need('group', /roundMiss\(d\.gGroupOff\(n, why === 'high'\), 'n' \+ n\);/, 'mistake key: a typed number is not keyed by the number');
   need('sort', /if \(why\)\{ roundMiss\(d\.gSortWhy\(d\.gSortCards\[c\], d\.gSortWhyKind\[why\], d\.gSortBins\[SORT_BINS\.indexOf\(why\)\]\), c \+ '>' \+ bin\.b\); return false; \}/, 'a wrong card does not name ITS OWN box, or the key is not (card, box)');
-  need('trunc', /roundMiss\(d\.gTruncBad\(d\.gTruncNo\[i\], c\.a, c\.b\), 'c' \+ i\);/, 'mistake key: an honest chart is not keyed by the chart');
+  need('trunc', /roundMiss\(c\.brk \? d\.gTruncBrk\(d\.gTruncNo\[i\], c\.min, c\.a, c\.b\) : d\.gTruncBad\(d\.gTruncNo\[i\], c\.a, c\.b\), 'c' \+ i\);/, 'mistake key: an honest chart is not keyed by the chart, or a chart with the break mark is not told it is honest BECAUSE of the mark');
   if ((gsrc.match(/roundMiss\(/g) || []).length !== 10) fail('GAME: roundMiss() is called ' + (gsrc.match(/roundMiss\(/g) || []).length + ' times, expected 10 (definition + bar + 2 plot + seg + 3 group + sort + trunc) — a new call has an unchecked key');
   LANGS.forEach(L => {
     const d = I18N[L];
     if (nums(d.gPts(20)).join() !== '20' || nums(d.gPts(10)).join() !== '10') fail('GAME gPts ' + L + ' does not show the points');
     if (nums(d.gMinus).join() !== '5') fail('GAME gMinus ' + L + ' should say 5');
-    say('gWin', L, d.gWin(85), ['85']);
+    say('gWin', L, d.gWin(85, false), ['85', '20']);
+    say('gWin bonus', L, d.gWin(120, true), ['20', '120']);
   });
   /* shuffle()：切出來真的跑 */
   {
@@ -534,14 +556,19 @@ function checkData(D, I18N, fail, src){
     /* 不靠讀 0 就猜得到的線索：A、B 的數，A、B 的高度，兩根看起來差幾倍（codex 第九輪）、兩根頂端看起來差多高（第十輪）。真正的差距與真正的倍數不列 ——
        那是讀了長條上的數算出來的，正是範例 5 要孩子做的事（「實際只差多少」），而且誠實的「差很多」那一張本來就真的差最多 */
     const TRUNC_KEYS = [['A value', c => c.a], ['B value', c => c.b], ['B bar height', c => frac0(c, c.b)], ['A bar height', c => frac0(c, c.a)], ['look ratio', c => (c.b - c.min) / (c.a - c.min)], ['look gap', c => (c.b - c.a) / (c.max - c.min)]];
-    const truncSeq = {};
+    const truncSeq = {}, brkSeq = {};
+    /* 這裡自己的規則：騙人 ＝ 縱軸最下面不是 0，而且沒有省略符號 */
+    const isLie = c => c.min > 0 && c.brk !== true;
     D.GAME_TRUNC.forEach((set, n) => {
       const where = 'GAME trunc[' + n + ']';
       if (set.length !== 4) fail(where + ': not 4 charts');
-      const lie = set.filter(c => c.min > 0), honest = set.filter(c => c.min === 0);
-      if (lie.length !== 2 || honest.length !== 2) fail(where + ': ' + lie.length + ' lying / ' + honest.length + ' honest charts (want 2 / 2)');
+      /* 三種都要有（2026-10-22）：騙人的（不是從 0 開始、沒有省略符號）兩張、從 0 開始的一張、不是從 0 開始但畫了省略符號的一張 ——
+         只看 0 會把有省略符號的那一張點掉，只看省略符號會把從 0 開始的那一張點掉；兩件事都要看 */
+      const lie = set.filter(isLie), honest = set.filter(c => !isLie(c)), zero = set.filter(c => c.min === 0), brk = set.filter(c => c.min > 0 && c.brk === true);
+      if (lie.length !== 2 || zero.length !== 1 || brk.length !== 1) fail(where + ': ' + lie.length + ' lying / ' + zero.length + ' from 0 / ' + brk.length + ' with a break mark (want 2 / 1 / 1)');
       set.forEach((c, i) => {
-        if (D.truncLie(c) !== (c.min > 0)) fail(where + ' chart ' + i + ': truncLie says ' + D.truncLie(c) + ' for an axis starting at ' + c.min);
+        if (c.min === 0 && c.brk) fail(where + ' chart ' + i + ': a break mark on an axis that starts at 0 (nothing is left out)');
+        if (D.truncLie(c) !== isLie(c)) fail(where + ' chart ' + i + ': truncLie says ' + D.truncLie(c) + ' for an axis starting at ' + c.min + (c.brk ? ' with a break mark' : ' with no break mark'));
         if (!((c.max - c.min) % c.step === 0 && c.min % c.step === 0)) fail(where + ' chart ' + i + ': the axis ' + c.min + '–' + c.max + ' is not whole steps of ' + c.step);
         if ((T.py1 - T.py0) / ((c.max - c.min) / c.step) < 20) fail(where + ' chart ' + i + ': tick labels only ' + ((T.py1 - T.py0) / ((c.max - c.min) / c.step)).toFixed(1) + 'px apart');
         if (!(c.a > c.min && c.b > c.a && c.b <= c.max)) fail(where + ' chart ' + i + ': A ' + c.a + ' / B ' + c.b + ' are not inside the axis with B > A');
@@ -567,10 +594,11 @@ function checkData(D, I18N, fail, src){
           if (top - bb > 32) fail(where + ' chart ' + i + ': the value label ' + v + ' floats ' + (top - bb).toFixed(1) + 'px above its bar');
         });
         const looks = (c.b - c.min) / (c.a - c.min), real = c.b / c.a;
-        if (c.min > 0 && !(looks >= 1.4 && real < 1.2)) fail(where + ' chart ' + i + ': a lying chart that does not look much bigger (looks ×' + looks.toFixed(2) + ', really ×' + real.toFixed(2) + ')');
+        if (c.min > 0 && !(looks >= 1.4 && real < 1.2)) fail(where + ' chart ' + i + ': a ' + (c.brk ? 'break-mark' : 'lying') + ' chart that does not look much bigger (looks ×' + looks.toFixed(2) + ', really ×' + real.toFixed(2) + ')');
         LANGS.forEach(L => {
           const d = I18N[L], no = d.gTruncNo[i];
-          if (c.min > 0){
+          if (c.min > 0 && c.brk) say(where + ' gTruncBrk', L, d.gTruncBrk(no, c.min, c.a, c.b), [c.min, 0, c.min, c.a, c.b, c.b - c.a]);
+          else if (c.min > 0){
             /* 說的「B 看起來是 A 的幾倍高」要和畫出來的一樣：用這裡自己的格線幾何量兩根長條的高度（驗證者抓到的：舊的「一點點的差距被畫得很大」對 42／46、7／8 這種圖不成立 ——
                那兩張誇大的是倍數，不是差距） */
             const gy2 = t => T.py1 - (t - c.min) / (c.max - c.min) * (T.py1 - T.py0), hA = T.py1 - gy2(c.a), hB = T.py1 - gy2(c.b), k = Math.round(hB / hA * 10) / 10;
@@ -590,7 +618,9 @@ function checkData(D, I18N, fail, src){
       const frac = (c, v) => (v - c.min) / (c.max - c.min);
       TRUNC_KEYS.forEach(([what, key]) => {
         if (new Set(set.map(key)).size !== 4) fail(where + ': two charts tie on ' + what + ' (the order is ambiguous)');
-        const seq = set.slice().sort((x, y) => key(x) - key(y)).map(c => c.min > 0 ? 'L' : 'H').join('');
+        const seq = set.slice().sort((x, y) => key(x) - key(y)).map(c => isLie(c) ? 'L' : 'H').join('');
+        /* 有省略符號的那一張在三張「不是從 0 開始」的圖裡排第幾（除了省略符號，什麼都不可以把它和騙人的分開） */
+        (brkSeq[what] = brkSeq[what] || []).push(set.filter(c => c.min > 0).sort((x, y) => key(x) - key(y)).map(c => c.brk ? 'K' : 'L').join(''));
         (truncSeq[what] = truncSeq[what] || []).push(seq);
         if (seq === 'LLHH' || seq === 'HHLL') fail(where + ': sorted by ' + what + ' the charts go ' + seq + ' — the ' + what + ' gives the answer away');
       });
@@ -602,6 +632,24 @@ function checkData(D, I18N, fail, src){
       if (new Set(q.map(x => x[3])).size < 2) fail('GAME trunc: the chart with the largest ' + what + ' is always ' + (q[0][3] === 'L' ? 'lying' : 'honest') + ' — a rank rule finds the lying charts');
       if (new Set(q.map(x => x[0])).size < 2) fail('GAME trunc: the chart with the smallest ' + what + ' is always ' + (q[0][0] === 'L' ? 'lying' : 'honest') + ' — a rank rule finds the lying charts');
     });
+    Object.keys(brkSeq).forEach(what => {
+      const q = brkSeq[what];
+      if (q.every(x => x[x.length - 1] === 'K') || q.every(x => x[0] === 'K') || new Set(q.map(x => x.indexOf('K'))).size < 2) fail('GAME trunc: sorted by ' + what + ', the break-mark chart sits at the same place among the charts that skip 0 in every set (' + q.join(' ') + ') — it can be told from the lying ones without the mark');
+    });
+    /* 省略符號：breakZig() 切出來跑 —— 左右各 hw、上下各 amp 的五個點；畫在最下面那一條線的數字下面、離它 ≥ 2px，不碰 A／B、編號、最下面那一條線，不出卡片 */
+    {
+      const B = D.TBRK, pts = D.breakZig(40, 100, 6, 2).split(' ').map(p => p.split(',').map(Number));
+      if (pts.length !== 5 || pts[0][0] !== 34 || pts[4][0] !== 46 || pts.some((p, j) => p[1] !== (j % 2 ? 98 : 102)) || pts.some((p, j) => j && !(p[0] > pts[j - 1][0]))) fail('GAME trunc: breakZig(40, 100, 6, 2) is not a 5-point zigzag from 34 to 46 between 98 and 102: ' + D.breakZig(40, 100, 6, 2));
+      const zig = { x:T.px0 - B.hw - 1, y:B.y1 - B.amp - 1, w:2 * B.hw + 2, h:B.y2 - B.y1 + 2 * B.amp + 2 };   /* 外框（含 2px 的線寬） */
+      const far = (a, b) => Math.max(a.x - (b.x + b.w), b.x - (a.x + a.w), a.y - (b.y + b.h), b.y - (a.y + a.h)) >= 2;
+      if (!(B.y1 < B.y2 && B.end >= B.y2 + B.amp && B.end + 1 <= T.ch - 2 && B.y1 - B.amp - 1 >= T.py1 + 2)) fail('GAME trunc: the break mark is not on the axis stretch below the bottom line, or leaves the card: ' + JSON.stringify(B));
+      D.GAME_TRUNC.forEach(set => set.forEach(c => { if (c.brk && !far(zig, lbl(T.px0 - 5, T.py1 + 4, String(c.min), 12, 'end'))) fail('GAME trunc: the break mark is under 2px from the bottom number ' + c.min); }));
+      [0.28, 0.72].forEach(f => { if (!far(zig, lbl(T.px0 + (T.px1 - T.px0) * f, T.catY, 'A', 13))) fail('GAME trunc: the break mark touches the A / B name'); });
+      if (!far(zig, lbl(14, T.catY + 8, '④', 15))) fail('GAME trunc: the break mark touches the chart number');
+      need('trunc', /if \(c\.brk\)\{\s*var bk = gEl\('g', \{ 'class':'gbrk' \}\);\s*bk\.appendChild\(gEl\('line', \{ x1:TRUNC\.px0, y1:TRUNC\.py1, x2:TRUNC\.px0, y2:TBRK\.end,[^\n]*\n\s*bk\.appendChild\(gEl\('rect', \{ x:TRUNC\.px0 - TBRK\.hw, y:TBRK\.y1, width:2 \* TBRK\.hw, height:TBRK\.y2 - TBRK\.y1, fill:'#FFFFFF' \}\)\);\s*\[TBRK\.y1, TBRK\.y2\]\.forEach\(function\(y\)\{ bk\.appendChild\(gEl\('polyline', \{ points:breakZig\(TRUNC\.px0, y, TBRK\.hw, TBRK\.amp\), fill:'none', stroke:'#2B2A33', 'stroke-width':2,/, 'the break mark is not drawn (only on c.brk charts) as the axis stretch + white gap + two breakZig() lines at TBRK (the layout checks assume it)');
+      if ((RB.trunc.match(/gbrk/g) || []).length !== 1) fail('GAME trunc: the break mark is drawn more than once / outside the c.brk branch');
+      if ((src.match(/gbrk/g) || []).length !== 1 || (src.match(/chart-brk/g) || []).length !== 1) fail('GAME trunc: the break-mark class is used outside its one drawing (a style or script could hide it)');
+    }
     /* truncPick：整片每 1px */
     let bad = 0;
     for (let x = -5; x <= W + 5; x += 1) for (let y = -5; y <= T.H + 5; y += 1){
@@ -688,8 +736,8 @@ function checkData(D, I18N, fail, src){
     has('gSortWhyKind.bar en', E.gSortWhyKind.bar, ['different kinds of things', 'one set of data'], ['time', 'two sets']);
     has('gSortWhyKind.line en', E.gSortWhyKind.line, ['changing over time'], ['kinds', 'two sets']);
     has('gSortWhyKind.grouped en', E.gSortWhyKind.grouped, ['two sets of data to compare side by side'], ['time', 'one set']);
-    has('gTruncFound zh', Z.gTruncFound('①', 40, 48, 52, 1.5), ['① 的縱軸從 40 開始', 'B 看起來大約是 A 的 1.5 倍高', '可是 A 是 48、B 是 52', '其實只差 4'], ['從 0 開始', '差距']);
-    has('gTruncFound en', E.gTruncFound('①', 40, 48, 52, 1.5), ['①’s axis starts at 40', 'B looks about 1.5 times as tall as A', 'but A is 48 and B is 52', 'only 4 apart'], ['starts at 0', 'gap']);
+    has('gTruncFound zh', Z.gTruncFound('①', 40, 48, 52, 1.5), ['① 的縱軸從 40 開始', '又沒有畫省略符號', 'B 看起來大約是 A 的 1.5 倍高', '可是 A 是 48、B 是 52', '其實只差 4'], ['從 0 開始', '差距']);
+    has('gTruncFound en', E.gTruncFound('①', 40, 48, 52, 1.5), ['①’s axis starts at 40', 'with no break mark', 'B looks about 1.5 times as tall as A', 'but A is 48 and B is 52', 'only 4 apart'], ['starts at 0', 'gap']);
     has('gTruncBad zh', Z.gTruncBad('②', 20, 50), ['② 的縱軸從 0 開始', '就真的差多少', '它沒有騙人'], ['會騙人的', '騙人的圖']);
     has('gTruncBad en', E.gTruncBad('②', 20, 50), ['②’s axis starts at 0', 'the gap you see is the real gap', 'It doesn’t lie'], ['misleading', 'It lies']);
     [2, 5, 10].forEach(u => {
@@ -740,9 +788,10 @@ function checkData(D, I18N, fail, src){
     has('gSortNow en', E.gSortNow(1, 4), ['1 / 4 cards sorted'], []);
     has('gTruncNow zh', Z.gTruncNow(1, 2), ['找到 1 / 2 張會騙人的圖'], []);
     has('gTruncNow en', E.gTruncNow(1, 2), ['1 / 2 lying charts found'], []);
-    has('gTruncH2 zh', Z.gTruncH2(2, [40, 25]), ['還沒找到的 2 張', '縱軸最下面那一條線寫的是 40、25'], []);
-    has('gTruncH2 en 2', E.gTruncH2(2, [40, 25]), ['The 2 still to find have 40 and 25 on the bottom line'], []);
-    has('gTruncH2 en 1', E.gTruncH2(1, [40]), ['The one still to find has 40 on the bottom line'], ['The 1 ']);
+    /* 有省略符號的那一張可以和騙人的那一張寫著同一個最下面的數（第 3 組：160），所以第二層提示一定要說「而且沒有省略符號」 */
+    has('gTruncH2 zh', Z.gTruncH2(2, [40, 25]), ['還沒找到的 2 張', '縱軸最下面那一條線寫的是 40、25', '而且沒有省略符號'], []);
+    has('gTruncH2 en 2', E.gTruncH2(2, [40, 25]), ['The 2 still to find have 40 and 25 on the bottom line', 'and no break mark'], []);
+    has('gTruncH2 en 1', E.gTruncH2(1, [40]), ['The one still to find has 40 on the bottom line', 'and no break mark'], ['The 1 ']);
     has('gHints.plot zh', Z.gHints.plot, ['那個月的那一直行', '那個數的那一條線', '交叉的地方就是點'], []);
     has('gHints.plot en', E.gHints.plot, ['the month’s column', 'the line for the number', 'where they cross'], []);
     has('gHints.group zh', Z.gHints.group, ['圖例', '那一週', '一格 2 公斤'], []);
@@ -750,19 +799,89 @@ function checkData(D, I18N, fail, src){
     has('gHints.sort zh', Z.gHints.sort, ['不同的種類', '隨著時間的變化', '兩組要並排比'], []);
     has('gHints.sort en', E.gHints.sort, ['different kinds of things', 'change over time', 'two groups to compare side by side'], []);
     has('gAsks.bar zh', Z.gAsks.bar, ['照表上的數量', '畫好了'], []);
-    has('gAsks.trunc zh', Z.gAsks.trunc, ['縱軸沒有從 0 開始', '點出所有會騙人的圖'], []);
-    has('gAsks.trunc en', E.gAsks.trunc, ['don’t start at 0', 'Tap every chart that lies'], []);
+    has('gAsks.trunc zh', Z.gAsks.trunc, ['縱軸沒有從 0 開始', '又沒有畫省略符號（≈）', '點出所有會騙人的圖'], []);
+    has('gAsks.trunc en', E.gAsks.trunc, ['don’t start at 0', 'and have no break mark (≈)', 'Tap every chart that lies'], []);
+    has('gTruncBrk zh', Z.gTruncBrk('③', 40, 42, 46), ['③ 的縱軸從 40 開始', '可是最下面畫了省略符號（≈）', '0 到 40 省略了', '要讀數字、不要比高矮', 'A 42、B 46，只差 4', '它沒有騙人'], ['會騙人', '從 0 開始']);
+    has('gTruncBrk en', E.gTruncBrk('③', 40, 42, 46), ['③’s axis starts at 40', 'but it has a break mark (≈)', '0 to 40 is left out', 'read the numbers, don’t compare heights', 'A 42, B 46, only 4 apart', 'It doesn’t lie'], ['misleading', 'It lies', 'starts at 0']);
+    has('gWin zh', Z.gWin(85, false), ['五關全破！總分 85 分', '挑戰一次都不放錯（再加 20 分）'], ['再加 20 分！']);
+    has('gWin zh bonus', Z.gWin(120, true), ['一次都沒放錯，再加 20 分！總分 120 分'], ['挑戰']);
+    has('gWin en', E.gWin(85, false), ['Total score 85', 'try a run with no wrong moves (+20 bonus)'], ['— +20 bonus!']);
+    has('gWin en bonus', E.gWin(120, true), ['without a single wrong move — +20 bonus! Total score 120'], ['try a run']);
     /* 過關那一句對每一張騙人的圖都要成立：它說的是「倍數」（上面每一張都驗過看起來的倍數 > 真正的倍數），不可以說「差距被畫得很大」 */
-    has('gTruncWin zh', Z.gTruncWin, ['沒有從 0 開始', '長條的高矮就和數字對不起來', '看起來的倍數比數字真正的倍數大'], ['差距', '畫得很大']);
-    has('gTruncWin en', E.gTruncWin, ['doesn’t start at 0', 'the bar heights no longer match the numbers', 'B looks bigger compared with A than the numbers really show'], ['gap', 'huge', 'more times']);
+    has('gTruncWin zh', Z.gTruncWin, ['沒有從 0 開始、又沒有畫省略符號', '長條的高矮就和數字對不起來', '看起來的倍數比數字真正的倍數大'], ['差距', '畫得很大']);
+    has('gTruncWin en', E.gTruncWin, ['doesn’t start at 0 and there is no break mark', 'the bar heights no longer match the numbers', 'B looks bigger compared with A than the numbers really show'], ['gap', 'huge', 'more times']);
     has('gHints.bar zh', Z.gHints.bar, ['表上的數 ÷ 一格代表的數', '要畫幾格'], ['×']);
     has('gHints.bar en', E.gHints.bar, ['the table’s number ÷ what one square is worth', 'how many squares to draw'], ['×']);
     has('gHints.seg zh', Z.gHints.seg, ['增加和減少都算', '線越陡，變化越大'], ['只算增加']);
     has('gHints.seg en', E.gHints.seg, ['Going up and going down both count', 'The steeper the line, the bigger the change'], ['only']);
-    has('gHints.trunc zh', Z.gHints.trunc, ['最下面那一條線', '是不是 0'], []);
-    has('gHints.trunc en', E.gHints.trunc, ['bottom line', 'is it 0'], []);
+    has('gHints.trunc zh', Z.gHints.trunc, ['最下面那一條線', '是不是 0', '不是 0 的，再看縱軸最下面有沒有畫省略符號（≈）'], []);
+    has('gHints.trunc en', E.gHints.trunc, ['bottom line', 'is it 0', 'If not, look for a break mark (≈)'], []);
     has('gSortWin zh', Z.gSortWin, ['比種類用長條圖', '看隨時間的變化用折線圖', '兩組並排比用複合長條圖'], []);
     has('gSortWin en', E.gSortWin, ['compare kinds with a bar chart', 'change over time with a line graph', 'two groups side by side with a grouped bar chart'], []);
+  }
+
+  /* ===== 範例 5：同一組資料畫三張 —— 從 0 開始、從 EX5_MIN 開始沒有記號（會騙人）、從 EX5_MIN 開始畫了省略符號（誠實）（2026-10-22） ===== */
+  {
+    const m = src.match(/var EX5_VALUES = \[(\d+), (\d+)\], EX5_MIN = (\d+);/);
+    if (!m) fail('EX5: cannot read EX5_VALUES / EX5_MIN');
+    else {
+      const a = +m[1], b = +m[2], min = +m[3], diff = Math.abs(b - a), k = Math.round((b - min) / (a - min) * 10) / 10;
+      if (!(min > 0 && a > min && b > a)) fail('EX5: the cut charts must start above 0 and below both values');
+      const ex = src.slice(src.indexOf('function renderEx5Fixed'), src.indexOf('/* ---------- 試題 ---------- */'));
+      const frames = ex.match(/makeChartFrame\(document\.getElementById\('ex5(\w+)Chart'\), \{[^}]*\}/g) || [];
+      const spec = id => frames.filter(f => f.indexOf("'ex5" + id + "Chart'") >= 0)[0] || '';
+      if (frames.length !== 3) fail('EX5: ' + frames.length + ' charts drawn, want 3 (from 0, cut with no mark, cut with the break mark)');
+      if (!/axisMin: 0,/.test(spec('Fair')) || /breakMark/.test(spec('Fair'))) fail('EX5: the ✅ chart does not start at 0, or has a break mark');
+      if (!/axisMin: EX5_MIN,/.test(spec('Trunc')) || /breakMark/.test(spec('Trunc'))) fail('EX5: the ⚠️ chart must start at EX5_MIN with NO break mark');
+      if (!/axisMin: EX5_MIN,[^}]*breakMark: true/.test(spec('Break'))) fail('EX5: the honest cut chart must start at EX5_MIN WITH the break mark');
+      if (!/axisMax: 55, gridStep: 5/.test(spec('Trunc')) || !/axisMax: 55, gridStep: 5/.test(spec('Break'))) fail('EX5: the two cut charts are not drawn on the same scale');
+      if (!/var looks = Math\.round\(\(EX5_VALUES\[1\] - EX5_MIN\) \/ \(EX5_VALUES\[0\] - EX5_MIN\) \* 10\) \/ 10;\s*el\.innerHTML = d\.ex5Explain\(EX5_VALUES\[0\], EX5_VALUES\[1\], diff, EX5_MIN, looks\);/.test(src)) fail('EX5: the explanation is not given the drawn look ratio and EX5_MIN');
+      const mk = extractFunction(src, 'makeChartFrame') || '';
+      if (!/if \(spec\.breakMark\)\{\s*var bk = svgEl\('g', \{ class: 'chart-brk' \}\), by1 = plotBottom \+ 14, by2 = plotBottom \+ 21;\s*bk\.appendChild\(svgEl\('line', \{ x1: plotLeft, y1: plotBottom, x2: plotLeft, y2: plotBottom \+ 24, stroke: '#2B2A33', 'stroke-width': 2 \}\)\);\s*bk\.appendChild\(svgEl\('rect', \{ x: plotLeft - 6, y: by1, width: 12, height: by2 - by1, fill: '#FFFFFF' \}\)\);\s*\[by1, by2\]\.forEach\(function\(y\)\{ bk\.appendChild\(svgEl\('polyline', \{ points: breakZig\(plotLeft, y, 6, 2\.5\), fill: 'none', stroke: '#2B2A33', 'stroke-width': 2, 'stroke-linejoin': 'round' \}\)\); \}\);\s*svg\.appendChild\(bk\);\s*\}/.test(mk)) fail('EX5: makeChartFrame() does not draw the break mark below the bottom line (plotBottom + 14 … + 24) with breakZig()');
+      /* 省略符號（鋸齒線上緣 ＝ by1 − 2.5 − 線寬一半）在最下面那個數字（11px，基線在 plotBottom + 4，靠右在 plotLeft − 8）的下面，離它 ≥ 2px；離橫軸的名字很遠 */
+      if (!(14 - 2.5 - 1 - (4 + 0.35 * 11) >= 2)) fail('EX5: the break mark touches the bottom number');
+      LANGS.forEach(L => {
+        const d = I18N[L];
+        say('EX5 ex5Explain', L, d.ex5Explain(a, b, diff, min, k), L === 'zh' ? [a, b, min, k, min, 0, min, diff, 0] : [a, b, min, k, min, 0, min, diff, 0]);
+        ['ex5FairTitle', 'ex5TruncTitle', 'ex5BreakTitle'].forEach(t => { if (typeof d[t] !== 'string' || !d[t]) fail('EX5 ' + L + ': ' + t + ' missing'); });
+      });
+      const has5 = (w, t, must, not) => { must.forEach(x => { if (t.indexOf(x) < 0) fail('EX5 meaning ' + w + ': must say "' + x + '" — "' + t + '"'); }); not.forEach(x => { if (t.indexOf(x) >= 0) fail('EX5 meaning ' + w + ': must not say "' + x + '"'); }); };
+      has5('zh', I18N.zh.ex5Explain(a, b, diff, min, k), ['三張圖', '從 ' + min + ' 開始，又什麼記號都沒有', 'B 看起來是 A 的 ' + k + ' 倍高', '它會騙人', '省略符號（≈）', '0 到 ' + min + ' 省略了', '它是誠實的', '只差 <b>' + diff + '</b> 杯'], ['兩張圖', '好幾倍', '差很多']);
+      has5('en', I18N.en.ex5Explain(a, b, diff, min, k), ['All three charts', 'starts at ' + min + ' with no mark', 'B looks ' + k + ' times as tall as A', 'that chart misleads', 'break mark (≈)', '0 to ' + min + ' is left out', 'So it is honest', 'only <b>' + diff + '</b> cups'], ['Both charts', 'huge']);
+      has5('zh titles', I18N.zh.ex5TruncTitle + '|' + I18N.zh.ex5BreakTitle, ['⚠️ 縱軸沒有從 0 開始，也沒有記號', '✅ 沒有從 0 開始，但畫了省略符號（≈）'], []);
+      has5('en titles', I18N.en.ex5TruncTitle + '|' + I18N.en.ex5BreakTitle, ['⚠️ Starts above 0, no mark', '✅ Starts above 0, with a break mark (≈)'], []);
+      /* 家長頁的例子（30 和 33、縱軸從 25 開始）：說的「看起來幾倍高」要和從 25 量起的高度一樣，中英都要；不可以再說「一倍／double」（2026-10-22） */
+      let par = '';
+      try { par = require('fs').readFileSync(require('path').join(require('path').dirname(require('path').resolve(process.argv[2] || '.')), 'parents.html'), 'utf8'); } catch (e){ fail('EX5: cannot read parents.html'); }
+      if (par){
+        const pm = par.match(/"s1p2": "[^"]*?(\d+) 和 (\d+) 只差 (\d+)，但如果縱軸從 (\d+) 開始，畫出來的長條一根高 (\d+) − (\d+) ＝ (\d+)、一根高 (\d+) − (\d+) ＝ (\d+)，(\d+) 那一根看起來是 (\d+) 那一根的 ([\d.]+) 倍高/);
+        const pe0 = par.match(/"s1p2": "[^"]*?(\d+) and (\d+) differ by (\d+), but on an axis starting at (\d+) the bars are drawn (\d+) − (\d+) = (\d+) units and (\d+) − (\d+) = (\d+) units tall, so the (\d+) bar looks ([\d.]+) times as tall as the (\d+) bar/);
+        const pe = pe0 && [pe0[0]].concat(pe0.slice(1, 12), [pe0[13], pe0[12]]);   /* 英文是「big … looks k times … as small」：排成和中文一樣的順序 */
+        [['zh', pm], ['en', pe]].forEach(([L, m]) => {
+          if (!m) { fail('EX5 parents s1p2 ' + L + ': the axis-from-25 example does not state the drawn heights and the look ratio'); return; }
+          const [x, y, df, lo, y1, l1, hy, x1, l2, hx, big, small, k] = m.slice(1).map(Number);
+          /* 每一個算式的兩邊都驗：被減數是那兩個數、減數是縱軸的起點、差是畫出來的高度；「哪一根是哪一根的幾倍」也照這些數（codex 第十九輪） */
+          if (y - x !== df || y1 !== y || x1 !== x || l1 !== lo || l2 !== lo || hy !== y - lo || hx !== x - lo || big !== y || small !== x || Math.round(hy / hx * 10) / 10 !== k) fail('EX5 parents s1p2 ' + L + ': ' + x + '/' + y + ' from ' + lo + ' are drawn ' + (y - lo) + ' and ' + (x - lo) + ' tall (×' + Math.round((y - lo) / (x - lo) * 10) / 10 + '), the text says ' + hy + ', ' + hx + ', ×' + k);
+        });
+        if (/差了一倍|look like double/.test(par)) fail('EX5 parents: still says the cut chart looks like double');
+        const fb = (par.match(/data-i18n="s1p2">([\s\S]*?)<\/p>/) || [])[1], dz = (par.match(/"s1p2": "([^"]*)"/) || [])[1];
+        if (!fb || fb !== dz) fail('EX5 parents: the s1p2 fallback text in the markup differs from the zh dictionary copy');
+      }
+      /* 速查卡同一張圖：也是三張、同一組資料、右邊那張畫了省略符號 */
+      let ref = '';
+      try { ref = require('fs').readFileSync(require('path').join(require('path').dirname(require('path').resolve(process.argv[2] || '.')), 'reference.html'), 'utf8'); }   /* 和受檢的 index.html 同一個資料夾（breaktest 的暫存複本也是） */ catch (e){ fail('EX5: cannot read reference.html'); }
+      if (ref){
+        if (!/var MISLEAD_VALUES = \[48, 52\], MISLEAD_MIN = 40;/.test(ref) || a !== 48 || b !== 52 || min !== 40) fail('EX5: reference.html does not draw the same data as example 5');
+        if (!/getElementById\('breakChart'\), \{[^}]*axisMin: MISLEAD_MIN,[^}]*breakMark: true/.test(ref) || /getElementById\('truncChart'\), \{[^}]*breakMark/.test(ref)) fail('EX5: reference.html is not cut-with-mark on breakChart and cut-without-mark on truncChart');
+        if (!/function breakZig\(x, y, hw, amp\)\{\s*var pts = \[\];\s*for \(var j = 0; j <= 4; j\+\+\) pts\.push\(\(x - hw \+ j \* hw \/ 2\) \+ ',' \+ \(y \+ \(j % 2 \? -amp : amp\)\)\);/.test(ref)) fail('EX5: reference.html breakZig() differs from the lesson page');
+        if ((ref.match(/breakTitle:'/g) || []).length !== 2) fail('EX5: reference.html breakTitle is missing in zh or en');
+        /* 速查卡自己的 makeChartFrame()：和課程頁一樣的畫法與位置（縱軸往下多一段、白色缺口、兩條鋸齒線；在最下面那個數字下面 ≥ 2px）（codex 第十四輪） */
+        const rmk = extractFunction(ref, 'makeChartFrame') || '';
+        if (!/if \(spec\.breakMark\)\{\s*var bk = svgEl\('g', \{ class: 'chart-brk' \}\), by1 = plotBottom \+ 14, by2 = plotBottom \+ 21;\s*bk\.appendChild\(svgEl\('line', \{ x1: plotLeft, y1: plotBottom, x2: plotLeft, y2: plotBottom \+ 24, stroke: COLOR_INK, 'stroke-width': 2 \}\)\);\s*bk\.appendChild\(svgEl\('rect', \{ x: plotLeft - 6, y: by1, width: 12, height: by2 - by1, fill: '#FFFFFF' \}\)\);\s*\[by1, by2\]\.forEach\(function\(y\)\{ bk\.appendChild\(svgEl\('polyline', \{ points: breakZig\(plotLeft, y, 6, 2\.5\), fill: 'none', stroke: COLOR_INK, 'stroke-width': 2, 'stroke-linejoin': 'round' \}\)\); \}\);\s*svg\.appendChild\(bk\);\s*\}/.test(rmk)) fail('EX5: reference.html makeChartFrame() does not draw the break mark like the lesson page (axis stretch to plotBottom + 24, white gap, two breakZig() lines at plotBottom + 14 / + 21)');
+        if ((ref.match(/chart-brk/g) || []).length !== 1) fail('EX5: reference.html uses the break-mark class outside its one drawing (a style or script could hide it)');
+        if (!/var lbl = svgEl\('text', \{ x: plotLeft - 8, y: y \+ 4, 'text-anchor': 'end', 'font-size': 11,/.test(rmk)) fail('EX5: reference.html tick labels are not 11px at line + 4 (the clearance check assumes it)');
+      }
+    }
   }
 
   /* --- 每一關的提示、題目、說明（兩種語言都在、沒有 undefined、英文沒有中文） --- */
@@ -851,13 +970,13 @@ module.exports = {
     {"file": "index", "expect": "does not fit a slot", "find": "binY:0, lblY:30, lblH:58, slotH:52, slotGap:4,", "replace": "binY:0, lblY:30, lblH:58, slotH:34, slotGap:4,"},
 
     /* ---- 第 5 關：抓出騙人的圖 ---- */
-    {"file": "index", "expect": "truncLie", "find": "  function truncLie(c){ return c.min > 0; }", "replace": "  function truncLie(c){ return c.min >= 0; }"},
-    {"file": "index", "expect": "lying /", "find": "{ a:39, b:45, min:30, max:45, step:5 }", "replace": "{ a:39, b:45, min:0, max:45, step:5 }"},
-    {"file": "index", "expect": "looks", "find": "{ a:7, b:8, min:5, max:20, step:5 }", "replace": "{ a:7, b:14, min:5, max:20, step:5 }"},
+    {"file": "index", "expect": "truncLie", "find": "  function truncLie(c){ return c.min > 0 && !c.brk; }", "replace": "  function truncLie(c){ return c.min >= 0 && !c.brk; }"},
+    {"file": "index", "expect": "lying /", "find": "{ a:25, b:29, min:20, max:35, step:5 }", "replace": "{ a:25, b:29, min:0, max:35, step:5 }"},
+    {"file": "index", "expect": "looks", "find": "{ a:34, b:39, min:25, max:40, step:5 }", "replace": "{ a:34, b:35, min:25, max:40, step:5 }"},
     {"file": "index", "expect": "truncY", "find": "  function truncY(c, v){ return TRUNC.py1 - (v - c.min) / (c.max - c.min) * (TRUNC.py1 - TRUNC.py0); }", "replace": "  function truncY(c, v){ return TRUNC.py1 - v / c.max * (TRUNC.py1 - TRUNC.py0); }"},
     {"file": "index", "expect": "truncPick", "find": "      if (p.x >= o.x && p.x <= o.x + TRUNC.cw && p.y >= o.y && p.y <= o.y + TRUNC.ch) return i;", "replace": "      if (p.x >= o.x - 6 && p.x <= o.x + TRUNC.cw + 6 && p.y >= o.y && p.y <= o.y + TRUNC.ch) return i;"},
     {"file": "index", "expect": "gTruncFound", "find": "其實只差 ' + (b - a) + '。'; },", "replace": "其實只差 ' + (b + a) + '。'; },"},
-    {"file": "index", "expect": "squares tall", "find": "{ a:13, b:27, min:0, max:30, step:10 }", "replace": "{ a:13, b:27, min:0, max:30, step:5 }"},
+    {"file": "index", "expect": "squares tall", "find": "{ a:3, b:8, min:0, max:30, step:10 }", "replace": "{ a:3, b:8, min:0, max:30, step:5 }"},
 
     /* ---- codex 第一輪補的：刻度表、整個輸入範圍、線段的點擊範圍、小圖的觸控、說明的意思、情境卡的種類 ---- */
     {"file": "index", "expect": "niceStep(", "find": "  function niceStep(maxVal){\n    if (maxVal <= 10) return 1;", "replace": "  function niceStep(maxVal){\n    return 1;"},
@@ -901,14 +1020,14 @@ module.exports = {
     /* ---- 驗證者第一次：長條上的數碰到格線、第二步的保護、刻度洩題 ---- */
     {"file": "index", "expect": "grid line (needs 2px clear)", "find": "    for (var y = top - 2 - 0.35 * TLBL; y - 1.1 * TLBL >= 2; y -= 0.5){", "replace": "    for (var y = top - 2 - 0.35 * TLBL; y - 1.1 * TLBL >= 2; y -= 0.5){ return top - 5;"},
     {"file": "index", "expect": "truncLabelY()", "find": "gText(s, cx, truncLabelY(c, v), v, { 'font-size':TLBL,", "replace": "gText(s, cx, truncY(c, v) - 5, v, { 'font-size':TLBL,"},
-    {"file": "index", "expect": "gives the answer away", "find": "{ a:5, b:10, min:0, max:15, step:5 }, { a:49, b:54, min:0, max:60, step:20 }", "replace": "{ a:5, b:10, min:0, max:60, step:20 }, { a:49, b:54, min:0, max:60, step:20 }"},
+    {"file": "index", "expect": "gives the answer away", "find": "{ a:30, b:60, min:0, max:60, step:20 }", "replace": "{ a:3, b:6, min:0, max:15, step:5 }"},
     {"file": "index", "expect": "phase", "find": "        if (phase !== 2) return;\n", "replace": ""},
 
-    {"file": "index", "expect": "a rank rule", "find": "{ a:42, b:46, min:40, max:100, step:20 }", "replace": "{ a:44, b:46, min:40, max:100, step:20 }"},
+    {"file": "index", "expect": "a rank rule", "find": "{ a:52, b:60, min:50, max:80, step:10 }", "replace": "{ a:54, b:60, min:50, max:80, step:10 }"},
     {"file": "index", "expect": "first clear spot", "find": "      if (lines.every(function(l){ return l < bt - 2 || l > bb + 2; })) return y;", "replace": "      if (lines.every(function(l){ return l < bt - 2 || l > bb + 2; })) return y - 10 >= 16 ? y - 10 : y;"},
 
     /* ---- 驗證者第二次：過關那一句要對每一張騙人的圖都成立 ---- */
-    {"file": "index", "expect": "meaning gTruncWin", "find": "      gTruncWin:'Found them all: when the axis doesn’t start at 0, the bar heights no longer match the numbers — B looks bigger compared with A than the numbers really show.',", "replace": "      gTruncWin:'Found them all: when the axis doesn’t start at 0, a tiny gap gets drawn as a huge one.',"},
+    {"file": "index", "expect": "meaning gTruncWin", "find": "      gTruncWin:'Found them all: when the axis doesn’t start at 0 and there is no break mark, the bar heights no longer match the numbers — B looks bigger compared with A than the numbers really show.',", "replace": "      gTruncWin:'Found them all: when the axis doesn’t start at 0 and there is no break mark, a tiny gap gets drawn as a huge one.',"},
     {"file": "index", "expect": "truncLooks says", "find": "  function truncLooks(c){ return Math.round((c.b - c.min) / (c.a - c.min) * 10) / 10; }", "replace": "  function truncLooks(c){ return Math.round(c.b / c.a * 10) / 10; }"},
 
     /* ---- 題庫：圖決定得了答案、算式、空格 ---- */
@@ -924,7 +1043,52 @@ module.exports = {
     {"file": "review", "expect": "copies the number", "find": "        var m = mixOpts(q, [round1(q - 0.1), round1(q + 0.1), round1(q * 2)], [k, dividend]);", "replace": "        var m = mixOpts(q, [round1(q - 0.1), round1(q + 0.1), round1(q * 2)]);"},
     {"file": "review", "expect": "arithmetic is wrong", "find": "            ? cats[d.qIdx] + '是 ' + d.squares[d.qIdx] + ' 格，一格代表 ' + d.unit + '，' + d.squares[d.qIdx] + ' × ' + d.unit + ' = ' + d.values[d.qIdx] + '。'", "replace": "            ? cats[d.qIdx] + '是 ' + d.squares[d.qIdx] + ' 格，一格代表 ' + d.unit + '，' + d.squares[d.qIdx] + ' × ' + d.unit + ' = ' + (d.values[d.qIdx] + 1) + '。'"},
     {"file": "review", "expect": "is wrong or 0", "find": "        if (a[qIdx] === b[qIdx]) b[qIdx] = a[qIdx] === 20 ? 18 : a[qIdx] + 2;", "replace": ""},
-    {"file": "review", "expect": "copies the number", "find": "        if (squares[qIdx] < 3){ squares[qIdx] = randInt(3, 9); values[qIdx] = squares[qIdx] * unit; }", "replace": ""}
+    {"file": "review", "expect": "copies the number", "find": "        if (squares[qIdx] < 3){ squares[qIdx] = randInt(3, 9); values[qIdx] = squares[qIdx] * unit; }", "replace": ""},
+    {"file": "index", "expect": "perfect-run bonus", "find": "    if (bonus) gScore += 20;\n", "replace": "\n"},
+    {"file": "index", "expect": "Restart does not clear gAnyMistake", "find": "  function restartGame(){ gRound = 0; gScore = 0; gAnyMistake = false;", "replace": "  function restartGame(){ gRound = 0; gScore = 0;"},
+    {"file": "index", "expect": "does not cancel the perfect-run bonus", "find": "    gMistake = true; gAnyMistake = true;\n", "replace": "    gMistake = true;\n"},
+    {"file": "index", "expect": "free reminder (roundNote) touches", "find": "  function roundNote(text){ gMsg.innerHTML", "replace": "  function roundNote(text){ gAnyMistake = true; gMsg.innerHTML"},
+    {"file": "index", "expect": "startRound() clears gAnyMistake", "find": "    gSolved = false; gMistake = false; gCtx = {};", "replace": "    gSolved = false; gMistake = false; gAnyMistake = false; gCtx = {};"},
+    {"file": "index", "expect": "whether the bonus was won", "find": "    var tail = last ? L().gWin(gScore, bonus) : L().gClear;", "replace": "    var tail = last ? L().gWin(gScore, true) : L().gClear;"},
+    {"file": "index", "expect": "meaning gWin zh", "find": "                     : ('五關全破！總分 ' + s + ' 分 🏆 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');", "replace": "                     : ('五關全破！總分 ' + s + ' 分 🏆 按「重新開始」再玩一次。');"},
+    {"file": "index", "expect": "meaning gWin en bonus", "find": "        return bonus ? ('All five rounds cleared without a single wrong move — +20 bonus! Total score ' + s + ' 🏆')", "replace": "        return bonus ? ('All five rounds cleared! Total score ' + s + ' 🏆')"},
+    {"file": "index", "expect": "truncLie says", "find": "  function truncLie(c){ return c.min > 0 && !c.brk; }", "replace": "  function truncLie(c){ return c.min > 0; }"},
+    {"file": "index", "expect": "with a break mark (want 2 / 1 / 1)", "find": "{ a:36, b:43, min:35, max:50, step:5, brk:true }", "replace": "{ a:36, b:43, min:35, max:50, step:5 }"},
+    {"file": "index", "expect": "a break mark on an axis that starts at 0", "find": "{ a:2, b:9, min:0, max:15, step:5 }", "replace": "{ a:2, b:9, min:0, max:15, step:5, brk:true }"},
+    {"file": "index", "expect": "the break mark is not drawn", "find": "        if (c.brk){\n          var bk = gEl('g', { 'class':'gbrk' });", "replace": "        if (false){\n          var bk = gEl('g', { 'class':'gbrk' });"},
+    {"file": "index", "expect": "under 2px from the bottom number", "find": "  var TBRK = { y1:126, y2:133.5, hw:8, amp:2.5, end:138 };", "replace": "  var TBRK = { y1:124, y2:131.5, hw:8, amp:2.5, end:138 };"},
+    {"file": "index", "expect": "breakZig(40, 100, 6, 2) is not", "find": "(y + (j % 2 ? -amp : amp)));\n    return pts.join(' ');\n  }\n  var GAME_TRUNC", "replace": "(y + (j % 2 ? -amp : amp) / 2));\n    return pts.join(' ');\n  }\n  var GAME_TRUNC"},
+    {"file": "index", "expect": "is not told it is honest BECAUSE of the mark", "find": "roundMiss(c.brk ? d.gTruncBrk(d.gTruncNo[i], c.min, c.a, c.b) : d.gTruncBad(d.gTruncNo[i], c.a, c.b), 'c' + i);", "replace": "roundMiss(d.gTruncBad(d.gTruncNo[i], c.a, c.b), 'c' + i);"},
+    {"file": "index", "expect": "meaning gTruncBrk zh", "find": "只差 ' + (b - a) + '。它沒有騙人。'; },", "replace": "只差 ' + (b - a) + '。它會騙人。'; },"},
+    {"file": "index", "expect": "meaning gTruncH2 zh", "find": "mins.join('、') + '，而且沒有省略符號。'; },", "replace": "mins.join('、') + '。'; },"},
+    {"file": "index", "expect": "meaning gAsks.trunc en", "find": "axes don’t start at 0 and have no break mark (≈), so", "replace": "axes don’t start at 0, so"},
+    {"file": "index", "expect": "meaning gHints.trunc zh", "find": "；不是 0 的，再看縱軸最下面有沒有畫省略符號（≈）。'", "replace": "。'"},
+    {"file": "index", "expect": "sits at the same place among the charts that skip 0", "find": "    [ { a:25, b:29, min:20, max:35, step:5 }, { a:156, b:187, min:140, max:200, step:20 }, { a:30, b:60, min:0, max:60, step:20 }, { a:36, b:43, min:35, max:50, step:5, brk:true } ],\n    [ { a:34, b:39, min:25, max:40, step:5 }, { a:65, b:76, min:60, max:90, step:10 }, { a:2, b:9, min:0, max:15, step:5 }, { a:53, b:61, min:40, max:70, step:10, brk:true } ],\n    [ { a:52, b:60, min:50, max:80, step:10 }, { a:182, b:203, min:160, max:220, step:20 }, { a:3, b:8, min:0, max:30, step:10 }, { a:196, b:213, min:160, max:220, step:20, brk:true } ]", "replace": "    [ { a:26, b:29, min:20, max:35, step:5 }, { a:173, b:200, min:160, max:220, step:20 }, { a:30, b:60, min:0, max:60, step:20 }, { a:32, b:38, min:30, max:45, step:5, brk:true } ],\n    [ { a:30, b:34, min:20, max:35, step:5 }, { a:72, b:85, min:70, max:100, step:10 }, { a:2, b:9, min:0, max:15, step:5 }, { a:84, b:95, min:70, max:100, step:10, brk:true } ],\n    [ { a:79, b:90, min:60, max:90, step:10 }, { a:125, b:143, min:120, max:180, step:20 }, { a:4, b:10, min:0, max:60, step:20 }, { a:98, b:108, min:80, max:110, step:10, brk:true } ]"},
+    {"file": "index", "expect": "the ⚠️ chart must start at EX5_MIN with NO break mark", "find": "axisMin: EX5_MIN, axisMax: 55, gridStep: 5,\n      yAxisLabel: d.ex5YUnit, ariaLabel: d.ex5TruncTitle", "replace": "axisMin: EX5_MIN, axisMax: 55, gridStep: 5, breakMark: true,\n      yAxisLabel: d.ex5YUnit, ariaLabel: d.ex5TruncTitle"},
+    {"file": "index", "expect": "must start at EX5_MIN WITH the break mark", "find": "gridStep: 5, breakMark: true,\n      yAxisLabel: d.ex5YUnit, ariaLabel: d.ex5BreakTitle", "replace": "gridStep: 5,\n      yAxisLabel: d.ex5YUnit, ariaLabel: d.ex5BreakTitle"},
+    {"file": "index", "expect": "not given the drawn look ratio", "find": "var looks = Math.round((EX5_VALUES[1] - EX5_MIN) / (EX5_VALUES[0] - EX5_MIN) * 10) / 10;", "replace": "var looks = Math.round(EX5_VALUES[1] / EX5_VALUES[0] * 10) / 10;"},
+    {"file": "index", "expect": "below the bottom line (plotBottom + 14", "find": "by1 = plotBottom + 14, by2 = plotBottom + 21;", "replace": "by1 = plotBottom + 3, by2 = plotBottom + 9;"},
+    {"file": "index", "expect": "EX5 meaning zh", "find": "'B 看起來是 A 的 ' + k + ' 倍高 —— <strong>它會騙人</strong>。", "replace": "'B 看起來比 A 高好幾倍 —— <strong>它會騙人</strong>。"},
+    {"file": "index", "expect": "EX5 meaning en", "find": "'“0 to ' + min + ' is left out — read the numbers, don’t compare the heights.” So it is honest.", "replace": "'“0 to ' + min + ' is left out — read the numbers, don’t compare the heights.” So it misleads too."},
+    {"file": "reference", "expect": "cut-with-mark on breakChart", "find": "axisMin: MISLEAD_MIN, axisMax: 55, gridStep: 5, breakMark: true, yAxisLabel: d.YUNIT2", "replace": "axisMin: MISLEAD_MIN, axisMax: 55, gridStep: 5, yAxisLabel: d.YUNIT2"},
+    {"file": "reference", "expect": "reference.html breakZig() differs", "find": "(y + (j % 2 ? -amp : amp)));\n    return pts.join(' ');\n  }\n  function makeChartFrame", "replace": "(y + (j % 2 ? amp : amp)));\n    return pts.join(' ');\n  }\n  function makeChartFrame"},
+    {"file": "reference", "expect": "reference.html does not draw the same data", "find": "var MISLEAD_VALUES = [48, 52], MISLEAD_MIN = 40;", "replace": "var MISLEAD_VALUES = [48, 52], MISLEAD_MIN = 30;"},
+    {"file": "reference", "expect": "reference.html makeChartFrame() does not draw the break mark", "find": "var bk = svgEl('g', { class: 'chart-brk' }), by1 = plotBottom + 14, by2 = plotBottom + 21;", "replace": "var bk = svgEl('g', { class: 'chart-brk' }), by1 = plotBottom + 4, by2 = plotBottom + 11;"},
+    {"file": "reference", "expect": "reference.html makeChartFrame() does not draw the break mark", "find": "      svg.appendChild(bk);\n    }\n    var n = spec.categories.length;", "replace": "    }\n    var n = spec.categories.length;"},
+    {"file": "index", "expect": "gAnyMistake is cleared somewhere other", "find": "    ex1Picked = -1; renderEx1();", "replace": "    gAnyMistake = false; ex1Picked = -1; renderEx1();"},
+    {"file": "index", "expect": "gAnyMistake is cleared somewhere other", "find": "    ex1Picked = -1; renderEx1();", "replace": "    gAnyMistake=0; ex1Picked = -1; renderEx1();"},
+    {"file": "reference", "expect": "reference.html makeChartFrame() does not draw the break mark", "find": "points: breakZig(plotLeft, y, 6, 2.5), fill: 'none', stroke: COLOR_INK, 'stroke-width': 2,", "replace": "points: breakZig(plotLeft, y, 6, 2.5), fill: 'none', stroke: '#FFFFFF', 'stroke-width': 2,"},
+    {"file": "index", "expect": "makeChartFrame() does not draw the break mark below", "find": "points: breakZig(plotLeft, y, 6, 2.5), fill: 'none', stroke: '#2B2A33', 'stroke-width': 2,", "replace": "points: breakZig(plotLeft, y, 6, 2.5), fill: 'none', stroke: '#2B2A33', 'stroke-width': 0,"},
+    {"file": "index", "expect": "break-mark class is used outside", "find": "  .gtcard.honest{", "replace": "  .gbrk{display:none}\n  .gtcard.honest{"},
+    {"file": "reference", "expect": "uses the break-mark class outside", "find": "  .chartrow{", "replace": "  .chart-brk{visibility:hidden}\n  .chartrow{"},
+    {"file": "index", "expect": "gAnyMistake is cleared somewhere other", "find": "    ex1Picked = -1; renderEx1();", "replace": "    if (!--gAnyMistake) {} ex1Picked = -1; renderEx1();"},
+    {"file": "index", "expect": "the page uses eval", "find": "    ex1Picked = -1; renderEx1();", "replace": "    eval('gAny' + 'Mistake = false'); ex1Picked = -1; renderEx1();"},
+    {"file": "parents", "expect": "EX5 parents s1p2 zh", "find": "\"s1p2\": \"<strong>大人最容易誤解的那一點：</strong>大人讀圖靠經驗，但孩子最常犯的是<strong>直接讀「幾格」當答案</strong>，忘了看「一格代表多少」。當一格代表 2 時，7 格是 14 不是 7。第二個更重要的是<strong>縱軸沒有從 0 開始時，視覺差距會被放大</strong>：30 和 33 只差 3，但如果縱軸從 25 開始，畫出來的長條一根高 33 − 25 ＝ 8、一根高 30 − 25 ＝ 5，33 那一根看起來是 30 那一根的 1.6 倍高 —— 好像差很多。這是媒體圖表最常用的手法，", "replace": "\"s1p2\": \"<strong>大人最容易誤解的那一點：</strong>大人讀圖靠經驗，但孩子最常犯的是<strong>直接讀「幾格」當答案</strong>，忘了看「一格代表多少」。當一格代表 2 時，7 格是 14 不是 7。第二個更重要的是<strong>縱軸沒有從 0 開始時，視覺差距會被放大</strong>：30 和 33 只差 3，但如果縱軸從 25 開始，畫出來的長條一根高 33 − 25 ＝ 8、一根高 30 − 25 ＝ 5，33 那一根看起來是 30 那一根的 2 倍高 —— 好像差很多。這是媒體圖表最常用的手法，"},
+    {"file": "parents", "expect": "EX5 parents s1p2 en", "find": "so the 33 bar looks 1.6 times as tall", "replace": "so the 33 bar looks 2 times as tall"},
+    {"file": "parents", "expect": "EX5 parents s1p2 zh", "find": "\"s1p2\": \"<strong>大人最容易誤解的那一點：</strong>大人讀圖靠經驗，但孩子最常犯的是<strong>直接讀「幾格」當答案</strong>，忘了看「一格代表多少」。當一格代表 2 時，7 格是 14 不是 7。第二個更重要的是<strong>縱軸沒有從 0 開始時，視覺差距會被放大</strong>：30 和 33 只差 3，但如果縱軸從 25 開始，畫出來的長條一根高 33 − 25 ＝ 8、一根高 30 − 25 ＝ 5，33 那一根看起來是 30 那一根的 1.6 倍高 —— 好像差很多。這是媒體圖表最常用的手法，", "replace": "\"s1p2\": \"<strong>大人最容易誤解的那一點：</strong>大人讀圖靠經驗，但孩子最常犯的是<strong>直接讀「幾格」當答案</strong>，忘了看「一格代表多少」。當一格代表 2 時，7 格是 14 不是 7。第二個更重要的是<strong>縱軸沒有從 0 開始時，視覺差距會被放大</strong>：30 和 33 只差 3，但如果縱軸從 25 開始，畫出來的長條一根高 33 − 25 ＝ 8、一根高 30 − 25 ＝ 4，33 那一根看起來是 30 那一根的 1.6 倍高 —— 好像差很多。這是媒體圖表最常用的手法，"},
+    {"file": "parents", "expect": "s1p2 fallback text in the markup differs", "find": "data-i18n=\"s1p2\"><strong>大人最容易誤解的那一點：</strong>", "replace": "data-i18n=\"s1p2\"><strong>大人最常誤解的那一點：</strong>"},
+    {"file": "parents", "expect": "EX5 parents s1p2 en", "find": "the bars are drawn 33 − 25 = 8 units and 30 − 25 = 5 units tall", "replace": "the bars are drawn 33 − 24 = 8 units and 30 − 24 = 5 units tall"},
+    {"file": "parents", "expect": "EX5 parents s1p2 zh", "find": "\"s1p2\": \"<strong>大人最容易誤解的那一點：</strong>大人讀圖靠經驗，但孩子最常犯的是<strong>直接讀「幾格」當答案</strong>，忘了看「一格代表多少」。當一格代表 2 時，7 格是 14 不是 7。第二個更重要的是<strong>縱軸沒有從 0 開始時，視覺差距會被放大</strong>：30 和 33 只差 3，但如果縱軸從 25 開始，畫出來的長條一根高 33 − 25 ＝ 8、一根高 30 − 25 ＝ 5，33 那一根看起來是 30 那一根的 1.6 倍高 —— 好像差很多。這是媒體圖表最常用的手法，", "replace": "\"s1p2\": \"<strong>大人最容易誤解的那一點：</strong>大人讀圖靠經驗，但孩子最常犯的是<strong>直接讀「幾格」當答案</strong>，忘了看「一格代表多少」。當一格代表 2 時，7 格是 14 不是 7。第二個更重要的是<strong>縱軸沒有從 0 開始時，視覺差距會被放大</strong>：30 和 33 只差 3，但如果縱軸從 25 開始，畫出來的長條一根高 33 − 24 ＝ 8、一根高 30 − 25 ＝ 5，33 那一根看起來是 30 那一根的 1.6 倍高 —— 好像差很多。這是媒體圖表最常用的手法，"}
   ],
 
   sim: {
@@ -1040,7 +1204,7 @@ module.exports = {
   data: {
     dataStart: "  var SVGNS = 'http://www.w3.org/2000/svg';",
     dataEnd: '  /* ---------- i18n ---------- */',
-    dataReturn: '{shuffle, pick, niceStep, niceAxisMax, GAME_ORDER, GPICK, gChart, gLineY, gSnapK, gColOf, unsorted, BAR, GAME_BAR, barChart, barWhy, barLabelled, PLOT, GAME_PLOT, plotChart, plotTrayX, plotCell, plotWhy, segDelta, segBest, segDist, segPts, segPick, GROUP, GAME_GROUP, groupChart, groupAnswer, parseCount, groupWhy, groupBarX, SORT_TYPES, SORT_BINS, SORT, sortBinX, sortBinH, sortPick, sortWhy, TRUNC, GAME_TRUNC, truncLie, truncLooks, truncXY, truncY, truncPick, TLBL, truncLabelY}',
+    dataReturn: '{shuffle, pick, niceStep, niceAxisMax, GAME_ORDER, GPICK, gChart, gLineY, gSnapK, gColOf, unsorted, BAR, GAME_BAR, barChart, barWhy, barLabelled, PLOT, GAME_PLOT, plotChart, plotTrayX, plotCell, plotWhy, segDelta, segBest, segDist, segPts, segPick, GROUP, GAME_GROUP, groupChart, groupAnswer, parseCount, groupWhy, groupBarX, SORT_TYPES, SORT_BINS, SORT, sortBinX, sortBinH, sortPick, sortWhy, TRUNC, TBRK, breakZig, GAME_TRUNC, truncLie, truncLooks, truncXY, truncY, truncPick, TLBL, truncLabelY}',
     check: function(D, I18N, fail, src){ checkData(D, I18N, fail, src); }
   }
 };
