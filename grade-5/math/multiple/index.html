@@ -321,7 +321,7 @@
   <section class="game">
     <span class="eyebrow" data-i18n="eb6">小遊戲</span>
     <h2 data-i18n="s6h2">倍數跳跳蛙</h2>
-    <p class="lead" data-i18n="s6lead">跳格子、除法檢查站、貼標籤、公車時刻表、找出全部 —— 五關五種玩法。放錯會說為什麼、扣 5 分，但不會結束。</p>
+    <p class="lead" data-i18n="s6lead">跳格子、除法檢查站、貼標籤、公車時刻表、找出全部 —— 五關五種玩法。放錯會說為什麼、扣 5 分，但不會結束；五關都沒放錯，最後再加 20 分。</p>
     <div class="card">
       <div class="stats">
         <span><span data-i18n="gRoundLabel">第</span> <b id="gRound">1</b> / 5 <span data-i18n="gRoundUnit">關</span></span>
@@ -592,13 +592,16 @@
           why:'因數最大就是自己，所以有限；倍數可以一直加下去，永遠數不完。' }
       ],
       s6h2: '倍數跳跳蛙',
-      s6lead: '跳格子、除法檢查站、貼標籤、公車時刻表、找出全部 —— 五關五種玩法。放錯會說為什麼、扣 5 分，但不會結束。',
+      s6lead: '跳格子、除法檢查站、貼標籤、公車時刻表、找出全部 —— 五關五種玩法。放錯會說為什麼、扣 5 分，但不會結束；五關都沒放錯，最後再加 20 分。',
       gRoundLabel: '第', gRoundUnit: '關', gScoreLabel: '分數',
       gNextBtn: '下一關', gRestartBtn: '重新開始', gHintBtn: '💡 提示',
       gPts: function(p){ return '＋' + p + ' 分'; },
       gMinus: '扣 5 分',
       gClear: '按「下一關」繼續。',
-      gWin: function(score){ return '五關全破！總分 ' + score + ' 分 🏆 按「重新開始」可以再玩一次。'; },
+      gWin: function(s, bonus){
+        return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + s + ' 分 🏆')
+                     : ('五關全破！總分 ' + s + ' 分 🏆 按「重新開始」，挑戰一次都不放錯（再加 20 分）。');
+      },
       gAsks: {
         hop: '把青蛙拖到下一次落腳的格子（也可以先點青蛙、再點格子），連跳 5 次。',
         check: '用除法檢查：把每一張數字卡放進對的籃子（也可以先點卡片、再點籃子）。',
@@ -789,13 +792,16 @@
           why:'The largest factor is the number itself (limited); multiples keep growing forever (endless).' }
       ],
       s6h2: 'Multiple-Jumping Frog',
-      s6lead: 'Hop the squares, the division checkpoint, tag the numbers, the bus timetable, find them all — five rounds, five ways to play. A wrong move tells you why and costs 5 points, but the game never ends.',
+      s6lead: 'Hop the squares, the division checkpoint, tag the numbers, the bus timetable, find them all — five rounds, five ways to play. A wrong move tells you why and costs 5 points, but the game never ends; clear all five without a wrong move for a 20-point bonus.',
       gRoundLabel: 'Round', gRoundUnit: '', gScoreLabel: 'Score',
       gNextBtn: 'Next round', gRestartBtn: 'Restart', gHintBtn: '💡 Hint',
       gPts: function(p){ return '+' + p + ' ' + plEn(p, 'point'); },
       gMinus: '5 points off',
       gClear: 'Press “Next round” to go on.',
-      gWin: function(score){ return 'All five rounds cleared! Final score ' + score + ' 🏆 Press “Restart” to play again.'; },
+      gWin: function(s, bonus){
+        return bonus ? ('All five rounds cleared without a single wrong move — +20 bonus! Total score ' + s + ' 🏆')
+                     : ('All five rounds cleared! Total score ' + s + ' 🏆 Press “Restart” and try a run with no wrong moves (+20 bonus).');
+      },
       gAsks: {
         hop: 'Drag the frog to the square where it lands next (or tap the frog, then the square). Make 5 jumps.',
         check: 'Check with division: put each number card in the right basket (or tap a card, then a basket).',
@@ -1070,7 +1076,7 @@
   }
 
   /* ---------- 6. 小遊戲：倍數跳跳蛙（§六之五） ---------- */
-  var gRound = 0, gScore = 0, gMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
+  var gRound = 0, gScore = 0, gMistake = false, gAnyMistake = false, gSolved = false, gCtx = {}, hintLevel = 0;
   /* 第幾次畫關卡：重新開始、切換語言、下一關都會換一個新的畫板。還拿在手上的舊積木放開時，
      它的畫板已經不在了 —— gen 不一樣就什麼都不做（不可以替新的那一關過關、加分）。二年級 length 的 codex 第一輪。 */
   var gGen = 0;
@@ -1245,23 +1251,26 @@
   function nearestOpen(list, pt, pad){ var b = nearestAny(list, pt, pad); return b && !b.done ? b : null; }
 
   /* 計分（沿用三、四年級的給法；§三 高年級的「扣分機制」就是這一條，「策略」在第 5 關自己按「全部找到了」）：這一關沒犯錯 +20、犯過錯 +10；
-     每一次「放錯並說明為什麼」−5，最低 0 分。 */
+     每一次「放錯並說明為什麼」−5，最低 0 分。五關都沒犯錯，最後加碼 +20。 */
   function roundSolved(text){
     if (gSolved) return;
     gSolved = true;
     Array.prototype.forEach.call(gameStage.querySelectorAll('.sel'), function(x){ x.classList.remove('sel'); });
     var pts = gMistake ? 10 : 20;
-    gScore += pts; elScore.textContent = gScore;
+    gScore += pts;
+    var last = (gRound === GAME_ORDER.length - 1), bonus = last && !gAnyMistake;
+    if (bonus) gScore += 20;
+    elScore.textContent = gScore;
     gHintBtn.disabled = true;
     elHint.textContent = '';   /* 過關就把提示清掉：第二層提示寫的是「下一步」，過關之後已經沒有下一步（四年級 chart 的驗證者） */
-    var tail = (gRound === GAME_ORDER.length - 1) ? L().gWin(gScore) : L().gClear;
+    var tail = last ? L().gWin(gScore, bonus) : L().gClear;
     gMsg.innerHTML = '<span class="yes">' + text + ' ' + L().gPts(pts) + '</span> ' + tail;
     if (gRound < GAME_ORDER.length - 1) gNext.disabled = false;
   }
   /* 第二層提示跟著畫面走（下一步該做什麼）：每做對一步就重寫，不留過期的數字 */
   function refreshHint(){ if (hintLevel >= 2 && !gSolved) showHint(); }
   function roundMiss(text){
-    gMistake = true;
+    gMistake = true; gAnyMistake = true;
     var lost = gScore >= 5 ? 5 : 0;   /* 分數一律是 5 的倍數；已經是 0 分就不扣，也不說「扣 5 分」 */
     gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;
     gMsg.innerHTML = '<span class="no">' + text + '</span>' + (lost ? ' <span class="gminus">' + L().gMinus + '</span>' : '');
@@ -1506,7 +1515,7 @@
     elHint.textContent = d.gHints[type] + (hintLevel >= 2 && gCtx.hint2 ? ' ' + gCtx.hint2() : '');
   }
 
-  function restartGame(){ gRound = 0; gScore = 0; elScore.textContent = '0'; startRound(); }
+  function restartGame(){ gRound = 0; gScore = 0; gAnyMistake = false; elScore.textContent = '0'; startRound(); }
 
   gNext.addEventListener('click', function(){
     if (gRound < GAME_ORDER.length - 1){ gRound++; startRound(); }

@@ -155,6 +155,14 @@ module.exports = {
     { file:'index', expect:'touch-action:none', find:"    touch-action:none;cursor:grab;", replace:"    cursor:grab;" },
     { file:'index', expect:'hint is not cleared', find:"    elHint.textContent = '';   /* 過關就把提示清掉", replace:"    void 0;   /* 過關就把提示清掉" },
     { file:'index', expect:'scoring', find:"    var pts = gMistake ? 10 : 20;", replace:"    var pts = 20;" },
+    { file:'index', expect:'gives', find:"    if (bonus) gScore += 20;", replace:"    if (bonus) gScore += 0;" },
+    { file:'index', expect:'gives', find:"bonus = last && !gAnyMistake;", replace:"bonus = last;" },
+    { file:'index', expect:'record the mistake', find:"    gMistake = true; gAnyMistake = true;", replace:"    gMistake = true;" },
+    { file:'index', expect:'gAnyMistake is assigned', find:"    gSolved = false; gMistake = false; gCtx = {}; gGen++;", replace:"    gSolved = false; gMistake = false; gAnyMistake = false; gCtx = {}; gGen++;" },
+    { file:'index', expect:'Restart does not clear gAnyMistake', find:"gScore = 0; gAnyMistake = false; elScore", replace:"gScore = 0; elScore" },
+    { file:'index', expect:'gWin bonus', find:"return bonus ? ('五關全破，而且一次都沒放錯，再加 20 分！總分 ' + s + ' 分 🏆')", replace:"return bonus ? ('五關全破，而且一次都沒放錯！總分 ' + s + ' 分 🏆')" },
+    { file:'index', expect:'gWin: numbers', find:"Press “Restart” and try a run with no wrong moves (+20 bonus).", replace:"Press “Restart” to play again." },
+    { file:'index', expect:'s6lead', find:"clear all five without a wrong move for a 20-point bonus.", replace:"clear all five without a wrong move for a bonus." },
     { file:'index', expect:'roundMiss() at score', find:"    gScore = Math.max(0, gScore - 5); elScore.textContent = gScore;", replace:"    gScore = Math.max(0, gScore - 0); elScore.textContent = gScore;" },
     { file:'index', expect:'roundMiss() at score 0', find:"    var lost = gScore >= 5 ? 5 : 0;", replace:"    var lost = 5;" },
     { file:'index', expect:'nearestAny(): a point inside the big box', find:"      if (dd < bd || (dd === bd && dc < bc)){ bd = dd; bc = dc; best = b; }", replace:"      if (dc < bc){ bd = dd; bc = dc; best = b; }" },
@@ -727,8 +735,40 @@ function gameChecks(D, I18N, fail, src){
   LANGS.forEach(L => {
     ['gNextBtn', 'gRestartBtn', 'gHintBtn', 'gMinus', 'gClear', 'gScoreLabel', 'gRoundLabel'].forEach(k => { if (typeof I18N[L][k] !== 'string') fail(k + ' missing in ' + L); });
     [10, 20].forEach(p => nums('gPts ' + p, I18N[L].gPts(p), [p]));
-    nums('gWin', I18N[L].gWin(100), [100]);
+    nums('gWin', I18N[L].gWin(95, false), [95, 20]);
+    nums('gWin bonus', I18N[L].gWin(120, true), [20, 120]);
+    if (I18N[L].gWin(95, false) === I18N[L].gWin(95, true)) fail('gWin ' + L + ' has no separate bonus line');
+    if (I18N[L].gWin(120, true).indexOf('120') < 0 || I18N[L].gWin(95, false).indexOf('95') < 0) fail('gWin ' + L + ' does not show the score');
+    if (gnums(I18N[L].s6lead).join() !== '5,20') fail('s6lead ' + L + ' should state −5 and the 20-point bonus: ' + I18N[L].s6lead);
   });
+  /* 五關都沒放錯 +20：roundSolved() 真的跑；放錯記在整輪（gAnyMistake），Restart 清掉 */
+  {
+    const ssrc = extractFunction(src, 'roundSolved');
+    if (!ssrc) fail('scoring: cannot find roundSolved()');
+    else [[0, false, false, 20], [0, true, true, 10], [4, false, false, 40], [4, true, true, 10], [4, false, true, 20]].forEach(([round, mis, any, want]) => {
+      let r;
+      try {
+        r = new Function('var gSolved = false, gScore = 0, gMistake = ' + mis + ', gAnyMistake = ' + any + ', gRound = ' + round + ', GAME_ORDER = [1,2,3,4,5];' +
+          'var gameStage = { querySelectorAll:function(){ return []; } }, elScore = {}, gHintBtn = {}, elHint = { textContent:"old hint" }, gMsg = {}, gNext = { disabled:true };' +
+          'function L(){ return { gPts:function(p){ return "+" + p; }, gWin:function(s, b){ return "WIN" + s + (b ? "B" : ""); }, gClear:"CLEAR" }; }\n' + ssrc +
+          '\nroundSolved("ok"); return { s:gScore, shown:elScore.textContent, hint:elHint.textContent, dis:gHintBtn.disabled, next:gNext.disabled, html:gMsg.innerHTML };')();
+      } catch (e){ return fail('scoring: roundSolved() could not run: ' + e.message); }
+      if (r.s !== want || String(r.shown) !== String(want)) fail('scoring: round ' + (round + 1) + (mis ? ' with' : ' without') + ' mistakes' + (any ? ' (earlier mistakes in the run)' : '') + ' gives ' + r.s + ', expected ' + want);
+      if (r.hint !== '' || r.dis !== true) fail('scoring: a solved round leaves the hint showing or the hint button enabled');
+      if ((round < 4) === r.next) fail('scoring: Next is ' + (r.next ? 'disabled after a cleared round' : 'enabled after the last round'));
+      if (round === 4 && /B/.test(r.html) !== (!any)) fail('scoring: the clean-run bonus line is ' + (any ? 'shown after mistakes' : 'missing'));
+    });
+    const msrc = extractFunction(src, 'roundMiss');
+    if (msrc){
+      let r;
+      try { r = new Function('var gMistake = false, gAnyMistake = false, gScore = 20, elScore = {}, gMsg = {}; function L(){ return { gMinus:"m" }; }\n' + msrc + '\nroundMiss("why"); return { m:gMistake, any:gAnyMistake };')(); }
+      catch (e){ r = { m:false, any:false }; }
+      if (!r.m || !r.any) fail('scoring: roundMiss() does not record the mistake for this round and for the whole run');
+    }
+    { const n = (src.match(/gAnyMistake\s*=[^=]/g) || []).length; if (n !== 3) fail('scoring: gAnyMistake is assigned ' + n + ' times, expected exactly 3 (declaration, roundMiss, restartGame) — a free reminder or startRound() must not touch it'); }
+    needSrc(/function restartGame\(\)\{ gRound = 0; gScore = 0; gAnyMistake = false;/, 'scoring: Restart does not clear gAnyMistake (the bonus would stay lost)');
+    needSrc(/var gRound = 0, gScore = 0, gMistake = false, gAnyMistake = false,/, 'scoring: gAnyMistake is not declared with the game state');
+  }
   if (!/扣 5 分/.test(z.gMinus) || !/5 points/.test(en.gMinus)) fail('gMinus should say 5 points off');
   {
     const fsrc = extractFunction(src, 'roundMiss');
